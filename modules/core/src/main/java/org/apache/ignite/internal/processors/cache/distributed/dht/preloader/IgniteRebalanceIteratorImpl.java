@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -73,15 +74,18 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
         this.historicalIterator = historicalIterator;
         this.doneParts = new HashSet<>();
 
-        advance();
+        advance(false);
     }
 
     /** */
-    private synchronized void advance() throws IgniteCheckedException {
+    private synchronized void advance(boolean nextPart) throws IgniteCheckedException {
         if (fullIterators.isEmpty())
             reachedEnd = true;
 
-        while (!reachedEnd && (current == null || !current.getValue().hasNextX() || missingParts.contains(current.getKey()))) {
+        while (!reachedEnd && (current == null || !current.getValue().hasNextX()
+            || missingParts.contains(current.getKey()) || nextPart)) {
+            nextPart = false;
+
             if (current == null)
                 current = fullIterators.entrySet().iterator().next();
             else {
@@ -148,20 +152,36 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
         return current != null && current.getValue().hasNextX();
     }
 
-    /** {@inheritDoc} */
-    @Override public synchronized void addPartIterator(int partId, GridCloseableIterator<CacheDataRow> partIterator) {
-        fullIterators.put(partId, partIterator);
-    }
-
-    /** {@inheritDoc} */
-    @Override public synchronized void closeForPart(int partId) throws IgniteCheckedException {
+    /** */
+    private void closeForPart(int partId) throws IgniteCheckedException {
         if (current != null && current.getKey() == partId)
-            advance();
+            advance(true);
 
         GridCloseableIterator<CacheDataRow> partIterator = fullIterators.remove(partId);
 
         if (partIterator != null)
             partIterator.close();
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void replaceFullPrtitions(Map<Integer, GridCloseableIterator<CacheDataRow>> partIters)
+        throws IgniteCheckedException {
+        assert !closed : "Closed iterator.";
+
+        for (Integer part : partIters.keySet()) {
+            if (!fullIterators.containsKey(part))
+                fullIterators.put(part, partIters.get(part));
+        }
+
+        ArrayList<Integer> partToRemove = new ArrayList<>();
+
+        for (Integer part : fullIterators.keySet()) {
+            if (!partIters.containsKey(part))
+                partToRemove.add(part);
+        }
+
+        for (Integer part : partToRemove)
+            closeForPart(part);
     }
 
     /** {@inheritDoc} */
@@ -171,6 +191,8 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
 
     /** {@inheritDoc} */
     @Override public synchronized void replaceHistorical(IgniteHistoricalIterator historicalIterator) throws IgniteCheckedException {
+        assert !closed : "Closed iterator.";
+
         if (this.historicalIterator != null)
             this.historicalIterator.close();
 
@@ -189,7 +211,7 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
 
         assert result.partition() == current.getKey();
 
-        advance();
+        advance(false);
 
         return result;
     }

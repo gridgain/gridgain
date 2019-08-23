@@ -190,67 +190,18 @@ class GridDhtPartitionSupplier {
         assert demandMsg != null;
         assert nodeId != null;
 
-        T3<UUID, Integer, AffinityTopologyVersion> contextId = new T3<>(nodeId, topicId, demandMsg.topologyVersion());
+        T3<UUID, Integer, AffinityTopologyVersion> contextId = new T3<>(nodeId, topicId, AffinityTopologyVersion.NONE/*demandMsg.topologyVersion()*/);
 
         if (demandMsg.rebalanceId() < 0) { // Demand node requested context cleanup.
             synchronized (scMap) {
                 SupplyContext sctx = scMap.get(contextId);
 
                 if (sctx != null && sctx.rebalanceId == -demandMsg.rebalanceId()) {
-                    if (demandMsg.partitions().isEmpty()) {
-                        clearContext(scMap.remove(contextId), log);
+                    clearContext(scMap.remove(contextId), log);
 
-                        if (log.isDebugEnabled())
-                            log.debug("Supply context cleaned [" + supplyRoutineInfo(topicId, nodeId, demandMsg)
-                                + ", supplyContext=" + sctx + "]");
-                    }
-                    else {
-                        Set<Integer> missing = new HashSet<>();
-
-                        for (int partId : demandMsg.partitions().fullSet()) {
-                            if (!sctx.iterator.fullParts().contains(partId)) {
-                                try {
-                                    GridCloseableIterator<CacheDataRow> partIter = grp.offheap().reservedIterator(partId,
-                                        demandMsg.topologyVersion());
-
-                                    if (partIter == null) {
-                                        missing.add(partId);
-
-                                        continue;
-                                    }
-
-                                    sctx.iterator.addPartIterator(partId, partIter);
-                                }
-                                catch (IgniteCheckedException e) {
-                                    U.error(log, "Faile to get rebalance iterator for partition: "
-                                        + partId + ".", e);
-                                }
-                            }
-                        }
-
-                        for (int partId : sctx.iterator.fullParts()) {
-                            if (!demandMsg.partitions().hasFull(partId)) {
-                                try {
-                                    sctx.iterator.closeForPart(partId);
-                                }
-                                catch (IgniteCheckedException e) {
-                                    U.error(log, "Iterator close failed for partition: " + partId + ".", e);
-                                }
-                            }
-                        }
-
-                        IgniteHistoricalIterator historicalIterator = null;
-
-                        try {
-                            if (demandMsg.partitions().hasHistorical())
-                                historicalIterator = grp.offheap().historicalIterator(demandMsg.partitions().historicalMap(), missing);
-
-                            sctx.iterator.replaceHistorical(historicalIterator);
-                        }
-                        catch (IgniteCheckedException e) {
-                            U.error(log, "Can not replace historical iterator.", e);
-                        }
-                    }
+                    if (log.isDebugEnabled())
+                        log.debug("Supply context cleaned [" + supplyRoutineInfo(topicId, nodeId, demandMsg)
+                            + ", supplyContext=" + sctx + "]");
                 }
                 else {
                     if (log.isDebugEnabled())
@@ -307,13 +258,17 @@ class GridDhtPartitionSupplier {
                 log.debug("Demand message accepted ["
                     + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
 
-            assert !(sctx != null && !demandMsg.partitions().isEmpty());
-
             long maxBatchesCnt = grp.preloader().batchesPrefetchCount();
 
             if (sctx == null) {
                 if (log.isDebugEnabled())
                     log.debug("Starting supplying rebalancing [" + supplyRoutineInfo(topicId, nodeId, demandMsg) +
+                        ", fullPartitions=" + S.compact(demandMsg.partitions().fullSet()) +
+                        ", histPartitions=" + S.compact(demandMsg.partitions().historicalSet()) + "]");
+            }
+            else if (isRebalanceContinuouse(demandMsg, sctx)) {
+                if (log.isInfoEnabled())
+                    log.info("Starting supplying continuose rebalancing [" + supplyRoutineInfo(topicId, nodeId, demandMsg) +
                         ", fullPartitions=" + S.compact(demandMsg.partitions().fullSet()) +
                         ", histPartitions=" + S.compact(demandMsg.partitions().historicalSet()) + "]");
             }
@@ -329,7 +284,7 @@ class GridDhtPartitionSupplier {
 
             Set<Integer> remainingParts;
 
-            if (sctx == null || sctx.iterator == null) {
+            if (sctx == null || sctx.iterator == null || isRebalanceContinuouse(demandMsg, sctx)) {
                 remainingParts = new HashSet<>(demandMsg.partitions().fullSet());
 
                 Set<Integer> demandParts = new HashSet<>(demandMsg.partitions().fullSet());
@@ -348,7 +303,8 @@ class GridDhtPartitionSupplier {
                         initUpdateCntrs.put(part, loc.updateCounter());
                 }
 
-                iter = grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
+                iter = isRebalanceContinuouse(demandMsg, sctx) ? modifyRebalanceIterator(demandMsg, sctx.iterator) :
+                    grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
 
                 for (int i = 0; i < histMap.size(); i++) {
                     int p = histMap.partitionAt(i);
@@ -365,7 +321,7 @@ class GridDhtPartitionSupplier {
                     assert loc != null && loc.state() == GridDhtPartitionState.OWNING
                         : "Partition should be in OWNING state: " + loc;
 
-                    supplyMsg.addEstimatedKeysCount(grp.offheap().totalPartitionEntriesCount(part));
+                    supplyMsg.addEstimatedKeysCount(loc.fullSize());
                 }
 
                 for (int i = 0; i < histMap.size(); i++) {
@@ -416,7 +372,8 @@ class GridDhtPartitionSupplier {
                         if (!reply(topicId, demanderNode, demandMsg, supplyMsg, contextId))
                             return;
 
-                        supplyMsg = new GridDhtPartitionSupplyMessage(demandMsg.rebalanceId(),
+                        supplyMsg = new GridDhtPartitionSupplyMessage(
+                            demandMsg.rebalanceId(),
                             grp.groupId(),
                             demandMsg.topologyVersion(),
                             grp.deploymentEnabled());
@@ -580,6 +537,69 @@ class GridDhtPartitionSupplier {
         }
     }
 
+    private boolean isRebalanceContinuouse(GridDhtPartitionDemandMessage demandMsg, SupplyContext sctx) {
+        return sctx != null && demandMsg.rebalanceId() != sctx.rebalanceId;
+    }
+
+    /** */
+    private boolean continuousRebalanceSupported(GridDhtPartitionDemandMessage demandMessage) {
+        return true;
+    }
+
+    /**
+     * @param demandMsg Demand message.
+     * @param rebalanceIterator Iterator which will be modified.
+     */
+    private IgniteRebalanceIterator modifyRebalanceIterator(GridDhtPartitionDemandMessage demandMsg,
+        IgniteRebalanceIterator rebalanceIterator) {
+            log.info("Transfor iterator for rebalance with id " + demandMsg.rebalanceId());
+
+        Set<Integer> missing = new HashSet<>();
+
+        Map<Integer, GridCloseableIterator<CacheDataRow>> partIters = new HashMap<>(
+            demandMsg.partitions().fullSet().size());
+
+        for (int partId : demandMsg.partitions().fullSet()) {
+            GridCloseableIterator<CacheDataRow> partIter = null;
+
+            if (!rebalanceIterator.fullParts().contains(partId)) {
+                try {
+                    partIter = grp.offheap().reservedIterator(partId, demandMsg.topologyVersion());
+
+                    if (partIter == null)
+                        missing.add(partId);
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Faile to get rebalance iterator for partition: "
+                        + partId + ".", e);
+                }
+            }
+
+            partIters.put(partId, partIter);
+        }
+
+        try {
+            rebalanceIterator.replaceFullPrtitions(partIters);
+        }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Cna not replace partiots in rebalace iterator.", e);
+        }
+
+        IgniteHistoricalIterator historicalIterator = null;
+
+        try {
+            if (demandMsg.partitions().hasHistorical())
+                historicalIterator = grp.offheap().historicalIterator(demandMsg.partitions().historicalMap(), missing);
+
+            rebalanceIterator.replaceHistorical(historicalIterator);
+        }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Can not replace historical iterator.", e);
+        }
+
+        return rebalanceIterator;
+    }
+
     /**
      * Extracts entry info from row.
      * @param row Cache data row.
@@ -686,6 +706,8 @@ class GridDhtPartitionSupplier {
         long rebalanceId,
         Map<Integer, Long> initUpdateCntrs
     ) {
+        log.info("Save rebalance context: " + contextId + " id " + rebalanceId);
+
         synchronized (scMap) {
             assert scMap.get(contextId) == null;
 

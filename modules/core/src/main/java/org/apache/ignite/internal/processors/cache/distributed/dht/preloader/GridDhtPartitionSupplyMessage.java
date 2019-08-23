@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectMap;
@@ -485,6 +486,11 @@ public class GridDhtPartitionSupplyMessage extends GridCacheGroupIdMessage imple
         }
         else
             keysPerCache.put(cacheId, cnt0 + cnt);
+    }
+
+    /** */
+    public Set<Integer> parts() {
+        return infos().keySet();
     }
 
     /** {@inheritDoc} */

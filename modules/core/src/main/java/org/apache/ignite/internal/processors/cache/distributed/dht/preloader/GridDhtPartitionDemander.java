@@ -663,7 +663,7 @@ public class GridDhtPartitionDemander {
         final UUID nodeId,
         final GridDhtPartitionSupplyMessage supplyMsg
     ) {
-        AffinityTopologyVersion topVer = supplyMsg.topologyVersion();
+        AffinityTopologyVersion topVer = grp.topology().lastTopologyChangeVersion(); //supplyMsg.topologyVersion();
 
         final RebalanceFuture fut = rebalanceFut;
 
@@ -680,9 +680,9 @@ public class GridDhtPartitionDemander {
             }
 
             // Topology already changed (for the future that supply message based on).
-            if (topologyChanged(fut) || !fut.isActual(supplyMsg.rebalanceId())) {
-                if (log.isDebugEnabled())
-                    log.debug("Supply message ignored (topology changed) [" + demandRoutineInfo(topicId, nodeId, supplyMsg) + "]");
+            if (/*topologyChanged(fut) || */!fut.isActual(supplyMsg.rebalanceId())) {
+                if (log.isInfoEnabled())
+                    log.info("Supply message ignored (topology changed) [" + demandRoutineInfo(topicId, nodeId, supplyMsg) + "]");
 
                 return;
             }
@@ -1284,7 +1284,7 @@ public class GridDhtPartitionDemander {
          * @return true in case future created for specified {@code rebalanceId}, false in other case.
          */
         private boolean isActual(long rebalanceId) {
-            return this.rebalanceId == rebalanceId;
+            return this.rebalanceId >= rebalanceId;
         }
 
         /**
@@ -1309,13 +1309,13 @@ public class GridDhtPartitionDemander {
                     if (isDone())
                         return true;
 
-                    U.log(log, "Cancelled rebalancing from all nodes [grp=" + grp.cacheOrGroupName() +
-                        ", topVer=" + topologyVersion() + "]");
-
-                    if (!ctx.kernalContext().isStopping()) {
-                        for (UUID nodeId : remaining.keySet())
-                            cleanupRemoteContexts(nodeId);
-                    }
+//                    U.log(log, "Cancelled rebalancing from all nodes [grp=" + grp.cacheOrGroupName() +
+//                        ", topVer=" + topologyVersion() + "]");
+//
+//                    if (!ctx.kernalContext().isStopping()) {
+//                        for (UUID nodeId : remaining.keySet())
+//                            cleanupRemoteContexts(nodeId);
+//                    }
 
                     remaining.clear();
 

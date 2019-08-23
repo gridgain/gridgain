@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
@@ -51,19 +52,12 @@ public interface IgniteRebalanceIterator extends GridCloseableIterator<CacheData
     public void setPartitionMissing(int partId);
 
     /**
-     * Add iterator by partiotn specified.
-     * @param partId Partition ID.
-     * @param partIterator Partition iterartor.
-     */
-    public void addPartIterator(int partId, GridCloseableIterator<CacheDataRow> partIterator);
-
-    /**
-     * Close iterator for specific partition.
-     * @param partId Prtition ID.
+     * Replace all partitions which will be iterated.
+     * @param partIters Partition id with iterator by it.
      *
      * @throws IgniteCheckedException In case of error.
      */
-    public void closeForPart(int partId) throws IgniteCheckedException;
+    public void replaceFullPrtitions(Map<Integer, GridCloseableIterator<CacheDataRow>> partIters) throws IgniteCheckedException;
 
     /**
      * Partitions which will be full iterated.
