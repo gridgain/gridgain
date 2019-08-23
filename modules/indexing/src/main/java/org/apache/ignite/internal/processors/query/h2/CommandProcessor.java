@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
@@ -1036,7 +1039,9 @@ public class CommandProcessor {
         if (!F.isEmpty(scale))
             res.setFieldsScale(scale);
 
-        String valTypeName = QueryUtils.createTableCacheName(createTbl.schemaName(), createTbl.tableName());
+        String digest = createFieldsDigest(createTbl);
+        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName(), digest);
+
         String keyTypeName = QueryUtils.createTableKeyTypeName(valTypeName);
 
         if (!F.isEmpty(createTbl.keyTypeName()))
@@ -1105,6 +1110,45 @@ public class CommandProcessor {
      */
     public static boolean isCommandNoOp(Prepared cmd) {
         return cmd instanceof NoOperation;
+    }
+
+    /**
+     * Creates table digest as MD5 hash from sorted list of column names and types.
+     *
+     * @param tbl Create table command
+     * @return Digest from sorted list of column names and types.
+     */
+    private static String createFieldsDigest(GridSqlCreateTable tbl) {
+        try {
+            List<String> fieldDigests = new ArrayList<>(tbl.columns().size());
+
+            for (Map.Entry<String, GridSqlColumn> e : tbl.columns().entrySet()) {
+                String colName = e.getKey();
+                String colType = getTypeClassName(e.getValue());
+
+                String fd = "[" + colName + ":" + colType + "]";
+
+                fieldDigests.add(fd.toUpperCase());
+            }
+
+            Collections.sort(fieldDigests);
+
+            String fieldsDigest = String.join(", ", fieldDigests);
+
+            MessageDigest md = MessageDigest.getInstance("MD5");
+
+            md.update(fieldsDigest.getBytes());
+
+            StringBuilder sb = new StringBuilder();
+
+            for (byte md5Byte : md.digest())
+                sb.append(Integer.toString((md5Byte & 0xff) + 0x100, 16).substring(1));
+
+            return sb.toString();
+        }
+        catch (NoSuchAlgorithmException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /**
