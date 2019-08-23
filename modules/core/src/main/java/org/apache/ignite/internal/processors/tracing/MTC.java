@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
-import org.apache.ignite.IgniteSystemProperties;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRACING_ENABLED;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings.NOOP_CLOSED_SURROUNDINGS;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings.NOOP_UNCLOSED_SURROUNDINGS;
 
@@ -32,13 +30,6 @@ public class MTC {
     /***/
     private static final Span NOOP_SPAN = NoopSpan.INSTANCE;
 
-    private static final boolean TRACING_ENABLED = IgniteSystemProperties.getBoolean(IGNITE_TRACING_ENABLED, true);
-
-    private static final TraceSurroundings NOOP_SURROUNDINGS = new TraceSurroundings(null, false) {
-        @Override public void close() {
-        }
-    };
-
     /** Thread local span holder. */
     private static ThreadLocal<Span> span = ThreadLocal.withInitial(() -> NOOP_SPAN);
 
@@ -46,9 +37,6 @@ public class MTC {
      * @return Span which corresponded to current thread or null if it doesn't not set.
      */
     @NotNull public static Span span() {
-        if (!TRACING_ENABLED)
-            return NOOP_SPAN;
-
         return MTC.span.get();
     }
 
@@ -56,8 +44,7 @@ public class MTC {
      * @param log Annotation string to added to tracing.
      */
     public static void trace(String log) {
-        if (TRACING_ENABLED)
-            MTC.span.get().addLog(log);
+        MTC.span.get().addLog(log);
     }
 
     /**
@@ -65,14 +52,14 @@ public class MTC {
      * @param value Value of tag.
      */
     public static void traceTag(String tag, String value) {
-        if (TRACING_ENABLED)
-            MTC.span.get().addTag(tag, value);
+        MTC.span.get().addTag(tag, value);
     }
 
     /**
+     * @return {@code true} If tracing in current thread makes sense.
      */
-    public static boolean isTraceble() {
-        return TRACING_ENABLED && MTC.span.get() != NOOP_SPAN;
+    public static boolean isTraceable() {
+        return MTC.span.get() != NOOP_SPAN;
 
     }
 
@@ -84,9 +71,6 @@ public class MTC {
      * @return {@link TraceSurroundings} for manage span life cycle.
      */
     public static TraceSurroundings startChildSpan(Span startSpan) {
-        if (!TRACING_ENABLED)
-            return NOOP_SURROUNDINGS;
-
         Span oldSpan = span();
 
         MTC.span.set(startSpan != null ? startSpan : NOOP_SPAN);
@@ -102,9 +86,6 @@ public class MTC {
      * @return {@link TraceSurroundings} for manage span life cycle.
      */
     public static TraceSurroundings supportSpan(Span supportSpan) {
-        if (!TRACING_ENABLED)
-            return NOOP_SURROUNDINGS;
-
         Span oldSpan = span();
 
         if (supportSpan != null)
@@ -133,7 +114,7 @@ public class MTC {
          * @param oldSpan Old span for restoring after close.
          * @param endRequired {@code true} if current span should be ended at close moment.
          */
-        public TraceSurroundings(Span oldSpan, boolean endRequired) {
+        private TraceSurroundings(Span oldSpan, boolean endRequired) {
             this.oldSpan = oldSpan;
             this.endRequired = endRequired;
         }

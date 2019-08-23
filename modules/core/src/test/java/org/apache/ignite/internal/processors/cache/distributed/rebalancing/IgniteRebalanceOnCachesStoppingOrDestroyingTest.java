@@ -41,7 +41,6 @@ import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
-import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteRunnable;
@@ -76,7 +75,7 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
     private static final int REBALANCE_BATCH_SIZE = 50 * 1024;
 
     /** Number of loaded keys in each cache. */
-    private static final int KEYS_SIZE = 30000;
+    private static final int KEYS_SIZE = 3000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -213,37 +212,35 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
 
         ig0.cluster().active(true);
 
-//        stopGrid(1);
+        stopGrid(1);
 
         loadData(ig0);
 
-        System.out.println("TIME : " + GridNioServer.WRITE_TIME.get());
+        IgniteEx ig1 = startGrid(1);
 
-//        IgniteEx ig1 = startGrid(1);
-//
-//        RebalanceBlockingSPI commSpi = (RebalanceBlockingSPI)ig1.configuration().getCommunicationSpi();
-//
-//        // Complete all futures for groups that we don't need to wait.
-//        commSpi.resumeRebalanceFutures.forEach((k, v) -> {
-//            if (k != CU.cacheId(groupName))
-//                v.onDone();
-//        });
-//
-//        CountDownLatch latch = commSpi.suspendRebalanceInMiddleLatch.get(CU.cacheId(groupName));
-//
-//        assert latch != null;
-//
-//        // Await some middle point rebalance for group.
-//        latch.await();
-//
-//        testAction.apply(ig0);
-//
-//        // Resume rebalance after action performed.
-//        commSpi.resumeRebalanceFutures.get(CU.cacheId(groupName)).onDone();
-//
-//        awaitPartitionMapExchange(true, true, null, true);
-//
-//        assertNull(grid(1).context().failure().failureContext());
+        RebalanceBlockingSPI commSpi = (RebalanceBlockingSPI)ig1.configuration().getCommunicationSpi();
+
+        // Complete all futures for groups that we don't need to wait.
+        commSpi.resumeRebalanceFutures.forEach((k, v) -> {
+            if (k != CU.cacheId(groupName))
+                v.onDone();
+        });
+
+        CountDownLatch latch = commSpi.suspendRebalanceInMiddleLatch.get(CU.cacheId(groupName));
+
+        assert latch != null;
+
+        // Await some middle point rebalance for group.
+        latch.await();
+
+        testAction.apply(ig0);
+
+        // Resume rebalance after action performed.
+        commSpi.resumeRebalanceFutures.get(CU.cacheId(groupName)).onDone();
+
+        awaitPartitionMapExchange(true, true, null, true);
+
+        assertNull(grid(1).context().failure().failureContext());
     }
 
     /**

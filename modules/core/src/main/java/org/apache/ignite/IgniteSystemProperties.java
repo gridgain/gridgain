@@ -1330,11 +1330,6 @@ public final class IgniteSystemProperties {
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /**
-     * Enable tracing. Default: true
-     */
-    public static final String IGNITE_TRACING_ENABLED = "IGNITE_TRACING_ENABLED";
-
-    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

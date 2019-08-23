@@ -87,7 +87,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceble;
+import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
@@ -1281,7 +1281,7 @@ public class GridNioServer<T> {
             return S.toString(ByteBufferNioClientWorker.class, this, super.toString());
         }
     }
-    public static AtomicLong WRITE_TIME = new AtomicLong();
+
     /**
      * Client worker for direct mode.
      */
@@ -1572,7 +1572,7 @@ public class GridNioServer<T> {
             msg = (Message)req.message();
 
             try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if (isTraceble())
+                if (isTraceable())
                     traceTag(SpanTags.MESSAGE, traceName(msg));
 
                 assert msg != null;
@@ -1750,9 +1750,9 @@ public class GridNioServer<T> {
             msg = (Message)req.message();
 
             assert msg != null : req;
-            long start = System.nanoTime();
+
             try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if(isTraceble())
+                if (isTraceable())
                     traceTag(SpanTags.MESSAGE, traceName(msg));
 
                 if (writer != null)
@@ -1768,12 +1768,8 @@ public class GridNioServer<T> {
                 }
 
                 return finished;
-            }finally {
-                WRITE_TIME.addAndGet(System.nanoTime() - start);
             }
         }
-
-
 
         /** {@inheritDoc} */
         @Override public String toString() {
