@@ -33,6 +33,8 @@
     </Appenders>
 
     <Loggers>
+        <Logger name="org.eclipse.jetty" level="WARN"/>
+
         <Root level="debug">
             <AppenderRef ref="CONSOLE" level="info"/>
             <AppenderRef ref="ROLLING_FILE"/>

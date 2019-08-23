@@ -86,6 +86,37 @@ const SuccessStatus = {
     SECURITY_CHECK_FAILED: 3
 };
 
+/**
+ * Save in local storage ID of specified cluster.
+ *
+ * @param {ClusterStats} cluster Cluster to save it's ID in local storage.
+ */
+const saveToStorage = (cluster) => {
+    try {
+        if (cluster)
+            localStorage.clusterId = cluster.id;
+    }
+    catch (ignored) {
+        // No-op.
+    }
+};
+
+/**
+ * Get ID of last active cluster from local storage.
+ *
+ * @return {string} ID of last active cluster.
+ */
+const getLastActiveClusterId = () => {
+    try {
+        return localStorage.clusterId;
+    }
+    catch (ignored) {
+        localStorage.removeItem('clusterId');
+
+        return null;
+    }
+};
+
 class ConnectionState {
     constructor(cluster) {
         this.cluster = cluster;
@@ -99,25 +130,33 @@ class ConnectionState {
         return cluster;
     }
 
-    update(demo, count, clusters, hasDemo) {
+    update(demo, hasAgent, clusters, hasDemo) {
         this.clusters = clusters;
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
-        else if (_.isNil(this.cluster))
-            this.cluster = _.head(clusters);
+        else if (_.isNil(this.cluster)) {
+            const restoredCluster = _.find(clusters, {id: getLastActiveClusterId()});
+
+            this.cluster = restoredCluster || _.head(clusters);
+
+            saveToStorage(this.cluster);
+        }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
 
             if (updatedCluster)
                 _.merge(this.cluster, updatedCluster);
-            else
+            else {
                 this.cluster = _.head(clusters);
+
+                saveToStorage(this.cluster);
+            }
         }
 
         this.hasDemo = hasDemo;
 
-        if (count === 0)
+        if (!hasAgent)
             this.state = State.AGENT_DISCONNECTED;
         else if (demo || this.cluster)
             this.state = State.CONNECTED;
@@ -139,7 +178,7 @@ export default class AgentManager {
 
     clusterVersion: string;
 
-    connectionSbj = new BehaviorSubject(new ConnectionState(AgentManager.restoreActiveCluster()));
+    connectionSbj = new BehaviorSubject(new ConnectionState());
 
     clustersSecrets = new ClusterSecretsManager();
 
@@ -160,17 +199,6 @@ export default class AgentManager {
 
     removeClusterSwitchListener(func) {
         this.switchClusterListeners.delete(func);
-    }
-
-    static restoreActiveCluster() {
-        try {
-            return JSON.parse(localStorage.cluster);
-        }
-        catch (ignored) {
-            localStorage.removeItem('cluster');
-
-            return null;
-        }
     }
 
     constructor(
@@ -281,11 +309,11 @@ export default class AgentManager {
 
         switch (eventType) {
             case 'agent:status':
-                const {clusters, count, hasDemo} = payload;
+                const {clusters, hasAgent, hasDemo} = payload;
 
                 const conn = this.connectionSbj.getValue();
 
-                conn.update(this.isDemoMode(), count, clusters, hasDemo);
+                conn.update(this.isDemoMode(), hasAgent, clusters, hasDemo);
 
                 this.connectionSbj.next(conn);
 
@@ -311,15 +339,6 @@ export default class AgentManager {
             eventType,
             payload
         });
-    }
-
-    saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
-        try {
-            localStorage.cluster = JSON.stringify(cluster);
-        }
-        catch (ignored) {
-            // No-op.
-        }
     }
 
     updateCluster(newCluster) {
@@ -349,7 +368,7 @@ export default class AgentManager {
 
                 this.connectionSbj.next(state);
 
-                this.saveToStorage(cluster);
+                saveToStorage(cluster);
 
                 return Promise.resolve();
             });
