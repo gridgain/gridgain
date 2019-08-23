@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-#pragma warning disable 1587   // invalid XML comment
+package org.apache.ignite.util;
 
-/// <summary>
-/// Tracig API.
-/// </summary>
-namespace Apache.Ignite.Core.Tracing
-{
-    // No-op.
+/**
+ * It is recommended to extends from this class in case of creating a cluster
+ * for each test method. Otherwise, use
+ * {@link GridCommandHandlerClusterByClassAbstractTest}
+ * */
+public abstract class GridCommandHandlerClusterPerMethodAbstractTest extends GridCommandHandlerAbstractTest {
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
 }

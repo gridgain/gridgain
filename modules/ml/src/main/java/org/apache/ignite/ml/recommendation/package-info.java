@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-#pragma warning disable 1587   // invalid XML comment
-
-/// <summary>
-/// Metric exporter API.
-/// </summary>
-namespace Apache.Ignite.Core.Metric
-{
-    // No-op.
-}
+/**
+ * <!-- Package description. -->
+ * Contains recommendation system framework.
+ */
+package org.apache.ignite.ml.recommendation;
