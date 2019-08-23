@@ -33,7 +33,6 @@ import org.h2.value.Value;
  * View that contains information about all the sql tables in the cluster.
  */
 public class SqlSystemViewIndexes extends SqlAbstractLocalSystemView {
-
     /** H2 Indexing. */
     private final IgniteH2Indexing idx;
 

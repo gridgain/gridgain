@@ -55,13 +55,13 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
 
         String idxSql = "SELECT * FROM IGNITE.INDEXES ORDER BY TABLE_NAME, INDEX_NAME";
 
-        List<List<?>> clientNodeNodeIndexes = execSql(client, idxSql);
+        List<List<?>> clientNodeIndexes = execSql(client, idxSql);
 
-        Assert.assertTrue("Only affinity nodes know about their indexes", clientNodeNodeIndexes.isEmpty());
+        Assert.assertTrue("Only affinity nodes know about their indexes", clientNodeIndexes.isEmpty());
 
         List<List<?>> srvNodeIndexes = execSql(srv, idxSql);
 
-        String[][] expectedResults = {
+        String[][] expRes = {
             {"PUBLIC", "AFF_CACHE", "IDX_GEO_1", "\"GEOM\" ASC", "SPATIAL", "false", "false", "-825022849", "SQL_PUBLIC_AFF_CACHE", "-825022849", "SQL_PUBLIC_AFF_CACHE", "null"},
             {"PUBLIC", "AFF_CACHE", "__SCAN_", "null", "SCAN", "false", "false", "-825022849", "SQL_PUBLIC_AFF_CACHE", "-825022849", "SQL_PUBLIC_AFF_CACHE", "null"},
             {"PUBLIC", "AFF_CACHE", "_key_PK", "\"_KEY\" ASC", "BTREE", "true", "true", "-825022849", "SQL_PUBLIC_AFF_CACHE", "-825022849", "SQL_PUBLIC_AFF_CACHE", "5"},
@@ -71,7 +71,7 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
         for (int i = 0; i < srvNodeIndexes.size(); i++) {
             List<?> resRow = srvNodeIndexes.get(i);
 
-            String[] expRow = expectedResults[i];
+            String[] expRow = expRes[i];
 
             assertEquals(expRow.length, resRow.size());
 
