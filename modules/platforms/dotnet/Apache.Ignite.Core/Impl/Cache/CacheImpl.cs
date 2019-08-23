@@ -999,6 +999,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return DoOutOpAsync(CacheOp.InvokeAsync, writer =>
                     {
                         writer.WriteObjectDetached(key);
+                        writer.WriteLong(ptr);
                         writer.WriteObjectDetached(holder);
                     },
                     r =>
@@ -1080,6 +1081,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     writer =>
                     {
                         writer.WriteEnumerable(keys);
+                        writer.WriteLong(ptr);
                         writer.Write(holder);
                     },
                     reader =>
