@@ -1265,34 +1265,23 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public final void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException {
+    @Override public void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException {
         int p = store.partId();
 
-        boolean withPersistence = getClass() != IgniteCacheOffheapManagerImpl.class;
-
-        if (withPersistence)
-            ctx.database().checkpointReadLock();
+        partStoreLock.lock(p);
 
         try {
-            partStoreLock.lock(p);
+            boolean removed = partDataStores.remove(p, store);
 
-            try {
-                boolean removed = partDataStores.remove(p, store);
+            assert removed;
 
-                assert removed;
-
-                destroyCacheDataStore0(store);
-            }
-            finally {
-                partStoreLock.unlock(p);
-            }
+            destroyCacheDataStore0(store);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
         finally {
-            if (withPersistence)
-                ctx.database().checkpointReadUnlock();
+            partStoreLock.unlock(p);
         }
     }
 
