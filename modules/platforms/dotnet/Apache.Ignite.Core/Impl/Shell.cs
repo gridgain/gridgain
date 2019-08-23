@@ -36,33 +36,6 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Executes the command.
         /// </summary>
-        public static string Execute2(string file, string args) // TODO: Delete me
-        {
-            var escapedArgs = args.Replace("\"", "\\\"");
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = file,
-                    Arguments = args,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.Start();
-
-            var res = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            return res;
-        }
-
-        /// <summary>
-        /// Executes the command.
-        /// </summary>
         private static string Execute(string file, string args)
         {
             var escapedArgs = args.Replace("\"", "\\\"");

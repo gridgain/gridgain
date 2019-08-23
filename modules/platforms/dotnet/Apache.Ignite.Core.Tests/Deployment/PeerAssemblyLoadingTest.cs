@@ -140,9 +140,7 @@ namespace Apache.Ignite.Core.Tests.Deployment
         {
             TestDeployment(remoteCompute =>
             {
-                Console.WriteLine("Creating cache");
                 var cache = remoteCompute.ClusterGroup.Ignite.GetOrCreateCache<int, Address>("addr");
-                Console.WriteLine("Created cache");
                 cache[1] = new Address("street", 123);
 
                 // This will fail for <object, object> func, because cache operations are not p2p-enabled.
@@ -153,7 +151,6 @@ namespace Apache.Ignite.Core.Tests.Deployment
                     Key = 1
                 };
 
-                Console.WriteLine("Executing compute");
                 var res = remoteCompute.Call(func);
                 Assert.AreEqual("street", res.Street);
             });
@@ -210,27 +207,12 @@ namespace Apache.Ignite.Core.Tests.Deployment
                     : PeerAssemblyLoadingMode.Disabled
             };
 
-            Console.WriteLine("Starting second node");
             using (var ignite = Ignition.Start(cfg))
             {
-                Console.WriteLine("Second node started");
                 Assert.IsTrue(ignite.WaitTopology(2));
-                Console.WriteLine("Topology established");
 
                 for (var i = 0; i < 10; i++)
                 {
-                    Console.WriteLine("Test iteration {0}", i);
-                    Task.Factory.StartNew(() =>
-                    {
-                        Thread.Sleep(5000);
-                        var jh = Environment.GetEnvironmentVariable("JAVA_HOME");
-                        var jstack = Path.Combine(jh, "bin", "jstack.exe");
-                        Console.WriteLine("Taking java thread dump with " + jstack);
-                        Console.WriteLine("JSTACK for in-proc node: " +
-                                          Shell.Execute2(jstack, Process.GetCurrentProcess().Id.ToString()));
-                        Console.WriteLine("JSTACK for external node: " +
-                                          Shell.Execute2(jstack, proc.Id.ToString()));
-                    });
                     test(ignite);
                 }
             }
