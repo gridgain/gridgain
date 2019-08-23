@@ -314,6 +314,9 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
                     msgLog.debug("Near update fut, sent request [futId=" + req.futureId() +
                         ", node=" + req.nodeId() + ']');
                 }
+
+                U.debug(log, "Near update fut, sent request [futId=" + req.futureId() +
+                    ", node=" + req.nodeId() + ']');
             }
             catch (IgniteCheckedException e) {
                 if (msgLog.isDebugEnabled()) {

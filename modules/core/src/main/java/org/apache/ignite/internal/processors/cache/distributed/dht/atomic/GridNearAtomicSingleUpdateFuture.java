@@ -47,6 +47,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -403,6 +404,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
     @Override protected void mapOnTopology() {
         AffinityTopologyVersion topVer;
 
+        U.debug(log, "Map on topology: " + this);
+
         if (cache.topology().stopping()) {
             completeFuture(
                 null,
@@ -429,6 +432,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         }
         else {
             assert !topLocked : this;
+
+            U.debug(log, "Will wait for future completion: " + fut);
 
             fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                 @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> t) {
@@ -481,6 +486,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
 
             return;
         }
+
+        U.debug(log, "Mapped update future: " + this + ", reqState=" + reqState0);
 
         // Optimize mapping for single key.
         sendSingleRequest(reqState0.req.nodeId(), reqState0.req);

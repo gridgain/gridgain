@@ -1134,6 +1134,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         validateCacheKey(key);
 
+        U.debug("update0: " + key);
+
         ctx.checkSecurity(SecurityPermission.CACHE_PUT);
 
         final GridNearAtomicAbstractUpdateFuture updateFut =
