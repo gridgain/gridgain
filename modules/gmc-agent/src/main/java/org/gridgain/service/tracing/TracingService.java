@@ -50,7 +50,7 @@ public class TracingService implements AutoCloseable {
     private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeTraces;
 
     /** Worker. */
-    private final RetryableSender<Span> worker;
+    private final RetryableSender<Span> snd;
 
     /**
      * @param ctx Context.
@@ -60,7 +60,7 @@ public class TracingService implements AutoCloseable {
         this.ctx = ctx;
         this.mgr = mgr;
         this.log = ctx.log(TracingService.class);
-        this.worker = createSenderWorker();
+        this.snd = createSenderWorker();
 
         ctx.grid().message().localListen(TRACING_TOPIC, lsnr);
     }
@@ -68,7 +68,7 @@ public class TracingService implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         ctx.grid().message().stopLocalListen(TRACING_TOPIC, lsnr);
-        U.closeQuiet(worker);
+        U.closeQuiet(snd);
     }
 
     /**
@@ -76,7 +76,7 @@ public class TracingService implements AutoCloseable {
      * @param spans Spans.
      */
     boolean onNodeTraces(UUID uuid, Object spans) {
-        worker.send((List<Span>) spans);
+        snd.send((List<Span>) spans);
 
         return true;
     }

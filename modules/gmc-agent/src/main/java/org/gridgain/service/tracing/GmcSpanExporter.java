@@ -19,7 +19,6 @@ package org.gridgain.service.tracing;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import io.opencensus.common.Duration;
 import io.opencensus.common.Function;
@@ -68,7 +67,7 @@ public class GmcSpanExporter implements AutoCloseable {
     private OpenCensusTraceExporter exporter;
 
     /** Worker. */
-    private RetryableSender<Span> worker;
+    private RetryableSender<Span> snd;
 
     /**
      * @param ctx Context.
@@ -79,7 +78,7 @@ public class GmcSpanExporter implements AutoCloseable {
 
         if (ctx.config().getTracingSpi() != null) {
             try {
-                worker = createSenderWorker();
+                snd = createSenderWorker();
                 exporter = new OpenCensusTraceExporter(getTraceHandler());
                 exporter.start(ctx.igniteInstanceName());
             }
@@ -92,7 +91,7 @@ public class GmcSpanExporter implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         if (exporter != null) {
-            U.closeQuiet(worker);
+            U.closeQuiet(snd);
             exporter.stop();
         }
     }
@@ -108,7 +107,7 @@ public class GmcSpanExporter implements AutoCloseable {
                         .map(GmcSpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
-                worker.send(spans);
+                snd.send(spans);
             }
         };
     }
