@@ -272,7 +272,7 @@ namespace Apache.Ignite.Core.Tests.Deployment
             {
                 SpringConfigUrl = @"config\log\custom-log.xml",
                 PeerAssemblyLoadingMode = PeerAssemblyLoadingMode.CurrentAppDomain
-            }
+            };
 
             return cfg;
         }
