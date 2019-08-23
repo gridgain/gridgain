@@ -139,7 +139,6 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -571,7 +570,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      * For more information about the problem refer to
      * <a href="https://issues.apache.org/jira/browse/IGNITE-8857">IGNITE-8857</a>.
      */
-    @Test @Ignore
+    @Test
     public void testNodeAttributesNotReferencingZookeeperClusterNode() throws Exception {
         userAttrs = new HashMap<>();
         userAttrs.put("testAttr", "testAttr");
@@ -599,7 +598,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testZkRootNotExists() throws Exception {
         zkRootPath = "/a/b/c";
 
@@ -619,7 +618,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testMetadataUpdate() throws Exception {
         startGrid(0);
 
@@ -636,7 +635,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNodeAddresses() throws Exception {
         startGridsMultiThreaded(3);
 
@@ -662,7 +661,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testSetConsistentId() throws Exception {
         startGridsMultiThreaded(3);
 
@@ -688,7 +687,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultConsistentId() throws Exception {
         dfltConsistenId = true;
 
@@ -713,7 +712,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception if failed.
      */
-    @Test @Ignore
+    @Test
     public void testMbean() throws Exception {
         startGrids(3);
 
@@ -746,7 +745,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testClientNodesStatus() throws Exception {
         startGrid(0);
 
@@ -799,7 +798,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLocalAuthenticationFails() throws Exception {
         auth = ZkTestNodeAuthenticator.factory(getTestIgniteInstanceName(0));
 
@@ -825,7 +824,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testAuthentication() throws Exception {
         auth = ZkTestNodeAuthenticator.factory(getTestIgniteInstanceName(1),
             getTestIgniteInstanceName(5));
@@ -934,7 +933,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStopNode_1() throws Exception {
         startGrids(5);
 
@@ -952,7 +951,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCustomEventsSimple1_SingleNode() throws Exception {
         ackEveryEventSystemProperty();
 
@@ -966,7 +965,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCustomEventsSimple1_5_Nodes() throws Exception {
         ackEveryEventSystemProperty();
 
@@ -982,7 +981,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCustomEvents_FastStopProcess_1() throws Exception {
         customEvents_FastStopProcess(1, 0);
     }
@@ -990,7 +989,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCustomEvents_FastStopProcess_2() throws Exception {
         customEvents_FastStopProcess(5, 5);
     }
@@ -1165,7 +1164,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @see <a href="https://issues.apache.org/jira/browse/IGNITE-9040">IGNITE-9040</a> ticket for more context of the test.
      */
-    @Test @Ignore
+    @Test
     public void testStopNodeOnSegmentaion() throws Exception {
         try {
             System.setProperty("IGNITE_WAL_LOG_TX_RECORDS", "true");
@@ -1267,7 +1266,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testSegmentation1() throws Exception {
         sesTimeout = 2000;
         testSockNio = true;
@@ -1305,7 +1304,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testSegmentation2() throws Exception {
         sesTimeout = 2000;
 
@@ -1336,7 +1335,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testSegmentation3() throws Exception {
         sesTimeout = 5000;
 
@@ -1377,7 +1376,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testQuorumRestore() throws Exception {
         sesTimeout = 60_000;
 
@@ -1415,7 +1414,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore1() throws Exception {
         testSockNio = true;
 
@@ -1431,7 +1430,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore2() throws Exception {
         testSockNio = true;
 
@@ -1447,7 +1446,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_NonCoordinator1() throws Exception {
         connectionRestore_NonCoordinator(false);
     }
@@ -1455,7 +1454,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_NonCoordinator2() throws Exception {
         connectionRestore_NonCoordinator(true);
     }
@@ -1515,7 +1514,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_Coordinator1() throws Exception {
         connectionRestore_Coordinator(1, 1, 0);
     }
@@ -1523,7 +1522,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_Coordinator1_1() throws Exception {
         connectionRestore_Coordinator(1, 1, 1);
     }
@@ -1531,7 +1530,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_Coordinator2() throws Exception {
         connectionRestore_Coordinator(1, 3, 0);
     }
@@ -1539,7 +1538,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_Coordinator3() throws Exception {
         connectionRestore_Coordinator(3, 3, 0);
     }
@@ -1547,7 +1546,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore_Coordinator4() throws Exception {
         connectionRestore_Coordinator(3, 3, 1);
     }
@@ -1711,7 +1710,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConcurrentStartWithClient() throws Exception {
         final int NODES = 20;
 
@@ -1747,7 +1746,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConcurrentStart() throws Exception {
         final int NODES = 20;
 
@@ -1783,7 +1782,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConcurrentStartStop1() throws Exception {
        concurrentStartStop(1);
     }
@@ -1791,7 +1790,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConcurrentStartStop2() throws Exception {
         concurrentStartStop(5);
     }
@@ -1799,7 +1798,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConcurrentStartStop2_EventsThrottle() throws Exception {
         System.setProperty(ZookeeperDiscoveryImpl.IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS, "1");
 
@@ -1863,7 +1862,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testClusterRestart() throws Exception {
         startGridsMultiThreaded(3, false);
 
@@ -1879,7 +1878,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionRestore4() throws Exception {
         testSockNio = true;
 
@@ -1895,7 +1894,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop_1_Node() throws Exception {
         startGrid(0);
 
@@ -1907,7 +1906,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testRestarts_2_Nodes() throws Exception {
         startGrid(0);
 
@@ -1925,7 +1924,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop_2_Nodes_WithCache() throws Exception {
         startGrids(2);
 
@@ -1947,7 +1946,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop_2_Nodes() throws Exception {
         ackEveryEventSystemProperty();
 
@@ -1970,7 +1969,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testMultipleClusters() throws Exception {
         Ignite c0 = startGrid(0);
 
@@ -2025,7 +2024,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop1() throws Exception {
         ackEveryEventSystemProperty();
 
@@ -2056,7 +2055,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop3() throws Exception {
         startGrids(4);
 
@@ -2072,7 +2071,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop4() throws Exception {
         startGrids(6);
 
@@ -2101,7 +2100,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStop2() throws Exception {
         startGridsMultiThreaded(10, false);
 
@@ -2121,7 +2120,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartStopWithClients() throws Exception {
         final int SRVS = 3;
 
@@ -2153,7 +2152,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testTopologyChangeMultithreaded() throws Exception {
         topologyChangeWithRestarts(false, false);
     }
@@ -2161,7 +2160,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testTopologyChangeMultithreaded_RestartZk() throws Exception {
         try {
             topologyChangeWithRestarts(true, false);
@@ -2176,7 +2175,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testTopologyChangeMultithreaded_RestartZk_CloseClients() throws Exception {
         try {
             topologyChangeWithRestarts(true, true);
@@ -2292,7 +2291,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testRandomTopologyChanges() throws Exception {
         randomTopologyChanges(false, false);
     }
@@ -2368,7 +2367,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testRandomTopologyChanges_RestartZk() throws Exception {
         randomTopologyChanges(true, false);
     }
@@ -2376,7 +2375,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testRandomTopologyChanges_CloseClients() throws Exception {
         randomTopologyChanges(false, true);
     }
@@ -2384,7 +2383,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDeployService1() throws Exception {
         startGridsMultiThreaded(3);
 
@@ -2394,7 +2393,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDeployService2() throws Exception {
         clientMode(false);
 
@@ -2410,7 +2409,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDeployService3() throws Exception {
         IgniteInternalFuture fut = GridTestUtils.runAsync(new Callable() {
             @Override public Object call() throws Exception {
@@ -2436,7 +2435,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLargeUserAttribute1() throws Exception {
         initLargeAttribute();
 
@@ -2458,7 +2457,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLargeUserAttribute2() throws Exception {
         startGrid(0);
 
@@ -2477,7 +2476,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLargeUserAttribute3() throws Exception {
         Set<Integer> idxs = ThreadLocalRandom.current()
             .ints(0, 10)
@@ -2519,7 +2518,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLargeCustomEvent() throws Exception {
         Ignite srv0 = startGrid(0);
 
@@ -2551,7 +2550,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testClientReconnectSessionExpire1_1() throws Exception {
         clientReconnectSessionExpire(false);
     }
@@ -2559,7 +2558,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testClientReconnectSessionExpire1_2() throws Exception {
         clientReconnectSessionExpire(true);
     }
@@ -2589,7 +2588,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testForceClientReconnect() throws Exception {
         final int SRVS = 3;
 
@@ -2615,7 +2614,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testForcibleClientFail() throws Exception {
         final int SRVS = 3;
 
@@ -2641,7 +2640,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDuplicatedNodeId() throws Exception {
         UUID nodeId0 = nodeId = UUID.randomUUID();
 
@@ -2684,7 +2683,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testPing() throws Exception {
         sesTimeout = 5000;
 
@@ -2726,7 +2725,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testWithPersistence1() throws Exception {
         startWithPersistence(false);
     }
@@ -2734,7 +2733,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testWithPersistence2() throws Exception {
         startWithPersistence(true);
     }
@@ -2742,7 +2741,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNoOpCommunicationFailureResolve_1() throws Exception {
         communicationFailureResolve_Simple(2);
     }
@@ -2750,7 +2749,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNoOpCommunicationErrorResolve_2() throws Exception {
         communicationFailureResolve_Simple(10);
     }
@@ -2794,7 +2793,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNoOpCommunicationErrorResolve_3() throws Exception {
         sesTimeout = 2000;
         commFailureRslvr = NoOpCommunicationFailureResolver.FACTORY;
@@ -2841,7 +2840,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNoOpCommunicationErrorResolve_4() throws Exception {
         testCommSpi = true;
 
@@ -2884,7 +2883,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNoOpCommunicationErrorResolve_5() throws Exception {
         testCommSpi = true;
 
@@ -2946,7 +2945,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillNode_1() throws Exception {
         communicationFailureResolve_KillNodes(2, Collections.singleton(2L));
     }
@@ -2954,7 +2953,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillNode_2() throws Exception {
         communicationFailureResolve_KillNodes(3, Collections.singleton(2L));
     }
@@ -2962,7 +2961,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillNode_3() throws Exception {
         communicationFailureResolve_KillNodes(10, Arrays.asList(2L, 4L, 6L));
     }
@@ -2970,7 +2969,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillCoordinator_1() throws Exception {
         communicationFailureResolve_KillNodes(2, Collections.singleton(1L));
     }
@@ -2978,7 +2977,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillCoordinator_2() throws Exception {
         communicationFailureResolve_KillNodes(3, Collections.singleton(1L));
     }
@@ -2986,7 +2985,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillCoordinator_3() throws Exception {
         communicationFailureResolve_KillNodes(10, Arrays.asList(1L, 4L, 6L));
     }
@@ -2994,7 +2993,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationErrorResolve_KillCoordinator_4() throws Exception {
         communicationFailureResolve_KillNodes(10, Arrays.asList(1L, 2L, 3L));
     }
@@ -3054,7 +3053,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_KillCoordinator_5() throws Exception {
         sesTimeout = 2000;
 
@@ -3099,7 +3098,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_KillRandom() throws Exception {
         sesTimeout = 2000;
 
@@ -3171,7 +3170,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver1() throws Exception {
         testCommSpi = true;
         sesTimeout = 5000;
@@ -3198,7 +3197,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver2() throws Exception {
         testCommSpi = true;
         sesTimeout = 5000;
@@ -3225,7 +3224,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver3() throws Exception {
         defaultCommunicationFailureResolver_BreakCommunication(3, 1);
     }
@@ -3233,7 +3232,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver4() throws Exception {
         defaultCommunicationFailureResolver_BreakCommunication(3, 0);
     }
@@ -3241,7 +3240,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver5() throws Exception {
         defaultCommunicationFailureResolver_BreakCommunication(10, 1, 3, 6);
     }
@@ -3254,7 +3253,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDefaultCommunicationFailureResolver6() throws Exception {
         testCommSpi = true;
         sesTimeout = 5000;
@@ -3315,7 +3314,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_CachesInfo1() throws Exception {
         testCommSpi = true;
         sesTimeout = 5000;
@@ -3409,7 +3408,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_CachesInfo2() throws Exception {
         testCommSpi = true;
         sesTimeout = 5000;
@@ -3506,7 +3505,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @SuppressWarnings("unchecked")
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_ConcurrentDiscoveyEvents() throws Exception {
         sesTimeout = 5000;
 
@@ -3618,7 +3617,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testCommunicationFailureResolve_ConcurrentMultinode() throws Exception {
         sesTimeout = 5000;
 
@@ -3656,7 +3655,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testClientReconnects() throws Exception {
         blockCommSpi = true;
 
@@ -3691,7 +3690,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testConnectionCheck() throws Exception {
        final int NODES = 5;
 
@@ -3714,7 +3713,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testReconnectDisabled_ConnectionLost() throws Exception {
         clientReconnectDisabled = true;
 
@@ -3756,7 +3755,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testServersLeft_FailOnTimeout() throws Exception {
         startGrid(0);
 
@@ -3794,7 +3793,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      *
      */
-    @Test @Ignore
+    @Test
     public void testStartNoServers_FailOnTimeout() {
         joinTimeout = 3000;
 
@@ -3821,7 +3820,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartNoServer_WaitForServers1() throws Exception {
         startNoServer_WaitForServers(0);
     }
@@ -3829,7 +3828,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartNoServer_WaitForServers2() throws Exception {
         startNoServer_WaitForServers(10_000);
     }
@@ -3867,7 +3866,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDisconnectOnServersLeft_1() throws Exception {
         disconnectOnServersLeft(1, 1);
     }
@@ -3875,7 +3874,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDisconnectOnServersLeft_2() throws Exception {
         disconnectOnServersLeft(5, 1);
     }
@@ -3883,7 +3882,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDisconnectOnServersLeft_3() throws Exception {
         disconnectOnServersLeft(1, 10);
     }
@@ -3891,7 +3890,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDisconnectOnServersLeft_4() throws Exception {
         disconnectOnServersLeft(5, 10);
     }
@@ -3899,7 +3898,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testDisconnectOnServersLeft_5() throws Exception {
         joinTimeout = 10_000;
 
@@ -3980,7 +3979,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testReconnectServersRestart_1() throws Exception {
         reconnectServersRestart(1);
     }
@@ -3988,7 +3987,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testReconnectServersRestart_2() throws Exception {
         reconnectServersRestart(3);
     }
@@ -4001,7 +4000,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testSimpleSplitBrain() throws Exception {
         failCommSpi = true;
 
@@ -4052,7 +4051,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNotActualSplitBrain() throws Exception {
         failCommSpi = true;
 
@@ -4100,7 +4099,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testAlmostSplitBrain() throws Exception {
         failCommSpi = true;
 
@@ -4441,7 +4440,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testReconnectServersRestart_3() throws Exception {
         startGrid(0);
 
@@ -4480,7 +4479,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testReconnectServersRestart_4() throws Exception {
         startGrid(0);
 
@@ -4523,7 +4522,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStartNoZk() throws Exception {
         stopZkCluster();
 
