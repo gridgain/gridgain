@@ -101,12 +101,6 @@ public interface GridCachePreloader {
     public void preloadPredicate(IgnitePredicate<GridCacheEntryInfo> p);
 
     /**
-     * @return Preload predicate. If not {@code null}, will evaluate each preloaded entry during
-     *      send and receive, and if predicate evaluates to {@code false}, entry will be skipped.
-     */
-    public IgnitePredicate<GridCacheEntryInfo> preloadPredicate();
-
-    /**
      * @return Future which will complete when preloader is safe to use.
      */
     public IgniteInternalFuture<Object> startFuture();

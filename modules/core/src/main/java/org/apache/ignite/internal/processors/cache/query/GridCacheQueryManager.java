@@ -82,7 +82,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheA
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.datastructures.GridSetQueryPredicate;
@@ -165,8 +164,10 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
     private static final String TOPIC_PREFIX = "QUERY";
     /** Maximum number of query detail metrics to evict at once. */
     private static final int QRY_DETAIL_METRICS_EVICTION_LIMIT = 10_000;
+
     /** Support 'not null' field constraint since v 2.3.0. */
     private static final IgniteProductVersion NOT_NULLS_SUPPORT_VER = IgniteProductVersion.fromString("2.3.0");
+
     /** Comparator for priority queue with query detail metrics with priority to new metrics. */
     private static final Comparator<GridCacheQueryDetailMetricsAdapter> QRY_DETAIL_METRICS_PRIORITY_NEW_CMP =
         new Comparator<GridCacheQueryDetailMetricsAdapter>() {
@@ -174,6 +175,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
                 return Long.compare(m1.lastStartTime(), m2.lastStartTime());
             }
         };
+
     /** Comparator for priority queue with query detail metrics with priority to old metrics. */
     private static final Comparator<GridCacheQueryDetailMetricsAdapter> QRY_DETAIL_METRICS_PRIORITY_OLD_CMP =
         new Comparator<GridCacheQueryDetailMetricsAdapter>() {
@@ -181,19 +183,24 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
                 return Long.compare(m2.lastStartTime(), m1.lastStartTime());
             }
         };
+
     /** Function to merge query detail metrics. */
     private static final BiFunction<
         GridCacheQueryDetailMetricsAdapter,
         GridCacheQueryDetailMetricsAdapter,
         GridCacheQueryDetailMetricsAdapter>
         QRY_DETAIL_METRICS_MERGE_FX = GridCacheQueryDetailMetricsAdapter::aggregate;
+
     /** */
     private final boolean isIndexingSpiAllowsBinary = !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_UNWRAP_BINARY_FOR_INDEXING_SPI);
+
     /** */
     private final ConcurrentMap<UUID, RequestFutureMap> qryIters = new ConcurrentHashMap<>();
+
     /** */
     private final ConcurrentMap<UUID, Map<Long, GridFutureAdapter<FieldsResult>>> fieldsQryRes =
         new ConcurrentHashMap<>();
+
     /** */
     private final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
@@ -216,24 +223,34 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
 
     /** Event listener. */
     private GridLocalEventListener lsnr;
+
     /** */
     private GridQueryProcessor qryProc;
+
     /** */
     private String cacheName;
+
     /** */
     private int maxIterCnt;
+
     /** */
     private volatile GridCacheQueryMetricsAdapter metrics;
+
     /** */
     private int detailMetricsSz;
+
     /** */
     private ConcurrentHashMap<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> detailMetrics;
+
     /** */
     private volatile ConcurrentMap<Object, CachedResult<?>> qryResCache = new ConcurrentHashMap<>();
+
     /** */
     private boolean enabled;
+
     /** */
     private boolean qryProcEnabled;
+
     /** */
     private AffinityTopologyVersion qryTopVer;
 
@@ -276,10 +293,10 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
                 for (GridCacheDistributedQueryFuture fut : futs.values())
                     fut.onNodeLeft(nodeId);
 
-                Map<Long, GridFutureAdapter<QueryResult<K, V>>> futs1 = GridCacheQueryManager.this.qryIters.remove(nodeId);
+                Map<Long, GridFutureAdapter<QueryResult<K, V>>> futs = qryIters.remove(nodeId);
 
-                if (futs1 != null) {
-                    for (Map.Entry<Long, GridFutureAdapter<QueryResult<K, V>>> entry : futs1.entrySet()) {
+                if (futs != null) {
+                    for (Map.Entry<Long, GridFutureAdapter<QueryResult<K, V>>> entry : futs.entrySet()) {
                         final Object rcpt = recipient(nodeId, entry.getKey());
 
                         entry.getValue().listen(new CIX1<IgniteInternalFuture<QueryResult<K, V>>>() {
@@ -291,7 +308,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
                     }
                 }
 
-                Map<Long, GridFutureAdapter<FieldsResult>> fieldsFuts = GridCacheQueryManager.this.fieldsQryRes.remove(nodeId);
+                Map<Long, GridFutureAdapter<FieldsResult>> fieldsFuts = fieldsQryRes.remove(nodeId);
 
                 if (fieldsFuts != null) {
                     for (Map.Entry<Long, GridFutureAdapter<FieldsResult>> entry : fieldsFuts.entrySet()) {
@@ -321,14 +338,12 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
     @Override protected void onKernalStop0(boolean cancel) {
         busyLock.block();
 
-        cctx.events().removeListener(this.lsnr);
+        cctx.events().removeListener(lsnr);
 
         if (cancel)
             onCancelAtStop();
         else
             onWaitAtStop();
-
-        cctx.events().removeListener(lsnr);
     }
 
     /** {@inheritDoc} */
@@ -691,7 +706,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
     /**
      * @param loc Local query or not.
      * @param qryInfo Query info.
-     * @param metaData Meta data.
+     * @param metadata Meta data.
      * @param entities Indexing entities.
      * @param data Data.
      * @param finished Last page or not.
@@ -3709,7 +3724,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
 
                 // Filter backups for SCAN queries, if it isn't partition scan.
                 // Other types are filtered in indexing manager.
-                if (!cctx.isReplicated() && /*qry.partition()*/this.locPart == null && !incBackups &&
+                if (!cctx.isReplicated() && /*qry.partition()*/locPart == null && !incBackups &&
                     !cctx.affinity().primaryByKey(cctx.localNode(), key, topVer)) {
                     if (log.isDebugEnabled())
                         log.debug("Ignoring backup element [row=" + row +

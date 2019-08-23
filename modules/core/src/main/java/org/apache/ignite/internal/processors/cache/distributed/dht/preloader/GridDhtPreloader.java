@@ -44,12 +44,15 @@ import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_THROTTLE;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_TIMEOUT;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -610,7 +613,7 @@ public class GridDhtPreloader implements GridCachePreloader {
 
             final GridDhtPreloader preloader = this;
 
-            ctx.kernalContext().closure().runLocalSafe((GridPlainRunnable)() -> msgToProc.forEach(
+            ctx.kernalContext().closure().runLocalSafe(() -> msgToProc.forEach(
                     m -> preloader.handleSupplyMessage(F.nonNull(m.get1()), m.get2(), m.get3())
             ), GridIoPolicy.SYSTEM_POOL);
 
@@ -619,6 +622,30 @@ public class GridDhtPreloader implements GridCachePreloader {
         finally {
             demandLock.writeLock().unlock();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public long timeout() {
+        return grp.shared().gridConfig().getRebalanceTimeout() == DFLT_REBALANCE_TIMEOUT ?
+                grp.config().getRebalanceTimeout() : grp.shared().gridConfig().getRebalanceTimeout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long batchesPrefetchCount() {
+        return grp.shared().gridConfig().getRebalanceBatchesPrefetchCount() == DFLT_REBALANCE_BATCHES_PREFETCH_COUNT ?
+                grp.config().getRebalanceBatchesPrefetchCount() : grp.shared().gridConfig().getRebalanceBatchesPrefetchCount();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long throttle() {
+        return grp.shared().gridConfig().getRebalanceThrottle() == DFLT_REBALANCE_THROTTLE ?
+                grp.config().getRebalanceThrottle() : grp.shared().gridConfig().getRebalanceThrottle();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int batchSize() {
+        return grp.shared().gridConfig().getRebalanceBatchSize() == DFLT_REBALANCE_BATCH_SIZE ?
+                grp.config().getRebalanceBatchSize() : grp.shared().gridConfig().getRebalanceBatchSize();
     }
 
     /** {@inheritDoc} */

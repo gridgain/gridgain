@@ -57,7 +57,12 @@ import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.internal.*;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.IgniteTransactionsEx;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
@@ -86,7 +91,12 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
 import org.apache.ignite.internal.processors.cache.mvcc.DeadlockDetectionManager;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager;
-import org.apache.ignite.internal.processors.cache.persistence.*;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointFuture;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
+import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -159,17 +169,9 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.management.MBeanServer;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -1166,7 +1168,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CacheEvictionManager evictMgr = (nearEnabled || cfg.isOnheapCacheEnabled())
             ? new GridCacheEvictionManager()
             : new CacheOffheapEvictionManager();
-        GridCacheQueryManager<Object, Object> qryMgr = new GridCacheQueryManager();
+        GridCacheQueryManager qryMgr = new GridCacheQueryManager();
         CacheContinuousQueryManager contQryMgr = new CacheContinuousQueryManager();
         CacheDataStructuresManager dataStructuresMgr = new CacheDataStructuresManager();
         GridCacheTtlManager ttlMgr = new GridCacheTtlManager();
@@ -1884,9 +1886,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             GridCacheContext cacheCtx = createCacheContext(ccfg,
                 grp,
                 desc,
-            exchTopVer,
-            cacheObjCtx,
-            affNode,
+                exchTopVer,
+                cacheObjCtx,
+                affNode,
                 disabledAfterStart,
                 false
             );
@@ -2167,8 +2169,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cacheCtx = createCacheContext(cfg,
                 grpCtx,
                 desc,
-            AffinityTopologyVersion.NONE,
-            cacheObjCtx,
+                AffinityTopologyVersion.NONE,
+                cacheObjCtx,
                 true,
                 false,
                 true
@@ -4613,7 +4615,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /**
      * Unregisters MBean for cache components.
-     *  @param o Cache component.
+     *
+     * @param o Cache component.
      * @param cacheName Cache name.
      */
     private void unregisterMbean(Object o, @Nullable String cacheName) {

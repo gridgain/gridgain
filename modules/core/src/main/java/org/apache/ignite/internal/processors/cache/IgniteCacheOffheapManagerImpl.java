@@ -353,8 +353,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         int cacheId,
         boolean primary,
         boolean backup,
-        AffinityTopologyVersion topVer
-    ) {
+        AffinityTopologyVersion topVer) {
         long cnt = 0;
 
         Iterator<CacheDataStore> it = cacheData(primary, backup, topVer);
@@ -379,13 +378,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @return Data stores iterator.
      */
     private Iterator<CacheDataStore> cacheData(boolean primary, boolean backup, AffinityTopologyVersion topVer) {
-        return F.iterator(grp.topology().currentLocalPartitions(),
-            GridDhtLocalPartition::dataStore, true, partitionFilter(primary, backup, topVer));
-    }
-
-    /** */
-    private IgnitePredicate<GridDhtLocalPartition> partitionFilter(boolean primary, boolean backup,
-        AffinityTopologyVersion topVer) {
         assert primary || backup;
 
         final Iterator<GridDhtLocalPartition> it = grp.topology().currentLocalPartitions().iterator();
@@ -1094,7 +1086,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return null;
         }
 
-        final GridCursor<? extends CacheDataRow> cur = loc.dataStore().cursor(CacheDataRowAdapter.RowData.FULL_WITH_HINTS);
+        CacheDataStore data = partitionData(part);
+
+        final GridCursor<? extends CacheDataRow> cur = data.cursor(CacheDataRowAdapter.RowData.FULL_WITH_HINTS);
 
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -2018,7 +2012,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 assert !old;
 
-                GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
+                GridCacheQueryManager qryMgr = cctx.queries();
 
                 if (qryMgr.enabled())
                     qryMgr.store(updateRow, null, true);
@@ -2305,7 +2299,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             int res = 0;
 
-            GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
+            GridCacheQueryManager qryMgr = cctx.queries();
 
             for (int i = 0; i < cleanupRows.size(); i++) {
                 MvccLinkAwareSearchRow cleanupRow = cleanupRows.get(i);
@@ -2478,7 +2472,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     assert !old;
 
-                    GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
+                    GridCacheQueryManager qryMgr = cctx.queries();
 
                     if (qryMgr.enabled())
                         qryMgr.store(updateRow, null, true);
@@ -2502,7 +2496,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow == null)
                 incrementSize(cctx.cacheId());
 
-            GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
+            GridCacheQueryManager qryMgr = cctx.queries();
 
             if (qryMgr.enabled())
                 qryMgr.store(newRow, oldRow, true);
@@ -2577,7 +2571,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 decrementSize(cctx.cacheId());
             }
 
-            GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
+            GridCacheQueryManager qryMgr = cctx.queries();
 
             if (qryMgr.enabled())
                 qryMgr.remove(key, oldRow);
