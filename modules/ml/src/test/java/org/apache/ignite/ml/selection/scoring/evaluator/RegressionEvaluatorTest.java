@@ -112,7 +112,7 @@ public class RegressionEvaluatorTest extends TrainerTest {
 
         double score = Evaluator.evaluate(new LocalDatasetBuilder<>(data, split.getTrainFilter(), parts),
             mdl, vectorizer, new Rss()
-        ).get();
+        ).getSignle();
 
         assertEquals(4800164.444444457, score, 1e-4);
     }

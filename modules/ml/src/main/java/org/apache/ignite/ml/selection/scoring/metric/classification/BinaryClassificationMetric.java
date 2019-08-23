@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.ml.selection.scoring.metric.classification;
 
+import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.BinaryClassificationEvaluationContext;
 import org.apache.ignite.ml.selection.scoring.metric.Metric;
@@ -22,7 +23,7 @@ import org.apache.ignite.ml.selection.scoring.metric.Metric;
 /**
  * Common abstract class for all binary classification metrics.
  */
-public abstract class BinaryClassificationMetric<L> implements Metric<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
+public abstract class BinaryClassificationMetric<L extends Serializable> implements Metric<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = 7549975086331141766L;
 

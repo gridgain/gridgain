@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.aggregator;
 
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
@@ -31,7 +32,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
     /**
      * Number of examples in dataset.
      */
-    private long N = 0;
+    private long n = 0;
 
     /**
      * Absolute error.
@@ -70,7 +71,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      */
     public RegressionMetricStatsAggregator(long n, double absoluteError, double rss, double sumOfYs,
         double sumOfSquaredYs) {
-        N = n;
+        this.n = n;
         this.absoluteError = absoluteError;
         this.rss = rss;
         this.sumOfYs = sumOfYs;
@@ -79,9 +80,11 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
 
     /** {@inheritDoc} */
     @Override public void aggregate(IgniteModel<Vector, Double> model, LabeledVector<Double> vector) {
-        N += 1;
+        n += 1;
         Double prediction = model.predict(vector.features());
         Double truth = vector.label();
+        A.notNull(truth != null, "Test set mustn't contain null labels");
+        A.notNull(prediction != null, "Model mustn't return null answers");
         double error = truth - prediction;
 
         absoluteError = sum(Math.abs(error), absoluteError);
@@ -92,7 +95,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
 
     /** {@inheritDoc} */
     @Override public RegressionMetricStatsAggregator mergeWith(RegressionMetricStatsAggregator other) {
-        long n = this.N + other.N;
+        long n = this.n + other.n;
         double absoluteError = sum(this.absoluteError, other.absoluteError);
         double squaredError = sum(this.rss, other.rss);
         double sumOfYs = sum(this.sumOfYs, other.sumOfYs);
@@ -120,7 +123,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         if (Double.isNaN(absoluteError))
             return Double.NaN;
 
-        return absoluteError / Math.max(N, 1);
+        return absoluteError / Math.max(n, 1);
     }
 
     /**
@@ -129,7 +132,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      * @return Mean squared error.
      */
     public double getMSE() {
-        return rss / Math.max(N, 1);
+        return rss / Math.max(n, 1);
     }
 
     /**
@@ -138,7 +141,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      * @return Sum of squared errors
      */
     public double ysRss() {
-        return ysVariance() * Math.max(N, 1);
+        return ysVariance() * Math.max(n, 1);
     }
 
     /**
@@ -150,7 +153,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         if (Double.isNaN(sumOfSquaredYs))
             return Double.NaN;
 
-        return (sumOfSquaredYs / Math.max(N, 1) - Math.pow(sumOfYs / Math.max(N, 1), 2));
+        return (sumOfSquaredYs / Math.max(n, 1) - Math.pow(sumOfYs / Math.max(n, 1), 2));
     }
 
     /**

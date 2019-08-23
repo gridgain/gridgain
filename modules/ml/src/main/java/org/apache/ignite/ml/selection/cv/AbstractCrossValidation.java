@@ -344,7 +344,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, Doub
             M mdl = trainer.fit(trainSet, preprocessor); //TODO: IGNITE-11580
 
             DatasetBuilder<K, V> testSet = datasetBuilderSupplier.apply(testSetFilter);
-            scores[i] = Evaluator.evaluate(testSet, mdl, preprocessor, metric).get();
+            scores[i] = Evaluator.evaluate(testSet, mdl, preprocessor, metric).getSignle();
         }
 
         return scores;
@@ -375,7 +375,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, Doub
             PipelineMdl<K, V> mdl = pipeline.fit(datasetBuilder);
 
             DatasetBuilder<K, V> testSet = datasetBuilderSupplier.apply(testSetFilter);
-            scores[i] = Evaluator.evaluate(testSet, mdl, preprocessor, metric).get();
+            scores[i] = Evaluator.evaluate(testSet, mdl, preprocessor, metric).getSignle();
         }
 
         return scores;

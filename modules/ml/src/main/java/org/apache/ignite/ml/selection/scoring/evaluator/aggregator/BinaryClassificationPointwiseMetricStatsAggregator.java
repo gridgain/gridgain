@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.aggregator;
 
+import java.io.Serializable;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -26,7 +27,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * This class represents statistics for pointwise metrics evaluation for binary classification like TruePositive,
  * FalsePositive, TrueNegative and FalseNegative.
  */
-public class BinaryClassificationPointwiseMetricStatsAggregator<L> implements MetricStatsAggregator<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
+public class BinaryClassificationPointwiseMetricStatsAggregator<L extends Serializable> implements MetricStatsAggregator<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = -7677193556950322385L;
 
@@ -182,7 +183,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator<L> implements Me
     /**
      * Class represents already initialized aggregator.
      */
-    public static class WithCustomLabelsAggregator<L> extends BinaryClassificationPointwiseMetricStatsAggregator<L> {
+    public static class WithCustomLabelsAggregator<L extends Serializable> extends BinaryClassificationPointwiseMetricStatsAggregator<L> {
         /** Truth label. */
         private final L truthLabel;
 
@@ -207,6 +208,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator<L> implements Me
                  */
                 private static final long serialVersionUID = 4739649114414953828L;
 
+                /** {@inheritDoc} */
                 @Override public boolean needToCompute() {
                     return false;
                 }

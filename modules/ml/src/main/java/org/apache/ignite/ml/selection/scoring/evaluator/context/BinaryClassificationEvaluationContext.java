@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.context;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -27,7 +28,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
 /**
  * This context tries to define positive and negative labels for estimation of binary classifier.
  */
-public class BinaryClassificationEvaluationContext<L> implements EvaluationContext<L, BinaryClassificationEvaluationContext<L>> {
+public class BinaryClassificationEvaluationContext<L extends Serializable> implements EvaluationContext<L, BinaryClassificationEvaluationContext<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = 658785331349096576L;
 

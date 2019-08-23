@@ -55,8 +55,9 @@ public class EvaluationResult {
      *
      * @return Metric value.
      */
-    public double get() {
-        return values.values().stream().findFirst().orElse(Double.NaN);
+    public double getSignle() {
+        A.ensure(values.size() == 1, "getSingle expects only one metric");
+        return values.values().stream().findFirst().get();
     }
 
     /**
