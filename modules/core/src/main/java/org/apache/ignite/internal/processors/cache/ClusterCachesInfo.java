@@ -539,7 +539,7 @@ class ClusterCachesInfo {
     public boolean onCacheChangeRequested(DynamicCacheChangeBatch batch, AffinityTopologyVersion topVer) {
         DiscoveryDataClusterState state = ctx.state().clusterState();
 
-        if (state.active() && !state.transition()) {
+        if (state.active() && (!state.transition() || state.baselineChanging())) {
             ExchangeActions exchangeActions = new ExchangeActions();
 
             CacheChangeProcessResult res = processCacheChangeRequests(exchangeActions,
