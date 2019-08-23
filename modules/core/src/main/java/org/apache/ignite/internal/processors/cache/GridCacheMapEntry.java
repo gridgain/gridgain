@@ -526,6 +526,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     @Nullable protected CacheDataRow unswap(@Nullable CacheDataRow row, boolean checkExpire)
         throws IgniteCheckedException, GridCacheEntryRemovedException {
+        boolean obsolete = false;
+        boolean deferred = false;
+        GridCacheVersion ver0 = null;
 
         lockEntry();
 
@@ -544,13 +547,34 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     update(val, read.expireTime(), 0, read.version(), false);
 
-                    if (!(read.expireTime() > 0) || (read.expireTime() > U.currentTimeMillis()))
+                    if (!(checkExpire && read.expireTime() > 0) || (read.expireTime() > U.currentTimeMillis()))
                         return read;
-                }
+                    else {
+                        if (onExpired(this.val, null)) {
+                            if (cctx.deferredDelete()) {
+                                deferred = true;
+                                ver0 = ver;
+                            }
+                            else
+                                obsolete = true;
+                        }
+                    }                }
             }
         }
         finally {
             unlockEntry();
+        }
+
+        if (obsolete) {
+            onMarkedObsolete();
+
+            cctx.cache().removeEntry(this);
+        }
+
+        if (deferred) {
+            assert ver0 != null;
+
+            cctx.onDeferredDelete(this, ver0);
         }
 
         return null;
@@ -697,6 +721,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         GridCacheVersion startVer;
         GridCacheVersion resVer = null;
 
+        boolean obsolete = false;
+        boolean deferred = false;
+        GridCacheVersion ver0 = null;
+
         Object res = null;
 
         lockEntry();
@@ -716,6 +744,24 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         unswap(null, false);
 
                         val = this.val;
+                    }
+                }
+
+                if (val != null) {
+                    long expireTime = expireTimeExtras();
+
+                    if (expireTime > 0 && (expireTime < U.currentTimeMillis())) {
+                        if (onExpired((CacheObject)cctx.unwrapTemporary(val), null)) {
+                            val = null;
+                            evt = false;
+
+                            if (cctx.deferredDelete()) {
+                                deferred = true;
+                                ver0 = ver;
+                            }
+                            else
+                                obsolete = true;
+                        }
                     }
                 }
             }
@@ -773,10 +819,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             addReaderIfNeed(readerArgs);
 
             if (ret != null) {
+                assert !obsolete;
+                assert !deferred;
+
                 // If return value is consistent, then done.
                 res = retVer ? entryGetResult(ret, resVer, false) : ret;
             }
-            else if (reserveForLoad) {
+            else if (reserveForLoad && !obsolete) {
                 assert !readThrough;
                 assert retVer;
 
@@ -791,6 +840,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         finally {
             unlockEntry();
         }
+
+        if (obsolete) {
+            onMarkedObsolete();
+
+            throw new GridCacheEntryRemovedException();
+        }
+
+        if (deferred)
+            cctx.onDeferredDelete(this, ver0);
 
         if (res != null)
             return res;
@@ -1854,7 +1912,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             old = val;
 
-            boolean readFromStore = false;
+            if (expireTimeExtras() > 0 && expireTimeExtras() < U.currentTimeMillis()) {
+                if (onExpired(val, null)) {
+                    assert !deletedUnlocked();
+
+                    update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
+
+                    old = null;
+                }
+            }            boolean readFromStore = false;
 
             Object old0 = null;
 

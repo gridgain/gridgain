@@ -16,14 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.cache.Cache;
-import javax.cache.CacheException;
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheWriter;
-import javax.cache.integration.CacheWriterException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +32,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import javax.cache.configuration.Factory;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -128,7 +128,7 @@ public class GridCacheUtils {
 
     /** Each cache operation removes this amount of entries with expired TTL. */
     private static final int TTL_BATCH_SIZE = IgniteSystemProperties.getInteger(
-        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
+        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, Integer.MAX_VALUE);
 
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;

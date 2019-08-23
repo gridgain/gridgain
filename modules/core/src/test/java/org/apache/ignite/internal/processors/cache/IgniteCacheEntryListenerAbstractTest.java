@@ -859,7 +859,8 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
         boolean update,
         boolean rmv,
         boolean expire,
-        boolean oldVal) throws Exception {
+        boolean oldVal
+    ) throws Exception {
         GridTestUtils.assertThrows(log, (Callable<Void>)() -> {
             cache.registerCacheEntryListener(lsnrCfg);
 
