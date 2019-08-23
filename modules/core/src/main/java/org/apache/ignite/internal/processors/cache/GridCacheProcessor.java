@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,12 +34,14 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheExistsException;
 import org.apache.ignite.cache.CacheMode;
@@ -90,7 +93,6 @@ import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.local.atomic.GridLocalAtomicCache;
 import org.apache.ignite.internal.processors.cache.mvcc.DeadlockDetectionManager;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointFuture;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
@@ -132,6 +134,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.InitializationProtector;
+import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -153,6 +156,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.marshaller.Marshaller;
@@ -182,6 +186,7 @@ import static org.apache.ignite.configuration.DeploymentMode.CONTINUOUS;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.IgniteComponentType.JTA;
+import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
@@ -509,6 +514,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
+        grp.metrics().remove();
+
         cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 
@@ -553,7 +560,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         locCfgMgr = new GridLocalConfigManager(this, ctx);
 
-        transactions = new IgniteTransactionsImpl(sharedCtx, null);
+        transactions = new IgniteTransactionsImpl(sharedCtx, null, false);
 
         // Start shared managers.
         for (GridCacheSharedManager mgr : sharedCtx.managers())
@@ -2399,7 +2406,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!grp.systemCache() && !U.IGNITE_MBEANS_DISABLED) {
             try {
                 U.registerMBean(ctx.config().getMBeanServer(), ctx.igniteInstanceName(), CACHE_GRP_METRICS_MBEAN_GRP,
-                    grp.cacheOrGroupName(), grp.mxBean(), CacheGroupMetricsMXBean.class);
+                    grp.cacheOrGroupName(), new CacheGroupMetricsMXBeanImpl(grp), CacheGroupMetricsMXBean.class);
             }
             catch (Throwable e) {
                 U.error(log, "Failed to register MBean for cache group: " + grp.name(), e);
@@ -2708,28 +2715,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param grpToStop Cache group to stop.
      */
     private void removeOffheapListenerAfterCheckpoint(List<IgniteBiTuple<CacheGroupContext, Boolean>> grpToStop) {
-        CheckpointFuture checkpointFut;
-        do {
-            do {
-                checkpointFut = sharedCtx.database().forceCheckpoint("caches stop");
-            }
-            while (checkpointFut != null && checkpointFut.started());
-
-            if (checkpointFut != null)
-                checkpointFut.finishFuture().listen((fut) -> removeOffheapCheckpointListener(grpToStop));
+        try {
+            sharedCtx.database().waitForCheckpoint(
+                "caches stop", (fut) -> removeOffheapCheckpointListener(grpToStop)
+            );
         }
-        while (checkpointFut != null && checkpointFut.finishFuture().isDone());
-
-        if (checkpointFut != null) {
-            try {
-                checkpointFut.finishFuture().get();
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to wait for checkpoint finish during cache stop.", e);
-            }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Failed to wait for checkpoint finish during cache stop.", e);
         }
-        else
-            removeOffheapCheckpointListener(grpToStop);
     }
 
     /**
@@ -4070,29 +4063,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Last data version.
-     */
-    public long lastDataVersion() {
-        long max = 0;
-
-        for (GridCacheAdapter<?, ?> cache : caches.values()) {
-            GridCacheContext<?, ?> ctx = cache.context();
-
-            if (ctx.versions().last().order() > max)
-                max = ctx.versions().last().order();
-
-            if (ctx.isNear()) {
-                ctx = ctx.near().dht().context();
-
-                if (ctx.versions().last().order() > max)
-                    max = ctx.versions().last().order();
-            }
-        }
-
-        return max;
-    }
-
-    /**
      * @return Keep static cache configuration flag. If {@code true}, static cache configuration will override
      * configuration persisted on disk.
      */
@@ -4329,10 +4299,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Get configuration for the given cache.
+     * Get configuration for the given cache. Fails if cache does not exist or restarting.
      *
      * @param name Cache name.
      * @return Cache configuration.
+     * @throws org.apache.ignite.IgniteCacheRestartingException If the cache with the given name
+     *      is currently restarting.
+     * @throws IllegalStateException If the cache with the given name does not exist.
      */
     public CacheConfiguration cacheConfiguration(String name) {
         assert name != null;
@@ -4355,6 +4328,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
         else
             return desc.cacheConfiguration();
+    }
+
+    /**
+     * Get configuration for the given cache. If a cache with the given name does not exist, will return {@code null}.
+     *
+     * @param name Cache name.
+     * @return Cache configuration or {@code null}.
+     */
+    public CacheConfiguration cacheConfigurationNoProxyCheck(String name) {
+        assert name != null;
+
+        DynamicCacheDescriptor desc = cacheDescriptor(name);
+
+        return desc == null ? null : desc.cacheConfiguration();
     }
 
     /**
@@ -5139,6 +5126,71 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Sets threshold timeout in milliseconds for long transactions, if transaction exceeds it,
+     * it will be dumped in log with information about how much time did
+     * it spent in system time (time while aquiring locks, preparing, commiting, etc.)
+     * and user time (time when client node runs some code while holding transaction).
+     * Can be set to 0 - no transactions will be dumped in log in this case.
+     *
+     * @param threshold Threshold timeout in milliseconds.
+     */
+    public void longTransactionTimeDumpThreshold(long threshold) {
+        assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
+
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Sets the coefficient for samples of long running transactions that will be dumped in log, if
+     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value."
+     *
+     * @param coefficient Coefficient, must be value between 0.0 and 1.0 inclusively.
+     */
+    public void transactionTimeDumpSamplesCoefficient(double coefficient) {
+        assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
+
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Sets the limit of samples of completed transactions that will be dumped in log per second,
+     * if {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>.
+     * Must be integer value greater than <code>0</code>.
+     *
+     * @param limit Limit value.
+     */
+    public void longTransactionTimeDumpSamplesPerSecondLimit(int limit) {
+        assert limit > 0 : "Limit value must be greater than 0.";
+
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Broadcasts given job to nodes that support ignite feature.
+     *
+     * @param job Ignite job.
+     * @param feature Ignite feature.
+     */
+    private void broadcastToNodesSupportingFeature(IgniteRunnable job, IgniteFeatures feature) {
+        ClusterGroup grp = ctx.grid()
+            .cluster()
+            .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, feature));
+
+        IgniteCompute compute = ctx.grid().compute(grp);
+
+        compute.broadcast(job);
+    }
+
+    /**
      * @param oldFormat Old format.
      */
     private CacheConfigurationSplitter splitter(boolean oldFormat) {
@@ -5233,7 +5285,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         /** {@inheritDoc} */
         @Override public void afterLogicalUpdatesApplied(
             IgniteCacheDatabaseSharedManager mgr,
-            GridCacheDatabaseSharedManager.RestoreLogicalState restoreState) throws IgniteCheckedException {
+            GridCacheDatabaseSharedManager.RestoreLogicalState restoreState
+        ) throws IgniteCheckedException {
             restorePartitionStates(cacheGroups(), restoreState.partitionRecoveryStates());
         }
 
@@ -5251,15 +5304,48 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (log.isInfoEnabled())
                 log.info("Restoring partition state for local groups.");
 
-            long totalProcessed = 0;
+            AtomicLong totalProcessed = new AtomicLong();
 
-            for (CacheGroupContext grp : forGroups)
-                totalProcessed += grp.offheap().restorePartitionStates(partitionStates);
+            AtomicReference<IgniteCheckedException> restoreStateError = new AtomicReference<>();
+
+            StripedExecutor stripedExec = ctx.getStripedExecutorService();
+
+            int roundRobin = 0;
+
+            for (CacheGroupContext grp : forGroups) {
+                stripedExec.execute(roundRobin % stripedExec.stripes(), () -> {
+                    try {
+                        long processed = grp.offheap().restorePartitionStates(partitionStates);
+
+                        totalProcessed.addAndGet(processed);
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Failed to restore partition state for " +
+                            "groupName=" + grp.name() + " groupId=" + grp.groupId(), e);
+
+                        restoreStateError.compareAndSet(null, e);
+                    }
+                });
+
+                roundRobin++;
+            }
+
+            try {
+                // Await completion restore state tasks in all stripes.
+                stripedExec.awaitComplete();
+            }
+            catch (InterruptedException e) {
+                throw new IgniteInterruptedException(e);
+            }
+
+            // Checking error after all task applied.
+            if (restoreStateError.get() != null)
+                throw restoreStateError.get();
 
             if (log.isInfoEnabled())
                 log.info("Finished restoring partition state for local groups [" +
                     "groupsProcessed=" + forGroups.size() +
-                    ", partitionsProcessed=" + totalProcessed +
+                    ", partitionsProcessed=" + totalProcessed.get() +
                     ", time=" + (U.currentTimeMillis() - startRestorePart) + "ms]");
         }
     }
