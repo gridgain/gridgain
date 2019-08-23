@@ -1718,15 +1718,13 @@ public class GridCacheUtils {
 
                 cfg.setAffinity(aff);
             }
-            else if (cfg.getCacheMode() == REPLICATED) {
+            else {
                 RendezvousAffinityFunction aff = new RendezvousAffinityFunction(false, 512);
 
                 cfg.setAffinity(aff);
 
                 cfg.setBackups(Integer.MAX_VALUE);
             }
-            else
-                cfg.setAffinity(new GridCacheProcessor.LocalAffinityFunction());
         }
 
         validateKeyConfigiration(cfg.getGroupName(), cfg.getName(), cfg.getKeyConfiguration(), log, true);
