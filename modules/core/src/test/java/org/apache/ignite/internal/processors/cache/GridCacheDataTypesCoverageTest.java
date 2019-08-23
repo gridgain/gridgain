@@ -248,7 +248,7 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 20_000;
+        return 30_000;
     }
 
     /** {@inheritDoc} */
