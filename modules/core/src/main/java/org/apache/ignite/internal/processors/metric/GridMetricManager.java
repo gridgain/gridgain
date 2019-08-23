@@ -116,6 +116,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Group for a thread pools. */
     public static final String THREAD_POOLS = "threadPools";
 
+    /** Metric registry type for striped tread pools. */
+    public static final String STRIPED_THREAD_POOLS = "stripedThreadPools";
+
     /** Metrics update frequency. */
     private static final long METRICS_UPDATE_FREQ = 3000;
 
@@ -488,7 +491,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     private void monitorStripedPool(StripedExecutor svc) {
         String name = metricName(THREAD_POOLS, "StripedExecutor");
 
-        MetricRegistry mreg = new MetricRegistry(name, name, log);
+        MetricRegistry mreg = new MetricRegistry(STRIPED_THREAD_POOLS, name, log);
 
         mreg.register("DetectStarvation",
             svc::detectStarvation,
