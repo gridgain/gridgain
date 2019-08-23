@@ -25,7 +25,6 @@ import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.svm.SVMLinearClassificationModel;
 import org.apache.ignite.ml.svm.SVMLinearClassificationTrainer;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
@@ -63,9 +62,7 @@ public class MultipleMetricsExample {
 
                 SVMLinearClassificationModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
-                Evaluator.evaluate(dataCache, mdl, vectorizer,
-                    MetricName.ACCURACY, MetricName.PRECISION, MetricName.RECALL, MetricName.F_MEASURE
-                ).print();
+                Evaluator.evaluateBinaryClassification(dataCache, mdl, vectorizer).print();
             } finally {
                 dataCache.destroy();
             }

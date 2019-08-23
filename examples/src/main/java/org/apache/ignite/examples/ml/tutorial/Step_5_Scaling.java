@@ -30,7 +30,7 @@ import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
 import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
 
@@ -102,8 +102,11 @@ public class Step_5_Scaling {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(dataCache,
-                    mdl, normalizationPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache,
+                    mdl,
+                    normalizationPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

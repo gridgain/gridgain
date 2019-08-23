@@ -112,14 +112,6 @@ public class FraudDetectionExample {
             mdl, vectorizer, MetricName.ACCURACY, MetricName.PRECISION, MetricName.RECALL, MetricName.F_MEASURE
         );
 
-//        System.out.println(String.format(">> Model accuracy: %.2f", metricValues.accuracy()));
-//        System.out.println(String.format(">> Model precision: %.2f", metricValues.precision()));
-//        System.out.println(String.format(">> Model recall: %.2f", metricValues.recall()));
-//        System.out.println(String.format(">> Model f1-score: %.2f", metricValues.f1Score()));
         metricValues.print();
-//        System.out.println(">> Confusion matrix:");
-//        System.out.println(">>                    fraud (ans) | not fraud (ans)");
-//        System.out.println(String.format(">> fraud (pred)     | %1$11.2f | %2$15.2f ", metricValues.tp(), metricValues.fp()));
-//        System.out.println(String.format(">> not fraud (pred) | %1$11.2f | %2$15.2f ", metricValues.fn(), metricValues.tn()));
     }
 }

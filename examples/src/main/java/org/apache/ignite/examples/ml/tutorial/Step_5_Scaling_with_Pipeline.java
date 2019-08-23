@@ -31,7 +31,7 @@ import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
 import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 
 /**
@@ -78,7 +78,7 @@ public class Step_5_Scaling_with_Pipeline {
 
                 double accuracy = Evaluator.evaluate(dataCache,
                     mdl, mdl.getPreprocessor(),
-                    MetricName.ACCURACY
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

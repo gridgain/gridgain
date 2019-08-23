@@ -32,7 +32,7 @@ import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
 import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 
 /**
  * Change classification algorithm that was used in {@link Step_5_Scaling} from decision tree to kNN
@@ -104,8 +104,11 @@ public class Step_6_KNN {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(dataCache,
-                    mdl, normalizationPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache,
+                    mdl,
+                    normalizationPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

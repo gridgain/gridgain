@@ -39,7 +39,6 @@ import org.apache.ignite.ml.selection.cv.CrossValidationResult;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
@@ -143,7 +142,7 @@ public class Step_12_Parallel_Random_Search {
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
                     .isRunningOnPipeline(false)
-                    .withMetric(new Accuracy(1.0, 0.0))
+                    .withMetric(new Accuracy<>(1.0, 0.0))
                     .withFilter(split.getTrainFilter())
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
@@ -177,8 +176,11 @@ public class Step_12_Parallel_Random_Search {
 
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
-                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter(),
-                    bestMdl, normalizationPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache, split.getTestFilter(),
+                    bestMdl,
+                    normalizationPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

@@ -99,7 +99,7 @@ public class Step_8_CV_with_Param_Grid_and_metrics_and_pipeline {
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
                     .withPipeline(pipeline)
-                    .withMetric(new Accuracy(1.0, 0.0))
+                    .withMetric(new Accuracy<>(1.0, 0.0))
                     .withFilter(split.getTrainFilter())
                     .withPreprocessor(vectorizer)
                     .withAmountOfFolds(3)

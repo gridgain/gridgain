@@ -81,7 +81,7 @@ public class CrossValidationExample {
                     .withIgnite(ignite)
                     .withUpstreamCache(trainingSet)
                     .withTrainer(trainer)
-                    .withMetric(new Accuracy())
+                    .withMetric(new Accuracy<>())
                     .withPreprocessor(vectorizer)
                     .withAmountOfFolds(4)
                     .isRunningOnPipeline(false)
@@ -90,7 +90,7 @@ public class CrossValidationExample {
                 System.out.println(">>> Accuracy: " + Arrays.toString(accuracyScores));
 
                 double[] balancedAccuracyScores = scoreCalculator
-                    .withMetric(new Accuracy())
+                    .withMetric(new Accuracy<>())
                     .scoreByFolds();
 
                 System.out.println(">>> Balanced Accuracy: " + Arrays.toString(balancedAccuracyScores));

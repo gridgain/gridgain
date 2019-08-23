@@ -72,8 +72,12 @@ public class BostonHousePricesPredictionExample {
                 );
 
                 System.out.println(">>> Perform scoring.");
-                double score = Evaluator.evaluate(dataCache, split.getTestFilter(),
-                    mdl, vectorizer, MetricName.R2
+                double score = Evaluator.evaluate(
+                    dataCache,
+                    split.getTestFilter(),
+                    mdl,
+                    vectorizer,
+                    MetricName.R2
                 );
 
                 System.out.println(">>> Model: " + toString(mdl));

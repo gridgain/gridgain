@@ -27,7 +27,7 @@ import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -69,8 +69,11 @@ public class KNNClassificationExample {
 
                 KNNClassificationModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
-                double accuracy = Evaluator.evaluate(dataCache,
-                    mdl, vectorizer, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache,
+                    mdl,
+                    vectorizer,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

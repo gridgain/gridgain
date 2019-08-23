@@ -73,7 +73,8 @@ public class LinearRegressionLSQRTrainerExample {
                 LinearRegressionModel mdl = trainer.fit(ignite, dataCache, new DummyVectorizer<Integer>()
                     .labeled(Vectorizer.LabelCoordinate.FIRST));
 
-                double rmse = Evaluator.evaluate(dataCache, mdl,
+                double rmse = Evaluator.evaluate(
+                    dataCache, mdl,
                     new DummyVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST),
                     MetricName.RMSE
                 );

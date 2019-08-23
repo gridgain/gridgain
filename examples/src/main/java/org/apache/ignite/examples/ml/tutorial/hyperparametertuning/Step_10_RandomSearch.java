@@ -36,7 +36,6 @@ import org.apache.ignite.ml.selection.cv.CrossValidationResult;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
 import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetrics;
@@ -141,7 +140,7 @@ public class Step_10_RandomSearch {
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
                     .withTrainer(trainerCV)
-                    .withMetric(new Accuracy(1.0, 0.0))
+                    .withMetric(new Accuracy<>(1.0, 0.0))
                     .withFilter(split.getTrainFilter())
                     .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
@@ -176,8 +175,11 @@ public class Step_10_RandomSearch {
 
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
-                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter(),
-                    bestMdl, normalizationPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache, split.getTestFilter(),
+                    bestMdl,
+                    normalizationPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

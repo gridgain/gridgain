@@ -28,7 +28,7 @@ import org.apache.ignite.ml.preprocessing.encoding.EncoderTrainer;
 import org.apache.ignite.ml.preprocessing.encoding.EncoderType;
 import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
 
@@ -84,8 +84,11 @@ public class Step_4_Add_age_fare {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(dataCache,
-                    mdl, imputingPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache,
+                    mdl,
+                    imputingPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

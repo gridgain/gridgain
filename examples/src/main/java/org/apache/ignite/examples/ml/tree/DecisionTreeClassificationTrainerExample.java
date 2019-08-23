@@ -70,7 +70,7 @@ public class DecisionTreeClassificationTrainerExample {
                     trainingSet.put(i, generatePoint(rnd));
 
                 // Create classification trainer.
-                DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(2, 0);
+                DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(4, 0);
 
                 // Train decision tree model.
                 LabeledDummyVectorizer<Integer, Double> vectorizer = new LabeledDummyVectorizer<>();

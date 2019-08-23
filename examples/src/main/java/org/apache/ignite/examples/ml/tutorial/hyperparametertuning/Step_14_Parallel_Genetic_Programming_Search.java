@@ -39,7 +39,6 @@ import org.apache.ignite.ml.selection.cv.CrossValidationResult;
 import org.apache.ignite.ml.selection.paramgrid.EvolutionOptimizationStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
@@ -136,7 +135,7 @@ public class Step_14_Parallel_Genetic_Programming_Search {
                         .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
-                    .withMetric(new Accuracy())
+                    .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
                     .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
@@ -171,8 +170,11 @@ public class Step_14_Parallel_Genetic_Programming_Search {
 
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
-                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter(),
-                    bestMdl, normalizationPreprocessor, MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(
+                    dataCache, split.getTestFilter(),
+                    bestMdl,
+                    normalizationPreprocessor,
+                    new Accuracy<>()
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);
