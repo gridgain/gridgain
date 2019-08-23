@@ -62,10 +62,26 @@ public class BinaryClassificationEvaluationContext<L> implements EvaluationConte
         L label = vector.label();
         if (firstClassLbl == null)
             this.firstClassLbl = label;
-        else if (secondClassLbl == null && !label.equals(firstClassLbl))
+        else if (secondClassLbl == null && !label.equals(firstClassLbl)) {
             secondClassLbl = label;
-        else
+            swapLabelsIfNeed();
+        } else
             checkNewLabel(label);
+    }
+
+    /**
+     * Swaps labels in sorting order if it's possible.
+     */
+    private void swapLabelsIfNeed() {
+        if (firstClassLbl instanceof Comparable) {
+            Comparable cmp1 = (Comparable) firstClassLbl;
+            int res = cmp1.compareTo(secondClassLbl);
+            if (res > 0) {
+                L tmp = secondClassLbl;
+                secondClassLbl = firstClassLbl;
+                firstClassLbl = tmp;
+            }
+        }
     }
 
     /** {@inheritDoc} */

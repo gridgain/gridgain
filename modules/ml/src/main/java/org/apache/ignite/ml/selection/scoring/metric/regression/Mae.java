@@ -51,6 +51,6 @@ public class Mae implements Metric<Double, EmptyContext, RegressionMetricStatsAg
 
     /** {@inheritDoc} */
     @Override public MetricName name() {
-        return MetricName.MSE;
+        return MetricName.MAE;
     }
 }
