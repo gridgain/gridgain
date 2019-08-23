@@ -53,6 +53,9 @@ public enum CommandList {
     ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand()),
 
     /** */
+    CLUSTER_CHANGE_TAG("--change-tag", new ClusterChangeTagCommand()),
+
+    /** */
     MANAGEMENT("--management", new ManagementCommands());
 
     /** Private values copy so there's no need in cloning it every time. */
