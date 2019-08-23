@@ -34,6 +34,9 @@ public class JoinNode implements PlanNode {
         private JoinRelType joinType;
         private JoinAlgorithm joinAlg;
 
+    public JoinNode() {
+    }
+
     public JoinNode(PlanNode left, PlanNode right, int[] leftJoinKeys, int[] rightJoinKeys,
         Condition joinCond, JoinRelType joinType,
         JoinAlgorithm joinAlg) {

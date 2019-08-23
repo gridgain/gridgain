@@ -22,18 +22,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.GridTopic;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.sql.calcite.plan.OutputNode;
 import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
-import org.apache.ignite.internal.sql.calcite.plan.SenderNode;
-import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.Message;
 
-import static org.apache.ignite.internal.sql.calcite.plan.PlanStep.Distribution.ALL_NODES;
+import static org.apache.ignite.internal.sql.calcite.plan.PlanStep.Site.ALL_NODES;
 
 /**
  * Made in the worst tradition. Do not use it in production code.
@@ -44,23 +51,42 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
 
     private GridKernalContext ctx;
 
+    private Marshaller marshaller;
+
     private Map<T2<UUID, Long>, Map<Integer, PlanStep>> runningQrys = new HashMap<>();
 
-    /** */
+    private List<GridCacheContext> caches = new ArrayList<>();
+
+    private Map<T2<UUID, Long>, IgniteInternalFuture<FieldsQueryCursor<List<?>>>> futs = new HashMap<>();
+
+    /**
+     *
+     */
     public ExecutorOfGovnoAndPalki(GridKernalContext ctx) {
         this.ctx = ctx;
+
+        marshaller = ctx.config().getMarshaller();
     }
 
-    /** */
+    /**
+     *
+     */
     public List<FieldsQueryCursor<List<?>>> execute(List<PlanStep> multiStepPlan) {
-        FieldsQueryCursor<List<?>> cursor = submitQuery(multiStepPlan).get();
+        try {
+            FieldsQueryCursor<List<?>> cursor = submitQuery(multiStepPlan).get();
 
-        return Collections.singletonList(cursor);
+            return Collections.singletonList(cursor);
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
-    /** */
-    private IgniteFuture<FieldsQueryCursor<List<?>>> submitQuery(List<PlanStep> multiStepPlan) {
-        assert multiStepPlan.get(multiStepPlan.size()).plan() instanceof OutputNode; // Last node is expected to be the output node.
+    /**
+     *
+     */
+    private IgniteInternalFuture<FieldsQueryCursor<List<?>>> submitQuery(List<PlanStep> multiStepPlan) {
+        assert multiStepPlan.get(multiStepPlan.size() - 1).plan() instanceof OutputNode; // Last node is expected to be the output node.
 
         UUID locNode = ctx.localNodeId();
         long cntr = qryIdCntr.getAndIncrement();
@@ -77,19 +103,66 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
                 globalPlan.add(step);
         }
 
-        runningQrys.put(qryId, locNodePlan);
+        IgniteInternalFuture<FieldsQueryCursor<List<?>>> qryFut = new GridFutureAdapter<>();
 
-        return new IgniteFinishedFutureImpl<>(new QueryCursorImpl<>(Collections.emptyList()));
+        synchronized (this) {
+            runningQrys.put(qryId, locNodePlan);
+
+            futs.put(qryId, qryFut);
+        }
+
+        sendRequests(qryId, globalPlan);
+
+        return qryFut;
     }
 
-    /** */
-    public void sendResult(List<List<?>> result, SenderNode.SenderType type, int linkId, T2<UUID, Long> qryId) {
+    private void sendRequests(T2<UUID, Long> qryId, List<PlanStep> plan) {
+        try {
+            QueryRequest req = new QueryRequest(qryId, plan);
+
+            for (ClusterNode node : ctx.discovery().remoteNodes()) {
+
+                if (!node.isClient()) {
+                    send(req, node);
+                }
+            }
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+    }
+
+    /**
+     *
+     */
+    public void sendResult(List<List<?>> result, int linkId, T2<UUID, Long> qryId, UUID dest) {
 
     }
 
-    /** */
+    private void send(Message msg, ClusterNode node) throws IgniteCheckedException {
+        if (msg instanceof GridCacheQueryMarshallable)
+            ((GridCacheQueryMarshallable)msg).marshall(marshaller);
+
+        ctx.io().sendToGridTopic(node, GridTopic.TOPIC_QUERY, msg, GridIoPolicy.QUERY_POOL);
+    }
+
+    /**
+     *
+     */
     @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-        // TODO: CODE: implement.
+        if (msg instanceof GridCacheQueryMarshallable)
+            ((GridCacheQueryMarshallable)msg).unmarshall(marshaller, ctx);
+
+        System.out.println("onMessage node =" + nodeId + ", msg= " + msg);
+    }
+
+    public void onCacheRegistered(GridCacheContext cache) {
+        if (cache.userCache())
+            caches.add(cache);
+    }
+
+    public GridCacheContext firstUserCache() {
+        return caches.get(0);
     }
 
 }

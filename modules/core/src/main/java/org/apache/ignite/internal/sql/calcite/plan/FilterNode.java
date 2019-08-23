@@ -28,6 +28,9 @@ public class FilterNode implements PlanNode {
     private PlanNode input;
     private Condition filterCond;
 
+    public FilterNode() {
+    }
+
     public FilterNode(Condition filterCond, PlanNode input) {
         this.filterCond = filterCond;
         this.input = input;

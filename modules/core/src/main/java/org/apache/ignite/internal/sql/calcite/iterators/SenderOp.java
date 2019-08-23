@@ -15,15 +15,23 @@
  */
 package org.apache.ignite.internal.sql.calcite.iterators;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.sql.calcite.executor.ExecutorOfGovnoAndPalki;
 import org.apache.ignite.internal.sql.calcite.plan.SenderNode;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteInClosure;
+
+import static org.apache.ignite.internal.sql.calcite.plan.SenderNode.SenderType.HASH;
+import static org.apache.ignite.internal.sql.calcite.plan.SenderNode.SenderType.SINGLE;
 
 /**
  * TODO: Add class description.
@@ -31,16 +39,39 @@ import org.apache.ignite.lang.IgniteInClosure;
 public class SenderOp extends PhysicalOperator {
 
     public SenderOp(PhysicalOperator rowsSrc, SenderNode.SenderType type, int linkId, T2<UUID, Long> qryId,
-        ExecutorOfGovnoAndPalki exec) {
+        List<Integer> distKeys, ExecutorOfGovnoAndPalki exec) {
 
         rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
             @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
                 try {
-                    List<List<?>> res = fut.get();
+                    List<List<?>> rows = fut.get();
 
-                    exec.sendResult(res, type, linkId, qryId);
+                    if (type == SINGLE)
+                        exec.sendResult(rows, linkId, qryId, qryId.getKey());
+                    else if (type == HASH) {
+                        assert !F.isEmpty(distKeys) && distKeys.size() == 1; // Only one key distribution supported at the moment
+
+                        AffinityTopologyVersion curTopVer = exec.firstUserCache().affinity().affinityTopologyVersion();
+
+                        Map<UUID, List<List<?>>> mapping = new HashMap<>();
+
+                        Integer hashKey = distKeys.get(0);
+
+                        for (List<?> row : rows) {
+                            ClusterNode node =  exec.firstUserCache().affinity().nodesByKey(row.get(hashKey), curTopVer).get(0);
+
+                            List<List<?>> mappedRows = mapping.computeIfAbsent(node.id(), k -> new ArrayList<>());
+
+                            mappedRows.add(row);
+                        }
+
+                        for (Map.Entry<UUID, List<List<?>>> e : mapping.entrySet())
+                            exec.sendResult(e.getValue(), linkId, qryId, e.getKey());
+                    }
+                    else
+                        throw new UnsupportedOperationException("unsupported yet");
                 }
-                catch (IgniteCheckedException e) {
+                catch (Exception e) {
                     onDone(e); // TODO send error back to the reducer
                 }
             }

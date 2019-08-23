@@ -28,24 +28,26 @@ public class PlanStep implements Externalizable {
 
     private PlanNode planStep;
 
-    private Distribution dist;
+    private Site site;
 
+    public PlanStep() {
+    }
 
-    public PlanStep(int id, PlanNode planStep, Distribution dist) {
+    public PlanStep(int id, PlanNode planStep, Site site) {
         this.id = id;
         this.planStep = planStep;
-        this.dist = dist;
+        this.site = site;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(id);
-        out.writeInt(dist.ordinal());
+        out.writeInt(site.ordinal());
         out.writeObject(planStep);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         id = in.readInt();
-        dist = Distribution.values()[in.readInt()];
+        site = Site.values()[in.readInt()];
         planStep = (PlanNode)in.readObject();
     }
 
@@ -57,20 +59,20 @@ public class PlanStep implements Externalizable {
         return planStep;
     }
 
-    public Distribution distribution() {
-        return dist;
+    public Site distribution() {
+        return site;
     }
 
-    public enum Distribution {
+    public enum Site {
         SINGLE_NODE,
         ALL_NODES
     }
 
     @Override public String toString() {
-        return "PlanStep{" +
+        return "\nPlanStep{" +
             "id=" + id +
+            ", site=" + site +
             ", plan=" + planStep +
-            ", dist=" + dist +
             '}';
     }
 }

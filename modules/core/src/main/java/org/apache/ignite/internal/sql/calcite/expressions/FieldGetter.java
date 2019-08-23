@@ -26,6 +26,9 @@ import java.util.List;
 public class FieldGetter implements Expression {
     private int idx;
 
+    public FieldGetter() {
+    }
+
     public FieldGetter(int idx) {
         this.idx = idx;
     }

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
@@ -116,7 +117,7 @@ public class PlanSplitter implements IgniteRelVisitor {
 
         OutputNode outputNode = new OutputNode(input);
 
-        PlanStep planStep = new PlanStep(curSubPlanId, outputNode, PlanStep.Distribution.SINGLE_NODE);
+        PlanStep planStep = new PlanStep(curSubPlanId, outputNode, PlanStep.Site.SINGLE_NODE);
 
         planSteps.add(planStep);
     }
@@ -124,21 +125,23 @@ public class PlanSplitter implements IgniteRelVisitor {
     @Override public void onUnionExchange(UnionExchangeRel exch) {
         visitChildren(exch);
 
-        boolean singleSource = exch.getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE).satisfies(RelDistributions.SINGLETON);
+        RelDistribution dist = exch.getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
+
+        boolean singleSrc = dist.satisfies(RelDistributions.SINGLETON);
 
         PlanNode input = childrenStack.poll();
 
         int linkId = curSubPlanId++;
 
-        SenderNode sender = new SenderNode(input, SenderNode.SenderType.SINGLE, linkId);
+        SenderNode snd = new SenderNode(input, SenderNode.SenderType.SINGLE, linkId, null);
 
-        PlanStep.Distribution dist = singleSource ? PlanStep.Distribution.SINGLE_NODE : PlanStep.Distribution.ALL_NODES;
+        PlanStep.Site site = singleSrc ? PlanStep.Site.SINGLE_NODE : PlanStep.Site.ALL_NODES;
 
-        PlanStep planStep = new PlanStep(linkId, sender, dist);
+        PlanStep planStep = new PlanStep(linkId, snd, site);
 
         planSteps.add(planStep);
 
-        ReceiverNode receiver = new ReceiverNode(linkId, singleSource ? ReceiverNode.Type.SINGLE :  ReceiverNode.Type.ALL);
+        ReceiverNode receiver = new ReceiverNode(linkId, singleSrc ? ReceiverNode.Type.SINGLE :  ReceiverNode.Type.ALL);
 
         childrenStack.push(receiver);
     }
@@ -149,9 +152,12 @@ public class PlanSplitter implements IgniteRelVisitor {
         PlanNode input = childrenStack.poll();
 
         int linkId = curSubPlanId++;
-        SenderNode sender = new SenderNode(input, SenderNode.SenderType.HASH, linkId);
 
-        PlanStep planStep = new PlanStep(linkId, sender, PlanStep.Distribution.ALL_NODES);
+        RelDistribution dist = exch.getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
+
+        SenderNode snd = new SenderNode(input, SenderNode.SenderType.HASH, linkId,  dist.getKeys());
+
+        PlanStep planStep = new PlanStep(linkId, snd, PlanStep.Site.ALL_NODES);
 
         planSteps.add(planStep);
 

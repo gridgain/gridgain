@@ -29,6 +29,9 @@ public class ReceiverNode implements PlanNode {
 
     private Type type;
 
+    public ReceiverNode() {
+    }
+
     public ReceiverNode(int inputLink, Type type) {
         this.inputLink = inputLink;
         this.type = type;

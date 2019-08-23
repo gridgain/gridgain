@@ -30,6 +30,9 @@ public class Constant implements Expression {
 
     private Object constant;
 
+    public Constant() {
+    }
+
     public Constant(RexLiteral literal) {
         this.constant = convertValueIfNeeded(literal.getValue(), literal.getType());
     }

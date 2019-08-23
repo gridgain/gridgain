@@ -31,6 +31,9 @@ public class BinaryCondition implements Condition {
     private Expression left;
     private Expression right;
 
+    public BinaryCondition() {
+    }
+
     public BinaryCondition(SqlKind kind, Expression left, Expression right) {
         this.kind = kind;
         this.left = left;

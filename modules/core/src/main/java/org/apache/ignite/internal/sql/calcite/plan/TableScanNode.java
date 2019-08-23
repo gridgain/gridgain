@@ -29,6 +29,9 @@ public class TableScanNode implements PlanNode {
 
     private String cacheName;
 
+    public TableScanNode() {
+    }
+
     public TableScanNode(String tableName, String cacheName) {
         this.tableName = tableName;
         this.cacheName = cacheName;

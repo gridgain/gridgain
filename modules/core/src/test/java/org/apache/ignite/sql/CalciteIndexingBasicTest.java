@@ -32,7 +32,7 @@ import org.junit.Test;
 public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite grid = startGrid(0);
+        Ignite grid = startGridsMultiThreaded(2);
 
         CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 

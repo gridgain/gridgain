@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * TODO: Add class description.
@@ -27,20 +28,29 @@ public class SenderNode implements PlanNode {
     private PlanNode input;
     private SenderType type;
     private int linkId;
+    private List<Integer> distKeys;
 
-    public SenderNode(PlanNode input, SenderType type, int linkId) {
+    public SenderNode() {
+    }
+
+    public SenderNode(PlanNode input, SenderType type, int linkId, List<Integer>  distKeys) {
         this.input = input;
         this.type = type;
         this.linkId = linkId;
+        this.distKeys = distKeys;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(type.ordinal());
+        out.writeInt(linkId);
+        out.writeObject(distKeys);
         out.writeObject(input);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         type = SenderType.values()[in.readInt()];
+        linkId = in.readInt();
+        distKeys = (List<Integer>)in.readObject();
         input = (PlanNode)in.readObject();
     }
 
@@ -55,6 +65,8 @@ public class SenderNode implements PlanNode {
             .append(linkId)
             .append(", type=")
             .append(type)
+            .append(", distKeys=")
+            .append(distKeys)
             .append("]")
             .append(input.toString(level + 1));
 

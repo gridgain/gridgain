@@ -27,6 +27,9 @@ public class OutputNode implements PlanNode {
 
     private PlanNode input;
 
+    public OutputNode() {
+    }
+
     public OutputNode(PlanNode input) {
         this.input = input;
     }
