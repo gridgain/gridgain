@@ -52,7 +52,7 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener logListener = new MessageOrderLogListener(
-        format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, grpName=%s.*", IDX_NAME, GRP_NAME)
+        format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s.*", IDX_NAME, GRP_NAME)
     );
 
     /** {@inheritDoc} */
