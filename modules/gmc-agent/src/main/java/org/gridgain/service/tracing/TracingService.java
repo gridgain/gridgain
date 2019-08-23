@@ -38,16 +38,16 @@ public class TracingService implements AutoCloseable {
     private static final int QUEUE_CAP = 100;
 
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Context. */
-    private GridKernalContext ctx;
+    private final GridKernalContext ctx;
 
     /** Manager. */
-    private WebSocketManager mgr;
+    private final WebSocketManager mgr;
 
     /** On node traces listener. */
-    private IgniteBiPredicate<UUID, Object> onNodeTraces = this::onNodeTraces;
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeTraces;
 
     /** Worker. */
     private final RetryableSender<Span> worker;
@@ -62,12 +62,12 @@ public class TracingService implements AutoCloseable {
         this.log = ctx.log(TracingService.class);
         this.worker = createSenderWorker();
 
-        ctx.grid().message().localListen(TRACING_TOPIC, onNodeTraces);
+        ctx.grid().message().localListen(TRACING_TOPIC, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.grid().message().stopLocalListen(TRACING_TOPIC, onNodeTraces);
+        ctx.grid().message().stopLocalListen(TRACING_TOPIC, lsnr);
         U.closeQuiet(worker);
     }
 
