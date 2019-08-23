@@ -29,6 +29,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
@@ -143,6 +144,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
         else
             quiet = true;
 
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
+
         cfg = null;
     }
 
@@ -162,6 +165,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
 
         quiet = quiet0;
         cfg = null;
+
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
     }
 
     /**
@@ -181,6 +186,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
 
         quiet = quiet0;
         cfg = path;
+
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
     }
 
     /**
@@ -231,6 +238,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
                 return Logger.getRootLogger();
             }
         });
+
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
 
         quiet = quiet0;
     }
@@ -283,6 +292,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
         });
 
         quiet = quiet0;
+
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
     }
 
     /**
@@ -330,6 +341,8 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAware, Log4jFileAw
         });
 
         quiet = quiet0;
+
+        LogManager.getLogger(CU.CACHE_MSG_LOG_CATEGORY).setLevel(Level.DEBUG);
     }
 
     /**
