@@ -367,18 +367,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         publicFut = new IgniteCacheFutureImpl<>(fut);
 
-        GridCacheAdapter cache = ctx.cache().internalCache(cacheName);
-
-        if (cache == null) { // Possible, cache is not configured on node.
-            assert ccfg != null;
-
-            if (ccfg.getCacheMode() == CacheMode.LOCAL)
-                throw new CacheException("Impossible to load Local cache configured remotely.");
-
-            ctx.grid().getOrCreateCache(ccfg);
-        }
-
-        ensureCacheStarted();
+        ctx.grid().getOrCreateCache(ccfg);
     }
 
     /** {@inheritDoc} */
@@ -1444,30 +1433,6 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             return;
 
         ctx.security().authorize(cacheName, perm);
-    }
-
-    /**
-     * Ensures that cache has been started and is ready to store streamed data.
-     */
-    private void ensureCacheStarted() {
-        DynamicCacheDescriptor desc = ctx.cache().cacheDescriptor(cacheName);
-
-        assert desc != null;
-
-        if (desc.startTopologyVersion() == null)
-            return;
-
-        IgniteInternalFuture<?> affReadyFut = ctx.cache().context().exchange()
-            .affinityReadyFuture(desc.startTopologyVersion());
-
-        if (affReadyFut != null) {
-            try {
-                affReadyFut.get();
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex);
-            }
-        }
     }
 
     /**
