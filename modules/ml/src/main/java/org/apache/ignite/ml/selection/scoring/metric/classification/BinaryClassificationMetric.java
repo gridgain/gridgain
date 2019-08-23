@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
+package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.BinaryClassificationEvaluationContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
 
 /**
  * Common abstract class for all binary classification metrics.

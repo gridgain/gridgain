@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
+package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
  * F-measure metric class.

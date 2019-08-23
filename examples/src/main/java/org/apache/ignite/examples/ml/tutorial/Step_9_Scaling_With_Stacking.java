@@ -37,7 +37,7 @@ import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 
 /**

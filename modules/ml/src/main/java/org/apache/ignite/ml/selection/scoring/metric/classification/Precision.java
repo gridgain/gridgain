@@ -1,11 +1,12 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,58 +17,49 @@
 
 package org.apache.ignite.ml.selection.scoring.metric.classification;
 
-import org.apache.ignite.ml.selection.scoring.LabelPair;
-
-import java.util.Iterator;
+import java.io.Serializable;
+import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
- * Precision calculator.
- *
- * @param <L> Type of a label (truth or prediction).
+ * Precision metric class for binary classificaion.
  */
-public class Precision<L> extends ClassOldMetric<L> {
+public class Precision<L extends Serializable> extends BinaryClassificationMetric<L> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 2112795951652050170L;
+
+    /** Precision. */
+    private Double precision = Double.NaN;
+
     /**
-     * The class of interest or positive class.
+     * Creates an instance Precision class.
      *
-     * @param clsLb The label.
+     * @param truthLabel Truth label.
+     * @param falseLabel False label.
      */
-    public Precision(L clsLb) {
-        super(clsLb);
+    public Precision(L truthLabel, L falseLabel) {
+        super(truthLabel, falseLabel);
+    }
+
+    /**
+     * Creates an instance Precision class.
+     */
+    public Precision() {
     }
 
     /** {@inheritDoc} */
-    @Override public double score(Iterator<LabelPair<L>> it) {
-        if (clsLb != null) {
-            long tp = 0;
-            long fp = 0;
-
-            while (it.hasNext()) {
-                LabelPair<L> e = it.next();
-
-                L prediction = e.getPrediction();
-                L truth = e.getTruth();
-
-                if (clsLb.equals(prediction)) {
-                    if (prediction.equals(truth))
-                        tp++;
-                    else
-                        fp++;
-                }
-            }
-            long denominator = tp + fp;
-
-            if (denominator == 0)
-                return 1; // according to https://github.com/dice-group/gerbil/wiki/Precision,-Recall-and-F1-measure
-
-            return (double)tp / denominator;
-        }
-        else
-            return Double.NaN;
+    @Override public Precision<L> initBy(BinaryClassificationPointwiseMetricStatsAggregator<L> aggr) {
+        precision = ((double) (aggr.getTruePositive()) / (aggr.getTruePositive() + aggr.getFalsePositive()));
+        return this;
     }
 
     /** {@inheritDoc} */
-    @Override public String name() {
-        return "precision for class with label " + clsLb;
+    @Override public double value() {
+        return precision;
     }
 
+    /** {@inheritDoc} */
+    @Override public MetricName name() {
+        return MetricName.PRECISION;
+    }
 }

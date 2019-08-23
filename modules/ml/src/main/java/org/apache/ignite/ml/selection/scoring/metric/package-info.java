@@ -16,6 +16,6 @@
 
 /**
  * <!-- Package description. -->
- * Root package for metrics.
+ * Package for metrics.
  */
 package org.apache.ignite.ml.selection.scoring.metric;

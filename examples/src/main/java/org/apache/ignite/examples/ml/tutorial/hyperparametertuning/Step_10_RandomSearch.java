@@ -36,9 +36,7 @@ import org.apache.ignite.ml.selection.cv.CrossValidationResult;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
-import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetrics;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
@@ -130,11 +128,6 @@ public class Step_10_RandomSearch {
                     .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
-
-                BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
-                    .withNegativeClsLb(0.0)
-                    .withPositiveClsLb(1.0)
-                    .withMetric(BinaryClassificationMetricValues::accuracy);
 
                 scoreCalculator
                     .withIgnite(ignite)

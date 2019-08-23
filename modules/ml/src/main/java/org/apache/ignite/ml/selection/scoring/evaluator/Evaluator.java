@@ -39,8 +39,8 @@ import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.MetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EvaluationContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.jetbrains.annotations.NotNull;
 

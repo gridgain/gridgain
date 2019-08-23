@@ -20,7 +20,7 @@ package org.apache.ignite.ml.selection.scoring.evaluator;
 import java.io.PrintStream;
 import java.util.Map;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
  * Class represents an aggregation of metrics evaluation results.

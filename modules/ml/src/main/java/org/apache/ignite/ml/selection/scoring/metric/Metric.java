@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric;
+package org.apache.ignite.ml.selection.scoring.metric;
 
 import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.MetricStatsAggregator;

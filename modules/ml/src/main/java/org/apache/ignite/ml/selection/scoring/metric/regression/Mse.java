@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.regression;
+package org.apache.ignite.ml.selection.scoring.metric.regression;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.RegressionMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
- * Class for RSS metric (residual sum of squares).
+ * Class for mean squared error metric.
  */
-public class Rss implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+public class Mse implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
     /** Serial version uid. */
-    private static final long serialVersionUID = -8963319864310149685L;
+    private static final long serialVersionUID = -5087769149524246865L;
 
     /** Value. */
     private double value = Double.NaN;
@@ -39,8 +39,8 @@ public class Rss implements Metric<Double, EmptyContext, RegressionMetricStatsAg
 
     /** {@inheritDoc} */
     @Override
-    public Metric<Double, EmptyContext, RegressionMetricStatsAggregator> initBy(RegressionMetricStatsAggregator aggr) {
-        value  = aggr.getRss();
+    public Mse initBy(RegressionMetricStatsAggregator aggr) {
+        value = aggr.getMSE();
         return this;
     }
 
@@ -51,6 +51,6 @@ public class Rss implements Metric<Double, EmptyContext, RegressionMetricStatsAg
 
     /** {@inheritDoc} */
     @Override public MetricName name() {
-        return MetricName.RSS;
+        return MetricName.MSE;
     }
 }

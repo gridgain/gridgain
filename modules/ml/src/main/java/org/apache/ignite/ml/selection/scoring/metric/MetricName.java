@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric;
+package org.apache.ignite.ml.selection.scoring.metric;
 
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.FMeasure;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Precision;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Recall;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Mae;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Mse;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.R2;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rmse;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rss;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.metric.classification.FMeasure;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Precision;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Recall;
+import org.apache.ignite.ml.selection.scoring.metric.regression.Mae;
+import org.apache.ignite.ml.selection.scoring.metric.regression.Mse;
+import org.apache.ignite.ml.selection.scoring.metric.regression.R2;
+import org.apache.ignite.ml.selection.scoring.metric.regression.Rmse;
+import org.apache.ignite.ml.selection.scoring.metric.regression.Rss;
 
 /**
  * Enum for all metrics aggregation.

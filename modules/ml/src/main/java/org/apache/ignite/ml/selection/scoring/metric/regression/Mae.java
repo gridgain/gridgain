@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.regression;
+package org.apache.ignite.ml.selection.scoring.metric.regression;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.RegressionMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
- * Class for mean squared error metric.
+ * Class for mean absolute error metric.
  */
-public class Mse implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+public class Mae implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
     /** Serial version uid. */
-    private static final long serialVersionUID = -5087769149524246865L;
+    private static final long serialVersionUID = -5154991220994862827L;
 
     /** Value. */
     private double value = Double.NaN;
@@ -39,8 +39,8 @@ public class Mse implements Metric<Double, EmptyContext, RegressionMetricStatsAg
 
     /** {@inheritDoc} */
     @Override
-    public Mse initBy(RegressionMetricStatsAggregator aggr) {
-        value = aggr.getMSE();
+    public Mae initBy(RegressionMetricStatsAggregator aggr) {
+        value = aggr.getMAE();
         return this;
     }
 

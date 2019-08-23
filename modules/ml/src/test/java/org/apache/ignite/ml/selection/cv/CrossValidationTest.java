@@ -28,7 +28,7 @@ import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
 import org.junit.Test;

@@ -25,7 +25,7 @@ import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.sparkmodelparser.SparkModelParser;
 import org.apache.ignite.ml.sparkmodelparser.SupportedSparkModels;
 import org.apache.ignite.ml.svm.SVMLinearClassificationModel;

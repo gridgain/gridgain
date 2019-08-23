@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.regression;
+package org.apache.ignite.ml.selection.scoring.metric.regression;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.RegressionMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
- * Class for coefficient of determination metric.
+ * Class for RSS metric (residual sum of squares).
  */
-public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+public class Rss implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
     /** Serial version uid. */
-    private static final long serialVersionUID = -3236888671577413798L;
+    private static final long serialVersionUID = -8963319864310149685L;
 
     /** Value. */
     private double value = Double.NaN;
@@ -39,11 +39,8 @@ public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAgg
 
     /** {@inheritDoc} */
     @Override
-    public R2 initBy(RegressionMetricStatsAggregator aggr) {
-        double ssReg = aggr.getRss();
-        double ssTot = aggr.ysRss();
-        value = ssReg / ssTot;
-
+    public Metric<Double, EmptyContext, RegressionMetricStatsAggregator> initBy(RegressionMetricStatsAggregator aggr) {
+        value  = aggr.getRss();
         return this;
     }
 
@@ -54,6 +51,6 @@ public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAgg
 
     /** {@inheritDoc} */
     @Override public MetricName name() {
-        return MetricName.R2;
+        return MetricName.RSS;
     }
 }

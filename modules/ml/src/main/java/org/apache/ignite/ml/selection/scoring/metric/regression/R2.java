@@ -15,42 +15,45 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.regression;
+package org.apache.ignite.ml.selection.scoring.metric.regression;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.RegressionMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
- * Class for RMSE metric.
+ * Class for coefficient of determination metric.
  */
-public class Rmse implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
     /** Serial version uid. */
-    private static final long serialVersionUID = 9027254107009342723L;
+    private static final long serialVersionUID = -3236888671577413798L;
 
-    /** Mse. */
-    private Mse mse = new Mse();
+    /** Value. */
+    private double value = Double.NaN;
 
     /** {@inheritDoc} */
     @Override public RegressionMetricStatsAggregator makeAggregator() {
-        return mse.makeAggregator();
+        return new RegressionMetricStatsAggregator();
     }
 
     /** {@inheritDoc} */
     @Override
-    public Metric<Double, EmptyContext, RegressionMetricStatsAggregator> initBy(RegressionMetricStatsAggregator aggr) {
-        mse.initBy(aggr);
+    public R2 initBy(RegressionMetricStatsAggregator aggr) {
+        double ssReg = aggr.getRss();
+        double ssTot = aggr.ysRss();
+        value = ssReg / ssTot;
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public double value() {
-        return Math.sqrt(mse.value());
+        return value;
     }
 
     /** {@inheritDoc} */
     @Override public MetricName name() {
-        return MetricName.RMSE;
+        return MetricName.R2;
     }
 }

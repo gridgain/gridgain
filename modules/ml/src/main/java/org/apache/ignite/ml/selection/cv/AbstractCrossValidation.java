@@ -45,7 +45,7 @@ import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.ParameterSetGenerator;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
 import org.apache.ignite.ml.selection.split.mapper.SHA256UniformMapper;
 import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
