@@ -992,23 +992,38 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            return DoOutOpAsync(CacheOp.InvokeAsync, writer =>
-                {
-                    writer.WriteObjectDetached(key);
-                    writer.WriteObjectDetached(holder);
-                },
-                r =>
-                {
-                    if (r == null)
-                        return default(TRes);
+            var ptr = AllocateNoTx(holder);
 
-                    var hasError = r.ReadBoolean();
+            try
+            {
+                return DoOutOpAsync(CacheOp.InvokeAsync, writer =>
+                    {
+                        writer.WriteObjectDetached(key);
+                        writer.WriteObjectDetached(holder);
+                    },
+                    r =>
+                    {
+                        if (ptr != 0)
+                            _ignite.HandleRegistry.Release(ptr);
 
-                    if (hasError)
-                        throw ReadException(r);
+                        if (r == null)
+                            return default(TRes);
 
-                    return r.ReadObject<TRes>();
-                });
+                        var hasError = r.ReadBoolean();
+
+                        if (hasError)
+                            throw ReadException(r);
+
+                        return r.ReadObject<TRes>();
+                    });
+            }
+            catch (Exception)
+            {
+                if (ptr != 0)
+                    _ignite.HandleRegistry.Release(ptr);
+
+                throw;
+            }
         }
 
         /** <inheritdoc /> */
@@ -1025,16 +1040,24 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var ptr = AllocateNoTx(holder);
 
-            return DoOutInOpX((int) CacheOp.InvokeAll,
-                writer =>
-                {
-                    writer.WriteEnumerable(keys);
-                    writer.WriteLong(ptr);
-                    writer.Write(holder);
-                },
-                (input, res) => res == True
-                    ? ReadInvokeAllResults<TRes>(Marshaller.StartUnmarshal(input, IsKeepBinary))
-                    : null, _readException);
+            try
+            {
+                return DoOutInOpX((int) CacheOp.InvokeAll,
+                    writer =>
+                    {
+                        writer.WriteEnumerable(keys);
+                        writer.WriteLong(ptr);
+                        writer.Write(holder);
+                    },
+                    (input, res) => res == True
+                        ? ReadInvokeAllResults<TRes>(Marshaller.StartUnmarshal(input, IsKeepBinary))
+                        : null, _readException);
+            }
+            finally
+            {
+                if (ptr != 0)
+                    _ignite.HandleRegistry.Release(ptr);
+            }
         }
 
         /** <inheritDoc /> */
@@ -1049,14 +1072,31 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            return DoOutOpAsync(CacheOp.InvokeAllAsync,
-                writer =>
-                {
-                    writer.WriteEnumerable(keys);
-                    writer.Write(holder);
-                },
-                input => ReadInvokeAllResults<TRes>(input));
+            var ptr = AllocateNoTx(holder);
 
+            try
+            {
+                return DoOutOpAsync(CacheOp.InvokeAllAsync,
+                    writer =>
+                    {
+                        writer.WriteEnumerable(keys);
+                        writer.Write(holder);
+                    },
+                    reader =>
+                    {
+                        if (ptr != 0)
+                            _ignite.HandleRegistry.Release(ptr);
+
+                        return ReadInvokeAllResults<TRes>(reader);
+                    });
+            }
+            catch (Exception)
+            {
+                if (ptr != 0)
+                    _ignite.HandleRegistry.Release(ptr);
+
+                throw;
+            }
         }
 
         /** <inheritDoc /> */
