@@ -740,7 +740,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /**
      * @param name Tree name.
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache group ID.
+     * @param cacheGrpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
      * @param globalRmvId Remove ID.
@@ -753,7 +754,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     protected BPlusTree(
         String name,
-        int cacheId,
+        int cacheGrpId,
+        String cacheGrpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -766,7 +768,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     ) throws IgniteCheckedException {
         this(
             name,
-            cacheId,
+            cacheGrpId,
+            cacheGrpName,
             pageMem,
             wal,
             globalRmvId,
@@ -781,7 +784,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /**
      * @param name Tree name.
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache ID.
+     * @param grpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
      * @param globalRmvId Remove ID.
@@ -792,7 +796,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     protected BPlusTree(
         String name,
-        int cacheId,
+        int cacheGrpId,
+        String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -801,7 +806,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         @Nullable FailureProcessor failureProcessor,
         @Nullable PageLockListener lsnr
     ) throws IgniteCheckedException {
-        super(cacheId, pageMem, wal, lsnr);
+        super(cacheGrpId, grpName, pageMem, wal, lsnr);
 
         assert !F.isEmpty(name);
 
@@ -1579,8 +1584,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     private void fail(Object msg) {
         AssertionError err = new AssertionError(msg);
 
-        if (failureProcessor != null)
-            failureProcessor.process(new FailureContext(FailureType.CRITICAL_ERROR, err));
+        processFailure(FailureType.CRITICAL_ERROR, err);
 
         throw err;
     }
@@ -2913,8 +2917,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     "(the tree may be corrupted). Increase " + IGNITE_BPLUS_TREE_LOCK_RETRIES + " system property " +
                     "if you regularly see this message (current value is " + getLockRetries() + ").");
 
-                if (failureProcessor != null)
-                    failureProcessor.process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                processFailure(FailureType.CRITICAL_ERROR, e);
 
                 throw e;
             }
@@ -5936,13 +5939,23 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param pageIds Pages ids.
      * @return New CorruptedTreeException instance.
      */
-    private CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, pageIds);
+    protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, pageIds);
 
-        if (failureProcessor != null)
-            failureProcessor.process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+        processFailure(FailureType.CRITICAL_ERROR, e);
 
         return e;
+    }
+
+    /**
+     * Processes failure with failure processor.
+     *
+     * @param failureType Failure type.
+     * @param e Exception.
+     */
+    protected void processFailure(FailureType failureType, Throwable e) {
+        if (failureProcessor != null)
+            failureProcessor.process(new FailureContext(failureType, e));
     }
 
     /**
