@@ -2456,9 +2456,14 @@ public class IgnitionEx {
                                 Constructor<?> ctor = log4jCls.getConstructor(URL.class);
 
                                 cfgLog = (IgniteLogger)ctor.newInstance(url);
+
+                                cfgLog.info("Configured Log4j from " + url);
                             }
-                            else
+                            else {
                                 cfgLog = (IgniteLogger)log4jCls.newInstance();
+
+                                cfgLog.info("Log4j is already configured");
+                            }
                         }
                         catch (Exception e) {
                             log4jInitErr = e;
