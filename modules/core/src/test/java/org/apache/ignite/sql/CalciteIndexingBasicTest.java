@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -32,9 +33,11 @@ import org.junit.Test;
 public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite grid = startGridsMultiThreaded(2);
+        Ignite grid = startGridsMultiThreaded(3);
 
-        CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+        CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setBackups(0);
 
         QueryEntity projEntity = new QueryEntity();
         projEntity.setKeyType(Integer.class.getName());
@@ -97,6 +100,8 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         cache.put(13, new City("Moscow", 10));
         cache.put(15, new City("Khabarovsk", 10));
 
+
+        awaitPartitionMapExchange();
     }
 
     @Test
@@ -106,7 +111,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
             "FROM Developer d JOIN Project p " +
             "ON d.projectId = p.id " +
-            "WHERE d.projectId > 1")).getAll();
+            "WHERE d.projectId > 0")).getAll();
 
 //        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
 //            "FROM Developer d JOIN Project p " +

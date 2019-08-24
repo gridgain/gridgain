@@ -16,6 +16,8 @@
 package org.apache.ignite.internal.sql.calcite.plan;
 
 import java.io.Externalizable;
+import java.util.List;
+import org.apache.ignite.internal.sql.calcite.rels.IgnitePlanVisitor;
 
 /**
  * TODO: Add interface description.
@@ -23,4 +25,8 @@ import java.io.Externalizable;
 public interface PlanNode extends Externalizable {
 
     String toString(int level);
+
+    void accept(IgnitePlanVisitor visitor);
+
+    List<PlanNode> inputs();
 }

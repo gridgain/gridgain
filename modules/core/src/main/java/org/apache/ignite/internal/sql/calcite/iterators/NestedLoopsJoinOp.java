@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -28,8 +27,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
 
 /**
  * TODO: Add class description.
@@ -46,13 +43,13 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
         PhysicalOperator rightSrc,
         ImmutableIntList leftJoinKeys,
         ImmutableIntList rightJoinKeys,
-        RexNode joinCond,
+        Condition joinCond,
         JoinRelType joinType) {
         this.leftSrc = leftSrc;
         this.rightSrc = rightSrc;
         this.leftJoinKeys = leftJoinKeys;
         this.rightJoinKeys = rightJoinKeys;
-        this.joinCond = (Condition)buildFilterCondition(joinCond);
+        this.joinCond = joinCond;
         this.joinType = joinType;
 
         assert leftJoinKeys.size() == rightJoinKeys.size() : "right=" + leftJoinKeys.size() + ",left=" + rightJoinKeys.size();
@@ -60,6 +57,11 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
         if (joinType != JoinRelType.INNER)
             throw new IgniteException("Unsupported join type: " + joinType);
 
+
+    }
+
+
+    @Override public void init() {
         leftSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
             @Override public void apply(IgniteInternalFuture<List<List<?>>> leftFut) {
                 rightSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
@@ -77,6 +79,9 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
                 });
             }
         });
+
+        leftSrc.init();
+        rightSrc.init();
     }
 
     @NotNull @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
@@ -134,6 +139,7 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
             }
         };
     }
+
 
     private List<?> joinRows(List l, List r) {
         List<?> res = new ArrayList<>(l.size() + r.size());

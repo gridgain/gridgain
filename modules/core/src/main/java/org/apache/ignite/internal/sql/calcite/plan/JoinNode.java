@@ -18,9 +18,13 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
+import org.apache.ignite.internal.sql.calcite.rels.IgnitePlanVisitor;
 
 /**
  * TODO: Add class description.
@@ -28,8 +32,8 @@ import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 public class JoinNode implements PlanNode {
         private PlanNode left;
         private PlanNode right;
-        private int[] leftJoinKeys;
-        private int[] rightJoinKeys;
+        private ImmutableIntList leftJoinKeys;
+        private ImmutableIntList rightJoinKeys;
         private Condition joinCond;
         private JoinRelType joinType;
         private JoinAlgorithm joinAlg;
@@ -37,7 +41,7 @@ public class JoinNode implements PlanNode {
     public JoinNode() {
     }
 
-    public JoinNode(PlanNode left, PlanNode right, int[] leftJoinKeys, int[] rightJoinKeys,
+    public JoinNode(PlanNode left, PlanNode right, ImmutableIntList leftJoinKeys, ImmutableIntList rightJoinKeys,
         Condition joinCond, JoinRelType joinType,
         JoinAlgorithm joinAlg) {
         this.left = left;
@@ -64,12 +68,39 @@ public class JoinNode implements PlanNode {
         joinAlg = JoinAlgorithm.values()[in.readInt()];
         joinType = JoinRelType.values()[in.readInt()];
         joinCond = (Condition)in.readObject();
-        leftJoinKeys = (int[])in.readObject();
-        rightJoinKeys = (int[])in.readObject();
+        leftJoinKeys = (ImmutableIntList)in.readObject();
+        rightJoinKeys = (ImmutableIntList)in.readObject();
         left = (PlanNode)in.readObject();
         right = (PlanNode)in.readObject();
     }
 
+    public PlanNode left() {
+        return left;
+    }
+
+    public PlanNode light() {
+        return right;
+    }
+
+    public ImmutableIntList leftJoinKeys() {
+        return leftJoinKeys;
+    }
+
+    public ImmutableIntList rightJoinKeys() {
+        return rightJoinKeys;
+    }
+
+    public Condition joinCond() {
+        return joinCond;
+    }
+
+    public JoinRelType joinType() {
+        return joinType;
+    }
+
+    public JoinAlgorithm joinAlgorithm() {
+        return joinAlg;
+    }
 
     @Override public String toString(int level) {
         String margin = String.join("", Collections.nCopies(level, "  "));
@@ -87,6 +118,14 @@ public class JoinNode implements PlanNode {
             .append(right.toString(level + 1));
 
         return sb.toString();
+    }
+
+    @Override public void accept(IgnitePlanVisitor visitor) {
+        visitor.onJoin(this);
+    }
+
+    @Override public List<PlanNode> inputs() {
+        return Arrays.asList(left, right);
     }
 
     @Override public String toString() {

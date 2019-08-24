@@ -20,6 +20,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
 import java.util.List;
+import org.apache.ignite.internal.sql.calcite.rels.IgnitePlanVisitor;
 
 /**
  * TODO: Add class description.
@@ -71,6 +72,30 @@ public class SenderNode implements PlanNode {
             .append(input.toString(level + 1));
 
         return sb.toString();
+    }
+
+    @Override public void accept(IgnitePlanVisitor visitor) {
+        visitor.onSender(this);
+    }
+
+    @Override public List<PlanNode> inputs() {
+        return Collections.singletonList(input);
+    }
+
+    public PlanNode input() {
+        return input;
+    }
+
+    public SenderType type() {
+        return type;
+    }
+
+    public int linkId() {
+        return linkId;
+    }
+
+    public List<Integer> distKeys() {
+        return distKeys;
     }
 
     @Override public String toString() {

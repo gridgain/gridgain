@@ -24,12 +24,15 @@ import java.util.List;
  */
 public class ReceiverOp extends PhysicalOperator {
 
+    private int linkId;
+
     private int responsesCntr;
 
     private List<List<?>> accumulatedRes = new ArrayList<>();
 
-    public ReceiverOp(int cntr) {
+    public ReceiverOp(int cntr, int linkId) {
         responsesCntr = cntr;
+        this.linkId = linkId;
     }
 
     public void onResult(List<List<?>> res) {
@@ -43,5 +46,13 @@ public class ReceiverOp extends PhysicalOperator {
 
     @Override Iterator<List<?>> iterator(List<List<?>>... input) {
         return input[0].iterator();
+    }
+
+    @Override public void init() {
+        // No-op
+    }
+
+    public int linkId() {
+        return linkId;
     }
 }

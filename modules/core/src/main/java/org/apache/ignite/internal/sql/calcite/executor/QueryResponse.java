@@ -24,8 +24,6 @@ import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
-import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -35,36 +33,51 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 /**
  * TODO: Add class description.
  */
-public class QueryRequest implements Message, GridCacheQueryMarshallable {
+public class QueryResponse  implements Message, GridCacheQueryMarshallable {
+
+    private int linkId;
 
     private UUID qryNode;
 
     private long qryId;
 
     @GridDirectTransient
-    private List<PlanStep> globalPlan;
+    private List<List<?>> result;
 
-    private byte[] planBytes;
+    private byte[] resultBytes;
 
-    public QueryRequest() {
+    public QueryResponse() {
     }
 
-    public QueryRequest(T2<UUID, Long> id, List<PlanStep> plan) {
-        qryNode = id.getKey();
-        qryId = id.getValue();
-        globalPlan = plan;
+    public QueryResponse(List<List<?>> result, int linkId, UUID qryNode, long qryId) {
+        this.result = result;
+        this.linkId = linkId;
+        this.qryNode = qryNode;
+        this.qryId = qryId;
     }
 
-    public UUID queryNode() {
-        return qryNode;
+    @Override public void marshall(Marshaller m) {
+        try {
+            resultBytes = U.marshal(m, result);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
-    public long queryId() {
-        return qryId;
-    }
+    @Override public void unmarshall(Marshaller m, GridKernalContext ctx) {
+        try {
+            final ClassLoader ldr = U.resolveClassLoader(ctx.config());
 
-    public List<PlanStep> plans() {
-        return globalPlan;
+            if (m instanceof BinaryMarshaller)
+                // To avoid deserializing of enum types.
+                result = ((BinaryMarshaller)m).binaryMarshaller().unmarshal(resultBytes, ldr);
+            else
+                result = U.unmarshal(m, resultBytes, ldr);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
@@ -79,7 +92,7 @@ public class QueryRequest implements Message, GridCacheQueryMarshallable {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeByteArray("planBytes", planBytes))
+                if (!writer.writeInt("linkId", linkId))
                     return false;
 
                 writer.incrementState();
@@ -92,6 +105,12 @@ public class QueryRequest implements Message, GridCacheQueryMarshallable {
 
             case 2:
                 if (!writer.writeUuid("qryNode", qryNode))
+                    return false;
+
+                writer.incrementState();
+
+            case 3:
+                if (!writer.writeByteArray("resultBytes", resultBytes))
                     return false;
 
                 writer.incrementState();
@@ -109,7 +128,7 @@ public class QueryRequest implements Message, GridCacheQueryMarshallable {
 
         switch (reader.state()) {
             case 0:
-                planBytes = reader.readByteArray("planBytes");
+                linkId = reader.readInt("linkId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -132,50 +151,52 @@ public class QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 reader.incrementState();
 
+            case 3:
+                resultBytes = reader.readByteArray("resultBytes");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
-        return reader.afterMessageRead(QueryRequest.class);
+        return reader.afterMessageRead(QueryResponse.class);
     }
 
     @Override public short directType() {
-        return 175;
+        return 176; // TODO: CODE: implement.
     }
 
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 
     @Override public void onAckReceived() {
     }
 
-    @Override public void marshall(Marshaller m) {
-        try {
-            planBytes = U.marshal(m, globalPlan);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+    public int linkId() {
+        return linkId;
     }
 
-    @Override public void unmarshall(Marshaller m, GridKernalContext ctx) {
-        try {
-            final ClassLoader ldr = U.resolveClassLoader(ctx.config());
+    public UUID queryNode() {
+        return qryNode;
+    }
 
-            if (m instanceof BinaryMarshaller)
-                // To avoid deserializing of enum types.
-                globalPlan = ((BinaryMarshaller)m).binaryMarshaller().unmarshal(planBytes, ldr);
-            else
-                globalPlan = U.unmarshal(m, planBytes, ldr);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+    public long queryId() {
+        return qryId;
+    }
+
+    public List<List<?>> result() {
+        return result;
     }
 
     @Override public String toString() {
-        return "QueryRequest{" +
-            "qryId=" + qryId +
-            ", globalPlan=" + globalPlan +
+        return "QueryResponse{" +
+            "linkId=" + linkId +
+            ", qryNode=" + qryNode +
+            ", qryId=" + qryId +
+            ", result=" + result +
             '}';
     }
 }

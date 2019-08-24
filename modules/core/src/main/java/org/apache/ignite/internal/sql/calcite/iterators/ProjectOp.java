@@ -18,10 +18,8 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 
@@ -30,11 +28,16 @@ import org.apache.ignite.lang.IgniteInClosure;
  */
 public class ProjectOp extends PhysicalOperator {
 
-    private final List<RexNode> projects;
+    private final ImmutableIntList prjIdxs;
+    private PhysicalOperator rowsSrc;
 
-    public ProjectOp(PhysicalOperator rowsSrc, List<RexNode> projects) {
-        this.projects = projects;
+    public ProjectOp(PhysicalOperator rowsSrc, ImmutableIntList prjIdxs) {
+        this.prjIdxs = prjIdxs;
+        this.rowsSrc = rowsSrc;
+    }
 
+
+    @Override public void init() {
         rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
             @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
                 try {
@@ -47,32 +50,31 @@ public class ProjectOp extends PhysicalOperator {
                 }
             }
         });
+
+        rowsSrc.init();
     }
 
     @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
         Iterator<List<?>> srcIter = input[0].iterator();
         return new Iterator<List<?>>() {
             @Override public boolean hasNext() {
-                return srcIter.hasNext(); // TODO: CODE: implement.
+                return srcIter.hasNext();
             }
 
             @Override public List<?> next() {
                 List<?> srcRow = srcIter.next();
 
-                List projectedRow = new ArrayList<>(projects.size());
+                List projectedRow = new ArrayList<>(prjIdxs.size());
 
-                for (RexNode projection : projects) {
-                    if (!(projection instanceof RexInputRef))
-                        throw new IgniteException("Unsupported projection type: " + projection.getClass());
-
-                    int colId = ((RexInputRef)projection).getIndex();
-
+                for (int colId : prjIdxs) {
                     Object obj = srcRow.get(colId);
+
                     projectedRow.add(obj);
                 }
 
-                return projectedRow; // TODO: CODE: implement.
+                return projectedRow;
             }
-        }; // TODO: CODE: implement.
+        };
     }
+
 }

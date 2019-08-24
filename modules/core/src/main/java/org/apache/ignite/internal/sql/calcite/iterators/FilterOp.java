@@ -17,13 +17,10 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 
 import java.util.Iterator;
 import java.util.List;
-import org.apache.calcite.rex.RexNode;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 import org.apache.ignite.lang.IgniteInClosure;
-
-import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
 
 /**
  * TODO: Add class description.
@@ -32,22 +29,10 @@ public class FilterOp extends PhysicalOperator {
     private final PhysicalOperator rowsSrc;
     private final Condition filterCondition;
 
-    public FilterOp(PhysicalOperator rowsSrc, RexNode expression) {
+    public FilterOp(PhysicalOperator rowsSrc, Condition filterCondition) {
         this.rowsSrc = rowsSrc;
-        filterCondition = (Condition)buildFilterCondition(expression);
+        this.filterCondition = filterCondition;
 
-        rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
-            @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
-                try {
-                    List<List<?>> input = fut.get();
-
-                    execute(input);
-                }
-                catch (IgniteCheckedException e) {
-                    onDone(e);
-                }
-            }
-        });
     }
 
     @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
@@ -80,6 +65,23 @@ public class FilterOp extends PhysicalOperator {
                 return null;
             }
         };
+    }
+
+    @Override public void init() {
+        rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+            @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
+                try {
+                    List<List<?>> input = fut.get();
+
+                    execute(input);
+                }
+                catch (IgniteCheckedException e) {
+                    onDone(e);
+                }
+            }
+        });
+
+        rowsSrc.init();
     }
 
 }

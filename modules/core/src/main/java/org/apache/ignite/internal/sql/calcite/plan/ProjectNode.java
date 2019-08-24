@@ -18,8 +18,10 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import org.apache.calcite.util.ImmutableIntList;
+import org.apache.ignite.internal.sql.calcite.rels.IgnitePlanVisitor;
 
 /**
  * TODO: Add class description.
@@ -27,23 +29,23 @@ import java.util.Collections;
 public class ProjectNode implements PlanNode {
     private PlanNode input;
 
-    private int[] prjIdx; // TODO other types of projections (RexNode)
+    private ImmutableIntList prjIdxs; // TODO other types of projections (RexNode)
 
     public ProjectNode() {
     }
 
     public ProjectNode(int[] prjIdx, PlanNode input) {
-        this.prjIdx = prjIdx;
+        this.prjIdxs = ImmutableIntList.of(prjIdx);
         this.input = input;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(prjIdx);
+        out.writeObject(prjIdxs);
         out.writeObject(input);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        prjIdx = (int[])in.readObject();
+        prjIdxs = (ImmutableIntList)in.readObject();
         input = (PlanNode)in.readObject();
     }
 
@@ -54,12 +56,24 @@ public class ProjectNode implements PlanNode {
         StringBuilder sb = new StringBuilder("\n");
 
         sb.append(margin)
-            .append("ProjectNode [prjIdx=")
-            .append(Arrays.toString(prjIdx))
+            .append("ProjectNode [prjIdxs=")
+            .append(prjIdxs)
             .append("]")
             .append(input.toString(level + 1));
 
         return sb.toString();
+    }
+
+    @Override public void accept(IgnitePlanVisitor visitor) {
+        visitor.onProject(this);
+    }
+
+    @Override public List<PlanNode> inputs() {
+        return Collections.singletonList(input);
+    }
+
+    public ImmutableIntList projectIndexes() {
+        return prjIdxs;
     }
 
     @Override public String toString() {

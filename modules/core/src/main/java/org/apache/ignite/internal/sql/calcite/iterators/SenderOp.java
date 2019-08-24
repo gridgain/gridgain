@@ -28,6 +28,7 @@ import org.apache.ignite.internal.sql.calcite.executor.ExecutorOfGovnoAndPalki;
 import org.apache.ignite.internal.sql.calcite.plan.SenderNode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteInClosure;
 
 import static org.apache.ignite.internal.sql.calcite.plan.SenderNode.SenderType.HASH;
@@ -37,10 +38,30 @@ import static org.apache.ignite.internal.sql.calcite.plan.SenderNode.SenderType.
  * TODO: Add class description.
  */
 public class SenderOp extends PhysicalOperator {
+    private final PhysicalOperator rowsSrc;
+    private final SenderNode.SenderType type;
+    private final int linkId;
+    private final T2<UUID, Long> qryId;
+    private final List<Integer> distKeys;
+    private final ExecutorOfGovnoAndPalki exec;
+
 
     public SenderOp(PhysicalOperator rowsSrc, SenderNode.SenderType type, int linkId, T2<UUID, Long> qryId,
         List<Integer> distKeys, ExecutorOfGovnoAndPalki exec) {
+        this.rowsSrc = rowsSrc;
+        this.type = type;
+        this.linkId = linkId;
+        this.qryId = qryId;
+        this.distKeys = distKeys;
+        this.exec = exec;
 
+    }
+
+    @Override Iterator<List<?>> iterator(List<List<?>>... input) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override public void init() {
         rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
             @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
                 try {
@@ -65,6 +86,8 @@ public class SenderOp extends PhysicalOperator {
                             mappedRows.add(row);
                         }
 
+                        System.out.println("mapping=" + mapping);
+
                         for (Map.Entry<UUID, List<List<?>>> e : mapping.entrySet())
                             exec.sendResult(e.getValue(), linkId, qryId, e.getKey());
                     }
@@ -72,13 +95,12 @@ public class SenderOp extends PhysicalOperator {
                         throw new UnsupportedOperationException("unsupported yet");
                 }
                 catch (Exception e) {
+                    System.out.println("Sender error=" + X.getFullStackTrace(e));
                     onDone(e); // TODO send error back to the reducer
                 }
             }
         });
-    }
 
-    @Override Iterator<List<?>> iterator(List<List<?>>... input) {
-        throw new UnsupportedOperationException();
+        rowsSrc.init();
     }
 }

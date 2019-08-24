@@ -59,7 +59,7 @@ public class PlanStep implements Externalizable {
         return planStep;
     }
 
-    public Site distribution() {
+    public Site site() {
         return site;
     }
 

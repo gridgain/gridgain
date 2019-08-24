@@ -19,10 +19,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import javax.cache.Cache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.sql.calcite.Column;
 import org.apache.ignite.internal.sql.calcite.IgniteTable;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -39,13 +39,13 @@ public class TableScanOp extends PhysicalOperator {
     public TableScanOp(IgniteTable tbl, IgniteInternalCache cache) {
         this.tbl = tbl;
         this.cache = cache;
-
-        execute(null);
     }
 
     @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
         try {
-            Iterator<Cache.Entry<Object, BinaryObject>> it = cache.scanIterator(true, null);
+            Iterator<CacheDataRow> it = cache.context().offheap().cacheIterator(cache.context().cacheId(),
+                true, false, cache.context().topology().readyTopologyVersion(),
+                null, false);
 
             return new TableScanIterator(it, tbl.columns(), tbl.typeId()); // TODO: CODE: implement.
         }
@@ -54,9 +54,13 @@ public class TableScanOp extends PhysicalOperator {
         }
     }
 
-    private static class TableScanIterator implements Iterator<List<?>>{
+    @Override public void init() {
+        execute(null);
+    }
 
-        private final Iterator<Cache.Entry<Object, BinaryObject>> it;
+    private class TableScanIterator implements Iterator<List<?>>{
+
+        private final Iterator<CacheDataRow> it;
 
         final List<Column> cols;
 
@@ -64,7 +68,7 @@ public class TableScanOp extends PhysicalOperator {
 
         List<?> next = null;
 
-        private TableScanIterator(Iterator<Cache.Entry<Object, BinaryObject>> it, List<Column> cols, int typeId) {
+        private TableScanIterator(Iterator<CacheDataRow> it, List<Column> cols, int typeId) {
             this.it = it;
             this.cols = cols;
             this.typeId = typeId;
@@ -92,16 +96,17 @@ public class TableScanOp extends PhysicalOperator {
 
         private List<?>  findNext() {
             while (it.hasNext()) {
-                Cache.Entry<Object, BinaryObject> e = it.next();
+                CacheDataRow e = it.next();
 
-                BinaryObject val = e.getValue();
+                BinaryObject val = (BinaryObject)e.value();
 
-                if (val.type().typeId() != typeId)
+                if (val.type().typeId() != typeId) {// TODO backup filter
                     continue;
+                }
 
                 List<Object> row = new ArrayList<>(cols.size());
 
-                Object key = e.getKey();
+                Object key = e.key().value(null, false);
 
                 row.add(key);
 

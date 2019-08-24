@@ -86,7 +86,7 @@ public class PlanSplitter implements IgniteRelVisitor {
 
         JoinInfo info = JoinInfo.of(join.getLeft(), join.getRight(), join.getCondition());
 
-        JoinNode node = new JoinNode(left, right, info.leftKeys.toIntArray(), info.rightKeys.toIntArray(),
+        JoinNode node = new JoinNode(left, right, info.leftKeys, info.rightKeys,
             (Condition)buildFilterCondition(join.getCondition()), join.getJoinType(), NESTED_LOOPS); // TODO Other types.
 
         childrenStack.push(node);

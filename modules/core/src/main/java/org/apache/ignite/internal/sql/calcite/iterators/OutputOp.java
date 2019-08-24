@@ -18,22 +18,36 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.lang.IgniteInClosure;
 
 /**
  * Query tree output.
  */
 public class OutputOp extends PhysicalOperator {
 
+    PhysicalOperator rowsSrc;
+
     public OutputOp(PhysicalOperator rowsSrc) {
-        try {
-            onDone(rowsSrc.get());
-        }
-        catch (IgniteCheckedException e) {
-            onDone(e);
-        }
+        this.rowsSrc = rowsSrc;
     }
 
     @Override Iterator<List<?>> iterator(List<List<?>>... input) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override public void init() {
+        rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+            @Override public void apply(IgniteInternalFuture<List<List<?>>> future) {
+                try {
+                    OutputOp.this.onDone(rowsSrc.get());
+                }
+                catch (IgniteCheckedException e) {
+                    onDone(e);
+                }
+            }
+        });
+
+        rowsSrc.init();
     }
 }

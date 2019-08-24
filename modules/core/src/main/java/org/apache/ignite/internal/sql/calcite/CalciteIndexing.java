@@ -21,10 +21,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -69,11 +71,15 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CalciteIndexing implements GridQueryIndexing {
 
+    public static final String DEFAULT_SCHEMA = "PUBLIC";
+        
     private GridKernalContext ctx;
 
     private final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
 
     private ExecutorOfGovnoAndPalki executor;
+    
+    
 
 
     /** {@inheritDoc} */
@@ -82,7 +88,7 @@ public class CalciteIndexing implements GridQueryIndexing {
 
         this.ctx = ctx;
 
-        executor = new ExecutorOfGovnoAndPalki(ctx);
+        executor = new ExecutorOfGovnoAndPalki(ctx, this);
 
         ctx.io().addMessageListener(GridTopic.TOPIC_QUERY, executor);
     }
@@ -109,9 +115,18 @@ public class CalciteIndexing implements GridQueryIndexing {
                 schema.add(cand.descriptor().tableName(), new IgniteTable(cand, cacheName, cand.descriptor().tableName()));
             }
         }
-        System.out.println("CalciteIndexing.registerCache");
 
-        // TODO: CODE: implement.
+        executor.onCacheRegistered(cacheInfo.cacheContext());
+        System.out.println("CalciteIndexing.registerCache");
+    }
+    
+    public IgniteTable table(String tblName) {
+        Table tbl = rootSchema.getSubSchema(DEFAULT_SCHEMA).getTable(tblName);
+        
+        if (tbl == null)
+            throw new IgniteException("Can not find table in the default schema. Table name=" + tblName);
+        
+        return (IgniteTable)tbl;
     }
 
     /** {@inheritDoc} */

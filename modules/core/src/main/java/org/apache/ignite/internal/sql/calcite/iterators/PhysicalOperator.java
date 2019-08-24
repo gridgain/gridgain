@@ -37,4 +37,6 @@ public abstract class PhysicalOperator extends GridFutureAdapter<List<List<?>>> 
 
         onDone(all);
     }
+
+    public abstract void init();
 }

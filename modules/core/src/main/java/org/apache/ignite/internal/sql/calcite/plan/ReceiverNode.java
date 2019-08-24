@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
+import java.util.List;
+import org.apache.ignite.internal.sql.calcite.rels.IgnitePlanVisitor;
 
 /**
  * TODO: Add class description.
@@ -59,6 +61,22 @@ public class ReceiverNode implements PlanNode {
             .append("]");
 
         return sb.toString();
+    }
+
+    @Override public void accept(IgnitePlanVisitor visitor) {
+        visitor.onReceiver(this);
+    }
+
+    @Override public List<PlanNode> inputs() {
+        return Collections.emptyList();
+    }
+
+    public int inputLink() {
+        return inputLink;
+    }
+
+    public Type type() {
+        return type;
     }
 
     @Override public String toString() {

@@ -176,6 +176,7 @@ import org.apache.ignite.internal.processors.service.ServiceDeploymentProcessId;
 import org.apache.ignite.internal.processors.service.ServiceSingleNodeDeploymentResult;
 import org.apache.ignite.internal.processors.service.ServiceSingleNodeDeploymentResultBatch;
 import org.apache.ignite.internal.sql.calcite.executor.QueryRequest;
+import org.apache.ignite.internal.sql.calcite.executor.QueryResponse;
 import org.apache.ignite.internal.util.GridByteArrayList;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.GridLongList;
@@ -1079,6 +1080,11 @@ public class GridIoMessageFactory implements MessageFactory {
 
             case 175:
                 msg = new QueryRequest();
+
+                break;
+
+            case 176:
+                msg = new QueryResponse();
 
                 break;
 
