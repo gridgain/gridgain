@@ -515,6 +515,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 ctx.cache().context().readOnlyMode(globalState.readOnly());
 
                 if (globalState.readOnly())
+                    ctx.cache().context().database().forceCheckpoint("Cluster read-only mode enabled");
+
+                if (globalState.readOnly())
                     log.info("Read-only mode is enabled");
                 else
                     log.info("Read-only mode is disabled");
@@ -848,6 +851,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().context().readOnlyMode(globalState.readOnly());
 
+            if (globalState.readOnly())
+                ctx.cache().context().database().forceCheckpoint("Cluster read-only mode enabled");
+
             return;
         }
 
@@ -867,6 +873,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
 
             ctx.cache().context().readOnlyMode(globalState.readOnly());
+
+            if (globalState.readOnly())
+                ctx.cache().context().database().forceCheckpoint("Cluster read-only mode enabled");
         }
     }
 
