@@ -42,9 +42,9 @@ public class ReceiverOp extends PhysicalOperator {
     public void onResult(List<List<?>> res) {
         synchronized (this) {
             accumulatedRes.addAll(res);
+
             --responsesCntr;
-            System.out.println("ReceiverOp locNode="+ exec.context().localNodeId().toString().substring(0,2) +
-                ", linkId=" + linkId + ", responsesCntr=" + responsesCntr + ", accumulatedRes=" + accumulatedRes);
+
             if (responsesCntr == 0)
                 execute(accumulatedRes); // All responses have arrived.
         }

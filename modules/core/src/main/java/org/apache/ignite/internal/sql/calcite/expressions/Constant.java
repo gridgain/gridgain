@@ -55,4 +55,10 @@ public class Constant implements Expression {
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         constant = in.readObject();
     }
+
+    @Override public String toString() {
+        return "{" +
+            constant +
+            '}';
+    }
 }

@@ -222,12 +222,18 @@ public class CalcitePlanner {
     }
 
     public List<PlanStep> plan(String sql) {
+        System.out.println("\n\n=======================================");
+        System.out.println("\nSQL=" + sql);
+
         SqlNode sqlAst = parse(sql);
 
         SqlNode validatedSqlAst = validate(sqlAst);
 
+        System.out.println("\nvalidatedSqlAst=" + validatedSqlAst);
+
         RelNode logicalPlan = convertToRel(validatedSqlAst);
-        System.out.println("Initial logical plan:\n" + RelOptUtil.toString(logicalPlan));
+
+        System.out.println("\nInitial logical plan:\n" + RelOptUtil.toString(logicalPlan));
 
         RelNode rewrittenPlan = rewritePlan(logicalPlan);
         //System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));

@@ -108,12 +108,11 @@ public class CalciteIndexing implements GridQueryIndexing {
         // QueryEntity == table
         SchemaPlus schema = rootSchema.getSubSchema(schemaName);
 
-        if (schema == null) {
+        if (schema == null)
             schema = rootSchema.add(schemaName, new AbstractSchema());
 
-            for (QueryTypeCandidate cand : cands) {
-                schema.add(cand.descriptor().tableName(), new IgniteTable(cand, cacheName, cand.descriptor().tableName()));
-            }
+        for (QueryTypeCandidate cand : cands) {
+            schema.add(cand.descriptor().tableName(), new IgniteTable(cand, cacheName, cand.descriptor().tableName()));
         }
 
         executor.onCacheRegistered(cacheInfo.cacheContext());

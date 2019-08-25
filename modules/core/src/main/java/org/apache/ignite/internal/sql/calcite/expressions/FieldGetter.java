@@ -44,4 +44,10 @@ public class FieldGetter implements Expression {
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         idx = in.readInt();
     }
+
+    @Override public String toString() {
+        return "{" +
+            "$" + idx +
+            '}';
+    }
 }

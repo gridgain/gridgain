@@ -18,7 +18,6 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteCheckedException;
@@ -57,9 +56,7 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
         if (joinType != JoinRelType.INNER)
             throw new IgniteException("Unsupported join type: " + joinType);
 
-
     }
-
 
     @Override public void init() {
         leftSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
@@ -84,62 +81,36 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
         rightSrc.init();
     }
 
-    @NotNull @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
+    @NotNull @Override public Iterator<List<?>> iterator(List<List<?>>... input) {
         return new Iterator<List<?>>() {
-            private Iterator<List<?>> leftIt = input[0].iterator();
-            private Iterator<List<?>> rightIt = input[1].iterator();
+            private List<List<?>> leftRows = input[0];
+            private List<List<?>> rightRows = input[1];
 
-            private List<?> curLeft;
-            private List<?> curRight;
-
-            // private List<?> curRow;
+            private List<List<?>> result = new ArrayList<>();
+            private Iterator<List<?>> resIt;
 
             {
-                advance();
+                for (List<?> leftRow : leftRows) {
+                    for (List<?> rightRow : rightRows) {
+                        List joinedRow = joinRows(leftRow, rightRow);
+
+                        if (leftJoinKeys.isEmpty() || joinCond.evaluate(joinedRow))
+                            result.add(joinedRow);
+                    }
+                }
+
+                resIt = result.iterator();
             }
 
             @Override public boolean hasNext() {
-                assert (curLeft == null) == (curRight == null);
-
-                return curLeft != null;
+                return resIt.hasNext();
             }
 
             @Override public List<?> next() {
-                if (curLeft == null)
-                    throw new NoSuchElementException();
-
-                List res = joinRows(curLeft, curRight);
-
-                advance();
-
-                return res;
-            }
-
-            private void advance() {
-                while (leftIt.hasNext()) {
-                    if (curLeft == null)
-                        curLeft = leftIt.next();
-
-                    while (rightIt.hasNext()) {
-                        curRight = rightIt.next();
-
-                        List<?> joinedRow = joinRows(curLeft, curRight); // TODO Refactor to not join rows twice.
-
-                        // Empty join keys means Cartesian product.
-                        if (leftJoinKeys.isEmpty() || joinCond.evaluate(joinedRow))
-                            return;
-                    }
-
-                    curLeft = null;
-                    rightIt = input[1].iterator();
-                }
-
-                curLeft = null;
-                curRight = null;
+                return resIt.next();
             }
         };
     }
-
 
     private List<?> joinRows(List l, List r) {
         List<?> res = new ArrayList<>(l.size() + r.size());

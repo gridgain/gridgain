@@ -16,7 +16,7 @@
  */
 package org.apache.ignite.sql;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -30,14 +30,12 @@ import org.junit.Test;
 /**
  * TODO: Add class description.
  */
-public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
+@SuppressWarnings("unchecked") public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite grid = startGridsMultiThreaded(2);
+        Ignite grid = startGridsMultiThreaded(4);
 
-        CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(0);
+
 
         QueryEntity projEntity = new QueryEntity();
         projEntity.setKeyType(Integer.class.getName());
@@ -48,14 +46,19 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         projEntity.addQueryField("id", Integer.class.getName(), null);
         projEntity.setTableName("Project");
 
+        CacheConfiguration projCfg = cache(projEntity);
+
         QueryEntity devEntity = new QueryEntity();
         devEntity.setKeyType(Integer.class.getName());
         devEntity.setKeyFieldName("id");
         devEntity.setValueType(Developer.class.getName());
         devEntity.addQueryField("name", String.class.getName(), null);
         devEntity.addQueryField("projectId", Integer.class.getName(), null);
+        devEntity.addQueryField("cityId", Integer.class.getName(), null);
         devEntity.addQueryField("id", Integer.class.getName(), null);
         devEntity.setTableName("Developer");
+
+        CacheConfiguration devCfg = cache(devEntity);
 
         QueryEntity countryEntity = new QueryEntity();
         countryEntity.setKeyType(Integer.class.getName());
@@ -66,6 +69,9 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         countryEntity.addQueryField("id", Integer.class.getName(), null);
         countryEntity.setTableName("Country");
 
+        CacheConfiguration countryCfg = cache(countryEntity);
+
+
         QueryEntity cityEntity = new QueryEntity();
         cityEntity.setKeyType(Integer.class.getName());
         cityEntity.setKeyFieldName("id");
@@ -75,58 +81,65 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         cityEntity.addQueryField("id", Integer.class.getName(), null);
         cityEntity.setTableName("City");
 
-        ccfg.setQueryEntities(Arrays.asList(projEntity, devEntity, countryEntity, cityEntity));
+        CacheConfiguration cityCfg = cache(cityEntity);
 
-        ccfg.setSqlSchema("PUBLIC");
 
-        IgniteCache cache = grid.createCache(ccfg);
+        IgniteCache projCache = grid.createCache(projCfg);
+        IgniteCache devCache = grid.createCache(devCfg);
+        IgniteCache countryCache = grid.createCache(countryCfg);
+        IgniteCache cityCache = grid.createCache(cityCfg);
 
-        cache.put(0, new Project("Optiq", 3));
-        cache.put(1, new Project("Ignite", 3));
-        cache.put(2, new Project("Calcite", 1));
-        cache.put(3, new Project("GridGain", 9));
 
-        cache.put(4, new Developer("Aristotel", 1));
-        cache.put(5, new Developer("Newton", 2));
-        cache.put(6, new Developer("dAlamber", 9));
-        cache.put(7, new Developer("Euler", 3));
-        cache.put(8, new Developer("Laplas", 2));
-        cache.put(9, new Developer("Einstein", 1));
+        projCache.put(1, new Project("Optiq", 3));
+        projCache.put(2, new Project("Ignite", 3));
+        projCache.put(3, new Project("Calcite", 1));
+        projCache.put(4, new Project("GridGain", 2));
 
-        cache.put(10, new Country("Russia", 1));
-        cache.put(11, new Country("USA", 2));
-        cache.put(12, new Country("England", 3));
+        devCache.put(1, new Developer("Aristotel", 1, 1));
+        devCache.put(2, new Developer("Newton", 2, 2));
+        devCache.put(3, new Developer("dAlamber", 1, 3));
+        devCache.put(4, new Developer("Euler", 3, 2));
+        devCache.put(5, new Developer("Laplas", 2, 4));
+        devCache.put(6, new Developer("Einstein", 4, 2));
 
-        cache.put(13, new City("Moscow", 10));
-        cache.put(15, new City("Khabarovsk", 10));
+        countryCache.put(1, new Country("Russia", 3));
+        countryCache.put(2, new Country("USA", 2));
+        countryCache.put(3, new Country("England", 1));
+
+        cityCache.put(1, new City("Moscow", 1));
+        cityCache.put(2, new City("Khabarovsk", 1));
+        cityCache.put(3, new City("NewYork", 2));
+        cityCache.put(4, new City("London", 3));
 
 
         awaitPartitionMapExchange();
     }
 
+
     @Test
     public void testSelect() {
-        IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, String> cache = grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.ver, p.name, p.id " +
+        List<List<?>> res = cache.query(new SqlFieldsQuery("SELECT d.id, d.name, d.projectId, p.id, p.name, p.ver " +
             "FROM Developer d JOIN Project p " +
-            "ON d.projectId = p.ver " +
-            "WHERE d.projectId > 0")).getAll();
+            "ON d.projectId = p.id " +
+            "WHERE d.projectId > 1")).getAll();
 
-//        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
+//        List<List<?>> res = cache.query(new SqlFieldsQuery(
+//            "SELECT d.id, d.name, d.projectId, p.id, p.name, cnt.id, cnt.Name, ci.id, ci.Name, ci.countryId  " +
 //            "FROM Developer d JOIN Project p " +
 //            "ON d.projectId = p.id " +
-//            "JOIN Country c " +
-//            "ON c.id = d.projectId " +
 //            "JOIN City ci " +
-//            "ON ci.countryId = c.id " +
+//            "ON ci.id = d.cityId " +
+//            "JOIN Country cnt " +
+//            "ON ci.countryId = cnt.id " +
 //            "WHERE d.projectId > 1")).getAll();
 
 //        Random r = new Random();
 //        for (int i = 0; i < 1000; i++) {
 //            long start = System.currentTimeMillis();
 //
-//            List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
+//            List<List<?>> res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
 //                "FROM Developer d JOIN Project p " +
 //                (r.nextBoolean() ? "ON d.projectId = p.id " : "ON d.id = p.id ") +
 //                "JOIN Country c " +
@@ -139,9 +152,9 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 //        }
 
 
-//        List res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project")).getAll();
+//        List<List<?>> res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project")).getAll();
 
-//        List res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project " +
+//        List<List<?>> res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project " +
 //            "WHERE ver = (SELECT MAX(projectId) FROM Developer)")).getAll();
 
 
@@ -152,7 +165,20 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 //                " OR id < " + ThreadLocalRandom.current().nextInt(3, 10) +
 //                " ORDER BY name")).getAll();
 
-        System.out.println("====res="  + res);
+        System.out.println("=================RESULT======================");
+        for (List<?> row : res)
+            System.out.println(row);
+        System.out.println("=======================================");
+
+    }
+
+
+    private CacheConfiguration<Object, Object> cache(QueryEntity ent) {
+        return new CacheConfiguration<>(ent.getTableName())
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setBackups(0)
+            .setQueryEntities(Collections.singletonList(ent))
+            .setSqlSchema("PUBLIC");
     }
 
     private static class Project {
@@ -175,10 +201,12 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
     private static class Developer {
         String name;
         int projectId;
+        int cityId;
 
-        public Developer(String name, int projectId) {
+        public Developer(String name, int projectId, int cityId) {
             this.name = name;
             this.projectId = projectId;
+            this.cityId = cityId;
         }
 
         @Override public String toString() {

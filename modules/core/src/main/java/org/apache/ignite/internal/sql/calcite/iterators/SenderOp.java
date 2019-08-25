@@ -89,8 +89,6 @@ public class SenderOp extends PhysicalOperator {
                             mappedRows.add(row);
                         }
 
-                        System.out.println("mapping=" + mapping);
-
                         for (Map.Entry<UUID, List<List<?>>> e : mapping.entrySet())
                             exec.sendResult(e.getValue(), linkId, qryId, e.getKey());
                     }

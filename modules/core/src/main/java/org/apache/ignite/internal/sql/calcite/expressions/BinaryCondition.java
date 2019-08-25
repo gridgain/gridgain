@@ -102,6 +102,6 @@ public class BinaryCondition implements Condition {
     }
 
     @Override public String toString() {
-        return String.valueOf(kind);
+        return left.toString() + String.valueOf(kind) + right.toString();
     }
 }

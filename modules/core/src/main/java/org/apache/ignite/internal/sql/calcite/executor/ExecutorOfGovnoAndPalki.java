@@ -158,8 +158,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
     public void sendResult(List<List<?>> result, int linkId, T2<UUID, Long> qryId,
         UUID dest) throws IgniteCheckedException {
 
-        System.out.println("sendResult " + locNode() + ", linkId=" + linkId + ", to=" + dest + ", result=" + result);
-
         QueryResponse res = new QueryResponse(result, linkId, qryId.getKey(), qryId.getValue());
 
         send(res, ctx.discovery().node(dest));
@@ -184,8 +182,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
             if (msg instanceof GridCacheQueryMarshallable)
                 ((GridCacheQueryMarshallable)msg).unmarshall(marshaller, ctx);
 
-            System.out.println("onMessage " + locNode() + ", from=" + nodeId + ", msg= " + msg);
-
             if (msg instanceof QueryRequest) {
                 QueryRequest qryReq = (QueryRequest)msg;
 
@@ -204,8 +200,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
     private void runLocalPlan(List<PlanStep> plans, Long qryId, UUID qryNode,
         GridFutureAdapter<FieldsQueryCursor<List<?>>> qryFut) {
 
-        System.out.println("runLocalPlan "+ locNode() +", plans.size=" + plans.size());
-
         int dataCnt = ctx.discovery().aliveServerNodes().size();
 
         T2<UUID, Long> globalQryId = new T2<>(qryNode, qryId);
@@ -219,8 +213,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
 
             List<ReceiverOp> recList = physicalPlanCreator.receivers();
 
-            System.out.println("plan "+ locNode() +", stepid=" + step.id() + ", recList.size=" + recList.size() + ", recList="  +recList);
-
             if (!recList.isEmpty()) {
                 synchronized (receivers) {
                     Map<Integer, ReceiverOp> qryRec = receivers.computeIfAbsent(globalQryId, k -> new HashMap<>());
@@ -228,13 +220,8 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
                     for (ReceiverOp receiverOp : recList)
                         qryRec.put(receiverOp.linkId(), receiverOp);
 
-                    System.out.println("Registered recievers locNode=" +locNode() + ", step=" + step.id() + ", receivers=" + qryRec);
-
-
                     if (!receivedResults.isEmpty()) {
                         Map<Integer, ReceivedResultsAccumulator> resultsForQry = receivedResults.get(globalQryId);
-
-                        System.out.println("Not empty receivedResults locNode=" + locNode() + ", receivedResults=" + receivedResults);
 
                         if (!F.isEmpty(resultsForQry)) {
                             for (Iterator<Map.Entry<Integer, ReceivedResultsAccumulator>> it = resultsForQry.entrySet().iterator(); it.hasNext();) {
@@ -244,9 +231,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
 
                                 if (recOp != null) {
                                     ReceivedResultsAccumulator acc = e.getValue();
-
-                                    System.out.println("Not empty acc locNode=" + locNode() + ", acc=" + acc);
-
 
                                     for (List<List<?>> res : acc.getResults())
                                         recOp.onResult(res);
@@ -296,8 +280,6 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
         int linkId = response.linkId();
 
         synchronized (receivers) {
-            System.out.println("OnResilt "+ locNode() + ", linkId=" + linkId + ", receivers=" + receivers + ", response" + response);
-
             Map<Integer, ReceiverOp> qryReceivers = receivers.get(qryId);
 
             ReceiverOp rec = qryReceivers == null ? null : qryReceivers.get(linkId);
@@ -308,11 +290,8 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
                 ReceivedResultsAccumulator acc = resultsForQry.computeIfAbsent(linkId, k -> new ReceivedResultsAccumulator());
 
                 acc.addResult(res);
-
-                System.out.println("accumulate "+ locNode() +  ", linkId=" + linkId+ " acc=" + acc);
             }
             else {
-                System.out.println("Send result to receiver "+ locNode() +", res=" + res);
                 rec.onResult(res);
             }
         }
