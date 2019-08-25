@@ -253,8 +253,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testParseAndValidateSSLArguments() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
-                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
+            if (skipCommand(cmd))
+                continue; // --cache, --wal, --rolling-upgrade and --change-tag commands require its own specific arguments.
 
             assertParseArgsThrows("Expected SSL trust store path", "--truststore");
 
@@ -275,6 +275,14 @@ public class CommandHandlerParsingTest {
         }
     }
 
+    /** */
+    private boolean skipCommand(CommandList cmd) {
+        return cmd == CommandList.CACHE ||
+            cmd == CommandList.WAL ||
+            cmd == CommandList.ROLLING_UPGRADE ||
+            cmd == CommandList.CLUSTER_CHANGE_TAG;
+    }
+
 
     /**
      * Tests parsing and validation for user and password arguments.
@@ -282,8 +290,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testParseAndValidateUserAndPassword() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
-                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
+            if (skipCommand(cmd))
+                continue; // --cache, --wal, --rolling-upgrade and --change-tag commands requires its own specific arguments.
 
             assertParseArgsThrows("Expected user name", "--user");
             assertParseArgsThrows("Expected password", "--password");
@@ -398,8 +406,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testConnectionSettings() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
-                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
+            if (skipCommand(cmd))
+                continue; // --cache, --wal, --rolling-upgrade, --change-tag commands require its own specific arguments.
 
             ConnectionAndSslParameters args = parseArgs(asList(cmd.text()));
 
