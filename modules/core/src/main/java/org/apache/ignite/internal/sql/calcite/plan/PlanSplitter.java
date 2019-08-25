@@ -153,7 +153,7 @@ public class PlanSplitter implements IgniteRelVisitor {
 
         int linkId = curSubPlanId++;
 
-        RelDistribution dist = exch.getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
+        RelDistribution dist = exch.getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
 
         SenderNode snd = new SenderNode(input, SenderNode.SenderType.HASH, linkId,  dist.getKeys());
 

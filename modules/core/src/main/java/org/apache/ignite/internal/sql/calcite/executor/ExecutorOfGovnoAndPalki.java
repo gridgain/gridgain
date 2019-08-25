@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.executor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,11 +44,13 @@ import org.apache.ignite.internal.sql.calcite.iterators.ReceiverOp;
 import org.apache.ignite.internal.sql.calcite.plan.OutputNode;
 import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.sql.calcite.plan.PlanStep.Site.ALL_NODES;
 
@@ -55,6 +58,8 @@ import static org.apache.ignite.internal.sql.calcite.plan.PlanStep.Site.ALL_NODE
  * Made in the worst tradition. Do not use it in production code.
  */
 public class ExecutorOfGovnoAndPalki implements GridMessageListener {
+
+    private static final Object SYNC = new Object();
 
     private final AtomicLong qryIdCntr = new AtomicLong();
 
@@ -66,7 +71,7 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
 
     private final Map<T2<UUID, Long>, Map<Integer, ReceiverOp>> receivers = new HashMap<>();// TODO clean maps
 
-    private final Map<T2<UUID, Long>, Map<Integer, List<List<?>>>> receivedResults = new HashMap<>();// TODO clean maps
+    private final Map<T2<UUID, Long>, Map<Integer, ReceivedResultsAccumulator>> receivedResults = new HashMap<>();// TODO clean maps
 
     private List<GridCacheContext> caches = new ArrayList<>();
 
@@ -122,9 +127,9 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
             futs.put(qryId, qryFut);
         }
 
-        runLocalPlan(locNodePlan, qryId.getValue(), qryId.getKey(), qryFut);
-
-        locNodePlan.get(locNodePlan.size() - 1);
+        synchronized (SYNC) {
+            runLocalPlan(locNodePlan, qryId.getValue(), qryId.getKey(), qryFut);
+        }
 
         sendPlansForExecution(qryId, globalPlan);
 
@@ -150,13 +155,18 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
     /**
      *
      */
-    public void sendResult(List<List<?>> result, int linkId, T2<UUID, Long> qryId, UUID dest) throws IgniteCheckedException {
+    public void sendResult(List<List<?>> result, int linkId, T2<UUID, Long> qryId,
+        UUID dest) throws IgniteCheckedException {
 
-        System.out.println("sendResult!!! localNodeId=" + ctx.localNodeId() + ", result=" + result);
+        System.out.println("sendResult " + locNode() + ", linkId=" + linkId + ", to=" + dest + ", result=" + result);
 
         QueryResponse res = new QueryResponse(result, linkId, qryId.getKey(), qryId.getValue());
 
         send(res, ctx.discovery().node(dest));
+    }
+
+    @NotNull private String locNode() {
+        return " locNode=" + ctx.localNodeId().toString().substring(0, 2);
     }
 
     private void send(Message msg, ClusterNode node) throws IgniteCheckedException {
@@ -170,26 +180,32 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
      *
      */
     @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-        if (msg instanceof GridCacheQueryMarshallable)
-            ((GridCacheQueryMarshallable)msg).unmarshall(marshaller, ctx);
+        synchronized (SYNC) {
+            if (msg instanceof GridCacheQueryMarshallable)
+                ((GridCacheQueryMarshallable)msg).unmarshall(marshaller, ctx);
 
-        System.out.println("onMessage curNode=" + ctx.localNodeId() + ", node =" + nodeId + ", msg= " + msg);
+            System.out.println("onMessage " + locNode() + ", from=" + nodeId + ", msg= " + msg);
 
-        if (msg instanceof QueryRequest) {
-            QueryRequest qryReq = (QueryRequest)msg;
+            if (msg instanceof QueryRequest) {
+                QueryRequest qryReq = (QueryRequest)msg;
 
-            runLocalPlan(qryReq.plans(), qryReq.queryId(), qryReq.queryNode(), null);
+                runLocalPlan(qryReq.plans(), qryReq.queryId(), qryReq.queryNode(), null);
+            }
+            else if (msg instanceof QueryResponse) {
+                onResult((QueryResponse)msg);
+            }
+            else
+                throw new IgniteException("unknown message:" + msg);
+
         }
-        else if (msg instanceof QueryResponse) {
-            onResult((QueryResponse)msg);
-        }
-        else
-            throw new IgniteException("unknown message:" + msg);
 
     }
 
     private void runLocalPlan(List<PlanStep> plans, Long qryId, UUID qryNode,
         GridFutureAdapter<FieldsQueryCursor<List<?>>> qryFut) {
+
+        System.out.println("runLocalPlan "+ locNode() +", plans.size=" + plans.size());
+
         int dataCnt = ctx.discovery().aliveServerNodes().size();
 
         T2<UUID, Long> globalQryId = new T2<>(qryNode, qryId);
@@ -203,29 +219,50 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
 
             List<ReceiverOp> recList = physicalPlanCreator.receivers();
 
+            System.out.println("plan "+ locNode() +", stepid=" + step.id() + ", recList.size=" + recList.size() + ", recList="  +recList);
+
             if (!recList.isEmpty()) {
                 synchronized (receivers) {
                     Map<Integer, ReceiverOp> qryRec = receivers.computeIfAbsent(globalQryId, k -> new HashMap<>());
 
-                    for (ReceiverOp receiverOp : recList) {
-                        Map<Integer, List<List<?>>> resultsForQry = receivedResults.get(globalQryId);
+                    for (ReceiverOp receiverOp : recList)
+                        qryRec.put(receiverOp.linkId(), receiverOp);
 
-                        if (resultsForQry != null) {
-                            List<List<?>> res = resultsForQry.remove(receiverOp.linkId());
+                    System.out.println("Registered recievers locNode=" +locNode() + ", step=" + step.id() + ", receivers=" + qryRec);
 
-                            if (res != null) {
-                                receiverOp.onResult(res);
 
-                                continue;
+                    if (!receivedResults.isEmpty()) {
+                        Map<Integer, ReceivedResultsAccumulator> resultsForQry = receivedResults.get(globalQryId);
+
+                        System.out.println("Not empty receivedResults locNode=" + locNode() + ", receivedResults=" + receivedResults);
+
+                        if (!F.isEmpty(resultsForQry)) {
+                            for (Iterator<Map.Entry<Integer, ReceivedResultsAccumulator>> it = resultsForQry.entrySet().iterator(); it.hasNext();) {
+                                Map.Entry<Integer, ReceivedResultsAccumulator> e = it.next();
+
+                                ReceiverOp recOp = qryRec.get(e.getKey());
+
+                                if (recOp != null) {
+                                    ReceivedResultsAccumulator acc = e.getValue();
+
+                                    System.out.println("Not empty acc locNode=" + locNode() + ", acc=" + acc);
+
+
+                                    for (List<List<?>> res : acc.getResults())
+                                        recOp.onResult(res);
+
+                                    it.remove();
+                                }
                             }
                         }
-
-                        qryRec.put(receiverOp.linkId(), receiverOp);
                     }
                 }
             }
 
             physicalPlanCreator.root().init();
+
+
+
         }
 
         if (qryFut != null) {// We are on initiator.
@@ -249,24 +286,33 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
     }
 
 
+
     private void onResult(QueryResponse response) {
         List<List<?>> res = response.result();
+
 
         T2<UUID, Long> qryId = new T2<>(response.queryNode(), response.queryId());
 
         int linkId = response.linkId();
 
         synchronized (receivers) {
+            System.out.println("OnResilt "+ locNode() + ", linkId=" + linkId + ", receivers=" + receivers + ", response" + response);
+
             Map<Integer, ReceiverOp> qryReceivers = receivers.get(qryId);
 
-            ReceiverOp rec = qryReceivers == null ? null : qryReceivers.remove(linkId);
+            ReceiverOp rec = qryReceivers == null ? null : qryReceivers.get(linkId);
 
             if (rec == null) { // We have a race here - receiver hasn't been registered yet.
-                Map<Integer, List<List<?>>> resultsForQry = receivedResults.computeIfAbsent(qryId, k -> new HashMap<>());
+                Map<Integer, ReceivedResultsAccumulator> resultsForQry = receivedResults.computeIfAbsent(qryId, k -> new HashMap<>());
 
-                resultsForQry.put(linkId, res);
+                ReceivedResultsAccumulator acc = resultsForQry.computeIfAbsent(linkId, k -> new ReceivedResultsAccumulator());
+
+                acc.addResult(res);
+
+                System.out.println("accumulate "+ locNode() +  ", linkId=" + linkId+ " acc=" + acc);
             }
             else {
+                System.out.println("Send result to receiver "+ locNode() +", res=" + res);
                 rec.onResult(res);
             }
         }
@@ -282,11 +328,33 @@ public class ExecutorOfGovnoAndPalki implements GridMessageListener {
         return caches.get(0);
     }
 
+    public GridKernalContext context() {
+        return ctx;
+    }
+
     public IgniteTable table(String tblName) {
         return indexing.table(tblName);
     }
 
     public IgniteInternalCache cache(String name) {
         return ctx.cache().cache(name);
+    }
+
+    private static class ReceivedResultsAccumulator {
+        private List<List<List<?>>> results = new ArrayList<>();
+
+        public void addResult(List<List<?>> res) {
+            results.add(res);
+        }
+
+        public  List<List<List<?>>> getResults() {
+            return results;
+        }
+
+        @Override public String toString() {
+            return "ReceivedResultsAccumulator{" +
+                "results=" + results +
+                '}';
+        }
     }
 }

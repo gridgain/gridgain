@@ -131,7 +131,7 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
                     }
 
                     curLeft = null;
-                    rightIt = rightSrc.iterator();
+                    rightIt = input[1].iterator();
                 }
 
                 curLeft = null;

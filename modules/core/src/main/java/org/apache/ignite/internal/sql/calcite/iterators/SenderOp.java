@@ -76,6 +76,9 @@ public class SenderOp extends PhysicalOperator {
 
                         Map<UUID, List<List<?>>> mapping = new HashMap<>();
 
+                        for (ClusterNode node : exec.context().discovery().aliveServerNodes())
+                            mapping.put(node.id(), new ArrayList<>());
+
                         Integer hashKey = distKeys.get(0);
 
                         for (List<?> row : rows) {

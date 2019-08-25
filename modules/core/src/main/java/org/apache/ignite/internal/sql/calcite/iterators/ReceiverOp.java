@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.ignite.internal.sql.calcite.executor.ExecutorOfGovnoAndPalki;
 
 /**
  * Receiver. Childless operator, like a table scan, but the result source is the another node.
@@ -30,17 +31,22 @@ public class ReceiverOp extends PhysicalOperator {
 
     private List<List<?>> accumulatedRes = new ArrayList<>();
 
-    public ReceiverOp(int cntr, int linkId) {
+    ExecutorOfGovnoAndPalki exec;
+
+    public ReceiverOp(int cntr, int linkId, ExecutorOfGovnoAndPalki exec) {
         responsesCntr = cntr;
         this.linkId = linkId;
+        this.exec = exec;
     }
 
     public void onResult(List<List<?>> res) {
         synchronized (this) {
             accumulatedRes.addAll(res);
-
-            if (--responsesCntr > 0)
-                execute(res); // All responses have arrived.
+            --responsesCntr;
+            System.out.println("ReceiverOp locNode="+ exec.context().localNodeId().toString().substring(0,2) +
+                ", linkId=" + linkId + ", responsesCntr=" + responsesCntr + ", accumulatedRes=" + accumulatedRes);
+            if (responsesCntr == 0)
+                execute(accumulatedRes); // All responses have arrived.
         }
     }
 
@@ -54,5 +60,13 @@ public class ReceiverOp extends PhysicalOperator {
 
     public int linkId() {
         return linkId;
+    }
+
+    @Override public String toString() {
+        return "ReceiverOp{" +
+            "linkId=" + linkId +
+            ", responsesCntr=" + responsesCntr +
+            ", accumulatedRes=" + accumulatedRes +
+            '}';
     }
 }

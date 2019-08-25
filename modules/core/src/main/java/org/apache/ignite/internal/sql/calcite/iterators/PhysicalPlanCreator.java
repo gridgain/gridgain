@@ -98,7 +98,7 @@ public class PhysicalPlanCreator implements IgnitePlanVisitor {
 
         int dataNodes = receiver.type() == ReceiverNode.Type.SINGLE ? 1 : totalDataNodeCnt;
 
-        ReceiverOp receiverOp = new ReceiverOp(dataNodes, receiver.inputLink());
+        ReceiverOp receiverOp = new ReceiverOp(dataNodes, receiver.inputLink(), exec);
 
         childrenStack.push(receiverOp);
 

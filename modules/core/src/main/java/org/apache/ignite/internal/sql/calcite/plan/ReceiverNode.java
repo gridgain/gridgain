@@ -40,11 +40,13 @@ public class ReceiverNode implements PlanNode {
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        // TODO: CODE: implement.
+        out.writeInt(inputLink);
+        out.writeInt(type.ordinal());
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        // TODO: CODE: implement.
+        inputLink = in.readInt();
+        type = Type.values()[in.readInt()];
     }
 
 

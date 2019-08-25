@@ -91,6 +91,8 @@ public class TableScanOp extends PhysicalOperator {
             List<?> res = next;
             next = null;
 
+            System.out.println("Table scan locNode=" + cache.context().localNodeId().toString().substring(0,2) + ", next=" + res);
+
             return res;
         }
 

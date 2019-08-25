@@ -33,7 +33,7 @@ import org.junit.Test;
 public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite grid = startGridsMultiThreaded(3);
+        Ignite grid = startGridsMultiThreaded(2);
 
         CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setCacheMode(CacheMode.PARTITIONED)
@@ -108,9 +108,9 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
     public void testSelect() {
         IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
+        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.ver, p.name, p.id " +
             "FROM Developer d JOIN Project p " +
-            "ON d.projectId = p.id " +
+            "ON d.projectId = p.ver " +
             "WHERE d.projectId > 0")).getAll();
 
 //        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
@@ -139,7 +139,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 //        }
 
 
-        //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM Project WHERE ver > 1")).getAll();
+//        List res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project")).getAll();
 
 //        List res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project " +
 //            "WHERE ver = (SELECT MAX(projectId) FROM Developer)")).getAll();
@@ -152,7 +152,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 //                " OR id < " + ThreadLocalRandom.current().nextInt(3, 10) +
 //                " ORDER BY name")).getAll();
 
-        System.out.println("res="  + res);
+        System.out.println("====res="  + res);
     }
 
     private static class Project {
