@@ -250,7 +250,7 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
             }
 
             if (msgLog.isDebugEnabled())
-                msgLog.debug("processing req=" + req);
+                msgLog.debug("processing req=" + req + ", res=" + res);
 
             boolean remapKey = res.remapTopologyVersion() != null;
 
@@ -300,6 +300,9 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         }
 
         if (res.error() != null && res.failedKeys() == null) {
+            if (msgLog.isDebugEnabled())
+                msgLog.debug("error: " + res.error());
+
             completeFuture(null, res.error(), res.futureId());
 
             return;
@@ -318,6 +321,9 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
             updateNear(req, res);
 
         completeFuture(opRes0, err0, res.futureId());
+
+        if (msgLog.isDebugEnabled())
+            msgLog.debug("Finished processing: " + this);
     }
 
     /**
