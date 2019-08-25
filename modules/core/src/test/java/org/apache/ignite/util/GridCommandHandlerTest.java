@@ -219,10 +219,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
-        String out = testOut.toString();
-
         //because cluster is inactive
-        assertTrue(out.contains("Error has occurred during tag update:"));
+        assertContains(log, testOut.toString(),"Error has occurred during tag update:");
 
         cl.cluster().active(true);
 
@@ -1000,7 +998,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                                         .filter(s -> s.contains("Arguments:"))
                                         .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
 
-        assertTrue(testOutStr, testOutStr.contains("Node not found for consistent ID:"));
+        assertContains(log, testOutStr, "Node not found for consistent ID:");
         assertFalse(testOutStr, isInstanse1Found);
     }
 
