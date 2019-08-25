@@ -1777,8 +1777,18 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             if (!req.topologyLocked()) {
                                 // Can not wait for topology future since it will break
                                 // GridNearAtomicCheckUpdateRequest processing.
-                                remap = !top.topologyVersionFuture().isDone() ||
-                                    needRemap(req.topologyVersion(), top.readyTopologyVersion(), req.keys());
+                                AffinityTopologyVersion readyVer = top.readyTopologyVersion();
+
+                                GridDhtTopologyFuture topVerFut = top.topologyVersionFuture();
+
+                                remap = !topVerFut.isDone() ||
+                                    needRemap(req.topologyVersion(), readyVer, req.keys());
+
+                                if (remap) {
+                                    if (msgLog.isDebugEnabled())
+                                        msgLog.debug("Will remap request [req=" + req +
+                                            ", topVerFut=" + topVerFut + ", readyVer=" + readyVer + ']');
+                                }
                             }
 
                             if (!remap) {
@@ -3249,8 +3259,16 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridNearAtomicAbstractUpdateFuture fut =
             (GridNearAtomicAbstractUpdateFuture)ctx.mvcc().atomicFuture(res.futureId());
 
-        if (fut != null)
-            fut.onPrimaryResponse(nodeId, res, false);
+        if (fut != null) {
+            try {
+                fut.onPrimaryResponse(nodeId, res, false);
+            }
+            catch (Throwable e) {
+                log.error("Failed processing response", e);
+
+                e.printStackTrace();
+            }
+        }
         else
             U.warn(msgLog, "Failed to find near update future for update response (will ignore) " +
                 "[futId=" + res.futureId() + ", node=" + nodeId + ", res=" + res + ']');
