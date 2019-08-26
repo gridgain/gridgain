@@ -305,7 +305,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 else {
                     // If for some reason (for example if supplier fails and new supplier is elected) partition is
                     // assigned for full rebalance force clearing if not yet set.
-                    if (grp.persistenceEnabled() && exchFut != null && !exchFut.isClearingPartition(grp, p))
+                    if (grp.persistenceEnabled() && exchFut != null && !exchFut.isClearingPartition(grp, p) && false)
                         part.clearAsync();
 
                     List<ClusterNode> picked = remoteOwners(p, topVer);

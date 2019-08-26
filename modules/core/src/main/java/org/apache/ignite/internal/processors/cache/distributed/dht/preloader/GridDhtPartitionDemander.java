@@ -583,7 +583,7 @@ public class GridDhtPartitionDemander {
 
             GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-            if (part != null && part.state() == MOVING) {
+            if (part != null && part.state() == MOVING && false) {
                 part.onClearFinished(f -> {
                     if (!fut.isDone()) {
                         // Cancel rebalance if partition clearing was failed.

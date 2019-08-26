@@ -158,6 +158,7 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
             advance(true);
 
         GridCloseableIterator<CacheDataRow> partIterator = fullIterators.remove(partId);
+        doneParts.remove(partId);
 
         if (partIterator != null)
             partIterator.close();
