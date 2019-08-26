@@ -407,6 +407,17 @@ class AtomicCacheUpdateClosure implements IgniteCacheOffheapManager.OffheapInvok
         if (!(row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis()))
             return false;
 
+        onRowExpired(row, entry);
+
+        return true;
+    }
+
+    /**
+     * @param row Cache data row.
+     * @param entry Cache map entry.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void onRowExpired(CacheDataRow row, GridCacheMapEntry entry) throws IgniteCheckedException {
         GridCacheContext cctx = entry.context();
 
         CacheObject expiredVal = row.value();
@@ -437,8 +448,6 @@ class AtomicCacheUpdateClosure implements IgniteCacheOffheapManager.OffheapInvok
         }
 
         cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
-
-        return true;
     }
 
     /**
