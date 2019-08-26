@@ -60,7 +60,7 @@ public class ClustersRepository {
     private CacheHolder<String, TopologySnapshot> clusters;
 
     /** */
-    private OneToManyIndex<UserKey, ClusterSession> clusterIdsByBrowser;
+    private OneToManyIndex<UserKey, ClusterSession> clusterIdsByUser;
 
     /**
      * @param ignite Ignite.
@@ -73,7 +73,7 @@ public class ClustersRepository {
 
         this.txMgr.registerStarter(() -> {
             clusters = new CacheHolder<>(ignite, "wc_clusters");
-            clusterIdsByBrowser = new OneToManyIndex<>(ignite, "wc_clusters_idx");
+            clusterIdsByUser = new OneToManyIndex<>(ignite, "wc_clusters_idx");
 
             cleanupClusterIndex();
         });
@@ -86,13 +86,25 @@ public class ClustersRepository {
      */
     public Set<TopologySnapshot> get(UserKey user) {
         return txMgr.doInTransaction(() ->
-            Optional.ofNullable(clusterIdsByBrowser.get(user))
+            Optional.ofNullable(clusterIdsByUser.get(user))
                 .orElseGet(Collections::emptySet).stream()
                 .map(ClusterSession::getClusterId)
                 .distinct()
                 .map(clusters::get)
                 .collect(toSet())
         );
+    }
+
+    /**
+     * @param users Users.
+     * @return Collection of cluster IDs.
+     */
+    public Set<String> clusters(Set<UserKey> users) {
+         return clusterIdsByUser
+             .getAll(users)
+             .stream()
+             .map(ClusterSession::getClusterId)
+             .collect(toSet());
     }
 
     /**
@@ -132,7 +144,7 @@ public class ClustersRepository {
             ClusterSession clusterSes = new ClusterSession(nid, top.getId());
 
             for (UUID accId : accIds)
-                clusterIdsByBrowser.add(new UserKey(accId, top.isDemo()), clusterSes);
+                clusterIdsByUser.add(new UserKey(accId, top.isDemo()), clusterSes);
 
             return clusters.getAndPut(top.getId(), top);
         });
@@ -152,7 +164,7 @@ public class ClustersRepository {
         txMgr.doInTransaction(() -> {
             boolean demo = clusters.get(clusterId).isDemo();
 
-            clusterIdsByBrowser.remove(new UserKey(accId, demo), clusterSes);
+            clusterIdsByUser.remove(new UserKey(accId, demo), clusterSes);
         });
     }
 
@@ -162,7 +174,7 @@ public class ClustersRepository {
      * @param accId Account ID.
      */
     public boolean hasDemo(UUID accId) {
-        return !F.isEmpty(clusterIdsByBrowser.get(new UserKey(accId, true)));
+        return !F.isEmpty(clusterIdsByUser.get(new UserKey(accId, true)));
     }
 
     /**
@@ -171,7 +183,7 @@ public class ClustersRepository {
     void cleanupClusterIndex() {
         Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
 
-        stream(clusterIdsByBrowser.cache().spliterator(), false)
+        stream(clusterIdsByUser.cache().spliterator(), false)
             .peek(entry -> {
                 Set<ClusterSession> activeClusters =
                     entry.getValue().stream().filter(cluster -> nids.contains(cluster.getNid())).collect(toSet());
@@ -179,7 +191,7 @@ public class ClustersRepository {
                 entry.getValue().removeAll(activeClusters);
             })
             .filter(entry -> !entry.getValue().isEmpty())
-            .forEach(entry -> clusterIdsByBrowser.removeAll(entry.getKey(), entry.getValue()));
+            .forEach(entry -> clusterIdsByUser.removeAll(entry.getKey(), entry.getValue()));
     }
 
     /**

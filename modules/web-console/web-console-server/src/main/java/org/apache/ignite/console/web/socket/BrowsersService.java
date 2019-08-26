@@ -205,10 +205,10 @@ public class BrowsersService extends AbstractSocketHandler {
     }
 
     /**
-     * Get session id.
+     * Get session ID.
      *
      * @param ses Session.
-     * @return User id.
+     * @return User ID.
      */
     protected UserKey getId(WebSocketSession ses) {
         return new UserKey(
@@ -358,17 +358,18 @@ public class BrowsersService extends AbstractSocketHandler {
 
     /**
      * @param evt Event.
+     * @return {@code true} if response was processed.
      */
-    protected void sendResponseToBrowser(WebSocketEvent evt) {
+    protected boolean processResponse(WebSocketEvent evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
-        if (ses == null) {
-            log.warn("Failed to send event to browser: " + evt);
+        if (ses != null) {
+            sendMessageQuiet(ses, evt);
 
-            return;
+            return true;
         }
 
-        sendMessageQuiet(ses, evt);
+        return false;
     }
 
     /**

@@ -103,7 +103,7 @@ public class AgentsRepository {
      * Remove agent from backend
      *
      * @param key Agent key.
-     * @param nid Node id.
+     * @param nid Node ID.
      */
     public void remove(AgentKey key, UUID nid) {
         txMgr.doInTransaction(() -> backendByAgent.remove(key, nid));
@@ -112,7 +112,7 @@ public class AgentsRepository {
     /**
      * Has agent for account
      *
-     * @param accId Account id.
+     * @param accId Account ID.
      */
     boolean hasAgent(UUID accId) {
         return txMgr.doInTransaction(() -> !backendByAgent.get(new AgentKey(accId)).isEmpty());

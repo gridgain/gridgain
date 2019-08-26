@@ -164,7 +164,13 @@ public class TransitionService {
 
         ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketEvent>() {
             @Override protected void receive(UUID nodeId, WebSocketEvent evt) {
-                browsersSrvc.sendResponseToBrowser(evt);
+                boolean processed = browsersSrvc.processResponse(evt);
+
+                if (!processed)
+                    processed = agentsSrvc.processResponse(evt);
+
+                if (!processed)
+                    log.warn("Event was not processed: " + evt);
             }
         });
 
@@ -205,6 +211,10 @@ public class TransitionService {
         ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(userKey, evt));
     }
 
+    /**
+     * @param nid Node ID.
+     * @param evt Event to send.
+     */
     public void sendResponse(UUID nid, WebSocketRequest evt) {
         ignite.message(ignite.cluster().forNodeId(nid)).send(SEND_RESPONSE, evt);
     }

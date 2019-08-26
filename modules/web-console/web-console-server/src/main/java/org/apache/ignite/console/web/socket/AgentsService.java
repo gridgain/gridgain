@@ -24,10 +24,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
@@ -213,6 +211,14 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
+     * @param evt Response to process.
+     * @return {@code true} If response processed.
+     */
+    protected boolean processResponse(WebSocketEvent evt) {
+        return false;
+    }
+
+    /**
      * @param acc Account.
      * @param oldTok Token to revoke.
      */
@@ -362,13 +368,18 @@ public class AgentsService extends AbstractSocketHandler {
         return locAgents.entrySet().stream()
             .filter((e) -> {
                 Set<UUID> accIds = e.getValue().getAccIds();
-
-                if (F.isEmpty(key.getClusterId()))
-                    return accIds.contains(key.getAccId());
-
                 Set<String> clusterIds = e.getValue().getClusterIds();
 
-                return accIds.contains(key.getAccId()) && clusterIds.contains(key.getClusterId());
+                UUID accId = key.getAccId();
+                String clusterId = key.getClusterId();
+
+                if (F.isEmpty(clusterId))
+                    return accIds.contains(accId);
+
+                if (accId == null)
+                    return clusterIds.contains(clusterId);
+
+                return accIds.contains(accId) && clusterIds.contains(clusterId);
             })
             .findFirst()
             .map(Map.Entry::getKey);
@@ -408,17 +419,5 @@ public class AgentsService extends AbstractSocketHandler {
         agentsRepo.add(accIds);
 
         locAgents.put(ses, new AgentSession(accIds));
-    }
-
-    /**
-     * @return List of connected account.
-     */
-    protected Set<UUID> connectedAccounts() {
-        return locAgents
-            .values()
-            .stream()
-            .filter(ses -> !F.isEmpty(ses.getClusterIds()))
-            .flatMap(ses -> ses.getAccIds().stream())
-            .collect(Collectors.toSet());
     }
 }
