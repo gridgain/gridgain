@@ -23,8 +23,6 @@ import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.metric.export.MetricRequest;
 import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 import org.gridgain.agent.WebSocketManager;
-import org.springframework.messaging.simp.stomp.StompHeaders;
-import org.springframework.util.MimeTypeUtils;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -46,7 +44,8 @@ public class MetricsService implements AutoCloseable {
     /** Logger. */
     private IgniteLogger log;
 
-    private GridMessageListener lsnr = this::onNodeMetrics;
+    /** Listener. */
+    private final GridMessageListener lsnr = this::onNodeMetrics;
 
     /**
      * @param ctx Context.

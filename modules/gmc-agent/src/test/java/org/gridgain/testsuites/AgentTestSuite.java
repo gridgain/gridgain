@@ -16,6 +16,7 @@
 
 package org.gridgain.testsuites;
 
+import org.gridgain.service.sender.RetryableSenderTest;
 import org.gridgain.service.MetricsServiceTest;
 import org.gridgain.service.TopologyServiceTest;
 import org.gridgain.service.tracing.GmcSpanExporterTest;
@@ -24,14 +25,15 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * GridGain on-premise GMC test suite.
+ * GridGain GMC agent test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     TopologyServiceTest.class,
     TracingServiceTest.class,
     GmcSpanExporterTest.class,
-    MetricsServiceTest.class
+    MetricsServiceTest.class,
+    RetryableSenderTest.class
 })
 public class AgentTestSuite {
 }

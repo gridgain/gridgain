@@ -33,8 +33,7 @@ import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.gridgain.dto.span.Span;
-import org.gridgain.dto.span.SpanList;
+import org.gridgain.dto.Span;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,7 +41,7 @@ import org.mockito.ArgumentCaptor;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,35 +60,16 @@ public class TracingServiceTest extends AbstractServiceTest {
 
         List<Span> expSpans = spanData.stream().map(GmcSpanExporter::fromSpanDataToSpan).collect(Collectors.toList());
 
-        srvc.onNodeTraces(UUID.randomUUID(), new SpanList(expSpans));
+        srvc.onNodeTraces(UUID.randomUUID(), expSpans);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, timeout(100).times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         List<Span> actualSpans = (List<Span>) payloadCaptor.getValue();
 
         Assert.assertEquals(buildSaveSpanDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
         Assert.assertEquals(expSpans.size(), actualSpans.size());
-    }
-
-    /**
-     * Should send buffered spans after session reconnect.
-     */
-    @Test
-    public void sendInitialState() {
-        TracingService srvc = new TracingService(getMockContext(), mgr);
-
-        srvc.sendInitialState();
-
-        ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
-
-        List<Span> actualSpans = (List<Span>) payloadCaptor.getValue();
-
-        Assert.assertEquals(buildSaveSpanDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
-        Assert.assertEquals(0, actualSpans.size());
     }
 
     /**

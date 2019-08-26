@@ -21,7 +21,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * GridGain on-premise GMC self test suite.
+ * GridGain GMC agent self test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

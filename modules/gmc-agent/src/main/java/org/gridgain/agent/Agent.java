@@ -311,7 +311,6 @@ public class Agent extends ManagementConsoleProcessor {
             ses.send(buildClusterAddDest(), new ClusterInfo(cluster.id(), cluster.tag()));
 
             topSrvc.sendInitialState();
-            tracingSrvc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {

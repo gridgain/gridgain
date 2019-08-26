@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.dto.span;
+package org.gridgain.dto;
 
 import java.util.HashMap;
 import java.util.Map;

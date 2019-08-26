@@ -31,23 +31,27 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.gridgain.dto.span.SpanList;
+import org.gridgain.dto.Span;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
 import static org.gridgain.service.tracing.GmcSpanExporter.TRACING_TOPIC;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Gmc span exporter test.
+ */
 public class GmcSpanExporterTest extends AbstractServiceTest {
     /** Context. */
     private GridKernalContext ctx = getMockContext();
@@ -63,11 +67,11 @@ public class GmcSpanExporterTest extends AbstractServiceTest {
 
         ArgumentCaptor<Object> topicCaptor = ArgumentCaptor.forClass(Object.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ctx.grid().message(), times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
+        verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
 
         Assert.assertEquals(TRACING_TOPIC, topicCaptor.getValue());
-        Assert.assertEquals(1, ((SpanList)payloadCaptor.getValue()).getList().size());
+        Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
     }
 
     /** {@inheritDoc} */
