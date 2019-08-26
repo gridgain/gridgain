@@ -69,5 +69,9 @@
         "cancelLinkLabel": "Cancel",
         "formActionButtonLabel": "Save Changes"
     },
-    "landing": {}
+    "landing": {},
+    "public": {
+        "appTitle": "Management console for Apache Ignite",
+        "signInLinkLabel": "Sign In"
+    }
 }
