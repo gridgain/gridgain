@@ -77,13 +77,28 @@ public class RecommendationTrainer {
      */
     public RecommendationModel<Serializable, Serializable> fit(DatasetBuilder<Object, BinaryObject> datasetBuilder,
         String objFieldName, String subjFieldName, String ratingFieldName) {
+        return update(datasetBuilder, objFieldName, subjFieldName, ratingFieldName, null);
+    }
+
+    /**
+     * Updates prediction model on a data storen in binary format.
+     *
+     * @param datasetBuilder Dataset builder.
+     * @param objFieldName Object field name.
+     * @param subjFieldName Subject field name.
+     * @param ratingFieldName Rating field name.
+     * @param mdl Previous model.
+     * @return Trained recommendation model.
+     */
+    public RecommendationModel<Serializable, Serializable> update(DatasetBuilder<Object, BinaryObject> datasetBuilder,
+        String objFieldName, String subjFieldName, String ratingFieldName, RecommendationModel<Serializable, Serializable> mdl) {
         try (Dataset<EmptyContext, RecommendationDatasetData<Serializable, Serializable>> dataset = datasetBuilder.build(
             environmentBuilder,
             new EmptyContextBuilder<>(),
             new RecommendationBinaryDatasetDataBuilder(objFieldName, subjFieldName, ratingFieldName),
             trainerEnvironment
         )) {
-            return train(dataset);
+            return train(dataset, mdl);
         }
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -101,13 +116,28 @@ public class RecommendationTrainer {
      */
     public <K, O extends Serializable, S extends Serializable> RecommendationModel<O, S> fit(
         DatasetBuilder<K, ? extends ObjectSubjectRatingTriplet<O, S>> datasetBuilder) {
+        return update(datasetBuilder, null);
+    }
+
+    /**
+     * Fits prediction model.
+     *
+     * @param datasetBuilder Dataset builder.
+     * @param mdl Previous model.
+     * @param <K> Type of a key in {@code upstream} data.
+     * @param <O> Type of an object.
+     * @param <S> Type of a subject.
+     * @return Trained recommendation model.
+     */
+    public <K, O extends Serializable, S extends Serializable> RecommendationModel<O, S> update(
+        DatasetBuilder<K, ? extends ObjectSubjectRatingTriplet<O, S>> datasetBuilder, RecommendationModel<O, S> mdl) {
         try (Dataset<EmptyContext, RecommendationDatasetData<O, S>> dataset = datasetBuilder.build(
             environmentBuilder,
             new EmptyContextBuilder<>(),
             new RecommendationDatasetDataBuilder<>(),
             trainerEnvironment
         )) {
-            return train(dataset);
+            return train(dataset, mdl);
         }
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -123,14 +153,18 @@ public class RecommendationTrainer {
      * @return Trained recommendation model.
      */
     private <O extends Serializable, S extends Serializable> RecommendationModel<O, S> train(
-        Dataset<EmptyContext, RecommendationDatasetData<O, S>> dataset) {
+        Dataset<EmptyContext, RecommendationDatasetData<O, S>> dataset, RecommendationModel<O, S> mdl) {
         // Collect total set of objects and subjects (their identifiers).
         Set<O> objects = dataset.compute(RecommendationDatasetData::getObjects, RecommendationTrainer::join);
         Set<S> subjects = dataset.compute(RecommendationDatasetData::getSubjects, RecommendationTrainer::join);
 
         // Generate initial model (object and subject matrices) initializing them with random values.
-        Map<O, Vector> objMatrix = generateRandomVectorForEach(objects, trainerEnvironment.randomNumbersGenerator());
-        Map<S, Vector> subjMatrix = generateRandomVectorForEach(subjects, trainerEnvironment.randomNumbersGenerator());
+        Map<O, Vector> objMatrix = mdl == null ?
+            generateRandomVectorForEach(objects, trainerEnvironment.randomNumbersGenerator()) :
+            new HashMap<>(mdl.getObjMatrix());
+        Map<S, Vector> subjMatrix = mdl == null ?
+            generateRandomVectorForEach(subjects, trainerEnvironment.randomNumbersGenerator()) :
+            new HashMap<>(mdl.getSubjMatrix());
 
         // SGD steps.
         for (int i = 0; maxIterations == -1 || i < maxIterations; i++) {

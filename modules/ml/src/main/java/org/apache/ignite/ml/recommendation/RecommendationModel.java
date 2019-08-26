@@ -57,4 +57,14 @@ public class RecommendationModel<O extends Serializable, S extends Serializable>
         Vector subjVector = subjMatrix.get(input.getSubj());
         return objVector.dot(subjVector);
     }
+
+    /** */
+    public Map<O, Vector> getObjMatrix() {
+        return objMatrix;
+    }
+
+    /** */
+    public Map<S, Vector> getSubjMatrix() {
+        return subjMatrix;
+    }
 }
