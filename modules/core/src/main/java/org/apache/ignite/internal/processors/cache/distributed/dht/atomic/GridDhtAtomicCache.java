@@ -1931,12 +1931,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     ctx.shared().wal().flush(null, false);
             }
         }
-        catch (GridDhtInvalidPartitionException ignore) {
+        catch (GridDhtInvalidPartitionException ipe) {
             if (log.isDebugEnabled())
                 log.debug("Caught invalid partition exception for cache entry (will remap update request): " + req);
 
-            if (msgLog.isDebugEnabled())
-                msgLog.debug("Caught invalid partition exception for cache entry (will remap update request): " + req);
+            log.error("Invalid partition exception: " + topology().topologyVersionFuture(), ipe);
 
             res.remapTopologyVersion(ctx.topology().lastTopologyChangeVersion());
         }
