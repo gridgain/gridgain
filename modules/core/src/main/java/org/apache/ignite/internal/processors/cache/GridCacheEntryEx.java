@@ -273,7 +273,7 @@ public interface GridCacheEntryEx {
      * @param ver Cache version to set. The version will be used on updating entry instead of generated one.
      * @param tx Cache transaction.
      * @param updateMetrics If {@code true} then metrics should be updated.
-     * @param evt Flag to signal event notification.
+     * @param signalEvent Flag to signal event notification.
      * @param subjId Subject ID initiated this read.
      * @param transformClo Transform closure to record event.
      * @param taskName Task name.
@@ -288,7 +288,7 @@ public interface GridCacheEntryEx {
         @Nullable GridCacheVersion ver,
         IgniteInternalTx tx,
         boolean updateMetrics,
-        boolean evt,
+        boolean signalEvent,
         UUID subjId,
         Object transformClo,
         String taskName,
@@ -436,7 +436,6 @@ public interface GridCacheEntryEx {
         UUID affNodeId,
         @Nullable CacheObject val,
         boolean writeThrough,
-        boolean retval,
         long ttl,
         boolean evt,
         boolean metrics,
@@ -458,7 +457,6 @@ public interface GridCacheEntryEx {
      * @param tx Cache transaction.
      * @param evtNodeId ID of node responsible for this change.
      * @param affNodeId Partitioned node iD.
-     * @param retval {@code True} if value should be returned (and unmarshalled if needed).
      * @param evt Flag to signal event notification.
      * @param metrics Flag to signal metrics notification.
      * @param keepBinary Keep binary flag.
@@ -480,7 +478,6 @@ public interface GridCacheEntryEx {
         @Nullable IgniteInternalTx tx,
         UUID evtNodeId,
         UUID affNodeId,
-        boolean retval,
         boolean evt,
         boolean metrics,
         boolean keepBinary,

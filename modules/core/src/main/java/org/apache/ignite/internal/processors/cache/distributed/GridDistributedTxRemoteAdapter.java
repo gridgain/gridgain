@@ -86,8 +86,8 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOO
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.RELOAD;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_BACKUP;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
@@ -650,7 +650,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                             cached.innerRemove(this,
                                                 eventNodeId(),
                                                 nodeId,
-                                                false,
                                                 true,
                                                 true,
                                                 txEntry.keepBinary(),
@@ -671,7 +670,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                                 eventNodeId(),
                                                 nodeId,
                                                 val,
-                                                false,
                                                 false,
                                                 txEntry.ttl(),
                                                 true,
@@ -711,7 +709,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                         GridCacheUpdateTxResult updRes = cached.innerRemove(this,
                                             eventNodeId(),
                                             nodeId,
-                                            false,
                                             true,
                                             true,
                                             txEntry.keepBinary(),
