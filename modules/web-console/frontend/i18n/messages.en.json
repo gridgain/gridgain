@@ -100,5 +100,70 @@
     "public": {
         "appTitle": "Management console for Apache Ignite",
         "signInLinkLabel": "Sign In"
+    },
+    "formField": {
+        "passwordVisibility": {
+            "show": "Show password",
+            "hide": "Hide password"
+        }
+    },
+    "validationMessages": {
+        "required": "Value is required",
+        "email": "Email has invalid format",
+        "passwordMatch": "Passwords do not match",
+        "unknown": "Value is invalid: {{errorType}}"
+    },
+    "profile": {
+        "confirmChangeToken": "Are you sure you want to change security token?<br>If you change the token you will need to restart the agent.",
+        "documentTitle": "User profile",
+        "pageTitle": "User profile",
+        "firstNameInput": {
+            "label": "First name"
+        },
+        "lastNameInput": {
+            "label": "Last name"
+        },
+        "emailInput": {
+            "label": "Email"
+        },
+        "phoneInput": {
+            "label": "Phone",
+            "placeholder": "Input phone (ex.: +15417543010)"
+        },
+        "countryInput": {
+            "label": "Country/Region"
+        },
+        "companyInput": {
+            "label": "Company"
+        },
+        "tokenPanel": {
+            "title": {
+                "opened": "Cancel security token changing...",
+                "closed": "Show security token..."
+            },
+            "form": {
+                "hint": "The security token is used for authentication of Web agent",
+                "label": "Security Token",
+                "copyTooltip": "Copy security token to clipboard",
+                "placeholder": "No security token. Please regenerate."
+            },
+            "generateToken": "Generate Random Security Token?"
+        },
+        "passwordPanel": {
+            "title": {
+                "opened": "Cancel password changing...",
+                "closed": "Change password..."
+            },
+            "newPassword": {
+                "label": "New password"
+            },
+            "confirmPassword": {
+                "label": "Confirm password"
+            }
+        },
+        "buttons": {
+            "cancel": "Cancel",
+            "save": "Save Changes"
+        }
     }
 }
