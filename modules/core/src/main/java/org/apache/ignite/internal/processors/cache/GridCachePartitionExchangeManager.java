@@ -1335,8 +1335,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             }
         }
 
-        if (log.isTraceEnabled())
-            log.trace("Sending all partitions [nodeIds=" + U.nodeIds(nodes) + ", cacheGroups=" + grps +
+        log.info("Sending all partitions [nodeIds=" + U.nodeIds(nodes) + ", cacheGroups=" + grps +
                 ", msg=" + m + ']');
 
         time = System.currentTimeMillis();
@@ -1560,8 +1559,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 null,
                 grps);
 
-        if (log.isTraceEnabled())
-            log.trace("Sending local partitions [nodeId=" + node.id() + ", msg=" + m + ']');
+        log.info("Sending local partitions [nodeId=" + node.id() + ", msg=" + m + ']');
 
         try {
             cctx.io().sendNoRetry(node, m, SYSTEM_POOL);

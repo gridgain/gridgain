@@ -1980,8 +1980,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         msg.exchangeStartTime(startTime);
 
-        if (log.isTraceEnabled())
-            log.trace("Sending local partitions [nodeId=" + node.id() + ", exchId=" + exchId + ", msg=" + msg + ']');
+
+        log.info("Sending local partitions [nodeId=" + node.id() + ", exchId=" + exchId + ", msg=" + msg + ']');
 
         while (true) {
             try {
