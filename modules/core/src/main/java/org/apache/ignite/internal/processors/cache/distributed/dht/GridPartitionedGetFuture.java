@@ -477,7 +477,6 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                         if (needVer) {
                             getRes = entry.innerGetVersioned(
                                 null,
-                                null,
                                 /*update-metrics*/false,
                                 /*event*/evt,
                                 subjId,

@@ -481,7 +481,6 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                         if (needVer) {
                             EntryGetResult res = entry.innerGetVersioned(
                                 null,
-                                null,
                                 /*update-metrics*/false,
                                 /*event*/evt,
                                 subjId,

@@ -935,7 +935,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                             else {
                                 res = entry.innerGetVersioned(
                                     null,
-                                    null,
                                     updateMetrics,
                                     evt,
                                     subjId,

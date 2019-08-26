@@ -556,7 +556,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
                                     if (needVer) {
                                         getRes = entry.innerGetVersioned(
                                             null,
-                                            null,
                                             /*update-metrics*/false,
                                             /*event*/evt,
                                             subjId,

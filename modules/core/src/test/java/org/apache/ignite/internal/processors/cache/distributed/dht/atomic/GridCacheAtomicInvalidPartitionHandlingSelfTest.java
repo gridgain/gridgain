@@ -40,6 +40,7 @@ import org.apache.ignite.internal.TestDelayingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -334,7 +335,7 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
                                 }
                             }
                             else
-                                assertTrue("Invalid entry: " + entry, entry == null || !entry.partitionValid());
+                                assertTrue("Invalid entry: " + entry, entry == null || !isPartitionValid(entry));
                         }
                         catch (AssertionError e) {
                             if (r == 9) {
@@ -355,6 +356,15 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
         finally {
             stopAllGrids();
         }
+    }
+
+    private boolean isPartitionValid(GridCacheEntryEx entry) {
+        if (!(entry instanceof GridDhtCacheEntry))
+            return true;
+
+        GridDhtCacheEntry e = (GridDhtCacheEntry)entry;
+
+        return ((GridDhtCacheEntry)entry).localPartition().valid();
     }
 
     /**

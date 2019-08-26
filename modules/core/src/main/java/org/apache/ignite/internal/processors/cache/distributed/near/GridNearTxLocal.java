@@ -1455,7 +1455,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             if (needReadVer) {
                                 EntryGetResult res = primaryLocal(entry) ?
                                     entry.innerGetVersioned(
-                                        null,
                                         this,
                                         /*metrics*/retval,
                                         /*events*/retval,
@@ -2343,7 +2342,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                                     if (needVer) {
                                         getRes = cached.innerGetVersioned(
-                                            null,
                                             GridNearTxLocal.this,
                                             /*update-metrics*/true,
                                             /*event*/!skipVals,
@@ -2641,7 +2639,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                             if (needVer) {
                                 getRes = txEntry.cached().innerGetVersioned(
-                                    null,
                                     this,
                                     /*update-metrics*/true,
                                     /*event*/!skipVals,
@@ -2727,7 +2724,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             if (needReadVer) {
                                 getRes = primaryLocal(entry) ?
                                     entry.innerGetVersioned(
-                                        null,
                                         this,
                                         /*metrics*/true,
                                         /*event*/true,
@@ -3215,7 +3211,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                     try {
                         EntryGetResult res = entry.innerGetVersioned(
-                            null,
                             this,
                             /*update-metrics*/!skipVals,
                             /*event*/!skipVals,

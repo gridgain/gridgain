@@ -1460,7 +1460,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                                 }
 
                                 if (ret && val == null)
-                                    val = e.valueBytes(null);
+                                    val = e.valueBytes();
 
                                 // We include values into response since they are required for local
                                 // calls and won't be serialized. We are also including DHT version.

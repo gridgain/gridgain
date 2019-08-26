@@ -486,7 +486,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
                                 else {
                                     res = entry.innerGetVersioned(
                                         null,
-                                        null,
                                         updateMetrics,
                                         evt,
                                         subjId,

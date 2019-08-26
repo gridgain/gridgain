@@ -450,7 +450,6 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                             if (needVer) {
                                 EntryGetResult res = entry.innerGetVersioned(
                                     null,
-                                    null,
                                     /*update-metrics*/false,
                                     /*event*/evt,
                                     subjId,
@@ -927,8 +926,6 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                             retval,
                             keepBinary,
                             expiryPlc,
-                            true,
-                            true,
                             filters,
                             intercept,
                             subjId,
@@ -1418,8 +1415,6 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                     false,
                     keepBinary,
                     expiryPlc,
-                    true,
-                    true,
                     null,
                     false,
                     subjId,

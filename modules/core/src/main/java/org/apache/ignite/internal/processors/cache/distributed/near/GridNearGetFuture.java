@@ -349,7 +349,6 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                     if (needVer) {
                         EntryGetResult res = entry.innerGetVersioned(
                             null,
-                            null,
                             /*update-metrics*/true,
                             /*event*/!skipVals,
                             subjId,
@@ -495,7 +494,6 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
                     if (needVer) {
                         EntryGetResult res = dhtEntry.innerGetVersioned(
-                            null,
                             null,
                             /*update-metrics*/false,
                             /*event*/!nearRead && !skipVals,
