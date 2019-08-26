@@ -367,6 +367,11 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         publicFut = new IgniteCacheFutureImpl<>(fut);
 
+        assert ccfg != null;
+
+        if (ccfg.getCacheMode() == CacheMode.LOCAL)
+            throw new CacheException("Impossible to load Local cache configured remotely.");
+
         ctx.grid().getOrCreateCache(ccfg);
     }
 
