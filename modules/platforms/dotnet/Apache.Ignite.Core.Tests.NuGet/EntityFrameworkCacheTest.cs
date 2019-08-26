@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Tests.NuGet
             var cfg = new IgniteConfiguration
             {
                 DiscoverySpi = TestUtil.GetLocalDiscoverySpi(),
-                GridName = "myGrid"
+                IgniteInstanceName = "myGrid"
             };
             
             // ReSharper disable once ObjectCreationAsStatement
@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Tests.NuGet
                 new CacheConfiguration("efMetaCache") {AtomicityMode = CacheAtomicityMode.Transactional},
                 new CacheConfiguration("efDataCache"), null);
 
-            var ignite = Ignition.GetIgnite(cfg.GridName);
+            var ignite = Ignition.GetIgnite(cfg.IgniteInstanceName);
             Assert.IsNotNull(ignite);
 
             Assert.IsNotNull(ignite.GetCache<string, object>("efMetaCache"));
