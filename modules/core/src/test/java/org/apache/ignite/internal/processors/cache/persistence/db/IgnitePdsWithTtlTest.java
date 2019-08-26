@@ -155,6 +155,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
         waitAndCheckExpired(srv, srv.cache(CACHE_NAME + "-" + (cacheCnt - 1)));
 
+        srv.cluster().active(false);
+
         stopAllGrids();
     }
 
@@ -189,6 +191,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
         waitAndCheckExpired(srv, cache);
 
+        srv.cluster().active(false);
+
         stopAllGrids();
     }
 
@@ -212,6 +216,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
         printStatistics((IgniteCacheProxy)cache, "After rebalancing start");
 
         waitAndCheckExpired(srv, cache);
+
+        srv.cluster().active(false);
 
         stopAllGrids();
     }
@@ -251,6 +257,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
             stopGrid(1);
             startGrid(1);
+
+            srv.cluster().active(false);
         }
         finally {
             stopAllGrids();
