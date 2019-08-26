@@ -225,6 +225,26 @@ namespace ignite
                 return OperationResult::AI_ERROR;
             }
 
+           int64_t InteropTarget::InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err)
+            {
+                JniErrorInfo jniErr;
+
+                SharedPointer<InteropMemory> outMem = env.Get()->AllocateMemory();
+                int64_t outPtr = WriteTo(outMem.Get(), inOp, err);
+
+                if (outPtr)
+                {
+                    int64_t res = env.Get()->Context()->TargetInStreamOutLong(javaRef, opType, outPtr, &jniErr);
+
+                    IgniteError::SetError(jniErr.code, jniErr.errCls, jniErr.errMsg, err);
+
+                    if (jniErr.code == IGNITE_JNI_ERR_SUCCESS)
+                        return res;
+                }
+
+                return OperationResult::AI_ERROR;
+            }
+
             jobject InteropTarget::InStreamOutObject(int32_t opType, InteropMemory& outInMem, IgniteError& err)
             {
                 JniErrorInfo jniErr;

@@ -144,6 +144,16 @@ namespace ignite
                 OperationResult::Type InStreamOutLong(int32_t opType, InteropMemory& outInMem, IgniteError& err);
 
                 /**
+                 * In stream out long operation.
+                 *
+                 * @param opType Type of operation.
+                 * @param inOp Input opeartion.
+                 * @param err Error.
+                 * @return Operation result or long value.
+                 */
+                int64_t InteropTarget::InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err);
+
+                /**
                  * In stream out object operation.
                  *
                  * @param opType Type of operation.

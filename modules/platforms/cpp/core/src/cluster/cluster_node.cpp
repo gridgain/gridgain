@@ -54,7 +54,7 @@ namespace ignite
             return impl.Get()->GetAttributes();
         }
 
-        Guid ClusterNode::GetId()
+        Guid ClusterNode::GetId() const
         {
             return impl.Get()->GetId();
         }

@@ -121,7 +121,7 @@ namespace ignite
                  *
                  * @return Cluster Node Guid.
                  */
-                Guid GetId();
+                Guid GetId() const;
 
                 /**
                  * Check if cluster node started in client mode.

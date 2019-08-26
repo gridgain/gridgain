@@ -17,6 +17,7 @@
 #include "ignite/impl/ignite_impl.h"
 
 using namespace ignite::common::concurrent;
+using namespace ignite::cache;
 using namespace ignite::cluster;
 using namespace ignite::jni::java;
 using namespace ignite::impl::interop;
@@ -39,6 +40,7 @@ namespace ignite
                 GET_CACHE = 1,
                 CREATE_CACHE = 2,
                 GET_OR_CREATE_CACHE = 3,
+                GET_AFFINITY = 7,
                 GET_TRANSACTIONS = 9,
                 GET_CLUSTER_GROUP = 10,
                 SET_BASELINE_TOPOLOGY_VERSION = 24,
@@ -57,6 +59,28 @@ namespace ignite
         {
             txImpl.Init(common::Bind(this, &IgniteImpl::InternalGetTransactions));
             prjImpl.Init(common::Bind(this, &IgniteImpl::InternalGetProjection));
+        }
+
+        IgniteImpl::SP_CacheAffinityImpl IgniteImpl::GetAffinity(std::string cacheName, IgniteError& err)
+        {
+            SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
+            InteropMemory* mem0 = mem.Get();
+            InteropOutputStream out(mem0);
+            BinaryWriterImpl writer(&out, env.Get()->GetTypeManager());
+            BinaryRawWriter rawWriter(&writer);
+
+            rawWriter.WriteString(cacheName);
+
+            out.Synchronize();
+
+            jobject affinityJavaRef = InStreamOutObject(ProcessorOp::GET_AFFINITY, *mem0, err);
+
+            if (!affinityJavaRef)
+            {
+                return NULL;
+            }
+
+            return new CacheAffinityImpl(env, affinityJavaRef);
         }
 
         const char* IgniteImpl::GetName() const
@@ -96,12 +120,12 @@ namespace ignite
 
         IgniteImpl::SP_IgniteClusterImpl IgniteImpl::GetCluster()
         {
-            return IgniteImpl::SP_IgniteClusterImpl(new cluster::IgniteClusterImpl(this->GetProjection()));
+            return IgniteImpl::SP_IgniteClusterImpl(new IgniteClusterImpl(this->GetProjection()));
         }
 
         IgniteImpl::SP_ComputeImpl IgniteImpl::GetCompute()
         {
-            cluster::SP_ClusterGroupImpl serversCluster = prjImpl.Get().Get()->ForServers();
+            SP_ClusterGroupImpl serversCluster = prjImpl.Get().Get()->ForServers();
 
             return serversCluster.Get()->GetCompute();
         }
@@ -182,7 +206,7 @@ namespace ignite
             return new transactions::TransactionsImpl(env, txJavaRef);
         }
 
-        cluster::ClusterGroupImpl* IgniteImpl::InternalGetProjection()
+        ClusterGroupImpl* IgniteImpl::InternalGetProjection()
         {
             IgniteError err;
 
@@ -193,10 +217,10 @@ namespace ignite
             if (!clusterGroupJavaRef)
                 throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, "Can not get ClusterGroup instance.");
 
-            return new cluster::ClusterGroupImpl(env, clusterGroupJavaRef);
+            return new ClusterGroupImpl(env, clusterGroupJavaRef);
         }
 
-        cache::CacheImpl* IgniteImpl::GetOrCreateCache(const char* name, IgniteError& err, int32_t op)
+        CacheImpl* IgniteImpl::GetOrCreateCache(const char* name, IgniteError& err, int32_t op)
         {
             SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
             InteropMemory* mem0 = mem.Get();
@@ -217,7 +241,7 @@ namespace ignite
 
             char* name0 = common::CopyChars(name);
 
-            return new cache::CacheImpl(name0, env, cacheJavaRef);
+            return new CacheImpl(name0, env, cacheJavaRef);
         }
     }
 }

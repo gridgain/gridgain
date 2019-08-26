@@ -86,7 +86,7 @@ namespace ignite
                 return *hosts.Get();
             }
 
-            Guid ClusterNodeImpl::GetId()
+            Guid ClusterNodeImpl::GetId() const
             {
                 return id;
             }

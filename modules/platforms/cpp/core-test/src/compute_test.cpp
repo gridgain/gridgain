@@ -21,9 +21,9 @@
 #include <ignite/ignition.h>
 #include <ignite/test_utils.h>
 
-#include <ignite/test_utils.h>
-
 using namespace ignite;
+using namespace ignite::cache;
+using namespace ignite::cluster;
 using namespace ignite::compute;
 using namespace ignite::common::concurrent;
 using namespace ignite_test;
@@ -246,6 +246,17 @@ struct Func3 : ComputeFunc<void>
 
 std::string Func3::res;
 
+int GetPrimaryKey(ClusterNode& node, CacheAffinity& affinity)
+{
+    for (int i = 0; i < INT_MAX; i++)
+        if (affinity.IsPrimary(node, i))
+            return i;
+
+    BOOST_CHECK(false);
+
+    return 0;
+}
+
 namespace ignite
 {
     namespace binary
@@ -331,6 +342,82 @@ IGNITE_EXPORTED_CALL void IgniteModuleInit1(IgniteBindingContext& context)
 }
 
 BOOST_FIXTURE_TEST_SUITE(ComputeTestSuite, ComputeTestSuiteFixture)
+
+BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
+{
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+    Cache<int, int> cache = node.GetCache<int, int>("cache1");
+    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    Compute compute = node.GetCompute();
+
+    int key = GetPrimaryKey(nodes.front(), affinity);
+
+    BOOST_TEST_CHECKPOINT("Making Call");
+    std::string res = compute.AffinityCall<std::string>(cache.GetName(), key, Func2(312, 245));
+
+    BOOST_CHECK_EQUAL(res, "312.245");
+}
+
+BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
+{
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+    Cache<int, int> cache = node.GetCache<int, int>("cache1");
+    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    Compute compute = node.GetCompute();
+
+    int key = GetPrimaryKey(nodes.front(), affinity);
+
+    BOOST_TEST_CHECKPOINT("Making Call");
+    Future<std::string> res = compute.AffinityCallAsync<std::string>(cache.GetName(), key, Func2(312, 245));
+
+    BOOST_CHECK(!res.IsReady());
+
+    BOOST_TEST_CHECKPOINT("Waiting with timeout");
+    res.WaitFor(100);
+
+    BOOST_CHECK(!res.IsReady());
+
+    BOOST_CHECK_EQUAL(res.GetValue(), "312.245");
+}
+
+BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
+{
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+    Cache<int, int> cache = node.GetCache<int, int>("cache1");
+    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    Compute compute = node.GetCompute();
+
+    int key = GetPrimaryKey(nodes.front(), affinity);
+
+    BOOST_TEST_CHECKPOINT("Running");
+    compute.AffinityRun(cache.GetName(), key, Func3(312, 245));
+
+    BOOST_CHECK_EQUAL(Func3::res, "312.245");
+}
+
+BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
+{
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+    Cache<int, int> cache = node.GetCache<int, int>("cache1");
+    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    Compute compute = node.GetCompute();
+
+    int key = GetPrimaryKey(nodes.front(), affinity);
+
+    BOOST_TEST_CHECKPOINT("Running");
+    Future<void> res = compute.AffinityRunAsync(cache.GetName(), key, Func3(312, 245));
+
+    BOOST_CHECK(!res.IsReady());
+
+    BOOST_TEST_CHECKPOINT("Waiting with timeout");
+    res.WaitFor(100);
+
+    BOOST_CHECK(!res.IsReady());
+
+    res.GetValue();
+
+    BOOST_CHECK_EQUAL(Func3::res, "312.245");
+}
 
 BOOST_AUTO_TEST_CASE(IgniteCallSyncLocal)
 {
@@ -600,8 +687,8 @@ BOOST_FIXTURE_TEST_SUITE(ComputeTestSuiteClusterGroup, ComputeTestSuiteFixtureCl
 
 BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
 {
-    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
-    cluster::ClusterGroup group = localGroup.ForServers();
+    ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
+    ClusterGroup group = localGroup.ForServers();
 
     Compute compute = client.GetCompute(group);
 
@@ -616,9 +703,9 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
 
 BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForAttribute)
 {
-    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
-    cluster::ClusterGroup group1 = localGroup.ForAttribute("TestAttribute", "Value0");
-    cluster::ClusterGroup group2 = localGroup.ForAttribute("TestAttribute", "Value1");
+    ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
+    ClusterGroup group1 = localGroup.ForAttribute("TestAttribute", "Value0");
+    ClusterGroup group2 = localGroup.ForAttribute("TestAttribute", "Value1");
 
     Compute compute1 = client.GetCompute(group1);
     Compute compute2 = client.GetCompute(group2);

@@ -98,7 +98,7 @@ namespace ignite
              *
              * @return Node Guid.
              */
-            Guid GetId();
+            Guid GetId() const;
 
             /**
              * Check if cluster node started in client mode.
@@ -134,6 +134,17 @@ namespace ignite
              * @return Prodcut version.
              */
             const IgniteProductVersion& GetVersion();
+
+            /**
+             * Define "less" operator to allow Cluster Node usage as STL container key.
+             *
+             * @param node Another cluster node.
+             * @return True if less.
+             */
+            bool operator<(const ClusterNode& node) const
+            {
+                return GetId() < node.GetId();
+            }
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;
