@@ -22,6 +22,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.google.common.collect.Lists;
 
 /**
  * Retryable sender with limited queue.
@@ -71,6 +72,14 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         exSrvc.shutdown();
+    }
+
+    /**
+     * @param element Element to send.
+     */
+    public void send(T element) {
+        if (element != null)
+            addToQueue(Lists.newArrayList(element));
     }
 
     /**

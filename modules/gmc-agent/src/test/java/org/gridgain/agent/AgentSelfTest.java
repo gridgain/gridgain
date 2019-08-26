@@ -59,6 +59,7 @@ import static org.awaitility.Awaitility.with;
 import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
@@ -102,6 +103,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildBaselineTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterActiveStateDest(cluster.id())) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
     }
 

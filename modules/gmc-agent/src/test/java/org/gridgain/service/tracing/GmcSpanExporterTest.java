@@ -16,7 +16,6 @@
 
 package org.gridgain.service.tracing;
 
-
 import com.google.common.collect.Lists;
 import io.opencensus.common.Timestamp;
 import io.opencensus.trace.SpanContext;
