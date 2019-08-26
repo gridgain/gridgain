@@ -14,48 +14,33 @@
  * limitations under the License.
  */
 
-package org.gridgain.agent;
+package org.gridgain.service.sender;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.function.Consumer;
-import org.apache.ignite.IgniteLogger;
 
 /**
  * Retryable sender with limited queue.
  */
-public class RetryableSender<T> implements Runnable, AutoCloseable {
-    /** Max sleep time seconds. */
-    private static final int MAX_SLEEP_TIME_SECONDS = 10;
-
+public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     /** Batch size. */
     private static final int BATCH_SIZE = 10;
 
-    /** Logger. */
-    private IgniteLogger log;
-
     /** Queue. */
-    private final LinkedBlockingDeque<List<T>> queue;
-
-    /** Send function. */
-    private final Consumer<List<T>> sndFn;
-
-    /** Retry count. */
-    int retryCnt;
+    private final BlockingQueue<List<T>> queue;
 
     /** Executor service. */
     private final ExecutorService exSrvc = Executors.newSingleThreadExecutor();
 
     /**
-     * @param log Logger.
+     * @param cap Capacity.
      */
-    public RetryableSender(IgniteLogger log, int cap, Consumer<List<T>> sndFn) {
-        this.log = log;
-        this.sndFn = sndFn;
-        queue = new LinkedBlockingDeque<>(cap);
+    protected RetryableSender(int cap) {
+        queue = new ArrayBlockingQueue<>(cap);
         exSrvc.submit(this);
     }
 
@@ -65,25 +50,27 @@ public class RetryableSender<T> implements Runnable, AutoCloseable {
             List<T> e = null;
 
             try {
-                Thread.sleep(Math.min(MAX_SLEEP_TIME_SECONDS, retryCnt) * 1000);
-
                 e = queue.take();
-                sndFn.accept(e);
-
-                retryCnt = 0;
+                sendInternal(e);
             }
             catch (InterruptedException ex) {
                 break;
             }
             catch (Exception ex) {
-                retryCnt++;
-
-                if (retryCnt == 1)
-                    log.warning("Failed to send message with spans, will retry in " + retryCnt * 1000 + " ms", ex);
-
                 addToQueue(e);
             }
         }
+    }
+
+    /**
+     * Abstract send method.
+     * @param elements Elements.
+     */
+    protected abstract void sendInternal(List<T> elements) throws Exception;
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        exSrvc.shutdown();
     }
 
     /**
@@ -119,15 +106,8 @@ public class RetryableSender<T> implements Runnable, AutoCloseable {
     /**
      * @param batch Batch.
      */
-    private synchronized void addToQueue(List<T> batch) {
-        if (!queue.offerLast(batch)) {
-            queue.removeFirst();
-            queue.offerLast(batch);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void close() {
-        exSrvc.shutdown();
+    private void addToQueue(List<T> batch) {
+        while (!queue.offer(batch))
+            queue.poll();
     }
 }

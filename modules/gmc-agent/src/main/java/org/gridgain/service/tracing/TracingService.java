@@ -18,14 +18,13 @@ package org.gridgain.service.tracing;
 
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.gridgain.agent.RetryableSender;
+import org.gridgain.service.sender.RetryableSender;
 import org.gridgain.agent.WebSocketManager;
 import org.gridgain.dto.Span;
+import org.gridgain.service.sender.GmcSender;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.gridgain.service.tracing.GmcSpanExporter.*;
@@ -36,9 +35,6 @@ import static org.gridgain.service.tracing.GmcSpanExporter.*;
 public class TracingService implements AutoCloseable {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
-
-    /** Logger. */
-    private final IgniteLogger log;
 
     /** Context. */
     private final GridKernalContext ctx;
@@ -59,8 +55,7 @@ public class TracingService implements AutoCloseable {
     public TracingService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
-        this.log = ctx.log(TracingService.class);
-        this.snd = createSenderWorker();
+        this.snd = createSender();
 
         ctx.grid().message().localListen(TRACING_TOPIC, lsnr);
     }
@@ -84,10 +79,7 @@ public class TracingService implements AutoCloseable {
     /**
      * @return Sender which send messages from queue to gmc.
      */
-    private RetryableSender<Span> createSenderWorker() {
-        return new RetryableSender<>(log, QUEUE_CAP, (b) -> {
-            if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), b))
-                throw new IgniteException("Failed to send message with spans");
-        });
+    private RetryableSender<Span> createSender() {
+        return new GmcSender<>(ctx, mgr, QUEUE_CAP, buildSaveSpanDest(ctx.cluster().get().id()));
     }
 }

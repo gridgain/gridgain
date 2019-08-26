@@ -16,7 +16,7 @@
 
 package org.gridgain.testsuites;
 
-import org.gridgain.agent.RetryableSenderTest;
+import org.gridgain.service.sender.RetryableSenderTest;
 import org.gridgain.service.MetricsServiceTest;
 import org.gridgain.service.TopologyServiceTest;
 import org.gridgain.service.tracing.GmcSpanExporterTest;

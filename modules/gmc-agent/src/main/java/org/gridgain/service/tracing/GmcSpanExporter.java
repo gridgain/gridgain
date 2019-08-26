@@ -35,8 +35,9 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.gridgain.agent.RetryableSender;
+import org.gridgain.service.sender.RetryableSender;
 import org.gridgain.dto.Span;
+import org.gridgain.service.sender.CoordinatorSender;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -78,7 +79,7 @@ public class GmcSpanExporter implements AutoCloseable {
 
         if (ctx.config().getTracingSpi() != null) {
             try {
-                snd = createSenderWorker();
+                snd = createSender();
                 exporter = new OpenCensusTraceExporter(getTraceHandler());
                 exporter.start(ctx.igniteInstanceName());
             }
@@ -115,12 +116,8 @@ public class GmcSpanExporter implements AutoCloseable {
     /**
      * @return Worker which send messages from queue to topic.
      */
-    private RetryableSender<Span> createSenderWorker() {
-        return new RetryableSender<>(
-            log,
-            QUEUE_CAP,
-            (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, (Object) b)
-        );
+    private RetryableSender<Span> createSender() {
+        return new CoordinatorSender<>(ctx, QUEUE_CAP, TRACING_TOPIC);
     }
 
     /**
