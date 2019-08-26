@@ -329,14 +329,10 @@ namespace ignite
                     interop::InteropInputStream inStream(memOut.Get());
                     binary::BinaryReaderImpl reader(&inStream);
 
-                    std::list<Guid> nodeIds;
+                    std::list<ignite::cluster::ClusterNode> ret;
                     int32_t cnt = reader.ReadInt32();
                     for (int32_t i = 0; i < cnt; i++)
-                        nodeIds.push_back(reader.ReadGuid());
-
-                    std::list<ignite::cluster::ClusterNode> ret;
-                    for (std::list<Guid>::iterator it = nodeIds.begin(); it != nodeIds.end(); ++it)
-                        ret.push_back(ignite::cluster::ClusterNode(GetEnvironment().GetNode(*it)));
+                        ret.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
 
                     return ret;
                 }
