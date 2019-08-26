@@ -1,0 +1,52 @@
+{
+    "configuration": {
+        "configurations": {},
+        "basic": {
+
+        },
+        "advanced": {
+            "cluster": {},
+            "caches": {},
+            "sql": {}
+        },
+        "importDialog": {},
+        "previewDialog": {}
+    },
+    "queries": {
+        "notebooks": {
+
+        },
+        "notebook": {}
+    },
+    "connectedClustersDialog": {},
+    "demoMode": {},
+    "helpMenu": {},
+    "userMenu": {},
+    "userProfile": {},
+    "admin": {
+        "userNotificationsDialog": {}
+    },
+    "newUserForm": {},
+    "gettingStartedDialog": {},
+    "footer": {
+
+    },
+    "navigationMenu": {},
+    "signIn": {
+        "documentTitle": "Sign In",
+        "pageTitle": "Sign In",
+        "emailInput": {
+            "placeholder": "Input email"
+        },
+        "passwordInput": {
+            "placeholder": "Input password"
+        },
+        "forgotPasswordLinkLabel": "Forgot password?",
+        "formActionButtonLabel": "{{::activationToken ? 'Activate' : 'Sign In'}}",
+        "signupMessage": "Don't have an account? <a href='/signup'>Get started</a>",
+        "confirmRegistrationMessage": "Please sign in to confirm your registration"
+    },
+    "signUp": {},
+    "forgotPassword": {},
+    "landing": {}
+}
