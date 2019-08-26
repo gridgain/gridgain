@@ -1407,7 +1407,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         UUID evtNodeId,
         UUID affNodeId,
         CacheObject val,
-        boolean writeThrough,
         long ttl,
         boolean evt,
         boolean metrics,
@@ -1592,11 +1591,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         if (log.isDebugEnabled())
             log.debug("Updated cache entry [val=" + val + ", old=" + old + ", entry=" + this + ']');
-
-        // Persist outside of synchronization. The correctness of the
-        // value will be handled by current transaction.
-        if (writeThrough)
-            cctx.store().put(tx, key, val, newVer);
 
         if (intercept)
             cctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(cctx, key, key0, val, val0, keepBinary, updateCntr0));

@@ -435,7 +435,6 @@ public interface GridCacheEntryEx {
         UUID evtNodeId,
         UUID affNodeId,
         @Nullable CacheObject val,
-        boolean writeThrough,
         long ttl,
         boolean evt,
         boolean metrics,

@@ -473,7 +473,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
         UUID evtNodeId,
         UUID affNodeId,
         @Nullable CacheObject val,
-        boolean writeThrough,
         long ttl,
         boolean evt,
         boolean metrics,

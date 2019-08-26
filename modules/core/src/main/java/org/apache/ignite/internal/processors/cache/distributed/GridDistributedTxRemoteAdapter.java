@@ -670,7 +670,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                                 eventNodeId(),
                                                 nodeId,
                                                 val,
-                                                false,
                                                 txEntry.ttl(),
                                                 true,
                                                 true,
