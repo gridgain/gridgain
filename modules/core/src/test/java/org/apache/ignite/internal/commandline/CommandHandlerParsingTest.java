@@ -47,6 +47,7 @@ import org.junit.rules.TestRule;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
+import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
@@ -343,7 +344,12 @@ public class CommandHandlerParsingTest {
             if (cmd.command().confirmationPrompt() == null)
                 continue;
 
-            ConnectionAndSslParameters args = parseArgs(asList(cmd.text()));
+            ConnectionAndSslParameters args;
+
+                if (cmd == CLUSTER_CHANGE_TAG)
+                    args = parseArgs(asList(cmd.text(), "test_tag"));
+                else
+                    args = parseArgs(asList(cmd.text()));
 
             checkCommonParametersCorrectlyParsed(cmd, args, false);
 
@@ -382,7 +388,22 @@ public class CommandHandlerParsingTest {
                     assertEquals("xid1", txTaskArg.getXid());
                     assertEquals(10_000, txTaskArg.getMinDuration().longValue());
                     assertEquals(VisorTxOperation.KILL, txTaskArg.getOperation());
+
+                    break;
                 }
+
+                case CLUSTER_CHANGE_TAG: {
+                    args = parseArgs(asList(cmd.text(), "test_tag", "--yes"));
+
+                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+
+                    assertEquals("test_tag", ((ClusterChangeTagCommand)args.command()).arg());
+
+                    break;
+                }
+
+                default:
+                    fail("Unknown command: " + cmd);
             }
         }
     }
