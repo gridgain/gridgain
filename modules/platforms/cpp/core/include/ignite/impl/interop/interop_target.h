@@ -151,7 +151,7 @@ namespace ignite
                  * @param err Error.
                  * @return Operation result or long value.
                  */
-                int64_t InteropTarget::InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err);
+                int64_t InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err);
 
                 /**
                  * In stream out object operation.

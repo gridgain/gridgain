@@ -243,13 +243,13 @@ namespace ignite
                 template<typename TK>
                 std::map<ignite::cluster::ClusterNode, std::list<TK> > MapKeysToNodes(std::list<TK> keys)
                 {
-                    SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
-                    SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
                     writer.WriteInt32(static_cast<int32_t>(keys.size()));
-                    for (std::list<TK>::iterator it = keys.begin(); it != keys.end(); ++it)
+                    for (typename std::list<TK>::iterator it = keys.begin(); it != keys.end(); ++it)
                         writer.WriteObject<TK>(*it);
 
                     out.Synchronize();
@@ -313,8 +313,8 @@ namespace ignite
                 template <typename TK>
                 std::list<ignite::cluster::ClusterNode> MapKeyToPrimaryAndBackups(TK key)
                 {
-                    SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
-                    SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
@@ -376,4 +376,4 @@ namespace ignite
     }
 }
 
-#endif _IGNITE_CACHE_AFFINITY_IMPL
+#endif // _IGNITE_CACHE_AFFINITY_IMPL
