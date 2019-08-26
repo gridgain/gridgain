@@ -23,7 +23,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.ssl.SslContextFactory;
@@ -126,7 +125,8 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
 
         String out = testOut.toString();
 
-        assertTrue(out.contains("firewall settings") && out.contains("SSL configuration"));
+        assertContains(log, out, "firewall settings");
+        assertContains(log, out, "SSL configuration");
     }
 
     /**

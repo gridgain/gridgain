@@ -358,15 +358,25 @@ public class CommandHandler {
      * thus is very fragile to any changes in that structure.
      *
      * @param e Exception to analyze.
+     *
+     * @return {@code True} if exception may be related to SSL misconfiguration issues.
      */
     private boolean isSSLMisconfigurationError(Throwable e) {
         return e != null && e.getMessage() != null && e.getMessage().contains("SSL");
     }
 
     /**
+     * Analyses passed exception to find out whether it is caused by server closing connection silently.
+     * This happens when client tries to establish unprotected connection
+     * to the cluster supporting only secured communications (e.g. when server is configured to use SSL certificates
+     * and client is not).
      *
-     * @param e
-     * @return
+     * (!) Implementation depends heavily on structure of exception stack trace
+     * thus is very fragile to any changes in that structure.
+     *
+     * @param e Exception to analyse.
+     * @return {@code True} if exception may be related to the attempt to establish unprotected connection
+     * to secured cluster.
      */
     private boolean isConnectionClosedSilentlyException(Throwable e) {
         if (!(e instanceof GridClientDisconnectedException))
