@@ -57,5 +57,17 @@
         "backToSignInLinkLabel": "Back to sign in",
         "formActionButtonLabel": "Send it to me"
     },
+    "passwordReset": {
+        "documentTitle": "Reset password",
+        "pageTitle": "Reset Password",
+        "newPasswordInput": {
+            "placeholder": "New password"
+        },
+        "confirmNewPasswordInput": {
+            "placeholder": "Confirm new password"
+        },
+        "cancelLinkLabel": "Cancel",
+        "formActionButtonLabel": "Save Changes"
+    },
     "landing": {}
 }
