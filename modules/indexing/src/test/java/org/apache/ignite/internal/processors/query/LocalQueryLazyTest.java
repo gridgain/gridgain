@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -114,6 +114,68 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
         assertEquals(KEY_CNT, r0 + r1);
     }
 
+    /** */
+    @Test
+    public void testParallelIteratorWithReducePhase() throws Exception {
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        Iterator<List<?>> cursorIter0 = sql(g1, "SELECT * FROM test limit 3").iterator();
+        Iterator<List<?>> cursorIter1 = distributedSql(g1, "SELECT * FROM test limit 3").iterator();
+
+        int r0 = 0;
+        int r1 = 0;
+
+        for (int i =0; i<KEY_CNT; i++) {
+            if (cursorIter0.hasNext()) {
+                r0++;
+
+                cursorIter0.next();
+            }
+
+            if (cursorIter1.hasNext()) {
+                r1++;
+
+                cursorIter1.next();
+            }
+        }
+
+        assertEquals(3, r0);
+        assertEquals(3, r1);
+    }
+
+    /** */
+    @Test
+    public void testParallelIterator() throws Exception {
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        Iterator<List<?>> cursorIter0 = sql(g1, "SELECT * FROM test").iterator();
+        Iterator<List<?>> cursorIter1 = distributedSql(g1, "SELECT * FROM test").iterator();
+
+        int r0 = 0;
+        int r1 = 0;
+
+        for (int i =0; i<KEY_CNT; i++) {
+            if (cursorIter0.hasNext()) {
+                r0++;
+
+                cursorIter0.next();
+            }
+
+            if (cursorIter1.hasNext()) {
+                r1++;
+
+                cursorIter1.next();
+            }
+        }
+
+        assertTrue(r0 < KEY_CNT);
+        assertEquals(KEY_CNT, r1);
+    }
+
     /**
      * @param sql SQL query.
      * @param args Query parameters.
@@ -132,6 +194,19 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
     private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLocal(true)
+            .setLazy(true)
+            .setSchema("TEST")
+            .setArgs(args), false);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> distributedSql(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
             .setSchema("TEST")
             .setArgs(args), false);
