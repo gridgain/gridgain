@@ -1389,8 +1389,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
         try {
             // All subsequent lock requests must use actual topology version to avoid mapping on invalid primaries.
-            AffinityTopologyVersion clienRemapVer =
-                req.firstClientRequest() && tx != null &&
+            AffinityTopologyVersion clienRemapVer = req.firstClientRequest() &&
+                tx != null &&
                 topology().readyTopologyVersion().after(req.topologyVersion()) ?
                 topology().readyTopologyVersion() : null;
 
