@@ -1935,6 +1935,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             if (log.isDebugEnabled())
                 log.debug("Caught invalid partition exception for cache entry (will remap update request): " + req);
 
+            if (msgLog.isDebugEnabled())
+                msgLog.debug("Caught invalid partition exception for cache entry (will remap update request): " + req);
+
             res.remapTopologyVersion(ctx.topology().lastTopologyChangeVersion());
         }
         catch (Throwable e) {
@@ -3264,6 +3267,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 fut.onPrimaryResponse(nodeId, res, false);
             }
             catch (Throwable e) {
+                if (msgLog.isDebugEnabled())
+                    msgLog.debug("Failed processing response: " + e.getMessage());
+
                 log.error("Failed processing response", e);
 
                 e.printStackTrace();

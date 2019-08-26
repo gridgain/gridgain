@@ -255,6 +255,11 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
             boolean remapKey = res.remapTopologyVersion() != null;
 
             if (remapKey) {
+                if (req.topologyVersion().equals(res.remapTopologyVersion())) {
+                    if (msgLog.isDebugEnabled())
+                        msgLog.debug("Invalid response, will throw an assertion: " + res);
+                }
+
                 assert !req.topologyVersion().equals(res.remapTopologyVersion());
 
                 assert remapTopVer == null : remapTopVer;
