@@ -208,7 +208,7 @@ public class GridAffinityAssignmentCache {
 
         HistoryAffinityAssignment existing = affCache.put(topVer, newHistEntry);
 
-        U.debug(log, "Calculated affinity [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + existing.get(1) + ']');
+        U.debug(log, "Calculated affinity [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + newHistEntry.get(1) + ']');
 
         head.set(assignment);
 
@@ -560,7 +560,7 @@ public class GridAffinityAssignmentCache {
 
         HistoryAffinityAssignment existing = affCache.put(topVer, newHistEntry);
 
-        U.debug(log, "Calculated affinity2 [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + existing.get(1) + ']');
+        U.debug(log, "Calculated affinity2 [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + newHistEntry.get(1) + ']');
 
         head.set(assignmentCpy);
 
