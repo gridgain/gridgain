@@ -1,4 +1,21 @@
 {
+    "scale": {
+        "time": {
+            "second": {
+                "long": "seconds",
+                "short": "s"
+            },
+            "minute": {
+                "long": "minutes",
+                "short": "m"
+            },
+            "hour": {
+                "long": "hours",
+                "short": "h"
+            }
+        }
+    },
+    "actionsButtonLabel": "Actions",
     "configuration": {
         "configurations": {},
         "basic": {
@@ -13,10 +30,113 @@
         "previewDialog": {}
     },
     "queries": {
-        "notebooks": {
-
+        "createNotebookDialog": {
+            "title": "New query notebook",
+            "nameInput": {
+                "title": "Notebook name"
+            }
         },
-        "notebook": {}
+        "renameNotebookDialog": {
+            "title": "Rename notebook",
+            "nameInput": {
+                "title": "Notebook name"
+            }
+        },
+        "notebooks": {
+            "documentTitle": "Notebooks",
+            "pageTitle": "Notebooks",
+            "gridColumns": {
+                "name": {
+                    "displayName": "Notebook name",
+                    "categoryDisplayName": "Name",
+                    "filterPlaceholder": "Filter by Name..."
+                },
+                "sqlQueries": {
+                    "displayName": "SQL Queries",
+                    "categoryDisplayName": "SQL Queries"
+                },
+                "scanQueries": {
+                    "displayName": "Scan Queries",
+                    "categoryDisplayName": "Scan Queries"
+                }
+            },
+            "actions": {
+                "clone": "Clone",
+                "rename": "Rename",
+                "delete": "Delete"
+            },
+            "createNotebookButtonLabel": "Create Notebook",
+            "gridTitle": "Notebooks",
+            "loadingMessage": "Loading notebooks...",
+            "noData": {
+                "message": "You have no notebooks. ",
+                "createEntityButtonLabel": "Create one?",
+                "emptyFilterResultMessage": "Nothing to display. Check your filters."
+            }
+        },
+        "notebook": {
+            "documentTitle": "Query notebook",
+            "internalClusterErrorMessagePrefix": "Internal cluster error",
+            "loadingMessageWithDemoEnabled": "Demo grid is starting. Please wait...",
+            "loadingMessageWithDemoDisabled": "Loading query notebook screen...",
+            "newQueryNamePrefix": "Query",
+            "newScanNamePrefix": "Scan",
+            "clearQueryResultConfirmationMessage": "Are you sure you want to clear query result?",
+            "queryTooltip": {
+                "waitingForResponse": "Waiting for server response",
+                "actionPrefix": "Input text to "
+            },
+            "scanTooltip": {
+                "waitingForResponse": "Waiting for server response",
+                "text": "Select cache to export scan results"
+            },
+            "queryResultDialog": {
+                "scan": {
+                    "title": "SCAN query",
+                    "emptyFilterMessage": "SCAN query for cache: <b>{{name}}</b>",
+                    "nonEmptyFilterMessage": "SCAN query for cache: <b>{{name}}</b> with filter: <b>{{filter}}</b>"
+                },
+                "explain": {
+                    "title": "Explain query"
+                },
+                "sqlQuery": {
+                    "title": "SQL query"
+                },
+                "duration": "Duration: {{duration}}",
+                "nodeId": " Node ID8: {{id}}"
+            },
+            "stackTraceDialog": {
+                "title": "Error details"
+            },
+            "leaveWithRunningQueriesConfirmationMessage": "You have running queries. Are you sure you want to cancel them?",
+            "scanActions": {
+                "scan": "Scan",
+                "scanOnSelectedNode": "Scan on selected node",
+                "rename": "Rename",
+                "remove": "Remove"
+            },
+            "queryActions": {
+                "execute": "Execute",
+                "executeOnSelectedNode": "Execute on selected node",
+                "explain": "Explain",
+                "rename": "Rename",
+                "remove": "Remove"
+            },
+            "renameQueryDialog": {
+                "title": "Rename Query",
+                "nameInput": {
+                    "title": "New query name:"
+                }
+            },
+            "removeQueryDialog": {
+                "message": "{{ hasRunningQueries ? 'Query is being executed. Are you sure you want to cancel and remove query: \"' : 'Are you sure you want to remove query: \"'}}{{name}}\"?"
+            }
+        },
+        "failedToLoadNotebookErrorMessage": "Failed to load notebook.",
+        "notebookRemovalNotSupportedInDemoModeErrorMessage": "Removing \"{{name}}\" notebook is not supported.",
+        "removeNotebookConfirmationMessage": "Are you sure you want to remove notebook: \"{{notebook.name}}\"?",
+        "removeNotebooksConfirmationMessage": "Are you sure you want to remove {{amount}} selected notebooks?",
+        "notebookNameCollissionErrorMessage": "Notebook with name \"{{name}}\" already exists!"
     },
     "connectedClustersDialog": {},
     "demoMode": {},
@@ -31,7 +151,9 @@
     "footer": {
 
     },
-    "navigationMenu": {},
+    "navigationMenu": {
+        "queriesLinkLabel": "Queries"
+    },
     "signIn": {
         "documentTitle": "Sign In",
         "pageTitle": "Sign In",
