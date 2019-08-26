@@ -16,7 +16,7 @@
 
  /**
   * @file
-  * Declares ignite::cache::Cache class.
+  * Declares ignite::cache::CacheAffinity class.
   */
 
 #ifndef _IGNITE_CACHE_AFFINITY
