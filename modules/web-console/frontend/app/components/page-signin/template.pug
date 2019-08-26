@@ -24,7 +24,7 @@ form(name='$ctrl.form' novalidate ng-submit='$ctrl.signin()')
         label: 'Email:',
         model: '$ctrl.data.email',
         name: '"email"',
-        placeholder: '{{::signIn.emailInput.placeholder|translate}}',
+        placeholder: '{{::"signIn.emailInput.placeholder"|translate}}',
         required: true
     })(
         ng-model-options='{allowInvalid: true}'
@@ -36,7 +36,7 @@ form(name='$ctrl.form' novalidate ng-submit='$ctrl.signin()')
         label: 'Password:',
         model: '$ctrl.data.password',
         name: '"password"',
-        placeholder: '{{::signIn.passwordInput.placeholder|translate}}',
+        placeholder: '{{::"signIn.passwordInput.placeholder"|translate}}',
         required: true
     })(
         ng-model-options='{allowInvalid: true}'
