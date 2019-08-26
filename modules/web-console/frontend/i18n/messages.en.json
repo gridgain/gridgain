@@ -69,7 +69,34 @@
         "cancelLinkLabel": "Cancel",
         "formActionButtonLabel": "Save Changes"
     },
-    "landing": {},
+    "landing": {
+        "intro": {
+            "title": "Web Console",
+            "subtitle": "An Interactive Configuration Wizard and Management Tool for Apache™ Ignite®",
+            "text": "It provides an interactive configuration wizard which helps you create and download configuration files and code snippets for your Apache Ignite projects. Additionally, the tool allows you to automatically load SQL metadata from any RDBMS, run SQL queries on your in-memory cache, and view execution plans, in-memory schema, and streaming charts.",
+            "signUpButtonLabel": "Sign Up"
+        },
+        "features": {
+            "title": "The Web Console allows you to:",
+            "configuration": {
+                "title": "Configure Apache Ignite clusters and caches",
+                "description": "The Web Console configuration wizard takes you through a step-by-step process that helps you define all the required configuration parameters. The system then generates a ready-to-use project with all the required config files."
+            },
+            "sql": {
+                "title": "Run free-form SQL queries on <br> Apache Ignite caches",
+                "description": "By connecting the Web Console to your Apache Ignite cluster, you can execute SQL queries on your in-memory cache. You can also view the execution plan, in-memory schema, and streaming charts for your cluster."
+            },
+            "schemaImport": {
+                "title": "Import database schemas from <br> virtually any RDBMS",
+                "description": "To speed the creation of your configuration files, the Web Console allows you to automatically import the database schema from virtually any RDBMS including Oracle, SAP, MySQL, PostgreSQL, and many more."
+            },
+            "userManagement": {
+                "title": "Manage the Web Console users",
+                "description": "The Web Console allows you to have accounts with different roles."
+            },
+            "signUpButtonLabel": "Get Started"
+        }
+    },
     "public": {
         "appTitle": "Management console for Apache Ignite",
         "signInLinkLabel": "Sign In"
