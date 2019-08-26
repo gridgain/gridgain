@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -28,17 +30,23 @@ import org.jetbrains.annotations.Nullable;
 public class DiscoveryNotification {
     /** Event type. */
     private final int eventType;
+
     /** Topology version. */
     private final long topVer;
+
     /** Node. */
     private final ClusterNode node;
+
     /** Topology snapshot. */
+    @GridToStringInclude
     private final Collection<ClusterNode> topSnapshot;
 
     /** Topology history. */
     private @Nullable Map<Long, Collection<ClusterNode>> topHist;
+
     /** Custom message data. */
     private @Nullable DiscoverySpiCustomMessage customMsgData;
+
     /** Span container. */
     private SpanContainer spanContainer;
 
@@ -129,5 +137,10 @@ public class DiscoveryNotification {
      */
     public SpanContainer getSpanContainer() {
         return spanContainer;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(DiscoveryNotification.class, this);
     }
 }

@@ -994,7 +994,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         throw new GridDhtInvalidPartitionException(p, "Creating partition which does not belong to " +
                             "local node (often may be caused by inconsistent 'key.hashCode()' implementation) " +
                             "[grp=" + grp.cacheOrGroupName() + ", part=" + p + ", topVer=" + topVer +
-                            ", this.topVer=" + this.readyTopVer + ']');
+                            ", this.topVer=" + this.readyTopVer +
+                            ", nodes=" + grp.affinity().nodes(p, topVer) +
+                            ", lastChangeTopVer=" + ctx.cache().context().exchange().lastAffinityChangedTopologyVersion(topVer) + ']');
 
                     locParts.set(p, loc = partFactory.create(ctx, grp, p));
 

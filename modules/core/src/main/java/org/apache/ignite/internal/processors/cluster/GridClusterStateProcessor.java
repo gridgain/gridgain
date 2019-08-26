@@ -1563,6 +1563,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 .filter(n -> !n.isClient() && !n.isDaemon())
                 .collect(Collectors.toList());
 
+            U.debug(log, "New baseline nodes: " + bltNodes + ", snapshot: " + topSnapshot);
+
             if (!bltNodes.isEmpty()) {
                 int newBltId = oldBlt == null ? 0 : oldBlt.id();
 
@@ -1590,6 +1592,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
                 return true;
             }
+        }
+        else {
+            U.debug(log, "Will not automatically adjust baseline [" +
+                "isInMemory=" + isInMemoryCluster +
+                ", oldActive=" + oldState.active() +
+                ", oldTransition=" + oldState.transition() +
+                ", adjustEnabled=" + cluster.isBaselineAutoAdjustEnabled() +
+                ", timeout=" + cluster.baselineAutoAdjustTimeout() + ']');
         }
 
         return false;
