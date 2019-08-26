@@ -23,6 +23,7 @@ using namespace ignite::jni::java;
 using namespace ignite::impl::interop;
 using namespace ignite::impl::binary;
 using namespace ignite::impl::cache;
+using namespace ignite::impl::cluster;
 
 using namespace ignite::binary;
 
