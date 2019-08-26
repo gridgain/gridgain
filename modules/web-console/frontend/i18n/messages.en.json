@@ -47,6 +47,15 @@
         "confirmRegistrationMessage": "Please sign in to confirm your registration"
     },
     "signUp": {},
-    "forgotPassword": {},
+    "forgotPassword": {
+        "documentTitle": "Forgot Password",
+        "pageTitle": "Forgot password?",
+        "pageMessage": "Enter the email address for your account & we'll email you a link to reset your password.",
+        "emailInput": {
+            "placeholder": "Input email"
+        },
+        "backToSignInLinkLabel": "Back to sign in",
+        "formActionButtonLabel": "Send it to me"
+    },
     "landing": {}
 }
