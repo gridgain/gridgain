@@ -977,7 +977,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         throw new GridDhtInvalidPartitionException(p, "Adding entry to evicted partition " +
                             "(often may be caused by inconsistent 'key.hashCode()' implementation) " +
                             "[grp=" + grp.cacheOrGroupName() + ", part=" + p + ", topVer=" + topVer +
-                            ", this.topVer=" + this.readyTopVer + ']');
+                            ", this.topVer=" + this.readyTopVer + ", nodes=" + grp.affinity().nodes(p, topVer) +
+                            ", lastChangeTopVer=" + ctx.cache().context().exchange().lastAffinityChangedTopologyVersion(topVer) + ']');
                     }
                 }
                 else if (loc != null && state == RENTING && !showRenting) {

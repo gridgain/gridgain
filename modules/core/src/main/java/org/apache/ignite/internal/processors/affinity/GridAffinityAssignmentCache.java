@@ -208,6 +208,8 @@ public class GridAffinityAssignmentCache {
 
         HistoryAffinityAssignment existing = affCache.put(topVer, newHistEntry);
 
+        U.debug(log, "Calculated affinity [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + existing.get(1) + ']');
+
         head.set(assignment);
 
         for (Map.Entry<AffinityTopologyVersion, AffinityReadyFuture> entry : readyFuts.entrySet()) {
@@ -557,6 +559,8 @@ public class GridAffinityAssignmentCache {
             new HistoryAffinityAssignmentShallowCopy(prevHistEntry.getValue().origin(), topVer);
 
         HistoryAffinityAssignment existing = affCache.put(topVer, newHistEntry);
+
+        U.debug(log, "Calculated affinity2 [cache=" + cacheOrGrpName + ", topVer=" + topVer + ", assignment(1)=" + existing.get(1) + ']');
 
         head.set(assignmentCpy);
 
