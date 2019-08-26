@@ -187,7 +187,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
                 // Check that class can be loaded.
                 String clsName = meta.className();
 
-                Class<?> cls = U.forName(clsName != null ? clsName : alias, ldr);
+                Class<?> cls = Class.forName(clsName != null ? clsName : alias, true, ldr);
 
                 spi.register(ldr, cls);
 
@@ -224,11 +224,6 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             log.debug("Acquired deployment class: " + dep);
 
         return dep;
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta) {
-        return deployment(meta.alias());
     }
 
     /**
@@ -449,7 +444,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
 
             evt.message(msg);
             evt.node(ctx.discovery().localNode());
-            evt.type(isTask ? EVT_CLASS_DEPLOY_FAILED : EVT_TASK_DEPLOY_FAILED);
+            evt.type(isTask(cls) ? EVT_CLASS_DEPLOY_FAILED : EVT_TASK_DEPLOY_FAILED);
             evt.alias(taskName);
 
             ctx.event().record(evt);

@@ -16,32 +16,34 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.util.Optional;
+import java.lang.management.ManagementFactory;
 import java.util.Set;
 import javax.management.DynamicMBean;
-import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanFeatureInfo;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.metric.jmx.JmxExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /** */
-public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
+public class JmxExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     private static IgniteEx ignite;
 
@@ -54,7 +56,7 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
                 new DataRegionConfiguration()
                     .setPersistenceEnabled(true)));
 
-        JmxMetricExporterSpi jmxSpi = new JmxMetricExporterSpi();
+        JmxExporterSpi jmxSpi = new JmxExporterSpi();
 
         jmxSpi.setExportFilter(mgrp -> !mgrp.name().startsWith(FILTERED_PREFIX));
 
@@ -80,7 +82,7 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testSysJmxMetrics() throws Exception {
-        DynamicMBean sysMBean = metricSet(ignite.name(), null, SYS_METRICS);
+        DynamicMBean sysMBean = metricSet(null, SYS_METRICS);
 
         Set<String> res = stream(sysMBean.getMBeanInfo().getAttributes())
             .map(MBeanFeatureInfo::getName)
@@ -92,26 +94,12 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
         assertTrue(res.contains(metricName("memory", "heap", "used")));
         assertTrue(res.contains(metricName("memory", "nonheap", "committed")));
         assertTrue(res.contains(metricName("memory", "nonheap", "max")));
-
-        Optional<MBeanAttributeInfo> cpuLoad = stream(sysMBean.getMBeanInfo().getAttributes())
-            .filter(a -> a.getName().equals(CPU_LOAD))
-            .findFirst();
-
-        assertTrue(cpuLoad.isPresent());
-        assertEquals(CPU_LOAD_DESCRIPTION, cpuLoad.get().getDescription());
-
-        Optional<MBeanAttributeInfo> gcCpuLoad = stream(sysMBean.getMBeanInfo().getAttributes())
-            .filter(a -> a.getName().equals(GC_CPU_LOAD))
-            .findFirst();
-
-        assertTrue(gcCpuLoad.isPresent());
-        assertEquals(GC_CPU_LOAD_DESCRIPTION, gcCpuLoad.get().getDescription());
     }
 
     /** */
     @Test
     public void testDataRegionJmxMetrics() throws Exception {
-        DynamicMBean dataRegionMBean = metricSet(ignite.name(), "io", "dataregion.default");
+        DynamicMBean dataRegionMBean = metricSet("io", "dataregion.default");
 
         Set<String> res = stream(dataRegionMBean.getMBeanInfo().getAttributes())
             .map(MBeanFeatureInfo::getName)
@@ -130,17 +118,29 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
 
         assertThrowsWithCause(new RunnableX() {
             @Override public void runx() throws Exception {
-                metricSet(ignite.name(), "filtered", "metric");
+                metricSet("filtered", "metric");
             }
         }, IgniteException.class);
 
-        DynamicMBean bean1 = metricSet(ignite.name(), "other", "prefix");
+        DynamicMBean bean1 = metricSet("other", "prefix");
 
         assertEquals(42L, bean1.getAttribute("test"));
         assertEquals(43L, bean1.getAttribute("test2"));
 
-        DynamicMBean bean2 = metricSet(ignite.name(), "other", "prefix2");
+        DynamicMBean bean2 = metricSet("other", "prefix2");
 
         assertEquals(44L, bean2.getAttribute("test3"));
+    }
+
+    /** */
+    public DynamicMBean metricSet(String grp, String name) throws MalformedObjectNameException {
+        ObjectName mbeanName = U.makeMBeanName(ignite.name(), grp, name);
+
+        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
+
+        if (!mbeanSrv.isRegistered(mbeanName))
+            throw new IgniteException("MBean not registered.");
+
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, DynamicMBean.class, false);
     }
 }

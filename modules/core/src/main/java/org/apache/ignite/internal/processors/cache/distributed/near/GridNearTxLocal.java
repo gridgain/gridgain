@@ -17,11 +17,9 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Externalizable;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -29,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.Cache;
@@ -79,9 +76,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyRollbackOnlyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -89,7 +83,6 @@ import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedExceptio
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridLeanMap;
-import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -127,9 +120,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_NOT_EMPTY_VER;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.DIAGNOSTIC_METRICS;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.TRANSACTION_METRICS;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -148,26 +138,6 @@ import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
 public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeoutObject, AutoCloseable, MvccCoordinatorChangeAware {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Metric name for total system time on node. */
-    public static final String METRIC_TOTAL_SYSTEM_TIME = "totalNodeSystemTime";
-
-    /** Metric name system time histogram on node. */
-    public static final String METRIC_SYSTEM_TIME_HISTOGRAM = "nodeSystemTimeHistogram";
-
-    /** Metric name for total user time on node. */
-    public static final String METRIC_TOTAL_USER_TIME = "totalNodeUserTime";
-
-    /** Metric name user time histogram on node. */
-    public static final String METRIC_USER_TIME_HISTOGRAM = "nodeUserTimeHistogram";
-
-    /** Histogram buckets for metrics of system and user time. */
-    public static final long[] METRIC_TIME_BUCKETS =
-        new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000, 5000, 10000, 25000, 60000};
-
-    /** */
-    private static final ThreadLocal<SimpleDateFormat> TIME_FORMAT =
-        ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss.SSS"));
 
     /** Prepare future updater. */
     private static final AtomicReferenceFieldUpdater<GridNearTxLocal, IgniteInternalFuture> PREP_FUT_UPD =
@@ -245,7 +215,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private final AtomicLong commitOrRollbackTime = new AtomicLong(0);
 
     /** */
-    private IgniteTxManager.TxDumpsThrottling txDumpsThrottling;
+    //private IgniteTxManager.TxDumpsThrottling txDumpsThrottling;
 
     /** */
     @GridToStringExclude
@@ -293,7 +263,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param taskNameHash Task name hash code.
      * @param lb Label.
      * @param tracingEnabled {@code true} if the transaction should be traced.
-     * @param txDumpsThrottling Log throttling information.
      */
     public GridNearTxLocal(
         GridCacheSharedContext ctx,
@@ -310,8 +279,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         @Nullable UUID subjId,
         int taskNameHash,
         @Nullable String lb,
-        boolean tracingEnabled,
-        IgniteTxManager.TxDumpsThrottling txDumpsThrottling
+        boolean tracingEnabled
     ) {
         super(
             ctx,
@@ -335,8 +303,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         mappings = implicitSingle ? new IgniteTxMappingsSingleImpl() : new IgniteTxMappingsImpl();
 
         this.mvccOp = mvccOp;
-
-        this.txDumpsThrottling = txDumpsThrottling;
 
         initResult();
 
@@ -3817,130 +3783,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     }
 
     /**
-     * Returns current amount of time that transaction has spent on system activities (acquiring locks, commiting,
-     * rolling back, etc.)
-     *
-     * @return Amount of time in milliseconds.
-     */
-    public long systemTimeCurrent() {
-        long sysTime0 = sysTime.get();
-
-        long sysStartTime0 = sysStartTime.get();
-
-        long t = sysStartTime0 == 0 ? 0 : (System.nanoTime() - sysStartTime0);
-
-        return U.nanosToMillis(sysTime0 + t);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean state(TransactionState state) {
-        boolean res = super.state(state);
-
-        if (state == COMMITTED || state == ROLLED_BACK) {
-            leaveSystemSection();
-
-            //if commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once
-            if (!commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
-                return res;
-
-            long sysTimeMillis = U.nanosToMillis(sysTime.get());
-            long totalTimeMillis = System.currentTimeMillis() - startTime();
-
-            // In some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision.
-            long userTimeMillis = Math.max(totalTimeMillis - sysTimeMillis, 0);
-
-            writeTxMetrics(sysTimeMillis, userTimeMillis);
-
-            boolean willBeSkipped = txDumpsThrottling == null || txDumpsThrottling.skipCurrent();
-
-            if (!willBeSkipped) {
-                long transactionTimeDumpThreshold = cctx.tm().longTransactionTimeDumpThreshold();
-
-                double transactionTimeDumpSamplesCoefficient = cctx.tm().transactionTimeDumpSamplesCoefficient();
-
-                boolean isLong = transactionTimeDumpThreshold > 0 && totalTimeMillis > transactionTimeDumpThreshold;
-
-                boolean randomlyChosen = transactionTimeDumpSamplesCoefficient > 0.0
-                    && ThreadLocalRandom.current().nextDouble() <= transactionTimeDumpSamplesCoefficient;
-
-                if (randomlyChosen || isLong) {
-                    String txDump = completedTransactionDump(state, sysTimeMillis, userTimeMillis, isLong);
-
-                    if (isLong)
-                        log.warning(txDump);
-                    else
-                        log.info(txDump);
-
-                    txDumpsThrottling.dump();
-                }
-            }
-            else if (txDumpsThrottling != null)
-                txDumpsThrottling.skip();
-        }
-
-        return res;
-    }
-
-    /**
-     * Builds dump string for completed transaction.
-     *
-     * @param state Transaction state.
-     * @param sysTimeMillis System time in milliseconds.
-     * @param userTimeMillis User time in milliseconds.
-     * @param isLong Whether the dumped transaction is long running or not.
-     * @return Dump string.
-     */
-    private String completedTransactionDump(
-        TransactionState state,
-        long sysTimeMillis,
-        long userTimeMillis,
-        boolean isLong
-    ) {
-        long cacheOperationsTimeMillis =
-            U.nanosToMillis(sysTime.get() - prepareTime.get() - commitOrRollbackTime.get());
-
-        GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
-            .a("[startTime=")
-            .a(TIME_FORMAT.get().format(new Date(startTime)))
-            .a(", totalTime=")
-            .a(sysTimeMillis + userTimeMillis)
-            .a(", systemTime=")
-            .a(sysTimeMillis)
-            .a(", userTime=")
-            .a(userTimeMillis)
-            .a(", cacheOperationsTime=")
-            .a(cacheOperationsTimeMillis);
-
-        if (state == COMMITTED) {
-            warning
-                .a(", prepareTime=")
-                .a(timeMillis(prepareTime))
-                .a(", commitTime=")
-                .a(timeMillis(commitOrRollbackTime));
-        }
-        else {
-            warning
-                .a(", rollbackTime=")
-                .a(timeMillis(commitOrRollbackTime));
-        }
-
-        warning
-            .a(", tx=")
-            .a(this)
-            .a(']');
-
-        return warning.toString();
-    }
-
-    /**
      * @return Tx prepare future.
      */
     public IgniteInternalFuture<?> prepareNearTxLocal() {
-        enterSystemSection();
-
-        //we assume that prepare start time should be set only once for the transaction
-        prepareStartTime.compareAndSet(0, System.nanoTime());
-
         GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)prepFut;
 
         if (fut == null) {
@@ -4039,11 +3884,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
-                    //these values should not be changed after set once
-                    prepareTime.compareAndSet(0, System.nanoTime() - prepareStartTime.get());
-
-                    commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
-
                     try {
                         // Make sure that here are no exceptions.
                         f.get();
@@ -4105,8 +3945,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         final boolean onTimeout) {
         if (log.isDebugEnabled())
             log.debug("Rolling back near tx: " + this);
-
-        enterSystemSection();
 
         if (!onTimeout && trackTimeout)
             removeTimeoutHandler();
@@ -5063,60 +4901,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (log.isDebugEnabled())
                 log.debug("Skip rollback tx on timeout: " + this);
         }
-    }
-
-    /** */
-    private long timeMillis(AtomicLong atomicNanoTime) {
-        return U.nanosToMillis(atomicNanoTime.get());
-    }
-
-    /**
-     * Enters the section when system time for this transaction is counted.
-     */
-    public void enterSystemSection() {
-        // Setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
-        // and sould do nothing.
-        sysStartTime.compareAndSet(0, System.nanoTime());
-    }
-
-    /**
-     * Leaves the section when system time for this transaction is counted.
-     */
-    public void leaveSystemSection() {
-        long sysStartTime0 = sysStartTime.getAndSet(0);
-
-        if (sysStartTime0 > 0)
-            sysTime.addAndGet(System.nanoTime() - sysStartTime0);
-    }
-
-    /**
-     * Writes system and user time metrics.
-     *
-     * @param sysTime System time.
-     * @param userTime User time.
-     */
-    private void writeTxMetrics(long sysTime, long userTime) {
-        MetricRegistry txMetricRegistry = cctx.kernalContext().metric()
-            .get(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
-
-        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, sysTime);
-        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_USER_TIME, METRIC_USER_TIME_HISTOGRAM, userTime);
-    }
-
-    /** */
-    private void writeTxMetrics(MetricRegistry registry, String monotonicMetricName, String histoMetricName, long val) {
-        if (registry == null || val <= 0)
-            return;
-
-        LongAdderMetric monotonic = registry.findMetric(monotonicMetricName);
-
-        if (monotonic != null)
-            monotonic.add(val);
-
-        HistogramMetric histo = registry.findMetric(histoMetricName);
-
-        if (histo != null)
-            histo.value(val);
     }
 
     /**

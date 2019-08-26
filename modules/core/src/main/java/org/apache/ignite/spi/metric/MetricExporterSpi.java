@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.IgniteSpi;
-import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
+import org.apache.ignite.spi.metric.jmx.JmxExporterSpi;
 
 /**
  * Exporter of metric information to the external recepient.
@@ -37,7 +37,7 @@ import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
  * @see IntMetric
  * @see LongMetric
  * @see ObjectMetric
- * @see JmxMetricExporterSpi
+ * @see JmxExporterSpi
  */
 public interface MetricExporterSpi extends IgniteSpi {
     /**

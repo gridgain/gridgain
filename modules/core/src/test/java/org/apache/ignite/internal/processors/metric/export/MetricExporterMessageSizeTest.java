@@ -25,7 +25,6 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.logger.NullLogger;
 import org.junit.Test;
@@ -33,11 +32,10 @@ import org.junit.Test;
 //TODO: remove class
 public class MetricExporterMessageSizeTest {
 
-    public static final int CACHE_CNT = 10;
-    public static final UUID CLUSTER_ID = UUID.randomUUID();
+    public static final int CACHE_CNT = 5000;
 
     @Test
-    public void testMessageSize() throws Exception {
+    public void testMessageSize() throws IOException {
         Map<String, MetricRegistry> metrics = new TreeMap<>();
 
 
@@ -47,19 +45,9 @@ public class MetricExporterMessageSizeTest {
             metrics.put(regName, createMetricRegistry(regName));
         }
 
-        MetricExporter exp = new MetricExporter(new StandaloneGridKernalContext(new NullLogger(), null, null));
+        MetricExporter exp = new MetricExporter();
 
-        for (int i = 0; i < 500; i++) {
-            long start = System.currentTimeMillis();
-
-            doIteration(exp, metrics);
-
-            System.out.println(">>> Iteration " + (i + 1) + ": " + (System.currentTimeMillis() - start));
-        }
-    }
-
-    private void doIteration(MetricExporter exp, Map<String, MetricRegistry> metrics) throws IOException {
-        MetricResponse msg = exp.metricMessage(CLUSTER_ID, "someUserTag", "someConsistentId", metrics);
+        MetricResponse msg = exp.metricMessage(UUID.randomUUID(), "someUserTag", "someConsistentId", metrics);
 
 /*
         int iterCnt = 100;
@@ -82,11 +70,11 @@ public class MetricExporterMessageSizeTest {
 
         System.out.println("Message size: " + msg.size());
 
-        System.out.println("MetricRegistrySchema size: " + msg.schemaSize());
+        System.out.println("Schema size: " + msg.schemaSize());
 
         System.out.println("Data size: " + msg.dataSize());
 
-        //System.out.println("ZIP size: " + zip(msg.body).length);
+        System.out.println("ZIP size: " + zip(msg.body).length);
     }
 
     byte[] zip(byte[] arr) throws IOException {
@@ -112,7 +100,7 @@ public class MetricExporterMessageSizeTest {
     MetricRegistry createMetricRegistry(String regName) {
         Random rnd = new Random();
 
-        MetricRegistry mreg = new MetricRegistry("cache", regName, new NullLogger());
+        MetricRegistry mreg = new MetricRegistry(regName, new NullLogger());
 
         mreg.longMetric("CacheGets",
                 "The total number of gets to the cache.").value((int)rnd.nextLong());

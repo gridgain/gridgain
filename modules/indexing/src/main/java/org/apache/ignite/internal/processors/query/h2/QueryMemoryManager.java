@@ -108,7 +108,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
         this.log = ctx.log(QueryMemoryManager.class);
 
-        metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric(), ctx.log(getClass()));
+        metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
     }
 
     /** {@inheritDoc} */

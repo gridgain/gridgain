@@ -39,7 +39,6 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
 import org.apache.ignite.internal.IgniteDiagnosticMessage;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -78,7 +77,6 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -115,9 +113,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** */
     private final AtomicBoolean notifyEnabled = new AtomicBoolean();
-
-    /** */
-    private final AtomicReference<String> updateNotifierUrl = new AtomicReference<>();
 
     /** */
     @GridToStringExclude
@@ -165,8 +160,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         super(ctx);
 
         notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, true));
-
-        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
 
@@ -573,13 +566,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         if (notifyEnabled.get()) {
             try {
-                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(),
-                    VER_STR,
-                    new GridKernalGatewayImpl(ctx.igniteInstanceName()),
-                    ctx.discovery(),
-                    U.allPluginProviders(),
-                    false,
-                    new HttpIgniteUpdatesChecker(updateNotifierUrl.get(), GridUpdateNotifier.CHARSET));
+                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(), VER_STR, false);
 
                 updateNtfTimer = new Timer("ignite-update-notifier-timer", true);
 
@@ -802,24 +789,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     /**
-     * Sets updates notifier url.
-     */
-    public void setUpdateNotifierUrl(String url) {
-        updateNotifierUrl.set(url);
-    }
-
-    /**
      * @return Update notifier status.
      */
     public boolean updateNotifierEnabled() {
         return notifyEnabled.get();
-    }
-
-    /**
-     * @return Get update notifier url.
-     */
-    public String updateNotifierUrl() {
-        return updateNotifierUrl.get();
     }
 
     /**
@@ -964,7 +937,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!notifyEnabled.get())
                 return;
 
-            verChecker.checkForNewVersion(log);
+            verChecker.checkForNewVersion(log, first);
 
             // Just wait for 10 secs.
             Thread.sleep(PERIODIC_VER_CHECK_CONN_TIMEOUT);

@@ -24,12 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
-import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.GridLeanIdentitySet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -48,6 +46,7 @@ import org.apache.ignite.resources.SpringResource;
 import org.apache.ignite.resources.TaskContinuousMapperResource;
 import org.apache.ignite.resources.TaskSessionResource;
 import org.jetbrains.annotations.Nullable;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Resource container contains caches for classes used for injection.
@@ -510,10 +509,7 @@ public class GridResourceIoc {
         JOB_CONTEXT(JobContextResource.class),
 
         /** */
-        CACHE_STORE_SESSION(CacheStoreSessionResource.class),
-
-        /** */
-        METRIC_MANAGER(MetricManagerResource.class);
+        CACHE_STORE_SESSION(CacheStoreSessionResource.class);
 
         /** */
         public final Class<? extends Annotation> clazz;
@@ -536,8 +532,7 @@ public class GridResourceIoc {
             ResourceAnnotation.SPRING,
             ResourceAnnotation.IGNITE_INSTANCE,
             ResourceAnnotation.LOGGER,
-            ResourceAnnotation.SERVICE,
-            ResourceAnnotation.METRIC_MANAGER
+            ResourceAnnotation.SERVICE
         ),
 
         /** */

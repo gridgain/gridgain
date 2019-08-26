@@ -14,8 +14,21 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.internal.util.nio;
+
+import java.util.EventListener;
+
 /**
- * <!-- Package description. -->
- * Contains util classes used in recommendation system framework.
+ * Metrics listener for NIO communication.
  */
-package org.apache.ignite.ml.recommendation.util;
+public interface GridNioMetricsListener extends EventListener {
+    /**
+     * @param bytesCnt Number of sent bytes.
+     */
+    public void onBytesSent(int bytesCnt);
+
+    /**
+     * @param bytesCnt Number of received bytes.
+     */
+    public void onBytesReceived(int bytesCnt);
+}

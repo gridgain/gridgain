@@ -152,7 +152,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         discoLsnr = new TaskDiscoveryListener();
 
-        MetricRegistry sysreg = ctx.metric().get(SYS_METRICS);
+        MetricRegistry sysreg = ctx.metric().registry(SYS_METRICS);
 
         execTasks = sysreg.longAdderMetric(TOTAL_EXEC_TASKS, "Total executed tasks.");
     }

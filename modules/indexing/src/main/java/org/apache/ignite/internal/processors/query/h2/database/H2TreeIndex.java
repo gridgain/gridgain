@@ -32,8 +32,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
@@ -64,6 +62,8 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRange
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRangeBounds;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -81,7 +81,6 @@ import org.h2.index.IndexType;
 import org.h2.index.SingleRowCursor;
 import org.h2.message.DbException;
 import org.h2.result.SearchRow;
-import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
@@ -89,10 +88,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
-import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
+import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -273,12 +272,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
         AtomicInteger maxCalculatedInlineSize = new AtomicInteger();
 
         IoStatisticsHolder stats = new IoStatisticsHolderIndex(
-                SORTED_INDEX,
-                cctx.name(),
-                idxName,
-                cctx.kernalContext().metric(),
-                log
-        );
+            SORTED_INDEX,
+            cctx.name(),
+            idxName,
+            cctx.kernalContext().metric());
 
         for (int i = 0; i < segments.length; i++) {
             db.checkpointReadLock();
@@ -370,8 +367,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             H2Tree tree = treeForRead(seg);
 
-            // If it is known that only one row will be returned an optimization is employed
-            if (isSingleRowLookup(lower, upper, tree)) {
+            if (!cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
+                tree.compareRows((H2Row)lower, (H2Row)upper) == 0) {
                 H2Row row = tree.findOne((H2Row)lower, filter(qctx), null);
 
                 if (row == null || isExpired(row))
@@ -387,23 +384,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);
         }
-    }
-
-    /** */
-    private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
-        return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
-            tree.compareRows((H2Row)lower, (H2Row)upper) == 0 && hasAllIndexColumns(lower);
-    }
-
-    /** */
-    private boolean hasAllIndexColumns(SearchRow searchRow) {
-        for (Column c : columns) {
-            // Java null means that column is not specified in a search row, for SQL NULL a special constant is used
-            if (searchRow.getValue(c.getColumnId()) == null)
-                return false;
-        }
-
-        return true;
     }
 
     /** {@inheritDoc} */

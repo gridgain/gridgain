@@ -16,71 +16,50 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
-import org.apache.ignite.plugin.extensions.communication.Message;
+import java.util.concurrent.atomic.LongAdder;
 
-import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_DESC;
-import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_NAME;
-import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_DESC;
-import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_METRIC_DESC;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_METRIC_NAME;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_METRIC_DESC;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_METRIC_NAME;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.util.nio.GridNioMetricsListener;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.extensions.communication.Message;
 
 /**
  * Statistics for {@link org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi}.
  */
-class TcpCommunicationMetricsListener {
-    /** Metrics manager. */
-    private final GridMetricManager mmgr;
+public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
+    /** Counter factory. */
+    private static final Callable<LongHolder> HOLDER_FACTORY = new Callable<LongHolder>() {
+        @Override public LongHolder call() {
+            return new LongHolder();
+        }
+    };
 
-    /** Metrics registry. */
-    private final MetricRegistry mreg;
+    /** Received bytes count. */
+    private final LongAdder rcvdBytesCnt = new LongAdder();
 
-    /** */
-    //private final Function<Short, LongAdderMetric> sentMsgsCntByTypeMetricFactory;
+    /** Sent bytes count.*/
+    private final LongAdder sentBytesCnt = new LongAdder();
 
-    /** */
-    //private final Function<Short, LongAdderMetric> rcvdMsgsCntByTypeMetricFactory;
+    /** All registered metrics. */
+    private final Set<ThreadMetrics> allMetrics = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    /** */
-    //private final Function<UUID, LongAdderMetric> sentMsgsCntByNodeIdMetricFactory;
+    /** Thread-local metrics. */
+    private final ThreadLocal<ThreadMetrics> threadMetrics = new ThreadLocal<ThreadMetrics>() {
+        @Override protected ThreadMetrics initialValue() {
+            ThreadMetrics metrics = new ThreadMetrics();
 
-    /** */
-    //private final Function<UUID, LongAdderMetric> rcvdMsgsCntByNodeIdMetricFactory;
+            allMetrics.add(metrics);
 
-    /** Sent bytes count metric.*/
-    private final LongAdderMetric sentBytesMetric;
-
-    /** Received bytes count metric. */
-    private final LongAdderMetric rcvdBytesMetric;
-
-    /** Sent messages count metric. */
-    private final LongAdderMetric sentMsgsMetric;
-
-    /** Received messages count metric. */
-    private final LongAdderMetric rcvdMsgsMetric;
-
-    /** Sent messages count metrics grouped by message type. */
-    ConcurrentHashMap<Short, LongAdderMetric> sentMsgsMetricsByType = new ConcurrentHashMap<>();
-
-    /** Received messages count metrics grouped by message type. */
-    Map<Short, LongAdderMetric> rcvdMsgsMetricsByType = new ConcurrentHashMap<>();
-
-    /** Sent messages count metrics grouped by message node id. */
-    Map<UUID, LongAdderMetric> sentMsgsMetricsByNodeId = new ConcurrentHashMap<>();
-
-    /** Received messages metrics count grouped by message node id. */
-    Map<UUID, LongAdderMetric> rcvdMsgsMetricsByNodeId = new ConcurrentHashMap<>();
+            return metrics;
+        }
+    };
 
     /** Method to synchronize access to message type map. */
     private final Object msgTypMapMux = new Object();
@@ -88,48 +67,14 @@ class TcpCommunicationMetricsListener {
     /** Message type map. */
     private volatile Map<Short, String> msgTypMap;
 
-
-    /** */
-    public TcpCommunicationMetricsListener(GridMetricManager mmgr) {
-        this.mmgr = mmgr;
-
-        mreg = new MetricRegistry(COMMUNICATION_METRICS_GROUP_NAME, COMMUNICATION_METRICS_GROUP_NAME);
-
-/*
-        sentMsgsCntByTypeMetricFactory = directType -> mreg.longAdderMetric(
-            sentMessagesByTypeMetricName(directType),
-            SENT_MESSAGES_BY_TYPE_METRIC_DESC
-        );
-        rcvdMsgsCntByTypeMetricFactory = directType -> mreg.longAdderMetric(
-            receivedMessagesByTypeMetricName(directType),
-            RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC
-        );
-
-        sentMsgsCntByNodeIdMetricFactory = nodeId -> mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId)
-            .longAdderMetric(
-                SENT_MESSAGES_BY_NODE_ID_METRIC_NAME,
-                SENT_MESSAGES_BY_NODE_ID_METRIC_DESC
-            );
-
-        rcvdMsgsCntByNodeIdMetricFactory = nodeId -> mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId)
-            .longAdderMetric(
-                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME,
-                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC
-            );
-
-*/
-        sentBytesMetric = mreg.longAdderMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
-        rcvdBytesMetric = mreg.longAdderMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
-
-        sentMsgsMetric = mreg.longAdderMetric(SENT_MESSAGES_METRIC_NAME, SENT_MESSAGES_METRIC_DESC);
-        rcvdMsgsMetric = mreg.longAdderMetric(RECEIVED_MESSAGES_METRIC_NAME, RECEIVED_MESSAGES_METRIC_DESC);
-
-        mmgr.add(mreg);
+    /** {@inheritDoc} */
+    @Override public void onBytesSent(int bytesCnt) {
+        sentBytesCnt.add(bytesCnt);
     }
 
-    /** Metrics registry. */
-    public MetricRegistry metricRegistry() {
-        return mreg;
+    /** {@inheritDoc} */
+    @Override public void onBytesReceived(int bytesCnt) {
+        rcvdBytesCnt.add(bytesCnt);
     }
 
     /**
@@ -147,11 +92,9 @@ class TcpCommunicationMetricsListener {
 
             updateMessageTypeMap(msg);
 
-            sentMsgsMetric.increment();
+            ThreadMetrics metrics = threadMetrics.get();
 
-            //sentMsgsMetricsByType.computeIfAbsent(msg.directType(), sentMsgsCntByTypeMetricFactory).increment();
-
-            //sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, sentMsgsCntByNodeIdMetricFactory).increment();
+            metrics.onMessageSent(msg, nodeId);
         }
     }
 
@@ -170,11 +113,9 @@ class TcpCommunicationMetricsListener {
 
             updateMessageTypeMap(msg);
 
-            rcvdMsgsMetric.increment();
+            ThreadMetrics metrics = threadMetrics.get();
 
-            //rcvdMsgsMetricsByType.computeIfAbsent(msg.directType(), rcvdMsgsCntByTypeMetricFactory).increment();
-
-            //rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, rcvdMsgsCntByNodeIdMetricFactory).increment();
+            metrics.onMessageReceived(msg, nodeId);
         }
     }
 
@@ -184,9 +125,17 @@ class TcpCommunicationMetricsListener {
      * @return Sent messages count.
      */
     public int sentMessagesCount() {
-        int res0 = (int)sentMsgsMetric.value();
+        long res = 0;
 
-        return res0 < 0 ? Integer.MAX_VALUE : res0;
+        for (ThreadMetrics metrics : allMetrics)
+            res += metrics.sentMsgsCnt;
+
+        int res0 = (int)res;
+
+        if (res0 < 0)
+            res0 = Integer.MAX_VALUE;
+
+        return res0;
     }
 
     /**
@@ -195,7 +144,7 @@ class TcpCommunicationMetricsListener {
      * @return Sent bytes count.
      */
     public long sentBytesCount() {
-        return sentBytesMetric.value();
+        return sentBytesCnt.longValue();
     }
 
     /**
@@ -204,9 +153,17 @@ class TcpCommunicationMetricsListener {
      * @return Received messages count.
      */
     public int receivedMessagesCount() {
-        int res0 = (int)rcvdMsgsMetric.value();
+        long res = 0;
 
-        return res0 < 0 ? Integer.MAX_VALUE : res0;
+        for (ThreadMetrics metrics : allMetrics)
+            res += metrics.rcvdMsgsCnt;
+
+        int res0 = (int)res;
+
+        if (res0 < 0)
+            res0 = Integer.MAX_VALUE;
+
+        return res0;
     }
 
     /**
@@ -215,30 +172,7 @@ class TcpCommunicationMetricsListener {
      * @return Received bytes count.
      */
     public long receivedBytesCount() {
-        return rcvdBytesMetric.value();
-    }
-
-    /**
-     * Convert message types.
-     *
-     * @param input Input map.
-     * @return Result map.
-     */
-    private Map<String, Long> convertMessageTypes(Map<Short, LongAdderMetric> input) {
-        Map<String, Long> res = new HashMap<>(input.size());
-
-        Map<Short, String> msgTypMap0 = msgTypMap;
-
-        if (msgTypMap0 != null) {
-            for (Map.Entry<Short, LongAdderMetric> inputEntry : input.entrySet()) {
-                String typeName = msgTypMap0.get(inputEntry.getKey());
-
-                if (typeName != null)
-                    res.put(typeName, inputEntry.getValue().value());
-            }
-        }
-
-        return res;
+        return rcvdBytesCnt.longValue();
     }
 
     /**
@@ -247,7 +181,35 @@ class TcpCommunicationMetricsListener {
      * @return Map containing message types and respective counts.
      */
     public Map<String, Long> receivedMessagesByType() {
-        return convertMessageTypes(rcvdMsgsMetricsByType);
+        Map<Short, Long> res = new HashMap<>();
+
+        for (ThreadMetrics metrics : allMetrics)
+            addMetrics(res, metrics.rcvdMsgsCntByType);
+
+        return convertMessageTypes(res);
+    }
+
+    /**
+     * Convert message types.
+     *
+     * @param input Input map.
+     * @return Result map.
+     */
+    private Map<String, Long> convertMessageTypes(Map<Short, Long> input) {
+        Map<String, Long> res = new HashMap<>(input.size());
+
+        Map<Short, String> msgTypMap0 = msgTypMap;
+
+        if (msgTypMap0 != null) {
+            for (Map.Entry<Short, Long> inputEntry : input.entrySet()) {
+                String typeName = msgTypMap0.get(inputEntry.getKey());
+
+                if (typeName != null)
+                    res.put(typeName, inputEntry.getValue());
+            }
+        }
+
+        return res;
     }
 
     /**
@@ -258,8 +220,8 @@ class TcpCommunicationMetricsListener {
     public Map<UUID, Long> receivedMessagesByNode() {
         Map<UUID, Long> res = new HashMap<>();
 
-        for (Map.Entry<UUID, LongAdderMetric> entry : rcvdMsgsMetricsByNodeId.entrySet())
-            res.put(entry.getKey(), entry.getValue().value());
+        for (ThreadMetrics metrics : allMetrics)
+            addMetrics(res, metrics.rcvdMsgsCntByNode);
 
         return res;
     }
@@ -270,7 +232,12 @@ class TcpCommunicationMetricsListener {
      * @return Map containing message types and respective counts.
      */
     public Map<String, Long> sentMessagesByType() {
-        return convertMessageTypes(sentMsgsMetricsByType);
+        Map<Short, Long> res = new HashMap<>();
+
+        for (ThreadMetrics metrics : allMetrics)
+            addMetrics(res, metrics.sentMsgsCntByType);
+
+        return convertMessageTypes(res);
     }
 
     /**
@@ -281,8 +248,8 @@ class TcpCommunicationMetricsListener {
     public Map<UUID, Long> sentMessagesByNode() {
         Map<UUID, Long> res = new HashMap<>();
 
-        for (Map.Entry<UUID, LongAdderMetric> entry : sentMsgsMetricsByNodeId.entrySet())
-            res.put(entry.getKey(), entry.getValue().value());
+        for (ThreadMetrics metrics : allMetrics)
+            addMetrics(res, metrics.sentMsgsCntByNode);
 
         return res;
     }
@@ -291,31 +258,28 @@ class TcpCommunicationMetricsListener {
      * Resets metrics for this instance.
      */
     public void resetMetrics() {
-        rcvdMsgsMetric.reset();
-        sentMsgsMetric.reset();
+        for (ThreadMetrics metrics : allMetrics)
+            metrics.reset();
 
-        sentBytesMetric.reset();
-        rcvdBytesMetric.reset();
-
-        for (LongAdderMetric metric : sentMsgsMetricsByType.values())
-            metric.reset();
-
-        for (LongAdderMetric metric : rcvdMsgsMetricsByType.values())
-            metric.reset();
-
-        for (LongAdderMetric metric : sentMsgsMetricsByNodeId.values())
-            metric.reset();
-
-        for (LongAdderMetric metric : rcvdMsgsMetricsByNodeId.values())
-            metric.reset();
+        sentBytesCnt.reset();
+        rcvdBytesCnt.reset();
     }
 
-    /** */
-    public void onNodeLeft(UUID nodeId) {
-        sentMsgsMetricsByNodeId.remove(nodeId);
-        rcvdMsgsMetricsByNodeId.remove(nodeId);
+    /**
+     * Add single metrics to the total.
+     *
+     * @param total Total.
+     * @param current Current metrics.
+     */
+    private <T> void addMetrics(Map<T, Long> total, Map<T, LongHolder> current) {
+        for (Map.Entry<T, LongHolder> entry : current.entrySet()) {
+            T key = entry.getKey();
+            long val = entry.getValue().val;
 
-        mmgr.remove(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId);
+            Long prevVal = total.get(key);
+
+            total.put(key, prevVal == null ? val : prevVal + val);
+        }
     }
 
     /**
@@ -347,6 +311,96 @@ class TcpCommunicationMetricsListener {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Long value holder.
+     */
+    private static class LongHolder {
+        /** Value. */
+        private long val;
+
+        /**
+         * Increment value.
+         */
+        private void increment() {
+            val++;
+        }
+    }
+
+    /**
+     * Thread-local metrics.
+     */
+    private static class ThreadMetrics {
+        /** Received messages count. */
+        private long rcvdMsgsCnt;
+
+        /** Sent messages count.*/
+        private long sentMsgsCnt;
+
+        /** Received messages count grouped by message type. */
+        private final HashMap<Short, LongHolder> rcvdMsgsCntByType = new HashMap<>();
+
+        /** Received messages count grouped by sender. */
+        private final HashMap<UUID, LongHolder> rcvdMsgsCntByNode = new HashMap<>();
+
+        /** Sent messages count grouped by message type. */
+        private final HashMap<Short, LongHolder> sentMsgsCntByType = new HashMap<>();
+
+        /** Sent messages count grouped by receiver. */
+        private final HashMap<UUID, LongHolder> sentMsgsCntByNode = new HashMap<>();
+
+        /**
+         * Collects statistics for message sent by SPI.
+         *
+         * @param msg Sent message.
+         * @param nodeId Receiver node id.
+         */
+        private void onMessageSent(Message msg, UUID nodeId) {
+            sentMsgsCnt++;
+
+            LongHolder cntByType = F.addIfAbsent(sentMsgsCntByType, msg.directType(), HOLDER_FACTORY);
+            LongHolder cntByNode = F.addIfAbsent(sentMsgsCntByNode, nodeId, HOLDER_FACTORY);
+
+            assert cntByType != null;
+            assert cntByNode != null;
+
+            cntByType.increment();
+            cntByNode.increment();
+        }
+
+        /**
+         * Collects statistics for message received by SPI.
+         *
+         * @param msg Received message.
+         * @param nodeId Sender node id.
+         */
+        private void onMessageReceived(Message msg, UUID nodeId) {
+            rcvdMsgsCnt++;
+
+            LongHolder cntByType = F.addIfAbsent(rcvdMsgsCntByType, msg.directType(), HOLDER_FACTORY);
+            LongHolder cntByNode = F.addIfAbsent(rcvdMsgsCntByNode, nodeId, HOLDER_FACTORY);
+
+            assert cntByType != null;
+            assert cntByNode != null;
+
+            cntByType.increment();
+            cntByNode.increment();
+        }
+
+        /**
+         * Reset metrics.
+         */
+        private void reset() {
+            rcvdMsgsCnt = 0;
+            sentMsgsCnt = 0;
+
+            sentMsgsCntByType.clear();
+            sentMsgsCntByNode.clear();
+
+            rcvdMsgsCntByType.clear();
+            rcvdMsgsCntByNode.clear();
         }
     }
 }

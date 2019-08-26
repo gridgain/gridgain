@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.metric;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -73,19 +72,13 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         IoStatisticsType type,
         String cacheName,
         String idxName,
-        GridMetricManager mmgr,
-        IgniteLogger log
-    ) {
+        GridMetricManager mmgr) {
         assert cacheName != null && idxName != null;
 
         this.cacheName = cacheName;
         this.idxName = idxName;
 
-        MetricRegistry mreg = new MetricRegistry(
-                type.metricGroupName(),
-                metricName(type.metricGroupName(), cacheName, idxName),
-                log
-        );
+        MetricRegistry mreg = mmgr.registry(metricName(type.metricGroupName(), cacheName, idxName));
 
         mreg.longMetric("startTime", null).value(U.currentTimeMillis());
         mreg.objectMetric("name", String.class, null).value(cacheName);
@@ -95,8 +88,6 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         logicalReadInnerCtr = mreg.longAdderMetric(LOGICAL_READS_INNER, null);
         physicalReadLeafCtr = mreg.longAdderMetric(PHYSICAL_READS_LEAF, null);
         physicalReadInnerCtr = mreg.longAdderMetric(PHYSICAL_READS_INNER, null);
-
-        mmgr.add(mreg);
     }
 
     /** {@inheritDoc} */
@@ -146,12 +137,12 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
 
     /** {@inheritDoc} */
     @Override public long logicalReads() {
-        return logicalReadLeafCtr.value() + logicalReadInnerCtr.value();
+        return logicalReadLeafCtr.longValue() + logicalReadInnerCtr.longValue();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalReads() {
-        return physicalReadLeafCtr.value() + physicalReadInnerCtr.value();
+        return physicalReadLeafCtr.longValue() + physicalReadInnerCtr.longValue();
     }
 
     /** {@inheritDoc} */

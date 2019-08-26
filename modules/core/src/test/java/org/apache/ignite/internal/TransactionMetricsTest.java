@@ -110,7 +110,7 @@ public class TransactionMetricsTest extends GridCommonAbstractTest {
 
         TransactionMetricsMxBean txMXBean = txMetricsMXBean(0);
 
-        MetricRegistry mreg = grid(0).context().metric().get(TX_METRICS);
+        MetricRegistry mreg = grid(0).context().metric().registry(TX_METRICS);
 
         final IgniteCache<Integer, String> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
@@ -190,7 +190,7 @@ public class TransactionMetricsTest extends GridCommonAbstractTest {
         IgniteEx primaryNode2 = startGrid(1);
         IgniteEx nearNode = startGrid(2);
 
-        MetricRegistry mreg = grid(2).context().metric().get(TX_METRICS);
+        MetricRegistry mreg = grid(2).context().metric().registry(TX_METRICS);
 
         awaitPartitionMapExchange();
 

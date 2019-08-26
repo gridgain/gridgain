@@ -70,22 +70,6 @@ public class IntHashMap<V> implements IntMap<V> {
         }
     }
 
-    /**
-     * Returns required size of table.
-     *
-     * @param cap Capacity.
-     */
-    static int tableSize(int cap) {
-        int n = cap - 1;
-        n |= n >>> 1;
-        n |= n >>> 2;
-        n |= n >>> 4;
-        n |= n >>> 8;
-        n |= n >>> 16;
-
-        return  (n < INITIAL_CAPACITY) ? INITIAL_CAPACITY : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
-    }
-
     /** Default constructor. */
     public IntHashMap() {
         entries = (Entry<V>[])new Entry[INITIAL_CAPACITY];
@@ -93,11 +77,18 @@ public class IntHashMap<V> implements IntMap<V> {
 
     /** Create map with preallocated array. */
     public IntHashMap(int cap) {
-        int entriesSize = tableSize(cap);
+        int n = cap - 1;
+        n |= n >>> 1;
+        n |= n >>> 2;
+        n |= n >>> 4;
+        n |= n >>> 8;
+        n |= n >>> 16;
 
-        compactThreshold = (int)(COMPACT_LOAD_FACTOR * (entriesSize >> 1));
+        int entriesSize = (n < INITIAL_CAPACITY) ? INITIAL_CAPACITY : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
 
-        scaleThreshold = (int)(entriesSize * SCALE_LOAD_FACTOR);
+        compactThreshold = (int)(COMPACT_LOAD_FACTOR * (entries.length >> 1));
+
+        scaleThreshold = (int)(entries.length * SCALE_LOAD_FACTOR);
 
         entries = (Entry<V>[])new Entry[entriesSize];
     }

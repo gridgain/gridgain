@@ -56,7 +56,7 @@ public class GridCacheQueryMetricsAdapter implements QueryMetrics {
      * @param isNear Is near flag.
      */
     public GridCacheQueryMetricsAdapter(GridMetricManager mmgr, String cacheName, boolean isNear) {
-        MetricRegistry mreg = mmgr.get(MetricUtils.cacheMetricsRegistryName(cacheName, isNear));
+        MetricRegistry mreg = mmgr.registry(MetricUtils.cacheMetricsRegistryName(cacheName, isNear));
 
         minTime = mreg.longMetric("QueryMinimalTime", null);
         minTime.value(Long.MAX_VALUE);
@@ -70,31 +70,31 @@ public class GridCacheQueryMetricsAdapter implements QueryMetrics {
 
     /** {@inheritDoc} */
     @Override public long minimumTime() {
-        long min = minTime.value();
+        long min = minTime.get();
 
         return min == Long.MAX_VALUE ? 0 : min;
     }
 
     /** {@inheritDoc} */
     @Override public long maximumTime() {
-        return maxTime.value();
+        return maxTime.get();
     }
 
     /** {@inheritDoc} */
     @Override public double averageTime() {
-        double val = completed.value();
+        double val = completed.longValue();
 
-        return val > 0 ? sumTime.value() / val : 0.0;
+        return val > 0 ? sumTime.longValue() / val : 0.0;
     }
 
     /** {@inheritDoc} */
     @Override public int executions() {
-        return (int)execs.value();
+        return (int)execs.longValue();
     }
 
     /** {@inheritDoc} */
     @Override public int fails() {
-        return (int)fails.value();
+        return (int)fails.longValue();
     }
 
     /**
@@ -121,14 +121,14 @@ public class GridCacheQueryMetricsAdapter implements QueryMetrics {
 
     /** @return Current metrics values. */
     public QueryMetrics snapshot() {
-        long minTimeVal = minTime.value();
+        long minTimeVal = minTime.longValue();
 
         return new QueryMetricsSnapshot(
             minTimeVal == Long.MAX_VALUE ? 0 : minTimeVal,
-            maxTime.value(),
+            maxTime.longValue(),
             averageTime(),
-            (int)execs.value(),
-            (int)fails.value());
+            (int)execs.longValue(),
+            (int)fails.longValue());
     }
 
     /** Resets query metrics. */

@@ -102,15 +102,7 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
         assertEquals(16, realCapacityForInitialSize(9));
         assertEquals(128, realCapacityForInitialSize(99));
         assertEquals(256, realCapacityForInitialSize(155));
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void shouldReturnsRequiredTableSizeForCustomCapacity() {
-        assertEquals(INITIAL_CAPACITY, IntHashMap.tableSize(1));
-        assertEquals(MAXIMUM_CAPACITY, IntHashMap.tableSize(Integer.MAX_VALUE));
+        assertEquals(MAXIMUM_CAPACITY, realCapacityForInitialSize(Integer.MAX_VALUE));
     }
 
     /**

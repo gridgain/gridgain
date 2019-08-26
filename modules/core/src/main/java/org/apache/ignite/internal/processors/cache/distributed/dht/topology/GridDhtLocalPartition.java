@@ -168,6 +168,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * reservation is released. */
     private volatile boolean delayedRenting;
 
+    /** Set if partition must be cleared in MOVING state. */
+    private volatile boolean clear;
+
     /** Set if topology update sequence should be updated on partition destroy. */
     private boolean updateSeqOnDestroy;
 
@@ -619,6 +622,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (partState == OWNING)
                 return true;
 
+            // Note what partition can be owned while clearing.
+            // This is possible if no owners are left other than current node.
+            assert !group().topology().initialized() ||
+                    group().topology().owners(id).isEmpty() ||
+                    !clear : this;
+
             assert partState == MOVING || partState == LOST;
 
             if (casState(state, OWNING))
@@ -700,42 +709,17 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         GridDhtPartitionState partState = getPartState(state);
 
-        boolean evictionRequested = partState == RENTING;
-        boolean clearingRequested = partState == MOVING;
+        boolean evictionRequested = partState == RENTING || delayedRenting;
+        boolean clearingRequested = partState == MOVING && clear;
 
         if (!evictionRequested && !clearingRequested)
             return;
 
         boolean reinitialized = clearFuture.initialize(updateSeq, evictionRequested);
 
-        // Clearing process is already running at the moment. No need to run it again.
+        // Clearing process is already running at the moment. No needs to run it again.
         if (!reinitialized)
             return;
-
-        // Make sure current rebalance future is finished before start clearing
-        // to avoid clearing currently rebalancing partition (except "initial" dummy rebalance).
-        if (clearingRequested) {
-            GridDhtPartitionDemander.RebalanceFuture rebFut =
-                (GridDhtPartitionDemander.RebalanceFuture)grp.preloader().rebalanceFuture();
-
-            if (!rebFut.isInitial() && !rebFut.isDone()) {
-                rebFut.listen(fut -> {
-                    // Partition could be owned after rebalance future is done. Skip clearing in such case.
-                    // Otherwise continue clearing.
-                    if (fut.error() == null && state() == MOVING) {
-                        if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
-                            clearFuture.finish();
-
-                            return;
-                        }
-
-                        ctx.evict().evictPartitionAsync(grp, GridDhtLocalPartition.this);
-                    }
-                });
-
-                return;
-            }
-        }
 
         // Try fast eviction.
         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
@@ -748,7 +732,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     destroy();
                 }
 
-                if (log.isDebugEnabled() && evictionRequested)
+                if (log.isDebugEnabled())
                     log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
                         + ", p=" + id + ", state=" + state() + "]");
 
@@ -762,9 +746,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Initiates single clear process if partition is in MOVING state or continues cleaning for RENTING state.
      * Method does nothing if clear process is already running.
-     *
-     * IMPORTANT: if clearing is required when after return from method call clear future must be initialized.
-     * This enforces clearing happens before sending demand requests.
      */
     public void clearAsync() {
         GridDhtPartitionState state0 = state();
@@ -772,7 +753,18 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (state0 != MOVING && state0 != RENTING)
             return;
 
-        clearAsync0(false);
+        clear = true;
+
+        GridDhtPartitionDemander.RebalanceFuture rebFut =
+            (GridDhtPartitionDemander.RebalanceFuture)grp.preloader().rebalanceFuture();
+
+        // Make sure current rebalance future finishes before clearing
+        // to avoid clearing currently rebalancing partition.
+        // NOTE: this invariant is not true for initial rebalance future.
+        if (rebFut.topologyVersion() != null && state0 == MOVING && !rebFut.isDone())
+            rebFut.listen(fut -> clearAsync0(false));
+        else
+            clearAsync0(false);
     }
 
     /**
@@ -1173,7 +1165,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     // Do not clear fresh rows in case of partition reloading.
                     // This is required because normal updates are possible to moving partition which is currently cleared.
-                    if (row.version().compareTo(clearVer) >= 0 && state() == MOVING)
+                    if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING && clear))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
@@ -1623,6 +1615,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                 // Recreate cache data store in case of allowed fast eviction, and reset clear flag.
                 listen(f -> {
+                    clear = false;
+
                     clearingCbRegistered = false;
                 });
             }

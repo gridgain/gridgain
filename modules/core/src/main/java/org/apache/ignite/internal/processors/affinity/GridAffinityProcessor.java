@@ -413,9 +413,6 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
         throws IgniteCheckedException {
         assert cacheName != null;
 
-        if (topVer == null)
-            topVer = ctx.cache().context().exchange().readyAffinityVersion();
-
         IgniteInternalFuture<AffinityInfo> locFetchFut = localAffinityInfo(cacheName, topVer);
 
         if (locFetchFut != null)
@@ -435,9 +432,10 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> localAffinityInfo(
         String cacheName,
-        AffinityTopologyVersion topVer
+        @Nullable AffinityTopologyVersion topVer
     ) throws IgniteCheckedException {
-        assert topVer != null;
+        if (topVer == null)
+            topVer = ctx.cache().context().exchange().readyAffinityVersion();
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 
@@ -498,9 +496,10 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> remoteAffinityInfo(
         String cacheName,
-        AffinityTopologyVersion topVer
+        @Nullable AffinityTopologyVersion topVer
     ) {
-        assert topVer != null;
+        if (topVer == null)
+            topVer = ctx.discovery().topologyVersionEx();
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 

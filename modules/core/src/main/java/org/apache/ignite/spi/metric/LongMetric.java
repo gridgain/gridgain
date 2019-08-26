@@ -27,4 +27,14 @@ public interface LongMetric extends Metric {
     @Override public default String getAsString() {
         return Long.toString(value());
     }
+
+    /** @return Value of the metric. */
+    public default long longValue() {
+        return value();
+    }
+
+    /** @return Value of the metric. */
+    public default long get() {
+        return value();
+    }
 }

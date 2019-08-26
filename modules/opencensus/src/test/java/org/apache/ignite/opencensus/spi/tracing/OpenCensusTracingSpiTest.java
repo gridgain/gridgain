@@ -75,10 +75,13 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     public static void beforeTests() {
         /* Uncomment following code to see visualisation on local Zipkin: */
 
-        //ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
-        //   .setV2Url("http://localhost:9411/api/v2/spans")
-        //   .setServiceName("ignite")
-        //   .build());
+        //OpenCensusZipkinTraceExporter zipkinExproter = new OpenCensusZipkinTraceExporter(
+        //    ZipkinExporterConfiguration.builder()
+        //        .setV2Url("http://localhost:9411/api/v2/spans")
+        //        .setServiceName("ignite")
+        //        .build()
+        //);
+        //zipkinExproter.start(provider, "all");
     }
 
     /**

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.metric;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -54,26 +53,20 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
      * @param grpId Group id.
      * @param mmgr Metric manager.
      */
-    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr, IgniteLogger log) {
+    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr) {
         assert cacheName != null;
 
         this.cacheName = cacheName;
         this.grpId = grpId;
 
-        MetricRegistry mreg = new MetricRegistry(
-                CACHE_GROUP.metricGroupName(),
-                metricName(CACHE_GROUP.metricGroupName(), cacheName),
-                log
-        );
+        MetricRegistry mreg = mmgr.registry(metricName(CACHE_GROUP.metricGroupName(), cacheName));
 
         mreg.longMetric("startTime", null).value(U.currentTimeMillis());
         mreg.objectMetric("name", String.class, null).value(cacheName);
         mreg.intMetric("grpId", null).value(grpId);
 
-        logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
-        physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
-
-        mmgr.add(mreg);
+        this.logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
+        this.physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
     }
 
     /** {@inheritDoc} */
@@ -102,12 +95,12 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
 
     /** {@inheritDoc} */
     @Override public long logicalReads() {
-        return logicalReadCtr.value();
+        return logicalReadCtr.longValue();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalReads() {
-        return physicalReadCtr.value();
+        return physicalReadCtr.longValue();
     }
 
     /**

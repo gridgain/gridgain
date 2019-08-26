@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoManager.RC
 import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
+import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.LAST_DATA_VER;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
@@ -202,15 +203,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         this.ctx = ctx;
         this.nodeStartTime = nodeStartTime;
 
-        //MetricRegistry mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, ctx.log(getClass()));
-
-        MetricRegistry mreg = ctx.metric().get(SYS_METRICS);
-
-        if (mreg == null) {
-            mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, ctx.log(getClass()));
-
-            ctx.metric().add(mreg);
-        }
+        MetricRegistry mreg = ctx.metric().registry(SYS_METRICS);
 
         gcCpuLoad = mreg.findMetric(GC_CPU_LOAD);
         cpuLoad = mreg.findMetric(CPU_LOAD);
@@ -234,13 +227,13 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         nonHeapCommitted = mreg.findMetric(metricName("memory", "nonheap", "committed"));
         nonHeapMax = mreg.findMetric(metricName("memory", "nonheap", "max"));
 
-        MetricRegistry pmeReg = ctx.metric().get(PME_METRICS);
+        MetricRegistry pmeReg = ctx.metric().registry(PME_METRICS);
 
         pmeDuration = pmeReg.findMetric(PME_DURATION);
 
-        lastDataVer = ctx.metric().get(SYS_METRICS).findMetric(LAST_DATA_VER);
+        lastDataVer = ctx.metric().registry(CACHE_METRICS).findMetric(LAST_DATA_VER);
 
-        MetricRegistry ioReg = ctx.metric().get(COMM_METRICS);
+        MetricRegistry ioReg = ctx.metric().registry(COMM_METRICS);
 
         sentMsgsCnt = ioReg.findMetric(SENT_MSG_CNT);
         sentBytesCnt = ioReg.findMetric(SENT_BYTES_CNT);
@@ -515,27 +508,27 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
-        return sentMsgsCnt.value();
+        return sentMsgsCnt != null ? sentMsgsCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
-        return sentBytesCnt.value();
+        return sentBytesCnt != null ? sentBytesCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
-        return rcvdMsgsCnt.value();
+        return rcvdMsgsCnt != null ? rcvdMsgsCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
-        return rcvdBytesCnt.value();
+        return rcvdBytesCnt != null ? rcvdBytesCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public int getOutboundMessagesQueueSize() {
-        return outboundMsgCnt.value();
+        return outboundMsgCnt != null ? outboundMsgCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
@@ -545,7 +538,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public long getCurrentPmeDuration() {
-        return pmeDuration.value();
+        return pmeDuration != null ? pmeDuration.value() : 0;
     }
 
     /**

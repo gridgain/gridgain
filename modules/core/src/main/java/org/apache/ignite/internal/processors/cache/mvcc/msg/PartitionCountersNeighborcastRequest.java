@@ -60,7 +60,7 @@ public class PartitionCountersNeighborcastRequest extends GridCacheIdMessage {
 
     /** {@inheritDoc} */
     @Override public AffinityTopologyVersion topologyVersion() {
-        return topVer;
+        return super.topologyVersion();
     }
 
     /**

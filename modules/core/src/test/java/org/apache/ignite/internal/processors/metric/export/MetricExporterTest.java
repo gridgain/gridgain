@@ -22,7 +22,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
@@ -30,7 +29,6 @@ import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -38,14 +36,9 @@ import static org.junit.Assert.assertTrue;
 
 public class MetricExporterTest {
 
-    private static MetricExporter exporter;
+    private static final MetricExporter EXPORTER = new MetricExporter();
 
     private static final IgniteLogger LOG = new NullLogger();
-
-    @Before
-    public void setUp() throws Exception {
-        exporter = new MetricExporter(new StandaloneGridKernalContext(LOG, null, null));
-    }
 
     @Test
     public void testResponse() {
@@ -68,7 +61,7 @@ public class MetricExporterTest {
 
         Map<String, MetricRegistry> metrics = generateMetrics();
 
-        MetricResponse msg = exporter.metricMessage(clusterId, userTag, consistentId, metrics);
+        MetricResponse msg = EXPORTER.metricMessage(clusterId, userTag, consistentId, metrics);
 
         assertEquals(clusterId, msg.clusterId());
 
@@ -76,7 +69,7 @@ public class MetricExporterTest {
 
         assertEquals(consistentId, msg.consistentId());
 
-        MetricSchema schema = msg.schema();
+        Schema schema = msg.schema();
 
         Map<String, Byte> map = new HashMap<>();
 
@@ -117,7 +110,6 @@ public class MetricExporterTest {
             }
         });
 
-
         assertTrue(map.isEmpty());
     }
 
@@ -131,7 +123,7 @@ public class MetricExporterTest {
         for (int i = 0; i < 4; i++) {
             String grpName = grpPref + i;
 
-            MetricRegistry reg = new MetricRegistry(grpName, grpName, LOG);
+            MetricRegistry reg = new MetricRegistry(grpName, LOG);
 
             metrics.put(grpName, reg);
 

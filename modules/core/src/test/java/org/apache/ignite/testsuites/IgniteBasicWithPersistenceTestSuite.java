@@ -33,9 +33,8 @@ import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
-import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
-import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerSslTest;
+import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -54,7 +53,6 @@ import org.junit.runners.Suite;
     CheckpointReadLockFailureTest.class,
 
     GridCommandHandlerTest.class,
-    GridCommandHandlerClusterByClassTest.class,
     GridCommandHandlerSslTest.class,
     GridInternalTaskUnusedWalSegmentsTest.class,
 

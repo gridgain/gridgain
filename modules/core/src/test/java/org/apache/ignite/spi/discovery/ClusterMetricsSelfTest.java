@@ -78,7 +78,7 @@ public class ClusterMetricsSelfTest extends GridCommonAbstractTest {
     private void checkPmeMetricsOnNodeJoin(boolean client) throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        MetricRegistry reg = ignite.context().metric().get(PME_METRICS);
+        MetricRegistry reg = ignite.context().metric().registry(PME_METRICS);
 
         LongMetric currentPMEDuration = reg.findMetric(PME_DURATION);
         LongMetric currentBlockingPMEDuration = reg.findMetric(PME_OPS_BLOCKED_DURATION);

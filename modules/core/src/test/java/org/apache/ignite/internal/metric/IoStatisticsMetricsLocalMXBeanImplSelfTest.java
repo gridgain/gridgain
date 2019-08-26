@@ -86,7 +86,7 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
         populateCache(cnt);
 
         MetricRegistry mreg = ignite.context().metric()
-            .get(metricName(HASH_INDEX.metricGroupName(), DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+            .registry(metricName(HASH_INDEX.metricGroupName(), DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
 
         long idxLeafLogicalCnt = mreg.<LongMetric>findMetric(LOGICAL_READS_LEAF).value();
 
@@ -123,7 +123,7 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
         populateCache(cnt);
 
         MetricRegistry mreg = ignite.context().metric()
-            .get(metricName(CACHE_GROUP.metricGroupName(), DEFAULT_CACHE_NAME));
+            .registry(metricName(CACHE_GROUP.metricGroupName(), DEFAULT_CACHE_NAME));
 
         long cacheLogicalReadsCnt = mreg.<LongMetric>findMetric(LOGICAL_READS).value();
 

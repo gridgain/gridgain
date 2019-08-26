@@ -218,7 +218,7 @@ public class GridDeploymentPerLoaderStore extends GridDeploymentStoreAdapter {
         IsolatedDeployment dep;
 
         synchronized (mux) {
-            dep = (IsolatedDeployment)searchDeploymentCache(meta);
+            dep = cache.get(meta.classLoaderId());
 
             if (dep == null) {
                 long undeployTimeout = 0;
@@ -328,11 +328,6 @@ public class GridDeploymentPerLoaderStore extends GridDeploymentStoreAdapter {
         }
 
         return dep;
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta) {
-        return cache.get(meta.classLoaderId());
     }
 
     /** {@inheritDoc} */

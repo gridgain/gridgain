@@ -80,7 +80,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicyFactory;
-import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
@@ -4186,11 +4185,12 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
                     assertNotNull(grp);
 
                     for (GridDhtLocalPartition part : grp.topology().currentLocalPartitions()) {
-                        IntMap<Object> cachesMap = GridTestUtils.getFieldValue(part, "cacheMaps");
+                        Map<Integer, Object> cachesMap = GridTestUtils.getFieldValue(part, "cacheMaps");
 
                         assertTrue(cachesMap.size() <= cacheIds.size());
 
-                        cachesMap.forEach((cacheId, v) -> assertTrue(cachesMap.containsKey(cacheId)));
+                        for (Integer cacheId : cachesMap.keySet())
+                            assertTrue(cachesMap.containsKey(cacheId));
                     }
                 }
             }
