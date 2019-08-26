@@ -174,7 +174,7 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
     public static Collection parameters() {
         Set<Object[]> params = new HashSet<>();
 
-        Object[] baseParamLine = {UUID.randomUUID(), CacheAtomicityMode.ATOMIC, CacheMode.PARTITIONED, null, 2, null,
+        Object[] baseParamLine = {null, CacheAtomicityMode.ATOMIC, CacheMode.PARTITIONED, null, 2, null,
             false, CacheWriteSynchronizationMode.FULL_SYNC, true};
 
         Object[] paramLine = null;
@@ -246,6 +246,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
 
             params.add(paramLine);
         }
+
+        for (Object[] pLine: params)
+            pLine[0] = UUID.randomUUID();
 
         return params;
     }
