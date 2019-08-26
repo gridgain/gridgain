@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
@@ -85,6 +86,8 @@ public class DistributedBaselineConfiguration {
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
+
+        U.debug(log, "Default baseline auto-adjust enabled: " + dfltEnabled);
 
         isp.registerDistributedConfigurationListener(
             dispatcher -> {

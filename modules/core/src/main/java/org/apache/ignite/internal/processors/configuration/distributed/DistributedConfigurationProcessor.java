@@ -26,6 +26,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor.AllowableAction.ACTUALIZE;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor.AllowableAction.CLUSTER_WIDE_UPDATE;
@@ -71,6 +72,8 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
                 distributedMetastorage.listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
+                        U.debug(log, "Received listener update from metastorage [key=" + key + ", val=" + newVal + ']');
+
                         DistributedProperty prop = props.get(toPropertyKey(key));
 
                         if (prop != null)
