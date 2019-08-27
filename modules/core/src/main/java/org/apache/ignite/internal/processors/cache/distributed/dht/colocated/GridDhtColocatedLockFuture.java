@@ -1711,7 +1711,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         tx.onRemap(res.clientRemapVersion(), false);
 
                         // Use remapped version for all subsequent mappings.
-                        synchronized (this) {
+                        synchronized (GridDhtColocatedLockFuture.this) {
                             for (GridNearLockMapping mapping : mappings) {
                                 GridNearLockRequest req = mapping.request();
 
