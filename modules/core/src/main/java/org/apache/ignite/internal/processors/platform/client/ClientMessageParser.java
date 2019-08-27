@@ -67,6 +67,7 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGetRequest;
 
 /**
  * Thin client message parser.
@@ -201,6 +202,23 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** */
     private static final short OP_BINARY_TYPE_PUT = 3003;
+
+    /* Cluster operations. */
+    /** */
+    private static final short OP_CLUSTER_GET = 4000;
+
+    /** */
+    private static final short OP_CLUSTER_FOR_ATTRIBUTES = 4001;
+
+    /** */
+    private static final short OP_CLUSTER_IS_ACTIVE = 4002;
+
+    /** */
+    private static final short OP_CLUSTER_ACTIVATE = 4003;
+
+    /** */
+    private static final short OP_CLUSTER_DEACTIVATE = 4003;
+
 
     /** Marshaller. */
     private final GridBinaryMarshaller marsh;
@@ -369,6 +387,12 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_QUERY_SQL_FIELDS_CURSOR_GET_PAGE:
                 return new ClientCacheQueryNextPageRequest(reader);
+
+            case OP_CLUSTER_GET:
+                return new ClientClusterGetRequest(reader);
+
+            case OP_CLUSTER_IS_ACTIVE:
+                return new ClientClusterGetRequest(reader);
         }
 
         return new ClientRawRequest(reader.readLong(), ClientStatus.INVALID_OP_CODE,

@@ -28,6 +28,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Client.Cache;
+    using Apache.Ignite.Core.Impl.Client.Cluster;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Handle;
@@ -145,6 +146,13 @@ namespace Apache.Ignite.Core.Impl.Client
         public ICollection<string> GetCacheNames()
         {
             return DoOutInOp(ClientOp.CacheGetNames, null, s => Marshaller.StartUnmarshal(s).ReadStringCollection());
+        }
+
+        /** <inheritDoc /> */
+        public IClientCluster GetCluster()
+        {
+            long ptr = DoOutInOp(ClientOp.ClusterGet, null, s => s.ReadLong());
+            return new ClientCluster(ptr);
         }
 
         /** <inheritDoc /> */
