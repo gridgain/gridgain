@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.msgtimelogging;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import javax.management.MalformedObjectNameException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
@@ -31,7 +31,8 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener.TimestampMap;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -156,33 +157,21 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
     }
 
     /**
-     *
-     */
-    private void populateCache(IgniteCache<Integer, Integer> cache) {
-        Map<Integer, Integer> map = new HashMap<>();
-
-        for (int i = 0; i < 20; ++i) {
-            cache.put(i, i);
-            map.put(i + 20, i * 2);
-        }
-
-        cache.putAll(map);
-    }
-
-    /**
      * @throws InterruptedException if {@code Thread#sleep} failed.
      */
     @WithSystemProperty(key = IGNITE_MESSAGES_INFO_STORE_TIME, value = "1")
     @Test
-    public void testEviction() throws InterruptedException {
-        Map<Long, Long> map = new TcpCommunicationMetricsListener.TimestampMap();
+    public void testEviction() throws InterruptedException, IgniteCheckedException {
+        Map<Long, Long> map = new TimestampMap();
 
-        map.put(10L, System.nanoTime());
-        map.putIfAbsent(20L, System.nanoTime());
+        int evictFreq = U.field(TimestampMap.class, "EVICT_FREQ");
+
+        for (long i = 0; i < evictFreq - 1; i++)
+            map.put(i, System.nanoTime());
 
         Thread.sleep(2000);
 
-        assertTrue("Unexpected map size before eviction: " + map.size(), map.size() == 2);
+        assertTrue("Unexpected map size before eviction: " + map.size(), map.size() == evictFreq - 1);
 
         map.putIfAbsent(30L, System.nanoTime());
 
@@ -196,7 +185,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
     public void testMetricBounds() throws Exception {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.put(1, 1);
+        populateCache(cache);
 
         HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareRequest.class, true);
 
@@ -244,7 +233,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
     public void testMetricClearOnNodeLeaving() throws Exception {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.put(1, 1);
+        populateCache(cache);
 
         UUID leavingNodeId = grid(1).localNode().id();
 

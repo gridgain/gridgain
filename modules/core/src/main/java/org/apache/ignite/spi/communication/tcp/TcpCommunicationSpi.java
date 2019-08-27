@@ -1961,16 +1961,16 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     }
 
     /**
-     * @return Map containing histogram metrics for outcoming messages by node by message class.
+     * @return Map containing histogram metrics for outcoming messages by node by message class name.
      */
-    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
+    public Map<UUID, Map<String, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
         return metricsLsnr.outMetricsByNodeByMsgClass();
     }
 
     /**
-     * @return Map containing histogram metrics for incoming messages by node by message class.
+     * @return Map containing histogram metrics for incoming messages by node by message class name.
      */
-    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass() {
+    public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass() {
         return metricsLsnr.inMetricsByNodeByMsgClass();
     }
 
@@ -5127,12 +5127,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         }
 
         /** {@inheritDoc} */
-        @Override public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
+        @Override public Map<UUID, Map<String, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
             return TcpCommunicationSpi.this.getOutMetricsByNodeByMsgClass();
         }
 
         /** {@inheritDoc} */
-        @Override public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass() {
+        @Override public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass() {
             return TcpCommunicationSpi.this.getInMetricsByNodeByMsgClass();
         }
 

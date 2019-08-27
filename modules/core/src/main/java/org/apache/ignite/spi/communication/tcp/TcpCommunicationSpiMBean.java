@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.mxbean.MXBeanDescription;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiManagementMBean;
 
 /**
@@ -183,17 +182,17 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
 
     /**
      * @return Map containing outcoming cache messages processing duration histograms
-     * grouped by message class and node ids.
+     * grouped by message class name and node ids.
      */
-    @MXBeanDescription("Messages processing duration grouped by message class and node.")
-    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getOutMetricsByNodeByMsgClass();
+    @MXBeanDescription("Outcoming messages processing duration grouped by message class name and node.")
+    public Map<UUID, Map<String, HistogramMetric>> getOutMetricsByNodeByMsgClass();
 
     /**
      * @return Map containing incoming cache messages processing duration histograms
-     * grouped by message class and node ids.
+     * grouped by message class name and node ids.
      */
-    @MXBeanDescription("Messages processing duration grouped by message class and node.")
-    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass();
+    @MXBeanDescription("Incoming messages processing duration grouped by message class name and node.")
+    public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass();
 
     /**
      * Gets outbound messages queue size.

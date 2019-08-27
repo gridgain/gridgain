@@ -9,6 +9,7 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -146,17 +147,17 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
         if (mbean == null)
             return null;
 
-        Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap =
+        Map<UUID, Map<String, HistogramMetric>> nodeMap =
             outcoming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
 
         assertNotNull(nodeMap);
 
-        Map<Class<? extends Message>, HistogramMetric> classMap = nodeMap.get(targetNodeId);
+        Map<String, HistogramMetric> clsNameMap = nodeMap.get(targetNodeId);
 
-        if (classMap == null)
+        if (clsNameMap == null)
             return null;
 
-        return classMap.get(msgClass);
+        return clsNameMap.get(msgClass.getName());
     }
 
     /**
@@ -185,6 +186,20 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      */
     private static String metricName(UUID nodeId, Class msgClass) {
         return nodeId + "." + msgClass.getSimpleName();
+    }
+
+    /**
+     *
+     */
+    protected void populateCache(IgniteCache<Integer, Integer> cache) {
+        Map<Integer, Integer> map = new HashMap<>();
+
+        for (int i = 0; i < 20; ++i) {
+            cache.put(i, i);
+            map.put(i + 20, i * 2);
+        }
+
+        cache.putAll(map);
     }
 
     /**

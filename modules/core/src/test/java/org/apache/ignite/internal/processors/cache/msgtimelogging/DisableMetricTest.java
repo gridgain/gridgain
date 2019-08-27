@@ -24,7 +24,7 @@ public class DisableMetricTest extends GridCacheMessagesTimeLoggingAbstractTest 
     public void testDisabledMetric() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.put(1, 1);
+        populateCache(cache);
 
         HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareRequest.class, true);
 
