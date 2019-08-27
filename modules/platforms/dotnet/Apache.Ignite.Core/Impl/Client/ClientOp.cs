@@ -67,6 +67,13 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryTypeNameGet = 3000,
         BinaryTypeNamePut = 3001,
         BinaryTypeGet = 3002,
-        BinaryTypePut = 3003
+        BinaryTypePut = 3003,
+
+        // Cluster.
+        ClusterGet = 4000,
+        ClusterForAttributes = 4001,
+        ClusterIsActivate = 4002,
+        ClusterActivate = 4003,
+        ClusterDeactivate = 4004,
     }
 }
