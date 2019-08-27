@@ -2796,11 +2796,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         GridCacheVersion obsoleteVer = obsoleteVersionExtras();
 
-        if (ver != null) {
-            // If already obsolete, then do nothing.
-            if (obsoleteVer != null)
-                return true;
-
+        if (ver != null && obsoleteVer == null /* If already obsolete, then do nothing. */) {
             GridCacheMvcc mvcc = mvccExtras();
 
             if (mvcc == null || mvcc.isEmpty(ver)) {
@@ -2818,11 +2814,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         ']');
                 }
             }
-
-            return obsoleteVer != null;
         }
-        else
-            return obsoleteVer != null;
+
+        return obsoleteVer != null;
     }
 
     /** {@inheritDoc} */
@@ -3876,7 +3870,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (expiredVal == null)
                 return false;
 
-            assert lock.isHeldByCurrentThread();
+            assert cctx.shared().database().checkpointLockIsHeldByThread();
 
             if (onExpired(expiredVal, obsoleteVer, true)) {
                 if (cctx.deferredDelete()) {
@@ -3902,8 +3896,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 cctx.cache().removeEntry(this);
             }
-
-            if (deferred) {
+            else if (deferred) {
                 assert ver0 != null;
 
                 cctx.onDeferredDelete(this, ver0);
@@ -3969,7 +3962,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 //        }
         }
 
-        if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
+        if (remove && cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
+            new Throwable(
+                "!!! EXPIRED hash=" + key.hashCode() + ", thread=" + Thread.currentThread().getName() +
+                    ", expiredVal=" + expiredVal + ", " +
+                    "obsoleteVers=" + obsoleteVer
+            ).printStackTrace();
+
+
             cctx.events().addEvent(partition(),
                 key,
                 cctx.localNodeId(),
