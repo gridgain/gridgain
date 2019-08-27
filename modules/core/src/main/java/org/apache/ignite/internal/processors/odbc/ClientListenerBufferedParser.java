@@ -54,7 +54,12 @@ public class ClientListenerBufferedParser implements GridNioParser {
             assert old == null;
         }
 
-        return nioBuf.read(buf);
+        try {
+            return nioBuf.read(buf);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteCheckedException("Failed to parse message from remote " + ses.remoteAddress(), e);
+        }
     }
 
     /** {@inheritDoc} */
