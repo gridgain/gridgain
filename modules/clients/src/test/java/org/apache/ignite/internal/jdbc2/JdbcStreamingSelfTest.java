@@ -168,6 +168,17 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testStreamedInsertFailsOnReadOnlyMode() throws Exception {
+        try (Connection conn = createStreamedConnection(true)) {
+            try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") " +
+                "values (?, ?)")) {
+                    stmt.setInt(1, 0);
+                    stmt.setString(2, nameForId(0));
+
+                    stmt.executeUpdate();
+
+            }
+        }
+
         grid(0).cluster().readOnly(true);
 
         try {
@@ -181,7 +192,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
                 try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {
                     assertTrue(rs.next());
 
-                    assertEquals(0, rs.getLong(1));
+                    assertEquals(1, rs.getLong(1));
                 }
 
                 try (Connection conn = createStreamedConnection(true)) {
@@ -205,7 +216,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
                 try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {
                     assertTrue(rs.next());
 
-                    assertEquals("Insert should be failed", 0, rs.getLong(1));
+                    assertEquals("Insert should be failed", 1, rs.getLong(1));
                 }
             }
 
