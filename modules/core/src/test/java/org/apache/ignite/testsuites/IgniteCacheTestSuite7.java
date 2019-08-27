@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.distributed.Cache64kPartition
 import org.apache.ignite.internal.processors.cache.distributed.CacheDataLossOnPartitionMoveTest;
 import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLostWhileClearingTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRentingStateRepairTest;
+import org.apache.ignite.internal.processors.cache.distributed.NodeJoinWithNewCachesTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheStartWithLoadTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingWithAsyncClearingTest;
@@ -113,6 +114,8 @@ public class IgniteCacheTestSuite7 {
         GridTestUtils.addTestIfNeeded(suite, CachePartitionLostWhileClearingTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridTransactionsSystemUserTimeMetricsTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, NodeJoinWithNewCachesTest.class, ignoredTests);
 
         return suite;
     }
