@@ -37,8 +37,7 @@
             "baselineAutoAdjustEnabled",
             "baselineAutoAdjustTimeout",
             "baselineAutoAdjustStatus",
-            "clientReconnectFuture",
-            "readOnly"
+            "clientReconnectFuture"
         };
 
         /** Members that are missing on .NET side and should be added in future. */
@@ -48,7 +47,8 @@
             "clearStatistics",          // IGNITE-9017
             "currentBaselineTopology",   // GG-21247
             "id",                       // GG-21621
-            "tag"                       // GG-21621
+            "tag",                       // GG-21621
+            "readOnly"                  // GG-23363
         };
 
         /// <summary>
