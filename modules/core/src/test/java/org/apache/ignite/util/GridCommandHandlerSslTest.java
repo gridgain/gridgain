@@ -84,7 +84,6 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
 
         List<String> params = new ArrayList<>();
 
-        params.add("--activate");
         params.add("--keystore");
         params.add(GridTestUtils.keyStorePath("node01"));
         params.add("--keystore-password");
