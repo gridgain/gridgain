@@ -1149,6 +1149,10 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
             U.debug(log, "FAILED111");
 
             try {
+                log.error("Failed processing message 123", e);
+                log.error("Failed processing message 1234");
+                log.warning("Failed processing message 1235");
+                log.info("Failed processing message 1236");
                 U.error(log, "Failed processing message [senderId=" + nodeId + ", msg=" + msg + ']', e);
             }
             catch (Throwable e0) {
