@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.metric.export;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -29,13 +27,11 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
-import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
@@ -56,9 +52,12 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
  */
 
 public class MetricExporter extends GridProcessorAdapter {
-    private final Map<Integer, IgniteBiTuple<MetricSchema, byte[]>> schemas = new HashMap<>();
+    /** Default varint byte buffer capacity. */
+    private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;
 
     /**
+     * Constructor.
+     *
      * @param ctx Kernal context.
      */
     public MetricExporter(GridKernalContext ctx) {
@@ -67,18 +66,14 @@ public class MetricExporter extends GridProcessorAdapter {
         ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
             @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
                 if (msg instanceof MetricRequest) {
-                    int schemaVer = ((MetricRequest) msg).schemaVersion();
+                    MetricResponse res = export();
 
-                    if (schemaVer == -1) {
-                        MetricResponse res = export();
-
-                        try {
-                            ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
-                        }
-                        catch (IgniteCheckedException e) {
-                            log.error("Error during sending message [topic" + TOPIC_METRICS +
-                                    ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
-                        }
+                    try {
+                        ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.error("Error during sending message [topic=" + TOPIC_METRICS +
+                                ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
                     }
                 }
             }
@@ -86,6 +81,11 @@ public class MetricExporter extends GridProcessorAdapter {
 
     }
 
+    /**
+     * Creates {@link MetricResponse} message instance.
+     *
+     * @return Metric response.
+     */
     public MetricResponse export() {
         IgniteCluster cluster = ctx.cluster().get();
 
@@ -104,53 +104,48 @@ public class MetricExporter extends GridProcessorAdapter {
         return metricMessage(clusterId, tag, consistentId, metrics);
     }
 
-    @NotNull
-    MetricResponse metricMessage(UUID clusterId, String userTag, String consistentId, Map<String, MetricRegistry> metrics) {
-        int ver = 0; //schemaVersion(metrics);
-
+    /**
+     * Creates {@link MetricResponse} message for given parameters and metric registries.
+     *
+     * @param clusterId Cluster ID.
+     * @param clusterTag Cluster tag.
+     * @param consistentId Consistent node ID.
+     * @param metrics Metric registries.
+     * @return {@link MetricResponse} instance.
+     */
+    MetricResponse metricMessage(
+            UUID clusterId,
+            String clusterTag,
+            String consistentId,
+            Map<String, MetricRegistry> metrics
+    ) {
         long ts = System.currentTimeMillis();
 
-        //IgniteBiTuple<MetricSchema, byte[]> tup = schemas.get(ver);
+        MetricSchema schema = generateSchema(metrics);
 
-        IgniteBiTuple<MetricSchema, byte[]> tup = null;
+        byte[] schemaBytes = schema.toBytes();
 
-        if (tup == null) {
-            //TODO: remove obsolete versions
+        VarIntWriter data = generateData(metrics);
 
-            long startTs = System.currentTimeMillis();
-
-            MetricSchema schema = generateSchema(metrics);
-
-            System.out.println("Generate schema: " + (System.currentTimeMillis() - startTs) + " ms");
-
-            schemas.put(ver, tup = new IgniteBiTuple<>(schema, schema.toBytes()));
-        }
-
-        MetricSchema schema = tup.get1();
-
-        byte[] schemaBytes = tup.get2();
-
-        long startTs = System.currentTimeMillis();
-
-        VarIntByteBuffer data = generateData(metrics);
-
-        MetricResponse metricResponse = new MetricResponse(
-                ver,
+        return new MetricResponse(
+                -1, //Unsupported.
                 ts,
                 clusterId,
-                userTag,
+                clusterTag,
                 consistentId,
                 schema.length(),
                 data.position(),
                 (arr, off) -> writeSchema(schemaBytes, arr, off),
-                (arr, off) -> writeData(arr, off, data)
+                (arr, off) -> writeData(data, arr, off)
         );
-
-        System.out.println("Message generation: " + (System.currentTimeMillis() - startTs) + " ms");
-
-        return metricResponse;
     }
 
+    /**
+     * Generates metrics schema for given metric registries.
+     *
+     * @param metrics Metric registries.
+     * @return Schema for metric message.
+     */
     private MetricSchema generateSchema(Map<String, MetricRegistry> metrics) {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
 
@@ -163,6 +158,12 @@ public class MetricExporter extends GridProcessorAdapter {
         return bldr.build();
     }
 
+    /**
+     * Generates metric registry schema for given metric registry.
+     *
+     * @param reg Metric registry.
+     * @return Metric registry schema.
+     */
     private MetricRegistrySchema generateMetricRegistrySchema(MetricRegistry reg) {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
@@ -180,21 +181,36 @@ public class MetricExporter extends GridProcessorAdapter {
         return bldr.build();
     }
 
-    private int schemaVersion(Map<String, MetricRegistry> metrics) {
-        //TODO: schemaVer --> ver (schemaVer + node.ver + topVer)
-        return Objects.hash(metrics.keySet());
+    /**
+     * Copies metric schema bytes representation to target byte array.
+     *
+     * @param schemaBytes Metric schema byte representation.
+     * @param arr Target byte array.
+     * @param off Target byte array offset.
+     */
+    private static void writeSchema(byte[] schemaBytes, byte[] arr, Integer off) {
+        copyMemory(schemaBytes, BYTE_ARR_OFF, arr, BYTE_ARR_OFF + off, schemaBytes.length);
     }
 
-    private static void writeSchema(byte[] schemaBytes0, byte[] arr, Integer off) {
-        copyMemory(schemaBytes0, BYTE_ARR_OFF, arr, BYTE_ARR_OFF + off, schemaBytes0.length);
+    /**
+     * Copies metric values to target byte array.
+     *
+     * @param data Metric data byte buffer.
+     * @param arr Target byte array.
+     * @param off Target byte array offset.
+     */
+    private static void writeData(VarIntWriter data, byte[] arr, int off) {
+        data.toBytes(arr, off);
     }
 
-    private static void writeData(byte[] arr, int dataFrameOff, VarIntByteBuffer data) {
-        data.toBytes(arr, dataFrameOff);
-    }
-
-    private static VarIntByteBuffer generateData(Map<String, MetricRegistry> metrics) {
-        VarIntByteBuffer buf = new VarIntByteBuffer(new byte[1024]);
+    /**
+     * Writes metrics values to the temporary buffer.
+     *
+     * @param metrics Metric registries.
+     * @return Metric values data set as {@link VarIntWriter} instance.
+     */
+    private static VarIntWriter generateData(Map<String, MetricRegistry> metrics) {
+        VarIntWriter buf = new VarIntWriter(DEFAULT_VARINT_BYTE_BUF_CAPACITY);
 
         for (Map.Entry<String, MetricRegistry> r : metrics.entrySet()) {
             for (Map.Entry<String, Metric> e : r.getValue().metrics().entrySet()) {
@@ -202,7 +218,7 @@ public class MetricExporter extends GridProcessorAdapter {
 
                 MetricType type = MetricType.findByClass(m.getClass());
 
-                // Unsupported type.
+                // Unsupported type. Just ignore in schema and in data set.
                 if (type == null)
                     continue;
 
@@ -227,7 +243,7 @@ public class MetricExporter extends GridProcessorAdapter {
 
                     buf.putVarInt(bounds.length);
 
-                    // Pais
+                    // Pairs.
                     for (int i = 0; i < bounds.length; i++) {
                         buf.putVarLong(bounds[i]);
 
@@ -248,5 +264,4 @@ public class MetricExporter extends GridProcessorAdapter {
 
         return buf;
     }
-
 }

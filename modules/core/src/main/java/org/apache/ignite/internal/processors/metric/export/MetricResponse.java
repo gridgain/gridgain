@@ -233,7 +233,7 @@ public class MetricResponse implements Message {
         if (off == NO_OFF)
             return;
 
-        VarIntByteBuffer data = new VarIntByteBuffer(body);
+        VarIntReader data = new VarIntReader(body);
 
         data.position(off);
 
