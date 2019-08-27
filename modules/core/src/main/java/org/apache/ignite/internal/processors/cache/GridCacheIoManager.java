@@ -591,6 +591,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                 processMessage(nodeId, cacheMsg, c);
         }
         catch (Throwable e) {
+            U.debug(log, "FAILED222");
+
             String msgStr;
 
             try {
@@ -1144,6 +1146,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                 log.debug("Finished processing cache communication message [nodeId=" + nodeId + ", msg=" + msg + ']');
         }
         catch (Throwable e) {
+            U.debug(log, "FAILED111");
+
             try {
                 U.error(log, "Failed processing message [senderId=" + nodeId + ", msg=" + msg + ']', e);
             }

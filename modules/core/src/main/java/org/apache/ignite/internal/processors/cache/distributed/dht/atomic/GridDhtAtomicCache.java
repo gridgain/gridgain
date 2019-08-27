@@ -3266,10 +3266,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 fut.onPrimaryResponse(nodeId, res, false);
             }
             catch (Throwable e) {
-                if (msgLog.isDebugEnabled())
-                    msgLog.debug("Failed processing response: " + e.getMessage());
-
-                log.error("Failed processing response", e);
+                U.debug(log, "Failed processing response....");
 
                 throw e;
             }

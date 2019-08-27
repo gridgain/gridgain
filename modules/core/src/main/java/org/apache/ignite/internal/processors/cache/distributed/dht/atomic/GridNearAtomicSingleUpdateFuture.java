@@ -256,8 +256,7 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
 
             if (remapKey) {
                 if (req.topologyVersion().equals(res.remapTopologyVersion())) {
-                    if (msgLog.isDebugEnabled())
-                        msgLog.debug("Invalid response, will throw an assertion: " + res);
+                    U.debug(log, "Invalid response, will throw an assertion: " + res);
                 }
 
                 assert !req.topologyVersion().equals(res.remapTopologyVersion());

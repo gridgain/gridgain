@@ -18,6 +18,7 @@ package org.apache.ignite.failure;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Just ignores any failure. It's useful for tests and debugging.
@@ -25,6 +26,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class NoOpFailureHandler extends AbstractFailureHandler {
     /** {@inheritDoc} */
     @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
+        U.debug(ignite.log(), "INSIDE NOOP FAILURE HANDLER");
+
         return false;
     }
 
