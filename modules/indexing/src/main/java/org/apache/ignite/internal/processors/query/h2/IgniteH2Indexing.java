@@ -1831,7 +1831,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (clo0.hasIndexes()) {
                 if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.FORCE_FULL_INDEX_REBUILD, true))
-                    clo = new IndexRebuildFullClosure(cctx.queries());
+                    clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
                 else
                     clo = clo0;
             }
