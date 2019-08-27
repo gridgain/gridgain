@@ -219,7 +219,7 @@
             },
             "queryResult": {
                 "genericError": "Error: {{error}}",
-                "emptyResult": "Result set is empty. Duration: <b>duration</b>",
+                "emptyResult": "Result set is empty. Duration: <b>{{duration}}</b>",
                 "scanQueryCache": "Showing results for scan of <b>{{cacheName}}</b>",
                 "scanQueryFilter": "&nbsp; with filter: <b>{{filter}}</b>",
                 "scanQueryNode": "&nbsp; on node: <b>{{node}}</b>",
