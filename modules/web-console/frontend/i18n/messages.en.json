@@ -115,7 +115,7 @@
     },
     "profile": {
         "confirmChangeToken": "Are you sure you want to change security token?<br>If you change the token you will need to restart the agent.",
-        "documentTitle": "USER profile",
+        "documentTitle": "User profile",
         "pageTitle": "User profile",
         "firstNameInput": {
             "label": "First name"
