@@ -34,8 +34,7 @@ using namespace boost::unit_test;
  */
 struct AffinityTestSuiteFixture
 {
-    Ignite server0;
-    Ignite server1;
+    Ignite node;
 
     Cache<int, int> cache;
     CacheAffinity affinity;
@@ -54,10 +53,9 @@ struct AffinityTestSuiteFixture
      * Constructor.
      */
     AffinityTestSuiteFixture() :
-        server0(MakeNode("AffinityNode1")),
-        server1(MakeNode("AffinityNode2")),
-        cache(server0.GetCache<int, int>("cache1")),
-        affinity(server0.GetAffinity(cache.GetName()))
+        node(MakeNode("AffinityNode1")),
+        cache(node.GetCache<int, int>("cache1")),
+        affinity(node.GetAffinity(cache.GetName()))
     {
         // No-op.
     }
@@ -83,30 +81,20 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityGetPartition)
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityIsPrimaryOrBackup)
 {
-    std::vector<ClusterNode> nodes = server0.GetCluster().AsClusterGroup().GetNodes();
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
 
     BOOST_REQUIRE(true == affinity.IsPrimary<int64_t>(nodes.front(), 0));
-    BOOST_REQUIRE(false == affinity.IsPrimary<int64_t>(nodes.back(), 0));
-
     BOOST_REQUIRE(false == affinity.IsBackup<int64_t>(nodes.front(), 0));
-    BOOST_REQUIRE(false == affinity.IsBackup<int64_t>(nodes.back(), 0));
-
     BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup<int64_t>(nodes.front(), 0));
-    BOOST_REQUIRE(false == affinity.IsPrimaryOrBackup<int64_t>(nodes.back(), 0));
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityGetDifferentPartitions)
 {
-    std::vector<ClusterNode> nodes = server0.GetCluster().AsClusterGroup().GetNodes();
+    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
 
     BOOST_CHECK_EQUAL(affinity.GetPrimaryPartitions(nodes.front()).size(), 1024);
-    BOOST_CHECK_EQUAL(affinity.GetPrimaryPartitions(nodes.back()).size(), 0);
-
     BOOST_CHECK_EQUAL(affinity.GetBackupPartitions(nodes.front()).size(), 0);
-    BOOST_CHECK_EQUAL(affinity.GetBackupPartitions(nodes.back()).size(), 524);
-
     BOOST_CHECK_EQUAL(affinity.GetAllPartitions(nodes.front()).size(), 1024);
-    BOOST_CHECK_EQUAL(affinity.GetAllPartitions(nodes.back()).size(), 524);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityGetAffinityKey)
@@ -125,10 +113,10 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapKeysToNodes)
 
     for (std::list<int>::iterator it = keys.begin(); it != keys.end(); ++it)
     {
-        ClusterNode node = affinity.MapKeyToNode(*it);
-        BOOST_REQUIRE(map.find(node) != map.end());
+        ClusterNode clusterNode = affinity.MapKeyToNode(*it);
+        BOOST_REQUIRE(map.find(clusterNode) != map.end());
 
-        std::list<int32_t> nodeKeys = map[node];
+        std::list<int32_t> nodeKeys = map[clusterNode];
         BOOST_REQUIRE(nodeKeys.size() > 0);
         BOOST_REQUIRE(std::find(nodeKeys.begin(), nodeKeys.end(), *it) != nodeKeys.end());
     }
@@ -140,9 +128,8 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapKeyToPrimaryAndBackups)
 
     std::list<ClusterNode> nodes = affinity.MapKeyToPrimaryAndBackups(key);
 
-    BOOST_REQUIRE(nodes.size() == 2);
+    BOOST_REQUIRE(nodes.size() == 1);
     BOOST_REQUIRE(true == affinity.IsPrimary(nodes.front(), key));
-    BOOST_REQUIRE(false == affinity.IsPrimary(nodes.back(), key));
 
     int part = affinity.GetPartition(key);
     std::list<ClusterNode> partNodes = affinity.MapPartitionToPrimaryAndBackups(part);
@@ -162,16 +149,16 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapPartitionToNode)
 {
     const int32_t key = 1;
 
-    ClusterNode node = affinity.MapKeyToNode(key);
+    ClusterNode clusterNode = affinity.MapKeyToNode(key);
 
-    BOOST_REQUIRE(true == affinity.IsPrimary(node, key));
-    BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup(node, key));
-    BOOST_REQUIRE(false == affinity.IsBackup(node, key));
+    BOOST_REQUIRE(true == affinity.IsPrimary(clusterNode, key));
+    BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup(clusterNode, key));
+    BOOST_REQUIRE(false == affinity.IsBackup(clusterNode, key));
 
     int part = affinity.GetPartition(key);
     ClusterNode partNode = affinity.MapPartitionToNode(part);
 
-    BOOST_REQUIRE(node.GetId() == partNode.GetId());
+    BOOST_REQUIRE(clusterNode.GetId() == partNode.GetId());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
