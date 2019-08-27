@@ -63,7 +63,7 @@ public class AgentLauncher {
      * @param args Launcher args.
      * @return Agent configuration;
      */
-    private static AgentConfiguration parseArgs(String[] args) {
+     static AgentConfiguration parseArgs(String[] args) {
         log.info("Starting Apache Ignite Web Console Agent...");
 
         AgentConfiguration cfg = new AgentConfiguration();

@@ -30,6 +30,7 @@ import com.beust.jcommander.Parameter;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.console.agent.AgentUtils.decodeValue;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.trim;
 
@@ -217,7 +218,7 @@ public class AgentConfiguration {
      * @return Agent password to authenticate on node.
      */
     public String nodePassword() {
-        return nodePwd;
+        return decodeValue(nodePwd);
     }
 
     /**
@@ -309,7 +310,7 @@ public class AgentConfiguration {
      * @return Node key store password.
      */
     public String nodeKeyStorePassword() {
-        return nodeKeyStorePass;
+        return decodeValue(nodeKeyStorePass);
     }
 
     /**
@@ -343,7 +344,7 @@ public class AgentConfiguration {
      * @return Node trust store password.
      */
     public String nodeTrustStorePassword() {
-        return nodeTrustStorePass;
+        return decodeValue(nodeTrustStorePass);
     }
 
     /**
@@ -377,7 +378,7 @@ public class AgentConfiguration {
      * @return Server key store password.
      */
     public String serverKeyStorePassword() {
-        return srvKeyStorePass;
+        return decodeValue(srvKeyStorePass);
     }
 
     /**
@@ -411,7 +412,7 @@ public class AgentConfiguration {
      * @return Server trust store password.
      */
     public String serverTrustStorePassword() {
-        return srvTrustStorePass;
+        return decodeValue(srvTrustStorePass);
     }
 
     /**

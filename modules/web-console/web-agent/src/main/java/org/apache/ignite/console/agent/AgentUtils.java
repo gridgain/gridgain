@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -44,12 +45,18 @@ import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
+import org.jasypt.encryption.StringEncryptor;
+import org.jasypt.encryption.pbe.StandardPBEByteEncryptor;
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
+import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
+import static org.jasypt.properties.PropertyValueEncryptionUtils.decrypt;
+import static org.jasypt.properties.PropertyValueEncryptionUtils.isEncryptedValue;
 
 /**
  * Utility methods.
@@ -57,6 +64,15 @@ import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 public class AgentUtils {
     /** */
     private static final Logger log = Logger.getLogger(AgentUtils.class.getName());
+
+    /** Web agent master password env variable name. */
+    public static final String WEB_AGENT_MASTER_PASSWORD_ENV_NAME = "WEB_AGENT_MASTER_PASSWORD";
+
+    /** Web agent encrypt algorithm env variable name. */
+    public static final String WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME = "WEB_AGENT_ENCRYPT_ALGORITHM";
+
+    /** Encryptor. */
+    private static StringEncryptor encryptor = createEncryptor();
 
     /** */
     public static final String[] EMPTY = {};
@@ -323,5 +339,45 @@ public class AgentUtils {
      */
     public static List<String> trim(List<String> lst) {
         return F.isEmpty(lst) ? lst : lst.stream().map(String::trim).collect(toList());
+    }
+
+    /**
+     * Create string encryptor with specific password and algorithm.
+     *
+     * @return String encryptor.
+     */
+    public static StandardPBEStringEncryptor createEncryptor() {
+        String pass = System.getenv(WEB_AGENT_MASTER_PASSWORD_ENV_NAME);
+        String alg = System.getenv(WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME);
+
+        if (F.isEmpty(pass))
+            return null;
+
+        if (F.isEmpty(alg))
+            alg = StandardPBEByteEncryptor.DEFAULT_ALGORITHM;
+
+        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setPassword(pass);
+        encryptor.setAlgorithm(alg);
+
+        return encryptor;
+    }
+
+    /**
+     * @param val Value.
+     */
+    public static String decodeValue(String val) {
+        if (isEncryptedValue(val)) {
+            if (encryptor == null)
+                throw new IgniteException("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD env variable is set");
+            try {
+                return decrypt(val, encryptor);
+            }
+            catch (EncryptionOperationNotPossibleException e) {
+                throw new IgniteException("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD or WEB_AGENT_ENCRYPT_ALGORITHM env variables is correct");
+            }
+        }
+
+        return val;
     }
 }
