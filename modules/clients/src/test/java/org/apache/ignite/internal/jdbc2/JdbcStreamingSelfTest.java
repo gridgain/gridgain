@@ -169,61 +169,33 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testStreamedInsertFailsOnReadOnlyMode() throws Exception {
         try (Connection conn = createStreamedConnection(true)) {
-            try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") " +
-                "values (?, ?)")) {
-                    stmt.setInt(1, 0);
-                    stmt.setString(2, nameForId(0));
+            populateData(conn, 0, 1);
 
-                    stmt.executeUpdate();
+            grid(0).cluster().readOnly(true);
 
-            }
-        }
+            try {
+                assertTrue(grid(0).cluster().readOnly());
 
-        grid(0).cluster().readOnly(true);
+                try (Connection ordinalCon = createOrdinaryConnection()) {
+                    assertEquals(1, countPersons(ordinalCon));
 
-        try {
-            assertTrue(grid(0).cluster().readOnly());
+                    try {
+                        populateData(conn, 1, 100);
 
-            boolean failed = false;
-
-            try (Connection ordinalCon = createOrdinaryConnection();
-                 Statement selectStmt = ordinalCon.createStatement()
-            ) {
-                try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {
-                    assertTrue(rs.next());
-
-                    assertEquals(1, rs.getLong(1));
-                }
-
-                try (Connection conn = createStreamedConnection(true)) {
-                    try (PreparedStatement stmt =
-                             conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") values (?, ?)")
-                    ) {
-                        for (int i = 1; i <= 2; i++) {
-                            stmt.setInt(1, i);
-                            stmt.setString(2, nameForId(i));
-
-                            stmt.executeUpdate();
-                        }
+                        fail("Insert should be failed!");
                     }
-                }
-                catch (Exception e) {
-                    log.error("Insert failed", e);
+                    catch (Exception e) {
+                        log.error("Insert failed", e);
 
-                    failed = X.hasCause(e, IgniteClusterReadOnlyException.class);
-                }
+                        assertTrue("Wrong exception", X.hasCause(e, IgniteClusterReadOnlyException.class));
+                    }
 
-                try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {
-                    assertTrue(rs.next());
-
-                    assertEquals("Insert should be failed", 1, rs.getLong(1));
+                    assertEquals("Insert should be failed", 1, countPersons(ordinalCon));
                 }
             }
-
-            assertTrue(failed);
-        }
-        finally {
-            grid(0).cluster().readOnly(false);
+            finally {
+                grid(0).cluster().readOnly(false);
+            }
         }
     }
 
@@ -236,15 +208,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
             put(i, nameForId(i * 100));
 
         try (Connection conn = createStreamedConnection(false)) {
-            try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") " +
-                "values (?, ?)")) {
-                for (int i = 1; i <= 100; i++) {
-                    stmt.setInt(1, i);
-                    stmt.setString(2, nameForId(i));
-
-                    stmt.executeUpdate();
-                }
-            }
+            populateData(conn, 1, 100);
         }
 
         U.sleep(500);
@@ -267,15 +231,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
             put(i, nameForId(i * 100));
 
         try (Connection conn = createStreamedConnection(false)) {
-            try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") " +
-                "values (?, ?)")) {
-                for (int i = 1; i <= 100; i++) {
-                    stmt.setInt(1, i);
-                    stmt.setString(2, nameForId(i));
-
-                    stmt.executeUpdate();
-                }
-            }
+            populateData(conn, 1, 100);
         }
 
         U.sleep(500);
@@ -298,15 +254,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
             put(i, nameForId(i * 100));
 
         try (Connection conn = createStreamedConnection(true)) {
-            try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") " +
-                "values (?, ?)")) {
-                for (int i = 1; i <= 100; i++) {
-                    stmt.setInt(1, i);
-                    stmt.setString(2, nameForId(i));
-
-                    stmt.executeUpdate();
-                }
-            }
+            populateData(conn, 1, 100);
         }
 
         U.sleep(500);
@@ -391,5 +339,39 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
         assertTrue(String.valueOf(o), o instanceof BinaryObject);
 
         return ((BinaryObject)o).field("name");
+    }
+
+    /**
+     * Populates data to the table.
+     *
+     * @param conn Connection.
+     * @param from First person id.
+     * @param count Number of persons.
+     * @throws SQLException If something goes wrong.
+     */
+    private void populateData(Connection conn, int from, int count) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("insert into PUBLIC.Person(\"id\", \"name\") values (?, ?)")) {
+            for (int i = from; i < from + count; i++) {
+                stmt.setInt(1, i);
+                stmt.setString(2, nameForId(i));
+
+                stmt.executeUpdate();
+            }
+        }
+    }
+
+    /**
+     * @param conn Connection.
+     * @return Size of PUBLIC.Person table.
+     * @throws SQLException If something goes wrong.
+     */
+    private long countPersons(Connection conn) throws SQLException {
+        try (Statement selectStmt = conn.createStatement()) {
+            try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {
+                assertTrue("Result set is empty!", rs.next());
+
+                return rs.getLong(1);
+            }
+        }
     }
 }
