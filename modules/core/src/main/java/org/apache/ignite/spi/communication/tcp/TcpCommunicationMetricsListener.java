@@ -700,17 +700,20 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          * Evicts messages older then {@code MAX_TIMESTAMP_AGE}
          */
         private void evict() {
-            if (evictCntr.incrementAndGet() < EVICT_FREQ)
-                return;
+            int currOpsNum = evictCntr.incrementAndGet();
 
-            Iterator<Map.Entry<Long, Long>> iter = entrySet().iterator();
+            // Second part of condition is added to eliminate even tiny
+            // risk of evictCntr skipping EVICT_FREQ
+            if (currOpsNum == EVICT_FREQ || currOpsNum > 2 * EVICT_FREQ) {
+                evictCntr.set(0);
 
-            long curTime = System.nanoTime();
+                Iterator<Map.Entry<Long, Long>> iter = entrySet().iterator();
 
-            while (iter.hasNext() && curTime - iter.next().getValue() > maxTimestampAge)
-                iter.remove();
+                long curTime = System.nanoTime();
 
-            evictCntr.set(0);
+                while (iter.hasNext() && curTime - iter.next().getValue() > maxTimestampAge)
+                    iter.remove();
+            }
         }
     }
 
