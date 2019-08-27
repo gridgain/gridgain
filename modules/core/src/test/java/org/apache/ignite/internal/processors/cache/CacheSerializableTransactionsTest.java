@@ -108,6 +108,9 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
     private static final int CLIENTS = 3;
 
     /** */
+    public static final int ACCEPTABLE_TRANSACTIONS_RETRIES_CNT = 1_000;
+
+    /** */
     private boolean client;
 
     /** {@inheritDoc} */
@@ -4015,6 +4018,8 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
                         barrier.await();
 
                         for (int i = 0; i < SF.apply(50); i++) {
+                            AtomicInteger retriesCntr = new AtomicInteger();
+
                             while (true) {
                                 try {
                                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -4047,6 +4052,9 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
                                 }
                                 catch (TransactionOptimisticException ignore) {
                                     // Retry.
+                                    if (retriesCntr.incrementAndGet() > ACCEPTABLE_TRANSACTIONS_RETRIES_CNT)
+                                        fail("Trying to fail a little bit sooner then default timeout," +
+                                            " core reason is https://ggsystems.atlassian.net/browse/GG-19679");
                                 }
                             }
                         }
