@@ -454,16 +454,16 @@ public interface IgniteCluster extends ClusterGroup {
     public void active(boolean active);
 
     /**
-     * Checks Ignite grid in read-only mode or not.
+     * Checks Ignite grid is in read-only mode or not.
      *
-     * @return {@code true} if grid is in read-only mode and {@code false} If grid allows data modification operations.
+     * @return {@code True} if grid is in read-only mode and {@code False} otherwise.
      */
     public boolean readOnly();
 
     /**
      * Enable or disable Ignite grid read-only mode.
      *
-     * @param readOnly If {@code true} enable read-only mode. If {@code false} disable read-only mode.
+     * @param readOnly If {@code True} enable read-only mode. If {@code False} disable read-only mode.
      * @throws IgniteException If Ignite grid isn't active.
      */
     public void readOnly(boolean readOnly) throws IgniteException;

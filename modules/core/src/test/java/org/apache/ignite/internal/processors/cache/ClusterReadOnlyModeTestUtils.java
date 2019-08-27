@@ -86,7 +86,7 @@ public class ClusterReadOnlyModeTestUtils {
     /**
      * Asserts that all caches in read-only or in read/write mode on all nodes.
      *
-     * @param readOnly If {@code true} then cache must be in read only mode, else in read/write mode.
+     * @param readOnly If {@code True} then cache must be in read only mode, else in read/write mode.
      * @param cacheNames Checked cache names.
      */
     public static void assertCachesReadOnlyMode(boolean readOnly, Collection<String> cacheNames) {
@@ -133,7 +133,7 @@ public class ClusterReadOnlyModeTestUtils {
     }
 
     /**
-     * @param readOnly If {@code true} then data streamer must fail, else succeed.
+     * @param readOnly If {@code True} then data streamer must fail, else succeed.
      * @param cacheNames Checked cache names.
      */
     public static void assertDataStreamerReadOnlyMode(boolean readOnly, Collection<String> cacheNames) {
