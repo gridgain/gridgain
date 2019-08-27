@@ -14,26 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import static org.springframework.boot.Banner.Mode.OFF;
+package org.apache.ignite.internal.processors.tracing.messages;
 
 /**
- * Web console launcher.
+ * This interface indicates class which able to transfer span.
  */
-@SpringBootApplication
-public class Application {
+public interface SpanTransport {
     /**
-     * @param args Args.
+     * Stored span for transferring.
+     *
+     * @param span Binary view of span.
      */
-    public static void main(String[] args) {
-        SpringApplication app = new SpringApplication(Application.class);
+    void span(byte[] span);
 
-        app.setBannerMode(OFF);
-
-        app.run(args);
-    }
+    /**
+     * @return Binary view of span.
+     */
+    byte[] span();
 }
