@@ -31,14 +31,14 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridCachePartitionedNodeRestartTest.class,
+ /*   GridCachePartitionedNodeRestartTest.class,*/
     GridCachePartitionedOptimisticTxNodeRestartTest.class,
-    GridCacheReplicatedNodeRestartSelfTest.class,
+   /* GridCacheReplicatedNodeRestartSelfTest.class,
     GridCachePartitionedNearDisabledOptimisticTxNodeRestartTest.class,
     IgniteCacheNearRestartRollbackSelfTest.class,
     NearCacheMultithreadedUpdateTest.class,
 
-    IgniteCacheCreateRestartSelfTest.class
+    IgniteCacheCreateRestartSelfTest.class*/
 })
 public class IgniteCacheRestartTestSuite {
 }

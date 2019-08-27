@@ -116,39 +116,441 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         super.testRestartWithTxEightNodesTwoBackups();
     }
 
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_0() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_1() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_2() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_3() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_4() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_5() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_6() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_7() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_8() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_9() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_10() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_11() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_12() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_13() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_14() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_15() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_16() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_17() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_18() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_19() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_20() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_21() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_22() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_23() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_24() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_25() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_26() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_27() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_28() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_29() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_30() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_31() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_32() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_33() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_34() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_35() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_36() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_37() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_38() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_39() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_40() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_41() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_42() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_43() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_44() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_45() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_46() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_47() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_48() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_49() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_50() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_51() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_52() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_53() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_54() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_55() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_56() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_57() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_58() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_59() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_60() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_61() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_62() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_63() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_64() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_65() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_66() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_67() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_68() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_69() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_70() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_71() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_72() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_73() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_74() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_75() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_76() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_77() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_78() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_79() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_80() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_81() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_82() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_83() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_84() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_85() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_86() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_87() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_88() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_89() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_90() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_91() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_92() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_93() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_94() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_95() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_96() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_97() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_98() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_99() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesNoBackups() throws Throwable {
-        super.testRestartWithTxFourNodesNoBackups();
+       // super.testRestartWithTxFourNodesNoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesOneBackups() throws Throwable {
-        super.testRestartWithTxFourNodesOneBackups();
+        //super.testRestartWithTxFourNodesOneBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxSixNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxSixNodesTwoBackups();
+       // super.testRestartWithTxSixNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTenNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxTenNodesTwoBackups();
+      //  super.testRestartWithTxTenNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesNoBackups() throws Throwable {
-        super.testRestartWithTxTwoNodesNoBackups();
+       // super.testRestartWithTxTwoNodesNoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesOneBackup() throws Throwable {
-        super.testRestartWithTxTwoNodesOneBackup();
+       // super.testRestartWithTxTwoNodesOneBackup();
     }
 }
