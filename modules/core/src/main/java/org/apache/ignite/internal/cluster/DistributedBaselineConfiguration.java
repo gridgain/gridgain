@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getString;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty.detachedLongProperty;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
@@ -87,6 +88,7 @@ public class DistributedBaselineConfiguration {
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
 
+        U.debug(log, "System property value in constructor: " + getString(IGNITE_BASELINE_AUTO_ADJUST_ENABLED));
         U.debug(log, "Default baseline auto-adjust enabled=" + dfltEnabled + ", persistenceEnabled=" + persistenceEnabled +
             ", cfg=" + ctx.config().getDataStorageConfiguration());
 
@@ -126,6 +128,8 @@ public class DistributedBaselineConfiguration {
      */
     public void onActivate() throws IgniteCheckedException {
         if (baselineAutoAdjustEnabled.get() == null && isLocalNodeCoordinator(ctx.discovery())) {
+            U.debug(log, "System property value in onActivate: " + getString(IGNITE_BASELINE_AUTO_ADJUST_ENABLED));
+
             boolean dfltEnableVal = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, isCurrentBaselineNew());
 
             //Set default enable flag to cluster only if it is true.
