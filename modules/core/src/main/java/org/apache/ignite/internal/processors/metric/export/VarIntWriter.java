@@ -16,26 +16,56 @@
 
 package org.apache.ignite.internal.processors.metric.export;
 
-public class VarIntByteBuffer {
-
+/**
+ * <p>Supports expandable byte buffer with varint put operations for {@code int} and {@code long} types.</p>
+ * <p>Each put operation moves position forward accordingly to the written type size.</p>
+ */
+public class VarIntWriter {
+    /** Backing byte array. */
     private byte[] arr;
 
+    /** Current position. */
     private int pos;
 
-    public VarIntByteBuffer(byte[] arr) {
-        this.arr = arr;
+    /**
+     * Constructor.
+     *
+     * @param initCap Initial backing byte array capacity.
+     */
+    public VarIntWriter(int initCap) {
+        arr = new byte[initCap];
     }
 
+    /**
+     * Returns current position in backing byte array.
+     */
+    public int position() {
+        return pos;
+    }
+
+    /**
+     * Resets current position in backing byte array to {@code 0}.
+     */
     public void reset() {
         pos = 0;
     }
 
+    /**
+     * Puts boolean value.
+     *
+     * @param val Value.
+     */
     public void putBoolean(boolean val) {
         ensureCapacity(1);
 
         arr[pos++] = (byte)(val ? 1 : 0);
     }
 
+    /**
+     * Puts double value.
+     *
+     * @param val Value.
+     */
     public void putDouble(double val) {
         ensureCapacity(Double.BYTES);
 
@@ -51,6 +81,11 @@ public class VarIntByteBuffer {
         arr[pos++] = (byte)(v);
     }
 
+    /**
+     * Puts integer value in varint format. It can consume from 1 to 5 bytes.
+     *
+     * @param val Value.
+     */
     public void putVarInt(int val) {
         if ((val & (~0 << 7)) == 0) {
             ensureCapacity(1);
@@ -99,6 +134,11 @@ public class VarIntByteBuffer {
         }
     }
 
+    /**
+     * Puts long value in varint format. It can consume form 1 to 10 bytes.
+     *
+     * @param val Value.
+     */
     public void putVarLong(long val) {
         if ((val & (~0L << 7)) == 0) {
             ensureCapacity(1);
@@ -242,63 +282,21 @@ public class VarIntByteBuffer {
         }
     }
 
-    public boolean getBoolean() {
-        return arr[pos++] != 0;
-    }
-
-    public double getDouble() {
-        long val = (((long)arr[pos++]) << 56) |
-                (((long)arr[pos++]) & 0xFF) << 48 |
-                (((long)arr[pos++]) & 0xFF) << 40 |
-                (((long)arr[pos++]) & 0xFF) << 32 |
-                (((long)arr[pos++]) & 0xFF) << 24 |
-                (((long)arr[pos++]) & 0xFF) << 16 |
-                (((long)arr[pos++]) & 0xFF) << 8 |
-                (((long)arr[pos++]) & 0xFF);
-
-        return Double.longBitsToDouble(val);
-    }
-
-    public int getVarInt() {
-        int b, i = 0, res = 0;
-
-        do {
-            b = arr[pos++] & 0xFF;
-
-            res |= ((b & 0x7F) << (7 * i++));
-        }
-        while ((b & 0x80) != 0);
-
-        return res;
-    }
-
-    public long getVarLong() {
-        int i = 0;
-
-        long b, res = 0;
-
-        do {
-            b = arr[pos++] & 0xFF;
-
-            res |= ((b & 0x7F) << (7 * i++));
-        }
-        while ((b & 0x80) != 0);
-
-        return res;
-    }
-
+    /**
+     * Copies data from backing byte array to target array from begining of backing array to the current position.
+     *
+     * @param arr Target byte array.
+     * @param off Traget byte array offset.
+     */
     public void toBytes(byte[] arr, int off) {
         System.arraycopy(this.arr, 0, arr, off, pos);
     }
 
-    public void position(int pos) {
-        this.pos = pos;
-    }
-
-    public int position() {
-        return pos;
-    }
-
+    /**
+     * Doubles size of backing byte array in case of array capacity isn't enough.
+     *
+     * @param len Length.
+     */
     private void ensureCapacity(int len) {
         if (arr.length - pos < len) {
             byte[] tmp = new byte[Math.max(arr.length * 2, arr.length + len)];

@@ -22,6 +22,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_INT_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
@@ -32,55 +34,99 @@ import static org.apache.ignite.internal.util.GridUnsafe.putInt;
 import static org.apache.ignite.internal.util.GridUnsafe.putShort;
 
 /**
- * Schema index: describe all nested schemas. Format for each item:
- * (may this entity should be named as Schema while Schema should be renamed to MetricRegistrySchemaItem and MetricRegistrySchemaItem should be renamed to ValueDescriptor)
+ * <p>
+ * <ul>
+ * Metric schema describes metric data set as:
+ *     <li>
+ *         Items - references to {@link MetricRegistrySchema} instance with metric prefix. Each item represents
+ *         one data block that corresponds to the particular {@link MetricRegistry}.
+ *     </li>
+ *     <li>
+ *         List of {@link MetricRegistrySchema} instances that could be referenced by index. Each list item corresponds
+ *         to one metric source type.
+ *     </li>
+ * </ul>
+ * </p>
  *
- * 0 - short - schema index.
- * 2 - int - prefix size in bytes (k)
- * 6 - byte[k] - prefix bytes
+ * <p>Metric schema is immutable and can be constructed using {@link MetricSchema.Builder}.</p>
  *
- * Items placed sequentially and can be iterated in order to provide convinient way for data fetching.
+ * <p>
+ *     Metric schema can be converted to binary representation. See {@link #toBytes()} and {@link #toBytes(byte[], int)}
+ * methods. And, of course, it can be deserialized from binary representation. See {@link #fromBytes(byte[])} and
+ * {@link #fromBytes(byte[], int, int)} methods.
+ * </p>
  */
 public class MetricSchema {
+    /** Size of registry schema index field. */
     static final int REG_SCHEMA_IDX_SIZE = Short.BYTES;
 
+    /** Size of schema items count field. */
     static final int SCHEMA_ITEM_CNT_SIZE = Short.BYTES;
 
+    /** Size of prefix length field. */
     static final int PREF_BYTES_LEN_SIZE = Integer.BYTES;
 
+    /** Size of registry schemas count field. */
     static final int REG_SCHEMA_CNT_SIZE = Short.BYTES;
 
+    /** Size of registry schema offset field. */
     static final int REG_SCHEMA_OFF_SIZE = Integer.BYTES;
 
+    /** List of items. */
     private final List<MetricSchemaItem> items;
 
+    /** List of used registry schemas. */
     private final List<MetricRegistrySchema> regSchemas;
 
+    /** Size of metric schema in bytes. */
     private final int len;
 
+    /**
+     * Private constructor.
+     *
+     * @param items Items.
+     * @param regSchemas Registry schemas.
+     * @param len Size of metric schema in bytes.
+     */
     private MetricSchema(List<MetricSchemaItem> items, List<MetricRegistrySchema> regSchemas, int len) {
         this.items = items;
         this.regSchemas = regSchemas;
         this.len = len;
     }
 
+    /**
+     * Returns immutable list of metric schema items.
+     *
+     * @return Metric schema items.
+     */
     public List<MetricSchemaItem> items() {
         return Collections.unmodifiableList(items);
     }
 
+    /**
+     * Returns size of metric schema in bytes.
+     *
+     * @return Metric schema size in bytes.
+     */
     public int length() {
         return len;
     }
 
+    /**
+     * Returns metric registry schema for given index.
+     *
+     * @param idx Index.
+     * @return Metric registry schema.
+     */
     public MetricRegistrySchema registrySchema(short idx) {
         return regSchemas.get(idx);
     }
 
-    public int registrySchemas() {
-        return regSchemas.size();
-    }
-
-
+    /**
+     * Converts metric registry schema to binary representation.
+     *
+     * @return Byte array with serialized metric schema.
+     */
     public byte[] toBytes() {
         byte[] arr = new byte[len];
 
@@ -89,6 +135,12 @@ public class MetricSchema {
         return arr;
     }
 
+    /**
+     * Converts metrics registry schema to binary representation which will be placed in given byte array.
+     *
+     * @param arr Target array.
+     * @param off Target array offset.
+     */
     public void toBytes(byte[] arr, int off) {
         if (len > arr.length - off) {
             throw new IllegalArgumentException("Schema can't be converted to byte array. " +
@@ -137,6 +189,14 @@ public class MetricSchema {
         }
     }
 
+    /**
+     * Converts byte representation of the scheme to the high-level representation.
+     *
+     * @param arr Source byte array.
+     * @param off Source byte array offset.
+     * @param len Metric schema size in bytes.
+     * @return {@link MetricSchema} instance.
+     */
     public static MetricSchema fromBytes(byte[] arr, int off, int len) {
         if (len > arr.length - off) {
             throw new IllegalArgumentException("Schema can't be converted from byte array. " +
@@ -196,24 +256,45 @@ public class MetricSchema {
     /**
      * Converts byte representation of the scheme to the high-level representation.
      *
-     * @param arr Byte array with compact schema representation.
-     * @return High-level schema representation.
+     * @param arr Byte array with binary schema representation.
+     * @return {@link MetricSchema} instance.
      */
     public static MetricSchema fromBytes(byte[] arr) {
         return fromBytes(arr, 0, arr.length);
     }
 
-
+    /**
+     * Builder for metric schema creation.
+     */
     public static class Builder {
+        /** Items. */
         private List<MetricSchemaItem> items = new ArrayList<>();
+
+        /** Registry schemas. */
         private List<MetricRegistrySchema> regSchemas = new ArrayList<>();
+
+        /** Index map. */
         private Map<String, Short> idxMap = new LinkedHashMap<>();
+
+        /** Length. */
         private int len;
 
+        /**
+         * Creates new builder instance.
+         *
+         * @return Builder instance.
+         */
         public static MetricSchema.Builder newInstance() {
             return new MetricSchema.Builder();
         }
 
+        /**
+         * Adds item corresponding to particular {@link MetricRegistry}.
+         *
+         * @param type Type of {@link MetricRegistry}.
+         * @param pref Prefix.
+         * @param regSchema Corresponding registry schema.
+         */
         public void add(String type, String pref, MetricRegistrySchema regSchema) {
             if (items == null)
                 throw new IllegalStateException("Builder can't be used twice.");
@@ -239,6 +320,11 @@ public class MetricSchema {
             len += REG_SCHEMA_IDX_SIZE + PREF_BYTES_LEN_SIZE + prefBytes.length;
         }
 
+        /**
+         * Builds metric schema.
+         *
+         * @return Metric schema.
+         */
         public MetricSchema build() {
             if (items == null)
                 throw new IllegalStateException("Builder can't be used twice.");
@@ -252,5 +338,4 @@ public class MetricSchema {
             return schema;
         }
     }
-
 }
