@@ -87,7 +87,8 @@ public class DistributedBaselineConfiguration {
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
 
-        U.debug(log, "Default baseline auto-adjust enabled: " + dfltEnabled);
+        U.debug(log, "Default baseline auto-adjust enabled=" + dfltEnabled + ", persistenceEnabled=" + persistenceEnabled +
+            ", cfg=" + ctx.config().getDataStorageConfiguration());
 
         isp.registerDistributedConfigurationListener(
             dispatcher -> {
