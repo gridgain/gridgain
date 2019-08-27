@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-/** This worker parse to JSON from string. */
-// eslint-disable-next-line no-undef
-onmessage = function(e) {
-    const data = e.data;
+package org.apache.ignite.internal.processors.tracing.messages;
 
-    const res = JSON.parse(data.replace(/([:,\[])(-?[0-9]{15,}(?:\.\d+)?)/g, '$1"$2"'));
+/**
+ * This interface indicates class which able to transfer span.
+ */
+public interface SpanTransport {
+    /**
+     * Stored span for transferring.
+     *
+     * @param span Binary view of span.
+     */
+    void span(byte[] span);
 
-    postMessage(res);
-};
+    /**
+     * @return Binary view of span.
+     */
+    byte[] span();
+}
