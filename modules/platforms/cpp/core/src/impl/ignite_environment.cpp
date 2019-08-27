@@ -114,6 +114,7 @@ namespace ignite
                 if (nodes.find(Id) != nodes.end())
                     return nodes.at(Id);
 
+                std::cout << "MYLOGTAG:" << "GetNode() return = NULL " << "Id = " << Id << std::endl;
                 return NULL;
             }
         };

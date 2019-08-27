@@ -125,12 +125,19 @@ public class PlatformAffinity extends PlatformAbstractTarget {
 
                 Object key = reader.readObjectDetached();
 
+                System.out.println("MYLOGTAGJAVA:OP_IS_PRIMARY: uid = " + nodeId + "key = " + key);
+
                 ClusterNode node = discovery.node(nodeId);
 
-                if (node == null)
+                if (node == null) {
+                    System.out.println("MYLOGTAGJAVA:OP_IS_PRIMARY: node == NULL");
                     return FALSE;
+                }
 
-                return aff.isPrimary(node, key) ? TRUE : FALSE;
+                long ret = aff.isPrimary(node, key) ? TRUE : FALSE;
+                System.out.println("MYLOGTAGJAVA:OP_IS_PRIMARY: ret = " + ret);
+                
+                return ret;
             }
 
             case OP_IS_BACKUP: {
@@ -215,9 +222,9 @@ public class PlatformAffinity extends PlatformAbstractTarget {
 
             case OP_MAP_KEY_TO_NODE: {
                 Object key = reader.readObjectDetached();
-
+                System.out.println("MYLOGTAGJAVA:OP_MAP_KEY_TO_NODE: key = " + key);
                 ClusterNode node = aff.mapKeyToNode(key);
-
+                System.out.println("MYLOGTAGJAVA:OP_MAP_KEY_TO_NODE: nodeId = " + node.id());
                 platformCtx.writeNode(writer, node);
 
                 break;
@@ -236,6 +243,7 @@ public class PlatformAffinity extends PlatformAbstractTarget {
             case OP_MAP_KEY_TO_PRIMARY_AND_BACKUPS: {
                 Object key = reader.readObjectDetached();
 
+                System.out.println("MYLOGTAGJAVA:OP_MAP_KEY_TO_PRIMARY_AND_BACKUPS: key = " + key);
                 platformCtx.writeNodes(writer, aff.mapKeyToPrimaryAndBackups(key));
 
                 break;

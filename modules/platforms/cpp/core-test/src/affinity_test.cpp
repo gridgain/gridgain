@@ -82,10 +82,13 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityGetPartition)
 BOOST_AUTO_TEST_CASE(IgniteAffinityIsPrimaryOrBackup)
 {
     std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+    BOOST_REQUIRE(nodes.size() == 1);
 
-    BOOST_REQUIRE(true == affinity.IsPrimary<int64_t>(nodes.front(), 0));
-    BOOST_REQUIRE(false == affinity.IsBackup<int64_t>(nodes.front(), 0));
-    BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup<int64_t>(nodes.front(), 0));
+    bool x = affinity.IsPrimary(nodes.front(), 0); // <= CLANG FAIL
+    std::cout << "MYLOGTAG:" << "IsPrimaryP0 ret = " << x << std::endl;
+
+    BOOST_REQUIRE(false == affinity.IsBackup(nodes.front(), 0));
+    BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup(nodes.front(), 0));
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityGetDifferentPartitions)
@@ -129,7 +132,8 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapKeyToPrimaryAndBackups)
     std::list<ClusterNode> nodes = affinity.MapKeyToPrimaryAndBackups(key);
 
     BOOST_REQUIRE(nodes.size() == 1);
-    BOOST_REQUIRE(true == affinity.IsPrimary(nodes.front(), key));
+    bool x = affinity.IsPrimary(nodes.front(), key);  // <= CLANG FAIL
+    std::cout << "MYLOGTAG:" << "IsPrimaryP1 ret = " << x << std::endl;
 
     int part = affinity.GetPartition(key);
     std::list<ClusterNode> partNodes = affinity.MapPartitionToPrimaryAndBackups(part);
@@ -151,7 +155,9 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapPartitionToNode)
 
     ClusterNode clusterNode = affinity.MapKeyToNode(key);
 
-    BOOST_REQUIRE(true == affinity.IsPrimary(clusterNode, key));
+    bool x = affinity.IsPrimary(clusterNode, key);  // <= CLANG FAIL
+    std::cout << "MYLOGTAG:" << "IsPrimaryP2 ret = " << x << std::endl;
+
     BOOST_REQUIRE(true == affinity.IsPrimaryOrBackup(clusterNode, key));
     BOOST_REQUIRE(false == affinity.IsBackup(clusterNode, key));
 

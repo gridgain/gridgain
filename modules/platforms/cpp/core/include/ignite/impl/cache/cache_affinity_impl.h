@@ -126,12 +126,16 @@ namespace ignite
                 template <typename K>
                 bool IsPrimary(ignite::cluster::ClusterNode node, K key)
                 {
+                    std::cout << "MYLOGTAG:" << "IsPrimary(node = " << node.GetId() << " key = " << (key) << ")" << std::endl;
+
                     IgniteError err;
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
-                    bool ret = OutOp(Command::IS_PRIMARY, inOp, err);
+                    bool ret = OutOpDEBUG(Command::IS_PRIMARY, inOp, err);
 
                     IgniteError::ThrowIfNeeded(err);
+
+                    std::cout << "MYLOGTAG:" << "IsPrimary(node = " << node.GetId() << " key = " << (key) << ")" "ret = " << ret << std::endl;
 
                     return ret;
                 }
@@ -290,6 +294,8 @@ namespace ignite
                 template <typename TK>
                 ignite::cluster::ClusterNode MapKeyToNode(TK key)
                 {
+                    std::cout << "MYLOGTAG:" << "MapKeyToNode(key = " << key << ")" << std::endl;
+
                     Guid nodeId;
                     In1Operation<TK> inOp(key);
                     Out1Operation<Guid> outOp(nodeId);
@@ -298,7 +304,15 @@ namespace ignite
                     InteropTarget::OutInOp(Command::MAP_KEY_TO_NODE, inOp, outOp, err);
                     IgniteError::ThrowIfNeeded(err);
 
-                    return GetEnvironment().GetNode(nodeId);
+                    std::cout << "MYLOGTAG:" << "MapKeyToNode:nodeId = " << nodeId << std::endl;
+
+                    common::concurrent::SharedPointer < ignite::impl::cluster::ClusterNodeImpl > pnode = GetEnvironment().GetNode(nodeId);
+                    if (!pnode.IsValid())
+                        std::cout << "MYLOGTAG:" << "MapKeyToNode:pnode INVALID" << std::endl;
+
+                    ClusterNode node(pnode);
+
+                    return node;
                 }
 
                 /**
@@ -322,6 +336,8 @@ namespace ignite
 
                     out.Synchronize();
 
+                    std::cout << "MYLOGTAG:" << "MapKeyToPrimaryAndBackups( key = " << key << ")" << std::endl;
+
                     IgniteError err;
                     InStreamOutStream(Command::MAP_KEY_TO_PRIMARY_AND_BACKUPS, *memIn.Get(), *memOut.Get(), err);
                     IgniteError::ThrowIfNeeded(err);
@@ -331,8 +347,15 @@ namespace ignite
 
                     std::list<ignite::cluster::ClusterNode> ret;
                     int32_t cnt = reader.ReadInt32();
-                    for (int32_t i = 0; i < cnt; i++)
-                        ret.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
+                    std::cout << "MYLOGTAG:" << "MapKeyToPrimaryAndBackups:cnt = " << cnt << std::endl;
+                    for (int32_t i = 0; i < cnt; i++) {
+                        common::concurrent::SharedPointer < ignite::impl::cluster::ClusterNodeImpl > pnode = GetEnvironment().GetNode(reader.ReadGuid());
+                        if (!pnode.IsValid())
+                            std::cout << "MYLOGTAG:" << "MapKeyToPrimaryAndBackups:pnode INVALID" << std::endl;
+
+                        ignite::cluster::ClusterNode node(pnode);
+                        ret.push_back(node);
+                    }
 
                     return ret;
                 }

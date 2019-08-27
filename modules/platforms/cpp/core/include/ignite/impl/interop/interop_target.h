@@ -82,6 +82,7 @@ namespace ignite
                  * @return Result.
                  */
                 bool OutOp(int32_t opType, InputOperation& inOp, IgniteError& err);
+                bool OutOpDEBUG(int32_t opType, InputOperation& inOp, IgniteError& err);
 
                 /**
                  * Internal out operation.

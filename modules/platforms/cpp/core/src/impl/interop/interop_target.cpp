@@ -115,6 +115,34 @@ namespace ignite
                 return false;
             }
 
+            bool InteropTarget::OutOpDEBUG(int32_t opType, InputOperation& inOp, IgniteError& err)
+            {
+                JniErrorInfo jniErr;
+
+                SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
+
+                int64_t outPtr = WriteTo(mem.Get(), inOp, err);
+
+                if (outPtr)
+                {
+                    long long res = env.Get()->Context()->TargetInStreamOutLong(javaRef, opType, outPtr, &jniErr);
+
+                    IgniteError::SetError(jniErr.code, jniErr.errCls, jniErr.errMsg, err);
+
+                    std::cout << "MYLOGTAG:" << "OutOpDEBUG(opType= " << opType << ") " << "res = " << res << " jniErr.code = " << ((int)jniErr.code) << std::endl;
+
+                    if (jniErr.code == IGNITE_JNI_ERR_SUCCESS) {
+                        std::cout << "MYLOGTAG:" << "OutOpDEBUG(opType= " << opType << ") " << "return = " << (res == 1) << std::endl;
+
+                        return res == 1;
+                    }
+                } else {
+                    std::cout << "MYLOGTAG:" << "OutOpDEBUG(opType= " << opType << ") " << "outPtr == NULL" << std::endl;
+                }
+
+                return false;
+            }
+
             bool InteropTarget::OutOp(int32_t opType, IgniteError& err)
             {
                 JniErrorInfo jniErr;
