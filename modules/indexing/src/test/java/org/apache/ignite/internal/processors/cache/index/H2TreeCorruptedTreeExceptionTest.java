@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -29,9 +28,9 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.stat.IoStatisticsHolder;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
@@ -50,7 +49,7 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener logListener = new MessageOrderLogListener(
-        format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s.*", IDX_NAME, GRP_NAME)
+        ".*?Tree is corrupted.*?cacheId=.*?, cacheName=SQL_PUBLIC_A, indexName=" + IDX_NAME + ", groupName=" + GRP_NAME + ".*"
     );
 
     /** {@inheritDoc} */
@@ -127,22 +126,64 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
         srv.cluster().active(true);
 
-        IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
+        srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create table a (id integer primary key, a integer) with \"CACHE_GROUP=" + GRP_NAME + "\"")).getAll();
-        cache.query(new SqlFieldsQuery("create index " + IDX_NAME + " on a(a)")).getAll();
+        GridQueryProcessor qryProc = srv.context().query();
+
+        qryProc.querySqlFields(new SqlFieldsQuery("create table a (id integer primary key, a integer) with \"CACHE_GROUP=" + GRP_NAME + "\""), true).getAll();
+        qryProc.querySqlFields(new SqlFieldsQuery("create index " + IDX_NAME + " on a(a)"), true).getAll();
 
         failWithCorruptTree.set(true);
 
         try {
-            cache.query(new SqlFieldsQuery("insert into a(id, a) values (11, 1)"));
+            qryProc.querySqlFields(new SqlFieldsQuery("insert into a(id, a) values (11, 1)"), true).getAll();
 
             fail("Cache operations are expected to fail");
         }
         catch (Throwable e) {
-            assertTrue(X.hasCause(e, CorruptedTreeException.class));
+            Throwable ex = findCauseCorruptedTreeExceptionIfExists(e, 0);
+
+            assertTrue(ex != null && ex instanceof CorruptedTreeException);
         }
 
         assertTrue(logListener.check());
+    }
+
+    /**
+     * Finds cause CorruptedTreeException between causes and suppressed exceptions of given exception.
+     *
+     * @param e Exception.
+     * @param depth Depth to limit calls.
+     * @return Cause CorruptedTreeException.
+     */
+    private Throwable findCauseCorruptedTreeExceptionIfExists(Throwable e, int depth) {
+        if (depth == 10)
+            return null; //limit search
+
+        Throwable res;
+
+        Throwable ex = e.getCause();
+
+        if (ex == null || ex instanceof CorruptedTreeException)
+            res = ex;
+        else
+            res = findCauseCorruptedTreeExceptionIfExists(ex, depth + 1);
+
+        if (res != null)
+            return res;
+
+        Throwable[] suppressed = e.getSuppressed();
+
+        for (Throwable s : suppressed) {
+            if (s instanceof CorruptedTreeException)
+                return s;
+
+            res = findCauseCorruptedTreeExceptionIfExists(s, depth + 1);
+
+            if (res instanceof CorruptedTreeException)
+                return res;
+        }
+
+        return res;
     }
 }
