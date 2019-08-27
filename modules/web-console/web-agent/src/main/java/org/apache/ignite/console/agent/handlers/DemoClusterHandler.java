@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.rest.RestResult;
 import org.apache.ignite.console.demo.AgentClusterDemo;
@@ -35,10 +34,8 @@ import org.apache.ignite.internal.processors.rest.handlers.top.GridTopologyComma
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
 import org.apache.ignite.internal.util.typedef.F;
 
-import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOGY;
-import static org.apache.ignite.internal.visor.util.VisorTaskUtils.sortAddresses;
 
 /**
  * API to transfer topology from demo cluster to Web Console.
@@ -93,10 +90,12 @@ public class DemoClusterHandler extends AbstractClusterHandler{
         else {
             top = new TopologySnapshot();
             
-            top.setId(DEMO_CLUSTER_ID);
-            top.setName(DEMO_CLUSTER_NAME);
             top.setClusterVersion(VER_STR);
         }
+
+        top.setId(DEMO_CLUSTER_ID);
+        top.setName(DEMO_CLUSTER_NAME);
+        top.setDemo(true);
 
         return top;
     }

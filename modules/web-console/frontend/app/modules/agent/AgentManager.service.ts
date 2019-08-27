@@ -184,6 +184,8 @@ export default class AgentManager {
     clusterVersion: string;
 
     indexing: boolean;
+    ruStatus: boolean;
+    snapshotChainMode: boolean;
 
     connectionSbj = new BehaviorSubject(new ConnectionState());
 
@@ -248,8 +250,14 @@ export default class AgentManager {
         });
 
         this.currentCluster$.pipe(
-            tap(({cluster}) => this.indexing = this.featureSupported(cluster, AgentTypes.IgniteFeatures.INDEXING))
-        );
+            map(({ cluster }) => cluster),
+            filter((cluster) => Boolean(cluster)),
+            tap((cluster) => {
+                this.indexing = this.featureSupported(cluster, AgentTypes.IgniteFeatures.INDEXING);
+                this.ruStatus = this.featureSupported(cluster, AgentTypes.IgniteFeatures.WC_ROLLING_UPGRADE_STATUS);
+                this.snapshotChainMode = this.featureSupported(cluster, AgentTypes.IgniteFeatures.WC_SNAPSHOT_CHAIN_MODE);
+            })
+        ).subscribe();
     }
 
     isDemoMode() {

@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -258,7 +259,7 @@ public class TopologySnapshot {
     /**
      * @return Cluster nodes IDs.
      */
-    public Collection<UUID> nids() {
+    public Set<UUID> nids() {
         return nodes.keySet();
     }
 
@@ -351,7 +352,7 @@ public class TopologySnapshot {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(id, nids(), active, name);
     }
 
     /** {@inheritDoc} */
