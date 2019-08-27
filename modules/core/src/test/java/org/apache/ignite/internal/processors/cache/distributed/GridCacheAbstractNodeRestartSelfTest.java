@@ -51,8 +51,10 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  * Test node restart.
@@ -758,7 +760,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
                                 try {
                                     IgniteTransactions txs = ignite.transactions();
 
-                                    try (Transaction tx = txs.txStart(txConcurrency(), REPEATABLE_READ)) {
+                                    try (Transaction tx = txs.txStart(OPTIMISTIC, SERIALIZABLE)) {
                                         c = txCntr.incrementAndGet();
 
                                         if (c % LOG_FREQ == 0) {
