@@ -166,6 +166,18 @@ public class RecommendationTrainer {
             generateRandomVectorForEach(subjects, trainerEnvironment.randomNumbersGenerator()) :
             new HashMap<>(mdl.getSubjMatrix());
 
+        if (mdl != null) {
+            for (O o : objects) {
+                if (!objMatrix.containsKey(o))
+                    objMatrix.put(o, randomVector(k, trainerEnvironment.randomNumbersGenerator()));
+            }
+
+            for (S s : subjects) {
+                if (!subjMatrix.containsKey(s))
+                    subjMatrix.put(s, randomVector(k, trainerEnvironment.randomNumbersGenerator()));
+            }
+        }
+
         // SGD steps.
         for (int i = 0; maxIterations == -1 || i < maxIterations; i++) {
             int seed = i;
