@@ -95,7 +95,7 @@ import {states} from './states';
         ReactiveFormsModule,
         UpgradeModule,
         TranslateModule.forRoot(),
-        UIRouterUpgradeModule.forRoot({states}),
+        UIRouterUpgradeModule.forRoot(),
         NgxPopperModule.forRoot({
             applyClass: 'ignite-popper',
             appendTo: 'body',
@@ -113,9 +113,10 @@ import {states} from './states';
 export class IgniteWebConsoleModule {
     static parameters = [[new Inject(UIRouter)], [new Inject(TranslateService)]];
 
-    constructor(private router: UIRouter, translate: TranslateService) {
+    constructor(router: UIRouter, translate: TranslateService) {
         translate.setTranslation('en', defaultLanguage);
         translate.use('en');
+        states(translate).subscribe((s) => router.stateRegistry.register(s));
     }
 
     ngDoBootstrap() {}
