@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.rest.protocols.tcp.redis;
 
+import org.junit.Test;
 import redis.clients.jedis.Jedis;
 
 /**
@@ -27,6 +28,7 @@ public class RedisProtocolStringAtomicDatastructuresSelfTest extends RedisCommon
      *
      * @throws Exception If failed.
      */
+    @Test
     public void testAtomicCommandsTopologyChange() throws Exception {
         try (Jedis jedis = pool.getResource()) {
             int size = grid(0).cachesx().size();
