@@ -310,7 +310,7 @@ namespace ignite
                     if (!pnode.IsValid())
                         std::cout << "MYLOGTAG:" << "MapKeyToNode:pnode INVALID" << std::endl;
 
-                    ClusterNode node(pnode);
+                    ignite::cluster::ClusterNode node(pnode);
 
                     return node;
                 }
