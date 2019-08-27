@@ -3271,7 +3271,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 log.error("Failed processing response", e);
 
-                e.printStackTrace();
+                throw e;
             }
         }
         else
