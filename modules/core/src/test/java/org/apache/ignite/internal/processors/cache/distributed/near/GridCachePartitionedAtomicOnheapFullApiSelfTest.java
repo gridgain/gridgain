@@ -28,9 +28,4 @@ public class GridCachePartitionedAtomicOnheapFullApiSelfTest extends GridCachePa
     @Override protected boolean txEnabled() {
         return false;
     }
-
-    /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
 }

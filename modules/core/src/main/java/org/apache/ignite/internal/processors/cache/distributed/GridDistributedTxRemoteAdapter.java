@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -330,7 +329,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
             try {
                 // Handle explicit locks.
-                GridCacheVersion doneVer = txEntry.explicitVersion() != null ? txEntry.explicitVersion() : xidVer;
+                GridCacheVersion doneVer = xidVer;
 
                 entry.doneRemote(doneVer, baseVer, pendingVers, committedVers, rolledbackVers, isSystemInvalidate());
 
@@ -447,7 +446,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                     assert entry != null : "Missing cached entry for transaction entry: " + txEntry;
 
                     try {
-                        GridCacheVersion ver = txEntry.explicitVersion() != null ? txEntry.explicitVersion() : xidVer;
+                        GridCacheVersion ver = xidVer;
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
@@ -1027,29 +1026,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     /** {@inheritDoc} */
     @Override public void commitError(Throwable e) {
         // No-op.
-    }
-
-    /**
-     * Adds explicit version if there is one.
-     *
-     * @param e Transaction entry.
-     */
-    protected void addExplicit(IgniteTxEntry e) {
-        if (e.explicitVersion() != null) {
-            if (explicitVers == null)
-                explicitVers = new LinkedList<>();
-
-            if (!explicitVers.contains(e.explicitVersion())) {
-                explicitVers.add(e.explicitVersion());
-
-                if (log.isDebugEnabled())
-                    log.debug("Added explicit version to transaction [explicitVer=" + e.explicitVersion() +
-                        ", tx=" + this + ']');
-
-                // Register alternate version with TM.
-                cctx.tm().addAlternateVersion(e.explicitVersion(), this);
-            }
-        }
     }
 
     /** {@inheritDoc} */

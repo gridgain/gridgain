@@ -53,9 +53,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
     private static final int IMPLICIT_SINGLE_FLAG_MASK = 0x04;
 
     /** */
-    private static final int EXPLICIT_LOCK_FLAG_MASK = 0x08;
-
-    /** */
     private static final int ALLOW_WAIT_TOP_FUT_FLAG_MASK = 0x10;
 
     /** Recovery value flag. */
@@ -104,7 +101,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
      * @param onePhaseCommit One phase commit flag.
      * @param retVal Return value flag.
      * @param implicitSingle Implicit single flag.
-     * @param explicitLock Explicit lock flag.
      * @param subjId Subject ID.
      * @param taskNameHash Task name hash.
      * @param firstClientReq {@code True} if first optimistic tx prepare request sent from client node.
@@ -124,7 +120,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
         boolean onePhaseCommit,
         boolean retVal,
         boolean implicitSingle,
-        boolean explicitLock,
         @Nullable UUID subjId,
         int taskNameHash,
         boolean firstClientReq,
@@ -154,7 +149,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
 
         setFlag(near, NEAR_FLAG_MASK);
         setFlag(implicitSingle, IMPLICIT_SINGLE_FLAG_MASK);
-        setFlag(explicitLock, EXPLICIT_LOCK_FLAG_MASK);
         setFlag(firstClientReq, FIRST_CLIENT_REQ_FLAG_MASK);
         setFlag(allowWaitTopFut, ALLOW_WAIT_TOP_FUT_FLAG_MASK);
         setFlag(recovery, RECOVERY_FLAG_MASK);
@@ -236,13 +230,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
      */
     public final boolean implicitSingle() {
         return isFlag(IMPLICIT_SINGLE_FLAG_MASK);
-    }
-
-    /**
-     * @return Explicit lock flag.
-     */
-    public final boolean explicitLock() {
-        return isFlag(EXPLICIT_LOCK_FLAG_MASK);
     }
 
     /**
@@ -477,8 +464,6 @@ public class GridNearTxPrepareRequest extends GridDistributedTxPrepareRequest {
             flags.append("[firstClientReq]");
         if (implicitSingle())
             flags.append("[implicitSingle]");
-        if (explicitLock())
-            flags.append("[explicitLock]");
 
         return S.toString(GridNearTxPrepareRequest.class, this,
             "flags", flags.toString(),

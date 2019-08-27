@@ -72,8 +72,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
      * @param ver Lock version.
      * @param topVer Topology version.
      * @param timeout Timeout to acquire lock.
-     * @param reenter Reentry flag.
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return New candidate.
@@ -84,10 +82,9 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         GridCacheVersion ver,
         AffinityTopologyVersion topVer,
         long timeout,
-        boolean reenter,
-        boolean tx,
         boolean implicitSingle,
-        boolean read) throws GridCacheEntryRemovedException {
+        boolean read
+    ) throws GridCacheEntryRemovedException {
         GridCacheMvccCandidate cand;
         CacheLockCandidates prev;
         CacheLockCandidates owner;
@@ -115,8 +112,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 threadId,
                 ver,
                 timeout,
-                reenter,
-                tx,
                 implicitSingle,
                 read);
 
@@ -139,7 +134,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         }
 
         // Don't link reentries.
-        if (cand != null && !cand.reentry())
+        if (cand != null)
             // Link with other candidates in the same thread.
             cctx.mvcc().addNext(cctx, cand);
 
@@ -158,8 +153,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         Collection<GridCacheMvccCandidate> cands = new ArrayList<>(rmts.size());
 
         for (GridCacheMvccCandidate c : rmts) {
-            assert !c.reentry();
-
             // Don't include reentries.
             if (!U.containsObjectArray(exclude, c.version()))
                 cands.add(c);
@@ -175,7 +168,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
      * @param otherNodeId Other node ID.
      * @param threadId Thread ID.
      * @param ver Lock version.
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param owned Owned candidate version.
      * @throws GridDistributedLockCancelledException If lock has been canceled.
@@ -186,7 +178,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         @Nullable UUID otherNodeId,
         long threadId,
         GridCacheVersion ver,
-        boolean tx,
         boolean implicitSingle,
         @Nullable GridCacheVersion owned
     ) throws GridDistributedLockCancelledException, GridCacheEntryRemovedException {
@@ -221,7 +212,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 otherNodeId,
                 threadId,
                 ver,
-                tx,
                 implicitSingle,
                 /*near-local*/false
             );
@@ -241,55 +231,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
             if (emptyAfter)
                 mvccExtras(null);
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-    }
-
-    /**
-     * Removes all lock candidates for node.
-     *
-     * @param nodeId ID of node to remove locks from.
-     * @throws GridCacheEntryRemovedException If entry was removed.
-     */
-    public void removeExplicitNodeLocks(UUID nodeId) throws GridCacheEntryRemovedException {
-        CacheLockCandidates prev = null;
-        CacheLockCandidates owner = null;
-
-        CacheObject val = null;
-
-        lockEntry();
-
-        try {
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc != null) {
-                prev = mvcc.allOwners();
-
-                boolean emptyBefore = mvcc.isEmpty();
-
-                owner = mvcc.removeExplicitNodeCandidates(nodeId);
-
-                boolean emptyAfter = mvcc.isEmpty();
-
-                checkCallbacks(emptyBefore, emptyAfter);
-
-                val = this.val;
-
-                refreshRemotes();
-
-                if (emptyAfter) {
-                    mvccExtras(null);
-
-                    onUnlock();
-                }
-            }
         }
         finally {
             unlockEntry();
@@ -426,9 +367,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         if (log.isDebugEnabled())
             log.debug("Removed lock candidate from entry [doomed=" + doomed + ", owner=" + owner + ", prev=" + prev +
                 ", entry=" + this + ']');
-
-        if (doomed != null && doomed.nearLocal())
-            cctx.mvcc().removeExplicitLock(doomed);
 
         if (doomed != null)
             checkThreadChain(doomed);
@@ -693,8 +631,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 tx.xidVersion(),
                 tx.topologyVersion(),
                 timeout,
-                /*reenter*/false,
-                /*tx*/true,
                 tx.implicitSingle(),
                 read) != null;
 
@@ -704,7 +640,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 tx.otherNodeId(),
                 tx.threadId(),
                 tx.xidVersion(),
-                /*tx*/true,
                 tx.implicitSingle(),
                 tx.ownedVersion(txKey())
             );

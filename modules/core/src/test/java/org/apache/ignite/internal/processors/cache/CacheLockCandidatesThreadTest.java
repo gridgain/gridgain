@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -24,6 +25,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import java.util.Map;
@@ -31,13 +33,14 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.Lock;
+
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.*;
 
 /**
  * Tests locking of thread of candidates (see GG-17364)
  */
 public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
-
     /** */
     private static final String DEFAULT_CACHE_NAME = "default";
 
@@ -81,7 +84,7 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
 
             final IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-            final String triggerKey = "" + ThreadLocalRandom.current().nextInt();
+            final String triggerKey = String.valueOf(ThreadLocalRandom.current().nextInt());
 
             System.out.println("Trigger: " + triggerKey);
 
@@ -89,20 +92,22 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
 
             IgniteInternalFuture<Object> future = GridTestUtils.runAsync(new Callable<Object>() {
                 @Override public Object call() throws Exception {
-                    Lock lock = cache.lock(triggerKey);
-                    try {
-                        lock.lock();
+                    IgniteTransactions transactions = grid(0).transactions();
+
+                    try (Transaction ignore = transactions.txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                        // PESSIMISTIC transaction will acquire a lock on get.
+                        cache.get(triggerKey);
 
                         System.out.println("Trigger is locked");
 
                         locked.countDown();
 
                         unlock.await();
-                    } finally {
-                        lock.unlock();
-
+                    }
+                    finally {
                         System.out.println("Trigger is unlocked");
                     }
+
 
                     return null;
                 }

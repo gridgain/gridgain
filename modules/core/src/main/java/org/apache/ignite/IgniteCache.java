@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
@@ -76,7 +74,6 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
  * <ul>
  * <li>Ability to perform basic atomic Map-like operations available on {@code JCache} API.</li>
  * <li>Ability to bulk load cache via {@link #loadCache(IgniteBiPredicate, Object...)} method.
- * <li>Distributed lock functionality via {@link #lock(Object)} methods.</li>
  * <li>Ability to query cache using Predicate, SQL, and Text queries via {@link #query(Query)} method.</li>
  * <li>Ability to collect cache and query metrics.</li>
  * <li>Ability to force partition rebalancing via {@link #rebalance()} methopd
@@ -309,45 +306,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V> {
      * @throws TransactionException If operation within transaction is failed.
      */
     public IgniteFuture<V> getAndPutIfAbsentAsync(K key, V val) throws CacheException, TransactionException;
-
-    /**
-     * Creates a {@link Lock} instance associated with passed key.
-     * This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-     * Returned lock does not support {@link Lock#newCondition()} method,
-     * other methods defined in {@link Lock} are supported.
-     *
-     * @param key Key for lock.
-     * @return New lock instance associated with passed key.
-     * @see Lock#lock()
-     * @see Lock#tryLock(long, TimeUnit)
-     */
-    public Lock lock(K key);
-
-    /**
-     * Creates a {@link Lock} instance associated with passed keys.
-     * This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-     * Returned lock does not support {@link Lock#newCondition()} method,
-     * other methods defined in {@link Lock} are supported.
-     *
-     * @param keys Keys for lock.
-     * @return New lock instance associated with passed key.
-     * @see Lock#lock()
-     * @see Lock#tryLock(long, TimeUnit)
-     */
-    public Lock lockAll(Collection<? extends K> keys);
-
-    /**
-     * Checks if specified key is locked.
-     * <p>
-     * This is a local in-VM operation and does not involve any network trips
-     * or access to persistent storage in any way.
-     *
-     * @param key Key to check.
-     * @param byCurrThread If {@code true} method will check that current thread owns a lock on this key, other vise
-     *     will check that any thread on any node owns a lock on this key.
-     * @return {@code True} if lock is owned by some node.
-     */
-    public boolean isLocalLocked(K key, boolean byCurrThread);
 
     /**
      * Queries cache. Accepts any subclass of {@link Query} interface.

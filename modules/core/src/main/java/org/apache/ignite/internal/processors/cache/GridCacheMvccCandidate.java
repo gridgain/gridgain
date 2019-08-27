@@ -43,10 +43,8 @@ import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.OWNER;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.READY;
-import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.REENTRY;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.REMOVED;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.SINGLE_IMPLICIT;
-import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.TX;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.USED;
 
 /**
@@ -83,9 +81,6 @@ public class GridCacheMvccCandidate implements Externalizable,
     @SuppressWarnings( {"TransientFieldNotInitialized"})
     @GridToStringInclude
     private transient volatile AffinityTopologyVersion topVer = AffinityTopologyVersion.NONE;
-
-    /** Linked reentry. */
-    private GridCacheMvccCandidate reentry;
 
     /** Previous lock for the thread. */
     @GridToStringExclude
@@ -135,8 +130,6 @@ public class GridCacheMvccCandidate implements Externalizable,
      * @param threadId Requesting thread ID.
      * @param ver Cache version.
      * @param loc {@code True} if the lock is local.
-     * @param reentry {@code True} if candidate is for reentry.
-     * @param tx Transaction flag.
      * @param singleImplicit Single-key-implicit-transaction flag.
      * @param nearLoc Near-local flag.
      * @param dhtLoc DHT local flag.
@@ -151,8 +144,6 @@ public class GridCacheMvccCandidate implements Externalizable,
         long threadId,
         GridCacheVersion ver,
         boolean loc,
-        boolean reentry,
-        boolean tx,
         boolean singleImplicit,
         boolean nearLoc,
         boolean dhtLoc,
@@ -172,8 +163,6 @@ public class GridCacheMvccCandidate implements Externalizable,
         this.serOrder = serOrder;
 
         mask(LOCAL, loc);
-        mask(REENTRY, reentry);
-        mask(TX, tx);
         mask(SINGLE_IMPLICIT, singleImplicit);
         mask(NEAR_LOCAL, nearLoc);
         mask(DHT_LOCAL, dhtLoc);
@@ -218,54 +207,6 @@ public class GridCacheMvccCandidate implements Externalizable,
      */
     public void topologyVersion(AffinityTopologyVersion topVer) {
         this.topVer = topVer;
-    }
-
-    /**
-     * @return Reentry candidate.
-     */
-    public GridCacheMvccCandidate reenter() {
-        GridCacheMvccCandidate old = reentry;
-
-        GridCacheMvccCandidate reentry = new GridCacheMvccCandidate(
-            parent,
-            nodeId,
-            otherNodeId,
-            otherVer,
-            threadId,
-            ver,
-            local(),
-            /*reentry*/true,
-            tx(),
-            singleImplicit(),
-            nearLocal(),
-            dhtLocal(),
-            serializableOrder(),
-            read());
-
-        reentry.topVer = topVer;
-
-        if (old != null)
-            reentry.reentry = old;
-
-        this.reentry = reentry;
-
-        return reentry;
-    }
-
-    /**
-     * @return Removed reentry candidate or {@code null}.
-     */
-    @Nullable public GridCacheMvccCandidate unenter() {
-        if (reentry != null) {
-            GridCacheMvccCandidate old = reentry;
-
-            // Link to next.
-            reentry = reentry.reentry;
-
-            return old;
-        }
-
-        return null;
     }
 
     /**
@@ -406,13 +347,6 @@ public class GridCacheMvccCandidate implements Externalizable,
     }
 
     /**
-     * @return {@code True} if transaction flag is set.
-     */
-    public boolean tx() {
-        return TX.get(flags());
-    }
-
-    /**
      * @return {@code True} if implicit transaction.
      */
     public boolean singleImplicit() {
@@ -452,20 +386,6 @@ public class GridCacheMvccCandidate implements Externalizable,
      */
     public boolean read() {
         return READ.get(flags());
-    }
-
-    /**
-     * @return {@code True} if this candidate is a reentry.
-     */
-    public boolean reentry() {
-        return REENTRY.get(flags());
-    }
-
-    /**
-     * Sets reentry flag.
-     */
-    public void setReentry() {
-        mask(REENTRY, true);
     }
 
     /**
@@ -618,7 +538,6 @@ public class GridCacheMvccCandidate implements Externalizable,
 
         mask(OWNER, OWNER.get(flags));
         mask(USED, USED.get(flags));
-        mask(TX, TX.get(flags));
     }
 
     /** {@inheritDoc} */
@@ -682,13 +601,7 @@ public class GridCacheMvccCandidate implements Externalizable,
         READY(0x04),
 
         /** */
-        REENTRY(0x08),
-
-        /** */
         USED(0x10),
-
-        /** */
-        TX(0x40),
 
         /** */
         SINGLE_IMPLICIT(0x80),

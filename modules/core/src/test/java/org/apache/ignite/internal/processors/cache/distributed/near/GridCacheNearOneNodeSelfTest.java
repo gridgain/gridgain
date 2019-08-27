@@ -18,9 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -194,106 +192,6 @@ public class GridCacheNearOneNodeSelfTest extends GridCommonAbstractTest {
 
         assertEquals(2, dht.size());
         assertEquals(2, dht.size());
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testSingleLockPut() throws Exception {
-        IgniteCache<Integer, String> near = jcache();
-
-        Lock lock = near.lock(1);
-
-        lock.lock();
-
-        try {
-            near.put(1, "1");
-            near.put(2, "2");
-
-            String one = near.getAndPut(1, "3");
-
-            assertNotNull(one);
-            assertEquals("1", one);
-        }
-        finally {
-            lock.unlock();
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testSingleLock() throws Exception {
-        IgniteCache<Integer, String> near = jcache();
-
-        Lock lock = near.lock(1);
-
-        lock.lock();
-
-        try {
-            near.put(1, "1");
-
-            assertEquals("1", near.localPeek(1, CachePeekMode.ONHEAP));
-            assertEquals("1", dhtPeek(1));
-
-            assertEquals("1", near.get(1));
-            assertEquals("1", near.getAndRemove(1));
-
-            assertNull(near.localPeek(1, CachePeekMode.ONHEAP));
-            assertNull(dhtPeek(1));
-
-            assertTrue(near.isLocalLocked(1, false));
-            assertTrue(near.isLocalLocked(1, true));
-        }
-        finally {
-            lock.unlock();
-        }
-
-        assertFalse(near.isLocalLocked(1, false));
-        assertFalse(near.isLocalLocked(1, true));
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testSingleLockReentry() throws Exception {
-        IgniteCache<Integer, String> near = jcache();
-
-        Lock lock = near.lock(1);
-
-        lock.lock();
-
-        try {
-            near.put(1, "1");
-
-            assertEquals("1", near.localPeek(1, CachePeekMode.ONHEAP));
-            assertEquals("1", dhtPeek(1));
-
-            assertTrue(near.isLocalLocked(1, false));
-            assertTrue(near.isLocalLocked(1, true));
-
-            lock.lock(); // Reentry.
-
-            try {
-                assertEquals("1", near.get(1));
-                assertEquals("1", near.getAndRemove(1));
-
-                assertNull(near.localPeek(1, CachePeekMode.ONHEAP));
-                assertNull(dhtPeek(1));
-
-                assertTrue(near.isLocalLocked(1, false));
-                assertTrue(near.isLocalLocked(1, true));
-            }
-            finally {
-                lock.unlock();
-            }
-
-            assertTrue(near.isLocalLocked(1, false));
-            assertTrue(near.isLocalLocked(1, true));
-        }
-        finally {
-            lock.unlock();
-        }
-
-        assertFalse(near.isLocalLocked(1, false));
-        assertFalse(near.isLocalLocked(1, true));
     }
 
     /** @throws Exception If failed. */

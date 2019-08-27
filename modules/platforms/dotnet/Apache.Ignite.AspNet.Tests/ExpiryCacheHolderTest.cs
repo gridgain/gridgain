@@ -495,21 +495,6 @@ namespace Apache.Ignite.AspNet.Tests
                 throw new NotImplementedException();
             }
 
-            public ICacheLock Lock(int key)
-            {
-                throw new NotImplementedException();
-            }
-
-            public ICacheLock LockAll(IEnumerable<int> keys)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsLocalLocked(int key, bool byCurrentThread)
-            {
-                throw new NotImplementedException();
-            }
-
             public ICacheMetrics GetMetrics()
             {
                 throw new NotImplementedException();

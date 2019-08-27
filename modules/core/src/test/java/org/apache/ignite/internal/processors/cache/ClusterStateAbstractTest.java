@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -268,35 +267,6 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
         }, 5000);
 
         checkInactive(GRID_CNT + 1);
-    }
-
-    /**
-     * Tests that deactivation is prohibited if explicit lock is held in current thread.
-     *
-     * @throws Exception If fails.
-     */
-    @Test
-    public void testDeactivationWithPendingLock() throws Exception {
-        startGrids(GRID_CNT);
-
-        Lock lock = grid(0).cache(CACHE_NAME).lock(1);
-
-        lock.lock();
-
-        try {
-            //noinspection ThrowableNotThrown
-            GridTestUtils.assertThrowsAnyCause(log, new Callable<Object>() {
-                @Override public Object call() {
-                    grid(0).cluster().active(false);
-
-                    return null;
-                }
-            }, IgniteException.class,
-                "Failed to deactivate cluster (must invoke the method outside of an active transaction).");
-        }
-        finally {
-            lock.unlock();
-        }
     }
 
     /**

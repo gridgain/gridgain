@@ -22,7 +22,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -54,7 +53,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  *
  */
 public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTest {
-
     /** */
     private static ThreadLocal<Boolean> client = new ThreadLocal<>();
 
@@ -149,28 +147,6 @@ public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTe
      * @throws Exception If failed.
      */
     @Test
-    public void testTxGetInsideLockStopPrimary() throws Exception {
-        getInsideLockStopPrimary(ignite(SRVS), TX_CACHE1);
-        getInsideLockStopPrimary(ignite(SRVS + 1), TX_CACHE1);
-
-        getInsideLockStopPrimary(ignite(SRVS), TX_CACHE2);
-        getInsideLockStopPrimary(ignite(SRVS + 1), TX_CACHE2);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAtomicGetInsideLockStopPrimary() throws Exception {
-        getInsideLockStopPrimary(ignite(SRVS), ATOMIC_CACHE);
-
-        getInsideLockStopPrimary(ignite(SRVS + 1), ATOMIC_CACHE);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
     public void testAtomicGetInsideTxStopPrimary() throws Exception {
         getInsideTxStopPrimary(ignite(SRVS), ATOMIC_CACHE);
 
@@ -249,60 +225,6 @@ public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTe
 
                 tx.commit();
             }
-        }
-        finally {
-            stopGrid(NEW_NODE);
-        }
-    }
-
-    /**
-     * @param ignite Node.
-     * @param cacheName Cache name.
-     * @throws Exception If failed.
-     */
-    private void getInsideLockStopPrimary(Ignite ignite, String cacheName) throws Exception {
-        IgniteCache<Integer, Integer> lockCache = ignite.cache(TX_CACHE1);
-
-        IgniteCache<Integer, Integer> getCache = ignite.cache(cacheName);
-
-        final int NEW_NODE = SRVS + CLIENTS;
-
-        Ignite srv = startGrid(NEW_NODE);
-
-        awaitPartitionMapExchange();
-
-        try {
-            Integer key = primaryKey(srv.cache(cacheName));
-
-            getCache.put(key, 1);
-
-            IgniteInternalFuture<?> stopFut = GridTestUtils.runAsync(new Callable<Void>() {
-                @Override public Void call() throws Exception {
-                    U.sleep(500);
-
-                    log.info("Stop node.");
-
-                    stopGrid(NEW_NODE);
-
-                    log.info("Node stopped.");
-
-                    return null;
-                }
-            }, "stop-thread");
-
-            Lock lock = lockCache.lock(key + 1);
-
-            lock.lock();
-
-            try {
-                while (!stopFut.isDone())
-                    assertEquals(1, (Object)getCache.get(key));
-            }
-            finally {
-                lock.unlock();
-            }
-
-            stopFut.get();
         }
         finally {
             stopGrid(NEW_NODE);
@@ -400,7 +322,7 @@ public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTe
             final int KEYS = 100_000;
 
             GridTestUtils.runMultiThreaded(new Callable<Void>() {
-                @Override public Void call() throws Exception {
+                @Override public Void call() {
                     int node = idx.getAndIncrement() % (SRVS + CLIENTS);
 
                     Ignite ignite = ignite(node);
@@ -414,21 +336,7 @@ public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTe
                     while (U.currentTimeMillis() < stopTime) {
                         Integer lockKey = rnd.nextInt(KEYS, KEYS + 1000);
 
-                        Lock lock = txCache1.lock(lockKey);
-
                         try {
-                            lock.lock();
-
-                            try {
-                                executeGet(txCache1);
-
-                                executeGet(txCache2);
-
-                                executeGet(atomicCache);
-                            } finally {
-                                lock.unlock();
-                            }
-
                             try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                                 txCache1.put(lockKey, lockKey);
 

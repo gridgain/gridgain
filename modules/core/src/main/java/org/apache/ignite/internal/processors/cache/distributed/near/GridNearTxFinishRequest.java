@@ -62,7 +62,6 @@ public class GridNearTxFinishRequest extends GridDistributedTxFinishRequest {
      * @param sys System flag.
      * @param plc IO policy.
      * @param syncMode Write synchronization mode.
-     * @param explicitLock Explicit lock flag.
      * @param storeEnabled Store enabled flag.
      * @param topVer Topology version.
      * @param baseVer Base version.
@@ -82,7 +81,6 @@ public class GridNearTxFinishRequest extends GridDistributedTxFinishRequest {
         boolean sys,
         byte plc,
         CacheWriteSynchronizationMode syncMode,
-        boolean explicitLock,
         boolean storeEnabled,
         @NotNull AffinityTopologyVersion topVer,
         GridCacheVersion baseVer,
@@ -113,7 +111,6 @@ public class GridNearTxFinishRequest extends GridDistributedTxFinishRequest {
             addDepInfo
         );
 
-        explicitLock(explicitLock);
         storeEnabled(storeEnabled);
 
         this.mvccSnapshot = mvccSnapshot;
@@ -124,20 +121,6 @@ public class GridNearTxFinishRequest extends GridDistributedTxFinishRequest {
      */
     @Nullable public MvccSnapshot mvccSnapshot() {
         return mvccSnapshot;
-    }
-
-    /**
-     * @return Explicit lock flag.
-     */
-    public boolean explicitLock() {
-        return isFlag(EXPLICIT_LOCK_FLAG_MASK);
-    }
-
-    /**
-     * @param explicitLock Explicit lock flag.
-     */
-    private void explicitLock(boolean explicitLock) {
-        setFlag(explicitLock, EXPLICIT_LOCK_FLAG_MASK);
     }
 
     /**

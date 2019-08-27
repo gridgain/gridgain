@@ -358,8 +358,6 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
                     txState.addWriteEntry(entry.txKey(), entry);
 
-                    addExplicit(entry);
-
                     return true;
                 }
             }

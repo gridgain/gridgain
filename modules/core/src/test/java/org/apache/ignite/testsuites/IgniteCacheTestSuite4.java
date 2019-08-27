@@ -49,7 +49,6 @@ import org.apache.ignite.internal.processors.cache.CacheStoreUsageMultinodeDynam
 import org.apache.ignite.internal.processors.cache.CacheStoreUsageMultinodeStaticStartAtomicTest;
 import org.apache.ignite.internal.processors.cache.CacheStoreUsageMultinodeStaticStartTxTest;
 import org.apache.ignite.internal.processors.cache.CacheTxNotAllowReadFromBackupTest;
-import org.apache.ignite.internal.processors.cache.CrossCacheLockTest;
 import org.apache.ignite.internal.processors.cache.GridCacheMarshallingNodeJoinSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateAtomicNearEnabledSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateAtomicSelfTest;
@@ -112,8 +111,6 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheFailed
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheReadFromBackupTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheSingleGetMessageTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtTxPreloadSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheLockFailoverSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheMultiTxLockSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCrossCacheTxSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheNearTxPreloadSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheNearOnlyTxTest;
@@ -276,9 +273,6 @@ public class IgniteCacheTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheTxStoreValueTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheTxNearEnabledStoreValueTest.class, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, IgniteCacheLockFailoverSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteCacheMultiTxLockSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteInternalCacheTypesTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteExchangeFutureHistoryTest.class, ignoredTests);
@@ -337,7 +331,6 @@ public class IgniteCacheTestSuite4 {
 
         GridTestUtils.addTestIfNeeded(suite, IgniteDynamicCacheFilterTest.class, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, CrossCacheLockTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCrossCacheTxSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheGetFutureHangsSelfTest.class, ignoredTests);

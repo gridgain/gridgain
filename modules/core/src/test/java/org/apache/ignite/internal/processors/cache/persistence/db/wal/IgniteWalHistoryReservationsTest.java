@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -39,11 +38,14 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  *
@@ -177,11 +179,9 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
 
         forceCheckpoint();
 
-        Lock lock = ig0.cache("cache1").lock(0);
+        try (Transaction ignore = ig0.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+            ig0.cache("cache1").get(0);
 
-        lock.lock();
-
-        try {
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
@@ -207,9 +207,6 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
             }, 10_000);
 
             assert reserved;
-        }
-        finally {
-            lock.unlock();
         }
 
         boolean released = GridTestUtils.waitForCondition(new GridAbsPredicate() {
@@ -433,11 +430,9 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
 
         forceCheckpoint();
 
-        Lock lock = cache.lock(0);
+        try (Transaction ignore = ig0.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+            cache.get(0);
 
-        lock.lock();
-
-        try {
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
@@ -465,9 +460,6 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
             assert reserved;
 
             stopGrid(Integer.toString(initGridCnt - 1), true, false);
-        }
-        finally {
-            lock.unlock();
         }
 
         boolean released = GridTestUtils.waitForCondition(new GridAbsPredicate() {

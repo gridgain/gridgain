@@ -24,11 +24,13 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 
 import java.io.Serializable;
 import java.net.NetworkInterface;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
 
 /**
  * Cluster port manager that allows to reliably {@link #acquirePort(UUID)} and {@link #releasePort(UUID, int)} on the
@@ -87,10 +89,7 @@ public class ClusterPortManager {
         if (hostId == null)
             throw new IllegalStateException("Can't find node [nodeId=" + nodeId + "]");
 
-        Lock lock = cache.lock(hostId);
-        lock.lock();
-
-        try {
+        try (Transaction tx = cache.unwrap(Ignite.class).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
             BitSet ports = cache.get(hostId);
 
             if (ports == null)
@@ -106,10 +105,9 @@ public class ClusterPortManager {
 
             cache.put(hostId, ports);
 
+            tx.commit();
+
             return from + free;
-        }
-        finally {
-            lock.unlock();
         }
     }
 
@@ -127,10 +125,7 @@ public class ClusterPortManager {
         if (hostId == null)
             return;
 
-        Lock lock = cache.lock(hostId);
-        lock.lock();
-
-        try {
+        try (Transaction tx = cache.unwrap(Ignite.class).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
             BitSet ports = cache.get(hostId);
 
             if (ports != null) {
@@ -142,9 +137,8 @@ public class ClusterPortManager {
                 else
                     cache.put(hostId, ports);
             }
-        }
-        finally {
-            lock.unlock();
+
+            tx.commit();
         }
     }
 

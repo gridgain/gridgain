@@ -326,8 +326,6 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
             entry.cached(cached);
 
             txState.addWriteEntry(entry.txKey(), entry);
-
-            addExplicit(entry);
         }
         catch (GridDhtInvalidPartitionException e) {
             addInvalidPartition(cacheCtx, e.partition());

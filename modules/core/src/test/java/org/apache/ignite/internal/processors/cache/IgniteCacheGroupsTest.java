@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.concurrent.locks.Lock;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -1948,33 +1947,6 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < 5; i++) {
             final Integer key = ThreadLocalRandom.current().nextInt(1000);
-
-            Lock lock = cache1.lock(key);
-
-            lock.lock();
-
-            try {
-                IgniteInternalFuture fut = GridTestUtils.runAsync(new Callable() {
-                    @Override public Object call() throws Exception {
-                        Lock lock1 = cache1.lock(key);
-
-                        assertFalse(lock1.tryLock());
-
-                        Lock lock2 = cache2.lock(key);
-
-                        assertTrue(lock2.tryLock());
-
-                        lock2.unlock();
-
-                        return null;
-                    }
-                }, "lockThread");
-
-                fut.get(10_000);
-            }
-            finally {
-                lock.unlock();
-            }
 
             try (Transaction tx = node.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                 cache1.put(key, 1);

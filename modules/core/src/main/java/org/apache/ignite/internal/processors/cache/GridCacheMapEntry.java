@@ -1735,7 +1735,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             clearReaders();
                         else {
                             // Optimize memory usage - do not allocate additional array.
-                            List<GridCacheMvccCandidate> locs = mvcc.localCandidatesNoCopy(false);
+                            List<GridCacheMvccCandidate> locs = mvcc.localCandidatesNoCopy();
 
                             GridCacheVersion txVer = tx.xidVersion();
 
@@ -1744,7 +1744,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             boolean hasOriginatingNodeId = false;
 
                             for (GridCacheMvccCandidate c : locs) {
-                                if (c.reentry() || Objects.equals(c.version(), txVer))
+                                if (Objects.equals(c.version(), txVer))
                                     continue;
 
                                 if (Objects.equals(c.otherNodeId(), originatingNodeId)) {

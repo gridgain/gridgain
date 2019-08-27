@@ -20,7 +20,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -40,6 +39,9 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
+
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  * Tests that {@link GridServiceProcessor} completes deploy/undeploy futures during node stop.
@@ -121,9 +123,6 @@ public class GridServiceProcessorStopSelfTest extends GridCommonAbstractTest {
         final Integer lockKey = keyForNode(node2.affinity("def"), new AtomicInteger(1),
             node2.cluster().localNode());
 
-        // Lock to hold topology version undone.
-        final Lock lock = cache.lock(lockKey);
-
         // Try to change topology once service has deployed.
         IgniteInternalFuture<?> fut = GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
@@ -152,8 +151,10 @@ public class GridServiceProcessorStopSelfTest extends GridCommonAbstractTest {
 
         assertNotNull(node0.services().service("myService"));
 
-        // Freeze topology changing
-        lock.lock();
+        node2.transactions().txStart(PESSIMISTIC, REPEATABLE_READ);
+
+        // Freeze topology changing - get lock in pessimistic transaction.
+        cache.get(lockKey);
 
         depLatch.countDown();
 

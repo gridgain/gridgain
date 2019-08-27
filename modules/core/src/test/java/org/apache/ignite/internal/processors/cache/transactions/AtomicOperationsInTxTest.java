@@ -18,9 +18,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.HashMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
-import javax.cache.CacheException;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
@@ -160,8 +158,6 @@ public class AtomicOperationsInTxTest extends GridCommonAbstractTest {
 
         checkOperation(isAtomicCacheAllowedInTx, cache -> cache.invokeAllAsync(map.keySet(),
             new SetEntryProcessor()).get());
-
-        checkLock(isAtomicCacheAllowedInTx);
     }
 
     /**
@@ -192,36 +188,6 @@ public class AtomicOperationsInTxTest extends GridCommonAbstractTest {
         else
             assertTrue(err != null && err.getMessage()
                 .startsWith("Transaction spans operations on atomic cache"));
-    }
-
-    /**
-     * @param isAtomicCacheAllowedInTx If true - atomic operation allowed.
-     * Otherwise - it should throw exception.
-     */
-    private void checkLock(boolean isAtomicCacheAllowedInTx) {
-        IgniteCache<Integer, Integer> cache;
-        Class<? extends Throwable> eCls;
-        String eMsg;
-
-        if (isAtomicCacheAllowedInTx) {
-            cache = grid(0).cache(DEFAULT_CACHE_NAME).withAllowAtomicOpsInTx();
-            eCls = CacheException.class;
-            eMsg = "Explicit lock can't be acquired within a transaction.";
-        } else {
-            cache = grid(0).cache(DEFAULT_CACHE_NAME);
-            eCls = IgniteException.class;
-            eMsg = "Transaction spans operations on atomic cache";
-        }
-
-        Lock lock = cache.lock(1);
-
-        GridTestUtils.assertThrows(log, (Callable<Void>)() -> {
-            try (Transaction tx = grid(0).transactions().txStart()) {
-                lock.lock();
-            }
-
-            return null;
-        }, eCls, eMsg);
     }
 
     /** */

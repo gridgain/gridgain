@@ -885,36 +885,6 @@ namespace Apache.Ignite.Core.Cache
             ICacheEntryProcessor<TK, TV, TArg, TRes> processor, TArg arg);
 
         /// <summary>
-        /// Creates an <see cref="ICacheLock"/> instance associated with passed key.
-        /// This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-        /// </summary>
-        /// <param name="key">Key for lock.</param>
-        /// <returns>New <see cref="ICacheLock"/> instance associated with passed key.</returns>
-        ICacheLock Lock(TK key);
-
-        /// <summary>
-        /// Creates an <see cref="ICacheLock"/> instance associated with passed keys.
-        /// This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-        /// </summary>
-        /// <param name="keys">Keys for lock.</param>
-        /// <returns>New <see cref="ICacheLock"/> instance associated with passed keys.</returns>
-        ICacheLock LockAll(IEnumerable<TK> keys);
-
-        /// <summary>
-        /// Checks if specified key is locked.
-        /// <para />
-        /// This is a local operation and does not involve any network trips
-        /// or access to persistent storage in any way.
-        /// </summary>
-        /// <param name="key">Key to check.</param>
-        /// <param name="byCurrentThread">
-        /// If true, checks that current thread owns a lock on this key;
-        /// otherwise, checks that any thread on any node owns a lock on this key.
-        /// </param>
-        /// <returns>True if specified key is locked; otherwise, false.</returns>
-        bool IsLocalLocked(TK key, bool byCurrentThread);
-
-        /// <summary>
         /// Gets global (whole cluster) snapshot metrics (statistics) for this cache.
         /// </summary>
         /// <returns>Cache metrics.</returns>

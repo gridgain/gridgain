@@ -373,13 +373,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     }
 
     /**
-     * @return {@code True} if transaction is not {@code null}.
-     */
-    private boolean inTx() {
-        return tx != null;
-    }
-
-    /**
      * @return {@code True} if transaction is implicit.
      */
     private boolean implicitSingle() {
@@ -429,8 +422,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             lockVer,
             null,
             timeout,
-            /*reenter*/false,
-            inTx(),
             implicitSingle(),
             false
         );
@@ -445,9 +436,9 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
 
         synchronized (this) {
-            entries.add(c == null || c.reentry() ? null : entry);
+            entries.add(c == null ? null : entry);
 
-            if (c != null && !c.reentry())
+            if (c != null)
                 pendingLocks.add(entry.key());
         }
 
@@ -561,7 +552,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
 
             U.warn(msgLog, "DHT lock fut, failed to find mini future [txId=" + nearLockVer +
                 ", dhtTxId=" + lockVer +
-                ", inTx=" + inTx() +
                 ", node=" + nodeId +
                 ", res=" + res +
                 ", fut=" + this + ']');
@@ -686,7 +676,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
      * @param entry Entry whose lock ownership changed.
      */
     @Override public boolean onOwnerChanged(GridCacheEntryEx entry, GridCacheMvccCandidate owner) {
-        if (isDone() || (inTx() && (tx.remainingTime() == -1 || tx.isRollbackOnly())))
+        if (isDone() || (tx.remainingTime() == -1 || tx.isRollbackOnly()))
             return false; // Check other futures.
 
         if (log.isDebugEnabled())
@@ -899,7 +889,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             if (log.isDebugEnabled())
                 log.debug("Mapped DHT lock future [dhtMap=" + F.nodeIds(dhtMap.keySet()) + ", dhtLockFut=" + this + ']');
 
-            long timeout = inTx() ? tx.remainingTime() : this.timeout;
+            long timeout = tx.remainingTime();
 
             synchronized (this) { // Prevents entry removal on concurrent rollback.
                 if (checkDone())
@@ -916,7 +906,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                     if (cnt > 0) {
                         assert !n.id().equals(cctx.localNodeId());
 
-                        if (inTx() && tx.remainingTime() == -1)
+                        if (tx.remainingTime() == -1)
                             return;
 
                         MiniFuture fut = new MiniFuture(n, dhtMapping);
@@ -924,34 +914,33 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                         GridDhtLockRequest req = new GridDhtLockRequest(
                             cctx.cacheId(),
                             nearNodeId,
-                            inTx() ? tx.nearXidVersion() : null,
+                            tx.nearXidVersion(),
                             threadId,
                             futId,
                             fut.futureId(),
                             lockVer,
                             topVer,
-                            inTx(),
                             read,
                             isolation(),
                             isInvalidate(),
                             timeout,
                             cnt,
                             0,
-                            inTx() ? tx.size() : cnt,
-                            inTx() ? tx.subjectId() : null,
-                            inTx() ? tx.taskNameHash() : 0,
+                            tx.size(),
+                            tx.subjectId(),
+                            tx.taskNameHash(),
                             read ? accessTtl : -1L,
                             skipStore,
                             cctx.store().configured(),
                             keepBinary,
                             cctx.deploymentEnabled(),
-                            inTx() ? tx.label() : null);
+                            tx.label());
 
                         try {
                             for (ListIterator<GridDhtCacheEntry> it = dhtMapping.listIterator(); it.hasNext(); ) {
                                 GridDhtCacheEntry e = it.next();
 
-                                boolean needVal = false;
+                                boolean needVal;
 
                                 try {
                                     // Must unswap entry so that isNewLocked returns correct value.
@@ -1014,7 +1003,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                                 if (msgLog.isDebugEnabled()) {
                                     msgLog.debug("DHT lock fut, sent request [txId=" + nearLockVer +
                                         ", dhtTxId=" + lockVer +
-                                        ", inTx=" + inTx() +
                                         ", nodeId=" + n.id() + ']');
                                 }
                             }
@@ -1027,7 +1015,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                                 if (msgLog.isDebugEnabled()) {
                                     msgLog.debug("DHT lock fut, failed to send request [txId=" + nearLockVer +
                                         ", dhtTxId=" + lockVer +
-                                        ", inTx=" + inTx() +
                                         ", node=" + n.id() +
                                         ", err=" + e + ']');
                                 }
@@ -1183,7 +1170,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                 clear();
             }
 
-            boolean releaseLocks = !(inTx() && cctx.tm().deadlockDetectionEnabled());
+            boolean releaseLocks = !cctx.tm().deadlockDetectionEnabled();
 
             onComplete(false, false, releaseLocks);
         }
@@ -1312,7 +1299,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             if (msgLog.isDebugEnabled()) {
                 msgLog.debug("DHT lock fut, mini future node left [txId=" + nearLockVer +
                     ", dhtTxId=" + lockVer +
-                    ", inTx=" + inTx() +
                     ", node=" + node.id() + ']');
             }
 
@@ -1365,7 +1351,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                     cache0 = ((GridNearCacheAdapter)cache0).dht();
 
                 synchronized (GridDhtLockFuture.this) { // Prevents entry re-creation on concurrent rollback.
-                    if (GridDhtLockFuture.this.checkDone())
+                    if (checkDone())
                         return;
 
                     for (GridCacheEntryInfo info : res.preloadEntries()) {

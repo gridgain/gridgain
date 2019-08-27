@@ -108,22 +108,6 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
         return lockAllAsync(keys, timeout, tx, isInvalidate, isRead, retval, isolation, createTtl, accessTtl);
     }
 
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<Boolean> lockAllAsync(Collection<? extends K> keys, long timeout) {
-        IgniteTxLocalEx tx = ctx.tm().userTx();
-
-        // Return value flag is true because we choose to bring values for explicit locks.
-        return lockAllAsync(ctx.cacheKeysView(keys),
-            timeout,
-            tx,
-            false,
-            false,
-            /*retval*/true,
-            null,
-            -1L,
-            -1L);
-    }
-
     /**
      * @param keys Keys to lock.
      * @param timeout Timeout.

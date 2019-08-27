@@ -58,7 +58,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
      * @param serOrder Version for serializable transactions ordering.
      * @param serReadVer Optional read entry version for optimistic serializable transaction.
      * @param timeout Timeout to acquire lock.
-     * @param reenter Reentry flag.
      * @param tx Transaction flag.
      * @param implicitSingle Implicit transaction flag.
      * @param read Read lock flag.
@@ -71,7 +70,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
         @Nullable GridCacheVersion serOrder,
         @Nullable GridCacheVersion serReadVer,
         long timeout,
-        boolean reenter,
         boolean tx,
         boolean implicitSingle,
         boolean read
@@ -111,8 +109,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
                 ver,
                 timeout,
                 serOrder,
-                reenter,
-                tx,
                 implicitSingle,
                 /*dht-local*/false,
                 read
@@ -129,7 +125,7 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
             unlockEntry();
         }
 
-        if (cand != null && !cand.reentry())
+        if (cand != null)
             cctx.mvcc().addNext(cctx, cand);
 
         checkOwnerChanged(prev, owner, val);
@@ -181,7 +177,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
             serOrder,
             serReadVer,
             timeout,
-            /*reenter*/false,
             /*tx*/true,
             tx.implicitSingle(),
             read

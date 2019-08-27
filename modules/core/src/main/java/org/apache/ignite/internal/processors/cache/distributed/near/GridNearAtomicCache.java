@@ -587,12 +587,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
         @Nullable TransactionIsolation isolation,
         long createTtl,
         long accessTtl) {
-        return dht.lockAllAsync(null, timeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlockAll(@Nullable Collection<? extends K> keys) throws IgniteCheckedException {
-        dht.unlockAll(keys);
+        throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */

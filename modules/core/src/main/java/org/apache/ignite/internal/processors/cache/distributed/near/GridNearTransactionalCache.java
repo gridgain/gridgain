@@ -308,45 +308,43 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
 
                         if (entry != null) {
                             // Handle implicit locks for pessimistic transactions.
-                            if (req.inTx()) {
-                                tx = ctx.tm().nearTx(req.version());
+                            tx = ctx.tm().nearTx(req.version());
 
-                                if (tx == null) {
-                                    tx = new GridNearTxRemote(
-                                        ctx.shared(),
-                                        req.topologyVersion(),
-                                        nodeId,
-                                        req.nearNodeId(),
-                                        req.nearXidVersion(),
-                                        req.version(),
-                                        null,
-                                        ctx.systemTx(),
-                                        ctx.ioPolicy(),
-                                        PESSIMISTIC,
-                                        req.isolation(),
-                                        req.isInvalidate(),
-                                        req.timeout(),
-                                        req.txSize(),
-                                        req.subjectId(),
-                                        req.taskNameHash(),
-                                        req.txLabel()
-                                    );
+                            if (tx == null) {
+                                tx = new GridNearTxRemote(
+                                    ctx.shared(),
+                                    req.topologyVersion(),
+                                    nodeId,
+                                    req.nearNodeId(),
+                                    req.nearXidVersion(),
+                                    req.version(),
+                                    null,
+                                    ctx.systemTx(),
+                                    ctx.ioPolicy(),
+                                    PESSIMISTIC,
+                                    req.isolation(),
+                                    req.isInvalidate(),
+                                    req.timeout(),
+                                    req.txSize(),
+                                    req.subjectId(),
+                                    req.taskNameHash(),
+                                    req.txLabel()
+                                );
 
-                                    tx = ctx.tm().onCreated(null, tx);
+                                tx = ctx.tm().onCreated(null, tx);
 
-                                    if (tx == null || !ctx.tm().onStarted(tx))
-                                        throw new IgniteTxRollbackCheckedException("Failed to acquire lock " +
-                                            "(transaction has been completed): " + req.version());
-                                }
-
-                                tx.addEntry(ctx,
-                                    txKey,
-                                    GridCacheOperation.NOOP,
-                                    null /*Value.*/,
-                                    null /*dr version*/,
-                                    req.skipStore(),
-                                    req.keepBinary());
+                                if (tx == null || !ctx.tm().onStarted(tx))
+                                    throw new IgniteTxRollbackCheckedException("Failed to acquire lock " +
+                                        "(transaction has been completed): " + req.version());
                             }
+
+                            tx.addEntry(ctx,
+                                txKey,
+                                GridCacheOperation.NOOP,
+                                null /*Value.*/,
+                                null /*dr version*/,
+                                req.skipStore(),
+                                req.keepBinary());
 
                             // Add remote candidate before reordering.
                             // Owned candidates should be reordered inside entry lock.
@@ -355,13 +353,9 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
                                 nodeId,
                                 req.threadId(),
                                 req.version(),
-                                tx != null,
-                                tx != null && tx.implicitSingle(),
+                                tx.implicitSingle(),
                                 req.owned(entry.key())
                             );
-
-                            if (!req.inTx())
-                                entry.touch();
                         }
                         else {
                             if (evicted == null)
@@ -428,7 +422,7 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
         assert nodeId != null;
         assert res != null;
 
-        GridNearLockFuture fut = (GridNearLockFuture)ctx.mvcc().<Boolean>versionedFuture(res.version(),
+        GridNearLockFuture fut = (GridNearLockFuture)ctx.mvcc().versionedFuture(res.version(),
             res.futureId());
 
         if (fut != null)
@@ -491,138 +485,10 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
             if (log.isDebugEnabled())
                 log.debug("Evicting dht-local entry from near cache [entry=" + e + ", tx=" + this + ']');
 
-            if (e.markObsolete(obsoleteVer))
-                return true;
+            return e.markObsolete(obsoleteVer);
         }
 
         return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlockAll(Collection<? extends K> keys) {
-        if (keys.isEmpty())
-            return;
-
-        try {
-            GridCacheVersion ver = null;
-
-            int keyCnt = -1;
-
-            Map<ClusterNode, GridNearUnlockRequest> map = null;
-
-            Collection<KeyCacheObject> locKeys = new LinkedList<>();
-
-            for (K key : keys) {
-                while (true) {
-                    KeyCacheObject cacheKey = ctx.toCacheKeyObject(key);
-
-                    GridDistributedCacheEntry entry = peekExx(cacheKey);
-
-                    if (entry == null)
-                        break; // While.
-
-                    try {
-                        GridCacheMvccCandidate cand = entry.candidate(ctx.nodeId(), Thread.currentThread().getId());
-
-                        AffinityTopologyVersion topVer = AffinityTopologyVersion.NONE;
-
-                        if (cand != null) {
-                            assert cand.nearLocal() : "Got non-near-local candidate in near cache: " + cand;
-
-                            ver = cand.version();
-
-                            if (map == null) {
-                                Collection<ClusterNode> affNodes = CU.affinityNodes(ctx, cand.topologyVersion());
-
-                                if (F.isEmpty(affNodes))
-                                    return;
-
-                                keyCnt = (int)Math.ceil((double)keys.size() / affNodes.size());
-
-                                map = U.newHashMap(affNodes.size());
-                            }
-
-                            topVer = cand.topologyVersion();
-
-                            // Send request to remove from remote nodes.
-                            ClusterNode primary = ctx.affinity().primaryByKey(key, topVer);
-
-                            if (primary == null) {
-                                if (log.isDebugEnabled())
-                                    log.debug("Failed to unlock key (all partition nodes left the grid).");
-
-                                break;
-                            }
-
-                            GridNearUnlockRequest req = map.get(primary);
-
-                            if (req == null) {
-                                map.put(primary, req = new GridNearUnlockRequest(ctx.cacheId(), keyCnt,
-                                    ctx.deploymentEnabled()));
-
-                                req.version(ver);
-                            }
-
-                            // Remove candidate from local node first.
-                            GridCacheMvccCandidate rmv = entry.removeLock();
-
-                            if (rmv != null) {
-                                if (!rmv.reentry()) {
-                                    if (ver != null && !ver.equals(rmv.version()))
-                                        throw new IgniteCheckedException("Failed to unlock (if keys were locked separately, " +
-                                            "then they need to be unlocked separately): " + keys);
-
-                                    if (!primary.isLocal()) {
-                                        assert req != null;
-
-                                        req.addKey(entry.key(), ctx);
-                                    }
-                                    else
-                                        locKeys.add(cacheKey);
-
-                                    if (log.isDebugEnabled())
-                                        log.debug("Removed lock (will distribute): " + rmv);
-                                }
-                                else if (log.isDebugEnabled())
-                                    log.debug("Current thread still owns lock (or there are no other nodes)" +
-                                        " [lock=" + rmv + ", curThreadId=" + Thread.currentThread().getId() + ']');
-                            }
-                        }
-
-                        assert !topVer.equals(AffinityTopologyVersion.NONE) || cand == null;
-
-                        if (topVer.equals(AffinityTopologyVersion.NONE))
-                            topVer = ctx.affinity().affinityTopologyVersion();
-
-                        entry.touch();
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignore) {
-                        if (log.isDebugEnabled())
-                            log.debug("Attempted to unlock removed entry (will retry): " + entry);
-                    }
-                }
-            }
-
-            if (ver == null)
-                return;
-
-            for (Map.Entry<ClusterNode, GridNearUnlockRequest> mapping : map.entrySet()) {
-                ClusterNode n = mapping.getKey();
-
-                GridDistributedUnlockRequest req = mapping.getValue();
-
-                if (n.isLocal())
-                    dht.removeLocks(ctx.nodeId(), req.version(), locKeys, true);
-                else if (!F.isEmpty(req.keys()))
-                    // We don't wait for reply to this message.
-                    ctx.io().send(n, req, ctx.ioPolicy());
-            }
-        }
-        catch (IgniteCheckedException ex) {
-            U.error(log, "Failed to unlock the lock for keys: " + keys, ex);
-        }
     }
 
     /**

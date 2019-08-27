@@ -76,14 +76,6 @@ class VisorCacheClearCommandSpec extends VisorRuntimeBaseSpec(2) {
         it("should show correct result for named cache") {
             Ignition.ignite("node-1").cache[Int, Int]("cache").putAll(Map(1 -> 1, 2 -> 2, 3 -> 3))
 
-            val lock = Ignition.ignite("node-1").cache[Int, Int]("cache").lock(1)
-
-            lock.lock()
-
-            visor.cache("-clear -c=cache")
-
-            lock.unlock()
-
             visor.cache("-clear -c=cache")
         }
 

@@ -87,8 +87,6 @@ public class GridCacheMvccFlagsTest extends GridCommonAbstractTest {
             true,
             true,
             true,
-            true,
-            true,
             null,
             false
         );
@@ -125,8 +123,6 @@ public class GridCacheMvccFlagsTest extends GridCommonAbstractTest {
             ver,
             1,
             ver,
-            false,
-            false,
             false,
             false,
             false,

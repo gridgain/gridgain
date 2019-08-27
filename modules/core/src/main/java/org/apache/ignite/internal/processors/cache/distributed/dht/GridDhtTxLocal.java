@@ -29,7 +29,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -135,7 +134,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         boolean implicit,
         boolean implicitSingle,
         boolean sys,
-        boolean explicitLock,
         byte plc,
         TransactionConcurrency concurrency,
         TransactionIsolation isolation,
@@ -156,7 +154,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
             implicit,
             implicitSingle,
             sys,
-            explicitLock,
             plc,
             concurrency,
             isolation,
@@ -296,13 +293,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         }
 
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void updateExplicitVersion(IgniteTxEntry txEntry, GridCacheEntryEx entry)
-        throws GridCacheEntryRemovedException {
-        // DHT local transactions don't have explicit locks.
-        // No-op.
     }
 
     /** {@inheritDoc} */

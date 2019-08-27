@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -328,35 +327,6 @@ public class GatewayProtectedCacheProxy<K, V> implements IgniteCacheProxy<K, V> 
 
         try {
             return delegate.getAndPutIfAbsentAsync(key, val);
-        }
-        finally {
-            onLeave(opGate);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lock(K key) {
-        CacheOperationGate opGate = onEnter();
-
-        try {
-            return delegate.lock(key);
-        }
-        finally {
-            onLeave(opGate);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lockAll(Collection<? extends K> keys) {
-        return delegate.lockAll(keys);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocalLocked(K key, boolean byCurrThread) {
-        CacheOperationGate opGate = onEnter();
-
-        try {
-            return delegate.isLocalLocked(key, byCurrThread);
         }
         finally {
             onLeave(opGate);

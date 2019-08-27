@@ -22,7 +22,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -171,34 +170,6 @@ public class GridCacheFinishPartitionsSelfTest extends GridCacheAbstractSelfTest
     }
 
     /**
-     * Tests method {@link GridCacheMvccManager#finishLocks(org.apache.ignite.lang.IgnitePredicate,
-     * AffinityTopologyVersion)}.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testMvccFinishPartitions() throws Exception {
-        String key = "key";
-
-        int keyPart = grid.internalCache(DEFAULT_CACHE_NAME).context().affinity().partition(key);
-
-        // Wait for tx-enlisted partition.
-        long waitTime = runLock(key, keyPart, F.asList(keyPart));
-
-        info("Wait time, ms: " + waitTime);
-
-        // Wait for not enlisted partition.
-        waitTime = runLock(key, keyPart, F.asList(keyPart + 1));
-
-        info("Wait time, ms: " + waitTime);
-
-        // Wait for both partitions.
-        waitTime = runLock(key, keyPart, F.asList(keyPart, keyPart + 1));
-
-        info("Wait time, ms: " + waitTime);
-    }
-
-    /**
      * Tests finish future for particular set of keys.
      *
      * @throws Exception If failed.
@@ -230,116 +201,5 @@ public class GridCacheFinishPartitionsSelfTest extends GridCacheAbstractSelfTest
 
             tx.commit();
         }
-    }
-
-    /**
-     * Tests chained locks and partitions release future.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testMvccFinishPartitionsContinuousLockAcquireRelease() throws Exception {
-        int key = 1;
-
-        GridCacheSharedContext<Object, Object> ctx = grid.context().cache().context();
-
-        final AtomicLong end = new AtomicLong(0);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        IgniteCache<Integer, String> cache = grid.cache(DEFAULT_CACHE_NAME);
-
-        Lock lock = cache.lock(key);
-
-        lock.lock();
-
-        long start = System.currentTimeMillis();
-
-        info("Start time: " + start);
-
-        IgniteInternalFuture<?> fut = ctx.partitionReleaseFuture(new AffinityTopologyVersion(GRID_CNT + 1));
-
-        assert fut != null;
-
-        fut.listen(new CI1<IgniteInternalFuture<?>>() {
-            @Override public void apply(IgniteInternalFuture<?> e) {
-                end.set(System.currentTimeMillis());
-
-                latch.countDown();
-
-                info("End time: " + end.get());
-            }
-        });
-
-        Lock lock1 = cache.lock(key + 1);
-
-        lock1.lock();
-
-        lock.unlock();
-
-        Lock lock2 = cache.lock(key + 2);
-
-        lock2.lock();
-
-        lock1.unlock();
-
-        assert !fut.isDone() : "Failed waiting for locks";
-
-        lock2.unlock();
-
-        latch.await();
-    }
-
-    /**
-     * @param key Key.
-     * @param keyPart Key partition.
-     * @param waitParts Partitions to wait.
-     * @return Wait time.
-     * @throws Exception If failed.
-     */
-    private long runLock(String key, int keyPart, Collection<Integer> waitParts) throws Exception {
-
-        GridCacheSharedContext<Object, Object> ctx = grid.context().cache().context();
-
-        final AtomicLong end = new AtomicLong(0);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        IgniteCache<String, String> cache = grid.cache(DEFAULT_CACHE_NAME);
-
-        Lock lock = cache.lock(key);
-
-        lock.lock();
-
-        long start;
-        try {
-            start = System.currentTimeMillis();
-
-            info("Start time: " + start);
-
-            IgniteInternalFuture<?> fut = ctx.partitionReleaseFuture(new AffinityTopologyVersion(GRID_CNT + 1));
-
-            assert fut != null;
-
-            fut.listen(new CI1<IgniteInternalFuture<?>>() {
-                @Override public void apply(IgniteInternalFuture<?> e) {
-                    end.set(System.currentTimeMillis());
-
-                    latch.countDown();
-
-                    info("End time: " + end.get());
-                }
-            });
-
-            assert !fut.isDone() : "Failed waiting for locks [keyPart=" + keyPart + ", waitParts=" + waitParts + ", done="
-                + fut.isDone() + ']';
-        }
-        finally {
-            lock.unlock();
-        }
-
-        latch.await();
-
-        return end.get() - start;
     }
 }

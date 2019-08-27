@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLock;
 import org.apache.ignite.IgniteQueue;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.IgniteSet;
@@ -238,30 +237,6 @@ public class IgnitePersistentStoreDataStructuresTest extends GridCommonAbstractT
             assertTrue(set.contains(i));
 
         assertEquals(100, set.size());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockVolatility() throws Exception {
-        Ignite ignite = startGrids(4);
-
-        ignite.active(true);
-
-        IgniteLock lock = ignite.reentrantLock("test", false, true, true);
-
-        assert lock != null;
-
-        stopAllGrids();
-
-        ignite = startGrids(4);
-
-        ignite.active(true);
-
-        lock = ignite.reentrantLock("test", false, true, false);
-
-        assert lock == null;
     }
 
     /**

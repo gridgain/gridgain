@@ -1669,11 +1669,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     }
 
     /** {@inheritDoc} */
-    @Override public void unlockAll(Collection<? extends K> keys) {
-        assert false;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridDhtCacheAdapter.class, this, super.toString());
     }

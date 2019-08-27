@@ -411,46 +411,6 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     }
 
     /** {@inheritDoc} */
-    @Override public boolean lock(Object key, long timeout) throws IgniteCheckedException {
-        return delegate.get().lock(keyTransformer.transform(key), timeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<Boolean> lockAsync(Object key, long timeout) {
-        return delegate.get().lockAsync(keyTransformer.transform(key), timeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean lockAll(@Nullable Collection keys, long timeout) throws IgniteCheckedException {
-        return delegate.get().lockAll(transform(keys), timeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<Boolean> lockAllAsync(@Nullable Collection keys, long timeout) {
-        return delegate.get().lockAllAsync(transform(keys), timeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlock(Object key) throws IgniteCheckedException {
-        delegate.get().unlock(keyTransformer.transform(key));
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlockAll(@Nullable Collection keys) throws IgniteCheckedException {
-        delegate.get().unlockAll(transform(keys));
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocked(Object key) {
-        return delegate.get().isLocked(keyTransformer.transform(key));
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLockedByThread(Object key) {
-        return delegate.get().isLockedByThread(keyTransformer.transform(key));
-    }
-
-    /** {@inheritDoc} */
     @Override public int size() {
         return delegate.get().size();
     }
