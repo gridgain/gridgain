@@ -19,8 +19,8 @@ import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 
 import Sockette from 'sockette';
 
-import {BehaviorSubject, Subject, EMPTY} from 'rxjs';
-import {distinctUntilChanged, filter, first, map, pluck, tap, timeout, catchError} from 'rxjs/operators';
+import {BehaviorSubject, Subject, Observable} from 'rxjs';
+import {distinctUntilChanged, filter, first, map, pluck, tap} from 'rxjs/operators';
 
 import uuidv4 from 'uuid/v4';
 
@@ -41,12 +41,12 @@ import {DemoService} from 'app/modules/demo/Demo.module';
 
 const __dbg = false;
 
-const State = {
-    INIT: 'INIT',
-    AGENT_DISCONNECTED: 'AGENT_DISCONNECTED',
-    CLUSTER_DISCONNECTED: 'CLUSTER_DISCONNECTED',
-    CONNECTED: 'CONNECTED'
-};
+enum State {
+    INIT = 'INIT',
+    AGENT_DISCONNECTED = 'AGENT_DISCONNECTED',
+    CLUSTER_DISCONNECTED = 'CLUSTER_DISCONNECTED',
+    CONNECTED = 'CONNECTED'
+}
 
 const IGNITE_2_0 = '2.0.0';
 const LAZY_QUERY_SINCE = [['2.1.4-p1', '2.2.0'], '2.2.1'];
@@ -118,8 +118,13 @@ const getLastActiveClusterId = () => {
 };
 
 class ConnectionState {
-    constructor(cluster) {
-        this.cluster = cluster;
+    cluster: AgentTypes.ClusterStats;
+    clusters: AgentTypes.ClusterStats[];
+    state: State;
+    hasDemo: boolean;
+
+    constructor() {
+        this.cluster = null;
         this.clusters = [];
         this.state = State.INIT;
     }
@@ -130,8 +135,9 @@ class ConnectionState {
         return cluster;
     }
 
-    update(demo, hasAgent, clusters, hasDemo) {
+    update(demo: boolean, hasAgent: boolean, clusters: AgentTypes.ClusterStats[], hasDemo: boolean) {
         this.clusters = clusters;
+        this.hasDemo = hasDemo;
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
@@ -154,8 +160,6 @@ class ConnectionState {
             }
         }
 
-        this.hasDemo = hasDemo;
-
         if (!hasAgent)
             this.state = State.AGENT_DISCONNECTED;
         else if (demo || this.cluster)
@@ -165,9 +169,6 @@ class ConnectionState {
     }
 
     disconnect() {
-        if (this.cluster)
-            this.cluster.disconnect = true;
-
         this.clusters = [];
         this.state = State.AGENT_DISCONNECTED;
     }
@@ -176,7 +177,13 @@ class ConnectionState {
 export default class AgentManager {
     static $inject = ['Demo', '$q', '$transitions', '$location', 'AgentModal', 'UserNotifications', 'IgniteVersion', 'ClusterLoginService'];
 
+    currentCluster$: Observable<ConnectionState>;
+    clusterIsActive$: Observable<boolean>;
+    clusterIsAvailable$: Observable<boolean>;
+
     clusterVersion: string;
+
+    indexing: boolean;
 
     connectionSbj = new BehaviorSubject(new ConnectionState());
 
@@ -189,9 +196,9 @@ export default class AgentManager {
     /** Websocket */
     ws = null;
 
-    wsSubject = new Subject();
+    wsSubject = new Subject<AgentTypes.WebSocketResponse>();
 
-    switchClusterListeners = new Set<() => Promise>();
+    switchClusterListeners = new Set<() => Promise<any>>();
 
     addClusterSwitchListener(func) {
         this.switchClusterListeners.add(func);
@@ -239,6 +246,10 @@ export default class AgentManager {
                 this.clusterVersion = version;
             }
         });
+
+        this.currentCluster$.pipe(
+            tap(({cluster}) => this.indexing = this.featureSupported(cluster, AgentTypes.IgniteFeatures.INDEXING))
+        );
     }
 
     isDemoMode() {
@@ -870,5 +881,43 @@ export default class AgentManager {
 
     hasCredentials(clusterId) {
         return this.clustersSecrets.get(clusterId).hasCredentials();
+    }
+
+    /**
+     * Check ignite feature is supported by cluster.
+     *
+     * @param cluster Cluster.
+     * @param feature Feature to check enabled.
+     * @return 'True' if feature is enabled or 'false' otherwise.
+     */
+    featureSupported(cluster: AgentTypes.ClusterStats, feature: AgentTypes.IgniteFeatures): boolean {
+        const bytes = this._base64ToArrayBuffer(cluster.supportedFeatures);
+
+        const byteIdx = feature >>> 3;
+
+        if (byteIdx >= bytes.length)
+            return false;
+
+        const bitIdx = feature & 0x7;
+
+        return (bytes[byteIdx] & (1 << bitIdx)) !== 0;
+    }
+
+    /**
+     * Decode base64 string to byte array.
+     *
+     * @param base64 Base64 string.
+     * @return {Uint8Array} Result byte array.
+     * @private
+     */
+    _base64ToArrayBuffer(base64: string) {
+        const binary_string =  window.atob(base64);
+        const len = binary_string.length;
+        const bytes = new Uint8Array( len );
+
+        for (let i = 0; i < len; i++)
+            bytes[i] = binary_string.charCodeAt(i);
+
+        return bytes;
     }
 }

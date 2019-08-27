@@ -82,7 +82,23 @@ public enum IgniteFeatures {
     /**
      * A mode when data nodes throttle update rate regarding to DR sender load
      */
-    DR_DATA_NODE_SMART_THROTTLING(19);
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /**
+     * Support rolling upgrade status task for Web Console.
+     */
+    WC_ROLLING_UPGRADE_STATUS(20),
+
+    /**
+     * Support for chain parameter in snapshot delete task for Web Console.
+     */
+    WC_SNAPSHOT_CHAIN_MODE(21),
+
+    /**
+     * Support enabling DR events from  Web Console.
+     */
+    WC_DR_STATE_EVENTS(22)
+    ;
 
     /**
      * Unique feature identifier.
