@@ -226,7 +226,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             Environment.SetEnvironmentVariable("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false");
 
-            try {
+//            try {
                 var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
                 {
                     ConsistentId = "node1"
@@ -285,11 +285,11 @@ namespace Apache.Ignite.Core.Tests.Cache
                     var res = cluster.GetBaselineTopology();
                     CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
                 }
-            }
-            finally
-            {
+//            }
+//            finally
+//            {
                 Environment.SetEnvironmentVariable("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", null);
-            }
+//            }
         }
 
         /// <summary>
