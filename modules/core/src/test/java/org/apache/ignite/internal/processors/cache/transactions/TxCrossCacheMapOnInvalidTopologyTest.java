@@ -143,7 +143,7 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
             assertNotNull(client.cache(CACHE2));
 
             try (IgniteDataStreamer<Object, Object> streamer = crd.dataStreamer(CACHE1)) {
-                // Put one key per partition.
+                // Put 500 keys per partition.
                 for (int k = 0; k < PARTS_CNT * 500; k++)
                     streamer.addData(k, new byte[10]);
             }
