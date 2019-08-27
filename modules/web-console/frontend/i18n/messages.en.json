@@ -113,14 +113,9 @@
                 "scan": "Scan",
                 "scanOnSelectedNode": "Scan on selected node",
                 "rename": "Rename",
-                "remove": "Remove"
-            },
-            "queryActions": {
-                "execute": "Execute",
-                "executeOnSelectedNode": "Execute on selected node",
-                "explain": "Explain",
-                "rename": "Rename",
-                "remove": "Remove"
+                "remove": "Remove",
+                "cancel": "Cancel",
+                "cancelTooltip": "Cancel query execution"
             },
             "renameQueryDialog": {
                 "title": "Rename Query",
@@ -130,6 +125,135 @@
             },
             "removeQueryDialog": {
                 "message": "{{ hasRunningQueries ? 'Query is being executed. Are you sure you want to cancel and remove query: \"' : 'Are you sure you want to remove query: \"'}}{{name}}\"?"
+            },
+            "chartTooltip": {
+                "table": "Show data in tabular form",
+                "bar": "Show bar chart<br/>By default first column - X values, second column - Y values<br/>In case of one column it will be treated as Y values",
+                "pie": "Show pie chart<br/>By default first column - pie labels, second column - pie values<br/>In case of one column it will be treated as pie values",
+                "line": "Show line chart<br/>By default first column - X values, second column - Y values<br/>In case of one column it will be treated as Y values",
+                "area": "Show area chart<br/>By default first column - X values, second column - Y values<br/>In case of one column it will be treated as Y values"
+            },
+            "chartSettings": {
+                "tooltip": "Click to show chart settings dialog",
+                "buttonLabel": "Chart settings",
+                "timeSpanPrefix": "Show",
+                "timeSpanSuffix": "min",
+                "durationLabel": "Duration: <b>{{duration}}</b>",
+                "nodeId8Label": "NodeID8: <b>{{id}}</b>",
+                "clearQueryResultButtonTooltip": "Clear query result"
+            },
+            "querySettings": {
+                "rowsPerPageInput": {
+                    "tooltip": "Max number of rows to show in query result as one page"
+                },
+                "maxPagesInput": {
+                    "tooltip": "Limit query max results to specified number of pages"
+                },
+                "refreshRateInput": {
+                    "tooltip": "Configure periodical execution of last successfully executed query"
+                },
+                "nonCollocatedJoinsInput": {
+                    "tooltip": "Non-collocated joins is a special mode that allow to join data across cluster without collocation.<br>Nested joins are not supported for now.<br><b>NOTE</b>: In some cases it may consume more heap memory or may take a long time than collocated joins."
+                },
+                "collocatedQueryInput": {
+                    "tooltip": "Used For Optimization Purposes Of Queries With GROUP BY Statements.<br/><b>NOTE:</b> Whenever Ignite executes a distributed query, it sends sub-queries to individual cluster members.<br/>If you know in advance that the elements of your query selection are collocated together on the same node and you group by collocated key (primary or affinity key), then Ignite can make significant performance and network optimizations by grouping data on remote nodes."
+                },
+                "enforceJoinOrderInput": {
+                    "tooltip": "Enforce join order of tables in the query.<br/>If <b>set</b>, then query optimizer will not reorder tables within join.<br/><b>NOTE:</b> It is not recommended to enable this property unless you have verified that indexes are not selected in optimal order."
+                },
+                "lazyResultSetInput": {
+                    "tooltip": "By default Ignite attempts to fetch the whole query result set to memory and send it to the client.<br/>For small and medium result sets this provides optimal performance and minimize duration of internal database locks, thus increasing concurrency.<br/>If result set is too big to fit in available memory this could lead to excessive GC pauses and even OutOfMemoryError.<br/>Use this flag as a hint for Ignite to fetch result set lazily, thus minimizing memory consumption at the cost of moderate performance hit."
+                }
+            },
+            "queryActions": {
+                "execute": {
+                    "buttonLabel": "Execute"
+                },
+                "executeOnSelectedNode": {
+                    "buttonLabel": "Execute on selected node"
+                },
+                "explain": {
+                    "buttonLabel": "Explain",
+                    "tooltip": "explain query"
+                },
+                "cancel": {
+                    "buttonLabel": "Cancel",
+                    "tooltip": "Cancel query execution"
+                },
+                "rename": {
+                    "buttonLabel": "Rename"
+                },
+                "remove": {
+                    "buttonLabel": "Remove"
+                }
+            },
+            "queryResultTableHeader": {
+                "currentPage": "Page: <b>{{page}}</b>",
+                "resultsSoFar": "Results so far: <b>{{amount}}</b>",
+                "duration": "Duration: <b>{{duration}}</b>",
+                "nodeId": "NodeID8: <b>{{id}}</b>",
+                "clearQueryResultButtonTooltip": "Clear query result",
+                "exportButtonTooltip": "export query results"
+            },
+            "export": {
+                "exportButtonLabel": "Export",
+                "exportAllButtonLabel": "Export all",
+                "copyToClipboardButtonLabel": "<span title=\"Copy current result page to clipboard\">Copy to clipboard</span>"
+            },
+            "chartResult": {
+                "columnsNotConfiguredErrorMessage": "Cannot display chart. Please configure axis using <b>Chart settings</b>",
+                "noColumnsErrorMessage": "Cannot display chart. Result set must contain Java build-in type columns. Please change query and execute it again.",
+                "pieChartNoSupportForTimeLineErrorMessage": "Pie chart does not support 'TIME_LINE' column for X-axis. Please use another column for X-axis or switch to another chart.",
+                "noQueryAndScanSupportErrorMessage": "Charts do not support <b>Explain</b> and <b>Scan</b> query"
+            },
+            "scanPanelContent": {
+                "chooseCacheInput": {
+                    "placeholder": "Choose cache"
+                },
+                "filterInput": {
+                    "placeholder": "Enter filter"
+                },
+                "rowsPerPageInput": {
+                    "tooltip": "Max number of rows to show in query result as one page"
+                }
+            },
+            "queryResult": {
+                "genericError": "Error: {{error}}",
+                "emptyResult": "Result set is empty. Duration: <b>duration</b>",
+                "scanQueryCache": "Showing results for scan of <b>{{cacheName}}</b>",
+                "scanQueryFilter": "&nbsp; with filter: <b>{{filter}}</b>",
+                "scanQueryNode": "&nbsp; on node: <b>{{node}}</b>",
+                "nextButtonLabel": "Next",
+                "cachesMetadataInput": {
+                    "label": "Caches:",
+                    "metadataButtonTooltip": "Click to show cache types metadata dialog",
+                    "filterPlaceholder": "Filter caches..."
+                },
+                "useAsDefaultSchemaInput": {
+                    "label": "Use selected cache as default schema name",
+                    "tooltip": "Use selected cache as default schema name.<br/>This will allow to execute query on specified cache without specify schema name.<br/><b>NOTE:</b> In future version of Ignite this feature will be removed."
+                },
+                "wrongCachesFilterError": "Wrong caches filter",
+                "noCaches": "No caches",
+                "showMoreButtonLabel": "Show more",
+                "showQueryButtonLabel": "Show query"
+            },
+            "scrollToQueryButtonLabel": "Scroll to query",
+            "saveNotebookNameButtonTooltip": "Save notebook name",
+            "addQueryButtonLabel": "Add query",
+            "addScanButtonLabel": "Add scan",
+            "breadcrumbs": {
+                "parent": "Notebooks",
+                "here": "Notebook '{{name}}'"
+            },
+            "features": {
+                "title": "With query notebook you can",
+                "list": "<li>Create any number of queries</li><li>Execute and explain SQL queries</li><li>Execute scan queries</li><li>View data in tabular form and as charts</li><li><a href='https://apacheignite-sql.readme.io/docs/sql-reference-overview' target='_blank'>More info</a></li>",
+                "examplesLabel": "Examples:"
+            },
+            "noData": {
+                "title": "Failed to load notebook",
+                "message": "Notebook not accessible any more. Go back to notebooks list."
             }
         },
         "failedToLoadNotebookErrorMessage": "Failed to load notebook.",

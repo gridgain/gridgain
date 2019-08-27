@@ -2292,29 +2292,44 @@ export class NotebookCtrl {
 
     queryActions: QueryActions<Paragraph & {type: 'SQL_FIELDS'}> = [
         {
-            text: this.$translate.instant('queries.notebook.queryActions.execute'),
+            text: this.$translate.instant('queries.notebook.queryActions.execute.buttonLabel'),
             click: (p) => this.$scope.execute(p),
             available: (p) => this.$scope.queryAvailable(p)
         },
         {
-            text: this.$translate.instant('queries.notebook.queryActions.executeOnSelectedNode'),
+            text: this.$translate.instant('queries.notebook.queryActions.executeOnSelectedNode.buttonLabel'),
             click: (p) => this.$scope.execute(p, true),
             available: (p) => this.$scope.queryAvailable(p)
         },
         {
-            text: this.$translate.instant('queries.notebook.queryActions.explain'),
+            text: this.$translate.instant('queries.notebook.queryActions.explain.buttonLabel'),
             click: (p) => this.$scope.explain(p),
             available: (p) => this.$scope.queryAvailable(p)
         },
         {
-            text: this.$translate.instant('queries.notebook.queryActions.rename'),
+            text: this.$translate.instant('queries.notebook.queryActions.rename.buttonLabel'),
             click: (p) => this.renameParagraph(p),
             available: () => true
         },
         {
-            text: this.$translate.instant('queries.notebook.queryActions.remove'),
+            text: this.$translate.instant('queries.notebook.queryActions.remove.buttonLabel'),
             click: (p) => this.removeParagraph(p),
             available: () => true
+        }
+    ];
+
+    exportActions = [
+        {
+            text: this.$translate.instant('queries.notebook.export.exportButtonLabel'),
+            click: 'exportCsv(paragraph)'
+        }, {
+            text: this.$translate.instant('queries.notebook.export.exportAllButtonLabel'),
+            click: 'exportCsvAll(paragraph)'
+        }, {
+            divider: true
+        }, {
+            text: this.$translate.instant('queries.notebook.export.copyToClipboardButtonLabel'),
+            click: 'exportCsvToClipBoard(paragraph)'
         }
     ];
 
