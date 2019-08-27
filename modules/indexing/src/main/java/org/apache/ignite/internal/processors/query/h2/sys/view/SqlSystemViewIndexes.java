@@ -39,7 +39,8 @@ public class SqlSystemViewIndexes extends SqlAbstractLocalSystemView {
     /**
      * Creates view with columns.
      *
-     * @param ctx kernal context.
+     * @param ctx Kernal context.
+     * @param idx Indexing.
      */
     public SqlSystemViewIndexes(GridKernalContext ctx, IgniteH2Indexing idx) {
         super("INDEXES", "Ignite SQL indexes", ctx, "TABLE_NAME",

@@ -235,6 +235,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * @param cacheName Cache name.
      * @return Default cache configuration.
      */
     protected CacheConfiguration<AbstractSchemaSelfTest.KeyClass, AbstractSchemaSelfTest.ValueClass> cacheConfiguration(
