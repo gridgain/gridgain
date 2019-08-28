@@ -38,6 +38,28 @@ Configuration file:
     server-uri=https://console.example.com
     node-uri=http://10.0.0.1:8080,http://10.0.0.2:8080
 
+Password encryption how to:
+  The web agent uses the jasypt library to encrypt passwords.
+
+  Supported password encryption algorithms:
+     [PBEWITHMD5ANDDES, PBEWITHMD5ANDTRIPLEDES, PBEWITHSHA1ANDDESEDE, PBEWITHSHA1ANDRC2_40]
+
+  1) Use encrypt.sh to encrypt passwords (default algorithm - PBEWITHMD5ANDDES).
+     Examples:
+        ./encrypt.sh input="plain-text-password" password=my-secret-password (output is PzOcEtbv03dkJZtMFdJdBkOT0X3s4hu3AG/wGDAwBf13EGlhWfpl60JmLcg8GkSq)
+        ./encrypt.sh input="plain-text-password" password=my-secret-password algorithm=PBEWITHMD5ANDTRIPLEDES (output is gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+
+  2) Set the environment variables "WEB_AGENT_MASTER_PASSWORD" and "WEB_AGENT_ENCRYPT_ALGORITHM" (if used non default algorithm).
+     Example for linux:
+        export WEB_AGENT_MASTER_PASSWORD=my-secret-password
+        export WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
+
+  3) Provide the encrypted password in script options or "default.properties" file.
+     Script example:
+        ./ignite-web-console-agent.{bat|sh} --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+     Property file example:
+        node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+
 Security tokens:
   1) By default security token of current user will be included into "default.properties" inside downloaded "ignite-web-console-agent-x.x.x.zip".
   2) One can get/reset token in Web Console profile (https://<your_console_address>/settings/profile).
