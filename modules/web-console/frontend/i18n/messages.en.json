@@ -16,6 +16,7 @@
         }
     },
     "actionsButtonLabel": "Actions",
+    "closeButtonLabel": "Close",
     "configuration": {
         "configurations": {},
         "basic": {
@@ -268,6 +269,22 @@
     "userMenu": {},
     "userProfile": {},
     "admin": {
+        "userActivitiesDialog": {
+            "title": "Activity details: {{ userName }}",
+            "grid": {
+                "columns": {
+                    "description": {
+                        "title": "Description"
+                    },
+                    "action": {
+                        "title": "Action"
+                    },
+                    "visited": {
+                        "title": "Visited"
+                    }
+                }
+            }
+        },
         "userNotificationsDialog": {}
     },
     "newUserForm": {},
