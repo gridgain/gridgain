@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if 0
 #include <stdint.h>
 #include <iostream>
 
@@ -425,3 +426,4 @@ int main()
 
     return 0;
 }
+#endif
