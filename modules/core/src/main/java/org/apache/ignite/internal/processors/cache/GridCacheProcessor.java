@@ -5306,7 +5306,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             AtomicLong totalProcessed = new AtomicLong();
 
-            AtomicReference<Throwable> restoreStateError = new AtomicReference<>();
+            AtomicReference<IgniteCheckedException> restoreStateError = new AtomicReference<>();
 
             StripedExecutor stripedExec = ctx.getStripedExecutorService();
 
@@ -5323,7 +5323,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                         U.error(log, "Failed to restore partition state for " +
                             "groupName=" + grp.name() + " groupId=" + grp.groupId(), e);
 
-                        restoreStateError.compareAndSet(null, e);
+                        restoreStateError.compareAndSet(
+                            null,
+                            e instanceof IgniteCheckedException
+                                ? ((IgniteCheckedException)e)
+                                : new IgniteCheckedException(e)
+                        );
                     }
                 });
 
@@ -5339,19 +5344,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
 
             // Checking error after all task applied.
-            if (restoreStateError.get() != null) {
-                Throwable t = restoreStateError.get();
-
-                assert t instanceof IgniteCheckedException || t instanceof RuntimeException || t instanceof Error : t;
-
-                if (t instanceof IgniteCheckedException)
-                    throw ((IgniteCheckedException)t);
-
-                if (t instanceof RuntimeException)
-                    throw ((RuntimeException)t);
-
-                throw (Error)t;
-            }
+            if (restoreStateError.get() != null)
+                throw restoreStateError.get();
 
             if (log.isInfoEnabled())
                 log.info("Finished restoring partition state for local groups [" +
