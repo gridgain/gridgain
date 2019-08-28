@@ -38,27 +38,41 @@ Configuration file:
     server-uri=https://console.example.com
     node-uri=http://10.0.0.1:8080,http://10.0.0.2:8080
 
-Password encryption:
-  The web agent uses the jasypt library to encrypt passwords.
+Passwords encryption:
+  There several passwords in Web Agent, for example for the SSL connectors. By default, passwords passed as simple text.
+  For security reasons encrypted passwords can be used.
 
-  Supported password encryption algorithms:
-     [PBEWITHMD5ANDDES, PBEWITHMD5ANDTRIPLEDES, PBEWITHSHA1ANDDESEDE, PBEWITHSHA1ANDRC2_40]
+  How to encrypt passwords:
+    1. Generate master password and set it as environment variable:
+      Linux/Mac OS: export WEB_AGENT_MASTER_PASSWORD=my-master-password
+      Windows: set WEB_AGENT_MASTER_PASSWORD=my-master-password
 
-  1) Use encrypt.sh to encrypt passwords (default algorithm - PBEWITHMD5ANDDES).
-     Examples:
-        ./encrypt.sh input="plain-text-password" password=my-secret-password (output is PzOcEtbv03dkJZtMFdJdBkOT0X3s4hu3AG/wGDAwBf13EGlhWfpl60JmLcg8GkSq)
-        ./encrypt.sh input="plain-text-password" password=my-secret-password algorithm=PBEWITHMD5ANDTRIPLEDES (output is gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+    2. Select password encryption algorithms.  This step is optional.
+      Supported algorithms:
+        PBEWITHMD5ANDDES - default algorithm
+        PBEWITHMD5ANDTRIPLEDES
+        PBEWITHSHA1ANDDESEDE
+        PBEWITHSHA1ANDRC2_40
 
-  2) Set the environment variables "WEB_AGENT_MASTER_PASSWORD" and "WEB_AGENT_ENCRYPT_ALGORITHM" (if used non default algorithm).
-     Example for linux:
-        export WEB_AGENT_MASTER_PASSWORD=my-secret-password
-        export WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
+    3. Set environment variable with algorithm name.
+      Linux/Mac OS: export  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
+      Windows: set  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
 
-  3) Provide the encrypted password in script options or "default.properties" file.
-     Script example:
-        ./ignite-web-console-agent.{bat|sh} --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
-     Property file example:
-        node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+    4. Encrypt passwords that will be used with Web Agent:
+      Linux/Mac OS:  ./encrypt.sh input="plain-text-password" password=my-master-password
+      Windows:  encrypt.bat input="plain-text-password" password=my-master-password
+      The result will be encoded password like this: gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh
+
+  And use encrypted passwords with Web Agent in script options or "default.properties" file.
+
+  Example for "default.properties":
+    ...
+      node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+    ...
+
+  Example for ignite-web-console-agent.{bat|sh}:
+    Linux/Mac OS: ./ignite-web-console-agent.sh --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+    Windows: ignite-web-console-agent.bat --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
 
 Security tokens:
   1) By default security token of current user will be included into "default.properties" inside downloaded "ignite-web-console-agent-x.x.x.zip".
