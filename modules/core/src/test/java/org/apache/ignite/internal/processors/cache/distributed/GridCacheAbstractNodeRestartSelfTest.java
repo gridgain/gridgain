@@ -116,6 +116,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
     /** Retries. */
     private int retries = DFLT_RETRIES;
+    private boolean client = false;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -131,6 +132,8 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
         disco.setNetworkTimeout(30_000);
 
         CacheConfiguration ccfg = cacheConfiguration();
+
+        c.setClientMode(client);
 
         if (evict) {
             LruEvictionPolicy plc = new LruEvictionPolicy();
@@ -717,7 +720,9 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
         final AtomicReference<Throwable> err = new AtomicReference<>();
 
+        client = true;
         startGrids();
+        client = false;
 
         Collection<Thread> threads = new LinkedList<>();
 
