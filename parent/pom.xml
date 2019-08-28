@@ -504,6 +504,10 @@
                                 <title>Encryption SPI</title>
                                 <packages>org.apache.ignite.spi.encryption*</packages>
                             </group>
+                            <group>
+                                <title>OpenCensus SPI</title>
+                                <packages>org.apache.ignite.opencensus.spi*</packages>
+                            </group>
                         </groups>
                         <header>
                             <![CDATA[
