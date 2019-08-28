@@ -38,7 +38,7 @@ Configuration file:
     server-uri=https://console.example.com
     node-uri=http://10.0.0.1:8080,http://10.0.0.2:8080
 
-Password encryption how to:
+Password encryption:
   The web agent uses the jasypt library to encrypt passwords.
 
   Supported password encryption algorithms:
