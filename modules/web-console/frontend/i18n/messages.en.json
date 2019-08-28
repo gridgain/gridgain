@@ -17,6 +17,7 @@
     },
     "actionsButtonLabel": "Actions",
     "closeButtonLabel": "Close",
+    "cancelButtonLabel": "Cancel",
     "configuration": {
         "configurations": {},
         "basic": {
@@ -263,7 +264,23 @@
         "removeNotebooksConfirmationMessage": "Are you sure you want to remove {{amount}} selected notebooks?",
         "notebookNameCollissionErrorMessage": "Notebook with name \"{{name}}\" already exists!"
     },
-    "connectedClustersDialog": {},
+    "connectedClustersDialog": {
+        "logoutButtonTooltip": "Click here to logout from cluster.",
+        "status": {
+            "active": "Active",
+            "inactive": "Not Active"
+        },
+        "noData": {
+            "noClustersMessage": "You have no connected clusters."
+        },
+        "gridColumnTitles": {
+            "name": "Cluster",
+            "nids": "Number of Nodes",
+            "status": "Status"
+        },
+        "title": "Connected Clusters",
+        "closeButtonLabel": "Ok"
+    },
     "demoMode": {},
     "helpMenu": {},
     "userMenu": {},
@@ -285,7 +302,13 @@
                 }
             }
         },
-        "userNotificationsDialog": {}
+        "userNotificationsDialog": {},
+        "createUserDialog": {
+            "userCreatedSuccessNotification": "User {{user.email}} created",
+            "loadingText": "Creating user…",
+            "title": "Create User",
+            "formActionButtonLabel": "Create user"
+        }
     },
     "newUserForm": {},
     "gettingStartedDialog": {},
@@ -428,5 +451,24 @@
             "cancel": "Cancel",
             "save": "Save Changes"
         }
+    },
+    "bsSelectMenu": {
+        "selectAllOptionLabel": "All"
+    },
+    "clusterSecurityIconComponent": {
+        "titleSecured": "Secured",
+        "titleUnsecured": "Unsecured"
+    },
+    "clusterSelectorComponent": {
+        "failedToSwitchClusterErrorMessage": "Failed to switch cluster: ",
+        "failedToToggleClusterStateErrorMessage": "Failed to toggle cluster state: ",
+        "deactivateConfirmationMessage": "Are you sure you want to deactivate cluster?",
+        "clusterIsInDemoMode": "Demo cluster",
+        "noClusters": "No clusters available",
+        "tooltip": "Multi-Cluster Support<br/><a href=\"https://apacheignite-tools.readme.io/docs/multi-cluster-support\" target=\"_blank\">More info</a>",
+        "activationState": "Cluster {{ active ? 'active' : 'inactive' }}"
+    },
+    "connectedClustersBadgeComponent": {
+        "message": "My Connected Clusters: "
     }
 }
