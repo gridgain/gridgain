@@ -63,16 +63,15 @@ Passwords encryption:
       Windows:  encrypt.bat input=plain-text-password password=my-master-password
       The result will be encoded password like this: gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh
 
-  And use encrypted passwords with Web Agent in script options or "default.properties" file.
+    4. Use encrypted passwords with Web Agent in script options or "default.properties" file.
+      Example for "default.properties":
+        ...
+          node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+        ...
 
-  Example for "default.properties":
-    ...
-      node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
-    ...
-
-  Example for ignite-web-console-agent.{bat|sh}:
-    Linux/Mac OS: ./ignite-web-console-agent.sh --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
-    Windows: ignite-web-console-agent.bat --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+      Example for ignite-web-console-agent.{bat|sh}:
+        Linux/Mac OS: ./ignite-web-console-agent.sh --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+        Windows: ignite-web-console-agent.bat --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
 
 Security tokens:
   1) By default security token of current user will be included into "default.properties" inside downloaded "ignite-web-console-agent-x.x.x.zip".
