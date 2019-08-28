@@ -54,11 +54,11 @@ Passwords encryption:
         PBEWITHSHA1ANDDESEDE
         PBEWITHSHA1ANDRC2_40
 
-    3. Set environment variable with algorithm name.
-      Linux/Mac OS: export  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
-      Windows: set  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
+      Set environment variable with algorithm name.
+        Linux/Mac OS: export  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
+        Windows: set  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
 
-    4. Encrypt passwords that will be used with Web Agent:
+    3. Encrypt passwords that will be used with Web Agent:
       Linux/Mac OS:  ./encrypt.sh input="plain-text-password" password=my-master-password
       Windows:  encrypt.bat input="plain-text-password" password=my-master-password
       The result will be encoded password like this: gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh
