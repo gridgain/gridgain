@@ -59,8 +59,8 @@ Passwords encryption:
         Windows: set  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
 
     3. Encrypt passwords that will be used with Web Agent:
-      Linux/Mac OS:  ./encrypt.sh input="plain-text-password" password=my-master-password
-      Windows:  encrypt.bat input="plain-text-password" password=my-master-password
+      Linux/Mac OS:  ./encrypt.sh input=plain-text-password password=my-master-password
+      Windows:  encrypt.bat input=plain-text-password password=my-master-password
       The result will be encoded password like this: gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh
 
   And use encrypted passwords with Web Agent in script options or "default.properties" file.
