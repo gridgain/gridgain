@@ -57,8 +57,15 @@ namespace ignite
 
                 int32_t metaVer = metaMgr->GetVersion();
 
+                Guid* pguid = (Guid*)inOp.GetVAL();
+                if (pguid)
+                    std::cout << "MYLOGTAG:" << "InputOperationP2:val2 = " << *((Guid*)inOp.GetVAL()) << std::endl;
+
                 InteropOutputStream out(mem);
                 BinaryWriterImpl writer(&out, metaMgr);
+
+                if (pguid)
+                    std::cout << "MYLOGTAG:" << "InputOperationP3:val2 = " << *((Guid*)inOp.GetVAL()) << std::endl;
                 
                 inOp.ProcessInput(writer);
 
@@ -120,6 +127,8 @@ namespace ignite
                 JniErrorInfo jniErr;
 
                 SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
+
+                std::cout << "MYLOGTAG:" << "InputOperationP1:val2 = " << *((Guid*)inOp.GetVAL()) << std::endl;
 
                 int64_t outPtr = WriteTo(mem.Get(), inOp, err);
 

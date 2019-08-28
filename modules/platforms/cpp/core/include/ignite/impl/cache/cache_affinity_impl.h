@@ -132,6 +132,8 @@ namespace ignite
 
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
+                    std::cout << "MYLOGTAG:" << "InputOperationP0:val2 = " << *((Guid*)inOp.GetVAL()) << std::endl;
+
                     bool ret = OutOpDEBUG(Command::IS_PRIMARY, inOp, err);
 /*
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();

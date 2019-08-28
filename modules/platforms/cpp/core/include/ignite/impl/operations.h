@@ -40,6 +40,18 @@ namespace ignite
         class InputOperation
         {
         public:
+
+            InputOperation()
+            {
+
+            }
+
+            InputOperation(const InputOperation&)
+            {
+                std::cout << "MYLOGTAG:" << "InputOperation(const InputOperation&) = !!!" << std::endl;
+            }
+
+
             /**
              * Destructor.
              */
@@ -54,6 +66,8 @@ namespace ignite
              * @param writer Writer.
              */
             virtual void ProcessInput(ignite::impl::binary::BinaryWriterImpl& writer) = 0;
+
+            virtual void* GetVAL() { return NULL; };
         };
 
         /**
@@ -104,10 +118,15 @@ namespace ignite
 
             virtual void ProcessInput(ignite::impl::binary::BinaryWriterImpl& writer)
             {
+                std::cout << "MYLOGTAG:" << "InputOperationP4:val2 = " << *((Guid*)GetVAL()) << std::endl;
+
                 writer.WriteTopObject<T1>(val1);
                 writer.WriteTopObject<T2>(val2);
             }
-        private:
+
+            virtual void* GetVAL() { return (void*)&val1; };
+
+        public:
             /** First value. */
             const T1& val1;
 
