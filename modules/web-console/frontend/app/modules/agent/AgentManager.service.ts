@@ -89,7 +89,7 @@ const SuccessStatus = {
 /**
  * Save in local storage ID of specified cluster.
  *
- * @param {ClusterStats} cluster Cluster to save it's ID in local storage.
+ * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
  */
 const saveToStorage = (cluster) => {
     try {
@@ -339,6 +339,16 @@ export default class AgentManager {
             eventType,
             payload
         });
+    }
+
+    /**
+     * Save in local storage ID of specified cluster.
+     * If cluster is not specified current cluster ID will be saved.
+     *
+     * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
+     */
+    saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
+        saveToStorage(cluster);
     }
 
     updateCluster(newCluster) {
