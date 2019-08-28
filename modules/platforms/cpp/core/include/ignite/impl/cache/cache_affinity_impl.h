@@ -126,10 +126,18 @@ namespace ignite
                 template <typename K>
                 bool IsPrimary(ignite::cluster::ClusterNode node, K key)
                 {
-                    IgniteError err;
-                    In2Operation<Guid, K> inOp(node.GetId(), key);
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
-                    bool ret = OutOp(Command::IS_PRIMARY, inOp, err);
+                    writer.WriteObject(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    IgniteError err;
+
+                    bool ret = OutOp(Command::IS_PRIMARY, *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 
@@ -148,10 +156,18 @@ namespace ignite
                 template <typename K>
                 bool IsBackup(ignite::cluster::ClusterNode node, K key)
                 {
-                    IgniteError err;
-                    In2Operation<Guid, K> inOp(node.GetId(), key);
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
-                    bool ret = OutOp(Command::IS_BACKUP, inOp, err);
+                    writer.WriteObject(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    IgniteError err;
+
+                    bool ret = OutOp(Command::IS_BACKUP, *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 
@@ -173,10 +189,18 @@ namespace ignite
                 template <typename K>
                 bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, K key)
                 {
-                    IgniteError err;
-                    In2Operation<Guid, K> inOp(node.GetId(), key);
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
-                    bool ret = OutOp(Command::IS_PRIMARY_OR_BACKUP, inOp, err);
+                    writer.WriteObject(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    IgniteError err;
+
+                    bool ret = OutOp(Command::IS_PRIMARY_OR_BACKUP, *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 

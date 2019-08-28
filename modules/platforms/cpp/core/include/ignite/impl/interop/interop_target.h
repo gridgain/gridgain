@@ -77,6 +77,16 @@ namespace ignite
                  * Internal out operation.
                  *
                  * @param opType Operation type.
+                 * @param inMem Input memory.
+                 * @param err Error.
+                 * @return Result.
+                 */
+                bool OutOp(int32_t opType, InteropMemory& inMem, IgniteError& err);
+
+                /**
+                 * Internal out operation.
+                 *
+                 * @param opType Operation type.
                  * @param inOp Input.
                  * @param err Error.
                  * @return Result.
