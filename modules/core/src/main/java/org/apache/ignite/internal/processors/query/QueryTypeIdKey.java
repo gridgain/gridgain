@@ -66,6 +66,10 @@ public class QueryTypeIdKey {
         return cacheName;
     }
 
+    public int valueTypeId() {
+        return valTypeId;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)

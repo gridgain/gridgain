@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Random;
@@ -32,6 +33,7 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.query.DummyQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.QueryTypeCandidate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
@@ -236,7 +238,7 @@ public class IgniteClientCacheInitializationFailTest extends GridCommonAbstractT
     private static class FailedIndexing extends DummyQueryIndexing {
         /** {@inheritDoc} */
         @Override public void registerCache(String cacheName, String schemaName,
-            GridCacheContextInfo<?, ?> cacheInfo) throws IgniteCheckedException {
+            GridCacheContextInfo<?, ?> cacheInfo, Collection<QueryTypeCandidate> cands) throws IgniteCheckedException {
             if (FAILED_CACHES.contains(cacheInfo.name()) && cacheInfo.cacheContext().kernalContext().clientNode())
                 throw new IgniteCheckedException("Test query exception " + cacheInfo.name() + " " + new Random().nextInt());
         }

@@ -159,7 +159,8 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     @Override public void registerCache(
         String cacheName,
         String schemaName,
-        GridCacheContextInfo<?, ?> cacheInfo
+        GridCacheContextInfo<?, ?> cacheInfo,
+        Collection<QueryTypeCandidate> cands
     ) throws IgniteCheckedException {
 
     }
