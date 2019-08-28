@@ -17,12 +17,13 @@
 package org.apache.ignite.sqltests;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
+import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -45,7 +46,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 /**
  * Data types coverage for basic sql operations.
  */
-public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
+public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     /** {@inheritDoc} */
     @Before
     @Override
@@ -261,6 +262,7 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      * @throws Exception If failed.
      */
     @Ignore("https://ggsystems.atlassian.net/browse/GG-23401")
+    @SuppressWarnings("ZeroLengthArrayAllocation")
     @Test
     public void testBinaryDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.BINARY,
@@ -329,6 +331,12 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
                 " val " + dataType + ")" +
                 " WITH " + "\"template=" + templateName + "\""), false);
 
+        if (cacheMode != CacheMode.LOCAL) {
+            ignite.context().query().querySqlFields(new SqlFieldsQuery(
+                "CREATE INDEX IDX" + UUID.randomUUID().toString().replaceAll("-", "_") +
+                    " ON " + tblName + "(id, val)"), false);
+        }
+
         checkCRUD(ignite, tblName, dataType, valsToCheck);
     }
 
@@ -392,7 +400,7 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
             // Check DELETE/SELECT
             if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
                 !waitForCondition(() -> ignite.context().query().querySqlFields(
-                    new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll().size() == 0,
+                    new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll().isEmpty(),
                     TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
                 fail("Deleted data are still retrievable via SELECT.");
 
@@ -417,7 +425,7 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
         throws Exception {
         if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
             !waitForCondition(() -> ignite.context().query().querySqlFields(
-                new SqlFieldsQuery(qryStr), false).getAll().size() != 0,
+                new SqlFieldsQuery(qryStr), false).getAll().isEmpty(),
                 TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
             fail("Unable to retrieve data via SELECT.");
 
@@ -544,7 +552,7 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
          */
         Quoted(Object val) {
             this.val = val;
-            this.sqlStrVal = "\'" + val + "\'";
+            sqlStrVal = "\'" + val + "\'";
         }
 
         /** @inheritDoc */
@@ -580,8 +588,8 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
          * @param time Original value.
          */
         Timed(Time time) {
-            this.val = time;
-            this.sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(time) + "', '" + PATTERN + "')";
+            val = time;
+            sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(time) + "', '" + PATTERN + "')";
         }
 
         /** @inheritDoc */
@@ -617,8 +625,8 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
          * @param date Original value.
          */
         Dated(Date date) {
-            this.val = date;
-            this.sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
+            val = date;
+            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
         }
 
         /** @inheritDoc */
@@ -648,8 +656,8 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
          * @param byteArr Original value.
          */
         ByteArrayed(byte[] byteArr) {
-            this.val = byteArr;
-            this.sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
+            val = byteArr;
+            sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
         }
 
         /** @inheritDoc */
