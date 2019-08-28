@@ -1,4 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -o nounset
+set -o errexit
+set -o pipefail
+set -o errtrace
+set -o functrace
 
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
@@ -16,32 +21,63 @@
 # limitations under the License.
 #
 
-SCRIPT_NAME=encrypt.sh
-EXECUTABLE_CLASS=org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI
-BIN_DIR=`dirname $0`
-LIB_DIR=$BIN_DIR/libs
+MAIN_CLASS=org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI
 EXEC_CLASSPATH="."
 
-if [ -n "$JASYPT_CLASSPATH" ]
-then
-  EXEC_CLASSPATH=$EXEC_CLASSPATH:$JASYPT_CLASSPATH
-fi
+SOURCE="${BASH_SOURCE[0]}"
 
-for a in `find $LIB_DIR -name '*.jar'`
+# Resolve $SOURCE until the file is no longer a symlink.
+while [ -h "$SOURCE" ]
+    do
+        IGNITE_HOME="$(cd -P "$( dirname "$SOURCE"  )" && pwd)"
+
+        SOURCE="$(readlink "$SOURCE")"
+
+        # If $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located.
+        [[ $SOURCE != /* ]] && SOURCE="$IGNITE_HOME/$SOURCE"
+    done
+
+#
+# Set IGNITE_HOME.
+#
+export IGNITE_HOME="$(cd -P "$( dirname "$SOURCE" )" && pwd)"
+
+source "${IGNITE_HOME}"/include/functions.sh
+
+#
+# OS specific support.
+#
+getClassPathSeparator;
+
+#
+# Libraries included in classpath.
+#
+IGNITE_LIBS="${IGNITE_HOME}/*${SEP}${IGNITE_HOME}/libs/*"
+
+for file in ${IGNITE_HOME}/libs/*
 do
-  EXEC_CLASSPATH=$EXEC_CLASSPATH:$a
+    if [ -d ${file} ] && [ "${file}" != "${IGNITE_HOME}"/libs/optional ]; then
+        IGNITE_LIBS=${IGNITE_LIBS:-}${SEP}${file}/*
+    fi
 done
 
-JAVA_EXECUTABLE=java
-if [ -n "$JAVA_HOME" ]
-then
-  JAVA_EXECUTABLE=$JAVA_HOME/bin/java
+CP="${IGNITE_LIBS}"
+#
+# Discover path to Java executable and check it's version.
+#
+checkJava
+
+osname=`uname`
+
+if [ "${DOCK_OPTS:-}" == "" ]; then
+    DOCK_OPTS="-Xdock:name=Web Agent"
 fi
 
-if [ "$OSTYPE" = "cygwin" ]
-then
-  EXEC_CLASSPATH=`echo $EXEC_CLASSPATH | sed 's/:/;/g' | sed 's/\/cygdrive\/\([a-z]\)/\1:/g'`
-  JAVA_EXECUTABLE=`cygpath --unix "$JAVA_EXECUTABLE"`
-fi
-
-"$JAVA_EXECUTABLE" -classpath $EXEC_CLASSPATH $EXECUTABLE_CLASS $SCRIPT_NAME "$@"
+case $osname in
+    Darwin*)
+        "$JAVA" "${DOCK_OPTS}" -cp "${CP}" ${MAIN_CLASS} "$@"
+    ;;
+    *)
+        "$JAVA" -cp "${CP}" ${MAIN_CLASS} "$@"
+    ;;
+esac

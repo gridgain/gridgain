@@ -15,21 +15,51 @@
 ::
 
 @ECHO OFF
+Setlocal EnableDelayedExpansion
 
-set SCRIPT_NAME=encrypt.bat
-set EXECUTABLE_CLASS=org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI
-set EXEC_CLASSPATH=.
-if "%JASYPT_CLASSPATH%" == "" goto computeclasspath
-set EXEC_CLASSPATH=%EXEC_CLASSPATH%;%JASYPT_CLASSPATH%
+if "%OS%" == "Windows_NT"  setlocal
 
-:computeclasspath
-IF "%OS%" == "Windows_NT" setlocal ENABLEDELAYEDEXPANSION
-FOR %%c in (%~dp0\libs\*.jar) DO set EXEC_CLASSPATH=!EXEC_CLASSPATH!;%%c
-IF "%OS%" == "Windows_NT" setlocal DISABLEDELAYEDEXPANSION
+:: Check IGNITE_HOME.
+pushd "%~dp0"
+set IGNITE_HOME=%CD%
 
-set JAVA_EXECUTABLE=java
-if "%JAVA_HOME%" == "" goto execute
-set JAVA_EXECUTABLE="%JAVA_HOME%\bin\java"
+:checkIgniteHome2
+:: Strip double quotes from IGNITE_HOME
+set IGNITE_HOME=%IGNITE_HOME:"=%
 
-:execute
-%JAVA_EXECUTABLE% -classpath %EXEC_CLASSPATH% %EXECUTABLE_CLASS% %SCRIPT_NAME% %*
+:: remove all trailing slashes from IGNITE_HOME.
+if %IGNITE_HOME:~-1,1% == \ goto removeTrailingSlash
+if %IGNITE_HOME:~-1,1% == / goto removeTrailingSlash
+goto checkIgniteHome3
+
+:removeTrailingSlash
+set IGNITE_HOME=%IGNITE_HOME:~0,-1%
+goto checkIgniteHome2
+
+:checkIgniteHome3
+
+:: Check JAVA_HOME.
+if defined JAVA_HOME  goto checkJdk
+    echo %0, ERROR:
+    echo JAVA_HOME environment variable is not found.
+    echo Please point JAVA_HOME variable to location of JDK 1.8 or later.
+    echo You can also download latest JDK at http://java.com/download.
+goto error_finish
+
+:checkJdk
+:: Check that JDK is where it should be.
+if not exist "%JAVA_HOME%\bin\java.exe" (
+    echo %0, ERROR:
+    echo JAVA is not found in JAVA_HOME=%JAVA_HOME%.
+    echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
+    echo You can also download latest JDK at http://java.com/download.
+)
+goto :run_java
+
+:run_java
+
+set CP=%IGNITE_HOME%\*;%IGNITE_HOME%\libs\*
+
+"%JAVA_HOME%\bin\java.exe" %JVM_OPTS% -cp "%CP%" org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI %*
+
+goto :eof
