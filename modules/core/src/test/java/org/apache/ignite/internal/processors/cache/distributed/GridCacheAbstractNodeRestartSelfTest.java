@@ -720,8 +720,16 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
         final AtomicReference<Throwable> err = new AtomicReference<>();
 
+        startGrid(4);
+        startGrid(5);
+        startGrid(6);
+        startGrid(7);
+
         client = true;
-        startGrids();
+        startGrid(0);
+        startGrid(1);
+        startGrid(2);
+        startGrid(3);
         client = false;
 
         Collection<Thread> threads = new LinkedList<>();
