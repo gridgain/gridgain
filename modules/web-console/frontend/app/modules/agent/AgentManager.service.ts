@@ -91,7 +91,7 @@ const SuccessStatus = {
  *
  * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
  */
-const saveToStorage = (cluster) => {
+const _saveToStorage = (cluster) => {
     try {
         if (cluster)
             localStorage.clusterId = cluster.id;
@@ -140,7 +140,7 @@ class ConnectionState {
 
             this.cluster = restoredCluster || _.head(clusters);
 
-            saveToStorage(this.cluster);
+            _saveToStorage(this.cluster);
         }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
@@ -150,7 +150,7 @@ class ConnectionState {
             else {
                 this.cluster = _.head(clusters);
 
-                saveToStorage(this.cluster);
+                _saveToStorage(this.cluster);
             }
         }
 
@@ -348,7 +348,7 @@ export default class AgentManager {
      * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
      */
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
-        saveToStorage(cluster);
+        _saveToStorage(cluster);
     }
 
     updateCluster(newCluster) {
@@ -378,7 +378,7 @@ export default class AgentManager {
 
                 this.connectionSbj.next(state);
 
-                saveToStorage(cluster);
+                _saveToStorage(cluster);
 
                 return Promise.resolve();
             });
