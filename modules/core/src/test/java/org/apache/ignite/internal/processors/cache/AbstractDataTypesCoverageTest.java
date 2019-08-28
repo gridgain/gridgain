@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
  * Abstract data types coverage  test.
  */
 @RunWith(Parameterized.class)
-public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTest{
+public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTest {
     /** */
     @SuppressWarnings("unchecked")
     private static final Factory[] TTL_FACTORIES = {
@@ -56,7 +56,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
                 return "EternalExpiryPolicy";
             }
         },
-        new FactoryBuilder.SingletonFactory(new TestPolicy(60_000L, 61_000L, 62_000L)){
+        new FactoryBuilder.SingletonFactory(new TestPolicy(60_000L, 61_000L, 62_000L)) {
             @Override public String toString() {
                 return "ExpiryPolicy:60_000L, 61_000L, 62_000L";
             }
@@ -77,7 +77,6 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
 //            }
 //        }
     };
-
 
     /** Possible options for enabled/disabled properties like onheapCacheEnabled */
     private static final boolean[] BOOLEANS = {true, false};
@@ -142,7 +141,8 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     public static Collection parameters() {
         Set<Object[]> params = new HashSet<>();
 
-        Object[] baseParamLine = {null, CacheAtomicityMode.ATOMIC, CacheMode.PARTITIONED, null, 2, null,
+        Object[] baseParamLine = {
+            null, CacheAtomicityMode.ATOMIC, CacheMode.PARTITIONED, null, 2, null,
             false, CacheWriteSynchronizationMode.FULL_SYNC, false};
 
         Object[] paramLine = null;
@@ -215,7 +215,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
             params.add(paramLine);
         }
 
-        for (Object[] pLine: params)
+        for (Object[] pLine : params)
             pLine[0] = UUID.randomUUID();
 
         return params;
@@ -394,7 +394,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     /**
      * Objects based on primitives and collections.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "AssignmentOrReturnOfFieldWithMutableType"})
     protected static class ObjectBasedOnPrimitivesAndCollections implements Serializable {
         /** */
         private static final long serialVersionUID = 0L;
@@ -466,7 +466,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     /**
      * Objects based on primitives collections and nested objects.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "AssignmentOrReturnOfFieldWithMutableType"})
     protected static class ObjectBasedOnPrimitivesCollectionsAndNestedObject implements Serializable {
         /** */
         private static final long serialVersionUID = 0L;
