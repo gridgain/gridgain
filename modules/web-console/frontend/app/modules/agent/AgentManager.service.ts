@@ -509,7 +509,7 @@ export default class AgentManager {
                     case SuccessStatus.AUTH_FAILED:
                         this.clustersSecrets.get(cluster.id).resetCredentials();
 
-                        throw new Error('Cluster authentication failed. Incorrect user and/or password.');
+                        return this._restOnCluster(event, params);
 
                     case SuccessStatus.SECURITY_CHECK_FAILED:
                         throw new Error('Access denied. You are not authorized to access this functionality.');
