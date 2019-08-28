@@ -44,7 +44,7 @@ if defined JAVA_HOME  goto checkJdk
     echo JAVA_HOME environment variable is not found.
     echo Please point JAVA_HOME variable to location of JDK 1.8 or later.
     echo You can also download latest JDK at http://java.com/download.
-goto error_finish
+goto :eof
 
 :checkJdk
 :: Check that JDK is where it should be.
