@@ -37,6 +37,8 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -134,6 +136,9 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
         CacheConfiguration ccfg = cacheConfiguration();
 
         c.setClientMode(client);
+
+        c.setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(300 * 1024 * 1024)));
 
         if (evict) {
             LruEvictionPolicy plc = new LruEvictionPolicy();
