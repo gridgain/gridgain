@@ -268,12 +268,13 @@ public class Agent extends ManagementConsoleProcessor {
      * @return Agent configuration.
      */
     private ManagementConfiguration readFromMetaStorage() {
-        ManagementConfiguration cfg = null;
+        if (metaStorage == null)
+            return new ManagementConfiguration();
 
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            cfg = (ManagementConfiguration) metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
+            return (ManagementConfiguration) metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Can't read agent configuration from meta storage!");
@@ -282,13 +283,16 @@ public class Agent extends ManagementConsoleProcessor {
             ctx.cache().context().database().checkpointReadUnlock();
         }
 
-        return cfg != null ? cfg : new ManagementConfiguration();
+        return new ManagementConfiguration();
     }
 
     /**
      * @param cfg Agent configuration.
      */
     private void writeToMetaStorage(ManagementConfiguration cfg) {
+        if (metaStorage == null)
+            return;
+
         ctx.cache().context().database().checkpointReadLock();
 
         try {
