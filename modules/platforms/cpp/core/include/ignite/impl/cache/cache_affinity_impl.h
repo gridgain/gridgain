@@ -138,7 +138,9 @@ namespace ignite
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
-                    writer.WriteGuid(node.GetId());
+                    // writer.WriteInt64(node.GetId().GetMostSignificantBits());
+                    // writer.WriteInt64(node.GetId().GetLeastSignificantBits());
+                    writer.WriteObject(node.GetId());
                     writer.WriteObject<K>(key);
 
                     out.Synchronize();
@@ -166,9 +168,23 @@ namespace ignite
                 bool IsBackup(ignite::cluster::ClusterNode node, K key)
                 {
                     IgniteError err;
+                    /*
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOp(Command::IS_BACKUP, inOp, err);
+                    */
+
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                    writer.WriteObject(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    bool ret = InStreamOutLongDEBUG(Command::IS_BACKUP,
+                        *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 
@@ -191,9 +207,23 @@ namespace ignite
                 bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, K key)
                 {
                     IgniteError err;
+                    /*
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOp(Command::IS_PRIMARY_OR_BACKUP, inOp, err);
+                    */
+
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                    writer.WriteObject(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    bool ret = InStreamOutLongDEBUG(Command::IS_PRIMARY_OR_BACKUP,
+                        *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 
