@@ -125,7 +125,7 @@ public class PlatformAffinity extends PlatformAbstractTarget {
 
                 Object key = reader.readObjectDetached();
 
-                System.out.println("MYLOGTAGJAVA:OP_IS_PRIMARY: uid = " + nodeId + "key = " + key);
+                System.out.println("MYLOGTAGJAVA:OP_IS_PRIMARY: uid = " + nodeId + " key = " + key);
 
                 ClusterNode node = discovery.node(nodeId);
 

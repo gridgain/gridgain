@@ -253,6 +253,26 @@ namespace ignite
                 return OperationResult::AI_ERROR;
             }
 
+            bool InteropTarget::InStreamOutLongDEBUG(int32_t opType,
+                InteropMemory& outInMem, IgniteError& err)
+            {
+                JniErrorInfo jniErr;
+
+                int64_t outInPtr = outInMem.PointerLong();
+
+                if (outInPtr)
+                {
+                    int64_t res = env.Get()->Context()->TargetInStreamOutLong(javaRef, opType, outInPtr, &jniErr);
+
+                    IgniteError::SetError(jniErr.code, jniErr.errCls, jniErr.errMsg, err);
+
+                    if (jniErr.code == IGNITE_JNI_ERR_SUCCESS)
+                        return res == 1;
+                }
+
+                return false;
+            }
+
            int64_t InteropTarget::InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err)
             {
                 JniErrorInfo jniErr;

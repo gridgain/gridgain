@@ -143,6 +143,8 @@ namespace ignite
                  * @return Operation result.
                  */
                 OperationResult::Type InStreamOutLong(int32_t opType, InteropMemory& outInMem, IgniteError& err);
+                bool InStreamOutLongDEBUG(int32_t opType,
+                    InteropMemory& outInMem, IgniteError& err);
 
                 /**
                  * In stream out long operation.

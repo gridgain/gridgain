@@ -129,9 +129,22 @@ namespace ignite
                     std::cout << "MYLOGTAG:" << "IsPrimary(node = " << node.GetId() << " key = " << (key) << ")" << std::endl;
 
                     IgniteError err;
+/*
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOpDEBUG(Command::IS_PRIMARY, inOp, err);
+*/
+                    common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                    interop::InteropOutputStream out(memIn.Get());
+                    binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                    writer.WriteGuid(node.GetId());
+                    writer.WriteObject<K>(key);
+
+                    out.Synchronize();
+
+                    bool ret = InStreamOutLongDEBUG(Command::IS_PRIMARY,
+                        *memIn.Get(), err);
 
                     IgniteError::ThrowIfNeeded(err);
 
