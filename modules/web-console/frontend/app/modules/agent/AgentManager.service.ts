@@ -183,9 +183,7 @@ export default class AgentManager {
 
     clusterVersion: string;
 
-    indexing: boolean;
-    ruStatus: boolean;
-    snapshotChainMode: boolean;
+    features: AgentTypes.IgniteFeatures[];
 
     connectionSbj = new BehaviorSubject(new ConnectionState());
 
@@ -252,11 +250,7 @@ export default class AgentManager {
         this.currentCluster$.pipe(
             map(({ cluster }) => cluster),
             filter((cluster) => Boolean(cluster)),
-            tap((cluster) => {
-                this.indexing = this.featureSupported(cluster, AgentTypes.IgniteFeatures.INDEXING);
-                this.ruStatus = this.featureSupported(cluster, AgentTypes.IgniteFeatures.WC_ROLLING_UPGRADE_STATUS);
-                this.snapshotChainMode = this.featureSupported(cluster, AgentTypes.IgniteFeatures.WC_SNAPSHOT_CHAIN_MODE);
-            })
+            tap((cluster) => this.features = this.allFeatures(cluster))
         ).subscribe();
     }
 
@@ -889,6 +883,21 @@ export default class AgentManager {
 
     hasCredentials(clusterId) {
         return this.clustersSecrets.get(clusterId).hasCredentials();
+    }
+
+    /**
+     * Collect features supported by the cluster.
+     *
+     * @param cluster Cluster.
+     * @return all supported features.
+     */
+    allFeatures(cluster: AgentTypes.ClusterStats): AgentTypes.IgniteFeatures[] {
+        return _.reduce(AgentTypes.IgniteFeatures, (acc, featureId) => {
+            if (_.isNumber(featureId) && this.featureSupported(cluster, featureId))
+                acc.push(featureId);
+
+            return acc;
+        }, []);
     }
 
     /**

@@ -74,7 +74,7 @@ export type QuerySqlX2Response = VisorQueryResult
 export type QueryFetchFirstPageResult = VisorQueryResult
 
 export enum IgniteFeatures {
-	INDEXING= 15,
+	INDEXING = 15,
 	WC_ROLLING_UPGRADE_STATUS = 20,
 	WC_SNAPSHOT_CHAIN_MODE = 21
 }
