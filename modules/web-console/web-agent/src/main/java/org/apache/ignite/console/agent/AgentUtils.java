@@ -369,12 +369,12 @@ public class AgentUtils {
     public static String decodeValue(String val) {
         if (isEncryptedValue(val)) {
             if (encryptor == null)
-                throw new IgniteException("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD env variable is set");
+                throw new IgniteException("Failed to decode value, please check that " + WEB_AGENT_MASTER_PASSWORD_ENV_NAME + "environment variable is set");
             try {
                 return decrypt(val, encryptor);
             }
             catch (EncryptionOperationNotPossibleException e) {
-                throw new IgniteException("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD or WEB_AGENT_ENCRYPT_ALGORITHM env variables is correct");
+                throw new IgniteException("Failed to decode value, please check that " + WEB_AGENT_MASTER_PASSWORD_ENV_NAME + " and/or " + WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME + " environment variables are correctly specified");
             }
         }
 
