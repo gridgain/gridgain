@@ -298,6 +298,8 @@ namespace ignite
 
             void BinaryUtils::WriteGuid(InteropOutputStream* stream, const Guid val)
             {
+                std::cout << "MYLOGTAG:" << "BinaryUtils::WriteGuid(val = " << val << ") = CALLED!" << std::endl;
+
                 stream->WriteInt64(val.GetMostSignificantBits());
                 stream->WriteInt64(val.GetLeastSignificantBits());
             }

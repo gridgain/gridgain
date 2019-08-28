@@ -209,6 +209,8 @@ namespace ignite
                 CheckRawMode(true);
                 CheckSingleMode(true);
 
+                std::cout << "MYLOGTAG:" << "WriteGuid(val = " << val << ") = CALLED!" << std::endl;
+
                 stream->WriteInt8(IGNITE_TYPE_UUID);
 
                 BinaryUtils::WriteGuid(stream, val);

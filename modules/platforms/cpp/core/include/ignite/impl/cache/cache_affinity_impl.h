@@ -129,11 +129,11 @@ namespace ignite
                     std::cout << "MYLOGTAG:" << "IsPrimary(node = " << node.GetId() << " key = " << (key) << ")" << std::endl;
 
                     IgniteError err;
-/*
+
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOpDEBUG(Command::IS_PRIMARY, inOp, err);
-*/
+/*
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
@@ -147,7 +147,7 @@ namespace ignite
 
                     bool ret = InStreamOutLongDEBUG(Command::IS_PRIMARY,
                         *memIn.Get(), err);
-
+*/
                     IgniteError::ThrowIfNeeded(err);
 
                     std::cout << "MYLOGTAG:" << "IsPrimary(node = " << node.GetId() << " key = " << (key) << ")" "ret = " << ret << std::endl;
@@ -168,12 +168,12 @@ namespace ignite
                 bool IsBackup(ignite::cluster::ClusterNode node, K key)
                 {
                     IgniteError err;
-                    /*
+
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOp(Command::IS_BACKUP, inOp, err);
-                    */
 
+/*
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
@@ -185,7 +185,7 @@ namespace ignite
 
                     bool ret = InStreamOutLongDEBUG(Command::IS_BACKUP,
                         *memIn.Get(), err);
-
+*/
                     IgniteError::ThrowIfNeeded(err);
 
                     return ret;
@@ -207,12 +207,12 @@ namespace ignite
                 bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, K key)
                 {
                     IgniteError err;
-                    /*
+
                     In2Operation<Guid, K> inOp(node.GetId(), key);
 
                     bool ret = OutOp(Command::IS_PRIMARY_OR_BACKUP, inOp, err);
-                    */
 
+/*
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
@@ -224,7 +224,7 @@ namespace ignite
 
                     bool ret = InStreamOutLongDEBUG(Command::IS_PRIMARY_OR_BACKUP,
                         *memIn.Get(), err);
-
+*/
                     IgniteError::ThrowIfNeeded(err);
 
                     return ret;
