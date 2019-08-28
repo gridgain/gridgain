@@ -17,6 +17,8 @@
 #ifndef _IGNITE_CACHE_AFFINITY_IMPL
 #define _IGNITE_CACHE_AFFINITY_IMPL
 
+#include <typeinfo>
+
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 
