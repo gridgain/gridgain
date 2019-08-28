@@ -114,6 +114,8 @@ namespace ignite
             In2Operation(const T1& val1, const T2& val2) : val1(val1), val2(val2)
             {
                 // No-op.
+                std::cout << "MYLOGTAG:" << "InputOperationP-2:val2 = " << this->val1 << " " << std::endl;
+                std::cout << "MYLOGTAG:" << "InputOperationP-1:val2 = " << *((Guid*)GetVAL()) << std::endl;
             }
 
             virtual void ProcessInput(ignite::impl::binary::BinaryWriterImpl& writer)
