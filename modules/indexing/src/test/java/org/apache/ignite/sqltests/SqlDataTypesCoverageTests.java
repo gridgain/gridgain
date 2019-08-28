@@ -16,35 +16,42 @@
 
 package org.apache.ignite.sqltests;
 
+import org.apache.commons.codec.binary.Hex;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.impl.CoordinateArraySequence;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.sql.Time;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
-    /** */
-    private static final int NODES_CNT = 3;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
+/**
+ * Data types coverage for basic sql operations.
+ */
+public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
     /** {@inheritDoc} */
     @Before
     @Override
     public void init() throws Exception {
         super.init();
     }
-
-//    /** {@inheritDoc} */
-//    @Override protected void afterTestsStopped() throws Exception {
-//        super.afterTestsStopped();
-//    }
 
     /**
      * https://apacheignite-sql.readme.io/docs/data-types#section-boolean
@@ -53,7 +60,9 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      */
     @Test
     public void testBooleanDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.BOOLEAN, Boolean.TRUE, Boolean.FALSE);
+        checkBasicSqlOperations(SqlDataType.BOOLEAN,
+            Boolean.TRUE,
+            Boolean.FALSE);
     }
 
     /**
@@ -63,9 +72,12 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      */
     @Test
     public void testIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.INT, 0, 1, Integer.MAX_VALUE, Integer.MIN_VALUE);
+        checkBasicSqlOperations(SqlDataType.INT,
+            0,
+            1,
+            Integer.MAX_VALUE,
+            Integer.MIN_VALUE);
     }
-
 
     /**
      * https://apacheignite-sql.readme.io/docs/data-types#section-tinyint
@@ -75,7 +87,11 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
     @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
     @Test
     public void testTinyIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.TINYINT, (byte)0, (byte)1, Byte.MIN_VALUE, Byte.MAX_VALUE);
+        checkBasicSqlOperations(SqlDataType.TINYINT,
+            (byte)0,
+            (byte)1,
+            Byte.MIN_VALUE,
+            Byte.MAX_VALUE);
     }
 
     /**
@@ -86,7 +102,11 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
     @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
     @Test
     public void testSmallIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.SMALLINT, (short)0, (short)1, Short.MIN_VALUE, Short.MAX_VALUE);
+        checkBasicSqlOperations(SqlDataType.SMALLINT,
+            (short)0,
+            (short)1,
+            Short.MIN_VALUE,
+            Short.MAX_VALUE);
     }
 
     /**
@@ -96,7 +116,11 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      */
     @Test
     public void testBigIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.BIGINT, 0L, 1L, Long.MIN_VALUE, Long.MAX_VALUE);
+        checkBasicSqlOperations(SqlDataType.BIGINT,
+            0L,
+            1L,
+            Long.MIN_VALUE,
+            Long.MAX_VALUE);
     }
 
     /**
@@ -116,7 +140,6 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
             BigDecimal.valueOf(123456789, 3));
     }
 
-    // TODO: 26.08.19 besides others, it's really strange to see JDBC in exception Caused by: org.h2.jdbc.JdbcSQLSyntaxErrorException: Column "INFINITY" not found; SQL statement:
     /**
      * https://apacheignite-sql.readme.io/docs/data-types#section-double
      *
@@ -127,12 +150,12 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
         checkBasicSqlOperations(SqlDataType.DOUBLE,
             Double.MIN_VALUE,
             Double.MAX_VALUE,
-            Double.NaN,
-            Double.NEGATIVE_INFINITY,
-            Double.POSITIVE_INFINITY,
-            0,
+            new Quoted(Double.NaN),
+            new Quoted(Double.NEGATIVE_INFINITY),
+            new Quoted(Double.POSITIVE_INFINITY),
+            0D,
             0.0,
-            1,
+            1D,
             1.0,
             1.1);
     }
@@ -147,9 +170,9 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
         checkBasicSqlOperations(SqlDataType.REAL,
             Float.MIN_VALUE,
             Float.MAX_VALUE,
-            Float.NaN,
-            Float.NEGATIVE_INFINITY,
-            Float.POSITIVE_INFINITY,
+            new Quoted(Float.NaN),
+            new Quoted(Float.NEGATIVE_INFINITY),
+            new Quoted(Float.POSITIVE_INFINITY),
             0F,
             0.0F,
             1F,
@@ -161,13 +184,12 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-23410")
     @Test
-    // TODO: 26.08.19 add parse time, parse date, etc otherwise class org.apache.ignite.internal.processors.query.IgniteSQLException: Failed to parse query. Syntax error in SQL statement "INSERT INTO TABLE0FE7A3(ID, VAL)  VALUES (03:[*]00:00, 03:00:00); "; expected "[, ::, *, /, %, +, -, ||, ~, !~, NOT, LIKE, ILIKE, REGEXP, IS, IN, BETWEEN, AND, OR, ,, )"; SQL statement:
-    //INSERT INTO table0fe7a3(id, val)  VALUES (03:00:00, 03:00:00); [42001-199]
     public void testTimeDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.TIME,
-            new java.sql.Time(0L),
-            java.sql.Time.from(Instant.now()));
+            new Timed(new java.sql.Time(0L)),
+            new Timed(new java.sql.Time(123L)));
     }
 
     /**
@@ -175,11 +197,12 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-17353")
     @Test
     public void testDateDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.DATE,
-            new java.sql.Date(123L),
-            java.sql.Date.from(Instant.now()));
+            new Dated(new java.sql.Date(0L)),
+            new Dated(new java.sql.Date(123L)));
     }
 
     /**
@@ -190,8 +213,8 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
     @Test
     public void testTimestampDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.TIMESTAMP,
-            new java.sql.Timestamp(123L),
-            java.sql.Timestamp.from(Instant.now()));
+            new Dated(new java.sql.Timestamp(0L)),
+            new Dated(new java.sql.Timestamp(123L)));
     }
 
     /**
@@ -200,12 +223,11 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      * @throws Exception If failed.
      */
     @Test
-    // TODO: 26.08.19 We should use versions of strings without qoutes as expected values.
     public void testVarcharDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.VARCHAR,
-            "\'\'",
-            "\'abcABC\'",
-            "\'!@#$%^&*()\'");
+            new Quoted(""),
+            new Quoted("abcABC"),
+            new Quoted("!@#$%^&*()"));
     }
 
     /**
@@ -214,12 +236,11 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      * @throws Exception If failed.
      */
     @Test
-    // TODO: 26.08.19 We should use versions of strings without qoutes as expected values.
     public void testCharDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.CHAR,
-            "\'a\'",
-            "\'B\'",
-            "\'@\'");
+            new Quoted("a"),
+            new Quoted("A"),
+            new Quoted("@"));
     }
 
     /**
@@ -228,11 +249,10 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      * @throws Exception If failed.
      */
     @Test
-    // TODO: 26.08.19 We should use versions of strings without qoutes as expected values.
     public void testUUIDDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.UUID,
-            "\'" + UUID.randomUUID().toString() + "\'",
-            "\'" +  UUID.randomUUID().toString() + "\'");
+            new Quoted(UUID.randomUUID()),
+            new Quoted(UUID.randomUUID()));
     }
 
     /**
@@ -240,14 +260,13 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-23401")
     @Test
-    // TODO: 26.08.19 Caused by: org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "INSERT INTO TABLEFA3122(ID, VAL)  VALUES ([[*]LJAVA.LANG.BYTE;@7232E370, [LJAVA.LANG.BYTE;@7232E370); "; expected "), DEFAULT, NOT, EXISTS, INTERSECTS"; SQL statement:
     public void testBinaryDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.BINARY,
-            new Byte[]{},
-            new Byte[] {1, 2, 3},
-            new byte[] {3, 2, 1},
-            new byte[]{});
+            new ByteArrayed(new byte[] {1, 2, 3}),
+            new ByteArrayed(new byte[] {3, 2, 1}),
+            new ByteArrayed(new byte[] {}));
     }
 
     /**
@@ -255,197 +274,392 @@ public class SqlDataTypesCoverageTests extends GridCacheDataTypesCoverageTest {
      *
      * @throws Exception If failed.
      */
-    // TODO: 26.08.19
-    @Ignore("todo")
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-23066")
     @Test
     public void testGeometryDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.GEOMETRY, Boolean.TRUE, Boolean.FALSE);
+        GeometryFactory geometryFactory = new GeometryFactory();
+
+        checkBasicSqlOperations(SqlDataType.GEOMETRY,
+            new Quoted(new Point(
+                new CoordinateArraySequence(new Coordinate[] {new Coordinate(1.1, 2.2)}),geometryFactory)),
+            new Quoted(new Point(
+                new CoordinateArraySequence(new Coordinate[] {new Coordinate(3.3, 4.4)}),geometryFactory)));
     }
 
-    private void checkBasicSqlOperations(SqlDataType dataType, Serializable... valsToCheck) throws Exception {
+    /**
+     * Create table based on test-parameters-dependent template with both id (PK) and val of {@code dataType}.
+     * Process sql CRUD and verify that all operations works as expected via SELECT:
+     * <ul>
+     * <li>INSERT</li>
+     * <li>SELECT</li>
+     * <li>UPDATE</li>
+     * <li>SELECT with WHERE CLAUSE</li>
+     * <li>DELETE</li>
+     * </ul>
+     *
+     * @param dataType Sql data type to check.
+     * @param valsToCheck Array of values to check.
+     * @throws Exception If Failed.
+     */
+    @SuppressWarnings("unchecked")
+    private void checkBasicSqlOperations(SqlDataType dataType, Object... valsToCheck) throws Exception {
         assert valsToCheck.length > 0;
 
         IgniteEx ignite = grid(new Random().nextInt(NODES_CNT));
 
-        final String tblName = "table" + UUID.randomUUID().toString().substring(0, 6);
+        final String tblName = "table" + UUID.randomUUID().toString(). replaceAll("-", "_");
 
-        // TODO: 26.08.19 use test params for atomicity, backups etc.
+        final String templateName = "template" + UUID.randomUUID().toString(). replaceAll("-", "_");
+
+        CacheConfiguration cfg = new CacheConfiguration<>(templateName)
+            .setAtomicityMode(atomicityMode)
+            .setCacheMode(cacheMode)
+            .setExpiryPolicyFactory(ttlFactory)
+            .setBackups(backups)
+            .setEvictionPolicyFactory(evictionFactory)
+            .setOnheapCacheEnabled(evictionFactory != null || onheapCacheEnabled)
+            .setWriteSynchronizationMode(writeSyncMode)
+            .setAffinity(new RendezvousAffinityFunction(false, PARTITIONS_CNT));
+
+        ignite.addCacheConfiguration(cfg);
+
         ignite.context().query().querySqlFields(new SqlFieldsQuery(
             "CREATE TABLE " + tblName +
                 "(id " + dataType + " PRIMARY KEY," +
                 " val " + dataType + ")" +
-                " WITH " + "\"atomicity=transactional_snapshot,backups=3\""), false);
+                " WITH " + "\"template=" + templateName + "\""), false);
 
         checkCRUD(ignite, tblName, dataType, valsToCheck);
     }
 
-    private void checkCRUD(IgniteEx ignite, String tblName, SqlDataType dataType, Serializable... valsToCheck) {
+    /**
+     * Perform and verify sql CRUD operations.
+     *
+     * @param ignite Ignite instance.
+     * @param tblName Table name.
+     * @param dataType Sql data type to check.
+     * @param valsToCheck Array of values to check.
+     * @throws Exception If Failed.
+     */
+    private void checkCRUD(IgniteEx ignite, String tblName, SqlDataType dataType, Object... valsToCheck)
+        throws Exception {
         for (int i = 0; i < valsToCheck.length; i++) {
 
             Object valToCheck = valsToCheck[i];
 
+            Object valToPut = valToCheck instanceof SqlStrConvertedValHolder ?
+                ((SqlStrConvertedValHolder)valToCheck).sqlStrVal() :
+                valToCheck;
+
+            Object expVal = valToCheck instanceof SqlStrConvertedValHolder ?
+                ((SqlStrConvertedValHolder)valToCheck).originalVal() :
+                valToCheck;
+
             // INSERT
-            ignite.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO " + tblName + "(id, val)  VALUES (" + valToCheck + ", " + valToCheck + ");"), false);
+            ignite.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO " + tblName +
+                "(id, val)  VALUES (" + valToPut + ", " + valToPut + ");"), false);
 
             // Check INSERT/SELECT
-            List<List<?>> res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id, val FROM " + tblName + ";"), false).getAll();
+            check(ignite, "SELECT id, val FROM " + tblName + ";", dataType, expVal, expVal);
 
-            assertEquals(1, res.size());
-
-            assertEquals(2, res.get(0).size());
-
-            // key
-            assertTrue(res.get(0).get(0).getClass().equals(dataType.javaType));
-
-            // TODO: 26.08.19 add cloning here, like it was done in base test?
-            assertEquals(valToCheck, res.get(0).get(0));
-
-            // val
-            assertTrue(res.get(0).get(1).getClass().equals(dataType.javaType));
-
-            assertEquals(valToCheck, res.get(0).get(1));
+            List<List<?>> res;
 
             Object revertedVal = valsToCheck[valsToCheck.length - 1 - i];
+
+            Object revertedValToPut = revertedVal instanceof SqlStrConvertedValHolder ?
+                ((SqlStrConvertedValHolder)revertedVal).sqlStrVal() :
+                revertedVal;
+
+            Object expRevertedVal = revertedVal instanceof SqlStrConvertedValHolder ?
+                ((SqlStrConvertedValHolder)revertedVal).originalVal() :
+                revertedVal;
+
             // UPDATE
-            ignite.context().query().querySqlFields(new SqlFieldsQuery("UPDATE " + tblName + " SET val =  " + revertedVal + ";"), false);
+            ignite.context().query().querySqlFields(
+                new SqlFieldsQuery("UPDATE " + tblName + " SET val =  " + revertedValToPut + ";"), false);
 
             // Check UPDATE/SELECT
-            res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id, val FROM " + tblName + ";"), false).getAll();
+            check(ignite, "SELECT id, val FROM " + tblName + ";", dataType, expVal, expRevertedVal);
 
-            assertEquals(1, res.size());
-
-            assertEquals(2, res.get(0).size());
-
-            // key
-            assertTrue(res.get(0).get(0).getClass().equals(dataType.javaType));
-
-            // TODO: 26.08.19 add cloning here, like it was done in base test?
-            assertEquals(valToCheck, res.get(0).get(0));
-
-            // val
-            assertTrue(res.get(0).get(1).getClass().equals(dataType.javaType));
-
-            assertEquals(revertedVal, res.get(0).get(1));
+            // Check UPDATE/SELECT with WHERE clause
+            check(ignite, "SELECT id, val FROM " + tblName + " where id =  " + valToPut + ";",
+                dataType, expVal, expRevertedVal);
 
             // DELETE
-            ignite.context().query().querySqlFields(new SqlFieldsQuery("DELETE FROM " + tblName + " where id =  " + valToCheck + ";"), false);
+            ignite.context().query().querySqlFields(
+                new SqlFieldsQuery("DELETE FROM " + tblName + " where id =  " + valToPut + ";"), false);
 
             // Check DELETE/SELECT
-            res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll();
+            if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
+                !waitForCondition(() -> ignite.context().query().querySqlFields(
+                    new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll().size() == 0,
+                    TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
+                fail("Deleted data are still retrievable via SELECT.");
+
+            res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id FROM " + tblName + ";"),
+                false).getAll();
 
             assertEquals(0, res.size());
         }
     }
 
-    private void checkBasicSqlOperations(Serializable... valsToCheck) throws Exception {
-        assert valsToCheck.length > 0;
+    /**
+     * Perform Select query and check that both key and value has expected values.
+     *
+     * @param ignite Ignite instance.
+     * @param qryStr Select query string.
+     * @param dataType Sql data type.
+     * @param expKey expected key.
+     * @param expVal expected value.
+     * @throws Exception If failed.
+     */
+    private void check(IgniteEx ignite, String qryStr, SqlDataType dataType, Object expKey, Object expVal)
+        throws Exception {
+        if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
+            !waitForCondition(() -> ignite.context().query().querySqlFields(
+                new SqlFieldsQuery(qryStr), false).getAll().size() != 0,
+                TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
+            fail("Unable to retrieve data via SELECT.");
 
-        IgniteEx ignite = grid(new Random().nextInt(NODES_CNT));
-
-        final String tblName = "table" + UUID.randomUUID().toString().substring(0, 6);
-
-        ignite.context().query().querySqlFields(new SqlFieldsQuery("CREATE TABLE " + tblName
-            + "(id BOOLEAN PRIMARY KEY, val BOOLEAN)  WITH " + "\"atomicity=transactional_snapshot,backups=3\""), false);
-
-//        ignite.context().query().querySqlFields(new SqlFieldsQuery("CREATE TABLE table" + UUID.randomUUID().toString().substring(0, 6)
-//            + "(id BOOLEAN PRIMARY KEY, val BOOLEAN) WITH atomicity=" + atomicityMode + ",cache_group=group1;"), false);
-
-        ignite.context().query().querySqlFields(new SqlFieldsQuery("CREATE TABLE " + tblName
-            + "(id BOOLEAN PRIMARY KEY, val BOOLEAN)  WITH " + "\"atomicity=transactional_snapshot,backups=3\""), false);
-
-        // INSERT
-        ignite.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO " + tblName + "(id, val)  VALUES (" + Boolean.TRUE + ", " + Boolean.TRUE + ");"), false);
-
-        // Check insert: SELECT
-        List<List<?>> res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll();
-
-        assertEquals(1, res.size());
-
-        assertEquals(1, res.get(0).size());
-
-        assertTrue(res.get(0).get(0) instanceof Boolean);
-
-        assertTrue((Boolean) res.get(0).get(0));
-
-        // UPDATE
-        ignite.context().query().querySqlFields(new SqlFieldsQuery("UPDATE " + tblName + " SET val =  " + Boolean.FALSE + ";"), false);
-
-        // Check update: SELECT
-        res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll();
+        List<List<?>> res = ignite.context().query().querySqlFields(new SqlFieldsQuery(qryStr), false).
+            getAll();
 
         assertEquals(1, res.size());
 
-        assertEquals(1, res.get(0).size());
+        assertEquals(2, res.get(0).size());
 
-        assertTrue(res.get(0).get(0) instanceof Boolean);
+        // key
+        assertTrue(res.get(0).get(0).getClass().equals(dataType.javaType));
 
-        assertTrue((Boolean) res.get(0).get(0));
+        if (expKey instanceof byte[])
+            assertTrue(Arrays.equals((byte[])expKey, (byte[])res.get(0).get(0)));
+        else
+            assertEquals(expKey, res.get(0).get(0));
 
-        // DELETE
-        ignite.context().query().querySqlFields(new SqlFieldsQuery("DELETE FROM " + tblName + " where id =  " + Boolean.TRUE + ";"), false);
+        // val
+        assertTrue(res.get(0).get(1).getClass().equals(dataType.javaType));
 
-        // Check delete: SELECT
-        res = ignite.context().query().querySqlFields(new SqlFieldsQuery("SELECT id FROM " + tblName + ";"), false).getAll();
-
-        assertEquals(0, res.size());
-
-
-
-
-
-//        node.getOrCreateCache(DEFAULT_CACHE_NAME)
-//            .query(new SqlFieldsQuery("CREATE TABLE City (id int primary key, name varchar, population int) WITH " +
-//                "\"atomicity=transactional_snapshot,cache_group=group1,template=partitioned,backups=3,cache_name=City\""))
-//            .getAll();;
-
-
-
-//        execute("CREATE TABLE " + depTabName + " (" +
-//            "id LONG PRIMARY KEY," +
-//            "idNoidx LONG, " +
-//            "name VARCHAR" +
-//            ") " +
-//            (F.isEmpty(commonParams) ? "" : " WITH \"" + commonParams + "\"") +
-//            ";");
-//
-//
-//        FieldsQueryCursor<List<?>> cursor = ((IgniteEx)node).context().query().querySqlFields(qry, false);
-//
-//        return BaseSqlTest.Result.fromCursor(cursor);
+        if (expVal instanceof byte[])
+            assertTrue(Arrays.equals((byte[])expVal, (byte[])res.get(0).get(1)));
+        else
+            assertEquals(expVal, res.get(0).get(1));
     }
 
     /**
-     * https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+     * Supported sql data types with corresponding java mappings.
+     * https://apacheignite-sql.readme.io/docs/data-types
      */
     private enum SqlDataType {
-        BOOLEAN (Boolean.class),
-        INT (Integer.class),
-        TINYINT (Byte.class),
-        SMALLINT (Short.class),
-        BIGINT (Long.class),
-        DECIMAL (BigDecimal.class),
-        DOUBLE (Double.class),
-        REAL (Float.class),
-        TIME (java.sql.Time.class),
-        DATE (java.sql.Date.class),
-        TIMESTAMP (java.sql.Timestamp.class),
-        VARCHAR (String.class),
-        CHAR (String.class),
-        UUID (UUID.class),
-        BINARY (byte[].class),
-        GEOMETRY (Boolean.class);
+        /** */
+        BOOLEAN(Boolean.class),
 
+        /** */
+        INT(Integer.class),
+
+        /** */
+        TINYINT(Byte.class),
+        /** */
+        SMALLINT(Short.class),
+
+        /** */
+        BIGINT(Long.class),
+
+        /** */
+        DECIMAL(BigDecimal.class),
+
+        /** */
+        DOUBLE(Double.class),
+
+        /** */
+        REAL(Float.class),
+
+        /** */
+        TIME(java.sql.Time.class),
+
+        /** */
+        DATE(java.sql.Date.class),
+
+        /** */
+        TIMESTAMP(java.sql.Timestamp.class),
+
+        /** */
+        VARCHAR(String.class),
+
+        /** */
+        CHAR(String.class),
+
+        /** */
+        UUID(UUID.class),
+
+        /** */
+        BINARY(byte[].class),
+
+        /**
+         * Please pay attention that point is just an example of GEOMETRY data types.
+         * It might have sense to add few more Geometry data types to check when basic functionality will be fixed.
+         */
+        GEOMETRY(org.locationtech.jts.geom.Point.class);
+
+        /**
+         * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+         */
         private Object javaType;
 
+        /** */
         SqlDataType(Object javaType) {
             this.javaType = javaType;
         }
+    }
+
+    /**
+     * Holder for both original value and value to be used as part of sql string.
+     */
+    private interface SqlStrConvertedValHolder {
 
         /**
-         * @return Java type.
+         * @return Original value that might be used as expected result.
          */
-        public Object javaType() {
-            return javaType;
+        Object originalVal();
+
+        /**
+         * @return Value converted to sql string representation.
+         */
+        String sqlStrVal();
+    }
+
+    /**
+     * Holder for quoted values. E.g. Double.NEGATIVE_INFINITY -> 'INFINITY'.
+     */
+    private static class Quoted implements SqlStrConvertedValHolder {
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param val Original value.
+         */
+        Quoted(Object val) {
+            this.val = val;
+            this.sqlStrVal = "\'" + val + "\'";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for Sql Time values.
+     */
+    private static class Timed implements SqlStrConvertedValHolder {
+        /** */
+        private static final String PATTERN = "HH:mm:ss.SSS";
+
+        /** */
+        private static final SimpleDateFormat TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param time Original value.
+         */
+        Timed(Time time) {
+            this.val = time;
+            this.sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(time) + "', '" + PATTERN + "')";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for Date and Timestamp values.
+     */
+    private static class Dated implements SqlStrConvertedValHolder {
+        /** */
+        private static final String PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
+
+        /** */
+        private static final SimpleDateFormat DATE_TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param date Original value.
+         */
+        Dated(Date date) {
+            this.val = date;
+            this.sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for byte array values.
+     */
+    private static class ByteArrayed implements SqlStrConvertedValHolder {
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param byteArr Original value.
+         */
+        ByteArrayed(byte[] byteArr) {
+            this.val = byteArr;
+            this.sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
         }
     }
 }
