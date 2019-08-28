@@ -118,7 +118,7 @@ const getLastActiveClusterId = () => {
 };
 
 class ConnectionState {
-    cluster: AgentTypes.ClusterStats;
+    cluster: AgentTypes.ClusterStats | null;
     clusters: AgentTypes.ClusterStats[];
     state: State;
     hasDemo: boolean;
@@ -915,10 +915,10 @@ export default class AgentManager {
      * Decode base64 string to byte array.
      *
      * @param base64 Base64 string.
-     * @return {Uint8Array} Result byte array.
+     * @return Result byte array.
      * @private
      */
-    _base64ToArrayBuffer(base64: string) {
+    _base64ToArrayBuffer(base64: string): Uint8Array {
         const binary_string =  window.atob(base64);
         const len = binary_string.length;
         const bytes = new Uint8Array( len );

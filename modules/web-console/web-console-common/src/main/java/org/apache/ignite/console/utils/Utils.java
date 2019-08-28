@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -197,27 +196,5 @@ public class Utils {
      */
     public static <K, U> Collector<Map.Entry<K, U>, ?, Map<K, U>> entriesToMap() {
         return Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue);
-    }
-
-    /**
-     * Checks that feature supported by cluster.
-     *
-     * @param featuresAttrBytes Byte array value of supported features.
-     * @param featureId Feature to check.
-     * @return {@code True} if feature is declared to be supported by cluster.
-     */
-    public static boolean gridSupports(byte[] featuresAttrBytes, int featureId) {
-        if (featuresAttrBytes == null)
-            return false;
-        // Same as "BitSet.valueOf(features).get(featureId)"
-
-        int byteIdx = featureId >>> 3;
-
-        if (byteIdx >= featuresAttrBytes.length)
-            return false;
-
-        int bitIdx = featureId & 0x7;
-
-        return (featuresAttrBytes[byteIdx] & (1 << bitIdx)) != 0;
     }
 }
