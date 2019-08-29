@@ -532,5 +532,19 @@
         "showing": "Showing: {{visible}}",
         "selected": "Selected: {{selected}} of {{count}}",
         "copyToClipboardButtonLabel": "Copy to clipboard"
+    },
+    "igniteChartComponent": {
+        "chartNoDataComponent": {
+            "noDatasets": "No Data<br />Make sure you are connected to the right grid."
+        },
+        "ranges": {
+            "1": "1 min",
+            "5": "5 min",
+            "10": "10 min",
+            "15": "15 min",
+            "30": "30 min"
+        },
+        "duplicateDatasetErrorMessage": "Dataset with name {{datasetName}} is already in chart",
+        "rangeLabel": "Range: "
     }
 }
