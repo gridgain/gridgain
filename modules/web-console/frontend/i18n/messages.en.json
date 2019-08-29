@@ -518,5 +518,9 @@
         "companyInput": {
             "placeholder": "Input company name"
         }
+    },
+    "gridExportComponent": {
+        "tooltip": "Export filtered rows to CSV",
+        "buttonLabel": "Export to .csv"
     }
 }
