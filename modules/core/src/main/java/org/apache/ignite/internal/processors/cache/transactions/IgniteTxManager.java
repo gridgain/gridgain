@@ -387,22 +387,25 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Initializes metrics.
      */
     private void initMetrics() {
-        MetricRegistry txMetrics = cctx.kernalContext().metric().registry(TX_METRICS);
+        MetricRegistry reg = new MetricRegistry(TX_METRICS, TX_METRICS);
 
-        assert txMetrics != null;
+        totalTxSystemTime = reg.longAdderMetric(METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
 
-        totalTxSystemTime = txMetrics.findMetric(METRIC_TOTAL_SYSTEM_TIME);
+        totalTxUserTime = reg.longAdderMetric(METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
 
-        totalTxUserTime = txMetrics.findMetric(METRIC_TOTAL_USER_TIME);
+        txSystemTimeHistogram = reg.histogram(
+                METRIC_SYSTEM_TIME_HISTOGRAM,
+                METRIC_TIME_BUCKETS,
+                "Transactions system times on node represented as histogram."
+        );
 
-        txSystemTimeHistogram = txMetrics.findMetric(METRIC_SYSTEM_TIME_HISTOGRAM);
+        txUserTimeHistogram = reg.histogram(
+                METRIC_USER_TIME_HISTOGRAM,
+                METRIC_TIME_BUCKETS,
+                "Transactions user times on node represented as histogram."
+        );
 
-        txUserTimeHistogram = txMetrics.findMetric(METRIC_USER_TIME_HISTOGRAM);
-
-        assert totalTxSystemTime != null;
-        assert totalTxUserTime != null;
-        assert txSystemTimeHistogram != null;
-        assert txUserTimeHistogram != null;
+        cctx.kernalContext().metric().add(reg);
     }
 
     /**
