@@ -522,5 +522,9 @@
     "gridExportComponent": {
         "tooltip": "Export filtered rows to CSV",
         "buttonLabel": "Export to .csv"
+    },
+    "gridItemSelectedComponent": {
+        "someSelected": "{{ selected }} of {{ count }} selected",
+        "noneSelected": "Showing: 0 rows"
     }
 }
