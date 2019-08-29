@@ -33,10 +33,10 @@ export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
     {
         name: 'nids',
         displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.nids'),
-        field: 'nids.length',
+        field: 'size',
         cellClass: 'ui-grid-number-cell',
-        width: 160,
-        minWidth: 160
+        width: 180,
+        minWidth: 180
     },
     {
         name: 'status',
