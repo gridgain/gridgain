@@ -29,6 +29,9 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
@@ -54,6 +57,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /** Thin client handshake code. */
     public static final byte THIN_CLIENT = 2;
 
+    /** Client sessions metric group. */
+    public static final String CLIENT_SESSIONS_METRIC_GROUP = MetricUtils.metricName("client", "sessions");
+
+    /** Client metric group. */
+    public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName("client", "requests");
+
     /** Connection handshake timeout task. */
     public static final int CONN_CTX_HANDSHAKE_TIMEOUT_TASK = GridNioSessionMetaKey.nextUniqueKey();
 
@@ -78,6 +87,15 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /** Client connection config. */
     private ClientConnectorConfiguration cliConnCfg;
 
+    /** Number of sessions that were not established because of handshake timeout. */
+    private final IntMetricImpl rejectedDueTimeout;
+
+    /** Number of sessions that were not established because of invalid handshake message. */
+    private final IntMetricImpl rejectedDueInvalidHandshake;
+
+    /** Number of sessions that were not established because of failed authentication. */
+    private final IntMetricImpl rejectedDueAuthentication;
+
     /**
      * Constructor.
      *
@@ -95,6 +113,17 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
+
+        MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
+
+        rejectedDueTimeout = mreg.intMetric("rejectedDueTimeout",
+            "Number of sessions that were not established because of handshake timeout.");
+
+        rejectedDueInvalidHandshake = mreg.intMetric("rejectedDueInvalidHandshake",
+            "Number of sessions that were not established because of invalid handshake message.");
+
+        rejectedDueAuthentication = mreg.intMetric("rejectedDueAuthentication",
+            "Number of sessions that were not established because of failed authentication.");
     }
 
     /** {@inheritDoc} */
@@ -230,6 +259,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             @Override public void run() {
                 ses.close();
 
+                rejectedDueTimeout.increment();
+
                 U.warn(log, "Unable to perform handshake within timeout " +
                     "[timeout=" + handshakeTimeout + ", remoteAddr=" + ses.remoteAddress() + ']');
             }
@@ -305,6 +336,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             connCtx.handler().writeHandshake(writer);
         }
         catch (IgniteAccessControlException authEx) {
+            rejectedDueAuthentication.increment();
+
             writer.writeBoolean(false);
 
             writer.writeShort((short)0);
@@ -317,6 +350,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 writer.writeInt(ClientStatus.AUTH_FAILED);
         }
         catch (IgniteCheckedException e) {
+            rejectedDueInvalidHandshake.increment();
+
             U.warn(log, "Error during handshake [rmtAddr=" + ses.remoteAddress() + ", msg=" + e.getMessage() + ']');
 
             ClientListenerProtocolVersion currVer;

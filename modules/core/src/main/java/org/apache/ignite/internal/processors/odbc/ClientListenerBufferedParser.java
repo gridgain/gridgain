@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.odbc;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.util.nio.GridNioParser;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
@@ -25,6 +28,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CLIENT_SESSIONS_METRIC_GROUP;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_HANDSHAKE_TIMEOUT_TASK;
 
 /**
@@ -44,6 +48,19 @@ public class ClientListenerBufferedParser implements GridNioParser {
 
     /** Length limit of handshake message - 128 MB.*/
     private static final int HANDSHAKE_MSG_LEN_LIMIT = 1024 * 1024 * 128;
+
+    /** Number of sessions that were not established because of parsing error. */
+    private final IntMetricImpl rejectedDueParsingError;
+
+    /**
+     * @param ctx Kernal context.
+     */
+    public ClientListenerBufferedParser(GridKernalContext ctx) {
+        MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
+
+        rejectedDueParsingError = mreg.intMetric("rejectedDueParsingError",
+            "Number of sessions that were not established because of not appropriate protocol version.");
+    }
 
     /** {@inheritDoc} */
     @Override public byte[] decode(GridNioSession ses, ByteBuffer buf) throws IOException, IgniteCheckedException {
@@ -69,6 +86,8 @@ public class ClientListenerBufferedParser implements GridNioParser {
             return nioBuf.read(buf, msgLenLimit);
         }
         catch (IgniteCheckedException e) {
+            rejectedDueParsingError.increment();
+
             throw new IgniteCheckedException("Failed to parse message from remote " + ses.remoteAddress(), e);
         }
     }
