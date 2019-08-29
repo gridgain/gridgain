@@ -138,7 +138,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
         c.setClientMode(client);
 
         c.setDataStorageConfiguration(new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(300 * 1024 * 1024)));
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100 * 1024 * 1024)));
 
         if (evict) {
             LruEvictionPolicy plc = new LruEvictionPolicy();
