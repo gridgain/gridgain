@@ -87,17 +87,12 @@ public enum IgniteFeatures {
     /**
      * Support rolling upgrade status task for Web Console.
      */
-    WC_ROLLING_UPGRADE_STATUS(20),
+    WC_ROLLING_UPGRADE_STATUS(21),
 
     /**
      * Support for chain parameter in snapshot delete task for Web Console.
      */
-    WC_SNAPSHOT_CHAIN_MODE(21),
-
-    /**
-     * Support enabling DR events from  Web Console.
-     */
-    WC_DR_STATE_EVENTS(22)
+    WC_SNAPSHOT_CHAIN_MODE(22)
     ;
 
     /**
