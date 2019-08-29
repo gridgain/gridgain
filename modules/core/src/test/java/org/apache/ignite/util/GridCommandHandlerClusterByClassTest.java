@@ -16,6 +16,8 @@
 
 package org.apache.ignite.util;
 
+import java.io.File;
+import java.net.URL;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -90,6 +92,7 @@ import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.readFile;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -102,6 +105,9 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * {@link GridCommandHandlerTest}
  */
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
+    /** Special character for defining any char sequence in golden copy of help output */
+    private static final String ANY = "<!any!>";
+
     /**
      * Very basic tests for running the command in different enviroment which other command are running in.
      */
@@ -312,7 +318,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testCacheHelp() {
+    public void testCacheHelp() throws Exception {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "help"));
@@ -330,12 +336,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                         assertTrue(cmd + " " + arg, output.contains(arg.toString()));
 
             }
-            else {
+            else
                 assertContains(log, output, CommandHandler.UTILITY_NAME);
-
-                assertNotContains(log, output, "control.sh");
-            }
         }
+
+        checkHelp(output, "org.apache.ignite.util/control.sh_cache_help.output");
     }
 
     /** */
@@ -354,7 +359,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testHelp() {
+    public void testHelp() throws Exception {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--help"));
@@ -364,10 +369,52 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         for (CommandList cmd : CommandList.values())
             assertContains(log, testOutStr, cmd.toString());
 
-        assertContains(log, testOutStr, "Control utility script");
-        assertContains(log, testOutStr, CommandHandler.UTILITY_NAME);
-
         assertNotContains(log, testOutStr, "Control.sh");
+
+        checkHelp(testOutStr, "org.apache.ignite.util/control.sh_help.output");
+    }
+
+    /**
+     * Checks that golden copy of output and current output are same.
+     *
+     * @param output Current output.
+     * @param resourceName Name of resource with golden copy on output.
+     * @throws Exception If something goes wrong.
+     */
+    private void checkHelp(String output, String resourceName) throws Exception {
+        URL goldenCopyResource = getClass().getClassLoader().getResource(resourceName);
+
+        assertNotNull("Golden copy not found. path: " + resourceName, goldenCopyResource);
+
+        String correctOutput = new String(readFile(new File(goldenCopyResource.toURI())));
+
+        try {
+            // Split by lines.
+            List<String> correctOutputLines = U.sealList(correctOutput.split("\\r?\\n"));
+            List<String> outputLines = U.sealList(output.split("\\r?\\n"));
+
+            assertEquals("Wrong number of files!", correctOutputLines.size(), outputLines.size());
+
+            for (int i=0; i<correctOutputLines.size(); i++) {
+                String cLine = correctOutputLines.get(i);
+                // Remove all spaces from end of line.
+                String line = outputLines.get(i).replaceAll("\\s+$", "");
+
+                if (cLine.contains(ANY)) {
+                    String cuttedCLine = cLine.substring(0, cLine.length() - ANY.length());
+
+                    assertTrue("line: " + i, line.startsWith(cuttedCLine));
+                } else
+                    assertEquals("line: " + i, cLine, line);
+            }
+        }
+        catch (AssertionError e) {
+            log.info("Correct output is: " + correctOutput);
+
+            throw e;
+        }
+
+
     }
 
     /** */
