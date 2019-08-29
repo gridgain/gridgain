@@ -364,7 +364,14 @@ public class BrowsersService extends AbstractSocketHandler {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses != null) {
-            sendMessageQuiet(ses, evt);
+            try {
+                sendMessage(ses, evt);
+            }
+            catch (Throwable e) {
+                log.error("Failed to send event [session=" + ses + ", event=" + evt + "]", e);
+
+                return false;
+            }
 
             return true;
         }
