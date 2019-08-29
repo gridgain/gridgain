@@ -492,5 +492,31 @@
     },
     "connectedClustersBadgeComponent": {
         "message": "My Connected Clusters: "
+    },
+    "signupFormComponent": {
+        "emailInput": {
+            "placeholder": "Input email"
+        },
+        "passwordInput": {
+            "placeholder": "Input password"
+        },
+        "confirmPasswordInput": {
+            "placeholder": "Confirm password"
+        },
+        "firstNameInput": {
+            "placeholder": "Input first name"
+        },
+        "lastNameInput": {
+            "placeholder": "Input last name"
+        },
+        "phoneInput": {
+            "placeholder": "Input phone (ex.: +15417543010)"
+        },
+        "countryInput": {
+            "placeholder": "Choose your country"
+        },
+        "companyInput": {
+            "placeholder": "Input company name"
+        }
     }
 }
