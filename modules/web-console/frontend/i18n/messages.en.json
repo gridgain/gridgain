@@ -555,5 +555,10 @@
         "emailModeInput": {
             "placeholder": "Input email"
         }
+    },
+    "listEditableComponent": {
+        "addNewItemsButtonLabel": "+ Add new {{entity}}",
+        "noItemsMessage": "You have no {{entity}}. ",
+        "noItemsCreateOneButtonLabel": "Create one?"
     }
 }
