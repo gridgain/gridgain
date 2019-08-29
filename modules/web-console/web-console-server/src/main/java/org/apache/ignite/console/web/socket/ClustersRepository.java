@@ -208,8 +208,7 @@ public class ClustersRepository {
             if (!F.isEmpty(clusterIds)) {
                 clusters.cache().removeAll(clusterIds);
 
-                if (log.isDebugEnabled())
-                    log.debug("Cleared topology for clusters: " + clusterIds);
+                log.debug("Cleared topology for clusters: {}", clusterIds);
             }
         });
     }
