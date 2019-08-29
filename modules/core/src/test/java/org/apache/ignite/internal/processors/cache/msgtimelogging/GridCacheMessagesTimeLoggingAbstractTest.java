@@ -14,6 +14,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -96,12 +97,15 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     )
         throws MalformedObjectNameException
     {
-        RecordingSpi spi = (RecordingSpi)grid(sourceIdx).configuration().getCommunicationSpi();
+        IgniteEx spiGrid = outcoming ? grid(sourceIdx) : grid(targetIdx);
+        IgniteEx metricNameGrid = outcoming ? grid(targetIdx) : grid(sourceIdx);
+
+        RecordingSpi spi = (RecordingSpi)spiGrid.configuration().getCommunicationSpi();
 
         HistogramMetric metric = getMetric(sourceIdx, targetIdx, msgClass, outcoming);
         assertNotNull("HistogramMetric not found", metric);
 
-        String metricName = metricName(grid(targetIdx).localNode().id(), msgClass);
+        String metricName = metricName(metricNameGrid.localNode().id(), msgClass);
 
         long sum = LongStream.of(metric.value()).sum();
 
