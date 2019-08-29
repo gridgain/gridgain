@@ -40,6 +40,7 @@
     "actionsButtonLabel": "Actions",
     "closeButtonLabel": "Close",
     "cancelButtonLabel": "Cancel",
+    "confirmButtonLabel": "Confirm",
     "configuration": {
         "configurations": {},
         "basic": {
@@ -546,5 +547,13 @@
         },
         "duplicateDatasetErrorMessage": "Dataset with name {{datasetName}} is already in chart",
         "rangeLabel": "Range: "
+    },
+    "inputDialog": {
+        "textModeInput": {
+            "placeholder": "Enter value"
+        },
+        "emailModeInput": {
+            "placeholder": "Input email"
+        }
     }
 }
