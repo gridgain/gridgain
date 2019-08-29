@@ -20,7 +20,7 @@ import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 import Sockette from 'sockette';
 
 import {BehaviorSubject, Subject, Observable} from 'rxjs';
-import {distinctUntilChanged, filter, first, map, pluck, tap} from 'rxjs/operators';
+import {distinctUntilChanged, filter, first, map, pluck, shareReplay, tap} from 'rxjs/operators';
 
 import uuidv4 from 'uuid/v4';
 
@@ -129,7 +129,7 @@ class ConnectionState {
         this.state = State.INIT;
     }
 
-    updateCluster(cluster) {
+    updateCluster(cluster: AgentTypes.ClusterStats) {
         this.cluster = cluster;
 
         return cluster;
@@ -222,18 +222,21 @@ export default class AgentManager {
 
         this.currentCluster$ = this.connectionSbj.pipe(
             distinctUntilChanged(({ cluster }) => prevCluster === cluster),
+            shareReplay(1),
             tap(({ cluster }) => prevCluster = cluster)
         );
 
         this.clusterIsActive$ = this.connectionSbj.pipe(
             map(({ cluster }) => cluster),
             filter((cluster) => Boolean(cluster)),
-            pluck('active')
+            pluck('active'),
+            shareReplay(1)
         );
 
         this.clusterIsAvailable$ = this.connectionSbj.pipe(
             pluck('cluster'),
-            map((cluster) => !!cluster)
+            map((cluster) => !!cluster),
+            shareReplay(1)
         );
 
         this.connectionSbj.subscribe({
