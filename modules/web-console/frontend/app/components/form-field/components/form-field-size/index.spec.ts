@@ -48,7 +48,7 @@ suite('form-field-size', () => {
         $compile(el)($scope);
         $scope.$digest();
         const ctrl = $scope.ctrl;
-        ctrl.sizeScale = {label: 'hour', value: 60 * 60};
+        ctrl.sizeScale = {label: 'hour', translationId: 'hour', value: 60 * 60};
         $scope.$digest();
         assert.equal($scope.model, 60 * 60, 'Model value is recalculated on measure switch');
     });

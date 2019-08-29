@@ -1,17 +1,39 @@
 {
     "scale": {
         "time": {
+            "nanosecond": {
+                "short": "ns"
+            },
+            "milisecond": {
+                "short": "ms"
+            },
             "second": {
                 "long": "seconds",
+                "medium": "sec",
                 "short": "s"
             },
             "minute": {
                 "long": "minutes",
+                "medium": "min",
                 "short": "m"
             },
             "hour": {
                 "long": "hours",
                 "short": "h"
+            }
+        },
+        "digital": {
+            "kilobyte": {
+                "short": "Kb"
+            },
+            "megabyte": {
+                "short": "Mb"
+            },
+            "gigabyte": {
+                "short": "Gb"
+            },
+            "terabyte": {
+                "short": "Tb"
             }
         }
     },
