@@ -89,9 +89,9 @@ const SuccessStatus = {
 /**
  * Save in local storage ID of specified cluster.
  *
- * @param {ClusterStats} cluster Cluster to save it's ID in local storage.
+ * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
  */
-const saveToStorage = (cluster) => {
+const _saveToStorage = (cluster) => {
     try {
         if (cluster)
             localStorage.clusterId = cluster.id;
@@ -146,7 +146,7 @@ class ConnectionState {
 
             this.cluster = restoredCluster || _.head(clusters);
 
-            saveToStorage(this.cluster);
+            _saveToStorage(this.cluster);
         }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
@@ -156,7 +156,7 @@ class ConnectionState {
             else {
                 this.cluster = _.head(clusters);
 
-                saveToStorage(this.cluster);
+                _saveToStorage(this.cluster);
             }
         }
 
@@ -357,6 +357,16 @@ export default class AgentManager {
         });
     }
 
+    /**
+     * Save in local storage ID of specified cluster.
+     * If cluster is not specified current cluster ID will be saved.
+     *
+     * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
+     */
+    saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
+        _saveToStorage(cluster);
+    }
+
     updateCluster(newCluster) {
         const conn = this.connectionSbj.getValue();
 
@@ -384,7 +394,7 @@ export default class AgentManager {
 
                 this.connectionSbj.next(state);
 
-                saveToStorage(cluster);
+                _saveToStorage(cluster);
 
                 return Promise.resolve();
             });
@@ -525,7 +535,7 @@ export default class AgentManager {
                     case SuccessStatus.AUTH_FAILED:
                         this.clustersSecrets.get(cluster.id).resetCredentials();
 
-                        throw new Error('Cluster authentication failed. Incorrect user and/or password.');
+                        return this._restOnCluster(event, params, new Error('Incorrect user and/or password.'));
 
                     case SuccessStatus.SECURITY_CHECK_FAILED:
                         throw new Error('Access denied. You are not authorized to access this functionality.');
@@ -550,10 +560,11 @@ export default class AgentManager {
     /**
      * @param {String} event
      * @param {Object} params
+     * @param {Error} repeatReason Error with reason of execution repeat.
      * @returns {Promise}
      * @private
      */
-    _restOnCluster(event, params) {
+    _restOnCluster(event, params, repeatReason) {
         return this.connectionSbj.pipe(first()).toPromise()
             .then(({cluster}) => {
                 if (_.isNil(cluster))
@@ -565,7 +576,7 @@ export default class AgentManager {
                             if (secrets.hasCredentials())
                                 return secrets;
 
-                            return this.ClusterLoginSrv.askCredentials(secrets)
+                            return this.ClusterLoginSrv.askCredentials(secrets, repeatReason)
                                 .then((secrets) => {
                                     this.clustersSecrets.put(cluster.id, secrets);
 
