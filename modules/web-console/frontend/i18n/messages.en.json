@@ -526,5 +526,11 @@
     "gridItemSelectedComponent": {
         "someSelected": "{{ selected }} of {{ count }} selected",
         "noneSelected": "Showing: 0 rows"
+    },
+    "gridShowingRowsComponent": {
+        "total": "Total: {{count}}",
+        "showing": "Showing: {{visible}}",
+        "selected": "Selected: {{selected}} of {{count}}",
+        "copyToClipboardButtonLabel": "Copy to clipboard"
     }
 }
