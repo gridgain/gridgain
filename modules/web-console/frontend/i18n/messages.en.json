@@ -475,7 +475,14 @@
                 }
             }
         },
-        "userNotificationsDialog": {},
+        "userNotificationsDialog": {
+            "title": "Set user notifications",
+            "message": "Enter the text, which will show for all users of the Web Console about an important event or warning about ongoing technical works. It will appear <b>on the yellow bar</b> in the header.",
+            "formActionButtonLabel": "Submit",
+            "showMessageInput": {
+                "label": "Show message"
+            }
+        },
         "createUserDialog": {
             "userCreatedSuccessNotification": "User {{user.email}} created",
             "loadingText": "Creating user…",
