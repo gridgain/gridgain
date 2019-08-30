@@ -128,7 +128,7 @@ public class GridCacheUtils {
 
     /** Each cache operation removes this amount of entries with expired TTL. */
     private static final int TTL_BATCH_SIZE = IgniteSystemProperties.getInteger(
-        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, Integer.MAX_VALUE);
+        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
 
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;

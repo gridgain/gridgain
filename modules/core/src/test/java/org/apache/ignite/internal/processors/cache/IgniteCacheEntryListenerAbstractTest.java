@@ -958,9 +958,6 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
         if (expire)
             checkEvent(iter, key, EXPIRED, oldVal ? 10 : null, oldVal ? 10 : null);
-//
-//        if (expire)
-//            checkEvent(iter, key, EXPIRED, oldVal ? 10 : null, oldVal ? 10 : null);
 
         if (create)
             checkEvent(iter, key, CREATED, 1, null);
