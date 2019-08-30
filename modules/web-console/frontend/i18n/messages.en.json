@@ -733,5 +733,9 @@
         "clusterDisconnected": "Cluster is not available. <a ng-click='$ctrl.openNodeMissingDialog()'>Check</a> cluster is up and running and agent is appropriately <a href=\"https://apacheignite-tools.readme.io/docs/getting-started#section-configuration\" target=\"_blank\">configured</a>.",
         "clusterInactive": "Cluster is inactive. Please activate cluster.",
         "dataIsLoading": "Data is loading..."
+    },
+    "permanentNotificationsComponent": {
+        "assumedIdentity": "You are currently viewing user <strong>{{user.firstName}} {{user.lastName}}</strong> as administrator. <a ng-click='$ctrl.revertIdentity()'>Revert to your identity?</a>",
+        "demoMode": "You are now in Demo Mode. <a ng-click='$ctrl.closeDemo()'>Close Demo?</a>"
     }
 }
