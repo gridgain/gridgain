@@ -37,6 +37,8 @@ import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -63,6 +65,9 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
 
     /** */
     public static final String SECOND_CACHE = "cache2";
+
+    /** */
+    private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -124,6 +129,8 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
         CacheConfiguration ccfgSecond = new CacheConfiguration(ccfgFirst).setName(SECOND_CACHE);
 
         configuration.setCacheConfiguration(ccfgFirst, ccfgSecond);
+
+        configuration.setGridLogger(listeningLog);
 
         return configuration;
     }
@@ -239,6 +246,11 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testPartialIndexRebuild() throws Exception {
+        LogListener lsnr = LogListener
+            .matches("B+Tree is corrupted")
+            .build();
+
+        listeningLog.registerListener(lsnr);
 
         long start = System.currentTimeMillis();
 
@@ -319,6 +331,8 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
         }
 
         assertFalse(hasIssue);
+
+        assertFalse("B+Tree is corrupted.", lsnr.check());
     }
 
     /** */
