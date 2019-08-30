@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
-import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -37,6 +36,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 
+import java.util.List;
+
 import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -55,9 +56,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
     /** Cache context. */
     private final GridCacheContext cctx;
-
-    /** Row filter. */
-    private final SchemaIndexCacheFilter rowFilter;
 
     /** Cancellation token. */
     private final SchemaIndexOperationCancellationToken cancel;
@@ -82,20 +80,18 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *  @param cctx Cache context.
      */
     public SchemaIndexCacheVisitorImpl(GridCacheContext cctx) {
-        this(cctx, null, null, 0);
+        this(cctx, null, 0);
     }
 
     /**
      * Constructor.
      *
      * @param cctx Cache context.
-     * @param rowFilter Row filter.
      * @param cancel Cancellation token.
      * @param parallelism Degree of parallelism.
      */
-    public SchemaIndexCacheVisitorImpl(GridCacheContext cctx, SchemaIndexCacheFilter rowFilter,
-        SchemaIndexOperationCancellationToken cancel, int parallelism) {
-        this.rowFilter = rowFilter;
+    public SchemaIndexCacheVisitorImpl(GridCacheContext cctx, SchemaIndexOperationCancellationToken cancel,
+        int parallelism) {
         this.cancel = cancel;
 
         if (parallelism > 0)
@@ -250,7 +246,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
                 try {
-                    entry.updateIndex(rowFilter, clo);
+                    entry.updateIndex(clo);
                 }
                 finally {
                     entry.touch();
