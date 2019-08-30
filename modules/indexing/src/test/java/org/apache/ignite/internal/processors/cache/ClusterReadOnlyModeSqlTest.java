@@ -27,6 +27,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.checkThatRootCauseIsReadOnly;
+
 /**
  * Tests SQL queries in read-only cluster mode.
  */

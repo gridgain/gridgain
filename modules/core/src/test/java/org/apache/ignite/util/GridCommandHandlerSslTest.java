@@ -87,7 +87,6 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
 
         List<String> params = new ArrayList<>();
 
-        params.add("--activate");
         params.add("--keystore");
         params.add(GridTestUtils.keyStorePath("node01"));
         params.add("--keystore-password");
@@ -97,6 +96,8 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
             params.add("--ssl-cipher-suites");
             params.add(utilityCipherSuite);
         }
+
+        params.add("--activate");
 
         assertEquals(expRes, execute(params));
 
@@ -121,7 +122,7 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
         List<String> params = new ArrayList<>();
 
         params.add("--activate");
-        
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_CONNECTION_FAILED, execute(params));
