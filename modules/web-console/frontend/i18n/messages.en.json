@@ -505,7 +505,12 @@
         "signupMessage": "Don't have an account? <a href='/signup'>Get started</a>",
         "confirmRegistrationMessage": "Please sign in to confirm your registration"
     },
-    "signUp": {},
+    "signUp": {
+        "documentTitle": "Sign Up",
+        "pageTitle": "Don't Have An Account?",
+        "formActionButtonLabel": "Sign Up",
+        "signInMessage": "Already have an account? <a ui-sref='signin'>Sign in here</a>"
+    },
     "forgotPassword": {
         "documentTitle": "Forgot Password",
         "pageTitle": "Forgot password?",
