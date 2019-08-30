@@ -206,7 +206,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 GridFutureAdapter<Void> fut = transitionFuts.get(globalState.transitionRequestId());
                 if (fut != null) {
                     if (asyncWaitForTransition) {
-                        return new IgniteFutureImpl<>(fut.chain(new C1<IgniteInternalFuture<Void>, Boolean>() {
+                         return new IgniteFutureImpl<>(fut.chain(new C1<IgniteInternalFuture<Void>, Boolean>() {
                             @Override public Boolean apply(IgniteInternalFuture<Void> fut) {
                                 Boolean res = globalState.transitionResult();
 
@@ -350,11 +350,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return joinFut;
         }
         else if (!ctx.clientNode()
-            && !ctx.isDaemon()
-            && ctx.config().isAutoActivationEnabled()
-            && !state.active()
-            && isBaselineSatisfied(state.baselineTopology(), discoCache.serverNodes()))
-            changeGlobalState0(true, state.baselineTopology(), false);
+                && !ctx.isDaemon()
+                && ctx.config().isAutoActivationEnabled()
+                && !state.active()
+                && isBaselineSatisfied(state.baselineTopology(), discoCache.serverNodes()))
+                changeGlobalState0(true, state.baselineTopology(), false);
 
         return null;
     }
@@ -1269,7 +1269,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 Object consistentId = node.consistentId();
 
                 if (currBlT.stream().noneMatch(
-                    currBlTNode -> Objects.equals(currBlTNode.consistentId(), consistentId)) &&
+                        currBlTNode -> Objects.equals(currBlTNode.consistentId(), consistentId)) &&
                     srvrs.stream().noneMatch(
                         currServersNode -> Objects.equals(currServersNode.consistentId(), consistentId)))
                     throw new IgniteException("Check arguments. Node with consistent ID [" + consistentId +
@@ -1281,7 +1281,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (onlineNodes != null) {
                 if (!onlineNodes.isEmpty()) {
                     throw new IgniteException("Removing online nodes from BaselineTopology is not supported: " +
-                        onlineNodes);
+                            onlineNodes);
                 }
             }
         }
@@ -1300,11 +1300,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             for (ClusterNode cn : discoCache.serverNodes()) {
                 if (cn.version().compareTo(MIN_BLT_SUPPORTING_VER) < 0)
                     sb
-                        .a('[')
-                        .a(cn.consistentId())
-                        .a(':')
-                        .a(cn.version())
-                        .a("], ");
+                            .a('[')
+                            .a(cn.consistentId())
+                            .a(':')
+                            .a(cn.version())
+                            .a("], ");
             }
 
             sb.d(sb.length() - 2, sb.length());
