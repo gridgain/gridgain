@@ -14,18 +14,35 @@
  * limitations under the License.
  */
 
-export default class ActivitiesCtrl {
-    static $inject = ['user'];
+package org.apache.ignite.internal.processors.rest.request;
 
-    constructor(user) {
-        this.user = user;
+/**
+ *
+ */
+public class GridRestReadOnlyChangeModeRequest extends GridRestRequest {
+    /** Request current state. */
+    private boolean reqCurrentMode;
 
-        this.data = user.activitiesDetail;
+    /** Read only. */
+    private boolean readOnly;
 
-        this.columnDefs = [
-            { displayName: 'Description', field: 'action', enableFiltering: false, cellFilter: 'translate', minWidth: 120, width: '43%'},
-            { displayName: 'Action', field: 'action', enableFiltering: false, minWidth: 120, width: '43%'},
-            { displayName: 'Visited', field: 'amount', enableFiltering: false, minWidth: 80}
-        ];
+    /** */
+    public void reqCurrentMode() {
+        reqCurrentMode = true;
+    }
+
+    /** */
+    public boolean isReqCurrentMode() {
+        return reqCurrentMode;
+    }
+
+    /** */
+    public void readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+    }
+
+    /** */
+    public boolean readOnly() {
+        return readOnly;
     }
 }
