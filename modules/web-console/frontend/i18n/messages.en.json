@@ -750,5 +750,11 @@
     },
     "versionPickerComponent": {
         "tooltip": "Web Console supports multiple Ignite versions.<br>Select version you need to configure cluster."
+    },
+    "appFooter": {
+        "downloadAgentButtonLabel": "Download Agent",
+        "product": "Apache Ignite Web Console ({{version}})",
+        "copyright": "© {{year}} The Apache Software Foundation.",
+        "legal": "Apache, Apache Ignite, the Apache feather and the Apache Ignite logo are trademarks of The Apache Software Foundation."
     }
 }
