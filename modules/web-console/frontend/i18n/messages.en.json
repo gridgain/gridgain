@@ -528,6 +528,11 @@
         "cancelLinkLabel": "Cancel",
         "formActionButtonLabel": "Save Changes"
     },
+    "passwordChangedPage": {
+        "documentTitle": "Password send",
+        "pageTitle": "Ready!",
+        "message": "Further instructions for password reset have been sent to your e-mail address.<br />You'll be redirected back automatically in a few seconds. If not, please <a ui-sref='signin'>click here</a>."
+    },
     "landing": {
         "intro": {
             "title": "Web Console",

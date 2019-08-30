@@ -19,6 +19,7 @@ import angular from 'angular';
 import template from './template.pug';
 import controller from './controller';
 import publicTemplate from '../../../views/public.pug';
+import {StateProvider} from '@uirouter/angularjs';
 
 import './style.scss';
 
@@ -29,7 +30,7 @@ export default angular
         template,
         controller
     })
-    .config(['$stateProvider', ($stateProvider) => {
+    .config(['$stateProvider', ($stateProvider: StateProvider) => {
         $stateProvider.state('password.send', {
             url: '/changed',
             views: {
@@ -41,7 +42,7 @@ export default angular
                 }
             },
             tfMetaTags: {
-                title: 'Password send'
+                title: 'passwordChangedPage.documentTitle'
             },
             unsaved: true
         });
