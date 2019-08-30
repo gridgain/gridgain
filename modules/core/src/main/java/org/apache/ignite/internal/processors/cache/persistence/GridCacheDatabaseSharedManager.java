@@ -56,6 +56,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1644,7 +1645,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         throw new IgniteException(new NodeStoppingException("Failed to perform cache update: node is stopping."));
                     }
 
-                    if (checkpointLock.getReadHoldCount() > 1 || safeToUpdatePageMemories())
+                    if (checkpointLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || checkpointLockIsHeldByThread())
                         break;
                     else {
                         checkpointLock.readLock().unlock();
@@ -3209,11 +3210,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         int pagesNum = 0;
 
+        AtomicBoolean allowToEvict = new AtomicBoolean(true);
+
         // Collect collection of dirty pages from all regions.
         for (DataRegion memPlc : regions) {
             if (memPlc.config().isPersistenceEnabled()){
                 GridMultiCollectionWrapper<FullPageId> nextCpPagesCol =
-                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint();
+                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint(allowToEvict);
 
                 pagesNum += nextCpPagesCol.size();
 
@@ -4266,6 +4269,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             tracker.onLockWaitStart();
 
+            AtomicBoolean allowToEvict = new AtomicBoolean(false);
+
             checkpointLock.writeLock().lock();
 
             try {
@@ -4289,7 +4294,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 fillCacheGroupState(cpRec);
 
                 GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
-                    beginAllCheckpoints();
+                    beginAllCheckpoints(allowToEvict);
 
                 cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
@@ -4356,6 +4361,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onWalCpRecordFsyncEnd();
 
                 writeCheckpointEntry(tmpWriteBuf, cp, CheckpointEntryType.START);
+
+                //Allowable to evict page only after checkpoint entry was stored to disk.
+                allowToEvict.set(true);
 
                 GridMultiCollectionWrapper<FullPageId> cpPages = splitAndSortCpPagesIfNeeded(
                     cpPagesTuple, persistenceCfg.getCheckpointThreads());
@@ -4607,8 +4615,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /**
          * @return triple with collections of FullPageIds obtained from each PageMemory, overall number of dirty
          * pages, and flag defines at least one user page became a dirty since last checkpoint.
+         * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
          */
-        private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints() {
+        private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints(
+            AtomicBoolean allowToEvict
+        ) {
             Collection<GridMultiCollectionWrapper<FullPageId>> res = new ArrayList(dataRegions().size());
 
             int pagesNum = 0;
@@ -4620,7 +4631,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     continue;
 
                 IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> nextCpPages =
-                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx();
+                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx(allowToEvict);
 
                 GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = nextCpPages.get1();
 

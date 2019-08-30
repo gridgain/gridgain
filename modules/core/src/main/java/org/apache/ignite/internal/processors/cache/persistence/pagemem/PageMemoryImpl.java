@@ -944,10 +944,10 @@ public class PageMemoryImpl implements PageMemoryEx {
         if (rmv)
             seg.loadedPages.remove(grpId, PageIdUtils.effectivePageId(pageId));
 
-        Collection<FullPageId> cpPages = seg.segCheckpointPages;
+        CheckpointPages cpPages = seg.checkpointPages;
 
         if (cpPages != null)
-            cpPages.remove(new FullPageId(pageId, grpId));
+            cpPages.markAsSaved(new FullPageId(pageId, grpId));
 
         Collection<FullPageId> dirtyPages = seg.dirtyPages;
 
@@ -1135,12 +1135,15 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
-    @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint() throws IgniteException {
-        return beginCheckpointEx().get1();
+    @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
+        AtomicBoolean allowToEvict
+    ) throws IgniteException {
+        return beginCheckpointEx(allowToEvict).get1();
     }
 
     /** {@inheritDoc} */
     @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
+        AtomicBoolean allowToEvict
     ) throws IgniteException {
         if (segments == null)
             return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
@@ -1150,10 +1153,13 @@ public class PageMemoryImpl implements PageMemoryEx {
         for (int i = 0; i < segments.length; i++) {
             Segment seg = segments[i];
 
-            if (seg.segCheckpointPages != null)
+            if (seg.checkpointPages != null)
                 throw new IgniteException("Failed to begin checkpoint (it is already in progress).");
 
-            collections[i] = seg.segCheckpointPages = seg.dirtyPages;
+            Collection<FullPageId> dirtyPages = seg.dirtyPages;
+            collections[i] = dirtyPages;
+
+            seg.checkpointPages = new CheckpointPages(dirtyPages, allowToEvict);
 
             seg.dirtyPages = new GridConcurrentHashSet<>();
         }
@@ -1181,7 +1187,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             return;
 
         for (Segment seg : segments)
-            seg.segCheckpointPages = null;
+            seg.checkpointPages = null;
 
         if (throttlingPlc != ThrottlingPolicy.DISABLED)
             writeThrottle.onFinishCheckpoint();
@@ -1221,7 +1227,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (relPtr != OUTDATED_REL_PTR) {
                 absPtr = seg.absolute(relPtr);
 
-                // Pin the page until page will not be copied.
+                // Pin the page until page will not be copied. This helpful to prevent page replacement.
                 if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR)
                     PageHeader.acquirePage(absPtr);
                 else
@@ -1772,7 +1778,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     boolean isInCheckpoint(FullPageId pageId) {
         Segment seg = segment(pageId.groupId(), pageId.pageId());
 
-        Collection<FullPageId> pages0 = seg.segCheckpointPages;
+        CheckpointPages pages0 = seg.checkpointPages;
 
         return pages0 != null && pages0.contains(pageId);
     }
@@ -1784,11 +1790,11 @@ public class PageMemoryImpl implements PageMemoryEx {
     boolean clearCheckpoint(FullPageId fullPageId) {
         Segment seg = segment(fullPageId.groupId(), fullPageId.pageId());
 
-        Collection<FullPageId> pages0 = seg.segCheckpointPages;
+        CheckpointPages pages0 = seg.checkpointPages;
 
         assert pages0 != null;
 
-        return pages0.remove(fullPageId);
+        return pages0.markAsSaved(fullPageId);
     }
 
     /**
@@ -2096,6 +2102,45 @@ public class PageMemoryImpl implements PageMemoryEx {
         return res;
     }
 
+    private class CheckpointPages {
+        /** */
+        private volatile Collection<FullPageId> segCheckpointPages;
+
+        private final AtomicBoolean allowToEvict;
+
+        private CheckpointPages(Collection<FullPageId> pages, AtomicBoolean evict) {
+            segCheckpointPages = pages;
+            allowToEvict = evict;
+        }
+
+        public boolean allowToSave(FullPageId fullPageId) {
+            Collection<FullPageId> checkpointPages = segCheckpointPages;
+
+            if(checkpointPages == null || allowToEvict == null)
+                return false;
+
+            return allowToEvict.get() && checkpointPages.contains(fullPageId);
+        }
+
+        public boolean contains(FullPageId fullPageId){
+            Collection<FullPageId> checkpointPages = segCheckpointPages;
+
+            return checkpointPages != null && checkpointPages.contains(fullPageId);
+        }
+
+        public boolean markAsSaved(FullPageId fullPageId) {
+            Collection<FullPageId> checkpointPages = segCheckpointPages;
+
+            return checkpointPages != null && checkpointPages.remove(fullPageId);
+        }
+
+        public int size(){
+            Collection<FullPageId> checkpointPages = segCheckpointPages;
+
+            return checkpointPages == null ? 0 : checkpointPages.size();
+        }
+    }
+
     /**
      *
      */
@@ -2128,7 +2173,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
 
         /** */
-        private volatile Collection<FullPageId> segCheckpointPages;
+        private volatile CheckpointPages checkpointPages;
 
         /** */
         private final int maxDirtyPages;
@@ -2277,14 +2322,13 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (PageHeader.isAcquired(absPtr))
                 return false;
 
-            Collection<FullPageId> cpPages = segCheckpointPages;
-
             clearRowCache(fullPageId, absPtr);
 
             if (isDirty(absPtr)) {
+                CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if should be written by a checkpoint.
                 // These pages does not have tmp buffer.
-                if (cpPages != null && cpPages.contains(fullPageId)) {
+                if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
                     assert storeMgr != null;
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
@@ -2300,7 +2344,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     setDirty(fullPageId, absPtr, false, true);
 
-                    cpPages.remove(fullPageId);
+                    checkpointPages.markAsSaved(fullPageId);
 
                     return true;
                 }
@@ -2601,7 +2645,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 ", loaded=" + loadedPages.size() +
                 ", maxDirtyPages=" + maxDirtyPages +
                 ", dirtyPages=" + dirtyPages.size() +
-                ", cpPages=" + (segCheckpointPages == null ? 0 : segCheckpointPages.size()) +
+                ", cpPages=" + (checkpointPages == null ? 0 : checkpointPages.size()) +
                 ", pinnedInSegment=" + pinnedCnt +
                 ", failedToPrepare=" + failToPrepare +
                 ']' + U.nl() + "Out of memory in data region [" +
