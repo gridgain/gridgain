@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metastorage.persistence;
+package org.apache.ignite.internal.processors.tracing.messages;
 
-import java.util.ArrayList;
-import java.util.List;
+/**
+ * This interface indicates class which able to transfer span.
+ */
+public interface SpanTransport {
+    /**
+     * Stored span for transferring.
+     *
+     * @param span Binary view of span.
+     */
+    void span(byte[] span);
 
-/** */
-@SuppressWarnings("PublicField")
-class StartupExtras {
-    /** */
-    public List<DistributedMetaStorageHistoryItem> deferredUpdates = new ArrayList<>();
-
-    /** */
-    public DistributedMetaStorageClusterNodeData fullNodeData;
+    /**
+     * @return Binary view of span.
+     */
+    byte[] span();
 }
