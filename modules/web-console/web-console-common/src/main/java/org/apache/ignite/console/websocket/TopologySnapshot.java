@@ -34,6 +34,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.console.utils.Utils.attribute;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
@@ -120,10 +121,13 @@ public class TopologySnapshot {
      * @param nodes Nodes.
      */
     public TopologySnapshot(Collection<GridClientNodeBean> nodes) {
-        id = firstNonNullAttribute(nodes, IGNITE_CLUSTER_ID);
-        name = firstNonNullAttribute(nodes, IGNITE_CLUSTER_NAME);
-        gridgain = Boolean.parseBoolean(firstNonNullAttribute(nodes, GRIDGAIN_PLUGIN));
-        ultimate = Boolean.parseBoolean(firstNonNullAttribute(nodes, ULTIMATE_CLUSTER));
+        Collection<GridClientNodeBean> srvs = forServers(nodes);
+
+        id = firstNonNullAttribute(srvs, IGNITE_CLUSTER_ID);
+        name = firstNonNullAttribute(srvs, IGNITE_CLUSTER_NAME);
+        gridgain = allHasAttribute(srvs, GRIDGAIN_PLUGIN, true);
+        ultimate = allHasAttribute(srvs, ULTIMATE_CLUSTER, true);
+        
         supportedFeatures = supportedFeatures(nodes);
         clusterVer = clusterVersion(nodes);
 
@@ -302,6 +306,27 @@ public class TopologySnapshot {
             .findFirst()
             .map(Object::toString)
             .orElse(null);
+    }
+
+    /**
+     * @param nodes Cluster nodes.
+     * @param key Attribute name.
+     * @param val Target attribute value.
+     * @return First non null value of attribute.
+     */
+    private boolean allHasAttribute(Collection<GridClientNodeBean> nodes, String key, Object val) {
+        return nodes.stream()
+            .allMatch(n -> val.equals(n.getAttributes().get(key)));
+    }
+
+    /**
+     * @param nodes Cluster nodes.
+     * @return All server nodes.
+     */
+    private Collection<GridClientNodeBean> forServers(Collection<GridClientNodeBean> nodes) {
+        return nodes.stream()
+            .filter(n -> Boolean.parseBoolean(n.getAttributes().get(ATTR_CLIENT_MODE).toString()))
+            .collect(toList());
     }
 
     /**
