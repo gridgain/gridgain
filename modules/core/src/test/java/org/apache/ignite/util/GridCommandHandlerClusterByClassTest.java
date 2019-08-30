@@ -16,7 +16,6 @@
 
 package org.apache.ignite.util;
 
-import java.io.File;
 import java.net.URL;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -92,7 +91,7 @@ import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
-import static org.apache.ignite.testframework.GridTestUtils.readFile;
+import static org.apache.ignite.testframework.GridTestUtils.readResource;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -386,7 +385,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         assertNotNull("Golden copy not found. path: " + resourceName, goldenCopyResource);
 
-        String correctOutput = new String(readFile(new File(goldenCopyResource.toURI())));
+        String correctOutput = new String(readResource(getClass().getClassLoader(), resourceName));
 
         try {
             // Split by lines.

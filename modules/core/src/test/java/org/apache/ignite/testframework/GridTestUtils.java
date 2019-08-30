@@ -16,10 +16,12 @@
 
 package org.apache.ignite.testframework;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -1771,6 +1773,34 @@ public final class GridTestUtils {
         }
 
         return bytes;
+    }
+
+    /**
+     * Reads resource into byte array.
+     *
+     * @param classLoader Classloader
+     * @param resourceName Resource name
+     * @return Content of resorce in byte array.
+     * @throws IOException If failed.
+     */
+    public static byte[] readResource(ClassLoader classLoader, String resourceName) throws IOException {
+        byte[] bytes = new byte[4096];
+
+        try (InputStream is = classLoader.getResourceAsStream(resourceName)) {
+            assertNotNull("Resource in empty!", is);
+
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                int readed, pos = 0;
+
+                while ((readed = is.read(bytes)) > 0) {
+                    baos.write(bytes, pos, readed);
+
+                    pos += readed;
+                }
+
+                return baos.toByteArray();
+            }
+        }
     }
 
     /**
