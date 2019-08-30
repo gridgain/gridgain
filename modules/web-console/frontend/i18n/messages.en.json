@@ -310,6 +310,31 @@
     "userProfile": {},
     "admin": {
         "listOfRegisteredUsers": {
+            "tabs": {
+                "users": "Users",
+                "companies": "Companies",
+                "countries": "Countries"
+            },
+            "gridTitles": {
+                "users": "List of registered users",
+                "companies": "List of registered companies",
+                "countries": "List of registered countries"
+            },
+            "excludeInput": {
+                "placeholder": "Exclude by company name..."
+            },
+            "noData": {
+                "nonEmptyFilterMessage": "Nothing to display. Check your filters."
+            },
+            "actions": {
+                "becomeThisUser": "Become this user",
+                "removeAdmin": "Revoke admin",
+                "grantAdmin": "Grant admin",
+                "addUser": "Add user",
+                "removeUser": "Remove user",
+                "activityDetail": "Activity detail"
+            },
+            "removeUserConfirmationMessage": "Are you sure you want to remove user: \"{{userName}}\"?",
             "categoryDisplayNames": {
                 "user": "User",
                 "email": "Email",

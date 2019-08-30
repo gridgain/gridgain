@@ -87,32 +87,32 @@ export default class IgniteListOfRegisteredUsersCtrl {
 
         this.actionOptions = [
             {
-                action: 'Become this user',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.becomeThisUser'),
                 click: () => this.becomeUser(),
                 available: true
             },
             {
-                action: 'Revoke admin',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeAdmin'),
                 click: () => this.toggleAdmin(),
                 available: true
             },
             {
-                action: 'Grant admin',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.grantAdmin'),
                 click: () => this.toggleAdmin(),
                 available: false
             },
             {
-                action: 'Add user',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.addUser'),
                 sref: '.createUser',
                 available: true
             },
             {
-                action: 'Remove user',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeUser'),
                 click: () => this.removeUser(),
                 available: true
             },
             {
-                action: 'Activity detail',
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.activityDetail'),
                 click: () => this.showActivities(),
                 available: true
             }
@@ -275,7 +275,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
     removeUser() {
         const user = this.gridApi.selection.legacyGetSelectedRows()[0];
 
-        this.Confirm.confirm(`Are you sure you want to remove user: "${user.userName}"?`)
+        this.Confirm.confirm(this.$translate.instant('admin.listOfRegisteredUsers.removeUserConfirmationMessage', {userName: user.userName}))
             .then(() => this.AdminData.removeUser(user))
             .then(() => {
                 const i = _.findIndex(this.gridOptions.data, (u) => u.id === user.id);
