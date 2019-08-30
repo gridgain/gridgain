@@ -25,7 +25,7 @@ html
         meta(http-equiv='X-UA-Compatible' content='IE=Edge')
         meta(name='viewport' content='width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0')
 
-        title(translate='{{tfMetaTags.title}}')
+        title(ng-bind='tfMetaTags.title')
         meta(ng-repeat='(key, value) in tfMetaTags.properties' name='{{::key}}' content='{{::value}}')
 
         meta(name='fragment' content='!')
