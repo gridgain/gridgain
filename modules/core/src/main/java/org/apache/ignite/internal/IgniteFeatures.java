@@ -57,6 +57,9 @@ public enum IgniteFeatures {
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
+    
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
 
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
@@ -82,7 +85,13 @@ public enum IgniteFeatures {
     /**
      * A mode when data nodes throttle update rate regarding to DR sender load
      */
-    DR_DATA_NODE_SMART_THROTTLING(19);
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /**
+     * Support enabling DR events from  Web Console.
+     */
+    WC_DR_EVENTS(20)
+    ;
 
     /**
      * Unique feature identifier.
