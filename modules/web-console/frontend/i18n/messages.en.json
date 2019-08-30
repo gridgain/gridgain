@@ -511,6 +511,12 @@
         "formActionButtonLabel": "Sign Up",
         "signInMessage": "Already have an account? <a ui-sref='signin'>Sign in here</a>"
     },
+    "signupConfirmation": {
+        "documentTitle": "Sign Up Confirmation",
+        "pageTitle": "Confirm your email",
+        "message": "Thanks For Signing Up!<br />Please check your email and click link in the message we just sent to <b>{{::$ctrl.email}}</b>.<br />If you don’t receive email try to <a ng-click='$ctrl.resendConfirmation()'>resend confirmation</a> once more.",
+        "successNotification": "Signup confirmation sent, check your email"
+    },
     "forgotPassword": {
         "documentTitle": "Forgot Password",
         "pageTitle": "Forgot password?",
