@@ -460,7 +460,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             DoOutOp(CacheOp.Put, key, val);
         }
@@ -471,7 +471,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.PutAsync, key, val);
         }
@@ -482,7 +482,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutInOpNullable(CacheOp.GetAndPut, key, val);
         }
@@ -493,7 +493,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.GetAndPutAsync, w =>
             {
@@ -508,7 +508,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutInOpNullable(CacheOp.GetAndReplace, key, val);
         }
@@ -519,7 +519,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.GetAndReplaceAsync, w =>
             {
@@ -533,7 +533,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutInOpNullable(CacheOp.GetAndRemove, key);
         }
@@ -543,7 +543,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.GetAndRemoveAsync, w => w.WriteObject(key), r => GetCacheResult(r));
         }
@@ -554,7 +554,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOp(CacheOp.PutIfAbsent, key, val);
         }
@@ -565,7 +565,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync<TK, TV, bool>(CacheOp.PutIfAbsentAsync, key, val);
         }
@@ -576,7 +576,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutInOpNullable(CacheOp.GetAndPutIfAbsent, key, val);
         }
@@ -587,7 +587,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.GetAndPutIfAbsentAsync, w =>
             {
@@ -602,7 +602,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOp(CacheOp.Replace2, key, val);
         }
@@ -613,7 +613,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync<TK, TV, bool>(CacheOp.Replace2Async, key, val);
         }
@@ -625,7 +625,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(oldVal, "oldVal");
             IgniteArgumentCheck.NotNull(newVal, "newVal");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOp(CacheOp.Replace3, key, oldVal, newVal);
         }
@@ -637,7 +637,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(oldVal, "oldVal");
             IgniteArgumentCheck.NotNull(newVal, "newVal");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync<bool>(CacheOp.Replace3Async, w =>
             {
@@ -652,7 +652,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(vals, "vals");
 
-            StartTx();
+            StartTxIfNeeded();
 
             DoOutOp(CacheOp.PutAll, writer => writer.WriteDictionary(vals));
         }
@@ -662,7 +662,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(vals, "vals");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.PutAllAsync, writer => writer.WriteDictionary(vals));
         }
@@ -740,7 +740,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOp(CacheOp.RemoveObj, key);
         }
@@ -750,7 +750,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync<TK, bool>(CacheOp.RemoveObjAsync, key);
         }
@@ -761,7 +761,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOp(CacheOp.RemoveBool, key, val);
         }
@@ -772,7 +772,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync<TK, TV, bool>(CacheOp.RemoveBoolAsync, key, val);
         }
@@ -782,7 +782,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            StartTx();
+            StartTxIfNeeded();
 
             DoOutOp(CacheOp.RemoveAll, writer => writer.WriteEnumerable(keys));
         }
@@ -792,7 +792,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.RemoveAllAsync, writer => writer.WriteEnumerable(keys));
         }
@@ -800,7 +800,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritDoc /> */
         public void RemoveAll()
         {
-            StartTx();
+            StartTxIfNeeded();
 
             DoOutInOp((int) CacheOp.RemoveAll2);
         }
@@ -808,7 +808,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritDoc /> */
         public Task RemoveAllAsync()
         {
-            StartTx();
+            StartTxIfNeeded();
 
             return DoOutOpAsync(CacheOp.RemoveAll2Async);
         }
@@ -955,12 +955,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(processor, "processor");
 
-            StartTx();
+            StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            var ptr = AllocateNoTx(holder);
+            var ptr = AllocateIfNoTx(holder);
 
             try
             {
@@ -987,12 +987,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(processor, "processor");
 
-            StartTx();
+            StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            var ptr = AllocateNoTx(holder);
+            var ptr = AllocateIfNoTx(holder);
 
             try
             {
@@ -1034,12 +1034,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(keys, "keys");
             IgniteArgumentCheck.NotNull(processor, "processor");
 
-            StartTx();
+            StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            var ptr = AllocateNoTx(holder);
+            var ptr = AllocateIfNoTx(holder);
 
             try
             {
@@ -1068,12 +1068,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(keys, "keys");
             IgniteArgumentCheck.NotNull(processor, "processor");
 
-            StartTx();
+            StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            var ptr = AllocateNoTx(holder);
+            var ptr = AllocateIfNoTx(holder);
 
             try
             {
@@ -1617,7 +1617,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Starts a transaction when applicable.
         /// </summary>
-        private void StartTx()
+        private void StartTxIfNeeded()
         {
             if (_txManager != null)
                 _txManager.StartTx();
@@ -1627,7 +1627,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Allocates a handle only when there is no active transaction.
         /// </summary>
         /// <returns>Handle or 0 when there is an active transaction.</returns>
-        private long AllocateNoTx(object obj)
+        private long AllocateIfNoTx(object obj)
         {
             // With transactions, actual cache operation execution is delayed, so we don't control handle lifetime.
             if (_txManager != null && _txManager.IsInTx())
