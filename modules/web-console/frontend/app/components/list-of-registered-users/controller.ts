@@ -16,8 +16,8 @@
 
 import _ from 'lodash';
 
-import columnDefs from './column-defs';
-import categories from './categories';
+import {columnDefsFn} from './column-defs';
+import {categoriesFn} from './categories';
 import {UserService} from 'app/modules/user/User.service';
 import {Subscription} from 'rxjs';
 import {tap} from 'rxjs/operators';
@@ -37,13 +37,24 @@ const treeAggregationFinalizerFn = function(agg) {
 };
 
 export default class IgniteListOfRegisteredUsersCtrl {
-    static $inject = ['$scope', '$state', '$filter', 'User', 'uiGridGroupingConstants', 'uiGridPinningConstants', 'IgniteAdminData', 'IgniteNotebookData', 'IgniteConfirm', 'IgniteActivitiesUserDialog'];
+    gridOptions: uiGrid.IGridOptions;
+    gridApi: uiGrid.IGridApi;
 
-    constructor($scope, $state, $filter, private User: UserService, uiGridGroupingConstants, uiGridPinningConstants, AdminData, NotebookData, Confirm, ActivitiesUserDialog) {
-        this.$state = $state;
-        this.AdminData = AdminData;
-        this.ActivitiesDialogFactory = ActivitiesUserDialog;
-        this.Confirm = Confirm;
+    static $inject = ['$scope', '$state', '$filter', 'User', 'uiGridGroupingConstants', 'uiGridPinningConstants', 'IgniteAdminData', 'IgniteNotebookData', 'IgniteConfirm', 'IgniteActivitiesUserDialog', '$translate'];
+
+    constructor(
+        $scope,
+        private $state,
+        $filter,
+        private User: UserService,
+        uiGridGroupingConstants,
+        uiGridPinningConstants,
+        private AdminData,
+        private NotebookData,
+        private Confirm,
+        private ActivitiesUserDialog,
+        public $translate: ng.translate.ITranslateService
+    ) {
         this.NotebookData = NotebookData;
 
         const dtFilter = $filter('date');
@@ -107,16 +118,11 @@ export default class IgniteListOfRegisteredUsersCtrl {
             }
         ];
 
-        this._userGridOptions = {
-            columnDefs,
-            categories
-        };
-
         this.gridOptions = {
             data: [],
 
-            columnDefs,
-            categories,
+            columnDefs: this.getColumnDefs(),
+            categories: this.getCategories(),
 
             treeRowHeaderAlwaysVisible: true,
             headerTemplate,
@@ -288,7 +294,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
     showActivities() {
         const user = this.gridApi.selection.legacyGetSelectedRows()[0];
 
-        return new this.ActivitiesDialogFactory({ user });
+        return new this.ActivitiesUserDialog({ user });
     }
 
     groupByUser() {
@@ -305,7 +311,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.gridApi.pinning.pinColumn(col, this.uiGridPinningConstants.container.NONE);
         });
 
-        this.gridOptions.categories = categories;
+        this.gridOptions.categories = this.getCategories();
     }
 
     groupByCompany() {
@@ -349,7 +355,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.gridApi.pinning.pinColumn(col, this.uiGridPinningConstants.container.NONE);
         });
 
-        const _categories = _.cloneDeep(categories);
+        const _categories = this.getCategories();
         // Cut company category.
         const company = _categories.splice(3, 1)[0];
         company.selectable = false;
@@ -400,7 +406,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.gridApi.pinning.pinColumn(col, this.uiGridPinningConstants.container.NONE);
         });
 
-        const _categories = _.cloneDeep(categories);
+        const _categories = this.getCategories();
         // Cut company category.
         const country = _categories.splice(4, 1)[0];
         country.selectable = false;
@@ -408,5 +414,13 @@ export default class IgniteListOfRegisteredUsersCtrl {
         // Add company as first column.
         _categories.unshift(country);
         this.gridOptions.categories = _categories;
+    }
+
+    getColumnDefs() {
+        return columnDefsFn(this.$translate);
+    }
+
+    getCategories() {
+        return categoriesFn(this.$translate);
     }
 }

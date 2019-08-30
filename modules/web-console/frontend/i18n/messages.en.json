@@ -309,6 +309,129 @@
     "userMenu": {},
     "userProfile": {},
     "admin": {
+        "listOfRegisteredUsers": {
+            "categoryDisplayNames": {
+                "user": "User",
+                "email": "Email",
+                "activated": "Activated",
+                "company": "Company",
+                "country": "Country",
+                "lastLogin": "Last login",
+                "lastActivity": "Last activity",
+                "configurations": "Configurations",
+                "totalActivities": "Total activities",
+                "configurationActivities": "Configuration's activities",
+                "queriesActivities": "Queries' activities"
+            },
+            "columns": {
+                "user": {
+                    "title": "User",
+                    "filterPlaceholder": "Filter by name..."
+                },
+                "email": {
+                    "title": "Email",
+                    "filterPlaceholder": "Filter by email..."
+                },
+                "activated": {
+                    "title": "Activated",
+                    "filterPlaceholder": "Filter by activation..."
+                },
+                "company": {
+                    "title": "Company",
+                    "filterPlaceholder": "Filter by company..."
+                },
+                "country": {
+                    "title": "Country",
+                    "filterPlaceholder": "Filter by country..."
+                },
+                "lastlogin": {
+                    "title": "Last login"
+                },
+                "lastactivity": {
+                    "title": "Last activity"
+                },
+                "cfg_clusters": {
+                    "title": "Clusters count",
+                    "tooltip": "Clusters count"
+                },
+                "cfg_models": {
+                    "title": "Models count",
+                    "tooltip": "Models count"
+                },
+                "cfg_caches": {
+                    "title": "Caches count",
+                    "tooltip": "Caches count"
+                },
+                "cfg": {
+                    "title": "Cfg",
+                    "tooltip": "Total count of configuration usages"
+                },
+                "qry": {
+                    "title": "Qry",
+                    "tooltip": "Total count of queries usages"
+                },
+                "demo": {
+                    "title": "Demo",
+                    "tooltip": "Total count of demo startup"
+                },
+                "dnld": {
+                    "title": "Dnld",
+                    "tooltip": "Total count of agent downloads"
+                },
+                "starts": {
+                    "title": "Starts",
+                    "tooltip": "Total count of agent startup"
+                },
+                "clusters": {
+                    "title": "Clusters",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterBasic": {
+                    "title": "Basic",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterBasicNew": {
+                    "title": "Basic create",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedNew": {
+                    "title": "Adv. Cluster create",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedCluster": {
+                    "title": "Adv. Cluster edit",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedCaches": {
+                    "title": "Adv. Caches",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedCache": {
+                    "title": "Adv. Cache edit",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedModels": {
+                    "title": "Adv. Models",
+                    "tooltip": "Configuration clusters"
+                },
+                "clusterAdvancedModel": {
+                    "title": "Adv. Model edit",
+                    "tooltip": "Configuration clusters"
+                },
+                "execute": {
+                    "title": "Execute",
+                    "tooltip": "Query executions"
+                },
+                "explain": {
+                    "title": "Explain",
+                    "tooltip": "Query explain executions"
+                },
+                "scan": {
+                    "title": "Scan",
+                    "tooltip": "Scan query executions"
+                }
+            }
+        },
         "userActivitiesDialog": {
             "title": "Activity details: {{ userName }}",
             "grid": {
