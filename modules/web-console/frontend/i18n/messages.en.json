@@ -309,6 +309,8 @@
     "userMenu": {},
     "userProfile": {},
     "admin": {
+        "pageTitle": "Admin panel",
+        "setUserNotificationsButtonLabel": "Set user notifications",
         "listOfRegisteredUsers": {
             "tabs": {
                 "users": "Users",
