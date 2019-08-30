@@ -75,8 +75,10 @@ export type QueryFetchFirstPageResult = VisorQueryResult
 
 export enum IgniteFeatures {
 	INDEXING = 15,
+	WC_DR_EVENTS = 20,
 	WC_ROLLING_UPGRADE_STATUS = 21,
-	WC_SNAPSHOT_CHAIN_MODE = 22
+	WC_SNAPSHOT_CHAIN_MODE = 22,
+	WC_BASELINE_AUTO_ADJUSTMENT = 23
 }
 
 export type WebSocketResponse = {

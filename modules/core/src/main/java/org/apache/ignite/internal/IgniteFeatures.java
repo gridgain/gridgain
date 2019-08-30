@@ -82,25 +82,20 @@ public enum IgniteFeatures {
     /** LRT system and user time dump settings.  */
     LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
 
-    /**
-     * A mode when data nodes throttle update rate regarding to DR sender load
-     */
+    /** A mode when data nodes throttle update rate regarding to DR sender load. */
     DR_DATA_NODE_SMART_THROTTLING(19),
 
-    /**
-     * Support enabling DR events from  Web Console.
-     */
+    /** Support of DR events from  Web Console. */
     WC_DR_EVENTS(20),
 
-    /**
-     * Support rolling upgrade status task for Web Console.
-     */
+    /** Support of rolling upgrade status task for Web Console. */
     WC_ROLLING_UPGRADE_STATUS(21),
 
-    /**
-     * Support for chain parameter in snapshot delete task for Web Console.
-     */
-    WC_SNAPSHOT_CHAIN_MODE(22)
+    /** Support of chain parameter in snapshot delete task for Web Console. */
+    WC_SNAPSHOT_CHAIN_MODE(22),
+
+    /** Support of baseline auto adjustment for Web Console. */
+    WC_BASELINE_AUTO_ADJUSTMENT(23)
     ;
 
     /**
