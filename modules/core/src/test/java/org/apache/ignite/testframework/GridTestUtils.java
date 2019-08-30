@@ -1790,13 +1790,10 @@ public final class GridTestUtils {
             assertNotNull("Resource in empty!", is);
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                int readed, pos = 0;
+                int readed;
 
-                while ((readed = is.read(bytes)) > 0) {
-                    baos.write(bytes, pos, readed);
-
-                    pos += readed;
-                }
+                while ((readed = is.read(bytes)) > 0)
+                    baos.write(bytes,0, readed);
 
                 return baos.toByteArray();
             }
