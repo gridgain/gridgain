@@ -703,7 +703,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         ctx.encryption().checkEncryptedCacheSupported();
 
-        final Iterator<byte[]> encKeys = ctx.encryption().generateKeys(encryptedCaches.size()).get().listIterator();
+        final Iterator<byte[]> encKeys = ctx.encryption().generateKeys(encryptedCaches.size()).get().iterator();
 
         return encryptedCaches.stream().collect(Collectors.toMap(
             CacheConfiguration::getName,
@@ -3569,12 +3569,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<Boolean> generateEncryptionKeysAndStartCacheAfter(int keyCnt,
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> after) {
-        IgniteInternalFuture<List<byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
+        IgniteInternalFuture<Collection<byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
 
         GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
 
-        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<List<byte[]>>>() {
-            @Override public void apply(IgniteInternalFuture<List<byte[]>> fut) {
+        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<Collection<byte[]>>>() {
+            @Override public void apply(IgniteInternalFuture<Collection<byte[]>> fut) {
                 try {
                     Collection<byte[]> grpKeys = fut.result();
 

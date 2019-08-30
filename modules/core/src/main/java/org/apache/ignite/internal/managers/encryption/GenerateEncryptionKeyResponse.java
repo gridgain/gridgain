@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.managers.encryption;
 
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collection;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
@@ -38,7 +38,7 @@ public class GenerateEncryptionKeyResponse implements Message {
 
     /** */
     @GridDirectCollection(byte[].class)
-    private List<byte[]> encKeys;
+    private Collection<byte[]> encKeys;
 
     /** */
     public GenerateEncryptionKeyResponse() {
@@ -48,7 +48,7 @@ public class GenerateEncryptionKeyResponse implements Message {
      * @param id Request id.
      * @param encKeys Encryption keys.
      */
-    public GenerateEncryptionKeyResponse(IgniteUuid id, List<byte[]> encKeys) {
+    public GenerateEncryptionKeyResponse(IgniteUuid id, Collection<byte[]> encKeys) {
         this.id = id;
         this.encKeys = encKeys;
     }
@@ -63,7 +63,7 @@ public class GenerateEncryptionKeyResponse implements Message {
     /**
      * @return Encryption keys.
      */
-    public List<byte[]> encryptionKeys() {
+    public Collection<byte[]> encryptionKeys() {
         return encKeys;
     }
 
