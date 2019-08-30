@@ -273,7 +273,7 @@ namespace ignite
             virtual void ProcessInput(ignite::impl::binary::BinaryWriterImpl& writer)
             {
                 writer.WriteTopObject<T1>(val1);
-                writer.GetStream()->WriteInt64(0);
+                writer.WriteInt64(0);
                 writer.WriteTopObject<T2>(val2);
             }
         private:
