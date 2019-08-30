@@ -1002,20 +1002,20 @@ namespace Apache.Ignite.Core.Impl.Cache
                         writer.WriteLong(ptr);
                         writer.WriteObjectDetached(holder);
                     },
-                    r =>
+                    reader =>
                     {
                         if (ptr != 0)
                             _ignite.HandleRegistry.Release(ptr);
 
-                        if (r == null)
+                        if (reader == null)
                             return default(TRes);
 
-                        var hasError = r.ReadBoolean();
+                        var hasError = reader.ReadBoolean();
 
                         if (hasError)
-                            throw ReadException(r);
+                            throw ReadException(reader);
 
-                        return r.ReadObject<TRes>();
+                        return reader.ReadObject<TRes>();
                     });
             }
             catch (Exception)
