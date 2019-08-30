@@ -708,5 +708,11 @@
         "addNewItemsButtonLabel": "+ Add new {{entity}}",
         "noItemsMessage": "You have no {{entity}}. ",
         "noItemsCreateOneButtonLabel": "Create one?"
+    },
+    "noDataComponent": {
+        "agentDisconnected": "Agent is disconnected. <a ng-click='$ctrl.openAgentMissingDialog()'>Check</a> agent is up and running.",
+        "clusterDisconnected": "Cluster is not available. <a ng-click='$ctrl.openNodeMissingDialog()'>Check</a> cluster is up and running and agent is appropriately <a href=\"https://apacheignite-tools.readme.io/docs/getting-started#section-configuration\" target=\"_blank\">configured</a>.",
+        "clusterInactive": "Cluster is inactive. Please activate cluster.",
+        "dataIsLoading": "Data is loading..."
     }
 }
