@@ -199,6 +199,13 @@ namespace ignite
             binary::BinaryTypeUpdater* GetTypeUpdater();
 
             /**
+             * Get local cluster node implementation.
+             *
+             * @return Cluster node implementation or NULL if does not exist.
+             */
+            SP_ClusterNodeImpl GetLocalNode();
+
+            /**
              * Get cluster node implementation by id.
              *
              * @return Cluster node implementation or NULL if does not exist.

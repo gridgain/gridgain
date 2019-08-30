@@ -114,6 +114,18 @@ namespace ignite
                 nodes.insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
             }
 
+            SP_ClusterNodeImpl GetLocalNode()
+            {
+                CsLockGuard mtx(nodesLock);
+
+                std::map<Guid, SP_ClusterNodeImpl>::iterator it;
+                for (it = nodes.begin(); it != nodes.end(); ++it)
+                    if (it->second.Get()->IsLocal())
+                        return it->second;
+
+                return NULL;
+            }
+
             SP_ClusterNodeImpl GetNode(Guid Id)
             {
                 CsLockGuard mtx(nodesLock);
@@ -443,6 +455,11 @@ namespace ignite
         BinaryTypeUpdater* IgniteEnvironment::GetTypeUpdater()
         {
             return metaUpdater;
+        }
+
+        IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetLocalNode()
+        {
+            return nodes.Get()->GetLocalNode();
         }
 
         IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetNode(Guid Id)
