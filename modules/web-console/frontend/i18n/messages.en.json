@@ -747,5 +747,8 @@
     },
     "timedRedirectionComponent": {
         "message": "You’ll be redirected back automatically in {{secondsLeft}} seconds, or <a ng-click='$ctrl.go()'>click here</a> to redirect now."
+    },
+    "versionPickerComponent": {
+        "tooltip": "Web Console supports multiple Ignite versions.<br>Select version you need to configure cluster."
     }
 }
