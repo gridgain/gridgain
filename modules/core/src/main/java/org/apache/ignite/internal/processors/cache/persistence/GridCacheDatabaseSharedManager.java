@@ -153,6 +153,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -609,10 +610,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         boolean hasMvccCache = false;
 
-        for (CacheGroupDescriptor grpDesc : cctx.cache().cacheGroupDescriptors().values()) {
-            hasMvccCache |= grpDesc.config().getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
+        for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
+            hasMvccCache |= grpCtx.config().getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
 
-            String regionName = grpDesc.config().getDataRegionName();
+            String regionName = grpCtx.config().getDataRegionName();
 
             DataRegion region = regionName != null ? dataRegionMap.get(regionName) : dfltDataRegion;
 
@@ -620,17 +621,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 continue;
 
             if (log.isInfoEnabled())
-                log.info("Page memory " + region.config().getName() + " for " + grpDesc + " has invalidated.");
+                log.info("Page memory " + region.config().getName()
+                    + " for " + grpCtx.cacheOrGroupName() + " has invalidated.");
 
-            int partitions = grpDesc.config().getAffinity().partitions();
+            int partitions = grpCtx.config().getAffinity().partitions();
 
             if (region.pageMemory() instanceof PageMemoryEx) {
                 PageMemoryEx memEx = (PageMemoryEx)region.pageMemory();
 
                 for (int partId = 0; partId < partitions; partId++)
-                    memEx.invalidate(grpDesc.groupId(), partId);
+                    memEx.invalidate(grpCtx.groupId(), partId);
 
-                memEx.invalidate(grpDesc.groupId(), PageIdAllocator.INDEX_PARTITION);
+                memEx.invalidate(grpCtx.groupId(), PageIdAllocator.INDEX_PARTITION);
             }
         }
 
@@ -1904,13 +1906,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
-    @Override public void waitForCheckpoint(String reason) throws IgniteCheckedException {
+    @Override public <R> void waitForCheckpoint(String reason, IgniteInClosure<? super IgniteInternalFuture<R>> lsnr)
+        throws IgniteCheckedException {
         Checkpointer cp = checkpointer;
 
         if (cp == null)
             return;
 
-        CheckpointProgressSnapshot progSnapshot = cp.wakeupForCheckpoint(0, reason);
+        CheckpointProgressSnapshot progSnapshot = cp.wakeupForCheckpoint(0, reason, lsnr);
 
         IgniteInternalFuture fut1 = progSnapshot.cpFinishFut;
 
@@ -3788,6 +3791,26 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          *
          */
         private CheckpointProgressSnapshot wakeupForCheckpoint(long delayFromNow, String reason) {
+            return wakeupForCheckpoint(delayFromNow, reason, null);
+        }
+
+        /**
+         *
+         */
+        private <R> CheckpointProgressSnapshot wakeupForCheckpoint(
+            long delayFromNow,
+            String reason,
+            IgniteInClosure<? super IgniteInternalFuture<R>> lsnr
+        ) {
+            if (lsnr != null) {
+                //To be sure lsnr always will be executed in checkpoint thread.
+                synchronized (this) {
+                    CheckpointProgress sched = scheduledCp;
+
+                    sched.cpFinishFut.listen(lsnr);
+                }
+            }
+
             CheckpointProgress sched = scheduledCp;
 
             long nextNanos = System.nanoTime() + U.millisToNanos(delayFromNow);
@@ -4214,7 +4237,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private Checkpoint markCheckpointBegin(CheckpointMetricsTracker tracker) throws IgniteCheckedException {
             long cpTs = updateLastCheckpointTime();
 
-            CheckpointProgress curr = updateCurrentCheckpointProgress();
+            CheckpointProgress curr = scheduledCp;
 
             CheckpointRecord cpRec = new CheckpointRecord(memoryRecoveryRecordPtr);
 
@@ -4247,6 +4270,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             checkpointLock.writeLock().lock();
 
             try {
+                updateCurrentCheckpointProgress();
+
                 assert curCpProgress == curr : "Concurrent checkpoint begin should not be happened";
 
                 tracker.onMarkStart();
@@ -5318,19 +5343,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
 
             //write ports
-            sb.a("[");
-            Iterator<GridPortRecord> it = ctx.ports().records().iterator();
+            final GridPortProcessor ports = ctx.ports();
 
-            while (it.hasNext()) {
-                GridPortRecord rec = it.next();
+            if (ports != null) {
+                sb.a("[");
+                Iterator<GridPortRecord> it = ports.records().iterator();
 
-                sb.a(rec.protocol()).a(":").a(rec.port());
+                while (it.hasNext()) {
+                    GridPortRecord rec = it.next();
 
-                if (it.hasNext())
-                    sb.a(", ");
+                    sb.a(rec.protocol()).a(":").a(rec.port());
+
+                    if (it.hasNext())
+                        sb.a(", ");
+                }
+
+                sb.a("]");
             }
-
-            sb.a("]");
 
             String failMsg;
 
