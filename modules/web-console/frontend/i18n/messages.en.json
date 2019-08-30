@@ -737,5 +737,8 @@
     "permanentNotificationsComponent": {
         "assumedIdentity": "You are currently viewing user <strong>{{user.firstName}} {{user.lastName}}</strong> as administrator. <a ng-click='$ctrl.revertIdentity()'>Revert to your identity?</a>",
         "demoMode": "You are now in Demo Mode. <a ng-click='$ctrl.closeDemo()'>Close Demo?</a>"
+    },
+    "timedRedirectionComponent": {
+        "message": "You’ll be redirected back automatically in {{secondsLeft}} seconds, or <a ng-click='$ctrl.go()'>click here</a> to redirect now."
     }
 }
