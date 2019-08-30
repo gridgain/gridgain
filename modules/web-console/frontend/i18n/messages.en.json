@@ -526,7 +526,8 @@
             "placeholder": "Confirm new password"
         },
         "cancelLinkLabel": "Cancel",
-        "formActionButtonLabel": "Save Changes"
+        "formActionButtonLabel": "Save Changes",
+        "successNotification": "Password successfully changed"
     },
     "passwordChangedPage": {
         "documentTitle": "Password send",
