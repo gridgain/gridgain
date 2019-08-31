@@ -27,6 +27,81 @@ using namespace ignite::cluster;
 using namespace boost::unit_test;
 
 /*
+ * Cluster node predicate example 0.
+ */
+class HasAttrName : public IgnitePredicate<ClusterNode>
+{
+public:
+    HasAttrName(std::string name) :
+        name(name)
+    {
+        // No-op.
+    }
+
+    bool operator()(ClusterNode& node)
+    {
+        std::vector<std::string> attrs = node.GetAttributes();
+        if (std::find(attrs.begin(), attrs.end(), name) != attrs.end())
+            return true;
+
+        return false;
+    }
+
+private:
+    std::string name;
+};
+
+/*
+ * Cluster node predicate example 1.
+ */
+class HasAttrValue : public IgnitePredicate<ClusterNode>
+{
+public:
+    HasAttrValue(std::string name, std::string val) :
+        name(name), val(val)
+    {
+        // No-op.
+    }
+
+    bool operator()(ClusterNode& node)
+    {
+        try {
+            std::string val = node.GetAttribute<std::string>(name);
+            if (val == this->val)
+                return true;
+        }
+        catch (...) {}
+
+        return false;
+    }
+
+private:
+    std::string name;
+    std::string val;
+};
+
+/*
+ * Predicate holder.
+ */
+class PredHolder
+{
+public:
+    PredHolder(IgnitePredicate<ClusterNode>* p) :
+        p(p)
+    {
+        // No-op.
+    }
+
+    bool operator()(ClusterNode& node)
+    {
+        return p->operator()(node);
+    }
+
+private:
+    IgnitePredicate<ClusterNode>* p;
+};
+
+/*
  * Test setup fixture.
  */
 struct ClusterGroupTestSuiteFixture
@@ -152,6 +227,18 @@ BOOST_AUTO_TEST_CASE(IgniteForClientNodes)
     BOOST_REQUIRE(group3.GetNodes().size() == 0);
 }
 
+BOOST_AUTO_TEST_CASE(IgniteForClients)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group0 = cluster.AsClusterGroup().ForClients();
+
+    BOOST_REQUIRE(group0.GetNodes().size() == 1);
+    BOOST_REQUIRE(group0.GetNodes().front().IsClient());
+}
+
 BOOST_AUTO_TEST_CASE(IgniteForDaemons)
 {
     IgniteCluster cluster = server1.GetCluster();
@@ -193,6 +280,24 @@ BOOST_AUTO_TEST_CASE(IgniteForHost)
 
     BOOST_REQUIRE(group1.GetNodes().size() == 4);
     BOOST_REQUIRE(group2.GetNodes().size() == 4);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForHostName)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHost(""), IgniteError);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForHostNames)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHosts(std::vector<std::string>()), IgniteError);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForNode)
@@ -266,6 +371,33 @@ BOOST_AUTO_TEST_CASE(IgniteForOldest)
     ClusterGroup group1 = cluster.AsClusterGroup().ForOldest();
 
     BOOST_REQUIRE(group1.GetNodes().size() == 1);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForPredicate)
+{
+    IgniteCluster cluster = server1.GetCluster();
+    ClusterGroup group0 = cluster.AsClusterGroup();
+
+    ClusterGroup groupServers = group0.ForServers();
+    ClusterGroup groupClients = group0.ForClients();
+    ClusterGroup group1 = groupServers.ForPredicate(new HasAttrValue("TestAttribute", "Value0"));
+    ClusterGroup group2 = groupServers.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
+    BOOST_CHECK_THROW(groupServers.ForClients(), IgniteError);
+
+    BOOST_REQUIRE(group0.GetNodes().size() == 4);
+    BOOST_REQUIRE(groupServers.GetNodes().size() == 3);
+    BOOST_REQUIRE(groupClients.GetNodes().size() == 1);
+    BOOST_REQUIRE(group1.GetNodes().size() == 1);
+    BOOST_REQUIRE(group2.GetNodes().size() == 2);
+
+    ClusterGroup group4 = group0.ForPredicate(new HasAttrName("TestAttribute"));
+    ClusterGroup group5 = group4.ForPredicate(new HasAttrValue("TestAttribute", "Value0"));
+    ClusterGroup group6 = group4.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
+    BOOST_CHECK_THROW(group4.ForPredicate(new HasAttrValue("TestAttribute", "ValueInvalid")), IgniteError);
+
+    BOOST_REQUIRE(group4.GetNodes().size() == 3);
+    BOOST_REQUIRE(group5.GetNodes().size() == 1);
+    BOOST_REQUIRE(group6.GetNodes().size() == 2);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForRandom)
@@ -354,6 +486,19 @@ BOOST_AUTO_TEST_CASE(IgniteGetNodes)
     std::vector<ClusterNode> nodes = group.GetNodes();
 
     BOOST_REQUIRE(nodes.size() == 4);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteGetPredicate)
+{
+    IgniteCluster cluster = server1.GetCluster();
+    ClusterGroup group0 = cluster.AsClusterGroup();
+    ClusterGroup group1 = group0.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
+    
+    std::vector<ClusterNode> nodes0 = group0.GetNodes();
+    std::vector<ClusterNode> nodes1 = group1.GetNodes();
+    int64_t count = std::count_if(nodes0.begin(), nodes0.end(), PredHolder(group1.GetPredicate()));
+
+    BOOST_CHECK_EQUAL(nodes1.size(), count);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

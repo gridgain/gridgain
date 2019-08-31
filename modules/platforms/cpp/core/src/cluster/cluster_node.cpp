@@ -23,7 +23,7 @@ namespace ignite
 {
     namespace cluster
     {
-        ClusterNode::ClusterNode(SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl) :
+        ClusterNode::ClusterNode(SharedPointer<ClusterNodeImpl> impl) :
             impl(impl)
         {
             // No-op.

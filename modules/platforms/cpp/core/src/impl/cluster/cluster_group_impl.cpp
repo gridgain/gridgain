@@ -21,6 +21,7 @@
 #include <ignite/impl/cluster/cluster_node_impl.h>
 #include "ignite/impl/cluster/cluster_group_impl.h"
 
+using namespace ignite;
 using namespace ignite::common;
 using namespace ignite::common::concurrent;
 using namespace ignite::cluster;
@@ -82,8 +83,80 @@ namespace ignite
                 };
             };
 
+            /**
+             * Internal cluster node predicates holder.
+             */
+            class ClusterNodePredicateHolder : public IgnitePredicate<ClusterNode>
+            {
+                typedef common::concurrent::SharedPointer<IgnitePredicate<ClusterNode> > SP_Pred;
+            public:
+                /*
+                 * Constructor.
+                 */
+                ClusterNodePredicateHolder()
+                {
+                    // No-op.
+                }
+
+                /**
+                 * Check cluster node predicate.
+                 *
+                 * @param node Cluster node to check.
+                 *
+                 * @return True in case of positive result.
+                 */
+                bool operator()(ClusterNode& node)
+                {
+                    bool ret = true;
+                    for (size_t i = 0; i < preds.size(); i++)
+                    {
+                        IgnitePredicate<ClusterNode>* p = preds.at(i).Get();
+                        ret &= p->operator()(node);
+                    }
+
+                    return ret;
+                }
+
+                /**
+                 * Insert pointer to new predicate.
+                 *
+                 * @param pred Pointer to predicate object.
+                 */
+                void Insert(IgnitePredicate<ClusterNode>* pred)
+                {
+                    preds.push_back(SP_Pred(pred));
+                }
+
+                /**
+                 * Insert pointer to new predicate holder.
+                 *
+                 * @param h Predicate holder object.
+                 */
+                void Insert(ClusterNodePredicateHolder& h)
+                {
+                    preds.insert(preds.end(), h.preds.begin(), h.preds.end());
+                }
+
+                /**
+                 * Check it predicate holder is empty
+                 *
+                 * @return True if empty.
+                 */
+                bool IsEmpty()
+                {
+                    return preds.size() == 0;
+                }
+
+            private:
+                IGNITE_NO_COPY_ASSIGNMENT(ClusterNodePredicateHolder);
+
+                /* Predicates container. */
+                std::vector<SP_Pred> preds;
+            };
+
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), topVer(0)
+                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), topVer(0),
+                predHolder(new ClusterNodePredicateHolder)
             {
                 computeImpl = InternalGetCompute();
             }
@@ -121,6 +194,20 @@ namespace ignite
                 return ForCacheNodes(cacheName, Command::FOR_CLIENT);
             }
 
+            class ClientsPredicate : public IgnitePredicate<ClusterNode>
+            {
+            public:
+                bool operator()(ClusterNode& node)
+                {
+                    return node.IsClient();
+                }
+            };
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForClients()
+            {
+                return ForPredicate(new ClientsPredicate);
+            }
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForDaemons()
             {
                 IgniteError err;
@@ -152,6 +239,44 @@ namespace ignite
                 IgniteError::ThrowIfNeeded(err);
 
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
+            }
+
+            class HostPredicate : public IgnitePredicate<ClusterNode>
+            {
+            public:
+                bool operator()(ClusterNode& node)
+                {
+                    std::vector<std::string> nodeNames = node.GetHostNames();
+                    for (size_t i = 0; i < nodeNames.size(); i++)
+                        if (std::find(names.begin(), names.end(), nodeNames.at(i)) != names.end())
+                            return true;
+
+                    return false;
+                }
+
+                HostPredicate(std::string hostName)
+                {
+                    names.push_back(hostName);
+                }
+
+                HostPredicate(std::vector<std::string> hostNames) :
+                    names(hostNames)
+                {
+                    // No-op.
+                }
+
+            private:
+                std::vector<std::string> names;
+            };
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForHost(std::string hostName)
+            {
+                return ForPredicate(new HostPredicate(hostName));
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForHosts(std::vector<std::string> hostNames)
+            {
+                return ForPredicate(new HostPredicate(hostNames));
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForNode(ClusterNode node)
@@ -229,6 +354,29 @@ namespace ignite
                 IgniteError::ThrowIfNeeded(err);
 
                 return FromTarget(res);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForPredicate(IgnitePredicate<ClusterNode>* pred)
+            {
+                SP_PredicateHolder newPredHolder(new ClusterNodePredicateHolder());
+
+                newPredHolder.Get()->Insert(pred);
+                newPredHolder.Get()->Insert(*predHolder.Get());
+
+                std::vector<Guid> nodeIds;
+                std::vector<ClusterNode> allNodes = GetNodes();
+                for (size_t i = 0; i < allNodes.size(); i++)
+                    if (newPredHolder.Get()->operator()(allNodes.at(i)))
+                        nodeIds.push_back(allNodes.at(i).GetId());
+
+                if (nodeIds.size() == 0)
+                    throw IgniteError(IgniteError::IGNITE_ERR_CLUSTER_GROUP_EMPTY, "The empty cluster group cannot be created.");
+
+                SP_ClusterGroupImpl ret = ForNodeIds(nodeIds);
+
+                ret.Get()->SetPredicate(newPredHolder);
+
+                return ret;
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForRandom()
@@ -395,6 +543,11 @@ namespace ignite
                 return OutOp(Command::PING_NODE, inOp, err);
             }
 
+            IgnitePredicate<ClusterNode>* ClusterGroupImpl::GetPredicate()
+            {
+                return predHolder.Get();
+            }
+
             std::vector<ClusterNode> ClusterGroupImpl::GetTopology(long version)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
@@ -464,7 +617,7 @@ namespace ignite
                 for (int i = 0; i < cnt; i++)
                 {
                     SP_ClusterNodeImpl impl = GetEnvironment().GetNode(reader.ReadGuid());
-                    if (impl.IsValid())
+                    if (impl.IsValid() && predHolder.Get()->operator()(ClusterNode(impl)))
                         newNodes.Get()->push_back(ClusterNode(impl));
                 }
 
@@ -500,7 +653,11 @@ namespace ignite
 
                 return *nodes.Get();
             }
+
+            void ClusterGroupImpl::SetPredicate(SP_PredicateHolder predHolder)
+            {
+                this->predHolder = predHolder;
+            }
         }
     }
 }
-

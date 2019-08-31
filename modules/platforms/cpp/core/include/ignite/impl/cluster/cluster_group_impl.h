@@ -20,6 +20,8 @@
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 
+#include <ignite/ignite_predicate.h>
+
 #include <ignite/impl/interop/interop_target.h>
 #include <ignite/impl/compute/compute_impl.h>
 #include <ignite/impl/cluster/cluster_node_impl.h>
@@ -48,9 +50,12 @@ namespace ignite
              */
             class IGNITE_FRIEND_EXPORT ClusterGroupImpl : private interop::InteropTarget
             {
+                friend class ClusterNodePredicateHolder;
+
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
                 typedef common::concurrent::SharedPointer<std::vector<ignite::cluster::ClusterNode> > SP_ClusterNodes;
+                typedef common::concurrent::SharedPointer<ClusterNodePredicateHolder> SP_PredicateHolder;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -91,6 +96,13 @@ namespace ignite
                 SP_ClusterGroupImpl ForClientNodes(std::string cacheName);
 
                 /**
+                 * Get a cluster group of nodes started in client mode.
+                 *
+                 * @return Pointer to cluster group over nodes that started in client mode.
+                 */
+                SP_ClusterGroupImpl ForClients();
+
+                /**
                  *  Gets a cluster group consisting from the daemon nodes
                  *
                  * @return Pointer to cluster group over nodes started in daemon mode.
@@ -112,6 +124,22 @@ namespace ignite
                  * @return Pointer to cluster group residing on the same host as the given node.
                  */
                 SP_ClusterGroupImpl ForHost(ignite::cluster::ClusterNode node);
+
+                /**
+                 * Get cluster group consisting from the nodes running on the host specified.
+                 *
+                 * @param hostName Host name.
+                 * @return Pointer to cluster group over nodes that have requested host name.
+                 */
+                SP_ClusterGroupImpl ForHost(std::string hostName);
+
+                /**
+                 * Get cluster group consisting from the nodes running on the hosts specified.
+                 *
+                 * @param hostNames Container of host names.
+                 * @return Pointer to cluster group over nodes that have requested host names.
+                 */
+                SP_ClusterGroupImpl ForHosts(std::vector<std::string> hostNames);
 
                 /**
                  * Get cluster group for the given node.
@@ -152,6 +180,14 @@ namespace ignite
                  * @return Pointer to cluster group with one oldest node from the current cluster group.
                  */
                 SP_ClusterGroupImpl ForOldest();
+
+                /**
+                 * Create a new cluster group which includes all nodes that pass the given predicate filter.
+                 *
+                 * @param pred Pointer to predicate.
+                 * @return Pointer to newly created cluster group.
+                 */
+                SP_ClusterGroupImpl ForPredicate(IgnitePredicate<ignite::cluster::ClusterNode>* pred);
 
                 /**
                  * Get cluster group with one random node from the current cluster group.
@@ -290,6 +326,13 @@ namespace ignite
                 bool PingNode(Guid nid);
 
                 /**
+                 * Get predicate that defines a subset of nodes for this cluster group.
+                 *
+                 * @return Pointer to predicate.
+                 */
+                IgnitePredicate<ignite::cluster::ClusterNode>* GetPredicate();
+
+                /**
                  * Get a topology by version.
                  *
                  * @param version Topology version.
@@ -340,6 +383,13 @@ namespace ignite
                 SP_ClusterNodes ReadNodes(binary::BinaryReaderImpl& reader);
 
                 /**
+                 * Set predicate for given cluster group.
+                 *
+                 * @param predHolder Pointer to cluster node predicate
+                 */
+                void SetPredicate(SP_PredicateHolder predHolder);
+
+                /**
                  * Get container of refreshed cluster nodes over this cluster group.
                  *
                  * @return Vector of cluster nodes.
@@ -357,6 +407,9 @@ namespace ignite
 
                 /** Cluster nodes top version. */
                 int64_t topVer;
+
+                /** Cluster node predicate. */
+                SP_PredicateHolder predHolder;
             };
         }
     }

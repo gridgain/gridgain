@@ -24,7 +24,7 @@ namespace ignite
 {
     namespace cluster
     {
-        IgniteCluster::IgniteCluster(SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl) :
+        IgniteCluster::IgniteCluster(SharedPointer<IgniteClusterImpl> impl) :
             impl(impl)
         {
             // No-op.
@@ -80,9 +80,9 @@ namespace ignite
             return impl.Get()->GetTopologyVersion();
         }
 
-        cluster::ClusterGroup IgniteCluster::AsClusterGroup()
+        ClusterGroup IgniteCluster::AsClusterGroup()
         {
-            return cluster::ClusterGroup(impl.Get()->AsClusterGroup());
+            return ClusterGroup(impl.Get()->AsClusterGroup());
         }
     }
 }

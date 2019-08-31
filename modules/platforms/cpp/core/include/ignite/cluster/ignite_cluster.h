@@ -112,7 +112,7 @@ namespace ignite
              * @param version Topology version.
              * @return Nodes collection for the requested topology version.
              */
-            std::vector<ignite::cluster::ClusterNode> GetTopology(long version);
+            std::vector<ClusterNode> GetTopology(long version);
 
             /**
              * Get current topology version.
@@ -126,7 +126,7 @@ namespace ignite
              *
              * @return ClusterGroup instance.
              */
-            cluster::ClusterGroup AsClusterGroup();
+            ClusterGroup AsClusterGroup();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl;
