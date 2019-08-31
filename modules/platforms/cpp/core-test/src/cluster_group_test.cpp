@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE(IgniteGetPredicate)
     IgniteCluster cluster = server1.GetCluster();
     ClusterGroup group0 = cluster.AsClusterGroup();
     ClusterGroup group1 = group0.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
-    
+
     std::vector<ClusterNode> nodes0 = group0.GetNodes();
     std::vector<ClusterNode> nodes1 = group1.GetNodes();
     int64_t count = std::count_if(nodes0.begin(), nodes0.end(), PredHolder(group1.GetPredicate()));

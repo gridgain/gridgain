@@ -144,7 +144,7 @@ namespace ignite
                  */
                 bool IsEmpty()
                 {
-                    return preds.size() == 0;
+                    return preds.empty();
                 }
 
             private:
@@ -369,7 +369,7 @@ namespace ignite
                     if (newPredHolder.Get()->operator()(allNodes.at(i)))
                         nodeIds.push_back(allNodes.at(i).GetId());
 
-                if (nodeIds.size() == 0)
+                if (nodeIds.empty())
                     throw IgniteError(IgniteError::IGNITE_ERR_CLUSTER_GROUP_EMPTY, "The empty cluster group cannot be created.");
 
                 SP_ClusterGroupImpl ret = ForNodeIds(nodeIds);
@@ -617,8 +617,9 @@ namespace ignite
                 for (int i = 0; i < cnt; i++)
                 {
                     SP_ClusterNodeImpl impl = GetEnvironment().GetNode(reader.ReadGuid());
-                    if (impl.IsValid() && predHolder.Get()->operator()(ClusterNode(impl)))
-                        newNodes.Get()->push_back(ClusterNode(impl));
+                    ClusterNode node(impl);
+                    if (impl.IsValid() && predHolder.Get()->operator()(node))
+                        newNodes.Get()->push_back(node);
                 }
 
                 return newNodes;

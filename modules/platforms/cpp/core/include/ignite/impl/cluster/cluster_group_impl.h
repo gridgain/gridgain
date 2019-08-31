@@ -41,6 +41,7 @@ namespace ignite
         {
             /* Forward declaration. */
             class ClusterGroupImpl;
+            class ClusterNodePredicateHolder;
 
             /* Shared pointer. */
             typedef common::concurrent::SharedPointer<ClusterGroupImpl> SP_ClusterGroupImpl;
@@ -50,8 +51,6 @@ namespace ignite
              */
             class IGNITE_FRIEND_EXPORT ClusterGroupImpl : private interop::InteropTarget
             {
-                friend class ClusterNodePredicateHolder;
-
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
                 typedef common::concurrent::SharedPointer<std::vector<ignite::cluster::ClusterNode> > SP_ClusterNodes;
