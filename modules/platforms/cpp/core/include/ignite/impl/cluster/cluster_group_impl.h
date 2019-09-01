@@ -102,7 +102,7 @@ namespace ignite
                 SP_ClusterGroupImpl ForClients();
 
                 /**
-                 *  Gets a cluster group consisting from the daemon nodes
+                 *  Get a cluster group consisting from the daemon nodes
                  *
                  * @return Pointer to cluster group over nodes started in daemon mode.
                  */
@@ -175,7 +175,6 @@ namespace ignite
                 /**
                  * Get cluster group with one oldest node from the current cluster group.
                  *
-                 * @param nodes Cluster nodes.
                  * @return Pointer to cluster group with one oldest node from the current cluster group.
                  */
                 SP_ClusterGroupImpl ForOldest();
@@ -183,8 +182,10 @@ namespace ignite
                 /**
                  * Create a new cluster group which includes all nodes that pass the given predicate filter.
                  *
-                 * @param pred Pointer to predicate.
+                 * @param pred Pointer to predicate heap object.
                  * @return Pointer to newly created cluster group.
+                 *
+                 * @throw IgniteError if there are no nodes in the cluster group.
                  */
                 SP_ClusterGroupImpl ForPredicate(IgnitePredicate<ignite::cluster::ClusterNode>* pred);
 
@@ -243,7 +244,7 @@ namespace ignite
                 ignite::cluster::ClusterNode GetNode(Guid nid);
 
                 /**
-                 * Gets the vector of nodes in this cluster group.
+                 * Get the vector of nodes in this cluster group.
                  *
                  * @return All nodes in this cluster group.
                  */
@@ -368,7 +369,7 @@ namespace ignite
                 SP_ClusterGroupImpl FromTarget(jobject javaRef);
 
                 /**
-                 * Gets instance of compute internally.
+                 * Get instance of compute internally.
                  *
                  * @return Pointer to compute.
                  */
@@ -382,7 +383,7 @@ namespace ignite
                 SP_ClusterNodes ReadNodes(binary::BinaryReaderImpl& reader);
 
                 /**
-                 * Set predicate for given cluster group.
+                 * Set predicate holder for given cluster group.
                  *
                  * @param predHolder Pointer to cluster node predicate
                  */

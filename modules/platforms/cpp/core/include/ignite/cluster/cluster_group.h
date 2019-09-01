@@ -114,7 +114,7 @@ namespace ignite
              * Get cluster group consisting from the nodes running on the hosts specified.
              *
              * @param hostNames Container of host names.
-             * @return cluster group over nodes that have requested host names.
+             * @return Cluster group over nodes that have requested host names.
              */
             ClusterGroup ForHosts(std::vector<std::string> hostNames);
 
@@ -153,7 +153,6 @@ namespace ignite
             /**
              * Get cluster group with one oldest node from the current cluster group.
              *
-             * @param nodes Cluster nodes.
              * @return Cluster group with one oldest node from the current cluster group.
              */
             ClusterGroup ForOldest();
@@ -161,8 +160,10 @@ namespace ignite
             /**
              * Create a new cluster group which includes all nodes that pass the given predicate filter.
              *
-             * @param pred Pointer to predicate.
+             * @param pred Pointer to predicate heap object.
              * @return Newly created cluster group.
+             *
+             * @throw IgniteError if there are no nodes in the cluster group.
              */
             ClusterGroup ForPredicate(IgnitePredicate<ClusterNode>* pred);
 
@@ -221,7 +222,7 @@ namespace ignite
             ClusterNode GetNode(Guid nid);
 
             /**
-             * Gets the vector of nodes in this cluster group.
+             * Get the vector of nodes in this cluster group.
              *
              * @return All nodes in this cluster group.
              */

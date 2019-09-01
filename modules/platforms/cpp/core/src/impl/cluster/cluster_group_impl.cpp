@@ -84,7 +84,7 @@ namespace ignite
             };
 
             /**
-             * Internal cluster node predicates holder.
+             * Cluster node predicates holder.
              */
             class ClusterNodePredicateHolder : public IgnitePredicate<ClusterNode>
             {
@@ -102,7 +102,6 @@ namespace ignite
                  * Check cluster node predicate.
                  *
                  * @param node Cluster node to check.
-                 *
                  * @return True in case of positive result.
                  */
                 bool operator()(ClusterNode& node)
@@ -128,7 +127,7 @@ namespace ignite
                 }
 
                 /**
-                 * Insert pointer to new predicate holder.
+                 * Insert predicates from another predicate holder.
                  *
                  * @param h Predicate holder object.
                  */
@@ -138,7 +137,7 @@ namespace ignite
                 }
 
                 /**
-                 * Check it predicate holder is empty
+                 * Check if predicate holder is empty
                  *
                  * @return True if empty.
                  */
@@ -194,7 +193,7 @@ namespace ignite
                 return ForCacheNodes(cacheName, Command::FOR_CLIENT);
             }
 
-            class ClientsPredicate : public IgnitePredicate<ClusterNode>
+            class IsClientPredicate : public IgnitePredicate<ClusterNode>
             {
             public:
                 bool operator()(ClusterNode& node)
@@ -205,7 +204,7 @@ namespace ignite
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForClients()
             {
-                return ForPredicate(new ClientsPredicate);
+                return ForPredicate(new IsClientPredicate);
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForDaemons()

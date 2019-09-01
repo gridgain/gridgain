@@ -94,7 +94,7 @@ namespace ignite
             std::vector<std::string> GetHostNames();
 
             /**
-             * Gets globally unique node ID. A new ID is generated every time a node restarts.
+             * Get globally unique node ID. A new ID is generated every time a node restarts.
              *
              * @return Node Guid.
              */

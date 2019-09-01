@@ -288,7 +288,9 @@ BOOST_AUTO_TEST_CASE(IgniteForHostName)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHost(""), IgniteError);
+    std::string hostName = "someHostName";
+
+    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHost(hostName), IgniteError);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForHostNames)
@@ -297,7 +299,11 @@ BOOST_AUTO_TEST_CASE(IgniteForHostNames)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHosts(std::vector<std::string>()), IgniteError);
+    std::vector<std::string> hostNames;
+    hostNames.push_back("hostName0");
+    hostNames.push_back("hostName1");
+
+    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHosts(hostNames), IgniteError);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForNode)

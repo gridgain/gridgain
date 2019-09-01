@@ -117,7 +117,7 @@ namespace ignite
                 std::vector<std::string> GetHostNames();
 
                 /**
-                 * Gets globally unique ID.
+                 * Get globally unique ID.
                  *
                  * @return Cluster Node Guid.
                  */
