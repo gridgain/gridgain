@@ -127,7 +127,7 @@ public class TopologySnapshot {
         name = firstNonNullAttribute(srvs, IGNITE_CLUSTER_NAME);
         gridgain = allHasAttribute(srvs, GRIDGAIN_PLUGIN, true);
         ultimate = allHasAttribute(srvs, ULTIMATE_CLUSTER, true);
-        
+
         supportedFeatures = supportedFeatures(nodes);
         clusterVer = clusterVersion(nodes);
 
@@ -325,7 +325,7 @@ public class TopologySnapshot {
      */
     private Collection<GridClientNodeBean> forServers(Collection<GridClientNodeBean> nodes) {
         return nodes.stream()
-            .filter(n -> Boolean.parseBoolean(n.getAttributes().get(ATTR_CLIENT_MODE).toString()))
+            .filter(n -> !(Boolean)n.getAttributes().get(ATTR_CLIENT_MODE))
             .collect(toList());
     }
 
