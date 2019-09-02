@@ -29,8 +29,6 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
@@ -57,17 +55,20 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /** Thin client handshake code. */
     public static final byte THIN_CLIENT = 2;
 
-    /** Client sessions metric group. */
-    public static final String CLIENT_SESSIONS_METRIC_GROUP = MetricUtils.metricName("client", "sessions");
+    /** Client metric group. */
+    public static final String CLIENT_METRIC_GROUP = "client";
 
     /** Client metric group. */
-    public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName("client", "requests");
+    public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName(CLIENT_METRIC_GROUP, "requests");
 
     /** Connection handshake timeout task. */
     public static final int CONN_CTX_HANDSHAKE_TIMEOUT_TASK = GridNioSessionMetaKey.nextUniqueKey();
 
-    /** Connection-related metadata key. */
+    /** Connection context metadata key. */
     public static final int CONN_CTX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
+
+    /** Metric tracker metadata key. */
+    public static final int METRIC_TRACKER_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** Next connection id. */
     private static AtomicInteger nextConnId = new AtomicInteger(1);
@@ -87,15 +88,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /** Client connection config. */
     private ClientConnectorConfiguration cliConnCfg;
 
-    /** Number of sessions that were not established because of handshake timeout. */
-    private final IntMetricImpl rejectedDueTimeout;
-
-    /** Number of sessions that were not established because of invalid handshake message. */
-    private final IntMetricImpl rejectedDueInvalidHandshake;
-
-    /** Number of sessions that were not established because of failed authentication. */
-    private final IntMetricImpl rejectedDueAuthentication;
-
     /**
      * Constructor.
      *
@@ -113,23 +105,14 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
-
-        MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
-
-        rejectedDueTimeout = mreg.intMetric("rejectedDueTimeout",
-            "Number of sessions that were not established because of handshake timeout.");
-
-        rejectedDueInvalidHandshake = mreg.intMetric("rejectedDueInvalidHandshake",
-            "Number of sessions that were not established because of invalid handshake message.");
-
-        rejectedDueAuthentication = mreg.intMetric("rejectedDueAuthentication",
-            "Number of sessions that were not established because of failed authentication.");
     }
 
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
+
+        ses.addMeta(METRIC_TRACKER_META_KEY, new ClientListenerSessionMetricTracker(ctx));
 
         long handshakeTimeout = cliConnCfg.getHandshakeTimeout();
 
@@ -139,6 +122,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+        ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
+        metrics.onSessionClosed();
+
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
         if (connCtx != null)
@@ -212,7 +198,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
-            try(OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
+            try(OperationSecurityContext ignored = ctx.security().withContext(connCtx.securityContext())) {
                 resp = handler.handle(req);
             }
             finally {
@@ -259,7 +245,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             @Override public void run() {
                 ses.close();
 
-                rejectedDueTimeout.increment();
+                ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
+                metrics.onHandshakeRejected(ClientListenerSessionMetricTracker.REJECT_REASON_TIMEOUT);
 
                 U.warn(log, "Unable to perform handshake within timeout " +
                     "[timeout=" + handshakeTimeout + ", remoteAddr=" + ses.remoteAddress() + ']');
@@ -318,6 +305,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerConnectionContext connCtx = null;
 
+        ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
+
         try {
             connCtx = prepareContext(ses, clientType);
 
@@ -331,12 +320,14 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             else
                 throw new IgniteCheckedException("Unsupported version.");
 
+            metrics.onHandshakeAccepted(clientTypeToMetricNamespace(clientType));
+
             cancelHandshakeTimeout(ses);
 
             connCtx.handler().writeHandshake(writer);
         }
         catch (IgniteAccessControlException authEx) {
-            rejectedDueAuthentication.increment();
+            metrics.onHandshakeRejected(ClientListenerSessionMetricTracker.REJECT_REASON_AUTHENTICATION_FAILURE);
 
             writer.writeBoolean(false);
 
@@ -350,16 +341,11 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 writer.writeInt(ClientStatus.AUTH_FAILED);
         }
         catch (IgniteCheckedException e) {
-            rejectedDueInvalidHandshake.increment();
-
             U.warn(log, "Error during handshake [rmtAddr=" + ses.remoteAddress() + ", msg=" + e.getMessage() + ']');
 
             ClientListenerProtocolVersion currVer;
 
-            if (connCtx == null)
-                currVer = ClientListenerProtocolVersion.create(0, 0, 0);
-            else
-                currVer = connCtx.defaultVersion();
+            currVer = connCtx == null ? ClientListenerProtocolVersion.create(0, 0, 0) : connCtx.defaultVersion();
 
             writer.writeBoolean(false);
 
@@ -407,6 +393,27 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
      */
     private long nextConnectionId() {
         return (ctx.discovery().localNode().order() << 32) + nextConnId.getAndIncrement();
+    }
+
+    /**
+     * Get metric namespace from client type.
+     * @param clientType Client type.
+     * @return Metric namespace for client.
+     */
+    private String clientTypeToMetricNamespace(byte clientType) throws IgniteCheckedException {
+        switch (clientType) {
+            case ODBC_CLIENT:
+                return "odbc";
+
+            case JDBC_CLIENT:
+                return "jdbc";
+
+            case THIN_CLIENT:
+                return "thin";
+
+            default:
+                throw new IgniteCheckedException("Unknown client type: " + clientType);
+        }
     }
 
     /**
