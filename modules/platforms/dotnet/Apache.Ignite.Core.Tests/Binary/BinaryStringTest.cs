@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Binary
 {
-    using System;
     using Apache.Ignite.Core.Impl.Binary;
     using NUnit.Framework;
 
