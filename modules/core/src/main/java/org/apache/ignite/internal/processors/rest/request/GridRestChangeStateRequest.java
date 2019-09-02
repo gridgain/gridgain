@@ -26,6 +26,9 @@ public class GridRestChangeStateRequest extends GridRestRequest {
     /** Request current state. */
     private boolean reqCurrentState;
 
+    /** Request cluster name. */
+    private boolean reqClusterName;
+
     /**
      *
      */
@@ -52,5 +55,15 @@ public class GridRestChangeStateRequest extends GridRestRequest {
      */
     public void reqCurrentState() {
         reqCurrentState = true;
+    }
+
+    /** @return Cluster name requested. */
+    public boolean isReqClusterName() {
+        return reqClusterName;
+    }
+
+    /** Setting the request to the cluster name. */
+    public void reqClusterName() {
+        reqClusterName = true;
     }
 }

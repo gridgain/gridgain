@@ -64,6 +64,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
@@ -97,14 +98,17 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.io.File.separatorChar;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -123,6 +127,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
     /** */
     protected static File customDiagnosticDir;
+
+    /** Cluster name for tests. */
+    private static final String CLUSTER_NAME = "TEST_CLUSTER_NAME";
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -251,6 +258,35 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
 
         assertFalse(ignite.cluster().active());
+    }
+
+    /**
+     * Test the deactivation command with the output of the cluster name
+     * in the confirmation message.
+     *
+     * @throws Exception If failed.
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = CLUSTER_NAME)
+    public void testDeactivateWithClusterNameInPromptMessage() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+        assertFalse(igniteEx.cluster().active());
+
+        igniteEx.cluster().active(true);
+        assertTrue(igniteEx.cluster().active());
+
+        autoConfirmation = false;
+        injectTestSystemOut();
+        injectTestSystemIn(CONFIRM_MSG);
+
+        assertEquals(EXIT_CODE_OK, execute(DEACTIVATE.text()));
+        assertFalse(igniteEx.cluster().active());
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "Warning: the command will deactivate a cluster \"" + CLUSTER_NAME + "\"."
+        );
     }
 
     /**

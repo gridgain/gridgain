@@ -538,4 +538,15 @@ public abstract class GridClientConnection {
 
         return null;
     }
+
+    /**
+     * Get a cluster name.
+     *
+     * @param destNodeId Destination node id.
+     * @return Future to get the cluster name.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<String> clusterName(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
 }

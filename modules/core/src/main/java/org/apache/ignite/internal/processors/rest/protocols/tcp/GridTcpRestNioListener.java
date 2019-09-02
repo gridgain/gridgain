@@ -70,6 +70,7 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_P
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REMOVE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REMOVE_ALL;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REPLACE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_NAME;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_READ_ONLY_MODE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_READ_ONLY_DISABLE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_READ_ONLY_ENABLE;
@@ -374,6 +375,10 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             if (req.isReqCurrentState()) {
                 restChangeReq.reqCurrentState();
                 restChangeReq.command(CLUSTER_CURRENT_STATE);
+            }
+            else if (req.isReqClusterName()) {
+                restChangeReq.reqClusterName();
+                restChangeReq.command(CLUSTER_CURRENT_NAME);
             }
             else {
                 restChangeReq.active(req.active());

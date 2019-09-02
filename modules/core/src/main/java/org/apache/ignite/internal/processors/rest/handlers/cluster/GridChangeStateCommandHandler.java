@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.rest.handlers.cluster;
 
 import java.util.Collection;
+
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
@@ -29,8 +30,11 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
+import static org.apache.ignite.IgniteSystemProperties.getString;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_NAME;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_DEACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_INACTIVE;
@@ -40,8 +44,14 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER
  */
 public class GridChangeStateCommandHandler extends GridRestCommandHandlerAdapter {
     /** Commands. */
-    private static final Collection<GridRestCommand> commands =
-        U.sealList(CLUSTER_ACTIVATE, CLUSTER_DEACTIVATE, CLUSTER_CURRENT_STATE, CLUSTER_ACTIVE, CLUSTER_INACTIVE);
+    private static final Collection<GridRestCommand> commands = U.sealList(
+        CLUSTER_ACTIVATE,
+        CLUSTER_DEACTIVATE,
+        CLUSTER_CURRENT_STATE,
+        CLUSTER_ACTIVE,
+        CLUSTER_INACTIVE,
+        CLUSTER_CURRENT_NAME
+    );
 
     /**
      * @param ctx Context.
@@ -69,6 +79,14 @@ public class GridChangeStateCommandHandler extends GridRestCommandHandlerAdapter
                     Boolean currentState = ctx.state().publicApiActiveState(false);
 
                     res.setResponse(currentState);
+                    break;
+                case CLUSTER_CURRENT_NAME:
+                    String clusterName = getString(
+                        IGNITE_CLUSTER_NAME,
+                        ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
+                    );
+
+                    res.setResponse(clusterName);
                     break;
                 case CLUSTER_ACTIVE:
                 case CLUSTER_INACTIVE:

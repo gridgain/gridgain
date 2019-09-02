@@ -233,27 +233,27 @@ public class CommandHandler {
             Command command = args.command();
             commandName = command.name();
 
-            if (!args.autoConfirmation() && !confirm(command.confirmationPrompt())) {
-                logger.info("Operation cancelled.");
-
-                return EXIT_CODE_OK;
-            }
+            GridClientConfiguration clientCfg = getClientConfiguration(args);
 
             int tryConnectMaxCount = 3;
 
             boolean suppliedAuth = !F.isEmpty(args.userName()) && !F.isEmpty(args.password());
 
-            GridClientConfiguration clientCfg = getClientConfiguration(args);
-
-            logger.info("Command [" + commandName + "] started");
-            logger.info("Arguments: " + argumentsToString(rawArgs));
-
-            logger.info(DELIM);
-
             boolean credentialsRequested = false;
 
             while (true) {
                 try {
+                    if (!args.autoConfirmation() && !confirm(command.confirmationPrompt(clientCfg, logger))) {
+                        logger.info("Operation cancelled.");
+
+                        return EXIT_CODE_OK;
+                    }
+
+                    logger.info("Command [" + commandName + "] started");
+                    logger.info("Arguments: " + argumentsToString(rawArgs));
+
+                    logger.info(DELIM);
+
                     lastOperationRes = command.execute(clientCfg, logger);
 
                     break;
@@ -455,7 +455,7 @@ public class CommandHandler {
      * @return Thin client configuration to connect to cluster.
      * @throws IgniteCheckedException If error occur.
      */
-    @NotNull private GridClientConfiguration getClientConfiguration(
+    @NotNull GridClientConfiguration getClientConfiguration(
         ConnectionAndSslParameters args
     ) throws IgniteCheckedException {
         return getClientConfiguration(args.userName(), args.password(), args);

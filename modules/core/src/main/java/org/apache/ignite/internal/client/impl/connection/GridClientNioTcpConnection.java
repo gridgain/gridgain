@@ -950,6 +950,15 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         return res;
     }
 
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<String> clusterName(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException {
+        GridClientStateRequest msg = new GridClientStateRequest();
+        msg.requestClusterName();
+
+        return makeRequest(msg, destNodeId);
+    }
+
     /**
      * Creates client node instance from message.
      *

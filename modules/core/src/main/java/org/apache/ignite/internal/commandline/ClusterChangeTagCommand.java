@@ -102,7 +102,7 @@ public class ClusterChangeTagCommand implements Command<String> {
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt() {
+    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         return "Warning: the command will change cluster tag.";
     }
 

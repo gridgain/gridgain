@@ -74,8 +74,11 @@ public interface Command<T> {
 
     /**
      * @return Message text to show user for. If null it means that confirmation is not needed.
+     * @param clientCfg Thin client configuration if connection to cluster is necessary.
+     * @param logger Logger to use.
+     * @throws Exception If error occur.
      */
-    public default String confirmationPrompt() {
+    default String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         return null;
     }
 

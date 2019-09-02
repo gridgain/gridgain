@@ -45,7 +45,7 @@ public class ClusterReadOnlyModeDisableCommand implements Command<Void> {
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt() {
+    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         return "Warning: the command will disable read-only mode on a cluster.";
     }
 
