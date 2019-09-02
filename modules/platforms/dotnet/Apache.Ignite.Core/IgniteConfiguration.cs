@@ -619,6 +619,20 @@ namespace Apache.Ignite.Core
                 }
             }
 
+            if (ExecutorConfiguration == null)
+            {
+                writer.WriteInt(-1);
+            }
+            else
+            {
+                writer.WriteInt(ExecutorConfiguration.Count);
+                foreach (var exec in ExecutorConfiguration)
+                {
+                    writer.WriteString(exec.Name);
+                    writer.WriteInt(exec.Size);
+                }
+            }
+
             // Plugins (should be last).
             if (PluginConfigurations != null)
             {
