@@ -97,10 +97,10 @@ public class ClientListenerSessionMetricTracker {
     }
 
     /**
-     * Handle session acceptance.
+     * Handle handshake.
      * @param clientName Client name.
      */
-    public void onHandshakeAccepted(String clientName) {
+    public void onHandshakeReceived(String clientName) {
         MetricRegistry mreg = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
 
         rejectedDueHandshakeParams = mreg.intMetric("rejectedDueHandshakeParams",
@@ -114,12 +114,17 @@ public class ClientListenerSessionMetricTracker {
         active = mreg.intMetric("active", "Number of active sessions.");
 
         closed = mreg.intMetric("closed", "Number of closed sessions.");
+    }
+
+    /**
+     * Handle session acceptance.
+     */
+    public void onHandshakeAccepted() {
+        established = true;
 
         accepted.increment();
         active.increment();
         waiting.add(-1);
-
-        established = true;
     }
 
     /**
@@ -144,18 +149,30 @@ public class ClientListenerSessionMetricTracker {
             waiting.add(-1);
 
             switch (rejectReason) {
-                case REJECT_REASON_TIMEOUT:
+                case REJECT_REASON_TIMEOUT: {
                     rejectedDueTimeout.increment();
 
-                case REJECT_REASON_PARSING_ERROR:
+                    break;
+                }
+
+                case REJECT_REASON_PARSING_ERROR: {
                     rejectedDueParsingError.increment();
 
-                case REJECT_REASON_AUTHENTICATION_FAILURE:
+                    break;
+                }
+
+                case REJECT_REASON_AUTHENTICATION_FAILURE: {
                     rejectedDueAuthentication.increment();
 
+                    break;
+                }
+
                 case REJECT_REASON_HANDSHAKE_PARAMS:
-                default:
+                default: {
                     rejectedDueHandshakeParams.increment();
+
+                    break;
+                }
             }
         }
     }

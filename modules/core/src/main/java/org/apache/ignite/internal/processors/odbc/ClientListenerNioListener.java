@@ -308,6 +308,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
 
         try {
+            metrics.onHandshakeReceived(clientTypeToMetricNamespace(clientType));
+
             connCtx = prepareContext(ses, clientType);
 
             ensureClientPermissions(clientType);
@@ -320,7 +322,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             else
                 throw new IgniteCheckedException("Unsupported version.");
 
-            metrics.onHandshakeAccepted(clientTypeToMetricNamespace(clientType));
+            metrics.onHandshakeAccepted();
 
             cancelHandshakeTimeout(ses);
 
