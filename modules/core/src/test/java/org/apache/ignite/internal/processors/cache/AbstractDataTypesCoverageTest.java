@@ -394,7 +394,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     /**
      * Objects based on primitives and collections.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "AssignmentOrReturnOfFieldWithMutableType"})
     protected static class ObjectBasedOnPrimitivesAndCollections implements Serializable {
         /** */
         private static final long serialVersionUID = 0L;
@@ -466,7 +466,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     /**
      * Objects based on primitives collections and nested objects.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "AssignmentOrReturnOfFieldWithMutableType"})
     protected static class ObjectBasedOnPrimitivesCollectionsAndNestedObject implements Serializable {
         /** */
         private static final long serialVersionUID = 0L;

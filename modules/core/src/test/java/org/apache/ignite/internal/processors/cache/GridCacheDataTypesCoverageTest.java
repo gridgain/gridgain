@@ -58,11 +58,12 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * Data types coverage for basic cache operations.
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public class GridCacheDataTypesCoverageTest extends AbstractDataTypesCoverageTest {
 
     /** @inheritDoc */
     @Before
-    public void init() throws Exception {
+    @Override public void init() throws Exception {
         super.init();
     }
 
@@ -186,7 +187,7 @@ public class GridCacheDataTypesCoverageTest extends AbstractDataTypesCoverageTes
     @Test
     public void testByteArrayDataType() throws Exception {
         checkBasicCacheOperations(
-            new Byte[]{},
+            new Byte[] {},
             new Byte[] {1, 2, 3},
             new byte[] {3, 2, 1});
     }
