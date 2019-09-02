@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-export default class ActivitiesCtrl {
-    static $inject = ['user'];
+import {suite, test} from 'mocha';
+import {assert} from 'chai';
 
-    constructor(user) {
-        this.user = user;
+import AgentManager from './AgentManager.service';
+import {ClusterStats, IgniteFeatures} from 'app/types/Agent';
 
-        this.data = user.activitiesDetail;
+suite('Agent manager service', () => {
+    test('allFeatures', () => {
+        const cluster: ClusterStats  = {supportedFeatures: '+/l9'};
 
-        this.columnDefs = [
-            { displayName: 'Description', field: 'action', enableFiltering: false, cellFilter: 'translate', minWidth: 120, width: '43%'},
-            { displayName: 'Action', field: 'action', enableFiltering: false, minWidth: 120, width: '43%'},
-            { displayName: 'Visited', field: 'amount', enableFiltering: false, minWidth: 80}
-        ];
-    }
-}
+        const service = new AgentManager();
+
+        const features = service.allFeatures(cluster);
+
+        assert.ok(features.includes(IgniteFeatures.INDEXING));
+        assert.ok(features.includes(IgniteFeatures.WC_SNAPSHOT_CHAIN_MODE));
+        assert.ok(features.includes(IgniteFeatures.WC_ROLLING_UPGRADE_STATUS));
+    });
+});
