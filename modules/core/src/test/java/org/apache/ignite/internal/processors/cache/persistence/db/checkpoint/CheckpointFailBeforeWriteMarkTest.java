@@ -98,16 +98,14 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         volatile boolean interrupt = false;
 
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-            System.out.println(file.getName());
-
             if (interrupt && file.getName().endsWith("START.bin.tmp")) {
-//                try {
-//                    Thread.sleep(10);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace(); // TODO implement.
-//                }
-                throw new RuntimeException("Some error");
+                try {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace(); // TODO implement.
+                }
+                throw new IOException("Some error");
             }
 
             return super.create(file, modes); // TODO: CODE: implement.
@@ -161,7 +159,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         doSleep(5000);
 
         interceptorIOFactory.interrupt = false;
-        startGrid(0);
 
+        startGrid(0);
     }
 }

@@ -1645,7 +1645,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         throw new IgniteException(new NodeStoppingException("Failed to perform cache update: node is stopping."));
                     }
 
-                    if (checkpointLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || checkpointLockIsHeldByThread())
+                    if (checkpointLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || inRecoveryMode)
                         break;
                     else {
                         checkpointLock.readLock().unlock();
@@ -2054,6 +2054,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
     }
 
+    volatile boolean inRecoveryMode = false;
+
     /** {@inheritDoc} */
     @Override public void startMemoryRestore(GridKernalContext kctx, TimeBag startTimer) throws IgniteCheckedException {
         if (kctx.clientNode())
@@ -2062,6 +2064,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
+            inRecoveryMode = true;
+
             // Preform early regions startup before restoring state.
             initAndStartRegions(kctx.config().getDataStorageConfiguration());
 
@@ -2205,6 +2209,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         cpThread.start();
 
         checkpointerThread = cpThread;
+
+        inRecoveryMode = false;
 
         CheckpointProgressSnapshot chp = checkpointer.wakeupForCheckpoint(0, "node started");
 
