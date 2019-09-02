@@ -19,7 +19,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -119,7 +118,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new AtomicBoolean(true));
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(() -> true);
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -182,7 +181,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new AtomicBoolean(true));
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(() -> true);
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 

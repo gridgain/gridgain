@@ -613,7 +613,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             ig.context().cache().context().database().checkpointReadUnlock();
         }
 
-        Collection<FullPageId> cpPages = mem.beginCheckpoint(new AtomicBoolean(true));
+        Collection<FullPageId> cpPages = mem.beginCheckpoint(() -> true);
 
         ig.context().cache().context().database().checkpointReadLock();
 
@@ -943,7 +943,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             try {
                 snapshot = new HashMap<>(resMap);
 
-                pageIds = mem.beginCheckpoint(new AtomicBoolean(true));
+                pageIds = mem.beginCheckpoint(() -> true);
 
                 checkpoints--;
 

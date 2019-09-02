@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -316,7 +315,7 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
             }
         }
 
-        Collection<FullPageId> pageIds = mem.beginCheckpoint(new AtomicBoolean(true));
+        Collection<FullPageId> pageIds = mem.beginCheckpoint(() -> true);
 
         info("Acquired pages for checkpoint: " + pageIds.size());
 

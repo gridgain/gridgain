@@ -124,7 +124,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             //Success
         }
 
-        memory.beginCheckpoint(new AtomicBoolean(true));
+        memory.beginCheckpoint(() -> true);
 
         final AtomicReference<FullPageId> lastPage = new AtomicReference<>();
 
@@ -209,14 +209,14 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             writePage(memory, fullId, (byte)1);
         }
 
-        doCheckpoint(memory.beginCheckpoint(new AtomicBoolean(true)), memory, pageStoreMgr);
+        doCheckpoint(memory.beginCheckpoint(() -> true), memory, pageStoreMgr);
 
         FullPageId cowPageId = allocated.get(0);
 
         // Mark some pages as dirty.
         writePage(memory, cowPageId, (byte)2);
 
-        GridMultiCollectionWrapper<FullPageId> cpPages = memory.beginCheckpoint(new AtomicBoolean(true));
+        GridMultiCollectionWrapper<FullPageId> cpPages = memory.beginCheckpoint(() -> true);
 
         assertEquals(1, cpPages.size());
 
@@ -287,7 +287,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         }
 
         // CP Write lock.
-        memory.beginCheckpoint(new AtomicBoolean(true));
+        memory.beginCheckpoint(() -> true);
         // CP Write unlock.
 
         byte[] buf = new byte[PAGE_SIZE];
@@ -362,7 +362,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             acquireAndReleaseWriteLock(memory, fullPageId);
         }
 
-        memory.beginCheckpoint(new AtomicBoolean(true));
+        memory.beginCheckpoint(() -> true);
 
         CheckpointMetricsTracker mockTracker = Mockito.mock(CheckpointMetricsTracker.class);
 
@@ -384,7 +384,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             acquireAndReleaseWriteLock(memory, fullPageId);
         }
 
-        memory.beginCheckpoint(new AtomicBoolean(true));
+        memory.beginCheckpoint(() -> true);
 
         Collections.shuffle(pages); // Mix pages in checkpoint with clean pages
 

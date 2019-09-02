@@ -19,35 +19,31 @@ package org.apache.ignite.internal.processors.cache.persistence.db.checkpoint;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
-import org.apache.ignite.Ignite;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  *
  */
 public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
-    /** Ip finder. */
-    private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
-    /** Cache name. */
-    private static final String CACHE_NAME = "cacheOne";
-    /** Cache size */
+    /** */
     private InterceptorIOFactory interceptorIOFactory = new InterceptorIOFactory();
 
     /** {@inheritDoc} */
@@ -76,55 +72,61 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
 
         DataStorageConfiguration storageCfg = new DataStorageConfiguration();
 
-        storageCfg.setCheckpointThreads(2);
+        storageCfg.setCheckpointThreads(2)
+            .setFileIOFactory(interceptorIOFactory)
+            .setWalSegmentSize(5 * 1024 * 1024)
+            .setWalSegments(3);
+
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(true)
-
-            .setMaxSize(30L * 1024 * 1024);
-
-        storageCfg.setFileIOFactory(interceptorIOFactory);
+            .setMaxSize(10L * 1024 * 1024);
 
         cfg.setDataStorageConfiguration(storageCfg)
-            .setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(IP_FINDER))
-            .setCacheConfiguration(cacheConfiguration(CACHE_NAME, CacheAtomicityMode.TRANSACTIONAL))
-        ;
+            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+                .setAffinity(new RendezvousAffinityFunction(false, 16)));
 
         cfg.setFailureHandler(new StopNodeFailureHandler());
 
         return cfg;
     }
 
+    /**
+     * Test IO factory which given opportunity to throw IO exception by custom predicate.
+     */
     private static class InterceptorIOFactory extends AsyncFileIOFactory {
-        volatile boolean interrupt = false;
+        /** */
+        private static final Predicate<File> DUMMY_PREDICATE = (f) -> false;
+        /** Time to wait before exception would be thrown. It is giving time to page replacer to work. */
+        private static final long WAIT_BEFORE_FAIL = 1000;
 
+        /** Predicate which is a trigger of throwing an exception. */
+        transient volatile Predicate<File> failPredicate = DUMMY_PREDICATE;
+
+        /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-            if (interrupt && file.getName().endsWith("START.bin.tmp")) {
+            if (failPredicate.test(file)) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(WAIT_BEFORE_FAIL);
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace(); // TODO implement.
+                catch (InterruptedException ignore) {
                 }
-                throw new IOException("Some error");
+
+                failPredicate = DUMMY_PREDICATE;
+
+                throw new IOException("Triggered test exception");
             }
 
-            return super.create(file, modes); // TODO: CODE: implement.
+            return super.create(file, modes);
         }
-    }
 
-    /**
-     * @param cacheName Cache name.
-     * @param mode Cache atomicity mode.
-     * @return Configured cache configuration.
-     */
-    private CacheConfiguration<Object, Object> cacheConfiguration(String cacheName, CacheAtomicityMode mode) {
-        return new CacheConfiguration<>(cacheName)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setAtomicityMode(mode)
-            .setBackups(1)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setIndexedTypes(String.class, String.class);
+        /**
+         * Triggering exception by custom predicate.
+         *
+         * @param failPredicate Predicate for exception.
+         */
+        public void triggerIOException(Predicate<File> failPredicate) {
+            this.failPredicate = failPredicate;
+        }
     }
 
     /**
@@ -132,34 +134,51 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCheckpointFailBeforeMarkEntityWrite() throws Exception {
+        //given: one node with persistence.
         IgniteEx ignite0 = startGrid(0);
 
         ignite0.cluster().active(true);
 
+        AtomicBoolean pageReplacementStarted = new AtomicBoolean(false);
+
+        //and: Listener of page replacement start.
+        ignite0.events().localListen((e) -> {
+            pageReplacementStarted.set(true);
+
+            return true;
+        }, EventType.EVT_PAGE_REPLACEMENT_STARTED);
+
+        //when: Load a lot of data to cluster.
+        AtomicInteger lastKey = new AtomicInteger();
         GridTestUtils.runAsync(() -> {
+            IgniteCache<Integer, Object> cache2 = ignite(0).cache(DEFAULT_CACHE_NAME);
 
-            Ignite ignite = ignite(0);
+            //Should stopped putting data when node is fail.
+            for (int i = 0; i < Integer.MAX_VALUE; i++) {
+                cache2.put(i, i);
 
-            IgniteCache<Integer, Object> cache2 = ignite.cache(CACHE_NAME);
+                lastKey.set(i);
 
-            for (int i = 0; i < 200_000; i++) {
-                cache2.put(i, new byte[i]);
-
-                if(i % 1000 == 0)
+                if (i % 1000 == 0)
                     log.info("WRITE : " + i);
             }
         });
 
-        doSleep(3000);
+        //and: Page replacement was started.
+        assertTrue(waitForCondition(pageReplacementStarted::get, 10_000));
 
-        interceptorIOFactory.interrupt = true;
+        //and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
+        interceptorIOFactory.triggerIOException((file) -> file.getName().endsWith("START.bin.tmp"));
 
-//        stopGrid(0 );
+        assertTrue(waitForCondition(() -> G.allGrids().isEmpty(), 10_000));
 
-        doSleep(5000);
-
-        interceptorIOFactory.interrupt = false;
-
+        //then: Data recovery after node start should be successful.
         startGrid(0);
+
+        IgniteCache<Integer, Object> cache = ignite(0).cache(DEFAULT_CACHE_NAME);
+
+        //WAL mode is 'default' so it is allowable to lost some last data(ex. last 100).
+        for(int i = 0; i < lastKey.get() - 100; i++)
+            assertNotNull(cache.get(i));
     }
 }

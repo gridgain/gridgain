@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -1136,14 +1137,14 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
-        AtomicBoolean allowToEvict
+        BooleanSupplier allowToEvict
     ) throws IgniteException {
         return beginCheckpointEx(allowToEvict).get1();
     }
 
     /** {@inheritDoc} */
     @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        AtomicBoolean allowToEvict
+        BooleanSupplier allowToEvict
     ) throws IgniteException {
         if (segments == null)
             return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
@@ -2102,45 +2103,6 @@ public class PageMemoryImpl implements PageMemoryEx {
         return res;
     }
 
-    private class CheckpointPages {
-        /** */
-        private volatile Collection<FullPageId> segCheckpointPages;
-
-        private final AtomicBoolean allowToEvict;
-
-        private CheckpointPages(Collection<FullPageId> pages, AtomicBoolean evict) {
-            segCheckpointPages = pages;
-            allowToEvict = evict;
-        }
-
-        public boolean allowToSave(FullPageId fullPageId) {
-            Collection<FullPageId> checkpointPages = segCheckpointPages;
-
-            if(checkpointPages == null || allowToEvict == null)
-                return false;
-
-            return allowToEvict.get() && checkpointPages.contains(fullPageId);
-        }
-
-        public boolean contains(FullPageId fullPageId){
-            Collection<FullPageId> checkpointPages = segCheckpointPages;
-
-            return checkpointPages != null && checkpointPages.contains(fullPageId);
-        }
-
-        public boolean markAsSaved(FullPageId fullPageId) {
-            Collection<FullPageId> checkpointPages = segCheckpointPages;
-
-            return checkpointPages != null && checkpointPages.remove(fullPageId);
-        }
-
-        public int size(){
-            Collection<FullPageId> checkpointPages = segCheckpointPages;
-
-            return checkpointPages == null ? 0 : checkpointPages.size();
-        }
-    }
-
     /**
      *
      */
@@ -2172,7 +2134,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         /** Pages marked as dirty since the last checkpoint. */
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
 
-        /** */
+        /** Wrapper of pages of current checkpoint. */
         private volatile CheckpointPages checkpointPages;
 
         /** */
