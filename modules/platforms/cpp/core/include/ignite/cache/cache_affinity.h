@@ -83,7 +83,7 @@ namespace ignite
              * @return True if given node is primary node for given key.
              */
             template<typename K>
-            bool IsPrimary(ignite::cluster::ClusterNode node, K key)
+            bool IsPrimary(cluster::ClusterNode node, K key)
             {
                 return impl.Get()->IsPrimary(node, key);
             }
@@ -98,7 +98,7 @@ namespace ignite
              * @return True if local node is one of the backup nodes for given key.
              */
             template <typename K>
-            bool IsBackup(ignite::cluster::ClusterNode node, K key)
+            bool IsBackup(cluster::ClusterNode node, K key)
             {
                 return impl.Get()->IsBackup(node, key);
             }
@@ -116,7 +116,7 @@ namespace ignite
              * @return True if local node is primary or one of the backup nodes.
              */
             template <typename K>
-            bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, K key)
+            bool IsPrimaryOrBackup(cluster::ClusterNode node, K key)
             {
                 return impl.Get()->IsPrimaryOrBackup(node, key);
             }
@@ -127,7 +127,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which the given cluster node has primary ownership.
              */
-            std::vector<int> GetPrimaryPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> GetPrimaryPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetPrimaryPartitions(node);
             }
@@ -138,7 +138,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which given cluster node has backup ownership.
              */
-            std::vector<int> GetBackupPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> GetBackupPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetBackupPartitions(node);
             }
@@ -149,7 +149,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which given cluster node has any ownership (either primary or backup).
              */
-            std::vector<int> GetAllPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> GetAllPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetAllPartitions(node);
             }
@@ -180,7 +180,7 @@ namespace ignite
              * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
              */
             template<typename TK>
-            std::map<ignite::cluster::ClusterNode, std::list<TK> > MapKeysToNodes(std::list<TK> keys)
+            std::map<cluster::ClusterNode, std::list<TK> > MapKeysToNodes(std::list<TK> keys)
             {
                 return impl.Get()->MapKeysToNodes(keys);
             }
@@ -196,7 +196,7 @@ namespace ignite
              * @return Primary node for the key.
              */
             template <typename TK>
-            ignite::cluster::ClusterNode MapKeyToNode(TK key)
+            cluster::ClusterNode MapKeyToNode(TK key)
             {
                 return impl.Get()->MapKeyToNode(key);
             }
@@ -211,7 +211,7 @@ namespace ignite
              * @return Collection of cluster nodes.
              */
             template <typename TK>
-            std::list<ignite::cluster::ClusterNode> MapKeyToPrimaryAndBackups(TK key)
+            std::list<cluster::ClusterNode> MapKeyToPrimaryAndBackups(TK key)
             {
                 return impl.Get()->MapKeyToPrimaryAndBackups(key);
             }
@@ -222,7 +222,7 @@ namespace ignite
              * @param part Partition id.
              * @return Primary node for the given partition.
              */
-            ignite::cluster::ClusterNode MapPartitionToNode(int part)
+            cluster::ClusterNode MapPartitionToNode(int part)
             {
                 return impl.Get()->MapPartitionToNode(part);
             }
@@ -233,7 +233,7 @@ namespace ignite
              * @param parts Partition ids.
              * @return Mapping of given partitions to their primary nodes.
              */
-            std::map<int, ignite::cluster::ClusterNode> MapPartitionsToNodes(std::vector<int> parts)
+            std::map<int, cluster::ClusterNode> MapPartitionsToNodes(std::vector<int> parts)
             {
                 return impl.Get()->MapPartitionsToNodes(parts);
             }
@@ -245,7 +245,7 @@ namespace ignite
              * @param part Partition to get affinity nodes for.
              * @return Collection of primary and backup nodes for partition with primary node always first.
              */
-            std::list<ignite::cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int part)
+            std::list<cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int part)
             {
                 return impl.Get()->MapPartitionToPrimaryAndBackups(part);
             }
