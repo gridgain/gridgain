@@ -21,16 +21,20 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 
-import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CLIENT_METRIC_GROUP;
-
 /**
  * Client listener session metric tracker.
  *
  * Helps thin clients to track session
  */
 public class ClientListenerSessionMetricTracker {
+    /** Client metric group. */
+    public static final String CLIENT_METRIC_GROUP = "client";
+
     /** Client sessions metric group. */
     public static final String CLIENT_SESSIONS_METRIC_GROUP = MetricUtils.metricName(CLIENT_METRIC_GROUP, "sessions");
+
+    /** Client requests metric group. */
+    public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName(CLIENT_METRIC_GROUP, "requests");
 
     /** Reject reason: timeout. */
     public static final int REJECT_REASON_TIMEOUT = 1;
@@ -77,6 +81,12 @@ public class ClientListenerSessionMetricTracker {
     /** Number of closed sessions. */
     private IntMetricImpl closed;
 
+    /** Number of handled requests. */
+    private IntMetricImpl handledRequests;
+
+    /** Number of failed requests. */
+    private IntMetricImpl failedRequests;
+
     /**
      * @param ctx Kernal context.
      */
@@ -101,19 +111,38 @@ public class ClientListenerSessionMetricTracker {
      * @param clientName Client name.
      */
     public void onHandshakeReceived(String clientName) {
-        MetricRegistry mreg = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
+        MetricRegistry mregSes = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
 
-        rejectedDueHandshakeParams = mreg.intMetric("rejectedDueHandshakeParams",
+        rejectedDueHandshakeParams = mregSes.intMetric("rejectedDueHandshakeParams",
             "Number of sessions that were not established because of rejected handshake message.");
 
-        rejectedDueAuthentication = mreg.intMetric("rejectedDueAuthentication",
+        rejectedDueAuthentication = mregSes.intMetric("rejectedDueAuthentication",
             "Number of sessions that were not established because of failed authentication.");
 
-        accepted = mreg.intMetric("accepted", "Number of successfully established sessions.");
+        accepted = mregSes.intMetric("accepted", "Number of successfully established sessions.");
 
-        active = mreg.intMetric("active", "Number of active sessions.");
+        active = mregSes.intMetric("active", "Number of active sessions.");
 
-        closed = mreg.intMetric("closed", "Number of closed sessions.");
+        closed = mregSes.intMetric("closed", "Number of closed sessions.");
+
+        MetricRegistry mregReq = ctx.metric().registry(MetricUtils.metricName(CLIENT_REQUESTS_METRIC_GROUP, clientName));
+
+        handledRequests = mregReq.intMetric("handled", "Number of handled requests.");
+        failedRequests = mregReq.intMetric("failed", "Number of failed requests.");
+    }
+
+    /**
+     * Handle request handling.
+     */
+    public  void onRequestHandled() {
+        handledRequests.increment();
+    }
+
+    /**
+     * Handle request failing.
+     */
+    public  void onRequestFailed() {
+        failedRequests.increment();
     }
 
     /**

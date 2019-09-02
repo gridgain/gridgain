@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.odbc;
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
@@ -29,7 +30,6 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
-import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
@@ -54,12 +54,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
     /** Thin client handshake code. */
     public static final byte THIN_CLIENT = 2;
-
-    /** Client metric group. */
-    public static final String CLIENT_METRIC_GROUP = "client";
-
-    /** Client metric group. */
-    public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName(CLIENT_METRIC_GROUP, "requests");
 
     /** Connection handshake timeout task. */
     public static final int CONN_CTX_HANDSHAKE_TIMEOUT_TASK = GridNioSessionMetaKey.nextUniqueKey();
@@ -181,6 +175,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         assert req != null;
 
+        ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
+
         try {
             long startTime = 0;
 
@@ -214,15 +210,25 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                         ", resp=" + resp.status() + ']');
                 }
 
+                if (resp.isSuccess())
+                    metrics.onRequestHandled();
+                else
+                    metrics.onRequestFailed();
+
                 byte[] outMsg = parser.encode(resp);
 
                 ses.send(outMsg);
+            }
+            else {
+                metrics.onRequestHandled();
             }
         }
         catch (Exception e) {
             handler.unregisterRequest(req.requestId());
 
             U.error(log, "Failed to process client request [req=" + req + ']', e);
+
+            metrics.onRequestFailed();
 
             ses.send(parser.encode(handler.handleException(e, req)));
         }
@@ -402,7 +408,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
      * @param clientType Client type.
      * @return Metric namespace for client.
      */
-    private String clientTypeToMetricNamespace(byte clientType) throws IgniteCheckedException {
+    private String clientTypeToMetricNamespace(byte clientType) {
         switch (clientType) {
             case ODBC_CLIENT:
                 return "odbc";
@@ -414,7 +420,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 return "thin";
 
             default:
-                throw new IgniteCheckedException("Unknown client type: " + clientType);
+                throw new IgniteException("Unknown client type: " + clientType);
         }
     }
 

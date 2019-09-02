@@ -46,6 +46,13 @@ public abstract class ClientListenerResponse {
     }
 
     /**
+     * Check whether status is successful.
+     */
+    public boolean isSuccess() {
+        return status == STATUS_SUCCESS;
+    }
+
+    /**
      * @return Success flag.
      */
     public int status() {
