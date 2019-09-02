@@ -166,7 +166,6 @@ import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
-import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -4249,7 +4248,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             IgniteBiTuple<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer> cpPagesTuple;
 
-            boolean hasPages, hasUserPages, hasPartitionsToDestroy;
+            boolean hasPages, hasPartitionsToDestroy;
 
             DbCheckpointContextImpl ctx0 = new DbCheckpointContextImpl(curr, new PartitionAllocationMap());
 
@@ -4289,14 +4288,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 fillCacheGroupState(cpRec);
 
-                GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
-                    beginAllCheckpoints();
+                cpPagesTuple = beginAllCheckpoints();
 
-                cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
-
-                hasUserPages = cpPagesTriple.get3();
-
-                hasPages = hasUserPages || hasPageForWrite(cpPagesTuple.get1());
+                hasPages = hasPageForWrite(cpPagesTuple.get1());
 
                 hasPartitionsToDestroy = !curr.destroyQueue.pendingReqs.isEmpty();
 
@@ -4328,7 +4322,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onLockRelease();
             }
 
-            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, hasPages, hasUserPages);
+            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, hasPages);
 
             curr.cpBeginFut.onDone();
 
@@ -4551,8 +4545,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** */
         private DbCheckpointListener.Context createOnCheckpointBeginContext(
             DbCheckpointListener.Context delegate,
-            boolean hasPages,
-            boolean hasUserPages
+            boolean hasPages
         ) {
             return new DbCheckpointListener.Context() {
                 /** {@inheritDoc} */
@@ -4579,11 +4572,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 @Override public boolean hasPages() {
                     return hasPages;
                 }
-
-                /** {@inheritDoc} */
-                @Override public boolean hasUserPages() {
-                    return hasUserPages;
-                }
             };
         }
 
@@ -4606,36 +4594,28 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         /**
-         * @return triple with collections of FullPageIds obtained from each PageMemory, overall number of dirty
-         * pages, and flag defines at least one user page became a dirty since last checkpoint.
+         * @return tuple with collections of FullPageIds obtained from each PageMemory and overall number of dirty
+         * pages.
          */
-        private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints() {
+        private IgniteBiTuple<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer> beginAllCheckpoints() {
             Collection<GridMultiCollectionWrapper<FullPageId>> res = new ArrayList(dataRegions().size());
 
             int pagesNum = 0;
-
-            boolean hasUserDirtyPages = false;
 
             for (DataRegion memPlc : dataRegions()) {
                 if (!memPlc.config().isPersistenceEnabled())
                     continue;
 
-                IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> nextCpPages =
-                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx();
-
-                GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = nextCpPages.get1();
+                GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint();
 
                 pagesNum += nextCpPagesCol.size();
 
                 res.add(nextCpPagesCol);
-
-                if (nextCpPages.get2())
-                    hasUserDirtyPages = true;
             }
 
             currCheckpointPagesCnt = pagesNum;
 
-            return new GridTuple3<>(res, pagesNum, hasUserDirtyPages);
+            return new IgniteBiTuple<>(res, pagesNum);
         }
 
         /**
@@ -4759,13 +4739,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             /** {@inheritDoc} */
             @Override public boolean hasPages() {
-                throw new IllegalStateException(
-                    "Property is unknown at this moment. You should use onCheckpointBegin() method."
-                );
-            }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasUserPages() {
                 throw new IllegalStateException(
                     "Property is unknown at this moment. You should use onCheckpointBegin() method."
                 );

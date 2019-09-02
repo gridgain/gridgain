@@ -203,8 +203,7 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
         ImmutableSet<UUID> nodes = ImmutableSet.of(((IgniteProcessProxy)grid(3)).getId(),
             ((IgniteProcessProxy)grid(2)).getId());
 
-        VisorValidateIndexesTaskArg arg = new VisorValidateIndexesTaskArg(null,
-            null, 10000, 1);
+        VisorValidateIndexesTaskArg arg = new VisorValidateIndexesTaskArg(null, null, 10000, 1, false);
 
         VisorTaskArgument<VisorValidateIndexesTaskArg> argument = new VisorTaskArgument<>(nodes, arg, true);
 

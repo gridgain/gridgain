@@ -52,6 +52,7 @@ import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCa
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CACHE_FILTER;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.EXCLUDE_CACHES;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
@@ -71,13 +72,20 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             "the set of all caches is sequently filtered by cache name " +
             "regexps, by cache type and after all by exclude regexps.";
 
-        Map<String, String> map = U.newLinkedHashMap(16);
+        Map<String, String> paramsDesc = U.newLinkedHashMap(16);
 
-        map.put(CHECK_FIRST + " N", "validate only the first N keys");
-        map.put(CHECK_THROUGH + " K", "validate every Kth key");
+        paramsDesc.put(CHECK_FIRST + " N", "validate only the first N keys");
+        paramsDesc.put(CHECK_THROUGH + " K", "validate every Kth key");
+        paramsDesc.put(CHECK_CRC.argName(), "check crc sums in pages of index partition");
 
-        usageCache(logger, VALIDATE_INDEXES, description, map,
-            optional(CACHES), OP_NODE_ID, optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K")));
+        Set<String> args = U.newLinkedHashSet(16);
+
+        args.add(optional(CACHES));
+        args.add(OP_NODE_ID);
+        args.add(optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K")));
+        args.add(optional(CHECK_CRC));
+
+        usageCache(logger, VALIDATE_INDEXES, description, paramsDesc, args.toArray(new String[0]));
     }
 
     /**
@@ -96,14 +104,16 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         /** Number of entries to check through. */
         private int checkThrough = -1;
 
-        /**
-         *
-         */
-        public Arguments(Set<String> caches, UUID nodeId, int checkFirst, int checkThrough) {
+        /** Check crc sums flag. */
+        private boolean checkCrc;
+
+        /** */
+        public Arguments(Set<String> caches, UUID nodeId, int checkFirst, int checkThrough, boolean checkCrc) {
             this.caches = caches;
             this.nodeId = nodeId;
             this.checkFirst = checkFirst;
             this.checkThrough = checkThrough;
+            this.checkCrc = checkCrc;
         }
 
         /**
@@ -127,12 +137,18 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             return checkThrough;
         }
 
-
         /**
          * @return Node id.
          */
         public UUID nodeId() {
             return nodeId;
+        }
+
+        /**
+         * @return Check crc sums flag.
+         */
+        public boolean checkCrc() {
+            return checkCrc;
         }
 
         /** {@inheritDoc} */
@@ -155,7 +171,8 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             args.caches(),
             args.nodeId() != null ? Collections.singleton(args.nodeId()) : null,
             args.checkFirst(),
-            args.checkThrough()
+            args.checkThrough(),
+            args.checkCrc()
         );
 
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -223,6 +240,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         int checkThrough = -1;
         UUID nodeId = null;
         Set<String> caches = null;
+        boolean checkCrc = false;
 
         int argsCnt = 0;
 
@@ -259,6 +277,12 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
                 continue;
             }
 
+            if (arg == CHECK_CRC) {
+                checkCrc = true;
+
+                continue;
+            }
+
             try {
                 nodeId = UUID.fromString(nextArg);
 
@@ -277,7 +301,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             }
         }
 
-        args = new Arguments(caches, nodeId, checkFirst, checkThrough);
+        args = new Arguments(caches, nodeId, checkFirst, checkThrough, checkCrc);
     }
 
     /** {@inheritDoc} */
