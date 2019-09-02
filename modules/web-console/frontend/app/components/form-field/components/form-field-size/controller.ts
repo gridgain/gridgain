@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
 import get from 'lodash/get';
 import {IInputErrorNotifier} from '../../../../types';
 
