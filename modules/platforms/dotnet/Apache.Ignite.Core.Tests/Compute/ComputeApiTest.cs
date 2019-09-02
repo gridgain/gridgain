@@ -810,16 +810,17 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Tests custom executors.
         /// </summary>
         [Test]
-        public void TestWithExecutor()
+        [TestCase("dotNetExecutor", "dotNetExecutor-#")]
+        [TestCase("invalid", "pub-#")]
+        public void TestWithExecutor(string executorName, string expectedThreadNamePrefix)
         {
-            // TODO: how do we verify that? Is there any API in Java?
-            // Try thread names - we can have a Java task for that.
             var compute = _grid1.GetCompute();
-            var computeWithExecutor = compute.WithExecutor("dotNetExecutor");
+            var computeWithExecutor = compute.WithExecutor(executorName);
+
+            var res = computeWithExecutor.ExecuteJavaTask<string>(ThreadNameTask, null);
 
             Assert.AreNotSame(compute, computeWithExecutor);
-            var res = computeWithExecutor.Call(new JavaThreadNameFunc());
-            Assert.AreEqual("1", res);
+            Assert.AreEqual(expectedThreadNamePrefix, res.Substring(0, expectedThreadNamePrefix.Length));
         }
 
         /// <summary>
@@ -1069,15 +1070,5 @@ namespace Apache.Ignite.Core.Tests.Compute
     public class InteropComputeEnumFieldTest
     {
         public PlatformComputeEnum InteropEnum { get; set; }
-    }
-
-    class JavaThreadNameFunc : IComputeFunc<string>
-    {
-        public string Invoke()
-        {
-            // TODO: Change to Java task.
-            Thread.Sleep(30000);
-            return Thread.CurrentThread.Name;
-        }
     }
 }
