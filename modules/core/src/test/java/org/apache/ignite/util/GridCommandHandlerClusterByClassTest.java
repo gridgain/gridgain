@@ -104,7 +104,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * {@link GridCommandHandlerTest}
  */
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
-    /** Special character for defining any char sequence in golden copy of help output */
+    /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */
     private static final String ANY = "<!any!>";
 
     /**
