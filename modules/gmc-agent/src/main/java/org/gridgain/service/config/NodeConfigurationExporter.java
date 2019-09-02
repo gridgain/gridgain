@@ -37,7 +37,6 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /** Context. */
     private GridKernalContext ctx;
 
-
     public NodeConfigurationExporter(GridKernalContext ctx) {
         this.ctx = ctx;
         this.snd = createSender();

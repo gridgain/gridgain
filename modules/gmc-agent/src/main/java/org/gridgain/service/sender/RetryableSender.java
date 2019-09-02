@@ -17,12 +17,12 @@
 package org.gridgain.service.sender;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.google.common.collect.Lists;
 
 /**
  * Retryable sender with limited queue.
@@ -79,7 +79,7 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
      */
     public void send(T element) {
         if (element != null)
-            addToQueue(Lists.newArrayList(element));
+            addToQueue(Collections.singletonList(element));
     }
 
     /**
