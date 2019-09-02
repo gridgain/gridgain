@@ -358,6 +358,12 @@ namespace Apache.Ignite.Core.Tests
             
             Assert.IsTrue(failureHandler.TryStop);  
             Assert.AreEqual(TimeSpan.Parse("0:1:0"), failureHandler.Timeout);
+
+            var ec = cfg.ExecutorConfiguration;
+            Assert.NotNull(ec);
+            Assert.AreEqual(2, ec.Count);
+            Assert.AreEqual("exec2", ec.ElementAt(1).Name);
+            Assert.AreEqual(2, ec.ElementAt(1).Size);
         }
 
         /// <summary>
