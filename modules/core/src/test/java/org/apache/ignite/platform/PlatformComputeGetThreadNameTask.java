@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Task to get Java thread name.
  */
-public class PlatformComputeGetThreadNameTask extends ComputeTaskAdapter<Object, Long> {
+public class PlatformComputeGetThreadNameTask extends ComputeTaskAdapter<Object, String> {
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         @Nullable Object arg) {
@@ -40,7 +40,7 @@ public class PlatformComputeGetThreadNameTask extends ComputeTaskAdapter<Object,
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public Long reduce(List<ComputeJobResult> results) {
+    @Nullable @Override public String reduce(List<ComputeJobResult> results) {
         return results.get(0).getData();
     }
 
