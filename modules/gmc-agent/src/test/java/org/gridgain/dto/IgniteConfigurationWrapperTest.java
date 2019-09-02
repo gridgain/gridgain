@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package org.gridgain.config;
+package org.gridgain.dto;
 
 import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.gridgain.service.config.ClusterConfiguration;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test of cluster configuration.
  */
-public class ClusterConfigurationTest {
+public class IgniteConfigurationWrapperTest {
     /** Mapper. */
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -39,13 +36,11 @@ public class ClusterConfigurationTest {
     @Test
     public void defaultConfiguration() throws IOException {
         try (Ignite ignite = Ignition.start(new IgniteConfiguration())) {
-            ClusterConfiguration cfg0 = new ClusterConfiguration(ignite.configuration());
+            IgniteConfigurationWrapper cfg0 = new IgniteConfigurationWrapper(ignite.configuration());
 
             String str = mapper.writeValueAsString(cfg0);
 
-            ClusterConfiguration cfg = mapper.readValue(str, ClusterConfiguration.class);
-
-            assertEquals(cfg0, cfg);
+            IgniteConfigurationWrapper cfg = mapper.readValue(str, IgniteConfigurationWrapper.class);
         }
     }
 }

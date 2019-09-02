@@ -21,9 +21,9 @@ import java.util.UUID;
 
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.node.VisorGridConfiguration;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.agent.WebSocketManager;
+import org.gridgain.dto.IgniteConfigurationWrapper;
 import org.gridgain.service.sender.GmcSender;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
@@ -43,11 +43,15 @@ public class NodeConfigurationService implements AutoCloseable {
     private final WebSocketManager mgr;
 
     /** Sender. */
-    private final GmcSender<VisorGridConfiguration> snd;
+    private final GmcSender<IgniteConfigurationWrapper> snd;
 
     /** On node traces listener. */
     private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeConfiguration;
 
+    /**
+     * @param ctx Context.
+     * @param mgr Manager.
+     */
     public NodeConfigurationService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
@@ -67,7 +71,7 @@ public class NodeConfigurationService implements AutoCloseable {
      * @param cfgList Config list.
      */
     boolean onNodeConfiguration(UUID uuid, Object cfgList) {
-        snd.send((List<VisorGridConfiguration>) cfgList);
+        snd.send((List<IgniteConfigurationWrapper>) cfgList);
 
         return true;
     }
@@ -75,7 +79,9 @@ public class NodeConfigurationService implements AutoCloseable {
     /**
      * @return Sender which send messages from queue to gmc.
      */
-    private GmcSender<VisorGridConfiguration> createSender() {
-        return new GmcSender<>(ctx, mgr, QUEUE_CAP, buildClusterNodeConfigurationDest(ctx.cluster().get().id()));
+    private GmcSender<IgniteConfigurationWrapper> createSender() {
+        UUID clusterId = ctx.cluster().get().id();
+        String consistentId = ctx.cluster().get().localNode().consistentId().toString();
+        return new GmcSender<>(ctx, mgr, QUEUE_CAP, buildClusterNodeConfigurationDest(clusterId, consistentId));
     }
 }

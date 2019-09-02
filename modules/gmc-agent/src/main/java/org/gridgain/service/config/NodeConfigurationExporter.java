@@ -18,7 +18,7 @@ package org.gridgain.service.config;
 
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.node.VisorGridConfiguration;
+import org.gridgain.dto.IgniteConfigurationWrapper;
 import org.gridgain.service.sender.CoordinatorSender;
 
 /**
@@ -32,7 +32,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
     public static final String NODE_CONFIGURATION_TOPIC = "gmc-node-configuration-topic";
 
     /** Sender. */
-    private final CoordinatorSender<VisorGridConfiguration> snd;
+    private final CoordinatorSender<IgniteConfigurationWrapper> snd;
 
     /** Context. */
     private GridKernalContext ctx;
@@ -47,7 +47,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
      * Send node configuration to coordinator.
      */
     public void export() {
-        snd.send(new VisorGridConfiguration(ctx.grid()));
+        snd.send(new IgniteConfigurationWrapper(ctx.config()));
     }
 
     /** {@inheritDoc} */
@@ -58,7 +58,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /**
      * @return Worker which send messages from queue to topic.
      */
-    private CoordinatorSender<VisorGridConfiguration> createSender() {
+    private CoordinatorSender<IgniteConfigurationWrapper> createSender() {
         return new CoordinatorSender<>(ctx, QUEUE_CAP, NODE_CONFIGURATION_TOPIC);
     }
 }

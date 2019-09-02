@@ -35,7 +35,7 @@ public class StompDestinationsUtils {
     private static final String CLUSTER_ACTIVE_STATE_DEST = CLUSTER_PREFIX_DEST + "/active-state/";
 
     /** Cluster node configuration. */
-    private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/";
+    private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s/%s";
 
     /** Save span destination. */
     private static final String SAVE_SPAN_DEST = "/app/agent/spans/%s/add";
@@ -71,8 +71,8 @@ public class StompDestinationsUtils {
      * @param clusterId Cluster id.
      * @return Cluster node configuration.
      */
-    public static String buildClusterNodeConfigurationDest(UUID clusterId) {
-        return CLUSTER_NODE_CONFIGURATION + clusterId;
+    public static String buildClusterNodeConfigurationDest(UUID clusterId, String consistentId) {
+        return String.format(CLUSTER_NODE_CONFIGURATION, clusterId, consistentId);
     }
 
     /**
