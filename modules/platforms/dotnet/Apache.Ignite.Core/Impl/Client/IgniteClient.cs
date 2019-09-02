@@ -151,8 +151,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         public IClientCluster GetCluster()
         {
-            long ptr = DoOutInOp(ClientOp.ClusterGet, null, s => s.ReadLong());
-            return new ClientCluster(ptr);
+            var ptr = DoOutInOp(ClientOp.ClusterGet, null, s => s.ReadLong());
+            return new ClientCluster(this, ptr);
         }
 
         /** <inheritDoc /> */

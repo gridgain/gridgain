@@ -3,12 +3,22 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 
-public class ClientClusterRequest extends ClientRequest {
+/**
+ * Client cluster request.
+ */
+public abstract class ClientClusterRequest extends ClientRequest {
 
-    private final long pointer;
+    /** Cluster object pointer. */
+    protected final long clusterId;
 
-    public ClientClusterRequest(BinaryRawReader reader, long pointer) {
+    /**
+     * Constructor.
+     *
+     * @param reader Reader.
+     */
+    public ClientClusterRequest(BinaryRawReader reader) {
         super(reader);
-        this.pointer = pointer;
+
+        clusterId = reader.readLong();
     }
 }
