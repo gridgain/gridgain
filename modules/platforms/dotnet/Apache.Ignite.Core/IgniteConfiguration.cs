@@ -882,7 +882,7 @@ namespace Apache.Ignite.Core
             // SSL context factory.
             SslContextFactory = SslFactorySerializer.Read(r);
 
-            //Failure handler.
+            // Failure handler.
             if (r.ReadBoolean())
             {
                 switch (r.ReadByte())
@@ -911,6 +911,22 @@ namespace Apache.Ignite.Core
             else
             {
                 FailureHandler = null;
+            }
+
+            // Executor configuration.
+            var count = r.ReadInt();
+            if (count >= 0)
+            {
+                ExecutorConfiguration = new List<ExecutorConfiguration>(count);
+
+                for (var i = 0; i < count; i++)
+                {
+                    ExecutorConfiguration.Add(new ExecutorConfiguration
+                    {
+                        Name = r.ReadString(),
+                        Size = r.ReadInt()
+                    });
+                }
             }
         }
 
