@@ -16,10 +16,8 @@
 
 package org.apache.ignite.console.agent;
 
-import org.apache.ignite.IgniteException;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.assertEquals;
@@ -28,85 +26,28 @@ import static org.junit.Assert.assertEquals;
  * Agent launcher test.
  */
 public class AgentLauncherTest {
-    /** Environment variables. */
+    /** Rule for expected exception. */
     @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
-    /** Expected exception. */
-    @Rule
-    public final ExpectedException expEx = ExpectedException.none();
+    public final ExpectedException ruleForExpEx = ExpectedException.none();
 
     /**
-     * Should decode password with specific algorithm.
+     * Should return the decrypted password from key store.
      */
     @Test
-    public void shouldDecodePasswordWithSpecificAlgorithm() {
-        environmentVariables.set(AgentUtils.WEB_AGENT_MASTER_PASSWORD_ENV_NAME, "SECRET_PASSWORD_EVER");
-        environmentVariables.set(AgentUtils.WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME, "PBEWITHSHA1ANDDESEDE");
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-np", "ENC(oVEmRrmjEzF5fSBgRRj/lX8MzHPdU83O3cYe+wu9YVVZeCuatrPEYw==)", "-t", "token"});
+    public void shouldReturnPasswordFromKeyStore() {
+        String path = AgentUtilsTest.class.getClassLoader().getResource("passwords.p12").getPath();
+        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-pks", path, "-pksp", "123456", "-t", "token"});
 
-        assertEquals("password-super", cfg.nodePassword());
+        assertEquals("1234", cfg.nodePassword());
     }
 
     /**
-     * Should decode password with default algorithm.
+     * Should return the plain password if we don't use key store.
      */
     @Test
-    public void shouldDecodePasswordWithDefaultAlgorithm() {
-        environmentVariables.set(AgentUtils.WEB_AGENT_MASTER_PASSWORD_ENV_NAME, "SECRET_PASSWORD_EVER");
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-np", "ENC(wk07vNEjg0lYhv4uq/VmdBncMRICj+bT3kcSGNNScFPW/P5Xi6uMkA==)", "-t", "token"});
+    public void shouldReturnPlainPasswordIfPasswordKeyStoreNotSpecified() {
+        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-sksp", "123", "-t", "token"});
 
-        assertEquals("password-super", cfg.nodePassword());
-    }
-
-    /**
-     * Should decode password from property file with default algorithm.
-     */
-    @Test
-    public void shouldDecodePasswordFromProeprtyFileWithDefaultAlgorithm() {
-        String propPath = AgentLauncherTest.class.getClassLoader().getResource("default.properties").getPath();
-        environmentVariables.set(AgentUtils.WEB_AGENT_MASTER_PASSWORD_ENV_NAME, "SECRET_PASSWORD_EVER");
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-c", propPath, "-t", "token"});
-
-        assertEquals("password-super", cfg.nodePassword());
-    }
-
-    /**
-     * Should throw exception when WEB_AGENT_MASTER_PASSWORD env variable is not set.
-     */
-    @Test
-    public void shouldThrowExceptionIfEncodeValueExistsButPasswordEnvVarIsNotSet() {
-        expEx.expect(IgniteException.class);
-        expEx.expectMessage("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD env variable is set");
-
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-np", "ENC(wk07vNEjg0lYhv4uq/VmdBncMRICj+bT3kcSGNNScFPW/P5Xi6uMkA==)", "-t", "token"});
-        cfg.nodePassword();
-    }
-
-    /**
-     * Should throw exception when WEB_AGENT_MASTER_PASSWORD env variable is incorrect.
-     */
-    @Test
-    public void shouldThrowExceptionIfIncorrectPasswordProvided() {
-        expEx.expect(IgniteException.class);
-        expEx.expectMessage("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD or WEB_AGENT_ENCRYPT_ALGORITHM env variables is correct");
-
-        environmentVariables.set(AgentUtils.WEB_AGENT_MASTER_PASSWORD_ENV_NAME, "SECRET_PASSWORD_EVEEEER");
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-np", "ENC(wk07vNEjg0lYhv4uq/VmdBncMRICj+bT3kcSGNNScFPW/P5Xi6uMkA==)", "-t", "token"});
-        cfg.nodePassword();
-    }
-
-    /**
-     * Should throw exception when WEB_AGENT_ENCRYPT_ALGORITHM env variable is incorrect.
-     */
-    @Test
-    public void shouldThrowExceptionIfIncorrectAlgorithmProvided() {
-        expEx.expect(IgniteException.class);
-        expEx.expectMessage("Failed to decode value, please check that WEB_AGENT_MASTER_PASSWORD or WEB_AGENT_ENCRYPT_ALGORITHM env variables is correct");
-
-        environmentVariables.set(AgentUtils.WEB_AGENT_MASTER_PASSWORD_ENV_NAME, "SECRET_PASSWORD_EVER");
-        environmentVariables.set(AgentUtils.WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME, "PBEWITHSHA1ANDDESEDE");
-        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[] {"-np", "ENC(wk07vNEjg0lYhv4uq/VmdBncMRICj+bT3kcSGNNScFPW/P5Xi6uMkA==)", "-t", "token"});
-        cfg.nodePassword();
+        assertEquals("123", cfg.serverKeyStorePassword());
     }
 }

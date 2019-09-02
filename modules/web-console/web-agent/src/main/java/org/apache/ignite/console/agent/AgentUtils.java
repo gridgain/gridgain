@@ -17,11 +17,16 @@
 package org.apache.ignite.console.agent;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.ProtectionDomain;
+import java.security.UnrecoverableKeyException;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
@@ -45,18 +50,14 @@ import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
-import org.jasypt.encryption.StringEncryptor;
-import org.jasypt.encryption.pbe.StandardPBEByteEncryptor;
-import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
-import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
+
+import javax.crypto.SecretKey;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
-import static org.jasypt.properties.PropertyValueEncryptionUtils.decrypt;
-import static org.jasypt.properties.PropertyValueEncryptionUtils.isEncryptedValue;
 
 /**
  * Utility methods.
@@ -64,15 +65,6 @@ import static org.jasypt.properties.PropertyValueEncryptionUtils.isEncryptedValu
 public class AgentUtils {
     /** */
     private static final Logger log = Logger.getLogger(AgentUtils.class.getName());
-
-    /** Web agent master password env variable name. */
-    public static final String WEB_AGENT_MASTER_PASSWORD_ENV_NAME = "WEB_AGENT_MASTER_PASSWORD";
-
-    /** Web agent encrypt algorithm env variable name. */
-    public static final String WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME = "WEB_AGENT_ENCRYPT_ALGORITHM";
-
-    /** Encryptor. */
-    private static StringEncryptor encryptor = createEncryptor();
 
     /** */
     public static final String[] EMPTY = {};
@@ -342,42 +334,34 @@ public class AgentUtils {
     }
 
     /**
-     * Create string encryptor with specific password and algorithm.
-     *
-     * @return String encryptor.
+     * @param name Name.
+     * @param keyStorePath Key store path.
+     * @param keyStorePwd Key store password.
      */
-    public static StandardPBEStringEncryptor createEncryptor() {
-        String pass = System.getenv(WEB_AGENT_MASTER_PASSWORD_ENV_NAME);
-        String alg = System.getenv(WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME);
+    public static String getPasswordFromKeyStore(String name, String keyStorePath, String keyStorePwd) {
+        if (F.isEmpty(keyStorePath))
+            throw new IgniteException("The passwords key store path can't be empty!");
 
-        if (F.isEmpty(pass))
-            return null;
+        try {
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            try (FileInputStream fis = new FileInputStream(keyStorePath)) {
+                ks.load(fis, keyStorePwd.toCharArray());
+                SecretKey secretKey = (SecretKey) ks.getKey(name, keyStorePwd.toCharArray());
 
-        if (F.isEmpty(alg))
-            alg = StandardPBEByteEncryptor.DEFAULT_ALGORITHM;
+                if (secretKey == null)
+                    throw new IgniteException(String.format("Failed to find password in key store: [name=%s, keyStorePath=%s]", name, keyStorePath));
 
-        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
-        encryptor.setPassword(pass);
-        encryptor.setAlgorithm(alg);
-
-        return encryptor;
-    }
-
-    /**
-     * @param val Value.
-     */
-    public static String decodeValue(String val) {
-        if (isEncryptedValue(val)) {
-            if (encryptor == null)
-                throw new IgniteException("Failed to decode value, please check that " + WEB_AGENT_MASTER_PASSWORD_ENV_NAME + "environment variable is set");
-            try {
-                return decrypt(val, encryptor);
-            }
-            catch (EncryptionOperationNotPossibleException e) {
-                throw new IgniteException("Failed to decode value, please check that " + WEB_AGENT_MASTER_PASSWORD_ENV_NAME + " and/or " + WEB_AGENT_ENCRYPT_ALGORITHM_ENV_NAME + " environment variables are correctly specified");
+                return new String(secretKey.getEncoded());
             }
         }
+        catch (IOException e) {
+            if (e.getCause() instanceof UnrecoverableKeyException)
+                throw new IgniteException("Failed to read password from key store, please check key store password!", e);
 
-        return val;
+            throw new IgniteException("Fail to open passwords key store by path: " + keyStorePath, e);
+        }
+        catch (GeneralSecurityException e) {
+            throw new IgniteException("Failed to read password from key store!", e);
+        }
     }
 }

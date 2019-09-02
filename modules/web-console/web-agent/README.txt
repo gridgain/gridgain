@@ -31,6 +31,7 @@ Configuration file:
     server-key-store-password
     server-trust-store
     server-trust-store-password
+    passwords-key-store
     cipher-suites
 
   Example configuration file:
@@ -43,35 +44,17 @@ Passwords encryption:
   For security reasons encrypted passwords can be used.
 
   How to encrypt passwords:
-    1. Generate master password and set it as environment variable:
-      Linux/Mac OS: export WEB_AGENT_MASTER_PASSWORD=my-master-password
-      Windows: set WEB_AGENT_MASTER_PASSWORD=my-master-password
+    1. Run "passwords-key-store-generator.{bat|sh}" and follow instructions.
 
-    2. Select password encryption algorithms.  This step is optional.
-      Supported algorithms:
-        PBEWITHMD5ANDDES - default algorithm
-        PBEWITHMD5ANDTRIPLEDES
-        PBEWITHSHA1ANDDESEDE
-        PBEWITHSHA1ANDRC2_40
-
-      Set environment variable with algorithm name.
-        Linux/Mac OS: export  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
-        Windows: set  WEB_AGENT_ENCRYPT_ALGORITHM=PBEWITHMD5ANDTRIPLEDES
-
-    3. Encrypt passwords that will be used with Web Agent:
-      Linux/Mac OS:  ./encrypt.sh input=plain-text-password password=my-master-password
-      Windows:  encrypt.bat input=plain-text-password password=my-master-password
-      The result will be encoded password like this: gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh
-
-    4. Use encrypted passwords with Web Agent in script options or "default.properties" file.
+    2. Add path to passwords key store to default.properties or pass as "ignite-web-console-agent.{bat|sh}" argument.
       Example for "default.properties":
         ...
-          node-password=ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+          passwords-key-store=/path/to/key/store/passwords.p12
         ...
 
       Example for ignite-web-console-agent.{bat|sh}:
-        Linux/Mac OS: ./ignite-web-console-agent.sh --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
-        Windows: ignite-web-console-agent.bat --node-password ENC(gKgWcumBHSXZ6C5oVKYVD57u75rNbT1ggF3eUgubZre2zRbqLfV9i8dMdVHKLofh)
+        Linux/Mac OS: ./ignite-web-console-agent.sh --passwords-key-store /path/to/key/store/passwords.p12
+        Windows: ignite-web-console-agent.bat --passwords-key-store /path/to/key/store/passwords.p12
 
 Security tokens:
   1) By default security token of current user will be included into "default.properties" inside downloaded "ignite-web-console-agent-x.x.x.zip".
@@ -120,6 +103,10 @@ Options:
     Path to trust store that will be used to connect to Web server
   -stsp, --server-trust-store-password
     Optional password for server trust store
+  -pks, --passwords-key-store
+    Path to key store that keeps encrypted passwords
+  -pksp, --passwords-key-store-password
+    Password for passwords key store
   -cs, --cipher-suites
      Optional comma-separated list of SSL cipher suites to be used to connect
      to server and cluster

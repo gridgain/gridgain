@@ -30,7 +30,6 @@ import com.beust.jcommander.Parameter;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.agent.AgentUtils.decodeValue;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.trim;
 
@@ -143,6 +142,16 @@ public class AgentConfiguration {
     private List<String> cipherSuites;
 
     /** */
+    @Parameter(names = {"-pks", "--passwords-key-store"},
+            description = "Path to key store that keeps encrypted passwords")
+    private String passwordsStore;
+
+    /** */
+    @Parameter(names = {"-pksp", "--passwords-key-store-password"},
+            description = "Password for passwords key store")
+    private String passwordsStorePass;
+
+    /** */
     @Parameter(names = {"-h", "--help"}, help = true, description = "Print this help message")
     private boolean help;
 
@@ -218,7 +227,7 @@ public class AgentConfiguration {
      * @return Agent password to authenticate on node.
      */
     public String nodePassword() {
-        return decodeValue(nodePwd);
+        return !F.isEmpty(nodePwd) ? nodePwd : getPasswordFromKeyStore("node-password");
     }
 
     /**
@@ -310,7 +319,7 @@ public class AgentConfiguration {
      * @return Node key store password.
      */
     public String nodeKeyStorePassword() {
-        return decodeValue(nodeKeyStorePass);
+        return !F.isEmpty(nodeKeyStorePass) ? nodeKeyStorePass : getPasswordFromKeyStore("node-key-store-password");
     }
 
     /**
@@ -344,7 +353,7 @@ public class AgentConfiguration {
      * @return Node trust store password.
      */
     public String nodeTrustStorePassword() {
-        return decodeValue(nodeTrustStorePass);
+        return !F.isEmpty(nodeTrustStorePass) ? nodeTrustStorePass : getPasswordFromKeyStore("node-trust-store-password");
     }
 
     /**
@@ -378,7 +387,7 @@ public class AgentConfiguration {
      * @return Server key store password.
      */
     public String serverKeyStorePassword() {
-        return decodeValue(srvKeyStorePass);
+        return !F.isEmpty(srvKeyStorePass) ? srvKeyStorePass : getPasswordFromKeyStore("server-key-store-password");
     }
 
     /**
@@ -412,7 +421,7 @@ public class AgentConfiguration {
      * @return Server trust store password.
      */
     public String serverTrustStorePassword() {
-        return decodeValue(srvTrustStorePass);
+        return !F.isEmpty(srvTrustStorePass) ? srvTrustStorePass : getPasswordFromKeyStore("server-trust-store-password");
     }
 
     /**
@@ -421,6 +430,40 @@ public class AgentConfiguration {
      */
     public AgentConfiguration serverTrustStorePassword(String srvTrustStorePass) {
         this.srvTrustStorePass = srvTrustStorePass;
+
+        return this;
+    }
+
+    /**
+     * @return Path to passwords key store.
+     */
+    public String passwordsStore() {
+        return passwordsStore;
+    }
+
+    /**
+     * @param passwordsStore Passwords store.
+     * @return {@code this} for chaining.
+     */
+    public AgentConfiguration passwordsStore(String passwordsStore) {
+        this.passwordsStore = passwordsStore;
+
+        return this;
+    }
+
+    /**
+     * @return Passwords key store password.
+     */
+    public String passwordsStorePassword() {
+        return passwordsStorePass;
+    }
+
+    /**
+     * @param passwordsStorePass Passwords store pass.
+     * @return {@code this} for chaining.
+     */
+    public AgentConfiguration passwordsStorePassword(String passwordsStorePass) {
+        this.passwordsStorePass = passwordsStorePass;
 
         return this;
     }
@@ -530,6 +573,11 @@ public class AgentConfiguration {
         if (val != null)
             serverTrustStorePassword(val);
 
+        val = props.getProperty("passwords-key-store");
+
+        if (val != null)
+            passwordsStore(val);
+
         val = props.getProperty("cipher-suites");
 
         if (val != null)
@@ -589,6 +637,12 @@ public class AgentConfiguration {
 
         if (srvTrustStorePass == null)
             serverTrustStorePassword(cfg.serverTrustStorePassword());
+
+        if (passwordsStore == null)
+            passwordsStore(cfg.passwordsStore());
+
+        if (passwordsStorePass == null)
+            passwordsStorePassword(cfg.passwordsStorePassword());
 
         if (cipherSuites == null)
             cipherSuites(cfg.cipherSuites());
@@ -656,9 +710,23 @@ public class AgentConfiguration {
         if (!F.isEmpty(srvTrustStorePass))
             sb.append("Server trust store password     : ").append(secured(srvTrustStorePass)).append(nl);
 
+        if (!F.isEmpty(passwordsStore))
+            sb.append("Passwords key store             : ").append(passwordsStore).append(nl);
+
         if (!F.isEmpty(cipherSuites))
             sb.append("Cipher suites                   : ").append(String.join(", ", cipherSuites)).append(nl);
 
         return sb.toString();
+    }
+
+    /**
+     * @param name Name.
+     * @return Decoded password from passwords key store.
+     */
+    private String getPasswordFromKeyStore(String name) {
+        if (!F.isEmpty(passwordsStore) && !F.isEmpty(passwordsStorePass))
+            return AgentUtils.getPasswordFromKeyStore(name, passwordsStore, passwordsStorePass);
+
+        return null;
     }
 }
