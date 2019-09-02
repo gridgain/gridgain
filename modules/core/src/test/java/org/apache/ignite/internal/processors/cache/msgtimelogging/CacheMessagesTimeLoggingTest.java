@@ -16,11 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.msgtimelogging;
 
-import java.util.Map;
 import java.util.UUID;
 import javax.management.MalformedObjectNameException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
@@ -31,15 +29,11 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener.TimestampMap;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STORE_TIME;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
@@ -156,27 +150,27 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         checkIncomingEventsNum(GridNearTxPrepareRequest.class);
     }
 
-    /**
-     * @throws InterruptedException if {@code Thread#sleep} failed.
-     */
-    @WithSystemProperty(key = IGNITE_MESSAGES_INFO_STORE_TIME, value = "1")
-    @Test
-    public void testEviction() throws InterruptedException, IgniteCheckedException {
-        Map<Long, Long> map = new TimestampMap();
-
-        int evictFreq = U.field(TimestampMap.class, "EVICT_FREQ");
-
-        for (long i = 0; i < evictFreq - 1; i++)
-            map.put(i, System.nanoTime());
-
-        Thread.sleep(2000);
-
-        assertTrue("Unexpected map size before eviction: " + map.size(), map.size() == evictFreq - 1);
-
-        map.putIfAbsent(30L, System.nanoTime());
-
-        assertTrue("Unexpected map size after eviction: " + map.size(), map.size() == 1);
-    }
+//    /**
+//     * @throws InterruptedException if {@code Thread#sleep} failed.
+//     */
+//    @WithSystemProperty(key = IGNITE_MESSAGES_INFO_STORE_TIME, value = "1")
+//    @Test
+//    public void testEviction() throws InterruptedException, IgniteCheckedException {
+//        Map<Long, Long> map = new TimestampMap();
+//
+//        int evictFreq = U.field(TimestampMap.class, "EVICT_FREQ");
+//
+//        for (long i = 0; i < evictFreq - 1; i++)
+//            map.put(i, System.nanoTime());
+//
+//        Thread.sleep(2000);
+//
+//        assertTrue("Unexpected map size before eviction: " + map.size(), map.size() == evictFreq - 1);
+//
+//        map.putIfAbsent(30L, System.nanoTime());
+//
+//        assertTrue("Unexpected map size after eviction: " + map.size(), map.size() == 1);
+//    }
 
     /**
      * @throws Exception if failed to start grid.

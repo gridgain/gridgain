@@ -22,12 +22,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
@@ -49,6 +52,20 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STOR
 public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     /** Default history bounds in milliseconds. */
     public static final long[] DEFAULT_HIST_BOUNDS = new long[]{10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000};
+
+    private static final int TIMESTAMP_MAP_LOGGING_MINIMUM = -1;
+
+    private IgniteLogger logger;
+
+    private final Timer logTimer = new Timer();
+
+    public TcpCommunicationMetricsListener() {
+        logTimer.schedule(new TimerTask() {
+            @Override public void run() {
+                logTimestampMaps();
+            }
+        }, 0, 5000);
+    }
 
     /** */
     private static final String BOUNDS_PARAM_DELIMITER = ",";
@@ -313,6 +330,34 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         msgTimeMetric.clearNodeMetrics(nodeId);
     }
 
+    private void logTimestampMaps() {
+        logTimestampsMap(true);
+        logTimestampsMap(false);
+    }
+
+    public void logTimestampsMap(boolean outcomming) {
+        if (logger == null) {
+            System.err.println("logger is null in " + getClass().getSimpleName());
+            return;
+        }
+
+        Map<UUID, Map<Short, Map<Long, Long>>> reqTimestamps = outcomming ? msgTimeMetric.outTimestamps :
+                                                                            msgTimeMetric.inTimestamps;
+
+        logger.info("Logging " + (outcomming ? "outcomming" : "incomming") + " timestampmap");
+
+        reqTimestamps.forEach((nodeId, msgMap) -> {
+            logger.info("NodeId: " + nodeId);
+
+            msgMap.forEach((msgType, timestampMap) -> {
+                if (timestampMap.size() > TIMESTAMP_MAP_LOGGING_MINIMUM)
+                    logger.info("msgDirectType: " + msgType +
+                                " msgClass: " + msgTypMap.get(msgType) +
+                                " unresponded num: " + timestampMap.size());
+            });
+        });
+    }
+
     /**
      * Add single metrics to the total.
      *
@@ -383,6 +428,10 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         });
 
         return res;
+    }
+
+    public void setLogger(IgniteLogger log) {
+        this.logger = log;
     }
 
     /**
@@ -653,7 +702,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     /**
      * Map with old entries eviction.
      */
-    public static class TimestampMap extends ConcurrentLinkedHashMap<Long, Long> {
+    public class TimestampMap extends ConcurrentLinkedHashMap<Long, Long> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -695,8 +744,16 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
                 long curTime = System.nanoTime();
 
-                while (iter.hasNext() && curTime - iter.next().getValue() > maxTimestampAge)
+                int evictedNum = 0;
+
+                while (iter.hasNext() && curTime - iter.next().getValue() > maxTimestampAge) {
                     iter.remove();
+
+                    evictedNum++;
+                }
+
+                if (logger != null)
+                    logger.info(evictedNum + " entries evicted");
             }
         }
     }

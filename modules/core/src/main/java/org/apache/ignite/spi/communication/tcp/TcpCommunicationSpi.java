@@ -511,6 +511,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                 ConnectionKey connKey;
 
+                metricsLsnr.setLogger(log);
+
                 if (msg instanceof NodeIdMessage) {
                     sndId = U.bytesToUuid(((NodeIdMessage)msg).nodeIdBytes(), 0);
                     connKey = new ConnectionKey(sndId, 0, -1);
