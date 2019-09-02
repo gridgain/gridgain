@@ -343,7 +343,7 @@ namespace Apache.Ignite.Core
             writer.WriteIntNullable(_sqlQueryHistorySize);
 
             if (SqlSchemas == null)
-                writer.WriteInt(-1);
+                writer.WriteInt(0);
             else
             {
                 writer.WriteInt(SqlSchemas.Count);
@@ -621,7 +621,7 @@ namespace Apache.Ignite.Core
 
             if (ExecutorConfiguration == null)
             {
-                writer.WriteInt(-1);
+                writer.WriteInt(0);
             }
             else
             {
@@ -749,9 +749,7 @@ namespace Apache.Ignite.Core
 
             int sqlSchemasCnt = r.ReadInt();
 
-            if (sqlSchemasCnt == -1)
-                SqlSchemas = null;
-            else
+            if (sqlSchemasCnt > 0)
             {
                 SqlSchemas = new List<string>(sqlSchemasCnt);
 
