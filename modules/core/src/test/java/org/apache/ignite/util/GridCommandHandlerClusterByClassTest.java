@@ -16,7 +16,6 @@
 
 package org.apache.ignite.util;
 
-import java.net.URL;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -381,10 +380,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * @throws Exception If something goes wrong.
      */
     private void checkHelp(String output, String resourceName) throws Exception {
-        URL goldenCopyResource = getClass().getClassLoader().getResource(resourceName);
-
-        assertNotNull("Golden copy not found. path: " + resourceName, goldenCopyResource);
-
         String correctOutput = new String(readResource(getClass().getClassLoader(), resourceName));
 
         try {
@@ -392,9 +387,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             List<String> correctOutputLines = U.sealList(correctOutput.split("\\r?\\n"));
             List<String> outputLines = U.sealList(output.split("\\r?\\n"));
 
-            assertEquals("Wrong number of files!", correctOutputLines.size(), outputLines.size());
+            assertEquals("Wrong number of lines!", correctOutputLines.size(), outputLines.size());
 
-            for (int i=0; i<correctOutputLines.size(); i++) {
+            for (int i = 0; i < correctOutputLines.size(); i++) {
                 String cLine = correctOutputLines.get(i);
                 // Remove all spaces from end of line.
                 String line = outputLines.get(i).replaceAll("\\s+$", "");
@@ -403,7 +398,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                     String cuttedCLine = cLine.substring(0, cLine.length() - ANY.length());
 
                     assertTrue("line: " + i, line.startsWith(cuttedCLine));
-                } else
+                }
+                else
                     assertEquals("line: " + i, cLine, line);
             }
         }
@@ -412,8 +408,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             throw e;
         }
-
-
     }
 
     /** */

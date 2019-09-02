@@ -1778,22 +1778,17 @@ public final class GridTestUtils {
     /**
      * Reads resource into byte array.
      *
-     * @param classLoader Classloader
-     * @param resourceName Resource name
+     * @param classLoader Classloader.
+     * @param resourceName Resource name.
      * @return Content of resorce in byte array.
      * @throws IOException If failed.
      */
     public static byte[] readResource(ClassLoader classLoader, String resourceName) throws IOException {
-        byte[] bytes = new byte[4096];
-
         try (InputStream is = classLoader.getResourceAsStream(resourceName)) {
-            assertNotNull("Resource in empty!", is);
+            assertNotNull("Resource in missing!", is);
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                int readed;
-
-                while ((readed = is.read(bytes)) > 0)
-                    baos.write(bytes,0, readed);
+                U.copy(is, baos);
 
                 return baos.toByteArray();
             }
