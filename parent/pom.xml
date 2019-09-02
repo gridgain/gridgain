@@ -142,6 +142,7 @@
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
         <reflections.version>0.9.11</reflections.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
+        <commons.lang3.version>3.9</commons.lang3.version>
 
 
         <!-- Maven plugins versions -->
