@@ -68,6 +68,7 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSc
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGetRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
 
 /**
  * Thin client message parser.
@@ -392,7 +393,7 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientClusterGetRequest(reader);
 
             case OP_CLUSTER_IS_ACTIVE:
-                return new ClientClusterGetRequest(reader);
+                return new ClientClusterIsActiveRequest(reader);
         }
 
         return new ClientRawRequest(reader.readLong(), ClientStatus.INVALID_OP_CODE,

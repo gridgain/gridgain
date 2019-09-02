@@ -20,45 +20,65 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using System;
     using Apache.Ignite.Core.Client;
 
+    /// <summary>
+    /// Ignite client cluster implementation.
+    /// </summary>
     internal class ClientCluster : IClientCluster
     {
+        /** Ignite. */
+        private readonly IgniteClient _ignite;
+
+        /** Cluster pointer. */
         private readonly long _ptr;
 
-        public ClientCluster(long ptr)
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="ignite">Ignite.</param>
+        /// <param name="ptr">Remote cluster object pointer.</param>
+        public ClientCluster(IgniteClient ignite, long ptr)
         {
+            _ignite = ignite;
             _ptr = ptr;
         }
 
+        /** <inheritdoc /> */
         public IClientClusterGroup ForAttribute(string name, string val)
         {
             throw new NotImplementedException();
         }
 
+        /** <inheritdoc /> */
         public IClientClusterGroup ForDataNodes(string name)
         {
             throw new NotImplementedException();
         }
 
+        /** <inheritdoc /> */
         public IClientClusterGroup ForDotNet()
         {
             throw new NotImplementedException();
         }
 
+        /** <inheritdoc /> */
         public void SetActive(bool isActive)
         {
             throw new NotImplementedException();
         }
 
+        /** <inheritdoc /> */
         public bool IsActive()
         {
-            throw new NotImplementedException();
+            return _ignite.Socket.DoOutInOp(ClientOp.ClusterIsActivate, w => w.WriteLong(_ptr), s => s.ReadBool());
         }
 
+        /** <inheritdoc /> */
         public void DisableWal(string cacheName)
         {
             throw new NotImplementedException();
         }
 
+        /** <inheritdoc /> */
         public void EnableWal(string cacheName)
         {
             throw new NotImplementedException();
