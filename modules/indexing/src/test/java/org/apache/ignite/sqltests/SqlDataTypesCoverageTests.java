@@ -47,6 +47,9 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * Data types coverage for basic sql operations.
  */
 public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
+    /** */
+    private static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 4_000;
+
     /** {@inheritDoc} */
     @Before
     @Override
@@ -424,7 +427,7 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     private void check(IgniteEx ignite, String qryStr, SqlDataType dataType, Object expKey, Object expVal)
         throws Exception {
         if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
-            !waitForCondition(() -> ignite.context().query().querySqlFields(
+            !waitForCondition(() -> !ignite.context().query().querySqlFields(
                 new SqlFieldsQuery(qryStr), false).getAll().isEmpty(),
                 TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
             fail("Unable to retrieve data via SELECT.");
