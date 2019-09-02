@@ -46,7 +46,7 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.of;
 
 /**
- * Commands assosiated with baseline functionality.
+ * Commands associated with baseline functionality.
  */
 public class BaselineCommand implements Command<BaselineArguments> {
     /** Arguments. */
@@ -71,7 +71,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        if (BaselineSubcommands.COLLECT != baselineArgs.getCmd())
+        if (baselineArgs != null && BaselineSubcommands.COLLECT != baselineArgs.getCmd())
             return "Warning: the command will perform changes in baseline.";
 
         return null;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
  namespace Apache.Ignite.Core.Tests.ApiParity
 {
     using Apache.Ignite.Core.Cluster;
@@ -22,6 +22,7 @@
     /// <summary>
     /// Tests that <see cref="ICluster"/> has all APIs from Java Ignite interface.
     /// </summary>
+    [Ignore(ParityTest.IgnoreReason)]
     public class ClusterParityTest
     {
         /** Members that are not needed on .NET side. */
@@ -46,7 +47,8 @@
             "clearStatistics",          // IGNITE-9017
             "currentBaselineTopology",   // GG-21247
             "id",                       // GG-21621
-            "tag"                       // GG-21621
+            "tag",                       // GG-21621
+            "readOnly"                  // GG-23363
         };
 
         /// <summary>
