@@ -360,7 +360,7 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param evt Event.
      * @return {@code true} if response was processed.
      */
-    protected boolean processResponse(WebSocketEvent evt) {
+    public boolean processResponse(WebSocketEvent evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses != null) {

@@ -100,11 +100,20 @@ public class ClustersRepository {
      * @return Collection of cluster IDs.
      */
     public Set<String> clusters(Set<UserKey> users) {
-         return clusterIdsByUser
-             .getAll(users)
-             .stream()
-             .map(ClusterSession::getClusterId)
-             .collect(toSet());
+        return txMgr.doInTransaction(() ->
+            clusterIdsByUser
+                .getAll(users)
+                .stream()
+                .map(ClusterSession::getClusterId)
+                .collect(toSet()));
+    }
+
+    /**
+     * @param users Users.
+     * @return Collection of topologies.
+     */
+    public Collection<TopologySnapshot> topologies(Set<UserKey> users) {
+        return txMgr.doInTransaction(() -> clusters.cache().getAll(clusters(users)).values());
     }
 
     /**

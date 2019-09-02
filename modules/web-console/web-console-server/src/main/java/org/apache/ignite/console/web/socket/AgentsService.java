@@ -151,7 +151,10 @@ public class AgentsService extends AbstractSocketHandler {
                 try {
                     UUID nid = srcOfRequests.remove(evt.getRequestId());
 
-                    transitionSrvc.sendResponse(nid, evt);
+                    if (nid != null)
+                        transitionSrvc.sendResponse(nid, evt);
+                    else
+                        log.warn("Request ID not found for response: " + evt);
                 }
                 catch (ClusterGroupEmptyException ignored) {
                     // No-op.
@@ -267,8 +270,7 @@ public class AgentsService extends AbstractSocketHandler {
 
         WebSocketEvent evt = req.getEvent();
 
-        if (log.isDebugEnabled())
-            log.debug("Found local agent session [session=" + ses + ", event=" + evt + "]");
+        log.debug("Found local agent session [session={}, event={}]", ses, evt);
 
         sendMessage(ses, evt);
 
