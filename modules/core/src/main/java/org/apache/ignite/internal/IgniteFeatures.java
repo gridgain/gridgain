@@ -58,6 +58,9 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
+
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
 
@@ -77,7 +80,23 @@ public enum IgniteFeatures {
     CLUSTER_ID_AND_TAG(16),
 
     /** LRT system and user time dump settings.  */
-    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18);
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
+
+    /** A mode when data nodes throttle update rate regarding to DR sender load. */
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /** Support of DR events from  Web Console. */
+    WC_DR_EVENTS(20),
+
+    /** Support of rolling upgrade status task for Web Console. */
+    WC_ROLLING_UPGRADE_STATUS(21),
+
+    /** Support of chain parameter in snapshot delete task for Web Console. */
+    WC_SNAPSHOT_CHAIN_MODE(22),
+
+    /** Support of baseline auto adjustment for Web Console. */
+    WC_BASELINE_AUTO_ADJUSTMENT(23)
+    ;
 
     /**
      * Unique feature identifier.

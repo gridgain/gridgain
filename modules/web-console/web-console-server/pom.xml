@@ -74,6 +74,17 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.session</groupId>
             <artifactId>spring-session</artifactId>
         </dependency>
@@ -125,6 +136,12 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${web-console.ignite.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-log4j2</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>

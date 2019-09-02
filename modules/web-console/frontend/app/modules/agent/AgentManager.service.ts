@@ -19,8 +19,8 @@ import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 
 import Sockette from 'sockette';
 
-import {BehaviorSubject, Subject, EMPTY} from 'rxjs';
-import {distinctUntilChanged, filter, first, map, pluck, tap, timeout, catchError} from 'rxjs/operators';
+import {BehaviorSubject, Subject, Observable} from 'rxjs';
+import {distinctUntilChanged, filter, first, map, pluck, shareReplay, tap} from 'rxjs/operators';
 
 import uuidv4 from 'uuid/v4';
 
@@ -41,12 +41,12 @@ import {DemoService} from 'app/modules/demo/Demo.module';
 
 const __dbg = false;
 
-const State = {
-    INIT: 'INIT',
-    AGENT_DISCONNECTED: 'AGENT_DISCONNECTED',
-    CLUSTER_DISCONNECTED: 'CLUSTER_DISCONNECTED',
-    CONNECTED: 'CONNECTED'
-};
+enum State {
+    INIT = 'INIT',
+    AGENT_DISCONNECTED = 'AGENT_DISCONNECTED',
+    CLUSTER_DISCONNECTED = 'CLUSTER_DISCONNECTED',
+    CONNECTED = 'CONNECTED'
+}
 
 const IGNITE_2_0 = '2.0.0';
 const LAZY_QUERY_SINCE = [['2.1.4-p1', '2.2.0'], '2.2.1'];
@@ -86,38 +86,81 @@ const SuccessStatus = {
     SECURITY_CHECK_FAILED: 3
 };
 
+/**
+ * Save in local storage ID of specified cluster.
+ *
+ * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
+ */
+const _saveToStorage = (cluster) => {
+    try {
+        if (cluster)
+            localStorage.clusterId = cluster.id;
+    }
+    catch (ignored) {
+        // No-op.
+    }
+};
+
+/**
+ * Get ID of last active cluster from local storage.
+ *
+ * @return {string} ID of last active cluster.
+ */
+const getLastActiveClusterId = () => {
+    try {
+        return localStorage.clusterId;
+    }
+    catch (ignored) {
+        localStorage.removeItem('clusterId');
+
+        return null;
+    }
+};
+
 class ConnectionState {
-    constructor(cluster) {
-        this.cluster = cluster;
+    cluster: AgentTypes.ClusterStats | null;
+    clusters: AgentTypes.ClusterStats[];
+    state: State;
+    hasDemo: boolean;
+
+    constructor() {
+        this.cluster = null;
         this.clusters = [];
         this.state = State.INIT;
     }
 
-    updateCluster(cluster) {
+    updateCluster(cluster: AgentTypes.ClusterStats) {
         this.cluster = cluster;
 
         return cluster;
     }
 
-    update(demo, count, clusters, hasDemo) {
+    update(demo: boolean, hasAgent: boolean, clusters: AgentTypes.ClusterStats[], hasDemo: boolean) {
         this.clusters = clusters;
+        this.hasDemo = hasDemo;
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
-        else if (_.isNil(this.cluster))
-            this.cluster = _.head(clusters);
+        else if (_.isNil(this.cluster)) {
+            const restoredCluster = _.find(clusters, {id: getLastActiveClusterId()});
+
+            this.cluster = restoredCluster || _.head(clusters);
+
+            _saveToStorage(this.cluster);
+        }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
 
             if (updatedCluster)
                 _.merge(this.cluster, updatedCluster);
-            else
+            else {
                 this.cluster = _.head(clusters);
+
+                _saveToStorage(this.cluster);
+            }
         }
 
-        this.hasDemo = hasDemo;
-
-        if (count === 0)
+        if (!hasAgent)
             this.state = State.AGENT_DISCONNECTED;
         else if (demo || this.cluster)
             this.state = State.CONNECTED;
@@ -126,9 +169,6 @@ class ConnectionState {
     }
 
     disconnect() {
-        if (this.cluster)
-            this.cluster.disconnect = true;
-
         this.clusters = [];
         this.state = State.AGENT_DISCONNECTED;
     }
@@ -137,9 +177,15 @@ class ConnectionState {
 export default class AgentManager {
     static $inject = ['Demo', '$q', '$transitions', '$location', 'AgentModal', 'UserNotifications', 'IgniteVersion', 'ClusterLoginService'];
 
+    currentCluster$: Observable<ConnectionState>;
+    clusterIsActive$: Observable<boolean>;
+    clusterIsAvailable$: Observable<boolean>;
+
     clusterVersion: string;
 
-    connectionSbj = new BehaviorSubject(new ConnectionState(AgentManager.restoreActiveCluster()));
+    features: AgentTypes.IgniteFeatures[];
+
+    connectionSbj = new BehaviorSubject(new ConnectionState());
 
     clustersSecrets = new ClusterSecretsManager();
 
@@ -150,9 +196,9 @@ export default class AgentManager {
     /** Websocket */
     ws = null;
 
-    wsSubject = new Subject();
+    wsSubject = new Subject<AgentTypes.WebSocketResponse>();
 
-    switchClusterListeners = new Set<() => Promise>();
+    switchClusterListeners = new Set<() => Promise<any>>();
 
     addClusterSwitchListener(func) {
         this.switchClusterListeners.add(func);
@@ -160,17 +206,6 @@ export default class AgentManager {
 
     removeClusterSwitchListener(func) {
         this.switchClusterListeners.delete(func);
-    }
-
-    static restoreActiveCluster() {
-        try {
-            return JSON.parse(localStorage.cluster);
-        }
-        catch (ignored) {
-            localStorage.removeItem('cluster');
-
-            return null;
-        }
     }
 
     constructor(
@@ -187,18 +222,21 @@ export default class AgentManager {
 
         this.currentCluster$ = this.connectionSbj.pipe(
             distinctUntilChanged(({ cluster }) => prevCluster === cluster),
+            shareReplay(1),
             tap(({ cluster }) => prevCluster = cluster)
         );
 
         this.clusterIsActive$ = this.connectionSbj.pipe(
             map(({ cluster }) => cluster),
             filter((cluster) => Boolean(cluster)),
-            pluck('active')
+            pluck('active'),
+            shareReplay(1)
         );
 
         this.clusterIsAvailable$ = this.connectionSbj.pipe(
             pluck('cluster'),
-            map((cluster) => !!cluster)
+            map((cluster) => !!cluster),
+            shareReplay(1)
         );
 
         this.connectionSbj.subscribe({
@@ -211,6 +249,12 @@ export default class AgentManager {
                 this.clusterVersion = version;
             }
         });
+
+        this.currentCluster$.pipe(
+            map(({ cluster }) => cluster),
+            filter((cluster) => Boolean(cluster)),
+            tap((cluster) => this.features = this.allFeatures(cluster))
+        ).subscribe();
     }
 
     isDemoMode() {
@@ -281,11 +325,11 @@ export default class AgentManager {
 
         switch (eventType) {
             case 'agent:status':
-                const {clusters, count, hasDemo} = payload;
+                const {clusters, hasAgent, hasDemo} = payload;
 
                 const conn = this.connectionSbj.getValue();
 
-                conn.update(this.isDemoMode(), count, clusters, hasDemo);
+                conn.update(this.isDemoMode(), hasAgent, clusters, hasDemo);
 
                 this.connectionSbj.next(conn);
 
@@ -313,13 +357,14 @@ export default class AgentManager {
         });
     }
 
+    /**
+     * Save in local storage ID of specified cluster.
+     * If cluster is not specified current cluster ID will be saved.
+     *
+     * @param {AgentTypes.ClusterStats} cluster Cluster to save it's ID in local storage.
+     */
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
-        try {
-            localStorage.cluster = JSON.stringify(cluster);
-        }
-        catch (ignored) {
-            // No-op.
-        }
+        _saveToStorage(cluster);
     }
 
     updateCluster(newCluster) {
@@ -349,7 +394,7 @@ export default class AgentManager {
 
                 this.connectionSbj.next(state);
 
-                this.saveToStorage(cluster);
+                _saveToStorage(cluster);
 
                 return Promise.resolve();
             });
@@ -490,7 +535,7 @@ export default class AgentManager {
                     case SuccessStatus.AUTH_FAILED:
                         this.clustersSecrets.get(cluster.id).resetCredentials();
 
-                        throw new Error('Cluster authentication failed. Incorrect user and/or password.');
+                        return this._restOnCluster(event, params, new Error('Incorrect user and/or password.'));
 
                     case SuccessStatus.SECURITY_CHECK_FAILED:
                         throw new Error('Access denied. You are not authorized to access this functionality.');
@@ -515,10 +560,11 @@ export default class AgentManager {
     /**
      * @param {String} event
      * @param {Object} params
+     * @param {Error} repeatReason Error with reason of execution repeat.
      * @returns {Promise}
      * @private
      */
-    _restOnCluster(event, params) {
+    _restOnCluster(event, params, repeatReason) {
         return this.connectionSbj.pipe(first()).toPromise()
             .then(({cluster}) => {
                 if (_.isNil(cluster))
@@ -530,7 +576,7 @@ export default class AgentManager {
                             if (secrets.hasCredentials())
                                 return secrets;
 
-                            return this.ClusterLoginSrv.askCredentials(secrets)
+                            return this.ClusterLoginSrv.askCredentials(secrets, repeatReason)
                                 .then((secrets) => {
                                     this.clustersSecrets.put(cluster.id, secrets);
 
@@ -851,5 +897,58 @@ export default class AgentManager {
 
     hasCredentials(clusterId) {
         return this.clustersSecrets.get(clusterId).hasCredentials();
+    }
+
+    /**
+     * Collect features supported by the cluster.
+     *
+     * @param cluster Cluster.
+     * @return all supported features.
+     */
+    allFeatures(cluster: AgentTypes.ClusterStats): AgentTypes.IgniteFeatures[] {
+        return _.reduce(AgentTypes.IgniteFeatures, (acc, featureId) => {
+            if (_.isNumber(featureId) && this.featureSupported(cluster, featureId))
+                acc.push(featureId);
+
+            return acc;
+        }, []);
+    }
+
+    /**
+     * Check ignite feature is supported by cluster.
+     *
+     * @param cluster Cluster.
+     * @param feature Feature to check enabled.
+     * @return 'True' if feature is enabled or 'false' otherwise.
+     */
+    featureSupported(cluster: AgentTypes.ClusterStats, feature: AgentTypes.IgniteFeatures): boolean {
+        const bytes = this._base64ToArrayBuffer(cluster.supportedFeatures);
+
+        const byteIdx = feature >>> 3;
+
+        if (byteIdx >= bytes.length)
+            return false;
+
+        const bitIdx = feature & 0x7;
+
+        return (bytes[byteIdx] & (1 << bitIdx)) !== 0;
+    }
+
+    /**
+     * Decode base64 string to byte array.
+     *
+     * @param base64 Base64 string.
+     * @return Result byte array.
+     * @private
+     */
+    _base64ToArrayBuffer(base64: string): Uint8Array {
+        const binary_string =  window.atob(base64);
+        const len = binary_string.length;
+        const bytes = new Uint8Array( len );
+
+        for (let i = 0; i < len; i++)
+            bytes[i] = binary_string.charCodeAt(i);
+
+        return bytes;
     }
 }

@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewRunn
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewSchemas;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewTables;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.index.Index;
@@ -81,6 +82,9 @@ public class SchemaManager {
 
     /** Data tables. */
     private final ConcurrentMap<QueryTable, GridH2Table> dataTables = new ConcurrentHashMap<>();
+
+    /** System VIEW collection. */
+    private final Set<SqlSystemView> systemViews = new GridConcurrentHashSet<>();
 
     /** Mutex to synchronize schema operations. */
     private final Object schemaMux = new Object();
@@ -153,6 +157,8 @@ public class SchemaManager {
 
             try (H2PooledConnection c = connMgr.connection(schema)) {
                 SqlSystemTableEngine.registerView(c.connection(), view);
+
+                systemViews.add(view);
             }
         }
         catch (IgniteCheckedException | SQLException e) {
@@ -184,7 +190,7 @@ public class SchemaManager {
         views.add(new SqlSystemViewCacheGroupsIOStatistics(ctx));
         views.add(new SqlSystemViewRunningQueries(ctx));
         views.add(new SqlSystemViewQueryHistoryMetrics(ctx));
-        views.add(new SqlSystemViewTables(ctx, this));
+        views.add(new SqlSystemViewTables(ctx));
         views.add(new SqlSystemViewIndexes(ctx, this));
         views.add(new SqlSystemViewSchemas(ctx, this));
 
@@ -725,6 +731,13 @@ public class SchemaManager {
      */
     public Collection<GridH2Table> dataTables() {
         return dataTables.values();
+    }
+
+    /**
+     * @return all known system views.
+     */
+    public Collection<SqlSystemView> systemViews() {
+        return Collections.unmodifiableSet(systemViews);
     }
 
     /**
