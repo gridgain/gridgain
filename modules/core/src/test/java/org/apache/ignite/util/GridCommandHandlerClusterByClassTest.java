@@ -382,26 +382,69 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, testOutStr, "Control utility has completed execution at: ");
     }
 
+    /**
+     * Tests that idle verify with --check-crc fails without enabled read-only mode.
+     */
+    @Test
+    public void testValidateIndexesCrcWithoutReadOnlyFails() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--cache", "idle_verify", "--check-crc"));
+
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. idle_verify with --check-crc not allowed without enabled read-only mode.");
+    }
+
+    /**
+     * Tests that idle verify with --check-crc finished without errors if read-only mode enabled.
+     */
+    @Test
+    public void testValidateIndexesCrcWithReadOnlyNoErrors() {
+        injectTestSystemOut();
+
+        crd.cluster().readOnly(true);
+
+        try {
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--check-crc"));
+
+            assertNotContains(log, testOut.toString(), "Cluster isn't in read-only mode. idle_verify with --check-crc not allowed without enabled read-only mode.");
+        }
+        finally {
+            crd.cluster().readOnly(false);
+        }
+    }
+
     /** */
     @Test
     public void testCacheIdleVerify() {
-        IgniteEx ignite = crd;
-
-        createCacheAndPreload(ignite, 100);
+        createCacheAndPreload(crd, 100);
 
         injectTestSystemOut();
+
+        crd.cluster().readOnly(true);
+
+        try {
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
+
+            assertContains(log, testOut.toString(), "no conflicts have been found");
+            assertNotContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
+        }
+        finally {
+            crd.cluster().readOnly(false);
+        }
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
         assertContains(log, testOut.toString(), "no conflicts have been found");
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
 
         HashSet<Integer> clearKeys = new HashSet<>(asList(1, 2, 3, 4, 5, 6));
 
-        ignite.context().cache().cache(DEFAULT_CACHE_NAME).clearLocallyAll(clearKeys, true, true, true);
+        crd.context().cache().cache(DEFAULT_CACHE_NAME).clearLocallyAll(clearKeys, true, true, true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
         assertContains(log, testOut.toString(), "conflict partitions");
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
     }
 
     /** */

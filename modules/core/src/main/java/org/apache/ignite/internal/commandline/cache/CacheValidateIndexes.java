@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.internal.visor.verify.IndexIntegrityCheckIssue;
 import org.apache.ignite.internal.visor.verify.IndexValidationIssue;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
@@ -46,12 +48,9 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
-import static org.apache.ignite.internal.commandline.cache.CacheCommandList.IDLE_VERIFY;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.OP_NODE_ID;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
-import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CACHE_FILTER;
-import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.EXCLUDE_CACHES;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
@@ -63,24 +62,25 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY
 public class CacheValidateIndexes implements Command<CacheValidateIndexes.Arguments> {
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        String CACHES = "cacheName1,...,cacheNameN";
-        String description = "Verify counters and hash sums of primary and backup partitions for the specified " +
-            "caches/cache groups on an idle cluster and print out the differences, if any. " +
-            "Cache filtering options configure the set of caches that will be processed by " + IDLE_VERIFY + " command. " +
-            "Default value for the set of cache names (or cache group names) is all cache groups. Default value for " +
-            EXCLUDE_CACHES + " is empty set. Default value for " + CACHE_FILTER + " is no filtering. Therefore, " +
-            "the set of all caches is sequently filtered by cache name " +
-            "regexps, by cache type and after all by exclude regexps.";
+        String description = "Validate consistency between primary and secondary indexes for all or specified caches on " +
+            "an idle cluster and print out the differences, if any. The following is checked by the validation process: " +
+            "1) All the key-value entries that are referenced from a primary index has to be reachable from secondary " +
+            "SQL indexes as well if any. 2) All the key-value entries that are referenced from a primary index has to " +
+            "be reachable. A reference from the primary index shouldn't go in nowhere. 3) All the key-value entries " +
+            "that are referenced from secondary SQL indexes have to be reachable from the primary index as well." +
+            "The validation could be done on all cluster or on specified node only. For speed up process could be used " +
+            CHECK_FIRST + " or " + CHECK_THROUGH + " options.";
 
         Map<String, String> paramsDesc = U.newLinkedHashMap(16);
 
         paramsDesc.put(CHECK_FIRST + " N", "validate only the first N keys");
         paramsDesc.put(CHECK_THROUGH + " K", "validate every Kth key");
-        paramsDesc.put(CHECK_CRC.argName(), "check crc sums in pages of index partition");
+        paramsDesc.put(CHECK_CRC.argName(), "check the CRC-sum of pages in index partition stored on disk before " +
+            "index validation. Works only with enabled read-only mode.");
 
         Set<String> args = U.newLinkedHashSet(16);
 
-        args.add(optional(CACHES));
+        args.add(optional("cacheName1,...,cacheNameN"));
         args.add(OP_NODE_ID);
         args.add(optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K")));
         args.add(optional(CHECK_CRC));
@@ -176,6 +176,18 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         );
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            GridClientClusterState state = client.state();
+
+            if (args.checkCrc() && !state.readOnly()) {
+                throw new VisorIllegalStateException(
+                    "Cluster isn't in read-only mode. " + VALIDATE_INDEXES + " with " + CHECK_CRC +
+                        " not allowed without enabled read-only mode."
+                );
+            }
+
+            if (!state.readOnly())
+                logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
                 client, "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask", taskArg, null, clientCfg);
 
@@ -230,6 +242,12 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
             logger.info("");
 
+            if (errors && !state.readOnly()) {
+                logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+
+                logger.warning("");
+            }
+
             return taskRes;
         }
     }
@@ -244,7 +262,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
         int argsCnt = 0;
 
-        while (argIter.hasNextSubArg() && argsCnt++ < 4) {
+        while (argIter.hasNextSubArg() && argsCnt++ < 5) {
             String nextArg = argIter.nextArg("");
 
             ValidateIndexesCommandArg arg = CommandArgUtils.of(nextArg, ValidateIndexesCommandArg.class);

@@ -55,11 +55,13 @@ import static org.apache.ignite.internal.commandline.WalCommands.WAL_DELETE;
 import static org.apache.ignite.internal.commandline.WalCommands.WAL_PRINT;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.FIND_AND_DELETE_GARBAGE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -94,7 +96,8 @@ public class CommandHandlerParsingTest {
                 CHECK_FIRST.toString(),
                 Integer.toString(expectedCheckFirst),
                 CHECK_THROUGH.toString(),
-                Integer.toString(expectedCheckThrough)
+                Integer.toString(expectedCheckThrough),
+                CHECK_CRC.toString()
             ));
 
             assertTrue(args.command() instanceof CacheCommands);
@@ -106,6 +109,7 @@ public class CommandHandlerParsingTest {
             assertEquals("nodeId parameter unexpected value", nodeId, arg.nodeId());
             assertEquals("checkFirst parameter unexpected value", expectedCheckFirst, arg.checkFirst());
             assertEquals("checkThrough parameter unexpected value", expectedCheckThrough, arg.checkThrough());
+            assertTrue("checkCrc parameter unexcepted value", arg.checkCrc());
         }
         catch (IllegalArgumentException e) {
             fail("Unexpected exception: " + e);
@@ -133,6 +137,7 @@ public class CommandHandlerParsingTest {
             assertEquals("nodeId parameter unexpected value", nodeId, arg.nodeId());
             assertEquals("checkFirst parameter unexpected value", -1, arg.checkFirst());
             assertEquals("checkThrough parameter unexpected value", expectedParam, arg.checkThrough());
+            assertFalse("checkCrc parameter unexcepted value", arg.checkCrc());
         }
         catch (IllegalArgumentException e) {
             e.printStackTrace();

@@ -36,8 +36,10 @@ import org.junit.Test;
 import javax.cache.Cache;
 import java.util.Iterator;
 
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
@@ -65,7 +67,69 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertContains(log, testOut.toString(), "no issues found");
+        String out = testOut.toString();
+
+        assertContains(log, out, "no issues found");
+
+        assertContains(log, out,"Cluster isn't in read-only mode. The report may have false positive errors.");
+    }
+
+    /**
+     * Tests that validation doesn't fail if nothing is broken.
+     */
+    @Test
+    public void testValidateIndexesReaoOnlyEnabledNoErrors() {
+        injectTestSystemOut();
+
+        crd.cluster().readOnly(true);
+
+        try {
+            assertTrue("Cluster isn't in read-only mode", crd.cluster().readOnly());
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
+
+            String out = testOut.toString();
+
+            assertContains(log, out, "no issues found");
+
+            assertNotContains(log, out, "Cluster isn't in read-only mode. The report may have false positive errors.");
+        }
+        finally {
+            crd.cluster().readOnly(false);
+        }
+    }
+
+    /**
+     * Tests that validation with --check-crc fails without enabled read-only mode.
+     */
+    @Test
+    public void testValidateIndexesCrcWithoutReadOnlyFails() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--cache", "validate_indexes", CACHE_NAME, "--check-crc"));
+
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. validate_indexes with --check-crc not allowed without enabled read-only mode.");
+    }
+
+    /**
+     * Tests that validation with --check-crc fails without enabled read-only mode.
+     */
+    @Test
+    public void testValidateIndexesCrcWithReadOnlyNoErrors() {
+        injectTestSystemOut();
+
+        crd.cluster().readOnly(true);
+
+        try {
+            assertTrue("Cluster isn't in read-only mode", crd.cluster().readOnly());
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME, "--check-crc"));
+
+            assertContains(log, testOut.toString(), "no issues found");
+        }
+        finally {
+            crd.cluster().readOnly(false);
+        }
     }
 
     /**

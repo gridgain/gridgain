@@ -30,6 +30,7 @@ import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
@@ -44,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitions
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTask;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTaskArg;
@@ -93,7 +95,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             description,
             Collections.singletonMap(CHECK_CRC.toString(),
                 "check the CRC-sum of pages stored on disk before verifying data " +
-                    "consistency in partitions between primary and backup nodes."),
+                    "consistency in partitions between primary and backup nodes. Works only with enabled read-only mode."),
             optional(DUMP), optional(SKIP_ZEROS), optional(CHECK_CRC), optional(EXCLUDE_CACHES, CACHES),
                 optional(CACHE_FILTER, or(ALL, USER, SYSTEM, PERSISTENT, NOT_PERSISTENT)), optional(CACHES));
     }
@@ -210,10 +212,27 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
                 }
             }
 
-            if (args.dump())
-                cacheIdleVerifyDump(client, clientCfg, logger);
-            else if (idleVerifyV2)
-                cacheIdleVerifyV2(client, clientCfg, logger);
+            if (args.dump() || idleVerifyV2) {
+                GridClientClusterState state = client.state();
+
+                if (args.idleCheckCrc() && !state.readOnly()) {
+                    throw new VisorIllegalStateException(
+                        "Cluster isn't in read-only mode. " + IDLE_VERIFY + " with " + CHECK_CRC +
+                            " not allowed without enabled read-only mode."
+                    );
+                }
+
+                if (!state.readOnly())
+                    logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+
+                if (args.dump())
+                    cacheIdleVerifyDump(client, clientCfg, logger);
+                else
+                    cacheIdleVerifyV2(client, clientCfg, logger);
+
+                if (!state.readOnly())
+                    logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+            }
             else
                 legacyCacheIdleVerify(client, clientCfg, logger);
         }
@@ -337,6 +356,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
     /**
      * @param client Client.
      * @param clientCfg Client configuration.
+     * @param log Logger.
      */
     private void cacheIdleVerifyV2(
         GridClient client,
