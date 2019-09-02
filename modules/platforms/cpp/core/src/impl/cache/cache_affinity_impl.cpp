@@ -45,22 +45,22 @@ namespace ignite
                 return ret;
             }
 
-            std::vector<int> CacheAffinityImpl::GetPrimaryPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> CacheAffinityImpl::GetPrimaryPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::PRIMARY_PARTITIONS, node);
             }
 
-            std::vector<int> CacheAffinityImpl::GetBackupPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> CacheAffinityImpl::GetBackupPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::BACKUP_PARTITIONS, node);
             }
 
-            std::vector<int> CacheAffinityImpl::GetAllPartitions(ignite::cluster::ClusterNode node)
+            std::vector<int> CacheAffinityImpl::GetAllPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::ALL_PARTITIONS, node);
             }
 
-            ignite::cluster::ClusterNode CacheAffinityImpl::MapPartitionToNode(int part)
+            ClusterNode CacheAffinityImpl::MapPartitionToNode(int part)
             {
                 Guid nodeId;
                 In1Operation<int> inOp(part);
@@ -73,7 +73,7 @@ namespace ignite
                 return GetEnvironment().GetNode(nodeId);
             }
 
-            std::map<int, ignite::cluster::ClusterNode> CacheAffinityImpl::MapPartitionsToNodes(std::vector<int> parts)
+            std::map<int, ClusterNode> CacheAffinityImpl::MapPartitionsToNodes(std::vector<int> parts)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
