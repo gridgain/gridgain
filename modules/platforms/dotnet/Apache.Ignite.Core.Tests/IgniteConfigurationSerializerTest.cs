@@ -1034,7 +1034,15 @@ namespace Apache.Ignite.Core.Tests
                     TryStop = false,
                     Timeout = TimeSpan.FromSeconds(10)
                 },
-                SqlQueryHistorySize = 345
+                SqlQueryHistorySize = 345,
+                ExecutorConfiguration = new[]
+                {
+                    new ExecutorConfiguration
+                    {
+                        Name = "exec-1",
+                        Size = 11
+                    }
+                }
             };
         }
 
