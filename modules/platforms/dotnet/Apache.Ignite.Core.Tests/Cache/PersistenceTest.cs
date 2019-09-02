@@ -33,9 +33,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     /// </summary>
     public class PersistenceTest
     {
-        /** */
-        private const string BaselineAutoAdjustEnabledVar = "IGNITE_BASELINE_AUTO_ADJUST_ENABLED";
-
         /** Temp dir for WAL. */
         private readonly string _tempDir = TestUtils.GetTempDirectoryName();
 
@@ -227,10 +224,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestBaselineTopology()
         {
-            var oldAutoAdjustEnabled = Environment.GetEnvironmentVariable(BaselineAutoAdjustEnabledVar);
-            Environment.SetEnvironmentVariable(BaselineAutoAdjustEnabledVar, "false");
-
-            try
+            using (EnvVar.Set("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false"))
             {
                 var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
                 {
@@ -290,10 +284,6 @@ namespace Apache.Ignite.Core.Tests.Cache
                     var res = cluster.GetBaselineTopology();
                     CollectionAssert.AreEquivalent(new[] {"node1"}, res.Select(x => x.ConsistentId));
                 }
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable(BaselineAutoAdjustEnabledVar, oldAutoAdjustEnabled);
             }
         }
 
