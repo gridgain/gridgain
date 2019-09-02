@@ -812,7 +812,8 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestWithExecutor()
         {
-            // TODO
+            // TODO: how do we verify that? Is there any API in Java?
+            // Try thread names - we can have a Java task for that.
             var compute = _grid1.GetCompute();
             var computeWithExecutor = compute.WithExecutor("foo");
 
