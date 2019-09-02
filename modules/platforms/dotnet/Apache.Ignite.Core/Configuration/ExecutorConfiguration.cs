@@ -8,6 +8,7 @@ namespace Apache.Ignite.Core.Configuration
     /// </summary>
     public class ExecutorConfiguration
     {
+        /** */
         private int? _size;
 
         /// <summary>
