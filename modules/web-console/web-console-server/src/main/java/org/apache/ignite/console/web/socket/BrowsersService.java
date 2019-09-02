@@ -137,7 +137,7 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param key Key.
      * @param evt Event.
      */
-    protected void sendToAgent(AgentKey key, WebSocketRequest evt) {
+    public void sendToAgent(AgentKey key, WebSocketRequest evt) {
         transitionSrvc.sendToAgent(key, evt);
     }
 
