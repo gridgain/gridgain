@@ -45,8 +45,8 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestIgniteStart()
         {
-            using (EnvVar.Set(Classpath.EnvIgniteNativeTestClasspath, bool.TrueString)){
-
+            using (EnvVar.Set(Classpath.EnvIgniteNativeTestClasspath, bool.TrueString))
+            {
                 using (var ignite = Ignition.StartFromApplicationConfiguration(Ignition.ConfigurationSectionName))
                 {
                     Assert.AreEqual("myGrid1", ignite.Name);

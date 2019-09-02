@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests
 {
-    using System;
     using NUnit.Framework;
 
     /// <summary>
