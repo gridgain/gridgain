@@ -74,7 +74,10 @@ public enum IgniteFeatures {
     INDEXING(15),
 
     /** Support of cluster ID and tag. */
-    CLUSTER_ID_AND_TAG(16);
+    CLUSTER_ID_AND_TAG(16),
+
+    /** Supported continuous rebalance. */
+    CONTINUOUS_REBALANCE(17);
 
     /**
      * Unique feature identifier.

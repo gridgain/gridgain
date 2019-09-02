@@ -31,6 +31,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -306,6 +307,17 @@ class GridDhtPartitionSupplier {
                 iter = isRebalanceContinuouse(demandMsg, sctx) ? modifyRebalanceIterator(demandMsg, sctx.iterator) :
                     grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
 
+                Iterator<Integer> remainingPartsIterator = remainingParts.iterator();
+
+                if (isRebalanceContinuouse(demandMsg, sctx)) {
+                    while (remainingPartsIterator.hasNext()) {
+                        Integer part = remainingPartsIterator.next();
+
+                        if (iter.isPartitionDone(part))
+                            remainingPartsIterator.remove();
+                    }
+                }
+
                 for (int i = 0; i < histMap.size(); i++) {
                     int p = histMap.partitionAt(i);
 
@@ -542,8 +554,10 @@ class GridDhtPartitionSupplier {
     }
 
     /** */
-    private boolean continuousRebalanceSupported(GridDhtPartitionDemandMessage demandMessage) {
-        return true;
+    private boolean continuousRebalanceSupported() {
+        return IgniteFeatures.allNodesSupports(grp.shared().kernalContext(),
+            grp.shared().discovery().aliveServerNodes(),
+            IgniteFeatures.CONTINUOUS_REBALANCE);
     }
 
     /**
