@@ -17,14 +17,6 @@
         /// <param name="val">Optional attribute value to match.</param>
         /// <returns>Grid projection for nodes containing specified attribute.</returns>
         IClientClusterGroup ForAttribute(string name, string val);
-        
-        /// <summary>
-        /// Creates projection for all nodes that have cache with specified name running 
-        /// and cache distribution mode is PARTITIONED_ONLY or NEAR_PARTITIONED.
-        /// </summary>
-        /// <param name="name">Cache name to include into projection.</param>
-        /// <returns>Projection over nodes that have specified cache running.</returns>
-        IClientClusterGroup ForDataNodes(string name);
 
         /// <summary>
         /// Creates grid projection for nodes supporting .Net, i.e. for nodes started with Apache.Ignite.exe.

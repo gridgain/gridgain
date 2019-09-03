@@ -63,5 +63,31 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             Assert.IsNotNull(dotNetCluster);
         }
 
+        [Test]
+        public void TestEnableWal()
+        {
+            var clientCluster = Client.GetCluster();
+            var success = clientCluster.EnableWal("myCacheName");
+
+            Assert.IsTrue(success);
+        }
+
+        [Test]
+        public void TestDisableWal()
+        {
+            var clientCluster = Client.GetCluster();
+            var success = clientCluster.DisableWal("myCacheName");
+
+            Assert.IsTrue(success);
+        }
+
+        [Test]
+        public void TestWalStatus()
+        {
+            var clientCluster = Client.GetCluster();
+            var success = clientCluster.IsWalEnabled("myCacheName");
+
+            Assert.IsTrue(success);
+        }
     }
 }

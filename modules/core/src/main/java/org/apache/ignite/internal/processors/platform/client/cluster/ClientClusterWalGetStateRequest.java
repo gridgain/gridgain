@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,27 +22,27 @@ import org.apache.ignite.internal.processors.platform.client.ClientConnectionCon
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cluster status request
+ * Get cache WAL state request.
  */
-public class ClientClusterChangeStatusRequest extends ClientClusterRequest {
+public class ClientClusterWalGetStateRequest extends ClientClusterRequest {
 
-    private final boolean shouldBeActive;
+    /** Cache name. */
+    private final String cacheName;
 
     /**
      * Constructor.
      *
      * @param reader Reader/
      */
-    public ClientClusterChangeStatusRequest(BinaryRawReader reader) {
+    public ClientClusterWalGetStateRequest(BinaryRawReader reader) {
         super(reader);
-        shouldBeActive = reader.readBoolean();
+        cacheName = reader.readString();
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
         ClientCluster clientCluster = ctx.resources().get(clusterId);
-        clientCluster.changeGridState(shouldBeActive);
-        return new ClientBooleanResponse(requestId(), clientCluster.isActive());
+        return new ClientBooleanResponse(requestId(), clientCluster.isWalEnabled(cacheName));
     }
 }

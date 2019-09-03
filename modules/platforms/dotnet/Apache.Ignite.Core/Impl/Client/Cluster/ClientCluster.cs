@@ -18,7 +18,6 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
-    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -68,12 +67,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritdoc /> */
-        public IClientClusterGroup ForDataNodes(string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        /** <inheritdoc /> */
         public IClientClusterGroup ForDotNet()
         {
             return ForAttribute(AttrPlatform, Platform);
@@ -92,15 +85,30 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritdoc /> */
-        public void DisableWal(string cacheName)
+        public bool DisableWal(string cacheName)
         {
-            throw new NotImplementedException();
+            Action<BinaryWriter> action = writer =>
+            {
+                writer.WriteString(cacheName);
+                writer.WriteBoolean(false);
+            };
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBool());
         }
 
         /** <inheritdoc /> */
-        public void EnableWal(string cacheName)
+        public bool EnableWal(string cacheName)
         {
-            throw new NotImplementedException();
+            Action<BinaryWriter> action = writer =>
+            {
+                writer.WriteString(cacheName);
+                writer.WriteBoolean(true);
+            };
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBool());
+        }
+
+        public bool IsWalEnabled(string cacheName)
+        {
+            return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBool());
         }
 
         /// <summary>

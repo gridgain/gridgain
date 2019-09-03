@@ -19,12 +19,10 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
-import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Client cluster
- *
  */
 public class ClientCluster {
 
@@ -72,5 +70,41 @@ public class ClientCluster {
      */
     public void changeGridState(boolean isActive){
         prj.active(isActive);
+    }
+
+    /**
+     * Enables write-ahead logging for specified cache. Restoring crash-recovery guarantees of a previous call to
+     * {@link #disableWal(String)}.
+     * WAL state can be changed only for persistent caches.
+     *
+     * @param cacheName Cache name.
+     * @return Whether WAL enabled by this call.
+     * @throws IgniteException If error occurs.
+     */
+    public boolean enableWal(String cacheName) throws IgniteException {
+        return prj.enableWal(cacheName);
+    }
+
+    /**
+     * Disables write-ahead logging for specified cache. When WAL is disabled, changes are not logged to disk.
+     * This significantly improves cache update speed. The drawback is absence of local crash-recovery guarantees.
+     * If node is crashed, local content of WAL-disabled cache will be cleared on restart to avoid data corruption.
+     *
+     * @param cacheName Cache name.
+     * @return Whether WAL disabled by this call.
+     * @throws IgniteException If error occurs.
+     */
+    public boolean disableWal(String cacheName) throws IgniteException{
+        return prj.disableWal(cacheName);
+    }
+
+    /**
+     * Checks if write-ahead logging is enabled for specified cache.
+     *
+     * @param cacheName Cache name.
+     * @return {@code True} if WAL is enabled for cache.
+     */
+    public boolean isWalEnabled(String cacheName){
+        return prj.isWalEnabled(cacheName);
     }
 }

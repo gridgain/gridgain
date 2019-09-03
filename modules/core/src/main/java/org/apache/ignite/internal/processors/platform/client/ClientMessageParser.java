@@ -67,10 +67,12 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStatusRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterForAttributeRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGetRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
 
 /**
  * Thin client message parser.
@@ -218,6 +220,12 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** */
     private static final short OP_CLUSTER_CHANGE_STATE = 4003;
+
+    /** */
+    private static final short OP_CLUSTER_CHANGE_WAL_STATE = 4004;
+
+    /** */
+    private static final short OP_CLUSTER_GET_WAL_STATE = 4005;
 
 
     /** Marshaller. */
@@ -398,7 +406,13 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientClusterIsActiveRequest(reader);
 
             case OP_CLUSTER_CHANGE_STATE:
-                return new ClientClusterChangeStatusRequest(reader);
+                return new ClientClusterChangeStateRequest(reader);
+
+            case OP_CLUSTER_CHANGE_WAL_STATE:
+                return new ClientClusterWalChangeStateRequest(reader);
+
+            case OP_CLUSTER_GET_WAL_STATE:
+                return new ClientClusterWalGetStateRequest(reader);
         }
 
         return new ClientRawRequest(reader.readLong(), ClientStatus.INVALID_OP_CODE,

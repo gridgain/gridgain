@@ -33,7 +33,8 @@
         /// WAL state can be changed only for persistent caches.
         /// </summary>
         /// <param name="cacheName">Name of the cache.</param>
-        void DisableWal(string cacheName);
+        /// <returns>Whether WAL enabled by this call.</returns>
+        bool DisableWal(string cacheName);
 
         /// <summary>
         /// Enables write-ahead logging for specified cache. Restoring crash-recovery guarantees of a previous call to
@@ -46,6 +47,14 @@
         /// WAL state can be changed only for persistent caches.
         /// </summary>
         /// <param name="cacheName">Name of the cache.</param>
-        void EnableWal(string cacheName);
+        /// <returns>Whether WAL disabled by this call.</returns>
+        bool EnableWal(string cacheName);
+
+
+        /// <summary>
+        /// Determines whether write-ahead logging is enabled for specified cache.
+        /// </summary>
+        /// <param name="cacheName">Name of the cache.</param>
+        bool IsWalEnabled(string cacheName);
     }
 }
