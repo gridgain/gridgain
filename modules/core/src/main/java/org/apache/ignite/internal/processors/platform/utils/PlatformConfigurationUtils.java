@@ -839,18 +839,18 @@ public class PlatformConfigurationUtils {
             }
         }
 
-        int execConfigCnt = in.readInt();
+        int execCfgCnt = in.readInt();
 
-        if (execConfigCnt > 0) {
-            ExecutorConfiguration[] execConfigs = new ExecutorConfiguration[execConfigCnt];
+        if (execCfgCnt > 0) {
+            ExecutorConfiguration[] execCfgs = new ExecutorConfiguration[execCfgCnt];
 
-            for (int i = 0; i < execConfigCnt; i++) {
-                execConfigs[i] = new ExecutorConfiguration()
+            for (int i = 0; i < execCfgCnt; i++) {
+                execCfgs[i] = new ExecutorConfiguration()
                         .setName(in.readString())
                         .setSize(in.readInt());
             }
 
-            cfg.setExecutorConfiguration(execConfigs);
+            cfg.setExecutorConfiguration(execCfgs);
         }
 
         readPluginConfiguration(cfg, in);
