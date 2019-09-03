@@ -48,7 +48,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     /** */
-    private static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 4_000;
+    private static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 10_000;
 
     /** {@inheritDoc} */
     @Before
