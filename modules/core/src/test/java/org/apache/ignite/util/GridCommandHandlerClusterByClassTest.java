@@ -387,7 +387,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             List<String> correctOutputLines = U.sealList(correctOutput.split("\\r?\\n"));
             List<String> outputLines = U.sealList(output.split("\\r?\\n"));
 
-            assertEquals("Wrong number of lines!", correctOutputLines.size(), outputLines.size());
+            assertEquals("Wrong number of lines! Golden copy resource: " + resourceName, correctOutputLines.size(), outputLines.size());
 
             for (int i = 0; i < correctOutputLines.size(); i++) {
                 String cLine = correctOutputLines.get(i);
