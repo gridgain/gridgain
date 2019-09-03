@@ -45,6 +45,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -223,6 +224,9 @@ public class IgniteConfiguration {
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_FAILURE_DETECTION_TIMEOUT = new Long(10_000);
 
+    /** Default system worker blocked timeout in millis. */
+    public static final Long DFLT_SYS_WORKER_BLOCKED_TIMEOUT = 2 * 60 * 1000L;
+
     /** Default failure detection timeout for client nodes in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = new Long(30_000);
@@ -395,6 +399,9 @@ public class IgniteConfiguration {
     /** Metric exporter SPI. */
     private MetricExporterSpi[] metricExporterSpi;
 
+    /** Tracing SPI. */
+    private TracingSpi tracingSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -448,7 +455,7 @@ public class IgniteConfiguration {
     private Long failureDetectionTimeout = DFLT_FAILURE_DETECTION_TIMEOUT;
 
     /** Timeout for blocked system workers detection. */
-    private Long sysWorkerBlockedTimeout;
+    private Long sysWorkerBlockedTimeout = DFLT_SYS_WORKER_BLOCKED_TIMEOUT;
 
     /** Failure detection timeout for client nodes. */
     private Long clientFailureDetectionTimeout = DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT;
@@ -575,6 +582,7 @@ public class IgniteConfiguration {
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
         metricExporterSpi = cfg.getMetricExporterSpi();
+        tracingSpi = cfg.getTracingSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -2306,6 +2314,27 @@ public class IgniteConfiguration {
      */
     public MetricExporterSpi[] getMetricExporterSpi() {
         return metricExporterSpi;
+    }
+
+    /**
+     * Gets fully configured instance of {@link TracingSpi}.
+     *
+     * @param tracingSpi Fully configured instance of {@link TracingSpi}.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setTracingSpi(TracingSpi tracingSpi) {
+        this.tracingSpi = tracingSpi;
+
+        return this;
+    }
+
+    /**
+     * Gets fully configured tracing SPI implementation.
+     *
+     * @return Tracing SPI implementation.
+     */
+    public TracingSpi getTracingSpi() {
+        return tracingSpi;
     }
 
     /**

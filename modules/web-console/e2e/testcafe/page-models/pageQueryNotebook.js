@@ -26,6 +26,7 @@ export class Paragraph extends PanelCollapsible {
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');
+        this.clearResultButton = this.body.find('i.fa.fa-eraser')
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
     }
     async enterQuery(text, options = {replace: false}) {
@@ -40,6 +41,13 @@ export const showQueryDialog = {
     body: showQueryDialogSelector.find('.modal-body'),
     footer: showQueryDialogSelector.find('.modal-footer'),
     okButton: showQueryDialogSelector.find('button').withExactText('Ok')
+};
+
+const confirmClearQueryDialogSelector = Selector('.modal-header').withText('Confirm').parent('.modal');
+
+export const confirmClearQueryDialog = {
+    dialog: confirmClearQueryDialogSelector,
+    confirmButton: confirmClearQueryDialogSelector.find('button').withExactText('Confirm')
 };
 
 const showStacktraceDialogSelector = Selector('.modal-header').withText('Error details').parent('.modal');
