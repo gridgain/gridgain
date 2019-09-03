@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -223,63 +223,66 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestBaselineTopology()
         {
-            var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
+            using (EnvVar.Set("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false"))
             {
-                ConsistentId = "node1"
-            };
-            var cfg2 = new IgniteConfiguration(GetPersistentConfiguration())
-            {
-                ConsistentId = "node2",
-                IgniteInstanceName = "2"
-            };
+                var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
+                {
+                    ConsistentId = "node1"
+                };
+                var cfg2 = new IgniteConfiguration(GetPersistentConfiguration())
+                {
+                    ConsistentId = "node2",
+                    IgniteInstanceName = "2"
+                };
 
-            using (var ignite = Ignition.Start(cfg1))
-            {
-                // Start and stop to bump topology version.
-                Ignition.Start(cfg2);
-                Ignition.Stop(cfg2.IgniteInstanceName, true);
+                using (var ignite = Ignition.Start(cfg1))
+                {
+                    // Start and stop to bump topology version.
+                    Ignition.Start(cfg2);
+                    Ignition.Stop(cfg2.IgniteInstanceName, true);
 
-                var cluster = ignite.GetCluster();
-                Assert.AreEqual(3, cluster.TopologyVersion);
+                    var cluster = ignite.GetCluster();
+                    Assert.AreEqual(3, cluster.TopologyVersion);
 
-                // Can not set baseline while inactive.
-                var ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
-                Assert.AreEqual("Changing BaselineTopology on inactive cluster is not allowed.", ex.Message);
+                    // Can not set baseline while inactive.
+                    var ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
+                    Assert.AreEqual("Changing BaselineTopology on inactive cluster is not allowed.", ex.Message);
 
-                cluster.SetActive(true);
+                    cluster.SetActive(true);
 
-                // Can not set baseline with offline node.
-                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
-                Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
-                  ex.Message);
+                    // Can not set baseline with offline node.
+                    ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
+                    Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
+                        ex.Message);
 
-                cluster.SetBaselineTopology(1);
-                Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
+                    cluster.SetBaselineTopology(1);
+                    Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Set with node.
-                cluster.SetBaselineTopology(cluster.GetBaselineTopology());
+                    // Set with node.
+                    cluster.SetBaselineTopology(cluster.GetBaselineTopology());
 
-                var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
+                    var res = cluster.GetBaselineTopology();
+                    CollectionAssert.AreEquivalent(new[] {"node1"}, res.Select(x => x.ConsistentId));
 
-                cluster.SetBaselineTopology(cluster.GetTopology(1));
-                Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
+                    cluster.SetBaselineTopology(cluster.GetTopology(1));
+                    Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Can not set baseline with offline node.
-                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
-                Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
-                  ex.Message);
-            }
+                    // Can not set baseline with offline node.
+                    ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
+                    Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
+                        ex.Message);
+                }
 
-            // Check auto activation on cluster restart.
-            using (var ignite = Ignition.Start(cfg1))
-            using (Ignition.Start(cfg2))
-            {
-                var cluster = ignite.GetCluster();
-                Assert.IsTrue(cluster.IsActive());
+                // Check auto activation on cluster restart.
+                using (var ignite = Ignition.Start(cfg1))
+                using (Ignition.Start(cfg2))
+                {
+                    var cluster = ignite.GetCluster();
+                    Assert.IsTrue(cluster.IsActive());
 
-                var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
+                    var res = cluster.GetBaselineTopology();
+                    CollectionAssert.AreEquivalent(new[] {"node1"}, res.Select(x => x.ConsistentId));
+                }
             }
         }
 
