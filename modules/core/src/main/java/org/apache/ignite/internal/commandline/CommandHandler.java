@@ -104,7 +104,7 @@ public class CommandHandler {
     private static final long DFLT_PING_TIMEOUT = 30_000L;
 
     /** */
-    private static final Scanner IN = new Scanner(System.in);
+    private final Scanner in = new Scanner(System.in);
 
     /** Utility name. */
     public static final String UTILITY_NAME = "control.(sh|bat)";
@@ -576,7 +576,7 @@ public class CommandHandler {
     private String readLine(String prompt) {
         System.out.print(prompt);
 
-        return IN.nextLine();
+        return in.nextLine();
     }
 
 
