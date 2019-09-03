@@ -16,8 +16,8 @@
 
 import _ from 'lodash';
 
-import columnDefs from './column-defs';
-import categories from './categories';
+import {columnDefsFn} from './column-defs';
+import {categoriesFn} from './categories';
 import {UserService} from 'app/modules/user/User.service';
 import {Subscription} from 'rxjs';
 import {tap} from 'rxjs/operators';
@@ -417,10 +417,10 @@ export default class IgniteListOfRegisteredUsersCtrl {
     }
 
     getColumnDefs() {
-        return columnDefs.columnDefsFn(this.$translate);
+        return columnDefsFn(this.$translate);
     }
 
     getCategories() {
-        return categories.categoriesFn(this.$translate);
+        return categoriesFn(this.$translate);
     }
 }
