@@ -97,7 +97,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         /** */
         private static final Predicate<File> DUMMY_PREDICATE = (f) -> false;
         /** Time to wait before exception would be thrown. It is giving time to page replacer to work. */
-        private static final long WAIT_BEFORE_FAIL = 1000;
+        private static final long DELAY_TIME = 1000;
 
         /** Predicate which is a trigger of throwing an exception. */
         transient volatile Predicate<File> failPredicate = DUMMY_PREDICATE;
@@ -105,18 +105,26 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             if (failPredicate.test(file)) {
-                try {
-                    Thread.sleep(WAIT_BEFORE_FAIL);
-                }
-                catch (InterruptedException ignore) {
-                }
+                sleep();
 
                 failPredicate = DUMMY_PREDICATE;
 
                 throw new IOException("Triggered test exception");
             }
 
+            if(file.getName().endsWith("START.bin.tmp"))
+                sleep();
+
             return super.create(file, modes);
+        }
+
+        /** **/
+        private void sleep() {
+            try {
+                Thread.sleep(DELAY_TIME);
+            }
+            catch (InterruptedException ignore) {
+            }
         }
 
         /**

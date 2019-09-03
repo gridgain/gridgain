@@ -51,9 +51,9 @@ class CheckpointPages {
             return false;
 
         while(!allowToEvict.getAsBoolean())
-            LockSupport.parkNanos(10);
+            LockSupport.parkNanos(100);
 
-        return checkpointPages.contains(fullPageId);
+        return allowToEvict.getAsBoolean() && checkpointPages.contains(fullPageId);
     }
 
     /**

@@ -4296,7 +4296,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 //There are allowable to evict pages only after checkpoint entry was stored to disk.
                 GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
-                    beginAllCheckpoints(() -> curr.isState(MARKER_STORED_TO_DISK));
+                    beginAllCheckpoints(() -> curr.atLeastState(MARKER_STORED_TO_DISK));
 
                 cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
@@ -5274,8 +5274,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @param expectedState Expected state.
          * @return {@code true} if current state equal to given state.
          */
-        public boolean isState(State expectedState) {
-            return state.get() == expectedState;
+        public boolean atLeastState(State expectedState) {
+            return state.get().ordinal() >= expectedState.ordinal();
         }
 
         /**
