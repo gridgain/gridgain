@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.client;
 
-import java.util.UUID;
-
 /**
  *  Interface for manage state of grid cluster and obtain information about it: ID and tag.
  */
@@ -31,20 +29,6 @@ public interface GridClientClusterState {
      * @return {@code Boolean} - Current cluster state. {@code True} active, {@code False} inactive.
      */
     public boolean active() throws GridClientException;
-
-    /**
-     * Unique identifier of cluster STATE command was sent to.
-     *
-     * @return ID of the cluster.
-     */
-    public UUID id() throws GridClientException;
-
-    /**
-     * User-defined tag of cluster STATE command was sent to.
-     *
-     * @return Tag of the cluster.
-     */
-    public String tag() throws GridClientException;
 
     /**
      * @return {@code True} if the cluster is in read-only mode and {@code False} otherwise.

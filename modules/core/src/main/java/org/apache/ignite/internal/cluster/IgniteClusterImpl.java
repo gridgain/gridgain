@@ -344,7 +344,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** */
     private void verifyReadOnlyModeSupport() {
-        if (!allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
+        if (!allNodesSupports(ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
             throw new IgniteException("Not all nodes in cluster supports cluster read-only mode");
     }
 
