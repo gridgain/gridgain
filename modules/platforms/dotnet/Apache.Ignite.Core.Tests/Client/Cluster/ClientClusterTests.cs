@@ -37,10 +37,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [SetUp]
         public override void TestSetUp()
         {
-            var cacheCfg = new CacheConfiguration()
+            var cacheCfg = new CacheConfiguration
             {
                 Name = PersistentCache,
-                DataRegionName = DataRegionName,
+                DataRegionName = DataRegionName
             };
 
             var ignite = Ignition.GetIgnite();

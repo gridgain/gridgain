@@ -145,5 +145,20 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             throw new IgniteClientException(msg, null, status);
         }
+
+        /// <summary>
+        /// Close resource during GC
+        /// </summary>
+        ~ClientCluster()
+        {
+            try
+            {
+                DoOutInOp<object>(ClientOp.ResourceClose, w => w.WriteLong(_ptr), null);
+            }
+            finally
+            {
+                //no ops
+            }
+        }
     }
 }
