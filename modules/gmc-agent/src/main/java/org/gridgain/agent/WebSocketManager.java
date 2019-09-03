@@ -23,6 +23,8 @@ import java.net.URI;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -60,6 +62,9 @@ import static org.gridgain.agent.AgentUtils.EMPTY;
  * Web socket manager.
  */
 public class WebSocketManager implements AutoCloseable {
+    /** Mapper. */
+    private final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+
     /** Ws max buffer size. */
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;
 
@@ -176,8 +181,11 @@ public class WebSocketManager implements AutoCloseable {
      * @return Composite message converter.
      */
     private CompositeMessageConverter getMessageConverter() {
+        MappingJackson2MessageConverter mapper = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+        mapper.setObjectMapper(this.mapper);
+
         return new CompositeMessageConverter(
-            U.sealList(new StringMessageConverter(), new MappingJackson2MessageConverter())
+            U.sealList(new StringMessageConverter(), mapper)
         );
     }
 
