@@ -91,8 +91,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         populateData();
 
         // Warmup connection manager pool
-        for (int i = 0; i < 128; ++i)
-            execQuery("select * from T limit 1", false);
+        for (int i = 0; i < 128; ++i) {
+            GridTestUtils.runMultiThreaded(() -> {
+                execQuery("select * from T limit 1", false);
+
+                return  null;
+            }, 10, "conn-pool-warmup");
+        }
     }
 
     /** {@inheritDoc} */
