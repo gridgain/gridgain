@@ -1438,7 +1438,7 @@ public class PlatformConfigurationUtils {
 
         if (execCfgs != null) {
             w.writeInt(execCfgs.length);
-            
+
             for (ExecutorConfiguration execCfg : execCfgs) {
                 w.writeString(execCfg.getName());
                 w.writeInt(execCfg.getSize());

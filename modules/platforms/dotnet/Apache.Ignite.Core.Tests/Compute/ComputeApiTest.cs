@@ -807,23 +807,6 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
-        /// Tests custom executors.
-        /// </summary>
-        [Test]
-        [TestCase("dotNetExecutor", "dotNetExecutor-#")]
-        [TestCase("invalid", "pub-#")]
-        public void TestWithExecutor(string executorName, string expectedThreadNamePrefix)
-        {
-            var compute = _grid1.GetCompute();
-            var computeWithExecutor = compute.WithExecutor(executorName);
-
-            var res = computeWithExecutor.ExecuteJavaTask<string>(ThreadNameTask, null);
-
-            Assert.AreNotSame(compute, computeWithExecutor);
-            Assert.AreEqual(expectedThreadNamePrefix, res.Substring(0, expectedThreadNamePrefix.Length));
-        }
-
-        /// <summary>
         /// Create configuration.
         /// </summary>
         /// <param name="path">XML config path.</param>
