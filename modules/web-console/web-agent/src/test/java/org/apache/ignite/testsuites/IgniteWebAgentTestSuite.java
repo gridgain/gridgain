@@ -28,10 +28,10 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    RestExecutorSelfTest.class,
-    SerializationTests.class,
     AgentLauncherTest.class,
-    AgentUtilsTest.class
+    AgentUtilsTest.class,
+    RestExecutorSelfTest.class,
+    SerializationTests.class
 })
 public class IgniteWebAgentTestSuite {
     // No-op.

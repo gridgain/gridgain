@@ -57,7 +57,7 @@ public class AgentUtilsTest {
     @Test
     public void shouldThrowExceptionIfStorePassIncorrect() {
         ruleForExpEx.expect(IgniteException.class);
-        ruleForExpEx.expectMessage("Failed to read password from key store, please check key store password!");
+        ruleForExpEx.expectMessage("Failed to read password from key store, please check key store password");
 
         String path = AgentUtilsTest.class.getClassLoader().getResource("passwords.p12").getPath();
         getPasswordFromKeyStore("node-password", path, "12345678");
@@ -69,7 +69,7 @@ public class AgentUtilsTest {
     @Test
     public void shouldThrowExceptionIfStorePathIncorrect() {
         ruleForExpEx.expect(IgniteException.class);
-        ruleForExpEx.expectMessage("Fail to open passwords key store by path: /super-key-store.p911");
+        ruleForExpEx.expectMessage("Failed to open passwords key store: /super-key-store.p911");
 
         getPasswordFromKeyStore("node-password", "/super-key-store.p911", "12345678");
     }
@@ -94,7 +94,7 @@ public class AgentUtilsTest {
     @Test
     public void shouldThrowExceptionIfPathIsEmpty() {
         ruleForExpEx.expect(IgniteException.class);
-        ruleForExpEx.expectMessage("The passwords key store path can't be empty!");
+        ruleForExpEx.expectMessage("Empty path to key store with passwords");
 
         getPasswordFromKeyStore("node-password", "", "123456");
     }

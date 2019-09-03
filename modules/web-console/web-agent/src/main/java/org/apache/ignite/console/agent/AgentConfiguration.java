@@ -227,7 +227,7 @@ public class AgentConfiguration {
      * @return Agent password to authenticate on node.
      */
     public String nodePassword() {
-        return !F.isEmpty(nodePwd) ? nodePwd : getPasswordFromKeyStore("node-password");
+        return F.isEmpty(nodePwd) ?  getPasswordFromKeyStore("node-password") : nodePwd;
     }
 
     /**
@@ -319,7 +319,7 @@ public class AgentConfiguration {
      * @return Node key store password.
      */
     public String nodeKeyStorePassword() {
-        return !F.isEmpty(nodeKeyStorePass) ? nodeKeyStorePass : getPasswordFromKeyStore("node-key-store-password");
+        return F.isEmpty(nodeKeyStorePass) ?  getPasswordFromKeyStore("node-key-store-password") : nodeKeyStorePass;
     }
 
     /**
@@ -353,7 +353,7 @@ public class AgentConfiguration {
      * @return Node trust store password.
      */
     public String nodeTrustStorePassword() {
-        return !F.isEmpty(nodeTrustStorePass) ? nodeTrustStorePass : getPasswordFromKeyStore("node-trust-store-password");
+        return F.isEmpty(nodeTrustStorePass) ? getPasswordFromKeyStore("node-trust-store-password") : nodeTrustStorePass;
     }
 
     /**
@@ -387,7 +387,7 @@ public class AgentConfiguration {
      * @return Server key store password.
      */
     public String serverKeyStorePassword() {
-        return !F.isEmpty(srvKeyStorePass) ? srvKeyStorePass : getPasswordFromKeyStore("server-key-store-password");
+        return F.isEmpty(srvKeyStorePass) ? getPasswordFromKeyStore("server-key-store-password") : srvKeyStorePass;
     }
 
     /**
@@ -421,7 +421,7 @@ public class AgentConfiguration {
      * @return Server trust store password.
      */
     public String serverTrustStorePassword() {
-        return !F.isEmpty(srvTrustStorePass) ? srvTrustStorePass : getPasswordFromKeyStore("server-trust-store-password");
+        return F.isEmpty(srvTrustStorePass) ? getPasswordFromKeyStore("server-trust-store-password") : srvTrustStorePass;
     }
 
     /**

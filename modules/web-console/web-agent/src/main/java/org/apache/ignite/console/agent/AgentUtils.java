@@ -340,7 +340,7 @@ public class AgentUtils {
      */
     public static String getPasswordFromKeyStore(String name, String keyStorePath, String keyStorePwd) {
         if (F.isEmpty(keyStorePath))
-            throw new IgniteException("The passwords key store path can't be empty!");
+            throw new IgniteException("Empty path to key store with passwords");
 
         try {
             KeyStore ks = KeyStore.getInstance("PKCS12");
@@ -356,12 +356,12 @@ public class AgentUtils {
         }
         catch (IOException e) {
             if (e.getCause() instanceof UnrecoverableKeyException)
-                throw new IgniteException("Failed to read password from key store, please check key store password!", e);
+                throw new IgniteException("Failed to read password from key store, please check key store password", e);
 
-            throw new IgniteException("Fail to open passwords key store by path: " + keyStorePath, e);
+            throw new IgniteException("Failed to open passwords key store: " + keyStorePath, e);
         }
         catch (GeneralSecurityException e) {
-            throw new IgniteException("Failed to read password from key store!", e);
+            throw new IgniteException("Failed to read password from key store", e);
         }
     }
 }
