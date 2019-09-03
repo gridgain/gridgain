@@ -268,15 +268,13 @@ namespace ignite
 
         JniErrorInfo jniErr;
 
-        SharedPointer<IgniteEnvironment> env = SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg0));
+        SP_IgniteEnvironment* penv = IgniteEnvironment::Create(cfg0);
 
         JvmOptions opts;
         opts.FromConfiguration(cfg, home, cp);
 
-        std::auto_ptr< SharedPointer<IgniteEnvironment> > envTarget(new SharedPointer<IgniteEnvironment>(env));
-
         SharedPointer<JniContext> ctx(
-            JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(envTarget.get()), &jniErr));
+            JniContext::Create(opts.GetOpts(), opts.GetSize(), penv->Get()->GetJniHandlers(penv), &jniErr));
 
         if (!ctx.Get())
         {
@@ -285,7 +283,7 @@ namespace ignite
             return Ignite();
         }
 
-        env.Get()->SetContext(ctx);
+        penv->Get()->SetContext(ctx);
 
         // 6. Start Ignite.
 
@@ -308,11 +306,7 @@ namespace ignite
 
         ctx.Get()->IgnitionStart(&springCfgPath0[0], namep, 2, mem.PointerLong(), &jniErr);
 
-        // Releasing control over environment as it is controlled by Java at this point.
-        // Even if the call has failed environment are going to be released by the Java.
-        envTarget.release();
-
-        if (!env.Get()->GetProcessor() || jniErr.code != java::IGNITE_JNI_ERR_SUCCESS)
+        if (!penv->Get()->GetProcessor() || jniErr.code != java::IGNITE_JNI_ERR_SUCCESS)
         {
             IgniteError::SetError(jniErr.code, jniErr.errCls, jniErr.errMsg, err);
 
@@ -320,15 +314,15 @@ namespace ignite
         }
 
         // 7. Ignite is started at this point.
-        env.Get()->Initialize();
+        penv->Get()->Initialize();
 
         started = true;
 
         guard.Reset();
 
-        env.Get()->ProcessorReleaseStart();
+        penv->Get()->ProcessorReleaseStart();
 
-        IgniteImpl* impl = new IgniteImpl(env);
+        IgniteImpl* impl = new IgniteImpl(*penv);
 
         return Ignite(impl);
     }

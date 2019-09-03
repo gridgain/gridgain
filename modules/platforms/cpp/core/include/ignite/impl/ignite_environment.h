@@ -35,6 +35,7 @@ namespace ignite
     namespace impl
     {
         /* Forward declarations. */
+        class IgniteEnvironment;
         class IgniteBindingImpl;
         class ModuleManager;
         class ClusterNodesHolder;
@@ -65,11 +66,12 @@ namespace ignite
             enum { DEFAULT_SLOW_PATH_CONTAINERS_CAP = 16 };
 
             /**
-             * Constructor.
+             * Factory method. Create new instance of the class.
              *
              * @param cfg Node configuration.
+             * @return Pointer to shared pointer to new instance.
              */
-            IgniteEnvironment(const IgniteConfiguration& cfg);
+            static SP_IgniteEnvironment* Create(const IgniteConfiguration& cfg);
 
             /**
              * Destructor.
@@ -318,6 +320,13 @@ namespace ignite
             friend long long IGNITE_CALL InLongOutLong(void* target, int type, long long val);
 
         private:
+            /**
+             * Constructor.
+             *
+             * @param cfg Node configuration.
+             */
+            IgniteEnvironment(const IgniteConfiguration& cfg);
+
             /** Node configuration. */
             IgniteConfiguration* cfg;
 

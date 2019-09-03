@@ -40,7 +40,47 @@ namespace ignite
 {
     namespace impl
     {
-        typedef common::concurrent::SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
+        namespace
+        {
+            /*
+             * Stores IgniteEnvironment shared pointers.
+             */
+            class IgniteEnvironmentSPHolder
+            {
+                CriticalSection ptrsLock;
+                std::set<SharedPointer<IgniteEnvironment>*> ptrs;
+            public:
+                IgniteEnvironmentSPHolder() :
+                    ptrsLock()
+                {
+                    // No-op.
+                }
+
+                void AddSP(SharedPointer<IgniteEnvironment>* penv)
+                {
+                    CsLockGuard mtx(ptrsLock);
+
+                    ptrs.insert(penv);
+                }
+
+                void DeleteSP(SharedPointer<IgniteEnvironment>* penv)
+                {
+                    CsLockGuard mtx(ptrsLock);
+
+                    ptrs.erase(penv);
+
+                    delete penv;
+                }
+
+                ~IgniteEnvironmentSPHolder()
+                {
+                    std::set<SharedPointer<IgniteEnvironment>*>::iterator it;
+                    for (it = ptrs.begin(); it != ptrs.end(); ++it)
+                        delete* it;
+                }
+
+            } EnvSPHolder;
+        }
 
         /**
          * Callback codes.
@@ -91,6 +131,8 @@ namespace ignite
                 GET_COMPUTE = 31
             };
         };
+
+        typedef SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
 
         /*
          * Stores cluster nodes in thread-safe manner.
@@ -164,7 +206,7 @@ namespace ignite
 
                 case OperationCallback::ON_STOP:
                 {
-                    delete env;
+                    EnvSPHolder.DeleteSP(env);
 
                     break;
                 }
@@ -323,6 +365,15 @@ namespace ignite
             }
 
             return res;
+        }
+
+        SP_IgniteEnvironment* IgniteEnvironment::Create(const IgniteConfiguration& cfg)
+        {
+            SP_IgniteEnvironment* penv = new SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg));
+
+            EnvSPHolder.AddSP(penv);
+
+            return penv;
         }
 
         IgniteEnvironment::IgniteEnvironment(const IgniteConfiguration& cfg) :
