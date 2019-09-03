@@ -18,16 +18,50 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
     using NUnit.Framework;
 
+    /// <summary>
+    ///  Cluster API tests for thin client.
+    /// </summary>
     public class ClientClusterTests : ClientTestBase
     {
+
         /// <summary>
-        /// Tests cluster status.
+        /// Test cluster activation
         /// </summary>
         [Test]
-        public void TestClusterShouldBeActive()
+        public void TestClusterActivation()
         {
             var clientCluster = Client.GetCluster();
+            clientCluster.SetActive(true);
             Assert.IsTrue(clientCluster.IsActive());
         }
+
+        /// <summary>
+        /// Test cluster activation
+        /// </summary>
+        [Test]
+        public void TestClusterDeactivation()
+        {
+            var clientCluster = Client.GetCluster();
+            try
+            {
+                clientCluster.SetActive(false);
+                Assert.IsFalse(clientCluster.IsActive());
+            }
+            finally
+            {
+                //tear down logic requires active cluster
+                clientCluster.SetActive(true);
+            }
+        }
+
+        [Test]
+        public void TestForAttributesRequest()
+        {
+            var clientCluster = Client.GetCluster();
+            var dotNetCluster = clientCluster.ForDotNet();
+
+            Assert.IsNotNull(dotNetCluster);
+        }
+
     }
 }

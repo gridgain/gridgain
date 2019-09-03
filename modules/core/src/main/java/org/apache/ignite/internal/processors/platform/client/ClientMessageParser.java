@@ -67,6 +67,8 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStatusRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterForAttributeRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGetRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
 
@@ -218,10 +220,7 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     private static final short OP_CLUSTER_IS_ACTIVE = 4002;
 
     /** */
-    private static final short OP_CLUSTER_ACTIVATE = 4003;
-
-    /** */
-    private static final short OP_CLUSTER_DEACTIVATE = 4003;
+    private static final short OP_CLUSTER_CHANGE_STATE = 4003;
 
 
     /* Custom queries working through processors registry. */
@@ -405,8 +404,14 @@ public class ClientMessageParser implements ClientListenerMessageParser {
             case OP_CLUSTER_GET:
                 return new ClientClusterGetRequest(reader);
 
+            case OP_CLUSTER_FOR_ATTRIBUTES:
+                return new ClientClusterForAttributeRequest(reader);
+
             case OP_CLUSTER_IS_ACTIVE:
                 return new ClientClusterIsActiveRequest(reader);
+
+            case OP_CLUSTER_CHANGE_STATE:
+                return new ClientClusterChangeStatusRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);

@@ -72,8 +72,7 @@ namespace Apache.Ignite.Core.Impl.Client
         // Cluster.
         ClusterGet = 4000,
         ClusterForAttributes = 4001,
-        ClusterIsActivate = 4002,
-        ClusterActivate = 4003,
-        ClusterDeactivate = 4004,
+        ClusterIsActive = 4002,
+        ClusterChangeState = 4003,
     }
 }

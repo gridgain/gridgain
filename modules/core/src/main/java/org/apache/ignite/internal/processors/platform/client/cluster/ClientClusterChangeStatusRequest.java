@@ -16,34 +16,33 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.binary.BinaryRawReader;
+import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
-import org.apache.ignite.internal.processors.platform.client.ClientLongResponse;
-import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cluster get request.
+ * Cluster status request
  */
-public class ClientClusterGetRequest extends ClientRequest {
+public class ClientClusterChangeStatusRequest extends ClientClusterRequest {
+
+    private final boolean shouldBeActive;
+
     /**
      * Constructor.
      *
-     * @param reader Reader.
+     * @param reader Reader/
      */
-    public ClientClusterGetRequest(BinaryRawReader reader) {
+    public ClientClusterChangeStatusRequest(BinaryRawReader reader) {
         super(reader);
+        shouldBeActive = reader.readBoolean();
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
-
-        IgniteCluster cluster = ctx.kernalContext().grid().cluster();
-        ClientCluster clientCluster = new ClientCluster(cluster);
-
-        long resId = ctx.resources().put(clientCluster);
-        return new ClientLongResponse(requestId(), resId);
+        ClientCluster clientCluster = ctx.resources().get(clusterId);
+        clientCluster.changeGridState(shouldBeActive);
+        return new ClientBooleanResponse(requestId(), clientCluster.isActive());
     }
 }

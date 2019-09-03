@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,34 +16,37 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientLongResponse;
-import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cluster get request.
+ * Cluster for attribute request
  */
-public class ClientClusterGetRequest extends ClientRequest {
+public class ClientClusterForAttributeRequest extends ClientClusterRequest {
+
+    /**  Attribute name. */
+    private final String name;
+    /**  Attribute value. */
+    private final String val;
+
     /**
      * Constructor.
      *
-     * @param reader Reader.
+     * @param reader Reader/
      */
-    public ClientClusterGetRequest(BinaryRawReader reader) {
+    public ClientClusterForAttributeRequest(BinaryRawReader reader) {
         super(reader);
+        name = reader.readString();
+        val = reader.readString();
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
-
-        IgniteCluster cluster = ctx.kernalContext().grid().cluster();
-        ClientCluster clientCluster = new ClientCluster(cluster);
-
-        long resId = ctx.resources().put(clientCluster);
-        return new ClientLongResponse(requestId(), resId);
+        ClientCluster clientCluster = ctx.resources().get(clusterId);
+        long newPtr = ctx.resources().put(clientCluster.forAttribute(name, val));
+        return new ClientLongResponse(requestId(), newPtr);
     }
 }
