@@ -591,9 +591,8 @@ public class SchemaManager {
 
         try {
             // Populate index with existing cache data.
-            final GridH2RowDescriptor rowDesc = h2Tbl.rowDescriptor();
-
             IndexRebuildPartialClosure idxBuild = new IndexRebuildPartialClosure(h2Tbl.cacheContext());
+
             idxBuild.addIndex(h2Tbl, h2Idx);
 
             cacheVisitor.visit(idxBuild);
