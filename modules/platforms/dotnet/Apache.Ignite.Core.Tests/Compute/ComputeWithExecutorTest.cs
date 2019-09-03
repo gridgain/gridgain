@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             var cfg1 = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                SpringConfigUrl = @"Config\Compute\compute-grid1.xml"
+                SpringConfigUrl = @"Config\Compute\compute-grid-custom-executor.xml"
             };
 
             _springConfigGrid = Ignition.Start(cfg1);
@@ -58,7 +58,8 @@ namespace Apache.Ignite.Core.Tests.Compute
                     },
                     new ExecutorConfiguration
                     {
-                        // TODO: Will this fail?
+                        Name = "dotNetExecutor2",
+                        Size = 1
                     }
                 }
             };
@@ -79,12 +80,16 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Tests custom executors.
         /// </summary>
         [Test]
-        [TestCase("dotNetExecutor", "dotNetExecutor-#")]
-        [TestCase("invalid", "pub-#")]
-        public void TestWithExecutor(string executorName, string expectedThreadNamePrefix)
+        [TestCase("dotNetExecutor", "dotNetExecutor-#", true)]
+        [TestCase("dotNetExecutor2", "pub-#", true)]
+        [TestCase("invalid", "pub-#", true)]
+        [TestCase("dotNetExecutor", "dotNetExecutor-#", false)]
+        [TestCase("dotNetExecutor2", "dotNetExecutor2-#", false)]
+        [TestCase("invalid", "pub-#", false)]
+        public void TestWithExecutor(string executorName, string expectedThreadNamePrefix, bool springConfig)
         {
-            // TODO: Check both grids, use local node only.
-            var compute = _springConfigGrid.GetCompute();
+            var grid = springConfig ? _springConfigGrid : _codeConfigGrid;
+            var compute = grid.GetCluster().ForLocal().GetCompute();
             var computeWithExecutor = compute.WithExecutor(executorName);
 
             var res = computeWithExecutor.ExecuteJavaTask<string>(ThreadNameTask, null);
