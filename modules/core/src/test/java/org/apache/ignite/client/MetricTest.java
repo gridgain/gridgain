@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -38,47 +39,54 @@ import static org.junit.Assert.assertNotNull;
  * High Availability tests.
  */
 public class MetricTest {
-    /** */
-    private static String METRICS_NAMESPACE_CLIENT = "client";
+    /** Default thin client disconnect timeout in msecs. */
+    public static final int DEFAULT_CLIENT_DISCONNECT_TIMEOUT = 1000;
 
     /** */
-    private static String METRICS_NAMESPACE_SESSIONS = METRICS_NAMESPACE_CLIENT + ".sessions";
+    private static final String METRICS_NAMESPACE_CLIENT = "client";
 
     /** */
-    private static String METRICS_NAMESPACE_SESSIONS_THIN = METRICS_NAMESPACE_SESSIONS + ".thin";
+    private static final String METRICS_NAMESPACE_SESSIONS = METRICS_NAMESPACE_CLIENT + ".sessions";
 
     /** */
-    private static String METRICS_NAMESPACE_REQUESTS_THIN = METRICS_NAMESPACE_CLIENT + ".requests.thin";
+    private static final String METRICS_NAMESPACE_SESSIONS_THIN = METRICS_NAMESPACE_SESSIONS + ".thin";
 
     /** */
-    private static String METRIC_SESSIONS_WAITING = METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
+    private static final String METRICS_NAMESPACE_REQUESTS_THIN = METRICS_NAMESPACE_CLIENT + ".requests.thin";
 
     /** */
-    private static String METRIC_SESSIONS_REJECTED_DUE_TIMEOUT = METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
+    private static final String METRIC_SESSIONS_WAITING = METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
 
     /** */
-    private static String METRIC_SESSIONS_REJECTED_DUE_PARSING = METRICS_NAMESPACE_SESSIONS + ".rejectedDueParsingError";
+    private static final String METRIC_SESSIONS_REJECTED_DUE_TIMEOUT =
+        METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
 
     /** */
-    private static String METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE = METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueHandshakeParams";
+    private static final String METRIC_SESSIONS_REJECTED_DUE_PARSING =
+        METRICS_NAMESPACE_SESSIONS + ".rejectedDueParsingError";
 
     /** */
-    private static String METRIC_SESSIONS_REJECTED_DUE_AUTH = METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueAuthentication";
+    private static final String METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE =
+        METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueHandshakeParams";
 
     /** */
-    private static String METRIC_SESSIONS_ACCEPTED = METRICS_NAMESPACE_SESSIONS_THIN + ".accepted";
+    private static final String METRIC_SESSIONS_REJECTED_DUE_AUTH =
+        METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueAuthentication";
 
     /** */
-    private static String METRIC_SESSIONS_ACTIVE = METRICS_NAMESPACE_SESSIONS_THIN + ".active";
+    private static final String METRIC_SESSIONS_ACCEPTED = METRICS_NAMESPACE_SESSIONS_THIN + ".accepted";
 
     /** */
-    private static String METRIC_SESSIONS_CLOSED = METRICS_NAMESPACE_SESSIONS_THIN + ".closed";
+    private static final String METRIC_SESSIONS_ACTIVE = METRICS_NAMESPACE_SESSIONS_THIN + ".active";
 
     /** */
-    private static String METRIC_REQUESTS_HANDLED = METRICS_NAMESPACE_REQUESTS_THIN + ".handled";
+    private static final String METRIC_SESSIONS_CLOSED = METRICS_NAMESPACE_SESSIONS_THIN + ".closed";
 
     /** */
-    private static String METRIC_REQUESTS_FAILED = METRICS_NAMESPACE_REQUESTS_THIN + ".failed";
+    private static final String METRIC_REQUESTS_HANDLED = METRICS_NAMESPACE_REQUESTS_THIN + ".handled";
+
+    /** */
+    private static final String METRIC_REQUESTS_FAILED = METRICS_NAMESPACE_REQUESTS_THIN + ".failed";
 
 
     /** Per test timeout */
@@ -86,10 +94,10 @@ public class MetricTest {
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
 
     /**
-     * Thin clint failover.
+     * Tests metrics in subsequent connection scenario.
      */
     @Test
-    public void testSessions() throws Exception {
+    public void testSessionsSubsequent() throws Exception {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
 
@@ -101,7 +109,7 @@ public class MetricTest {
                 checkNothingRejected();
             }
 
-            Thread.sleep(100);
+            waitClientDisconnect(1);
 
             assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
             assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
@@ -120,7 +128,7 @@ public class MetricTest {
                 checkNothingRejected();
             }
 
-            Thread.sleep(100);
+            waitClientDisconnect(2);
 
             assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
             assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
@@ -129,6 +137,73 @@ public class MetricTest {
 
             checkNothingRejected();
         }
+    }
+
+    /**
+     * Tests metrics in parallel connection scenario.
+     */
+    @Test
+    public void testSessionsParallel() throws Exception {
+        try (Ignite ignored = startNode()) {
+            try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
+
+                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+
+                checkNothingRejected();
+
+                try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration())) {
+
+                    assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
+                    assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
+                    assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
+                    assertEquals(0, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+
+                    checkNothingRejected();
+                }
+
+                waitClientDisconnect(1);
+
+                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+
+                checkNothingRejected();
+            }
+
+            waitClientDisconnect(2);
+
+            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
+            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
+            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
+            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+
+            checkNothingRejected();
+        }
+    }
+
+    /**
+     * Wait until client disconnects.
+     * @param disconnected How much clients should be disconnected.
+     */
+    private static void waitClientDisconnect(int disconnected) throws Exception {
+        waitIntMetricChange(METRIC_SESSIONS_CLOSED, disconnected);
+    }
+
+    /**
+     * Wait for metric to change.
+     * @param metric Metric.
+     * @param value Expeced value.
+     */
+    private static void waitIntMetricChange(String metric, int value) throws Exception {
+        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                return getIntMetricValue(metric) == value;
+            }
+        }, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
     }
 
     /**
