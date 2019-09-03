@@ -37,9 +37,12 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /** Context. */
     private GridKernalContext ctx;
 
+    /**
+     * @param ctx Context.
+     */
     public NodeConfigurationExporter(GridKernalContext ctx) {
         this.ctx = ctx;
-        this.snd = createSender();
+        this.snd = new CoordinatorSender<>(ctx, QUEUE_CAP, NODE_CONFIGURATION_TOPIC);
     }
 
     /**
@@ -52,12 +55,5 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         U.closeQuiet(snd);
-    }
-
-    /**
-     * @return Worker which send messages from queue to topic.
-     */
-    private CoordinatorSender<IgniteConfigurationWrapper> createSender() {
-        return new CoordinatorSender<>(ctx, QUEUE_CAP, NODE_CONFIGURATION_TOPIC);
     }
 }
