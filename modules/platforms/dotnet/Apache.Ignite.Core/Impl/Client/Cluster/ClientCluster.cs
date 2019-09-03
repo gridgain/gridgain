@@ -18,34 +18,53 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
     /// Ignite client cluster implementation.
     /// </summary>
     internal class ClientCluster : IClientCluster
     {
+        /** Attribute: platform. */
+        private const string AttrPlatform = "org.apache.ignite.platform";
+
+        /** Platform. */
+        private const string Platform = "dotnet";
+
         /** Ignite. */
         private readonly IgniteClient _ignite;
 
         /** Cluster pointer. */
         private readonly long _ptr;
 
+        /** Marshaller. */
+        private readonly Marshaller _marsh;
+
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="ptr">Remote cluster object pointer.</param>
-        public ClientCluster(IgniteClient ignite, long ptr)
+        public ClientCluster(IgniteClient ignite, Marshaller marsh, long ptr)
         {
             _ignite = ignite;
+            _marsh = marsh;
             _ptr = ptr;
         }
 
         /** <inheritdoc /> */
         public IClientClusterGroup ForAttribute(string name, string val)
         {
-            throw new NotImplementedException();
+            Action<BinaryWriter> action = writer =>
+            {
+                writer.WriteString(name);
+                writer.WriteString(val);
+            };
+            var newPtr = DoOutInOp(ClientOp.ClusterForAttributes, action, r => r.ReadLong());
+            return new ClientCluster(_ignite, _marsh, newPtr);
         }
 
         /** <inheritdoc /> */
@@ -57,19 +76,19 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public IClientClusterGroup ForDotNet()
         {
-            throw new NotImplementedException();
+            return ForAttribute(AttrPlatform, Platform);
         }
 
         /** <inheritdoc /> */
         public void SetActive(bool isActive)
         {
-            throw new NotImplementedException();
+            DoOutInOp(ClientOp.ClusterChangeState, w => w.WriteBoolean(isActive), r => r.ReadBool());
         }
 
         /** <inheritdoc /> */
         public bool IsActive()
         {
-            return _ignite.Socket.DoOutInOp(ClientOp.ClusterIsActivate, w => w.WriteLong(_ptr), s => s.ReadBool());
+            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -82,6 +101,41 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         public void EnableWal(string cacheName)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Does the out in op.
+        /// </summary>
+        private T DoOutInOp<T>(ClientOp opId, Action<BinaryWriter> writeAction,
+            Func<IBinaryStream, T> readFunc)
+        {
+            return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
+                readFunc, HandleError<T>);
+        }
+
+        /// <summary>
+        /// Writes the request.
+        /// </summary>
+        private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
+        {
+            stream.WriteLong(_ptr);
+
+            if (writeAction != null)
+            {
+                var writer = _marsh.StartMarshal(stream);
+
+                writeAction(writer);
+
+                _marsh.FinishMarshal(writer);
+            }
+        }
+
+        /// <summary>
+        /// Handles the error.
+        /// </summary>
+        private T HandleError<T>(ClientStatusCode status, string msg)
+        {
+            throw new IgniteClientException(msg, null, status);
         }
     }
 }
