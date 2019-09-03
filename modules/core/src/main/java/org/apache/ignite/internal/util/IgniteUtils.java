@@ -574,10 +574,6 @@ public abstract class IgniteUtils {
     public static boolean IGNITE_MBEANS_DISABLED =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_MBEANS_DISABLED);
 
-    /** Ignite test features enabled flag. */
-    public static boolean IGNITE_TEST_FEATURES_ENABLED =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED);
-
     /** */
     private static final boolean assertionsEnabled;
 
@@ -5402,6 +5398,9 @@ public abstract class IgniteUtils {
      * @param obj Object.
      */
     public static int hashCode(Object obj) {
+        if(obj == null)
+            return 0;
+
         if (obj.getClass().isArray()) {
             if (obj instanceof byte[])
                 return Arrays.hashCode((byte[])obj);
@@ -9365,7 +9364,28 @@ public abstract class IgniteUtils {
                         IgniteSystemProperties.IGNITE_WORK_DIR + ") must be explicitly set."
                 );
 
-            workDir = new File(userDir, DEFAULT_WORK_DIR);
+            File igniteDir = new File(userDir, "ignite");
+
+            try {
+                igniteDir.mkdirs();
+
+                File readme = new File(igniteDir, "README.txt");
+
+                if (!readme.exists()) {
+                    U.writeStringToFile(readme,
+                        "This is GridGain working directory that contains information that \n" +
+                        "    GridGain nodes need in order to function normally.\n" +
+                        "Don't delete it unless you're sure you know what you're doing.\n\n" +
+                        "You can change the location of working directory with \n" +
+                        "    igniteConfiguration.setWorkingDirectory(location) or \n" +
+                        "    <property name=\"workingDirectory\" value=\"location\"/> in IgniteConfiguration <bean>.\n");
+                }
+            }
+            catch (Exception e) {
+                // Ignore.
+            }
+
+            workDir = new File(igniteDir, DEFAULT_WORK_DIR);
         }
 
         if (!workDir.isAbsolute())
@@ -11483,7 +11503,7 @@ public abstract class IgniteUtils {
     private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
         /** */
         private static final long serialVersionUID = 0L;
-        
+
         /** */
         public WriteLockTracer(ReentrantReadWriteLock lock) {
             super(lock);
