@@ -154,7 +154,7 @@ public class AgentsService extends AbstractSocketHandler {
                     if (nid != null)
                         transitionSrvc.sendResponse(nid, evt);
                     else
-                        log.warn("Request ID not found for response: " + evt);
+                        log.warn("Detected response with duplicated or unexpected ID: " + evt);
                 }
                 catch (ClusterGroupEmptyException ignored) {
                     // No-op.
