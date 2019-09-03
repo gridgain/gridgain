@@ -22,9 +22,6 @@ import { Stacktrace } from 'app/types/index';
 export default class {
     static $inject = ['$modal'];
 
-    /**
-     * @param {mgcrea.ngStrap.modal.IModalService} $modal
-     */
     constructor(private $modal: mgcrea.ngStrap.modal.IModalService) {}
 
     show(title: string, stacktrace: Stacktrace) {

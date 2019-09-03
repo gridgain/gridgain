@@ -15,7 +15,4 @@
  */
 
 export default class StacktraceViewer {
-    $onInit() {
-        this.expanded = false;
-    }
 }

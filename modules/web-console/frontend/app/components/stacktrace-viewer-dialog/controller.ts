@@ -26,8 +26,8 @@ export default class {
     stacktrace: Stacktrace;
 
     /**
-     * @param {string} title Title of stacktrace view dialog.
-     * @param {Stacktrace} stacktrace Stacktrace elements to show.
+     * @param title Title of stacktrace view dialog.
+     * @param stacktrace Stacktrace elements to show.
      */
     constructor(title: string, stacktrace: Stacktrace) {
         this.title = title;

@@ -2177,7 +2177,7 @@ export class NotebookCtrl {
                         const content = {message: errorParser.extractFullMessage(item)};
 
                         if (!_.isEmpty(item.stackTrace))
-                            content.stacktrace = _.map(item.stackTrace, (message) => ({ message }));
+                            content.stacktrace = item.stackTrace;
 
                         stacktrace.push(content);
 

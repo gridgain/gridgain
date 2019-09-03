@@ -78,7 +78,8 @@ export const FAKE_CLUSTERS = {
             },
             clusterVersion: '8.8.0-SNAPSHOT',
             active: true,
-            secured: false
+            secured: false,
+            supportedFeatures: ''
         },
         {
             id: '70831a7c-2b5e-4c11-8c08-5888911d5963',
@@ -92,7 +93,8 @@ export const FAKE_CLUSTERS = {
             },
             clusterVersion: '8.8.0-SNAPSHOT',
             active: true,
-            secured: false
+            secured: false,
+            supportedFeatures: ''
         }
     ]
 };
@@ -137,11 +139,14 @@ export const SIMPLE_FAILED_QUERY_RESPONSE = {
             'Outer error trace 2'
         ],
         cause: {
-            message:'Inner error message',
+            message: 'Inner error message',
             stackTrace: [
                 'Inner error trace 1',
                 'Inner error trace 2'
             ],
+            cause: {
+                message: 'Cause without stacktrace'
+            }
         }
     },
     result: null

@@ -90,8 +90,5 @@ export type BsSelectDropdownActions = BsSelectDropdownAction[]
 
 export type Stacktrace = {
     message: string,
-    stacktrace: [{
-        message: string
-    }],
-    expanded: boolean
+    stacktrace: string[]
 };

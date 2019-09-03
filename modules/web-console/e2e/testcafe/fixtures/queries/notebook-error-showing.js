@@ -44,7 +44,7 @@ fixture('Notebook')
         await dropTestDB();
     });
 
-test.only('Show stack trace on query failure.', async(t) => {
+test('Show stack trace on query failure.', async(t) => {
     const notebooks = new PageQueriesNotebooksList();
     const query = `SELECT * FROM Person;`;
     const paragraph = new Paragraph('Query');
@@ -62,5 +62,7 @@ test.only('Show stack trace on query failure.', async(t) => {
         .expect(showStacktraceDialog.rootCause.innerText).contains('Outer error message')
         .click(showStacktraceDialog.rootCause)
         .expect(showStacktraceDialog.rootCauseFirstStacktraceLine.innerText).contains('Outer error trace 1')
+        .click(showStacktraceDialog.causeWithoutStacktrace)
+        .expect(showStacktraceDialog.downloadLink.exists).ok()
         .click(showStacktraceDialog.okButton);
 });

@@ -26,7 +26,7 @@ export class Paragraph extends PanelCollapsible {
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');
-        this.clearResultButton = this.body.find('i.fa.fa-eraser')
+        this.clearResultButton = this.body.find('i.fa.fa-eraser');
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
     }
     async enterQuery(text, options = {replace: false}) {
@@ -59,5 +59,7 @@ export const showStacktraceDialog = {
     rootCause: stacktraceDialogRootCause,
     rootCauseMsg: stacktraceDialogRootCause.find('span'),
     rootCauseFirstStacktraceLine: stacktraceDialogRootCauseLine,
+    causeWithoutStacktrace: showStacktraceDialogSelector.find('.stacktrace-viewer__cause').withText('Cause without stacktrace'),
+    downloadLink: showStacktraceDialogSelector.find('a').withText('GridGain since 8.8.1'),
     okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
 };
