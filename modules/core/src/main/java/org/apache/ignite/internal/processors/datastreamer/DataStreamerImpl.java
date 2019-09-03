@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -74,7 +74,8 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.CacheStoppedException;
+import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -86,6 +87,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -369,16 +371,12 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         GridCacheAdapter cache = ctx.cache().internalCache(cacheName);
 
-        if (cache == null) { // Possible, cache is not configured on node.
-            assert ccfg != null;
+        assert ccfg != null;
 
-            if (ccfg.getCacheMode() == CacheMode.LOCAL)
-                throw new CacheException("Impossible to load Local cache configured remotely.");
+        if (cache == null && ccfg.getCacheMode() == CacheMode.LOCAL)
+            throw new CacheException("Impossible to load Local cache configured remotely.");
 
-            ctx.grid().getOrCreateCache(ccfg);
-        }
-
-        ensureCacheStarted();
+        ctx.grid().getOrCreateCache(ccfg);
     }
 
     /** {@inheritDoc} */
@@ -845,8 +843,19 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
             AffinityTopologyVersion topVer;
 
-            if (!cctx.isLocal())
-                topVer = ctx.cache().context().exchange().lastTopologyFuture().get();
+            if (!cctx.isLocal()) {
+                GridDhtPartitionsExchangeFuture exchFut = ctx.cache().context().exchange().lastTopologyFuture();
+
+                if (!exchFut.isDone()) {
+                    ExchangeActions acts = exchFut.exchangeActions();
+
+                    if (acts != null && acts.cacheStopped(CU.cacheId(cacheName)))
+                        throw new CacheStoppedException(cacheName);
+                }
+
+                // It is safe to block here even if the cache gate is acquired.
+                topVer = exchFut.get();
+            }
             else
                 topVer = ctx.cache().context().exchange().readyAffinityVersion();
 
@@ -1454,30 +1463,6 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             return;
 
         ctx.security().authorize(cacheName, perm);
-    }
-
-    /**
-     * Ensures that cache has been started and is ready to store streamed data.
-     */
-    private void ensureCacheStarted() {
-        DynamicCacheDescriptor desc = ctx.cache().cacheDescriptor(cacheName);
-
-        assert desc != null;
-
-        if (desc.startTopologyVersion() == null)
-            return;
-
-        IgniteInternalFuture<?> affReadyFut = ctx.cache().context().exchange()
-            .affinityReadyFuture(desc.startTopologyVersion());
-
-        if (affReadyFut != null) {
-            try {
-                affReadyFut.get();
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex);
-            }
-        }
     }
 
     /**
