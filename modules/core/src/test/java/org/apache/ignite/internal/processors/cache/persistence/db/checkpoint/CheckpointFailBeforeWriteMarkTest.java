@@ -150,7 +150,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
 
         //when: Load a lot of data to cluster.
         AtomicInteger lastKey = new AtomicInteger();
-        GridTestUtils.runAsync(() -> {
+        GridTestUtils.runMultiThreadedAsync(() -> {
             IgniteCache<Integer, Object> cache2 = ignite(0).cache(DEFAULT_CACHE_NAME);
 
             //Should stopped putting data when node is fail.
@@ -162,15 +162,15 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
                 if (i % 1000 == 0)
                     log.info("WRITE : " + i);
             }
-        });
+        }, 3, "LOAD-DATA");
 
         //and: Page replacement was started.
-        assertTrue(waitForCondition(pageReplacementStarted::get, 10_000));
+        assertTrue(waitForCondition(pageReplacementStarted::get, 20_000));
 
         //and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
         interceptorIOFactory.triggerIOException((file) -> file.getName().endsWith("START.bin.tmp"));
 
-        assertTrue(waitForCondition(() -> G.allGrids().isEmpty(), 10_000));
+        assertTrue(waitForCondition(() -> G.allGrids().isEmpty(), 20_000));
 
         //then: Data recovery after node start should be successful.
         startGrid(0);

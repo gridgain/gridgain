@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.internal.pagemem.FullPageId;
 
@@ -49,7 +50,10 @@ class CheckpointPages {
         if (checkpointPages == null || allowToEvict == null)
             return false;
 
-        return allowToEvict.getAsBoolean() && checkpointPages.contains(fullPageId);
+        while(!allowToEvict.getAsBoolean())
+            LockSupport.parkNanos(10);
+
+        return checkpointPages.contains(fullPageId);
     }
 
     /**

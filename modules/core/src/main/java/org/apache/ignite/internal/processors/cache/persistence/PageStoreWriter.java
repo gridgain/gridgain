@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.nio.ByteBuffer;
+import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.store.PageStore;
@@ -30,7 +31,7 @@ public interface PageStoreWriter {
      * Callback for write page. {@link PageMemoryEx} will copy page content to buffer before call.
      *
      * @param fullPageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
-     *      the {@link PageMemoryEx#beginCheckpoint(java.util.concurrent.atomic.AtomicBoolean)} method call.
+     *      the {@link PageMemoryEx#beginCheckpoint(BooleanSupplier)} method call.
      * @param buf Temporary buffer to write changes into.
      * @param tag  {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
      * @throws IgniteCheckedException If write page failed.

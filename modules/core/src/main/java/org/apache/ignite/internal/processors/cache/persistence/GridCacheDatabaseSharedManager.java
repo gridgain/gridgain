@@ -210,9 +210,9 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.METASTORE_DATA_RECORD;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.fromOrdinal;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.FINISHED;
-import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.PAGE_COUNTED;
-import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.READY_TO_START;
-import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.STORED_TO_DISK;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.LOCK_RELEASED;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.LOCK_TAKEN;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.MARKER_STORED_TO_DISK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_FILE_MATCHER;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
@@ -4296,7 +4296,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 //There are allowable to evict pages only after checkpoint entry was stored to disk.
                 GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
-                    beginAllCheckpoints(() -> curr.isState(STORED_TO_DISK));
+                    beginAllCheckpoints(() -> curr.isState(MARKER_STORED_TO_DISK));
 
                 cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
@@ -4336,7 +4336,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, hasPages, hasUserPages);
 
-            curr.state(PAGE_COUNTED);
+            curr.cpBeginFut.onDone();
 
             for (DbCheckpointListener lsnr : lsnrs)
                 lsnr.onCheckpointBegin(ctx);
@@ -4364,7 +4364,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 writeCheckpointEntry(tmpWriteBuf, cp, CheckpointEntryType.START);
 
-                curr.state(STORED_TO_DISK);
+                curr.state(MARKER_STORED_TO_DISK);
 
                 GridMultiCollectionWrapper<FullPageId> cpPages = splitAndSortCpPagesIfNeeded(
                     cpPagesTuple, persistenceCfg.getCheckpointThreads());
@@ -4543,7 +4543,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             synchronized (this) {
                 curr = scheduledCp;
 
-                curr.state(READY_TO_START);
+                curr.state(LOCK_TAKEN);
 
                 if (curr.reason == null)
                     curr.reason = "timeout";
@@ -4688,7 +4688,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 removeCheckpointFiles(cp);
 
             if (chp.progress != null)
-                chp.progress.state(FINISHED);;
+                chp.progress.cpFinishFut.onDone();
         }
 
         /** {@inheritDoc} */
@@ -5208,14 +5208,22 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** Scheduled time of checkpoint. */
         private volatile long nextCpNanos;
 
-        /** Checkpoint begin phase future. */
-        private GridFutureAdapter cpBeginFut = new GridFutureAdapter<>();
+        /** Checkpoint begin phase future. TODO it should be encapsulated. */
+        private GridFutureAdapter cpBeginFut = new GridFutureAdapter<Void>() {
+            @Override public boolean onDone(@Nullable Void res, @Nullable Throwable err, boolean cancel) {
+                CheckpointProgress.this.state(LOCK_RELEASED);
 
-        /** Checkpoint finish phase future. */
+                return super.onDone(res, err, cancel);
+            }
+        };
+
+        /** Checkpoint finish phase future. TODO it should be encapsulated. */
         private GridFutureAdapter cpFinishFut = new GridFutureAdapter<Void>() {
             @Override protected boolean onDone(@Nullable Void res, @Nullable Throwable err, boolean cancel) {
                 if (err != null && !cpBeginFut.isDone())
                     cpBeginFut.onDone(err);
+
+                CheckpointProgress.this.state(FINISHED);
 
                 return super.onDone(res, err, cancel);
             }
@@ -5225,7 +5233,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private volatile boolean nextSnapshot;
 
         /** Current checkpoint state. */
-        private volatile State state = State.SCHEDULED;
+        private volatile AtomicReference<State> state = new AtomicReference(State.SCHEDULED);
 
         /** Snapshot operation that should be performed if {@link #nextSnapshot} set to true. */
         private volatile SnapshotOperation snapshotOperation;
@@ -5249,7 +5257,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          */
         @Deprecated
         public boolean inProgress() {
-            return state != State.SCHEDULED;
+            return state.get().ordinal() >= State.LOCK_TAKEN.ordinal();
         }
 
         /** */
@@ -5266,38 +5274,34 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @param expectedState Expected state.
          * @return {@code true} if current state equal to given state.
          */
-        public boolean isState(State expectedState){
-            return state == expectedState;
+        public boolean isState(State expectedState) {
+            return state.get() == expectedState;
         }
 
         /**
-         * Changing checkpoint state.
+         * Changing checkpoint state if order of state is correct.
          *
-         * @param state New checkpoint state.
+         * @param newState New checkpoint state.
          */
-        public void state(State state) {
-            this.state = state;
-            switch (state) {
-                case PAGE_COUNTED:
-                    cpBeginFut.onDone();
-                    break;
-                case FINISHED:
-                    cpFinishFut.onDone();
-            }
+        public void state(@NotNull State newState) {
+            State state = this.state.get();
+
+            if (state.ordinal() < newState.ordinal())
+                this.state.compareAndSet(state, newState);
         }
 
         /**
-         * Possible checkpoint states.
+         * Possible checkpoint states. Ordinal is important. Every next state follows the previous one.
          */
         enum State {
             /** Checkpoint is waiting to execution. **/
             SCHEDULED,
             /** Checkpoint was awakened and it is preparing to start. **/
-            READY_TO_START,
+            LOCK_TAKEN,
             /** Checkpoint counted the pages and write lock was released. **/
-            PAGE_COUNTED,
+            LOCK_RELEASED,
             /** Checkpoint marker was stored to disk. **/
-            STORED_TO_DISK,
+            MARKER_STORED_TO_DISK,
             /** Checkpoint was finished. **/
             FINISHED
         }
@@ -5331,11 +5335,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** {@inheritDoc} */
         @Override public GridFutureAdapter<Object> finishFuture() {
             return cpFinishFut;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean started() {
-            return started;
         }
     }
 
