@@ -154,7 +154,7 @@ namespace ignite
             };
 
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), topVer(0),
+                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), nodesLock(), topVer(0),
                 predHolder(new ClusterNodePredicateHolder)
             {
                 computeImpl = InternalGetCompute();
