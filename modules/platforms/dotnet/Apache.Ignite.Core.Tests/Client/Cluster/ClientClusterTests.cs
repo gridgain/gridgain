@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
+    using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
 
     /// <summary>
@@ -23,6 +25,45 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     /// </summary>
     public class ClientClusterTests : ClientTestBase
     {
+        /** Cache name. */
+        private const string PersistentCache = "persistentCache";
+
+        /** Persistence data region name. */
+        private const string DataRegionName = "persistenceRegion";
+
+        /// <summary>
+        /// Sets up the test.
+        /// </summary>
+        [SetUp]
+        public override void TestSetUp()
+        {
+            var cacheCfg = new CacheConfiguration()
+            {
+                Name = PersistentCache,
+                DataRegionName = DataRegionName,
+            };
+
+            var ignite = Ignition.GetIgnite();
+            //to make sure there is no persisted cache from previous runs
+            ignite.DestroyCache(PersistentCache);
+            ignite.GetOrCreateCache<int, int>(cacheCfg);
+        }
+
+        /** <inheritDoc /> */
+        protected override IgniteConfiguration GetIgniteConfiguration()
+        {
+            var baseConfig = base.GetIgniteConfiguration();
+            baseConfig.DataStorageConfiguration.DataRegionConfigurations = new []
+            {
+                new DataRegionConfiguration
+                {
+                    Name = DataRegionName,
+                    PersistenceEnabled = true
+                }
+            };
+
+            return baseConfig;
+        }
 
         /// <summary>
         /// Test cluster activation
@@ -66,28 +107,20 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestEnableWal()
         {
-            var clientCluster = Client.GetCluster();
-            var success = clientCluster.EnableWal("myCacheName");
 
-            Assert.IsTrue(success);
+            var clientCluster = Client.GetCluster();
+            clientCluster.SetActive(true);
+            clientCluster.EnableWal(PersistentCache);
+            Assert.IsTrue(clientCluster.IsWalEnabled(PersistentCache));
         }
 
         [Test]
         public void TestDisableWal()
         {
             var clientCluster = Client.GetCluster();
-            var success = clientCluster.DisableWal("myCacheName");
-
-            Assert.IsTrue(success);
-        }
-
-        [Test]
-        public void TestWalStatus()
-        {
-            var clientCluster = Client.GetCluster();
-            var success = clientCluster.IsWalEnabled("myCacheName");
-
-            Assert.IsTrue(success);
+            clientCluster.SetActive(true);
+            clientCluster.DisableWal(PersistentCache);
+            Assert.IsFalse(clientCluster.IsWalEnabled(PersistentCache));
         }
     }
 }
