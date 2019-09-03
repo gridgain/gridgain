@@ -28,8 +28,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCluster
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.assertCachesReadOnlyMode;
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.assertDataStreamerReadOnlyMode;
@@ -38,7 +36,6 @@ import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTes
 /**
  * Tests cache get/put/remove and data streaming in read-only cluster mode.
  */
-@RunWith(JUnit4.class)
 public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
     /**
      * Tests cache get/put/remove.

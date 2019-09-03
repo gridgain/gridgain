@@ -1968,7 +1968,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                     if (roEx != null) {
                         throw new IgniteSQLException(
-                            "Failed to execute DML statement. Cluster in read-only mode [stmt=" + qryDesc.sql() +
+                            "Failed to execute DML statement. Cluster in read-only mode [stmt=" + sqlQry +
                                 ", params=" + Arrays.deepToString(qry.getArgs()) + "]",
                             IgniteQueryErrorCode.CLUSTER_READ_ONLY_MODE_ENABLED,
                             e
