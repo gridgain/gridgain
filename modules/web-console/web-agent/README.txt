@@ -46,7 +46,7 @@ Passwords encryption:
   How to encrypt passwords:
     1. Run "passwords-key-store-generator.{bat|sh}" and follow instructions.
 
-    2. Add path to passwords key store to default.properties or pass as "ignite-web-console-agent.{bat|sh}" argument.
+    2. Add path to key store with passwords to "default.properties" or pass as "ignite-web-console-agent.{bat|sh}" argument.
       Example for "default.properties":
         ...
           passwords-key-store=/path/to/key/store/passwords.p12
