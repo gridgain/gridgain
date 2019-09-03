@@ -955,9 +955,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * Register metadata locally for already registered caches.
      */
     private void registerMetadataForRegisteredCaches() {
-        for (DynamicCacheDescriptor cacheDescriptor : ctx.cache().cacheDescriptors().values()) {
+        for (DynamicCacheDescriptor cacheDescriptor : ctx.cache().cacheDescriptors().values())
             registerBinaryMetadata(cacheDescriptor.cacheConfiguration(), cacheDescriptor.schema());
-        }
     }
 
     /**

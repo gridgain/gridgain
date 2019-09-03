@@ -123,7 +123,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testAffinityKeyRegisteredStaticCache() throws Exception {
-        Ignite ignite = startGrid();
+        Ignite ignite = startGrid(0);
 
         assertEquals("affKey", getAffinityKey(ignite, StaticKey.class));
         assertEquals("affKey", getAffinityKey(ignite, StaticValue.class));
@@ -134,7 +134,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testAffinityKeyRegisteredDynamicCache() throws Exception {
-        Ignite ignite = startGrid();
+        Ignite ignite = startGrid(0);
 
         ignite.createCache(cacheConfiguration(DYNAMIC_CACHE_NAME, DynamicKey.class, DynamicValue.class));
 
@@ -147,10 +147,10 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testClientFindsValueByAffinityKeyStaticCacheWithoutExtraRequest() throws Exception {
-        Ignite srv = startGrid();
+        Ignite srv = startGrid(0);
         IgniteCache<StaticKey, StaticValue> cache = srv.cache(STATIC_CACHE_NAME);
 
-        testClientFindsValueByAffinityKey(cache, new StaticKey(1), new StaticValue(2));
+        testClientAndServerFindsValueByAffinityKey(cache, new StaticKey(1), new StaticValue(2));
 
         assertCustomMessages(2); //MetadataUpdateProposedMessage for update schema.
         assertCommunicationMessages();
@@ -161,11 +161,11 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testClientFindsValueByAffinityKeyDynamicCacheWithoutExtraRequest() throws Exception {
-        Ignite srv = startGrid();
+        Ignite srv = startGrid(0);
         IgniteCache<DynamicKey, DynamicValue> cache =
             srv.createCache(cacheConfiguration(DYNAMIC_CACHE_NAME, DynamicKey.class, DynamicValue.class));
 
-        testClientFindsValueByAffinityKey(cache, new DynamicKey(3), new DynamicValue(4));
+        testClientAndServerFindsValueByAffinityKey(cache, new DynamicKey(3), new DynamicValue(4));
 
         //Expected only MetadataUpdateProposedMessage for update schema.
         assertCustomMessages(2);
@@ -189,7 +189,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      * @param val Test value.
      * @throws Exception If failed.
      */
-    private <K, V> void testClientFindsValueByAffinityKey(IgniteCache<K, V> cache, K key, V val) throws Exception {
+    private <K, V> void testClientAndServerFindsValueByAffinityKey(IgniteCache<K, V> cache, K key, V val) throws Exception {
         cache.put(key, val);
 
         assertTrue(cache.containsKey(key));
@@ -199,6 +199,12 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
         IgniteCache<K, V> clientCache = client.cache(cache.getName());
 
         assertTrue(clientCache.containsKey(key));
+
+        Ignite server = startGrid(1);
+
+        IgniteCache<K, V> serverCache = server.cache(cache.getName());
+
+        assertTrue(serverCache.containsKey(key));
     }
 
     /**
@@ -254,7 +260,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
 
     /** */
     private static class StaticValue {
-        /** */
+        /** It doesn't make sense on value class. It it just for checking that value class also register correctly. */
         @AffinityKeyMapped
         private int affKey;
 
@@ -281,7 +287,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
 
     /** */
     private static class DynamicValue {
-        /** */
+        /** It doesn't make sense on value class. It it just for checking that value class also register correctly. */
         @AffinityKeyMapped
         private int affKey;
 
