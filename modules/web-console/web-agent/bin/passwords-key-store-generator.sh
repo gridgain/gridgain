@@ -22,9 +22,34 @@ set -o functrace
 # limitations under the License.
 #
 
+SOURCE="${BASH_SOURCE[0]}"
+
+# Resolve $SOURCE until the file is no longer a symlink.
+while [ -h "$SOURCE" ]
+    do
+        IGNITE_HOME="$(cd -P "$( dirname "$SOURCE"  )" && pwd)"
+
+        SOURCE="$(readlink "$SOURCE")"
+
+        # If $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located.
+        [[ $SOURCE != /* ]] && SOURCE="$IGNITE_HOME/$SOURCE"
+    done
+
+#
+# Set IGNITE_HOME.
+#
+export IGNITE_HOME="$(cd -P "$( dirname "$SOURCE" )" && pwd)"
+
+source "${IGNITE_HOME}"/include/functions.sh
+
+#
+# Discover path to Java executable and check it's version.
+#
+checkJava
+
 # Define functions
 createKeystore() {
-    keytool -importpassword -alias ${1} -keystore passwords.p12 -storetype pkcs12 -storepass ${2} -keypass ${2}
+    "$KEYTOOL" -importpassword -alias ${1} -keystore passwords.p12 -storetype pkcs12 -storepass ${2} -keypass ${2}
 }
 
 addToKeystore() {
