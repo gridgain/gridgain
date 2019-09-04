@@ -22,7 +22,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.console.Application;
 import org.apache.ignite.console.dto.DataObject;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
@@ -160,7 +159,7 @@ public class Utils {
      * @return the running {@link ApplicationContext}
      */
     public static ConfigurableApplicationContext run(Class<?> cls, String appName, String... args) {
-        SpringApplication app = new SpringApplication(Application.class);
+        SpringApplication app = new SpringApplication(cls);
 
         app.setBannerMode(OFF);
         app.setLogStartupInfo(false);
