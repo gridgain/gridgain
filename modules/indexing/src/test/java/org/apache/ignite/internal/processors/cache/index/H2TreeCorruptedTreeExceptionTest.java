@@ -52,9 +52,6 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
     private final AtomicBoolean failWithCorruptTree = new AtomicBoolean(false);
 
     /** */
-    private PageHandlerWrapper<BPlusTree.Result> regularWrapper;
-
-    /** */
     private final LogListener logListener = new MessageOrderLogListener(
         format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s.*", IDX_NAME, GRP_NAME)
     );
@@ -87,8 +84,6 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        regularWrapper = BPlusTree.pageHndWrapper;
 
         BPlusTree.pageHndWrapper = (tree, hnd) -> {
             if (hnd instanceof BPlusTree.Insert) {
@@ -123,9 +118,6 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        //restoring wrapper
-        BPlusTree.pageHndWrapper = regularWrapper;
-
         stopAllGrids();
 
         cleanPersistenceDir();
