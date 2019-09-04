@@ -24,7 +24,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.spi.metric.IntMetric;
+import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
@@ -101,39 +101,39 @@ public class MetricTest {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
 
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
                 checkNothingRejected();
             }
 
             waitClientDisconnect(1);
 
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(1, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
             checkNothingRejected();
 
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
 
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
                 checkNothingRejected();
             }
 
             waitClientDisconnect(2);
 
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
             checkNothingRejected();
         }
@@ -147,39 +147,39 @@ public class MetricTest {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
 
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
                 checkNothingRejected();
 
                 try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration())) {
 
-                    assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-                    assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-                    assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-                    assertEquals(0, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+                    assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+                    assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+                    assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+                    assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
                     checkNothingRejected();
                 }
 
                 waitClientDisconnect(1);
 
-                assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(1, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+                assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
                 checkNothingRejected();
             }
 
             waitClientDisconnect(2);
 
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getIntMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(2, getIntMetricValue(METRIC_SESSIONS_CLOSED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
+            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_CLOSED));
 
             checkNothingRejected();
         }
@@ -201,7 +201,7 @@ public class MetricTest {
     private static void waitIntMetricChange(String metric, int value) throws Exception {
         GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                return getIntMetricValue(metric) == value;
+                return getLongMetricValue(metric) == value;
             }
         }, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
     }
@@ -210,18 +210,18 @@ public class MetricTest {
      * Check that nothing was rejected.
      */
     private static void checkNothingRejected() {
-        assertEquals(0, getIntMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
-        assertEquals(0, getIntMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
-        assertEquals(0, getIntMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
-        assertEquals(0, getIntMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
+        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
+        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
+        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
+        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
     }
 
     /**
      * Get value of int metric. Fail if not found.
      * @param metricFull Full name of metric.
      */
-    private static int getIntMetricValue(String metricFull) {
-        IntMetric metric = getMetric(metricFull);
+    private static long getLongMetricValue(String metricFull) {
+        LongMetric metric = getMetric(metricFull);
 
         assertNotNull("Int metric was not found: " + metricFull, metric);
 

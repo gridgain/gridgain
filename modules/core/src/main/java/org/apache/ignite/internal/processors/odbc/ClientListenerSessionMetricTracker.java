@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.odbc;
 
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 
 /**
@@ -58,34 +58,34 @@ public class ClientListenerSessionMetricTracker {
     private boolean established;
 
     /** Number of sessions that did not pass handshake yet. */
-    private final IntMetricImpl waiting;
+    private final AtomicLongMetric waiting;
 
     /** Number of sessions that were not established because of handshake timeout. */
-    private final IntMetricImpl rejectedDueTimeout;
+    private final AtomicLongMetric rejectedDueTimeout;
 
     /** Number of sessions that were not established because of invalid handshake message. */
-    private final IntMetricImpl rejectedDueParsingError;
+    private final AtomicLongMetric rejectedDueParsingError;
 
     /** Number of sessions that were not established because of rejected handshake message. */
-    private IntMetricImpl rejectedDueHandshakeParams;
+    private AtomicLongMetric rejectedDueHandshakeParams;
 
     /** Number of sessions that were not established because of failed authentication. */
-    private IntMetricImpl rejectedDueAuthentication;
+    private AtomicLongMetric rejectedDueAuthentication;
 
     /** Number of successfully established sessions. */
-    private IntMetricImpl accepted;
+    private AtomicLongMetric accepted;
 
     /** Number of active sessions. */
-    private IntMetricImpl active;
+    private AtomicLongMetric active;
 
     /** Number of closed sessions. */
-    private IntMetricImpl closed;
+    private AtomicLongMetric closed;
 
     /** Number of handled requests. */
-    private IntMetricImpl handledRequests;
+    private AtomicLongMetric handledRequests;
 
     /** Number of failed requests. */
-    private IntMetricImpl failedRequests;
+    private AtomicLongMetric failedRequests;
 
     /**
      * @param ctx Kernal context.
@@ -95,12 +95,12 @@ public class ClientListenerSessionMetricTracker {
 
         MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
 
-        waiting = mreg.intMetric("waiting", "Number of sessions that did not pass handshake yet.");
+        waiting = mreg.longMetric("waiting", "Number of sessions that did not pass handshake yet.");
 
-        rejectedDueTimeout = mreg.intMetric("rejectedDueTimeout",
+        rejectedDueTimeout = mreg.longMetric("rejectedDueTimeout",
             "Number of sessions that were not established because of handshake timeout.");
 
-        rejectedDueParsingError = mreg.intMetric("rejectedDueParsingError",
+        rejectedDueParsingError = mreg.longMetric("rejectedDueParsingError",
             "Number of sessions that were not established because of corrupt handshake message.");
 
         waiting.increment();
@@ -113,22 +113,22 @@ public class ClientListenerSessionMetricTracker {
     public void onHandshakeReceived(String clientName) {
         MetricRegistry mregSes = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
 
-        rejectedDueHandshakeParams = mregSes.intMetric("rejectedDueHandshakeParams",
+        rejectedDueHandshakeParams = mregSes.longMetric("rejectedDueHandshakeParams",
             "Number of sessions that were not established because of rejected handshake message.");
 
-        rejectedDueAuthentication = mregSes.intMetric("rejectedDueAuthentication",
+        rejectedDueAuthentication = mregSes.longMetric("rejectedDueAuthentication",
             "Number of sessions that were not established because of failed authentication.");
 
-        accepted = mregSes.intMetric("accepted", "Number of successfully established sessions.");
+        accepted = mregSes.longMetric("accepted", "Number of successfully established sessions.");
 
-        active = mregSes.intMetric("active", "Number of active sessions.");
+        active = mregSes.longMetric("active", "Number of active sessions.");
 
-        closed = mregSes.intMetric("closed", "Number of closed sessions.");
+        closed = mregSes.longMetric("closed", "Number of closed sessions.");
 
         MetricRegistry mregReq = ctx.metric().registry(MetricUtils.metricName(CLIENT_REQUESTS_METRIC_GROUP, clientName));
 
-        handledRequests = mregReq.intMetric("handled", "Number of handled requests.");
-        failedRequests = mregReq.intMetric("failed", "Number of failed requests.");
+        handledRequests = mregReq.longMetric("handled", "Number of handled requests.");
+        failedRequests = mregReq.longMetric("failed", "Number of failed requests.");
     }
 
     /**
@@ -153,7 +153,7 @@ public class ClientListenerSessionMetricTracker {
 
         accepted.increment();
         active.increment();
-        waiting.add(-1);
+        waiting.decrement();
     }
 
     /**
@@ -169,13 +169,13 @@ public class ClientListenerSessionMetricTracker {
      */
     public void onSessionClosed() {
         if (established) {
-            active.add(-1);
+            active.decrement();
 
             closed.increment();
         }
         else
         {
-            waiting.add(-1);
+            waiting.decrement();
 
             switch (rejectReason) {
                 case REJECT_REASON_TIMEOUT: {
