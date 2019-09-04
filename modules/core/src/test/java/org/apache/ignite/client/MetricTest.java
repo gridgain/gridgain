@@ -19,11 +19,14 @@ package org.apache.ignite.client;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -34,6 +37,7 @@ import org.junit.rules.Timeout;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 /**
  * High Availability tests.
@@ -150,6 +154,45 @@ public class MetricTest {
     }
 
     /**
+     * Tests metrics when auth failed.
+     */
+    @Test
+    public void testAuth() throws Exception {
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", true);
+
+        try (Ignite ignored = startAuthNode()) {
+            try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration()
+                    .setUserName("ignite")
+                    .setUserPassword("ignite"))) {
+                checkSessionsState(0, 1, 1, 0);
+                checkNothingRejected();
+            }
+
+            waitClientDisconnect(1);
+
+            checkSessionsState(0, 1, 0, 1);
+            checkNothingRejected();
+
+            try {
+                Ignition.startClient(getClientConfiguration());
+
+                fail("Should not authenticate");
+            }
+            catch (ClientAuthenticationException ignored2) {
+                // No-op.
+            }
+
+            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_AUTH, 1, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
+
+            checkSessionsState(0, 1, 0, 1);
+
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
+        }
+    }
+
+    /**
      * Wait until client disconnects.
      * @param disconnected How much clients should be disconnected.
      */
@@ -191,6 +234,14 @@ public class MetricTest {
     }
 
     /**
+     * Check that no requests was received.
+     */
+    private static void checkNoRequests() {
+        assertEquals(0, getLongMetricValue(METRIC_REQUESTS_HANDLED));
+        assertEquals(0, getLongMetricValue(METRIC_REQUESTS_FAILED));
+    }
+
+    /**
      * Get value of int metric. Fail if not found.
      * @param metricFull Full name of metric.
      */
@@ -222,6 +273,22 @@ public class MetricTest {
     /** Start node. */
     private static Ignite startNode() {
         return Ignition.start(new IgniteConfiguration());
+    }
+
+    /** Start node. */
+    private static Ignite startAuthNode() {
+        IgniteConfiguration cfg = new IgniteConfiguration();
+
+        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
+            )
+        );
+
+        cfg.setAuthenticationEnabled(true);
+
+        return Ignition.start(cfg);
     }
 
     /** Get metric manager. */
