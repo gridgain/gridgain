@@ -82,7 +82,7 @@
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
         <javassist.version>3.20.0-GA</javassist.version>
         <javax.cache.bundle.version>1.0.0_1</javax.cache.bundle.version>
-        <javax.cache.tck.version>1.0.1</javax.cache.tck.version>
+        <javax.cache.tck.version>1.1.0</javax.cache.tck.version>
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
@@ -508,12 +508,11 @@
                                 <title>Ignite Web Console</title>
                                 <packages>org.apache.ignite.console*</packages>
                             </group>
+                            <group>
+                                <title>OpenCensus Integration</title>
+                                <packages>org.apache.ignite.opencensus.spi*</packages>
+                            </group>
                         </groups>
-                        <header>
-                            <![CDATA[
-                                    Ignite - In-Memory Database and Caching Platform
-                                ]]>
-                        </header>
                         <bottom>
                             <![CDATA[
                                     <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
