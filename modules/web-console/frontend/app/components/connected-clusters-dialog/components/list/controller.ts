@@ -16,7 +16,7 @@
 
 import _ from 'lodash';
 
-import columnDefsFn from './column-defs';
+import {columnDefsFn} from './column-defs';
 
 export default class ConnectedClustersListCtrl {
     data: any;

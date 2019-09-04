@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export default ($translate: ng.translate.ITranslateService) => [
+export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
     {
         name: 'name',
         displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.name'),
