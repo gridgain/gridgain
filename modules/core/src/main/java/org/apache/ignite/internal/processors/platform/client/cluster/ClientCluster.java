@@ -22,7 +22,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Client cluster
+ * Client cluster.
  */
 public class ClientCluster {
 
@@ -41,7 +41,6 @@ public class ClientCluster {
     /**
      * Creates a new cluster group for nodes containing given name and value
      * specified in user attributes.
-     * <p>
      *
      * @param name Name of the attribute.
      * @param val Optional attribute value to match.

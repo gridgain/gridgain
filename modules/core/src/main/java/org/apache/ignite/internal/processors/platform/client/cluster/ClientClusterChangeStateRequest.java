@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientConnectionCon
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cluster status request
+ * Cluster status request.
  */
 public class ClientClusterChangeStateRequest extends ClientClusterRequest {
 

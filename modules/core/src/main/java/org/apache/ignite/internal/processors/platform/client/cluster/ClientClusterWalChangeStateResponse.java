@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
@@ -41,11 +42,9 @@ public class ClientClusterWalChangeStateResponse extends ClientResponse {
         this.res = res;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public void encode(BinaryRawWriterEx writer) {
-        super.encode(writer);
+    /** {@inheritDoc} */
+    @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+        super.encode(ctx, writer);
 
         writer.writeBoolean(res);
     }

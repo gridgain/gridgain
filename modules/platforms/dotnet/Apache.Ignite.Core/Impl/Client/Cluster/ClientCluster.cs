@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** Ignite. */
         private readonly IgniteClient _ignite;
 
-        /** Cluster pointer. */
+        /** Cluster object pointer. */
         private readonly long _ptr;
 
         /** Marshaller. */
@@ -123,6 +123,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBool());
         }
 
+        /** <inheritdoc /> */
         public bool IsWalEnabled(string cacheName)
         {
             ThrowIfDisposed();
@@ -192,7 +193,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             }
             finally
             {
-                //no ops
+                //no op
             }
         }
 

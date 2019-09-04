@@ -47,6 +47,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             };
 
             var ignite = Ignition.GetIgnite();
+            ignite.GetCluster().SetActive(true);
             //to make sure there is no persisted cache from previous runs
             ignite.DestroyCache(PersistentCache);
             ignite.GetOrCreateCache<int, int>(cacheCfg);

@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientLongResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cluster for attribute request
+ * Cluster for attribute request.
  */
 public class ClientClusterForAttributeRequest extends ClientClusterRequest {
 

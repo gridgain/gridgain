@@ -230,7 +230,6 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_CLUSTER_GET_WAL_STATE = 4005;
 
-
     /* Custom queries working through processors registry. */
     /** */
     private static final short OP_CUSTOM_QUERY = 32_000;

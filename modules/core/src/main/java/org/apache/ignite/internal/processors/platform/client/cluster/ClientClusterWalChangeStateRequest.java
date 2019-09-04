@@ -21,7 +21,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientConnectionCon
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Change cache WAL state request
+ * Change cache WAL state request.
  */
 public class ClientClusterWalChangeStateRequest extends ClientClusterRequest {
 
