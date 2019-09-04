@@ -4177,7 +4177,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         throws IgniteCheckedException {
         assert cls.isInterface() : cls;
 
+        System.out.println("createComponent: " + cls.getName());
         T comp = ctx.plugins().createComponent(cls);
+        System.out.println("createComponent plugin result: " + (comp == null ? "null" : comp.getClass().getName()));
 
         if (comp != null)
             return comp;
