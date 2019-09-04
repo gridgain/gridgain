@@ -100,41 +100,23 @@ public class MetricTest {
     public void testSessionsSubsequent() throws Exception {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+                checkSessionsState(0, 1, 1, 0);
                 checkNothingRejected();
             }
 
             waitClientDisconnect(1);
 
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+            checkSessionsState(0, 1, 0, 1);
             checkNothingRejected();
 
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+                checkSessionsState(0, 2, 1, 1);
                 checkNothingRejected();
             }
 
             waitClientDisconnect(2);
 
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+            checkSessionsState(0, 2, 0, 2);
             checkNothingRejected();
         }
     }
@@ -146,41 +128,23 @@ public class MetricTest {
     public void testSessionsParallel() throws Exception {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+                checkSessionsState(0, 1, 1, 0);
                 checkNothingRejected();
 
                 try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration())) {
-
-                    assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-                    assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-                    assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-                    assertEquals(0, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+                    checkSessionsState(0, 2, 2, 0);
                     checkNothingRejected();
                 }
 
                 waitClientDisconnect(1);
 
-                assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-                assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-                assertEquals(1, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+                checkSessionsState(0, 2, 1, 1);
                 checkNothingRejected();
             }
 
             waitClientDisconnect(2);
 
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_WAITING));
-            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
-            assertEquals(2, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-
+            checkSessionsState(0, 2, 0, 2);
             checkNothingRejected();
         }
     }
@@ -189,8 +153,8 @@ public class MetricTest {
      * Wait until client disconnects.
      * @param disconnected How much clients should be disconnected.
      */
-    private static void waitClientDisconnect(int disconnected) throws Exception {
-        waitIntMetricChange(METRIC_SESSIONS_CLOSED, disconnected);
+    private static void waitClientDisconnect(long disconnected) throws Exception {
+        waitLongMetricChange(METRIC_SESSIONS_CLOSED, disconnected, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
     }
 
     /**
@@ -198,12 +162,22 @@ public class MetricTest {
      * @param metric Metric.
      * @param value Expeced value.
      */
-    private static void waitIntMetricChange(String metric, int value) throws Exception {
+    private static void waitLongMetricChange(String metric, long value, long timeout) throws Exception {
         GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return getLongMetricValue(metric) == value;
             }
-        }, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
+        }, timeout);
+    }
+
+    /**
+     * Check that nothing was rejected.
+     */
+    private static void checkSessionsState(long waiting, long accepted, long active, long closed) {
+        assertEquals(waiting, getLongMetricValue(METRIC_SESSIONS_WAITING));
+        assertEquals(accepted, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
+        assertEquals(active, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
+        assertEquals(closed, getLongMetricValue(METRIC_SESSIONS_CLOSED));
     }
 
     /**
