@@ -100,9 +100,9 @@ public class IgniteCacheWithIndexingTestSuite {
 
         suite.addTest(new JUnit4TestAdapter(RebuildIndexLogMessageTest.class));
 
-        suite.addTest(new JUnit4TestAdapter(H2TreeCorruptedTreeExceptionTest.class));
-
         suite.addTest(new JUnit4TestAdapter(CacheTtlReadOnlyModeSelfTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(H2TreeCorruptedTreeExceptionTest.class));
 
         return suite;
     }
