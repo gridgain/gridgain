@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -103,16 +102,10 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         /** Predicate which is a trigger of throwing an exception. */
         transient volatile Predicate<File> failPredicate = DUMMY_PREDICATE;
 
-        transient IgniteLogger log;
-
         /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             if(file.getName().endsWith("START.bin.tmp"))
                 sleep();
-
-            if (log != null) {
-                log.info(" FAIL PREDICATE : " + failPredicate.test(file));
-            }
 
             if (failPredicate.test(file)) {
                 failPredicate = DUMMY_PREDICATE;
@@ -137,8 +130,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
          *
          * @param failPredicate Predicate for exception.
          */
-        public void triggerIOException(IgniteLogger log, Predicate<File> failPredicate) {
-            this.log = log;
+        public void triggerIOException(Predicate<File> failPredicate) {
             this.failPredicate = failPredicate;
         }
     }
@@ -182,14 +174,16 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         assertTrue(waitForCondition(pageReplacementStarted::get, 20_000));
 
         //and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
-        interceptorIOFactory.triggerIOException(log, (file) -> file.getName().endsWith("START.bin.tmp"));
+        interceptorIOFactory.triggerIOException((file) -> file.getName().endsWith("START.bin.tmp"));
 
         log.info("KILL NODE await to stop");
 
         assertTrue(waitForCondition(() -> G.allGrids().isEmpty(), 20_000));
 
         //then: Data recovery after node start should be successful.
-        startGrid(0);
+        ignite0 = startGrid(0);
+
+        ignite0.cluster().active(true);
 
         IgniteCache<Integer, Object> cache = ignite(0).cache(DEFAULT_CACHE_NAME);
 

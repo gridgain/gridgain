@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.BooleanSupplier;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
 
 /**
@@ -29,13 +29,13 @@ class CheckpointPages {
     private volatile Collection<FullPageId> segCheckpointPages;
 
     /** The sign which allows to evict pages from a checkpoint by page replacer. */
-    private final BooleanSupplier allowToEvict;
+    private final IgniteInternalFuture allowToEvict;
 
     /**
      * @param pages Pages which would be stored to disk in current checkpoint.
      * @param evict The sign which allows to evict pages from a checkpoint by page replacer.
      */
-    CheckpointPages(Collection<FullPageId> pages, BooleanSupplier evict) {
+    CheckpointPages(Collection<FullPageId> pages, IgniteInternalFuture evict) {
         segCheckpointPages = pages;
         allowToEvict = evict;
     }
@@ -44,16 +44,15 @@ class CheckpointPages {
      * @param fullPageId Page id for checking.
      * @return {@code true} If fullPageId is allowable to store to disk.
      */
-    public boolean allowToSave(FullPageId fullPageId) {
+    public boolean allowToSave(FullPageId fullPageId) throws IgniteCheckedException {
         Collection<FullPageId> checkpointPages = segCheckpointPages;
 
         if (checkpointPages == null || allowToEvict == null)
             return false;
 
-        while(!allowToEvict.getAsBoolean())
-            LockSupport.parkNanos(100);
+        allowToEvict.get();
 
-        return allowToEvict.getAsBoolean() && checkpointPages.contains(fullPageId);
+        return checkpointPages.contains(fullPageId);
     }
 
     /**

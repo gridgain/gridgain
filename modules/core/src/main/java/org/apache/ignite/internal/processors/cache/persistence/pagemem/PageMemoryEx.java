@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
-import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -117,7 +116,7 @@ public interface PageMemoryEx extends PageMemory {
      * @throws IgniteException If checkpoint has been already started and was not finished.
      * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
      */
-    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(BooleanSupplier allowToEvict) throws IgniteException;
+    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToEvict) throws IgniteException;
 
     /**
      * Gets a collection of dirty page IDs since the last checkpoint and dirty pages with user data are presented. If a
@@ -131,7 +130,7 @@ public interface PageMemoryEx extends PageMemory {
      * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
      */
     public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        BooleanSupplier allowToEvict) throws IgniteException;
+        IgniteInternalFuture allowToEvict) throws IgniteException;
 
     /**
      * Finishes checkpoint operation.
@@ -143,7 +142,7 @@ public interface PageMemoryEx extends PageMemory {
      *{@link PageStoreWriter} will be called when the page will be ready to write.
      *
      * @param pageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
-     *      the {@link #beginCheckpoint(BooleanSupplier)} method call.
+     *      the {@link #beginCheckpoint(IgniteInternalFuture)} method call.
      * @param buf Temporary buffer to write changes into.
      * @param pageWriter Checkpoint page write context.
      * @param tracker Checkpoint metrics tracker.

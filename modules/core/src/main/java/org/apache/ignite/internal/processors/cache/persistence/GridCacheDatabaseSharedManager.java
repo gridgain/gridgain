@@ -62,7 +62,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
@@ -165,6 +164,7 @@ import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.lang.GridTuple3;
@@ -3215,11 +3215,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         int pagesNum = 0;
 
+        GridFinishedFuture finishedFuture = new GridFinishedFuture();
+
         // Collect collection of dirty pages from all regions.
         for (DataRegion memPlc : regions) {
             if (memPlc.config().isPersistenceEnabled()){
                 GridMultiCollectionWrapper<FullPageId> nextCpPagesCol =
-                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint(() -> true);
+                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint(finishedFuture);
 
                 pagesNum += nextCpPagesCol.size();
 
@@ -4296,7 +4298,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 //There are allowable to evict pages only after checkpoint entry was stored to disk.
                 GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
-                    beginAllCheckpoints(() -> curr.atLeastState(MARKER_STORED_TO_DISK));
+                    beginAllCheckpoints(curr.cpMarkerStored);
 
                 cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
@@ -4364,7 +4366,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 writeCheckpointEntry(tmpWriteBuf, cp, CheckpointEntryType.START);
 
-                curr.state(MARKER_STORED_TO_DISK);
+                curr.cpMarkerStored.onDone();
 
                 GridMultiCollectionWrapper<FullPageId> cpPages = splitAndSortCpPagesIfNeeded(
                     cpPagesTuple, persistenceCfg.getCheckpointThreads());
@@ -4619,7 +4621,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
          */
         private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints(
-            BooleanSupplier allowToEvict
+            IgniteInternalFuture allowToEvict
         ) {
             Collection<GridMultiCollectionWrapper<FullPageId>> res = new ArrayList(dataRegions().size());
 
@@ -5217,11 +5219,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         };
 
+        /** Checkpoint marker stored to disk phase future. TODO it should be encapsulated. */
+        private GridFutureAdapter cpMarkerStored = new GridFutureAdapter<Void>() {
+            @Override public boolean onDone(@Nullable Void res, @Nullable Throwable err, boolean cancel) {
+                CheckpointProgress.this.state(MARKER_STORED_TO_DISK);
+
+                return super.onDone(res, err, cancel);
+            }
+        };
+
         /** Checkpoint finish phase future. TODO it should be encapsulated. */
         private GridFutureAdapter cpFinishFut = new GridFutureAdapter<Void>() {
             @Override protected boolean onDone(@Nullable Void res, @Nullable Throwable err, boolean cancel) {
                 if (err != null && !cpBeginFut.isDone())
                     cpBeginFut.onDone(err);
+
+                if (err != null && !cpMarkerStored.isDone())
+                    cpMarkerStored.onDone(err);
 
                 CheckpointProgress.this.state(FINISHED);
 

@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -646,10 +645,10 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
         finally {
             seg.writeLock().unlock();
-
-            if (delayedWriter != null)
-                delayedWriter.finishReplacement();
         }
+
+        if (delayedWriter != null)
+            delayedWriter.finishReplacement();
 
         //we have allocated 'tracking' page, we need to allocate regular one
         return isTrackingPage ? allocatePage(grpId, partId, flags) : pageId;
@@ -1137,14 +1136,14 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
-        BooleanSupplier allowToEvict
+        IgniteInternalFuture allowToEvict
     ) throws IgniteException {
         return beginCheckpointEx(allowToEvict).get1();
     }
 
     /** {@inheritDoc} */
     @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        BooleanSupplier allowToEvict
+        IgniteInternalFuture allowToEvict
     ) throws IgniteException {
         if (segments == null)
             return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
