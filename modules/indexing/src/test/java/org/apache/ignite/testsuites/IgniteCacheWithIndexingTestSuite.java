@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExce
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
+import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
@@ -98,6 +99,8 @@ public class IgniteCacheWithIndexingTestSuite {
         suite.addTest(new JUnit4TestAdapter(ClusterReadOnlyModeSqlTest.class));
 
         suite.addTest(new JUnit4TestAdapter(RebuildIndexLogMessageTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(CacheTtlReadOnlyModeSelfTest.class));
 
         suite.addTest(new JUnit4TestAdapter(H2TreeCorruptedTreeExceptionTest.class));
 
