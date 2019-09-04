@@ -18,6 +18,9 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -25,6 +28,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -39,6 +44,10 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
 
     /** */
     private volatile DataStorageConfiguration memCfg;
+
+
+    /** */
+    private IgniteLogger logger;
 
     /** */
     private static final long DFLT_MEM_PLC_SIZE = 10L * 1024 * 1024;
@@ -56,12 +65,23 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         if (ccfg != null)
             cfg.setCacheConfiguration(ccfg);
 
+        if (logger != null)
+            cfg.setGridLogger(logger);
+
         return cfg;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    @Override protected void beforeTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /** */
@@ -199,6 +219,87 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         ccfg.setDataRegionName("ccfg");
 
         checkStartGridException(IgniteCheckedException.class, "Failed to start processor: GridProcessorAdapter []");
+    }
+
+    /**
+     * Filter to exclude the node from affinity nodes by its name.
+     */
+    private static class NodeNameNodeFilter implements IgnitePredicate<ClusterNode> {
+        /** */
+        private final String filteredNode;
+
+        /**
+         * @param node Node.
+         */
+        private NodeNameNodeFilter(String node) {
+            filteredNode = node;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean apply(ClusterNode node) {
+            return !node.attribute("org.apache.ignite.ignite.name").toString().contains(filteredNode);
+        }
+    }
+
+    /**
+     * Verifies that warning message is printed to the logs if user tries to start a cache in data region which
+     * overhead (e.g. metapages for partitions) occupies more space of the region than a defined threshold.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWarningIfStaticCacheOverheadExceedsThreshold() throws Exception {
+        String filteredSrvName = "srv2";
+
+        DataRegionConfiguration smallRegionCfg = new DataRegionConfiguration();
+
+        smallRegionCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
+        smallRegionCfg.setMaxSize(DFLT_MEM_PLC_SIZE);
+        smallRegionCfg.setPersistenceEnabled(true);
+
+        memCfg = new DataStorageConfiguration();
+        memCfg.setDefaultDataRegionConfiguration(smallRegionCfg);
+        //one hour to guarantee that checkpoint will be triggered by 'dirty pages amount' trigger
+        memCfg.setCheckpointFrequency(60 * 60 * 1000);
+
+        CacheConfiguration<Object, Object> manyPartitionsCache = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+
+        manyPartitionsCache.setAffinity(new RendezvousAffinityFunction(false, 4096));
+        manyPartitionsCache.setNodeFilter(new NodeNameNodeFilter(filteredSrvName));
+
+        ccfg = manyPartitionsCache;
+
+        GridStringLogger srv0Logger = getStringLogger();
+        logger = srv0Logger;
+
+        IgniteEx ignite0 = startGrid("srv0");
+
+        GridStringLogger srv1Logger = getStringLogger();
+        logger = srv1Logger;
+
+        startGrid("srv1");
+
+        GridStringLogger srv2Logger = getStringLogger();
+        logger = srv2Logger;
+
+        startGrid(filteredSrvName);
+
+        ignite0.cluster().active(true);
+
+        GridTestUtils.assertContains(null, srv0Logger.toString(), "Cache group 'default' brings high overhead");
+
+        GridTestUtils.assertContains(null, srv1Logger.toString(), "Cache group 'default' brings high overhead");
+
+        GridTestUtils.assertNotContains(null, srv2Logger.toString(), "Cache group 'default' brings high overhead");
+    }
+
+    /** */
+    private GridStringLogger getStringLogger() {
+        GridStringLogger strLog = new GridStringLogger(false, null);
+
+        strLog.logLength(1024 * 1024);
+
+        return strLog;
     }
 
     /**

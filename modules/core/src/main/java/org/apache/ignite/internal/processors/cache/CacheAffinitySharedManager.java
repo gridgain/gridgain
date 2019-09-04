@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +38,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -49,6 +52,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
+import org.apache.ignite.internal.processors.affinity.IdealAffinityAssignment;
 import org.apache.ignite.internal.processors.cache.distributed.dht.ClientCacheDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAssignmentFetchFuture;
@@ -109,6 +113,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
     /** Affinity information for all started caches (initialized on coordinator). */
     private ConcurrentMap<Integer, CacheGroupHolder> grpHolders = new ConcurrentHashMap<>();
+
+    /** */
+    private CacheMemoryOverheadValidator validator = new CacheMemoryOverheadValidator();
 
     /** Topology version which requires affinity re-calculation (set from discovery thread). */
     private AffinityTopologyVersion lastAffVer;
@@ -1028,6 +1035,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 fut.timeBag().finishLocalStage("Affinity initialization on cache group start " +
                     "[grp=" + grpDesc.cacheOrGroupName() + "]");
+
+                validator.validateCacheGroup(grpDesc);
 
                 return null;
             }
@@ -2967,6 +2976,100 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         @Override public String toString() {
             return "WaitRebalanceInfo [topVer=" + topVer +
                 ", grps=" + (waitGrps != null ? waitGrps.keySet() : null) + ']';
+        }
+    }
+
+    /**
+     * Validator for memory overhead of persistent caches.
+     *
+     * Persistent cache requires some overhead in dataregion memory, e.g. a metapage per partition created by the cache.
+     * If this overhead reaches some limit (hardcoded to 15% for now) it may cause critical errors on node during
+     * checkpoint.
+     *
+     * Validator is intended to analyze cache group configuration and print warning to log to inform user about
+     * found problem.
+     */
+    class CacheMemoryOverheadValidator {
+        /** */
+        private static final double MEMORY_OVERHEAD_THRESHOLD = 0.15;
+
+        /**
+         * Validates cache group configuration and prints warning if it violates 15% overhead limit.
+         *
+         * @param grpDesc Descriptor of cache group to validate.
+         */
+        void validateCacheGroup(CacheGroupDescriptor grpDesc) {
+            DataStorageConfiguration dsCfg = cctx.gridConfig().getDataStorageConfiguration();
+            CacheConfiguration<?, ?> grpCfg = grpDesc.config();
+
+            if (!CU.isPersistentCache(grpCfg, dsCfg))
+                return;
+
+            CacheGroupHolder grpHolder = grpHolders.get(grpDesc.groupId());
+
+            if (grpHolder != null) {
+                IdealAffinityAssignment assignment = grpHolder.aff.idealAssignment();
+
+                if (assignment != null) {
+                    int partsNum = assignment.idealPrimaries(cctx.localNode()).size();
+
+                    if (partsNum == 0)
+                        return;
+
+                    DataRegionConfiguration drCfg = findDataRegion(dsCfg, grpCfg.getDataRegionName());
+
+                    if ((1.0 * partsNum * dsCfg.getPageSize()) / drCfg.getMaxSize() > MEMORY_OVERHEAD_THRESHOLD)
+                        log.warning(buildWarningMessage(grpDesc, drCfg, dsCfg.getPageSize(), partsNum));
+                }
+            }
+        }
+
+        /**
+         * Builds explanatory warning message.
+         *
+         * @param grpDesc Configuration of cache group violating memory overhead threshold.
+         * @param drCfg Configuration of data region configuration with not sufficient memory.
+         */
+        private String buildWarningMessage(CacheGroupDescriptor grpDesc,
+            DataRegionConfiguration drCfg,
+            int pageSize,
+            int partsNum
+            ) {
+            StringBuilder sb = new StringBuilder("Cache group '");
+
+            sb.append(grpDesc.cacheOrGroupName())
+                .append("' brings high overhead for its metainformation in data region '")
+                .append(drCfg.getName())
+                .append("'.")
+                .append(" Metainformation required for its partitions (")
+                .append(partsNum)
+                .append(" partitions, ")
+                .append(pageSize)
+                .append(" bytes per partition) will consume more than 15% of data region memory (")
+                .append(U.sizeInMegabytes(drCfg.getMaxSize()))
+                .append(" MBs). ")
+                .append("It may lead to critical errors on the node and cluster instability.")
+                .append("Please reduce number of partitions, add more memory to the data region ")
+                .append("or add more server nodes for this cache group.");
+
+            return sb.toString();
+        }
+
+        /**
+         * Finds data region by name.
+         *
+         * @param dsCfg Data storage configuration.
+         * @param drName Data region name.
+         *
+         * @return Found data region.
+         */
+        private DataRegionConfiguration findDataRegion(DataStorageConfiguration dsCfg, String drName) {
+            if (dsCfg.getDataRegionConfigurations() == null)
+                return dsCfg.getDefaultDataRegionConfiguration();
+
+            return Arrays.stream(dsCfg.getDataRegionConfigurations())
+                .filter(drCfg -> drCfg.getName().equals(drName))
+                .findFirst().get();
         }
     }
 }
