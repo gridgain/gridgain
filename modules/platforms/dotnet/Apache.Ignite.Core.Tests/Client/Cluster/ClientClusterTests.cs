@@ -16,8 +16,11 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
+    using System;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
+    using Apache.Ignite.Core.Impl.Client.Cluster;
     using NUnit.Framework;
 
     /// <summary>
@@ -53,7 +56,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         protected override IgniteConfiguration GetIgniteConfiguration()
         {
             var baseConfig = base.GetIgniteConfiguration();
-            baseConfig.DataStorageConfiguration.DataRegionConfigurations = new []
+            baseConfig.DataStorageConfiguration.DataRegionConfigurations = new[]
             {
                 new DataRegionConfiguration
                 {
@@ -61,12 +64,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                     PersistenceEnabled = true
                 }
             };
-
             return baseConfig;
         }
 
         /// <summary>
-        /// Test cluster activation
+        /// Test cluster activation.
         /// </summary>
         [Test]
         public void TestClusterActivation()
@@ -77,7 +79,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
-        /// Test cluster activation
+        /// Test cluster activation fails if object disposed.
+        /// </summary>
+        [Test]
+        public void TestDisposedClusterActivationThrowsException()
+        {
+            Assert.Throws<ObjectDisposedException>(() => GetDisposedClientCluster().SetActive(true));
+        }
+
+        /// <summary>
+        /// Test cluster deactivation.
         /// </summary>
         [Test]
         public void TestClusterDeactivation()
@@ -95,8 +106,20 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             }
         }
 
+        /// <summary>
+        /// Test cluster deactivation fails if object disposed.
+        /// </summary>
         [Test]
-        public void TestForAttributesRequest()
+        public void TestDisposedClusterDeactivationThrowsException()
+        {
+            Assert.Throws<ObjectDisposedException>(() => GetDisposedClientCluster().SetActive(false));
+        }
+
+        /// <summary>
+        /// Test cluster .NET grid projection.
+        /// </summary>
+        [Test]
+        public void TestForDotNetRequest()
         {
             var clientCluster = Client.GetCluster();
             var dotNetCluster = clientCluster.ForDotNet();
@@ -104,6 +127,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             Assert.IsNotNull(dotNetCluster);
         }
 
+        /// <summary>
+        /// Test cluster for attributes request fails if object disposed.
+        /// </summary>
+        [Test]
+        public void TestDisposedClusterForDotNetThrowsException()
+        {
+            Assert.Throws<ObjectDisposedException>(() => GetDisposedClientCluster().ForDotNet());
+        }
+
+        /// <summary>
+        /// Test enable WAL.
+        /// </summary>
         [Test]
         public void TestEnableWal()
         {
@@ -114,6 +149,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             Assert.IsTrue(clientCluster.IsWalEnabled(PersistentCache));
         }
 
+        /// <summary>
+        /// Test enable WAL fails if object disposed.
+        /// </summary>
+        [Test]
+        public void TestDisposedEnableWalThrowsException()
+        {
+            Assert.Throws<ObjectDisposedException>(() => GetDisposedClientCluster().EnableWal(PersistentCache));
+        }
+
+        /// <summary>
+        /// Test disable WAL.
+        /// </summary>
         [Test]
         public void TestDisableWal()
         {
@@ -121,6 +168,60 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             clientCluster.SetActive(true);
             clientCluster.DisableWal(PersistentCache);
             Assert.IsFalse(clientCluster.IsWalEnabled(PersistentCache));
+        }
+
+        /// <summary>
+        /// Test disable WAL fails if object disposed.
+        /// </summary>
+        [Test]
+        public void TestDisposedDisableWalThrowsException()
+        {
+            Assert.Throws<ObjectDisposedException>(() => GetDisposedClientCluster().EnableWal(PersistentCache));
+        }
+
+        /// <summary>
+        /// Test cluster dispose should clean unmanaged resources.
+        /// </summary>
+        [Test]
+        public void TestDisposeCleanUpUnmanagedResources()
+        {
+            var clientCluster = Client.GetCluster();
+            clientCluster.Dispose();
+
+            var ex = Assert.Throws<IgniteClientException>(() => GetCopyOfClientCluster(clientCluster).Dispose());
+            Assert.IsTrue(ex.Message.StartsWith("Failed to find resource with id:"));
+        }
+
+        /// <summary>
+        /// Test resource cleanup during GC.
+        /// </summary>
+        [Test]
+        public void TestResourceCleanupDuringGc()
+        {
+            var copyOfClientCluster = GetCopyOfClientCluster();
+            GC.Collect();
+
+            var ex = Assert.Throws<IgniteClientException>(() => copyOfClientCluster.Dispose());
+            Assert.IsTrue(ex.Message.StartsWith("Failed to find resource with id:"));
+        }
+
+        /// <summary>
+        /// Get copy of client cluster with the same unmanaged pointer.
+        /// </summary>
+        /// <returns></returns>
+        private ClientCluster GetCopyOfClientCluster(IClientCluster clientCluster = null)
+        {
+            return ((ClientCluster) (clientCluster ?? Client.GetCluster())).GetCopyForUnitTesting();
+        }
+
+        /// <summary>
+        /// Get cluster in a disposed state.
+        /// </summary>
+        private IClientCluster GetDisposedClientCluster()
+        {
+            var clientCluster = Client.GetCluster();
+            clientCluster.Dispose();
+            return clientCluster;
         }
     }
 }

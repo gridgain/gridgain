@@ -1,5 +1,7 @@
 ﻿namespace Apache.Ignite.Core.Client
 {
+    using System;
+
     /// <summary>
     /// Defines grid projection which represents a common functionality over a group of nodes.
     /// Grid projection allows to group Ignite nodes into various subgroups to perform distributed
@@ -7,7 +9,7 @@
     /// from existing projection. If you create a new projection from current one, then the resulting
     /// projection will include a subset of nodes from current projection.
     /// </summary>
-    public interface IClientClusterGroup 
+    public interface IClientClusterGroup : IDisposable
     {
         /// <summary>
         /// Creates projection for nodes containing given name and value
