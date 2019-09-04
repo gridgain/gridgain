@@ -48,9 +48,7 @@ import static org.springframework.security.web.authentication.switchuser.SwitchU
  * Utilities.
  */
 public class Utils {
-    /**
-     *
-     */
+    /** */
     private static final JsonObject EMPTY_OBJ = new JsonObject();
 
     /**
