@@ -47,7 +47,7 @@ public class Annotation {
     /**
      * @return Timestamp.
      */
-    public long getTs() {
+    public long getTimestamp() {
         return ts;
     }
 
@@ -55,7 +55,7 @@ public class Annotation {
      * @param ts Timestamp.
      * @return Annotation.
      */
-    public Annotation setTs(long ts) {
+    public Annotation setTimestamp(long ts) {
         this.ts = ts;
         return this;
     }
