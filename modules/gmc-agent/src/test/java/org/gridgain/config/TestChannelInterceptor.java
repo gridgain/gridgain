@@ -51,7 +51,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
 
         if (accessor.getCommand() == StompCommand.SEND) {
             String dest = getDestination(msg.getHeaders());
-            messages.put(dest, new String((byte[]) msg.getPayload()));
+            messages.put(dest, msg.getPayload());
         }
 
         if (accessor.getCommand() == StompCommand.SUBSCRIBE)
@@ -76,7 +76,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
             return null;
 
         try {
-            return mapper.readValue((String) payload, clazz);
+            return mapper.readValue((byte[]) payload, clazz);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -94,7 +94,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
         JavaType type = mapper.getTypeFactory().constructCollectionType(List.class, clazz);
 
         try {
-            return mapper.readValue((String) payload, type);
+            return mapper.readValue((byte[]) payload, type);
         }
         catch (IOException e) {
             throw new RuntimeException(e);

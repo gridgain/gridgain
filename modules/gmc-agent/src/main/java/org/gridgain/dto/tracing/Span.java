@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package org.gridgain.dto;
+package org.gridgain.dto.tracing;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -44,6 +46,9 @@ public class Span {
 
     /** Tags. */
     private Map<String, String> tags = new HashMap<>();
+
+    /** Annotations. */
+    private List<Annotation> annotations = new ArrayList<>();
 
     /**
      * @return Trace id.
@@ -154,6 +159,22 @@ public class Span {
      */
     public Span setTags(Map<String, String> tags) {
         this.tags = tags;
+        return this;
+    }
+
+    /**
+     * @return Annotation list.
+     */
+    public List<Annotation> getAnnotations() {
+        return annotations;
+    }
+
+    /**
+     * @param annotations Annotations.
+     * @return Span.
+     */
+    public Span setAnnotations(List<Annotation> annotations) {
+        this.annotations = annotations;
         return this;
     }
 

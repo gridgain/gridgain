@@ -31,7 +31,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.gridgain.dto.Span;
+import org.gridgain.dto.tracing.Span;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
