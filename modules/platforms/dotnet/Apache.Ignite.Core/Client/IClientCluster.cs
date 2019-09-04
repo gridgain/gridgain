@@ -2,8 +2,6 @@
 {
     /// <summary>
     /// Represents whole cluster (group of all nodes in a cluster).
-    /// <para/>
-    /// All members are thread-safe and may be used concurrently from multiple threads.
     /// </summary>
     public interface IClientCluster : IClientClusterGroup
     {
