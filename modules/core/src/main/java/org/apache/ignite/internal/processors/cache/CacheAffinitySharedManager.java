@@ -3002,7 +3002,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             DataStorageConfiguration dsCfg = cctx.gridConfig().getDataStorageConfiguration();
             CacheConfiguration<?, ?> grpCfg = grpDesc.config();
 
-            if (!CU.isPersistentCache(grpCfg, dsCfg))
+            if (!CU.isPersistentCache(grpCfg, dsCfg) || CU.isSystemCache(grpDesc.cacheOrGroupName()))
                 return;
 
             CacheGroupHolder grpHolder = grpHolders.get(grpDesc.groupId());
@@ -3065,6 +3065,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          */
         private DataRegionConfiguration findDataRegion(DataStorageConfiguration dsCfg, String drName) {
             if (dsCfg.getDataRegionConfigurations() == null)
+                return dsCfg.getDefaultDataRegionConfiguration();
+
+            if (dsCfg.getDefaultDataRegionConfiguration().getName().equals(drName))
                 return dsCfg.getDefaultDataRegionConfiguration();
 
             return Arrays.stream(dsCfg.getDataRegionConfigurations())

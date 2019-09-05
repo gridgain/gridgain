@@ -19,6 +19,7 @@ import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -242,7 +243,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Verifies that warning message is printed to the logs if user tries to start a cache in data region which
+     * Verifies that warning message is printed to the logs if user tries to start a static cache in data region which
      * overhead (e.g. metapages for partitions) occupies more space of the region than a defined threshold.
      *
      * @throws Exception If failed.
@@ -286,11 +287,63 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
 
         ignite0.cluster().active(true);
 
+        //srv0 and srv1 print warning into the log as the threshold for cache in default cache group is broken
         GridTestUtils.assertContains(null, srv0Logger.toString(), "Cache group 'default' brings high overhead");
-
         GridTestUtils.assertContains(null, srv1Logger.toString(), "Cache group 'default' brings high overhead");
 
+        //srv2 doesn't print the warning as it is filtered by node filter from affinity nodes
         GridTestUtils.assertNotContains(null, srv2Logger.toString(), "Cache group 'default' brings high overhead");
+    }
+
+    /**
+     * Verifies that warning message is printed to the logs if user tries to start a dynamic cache in data region which
+     * overhead (e.g. metapages for partitions) occupies more space of the region than a defined threshold.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWarningIfDynamicCacheOverheadExceedsThreshold() throws Exception {
+        DataRegionConfiguration smallRegionCfg = new DataRegionConfiguration();
+
+        smallRegionCfg.setName("smallRegion");
+        smallRegionCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
+        smallRegionCfg.setMaxSize(DFLT_MEM_PLC_SIZE);
+        smallRegionCfg.setPersistenceEnabled(true);
+
+        //explicit default data region configuration to test possible NPE case
+        DataRegionConfiguration defaultRegionCfg = new DataRegionConfiguration();
+        smallRegionCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
+        smallRegionCfg.setMaxSize(DFLT_MEM_PLC_SIZE);
+        defaultRegionCfg.setPersistenceEnabled(true);
+
+        memCfg = new DataStorageConfiguration();
+        memCfg.setDefaultDataRegionConfiguration(defaultRegionCfg);
+        memCfg.setDataRegionConfigurations(smallRegionCfg);
+        //one hour to guarantee that checkpoint will be triggered by 'dirty pages amount' trigger
+        memCfg.setCheckpointFrequency(60 * 60 * 1000);
+
+        GridStringLogger srv0Logger = getStringLogger();
+        logger = srv0Logger;
+
+        IgniteEx ignite0 = startGrid("srv0");
+
+        GridStringLogger srv1Logger = getStringLogger();
+        logger = srv1Logger;
+
+        startGrid("srv1");
+
+        ignite0.cluster().active(true);
+
+        ignite0.createCache(
+            new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+                .setDataRegionName(defaultRegionCfg.getName())
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setAffinity(new RendezvousAffinityFunction(false, 4096))
+        );
+
+        //srv0 and srv1 print warning into the log as the threshold for cache in default cache group is broken
+        GridTestUtils.assertContains(null, srv0Logger.toString(), "Cache group 'default' brings high overhead");
+        GridTestUtils.assertContains(null, srv1Logger.toString(), "Cache group 'default' brings high overhead");
     }
 
     /** */
