@@ -43,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 
+import static java.lang.Long.MAX_VALUE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_SEGMENT_SYNC_TIMEOUT;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
@@ -309,7 +310,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
                             }
                         }
                         else {
-                            unparkWaiters(Long.MAX_VALUE);
+                            unparkWaiters(MAX_VALUE);
 
                             return;
                         }
@@ -340,7 +341,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
 
                             err = e;
 
-                            unparkWaiters(Long.MAX_VALUE);
+                            unparkWaiters(MAX_VALUE);
 
                             return;
                         }
@@ -374,7 +375,9 @@ public class FileHandleManagerImpl implements FileHandleManager {
                         finally {
                             seg.release();
 
-                            long p = pos <= UNCONDITIONAL_FLUSH || err != null ? Long.MAX_VALUE : currentHandle().written;
+                            boolean unparkAll = (pos == UNCONDITIONAL_FLUSH || pos == FILE_CLOSE) || err != null;
+
+                            long p = unparkAll ? MAX_VALUE : currentHandle().written;
 
                             unparkWaiters(p);
                         }
@@ -387,7 +390,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
             finally {
                 this.err = err;
 
-                unparkWaiters(Long.MAX_VALUE);
+                unparkWaiters(MAX_VALUE);
 
                 if (err == null && !isCancelled)
                     err = new IllegalStateException("Worker " + name() + " is terminated unexpectedly");
