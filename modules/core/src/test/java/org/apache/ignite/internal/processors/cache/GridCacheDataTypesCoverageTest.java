@@ -16,18 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -51,6 +39,17 @@ import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 

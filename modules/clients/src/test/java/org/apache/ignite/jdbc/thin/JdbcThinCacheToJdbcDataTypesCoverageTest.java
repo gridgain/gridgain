@@ -16,7 +16,29 @@
 
 package org.apache.ignite.jdbc.thin;
 
-import org.apache.commons.codec.binary.Hex;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -36,31 +58,6 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -409,7 +406,8 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      * @throws Exception If failed.
      */
     @SuppressWarnings("unchecked")
-    protected void checkBasicCacheOperations(Function converterToSqlExpVal, Serializable... valsToCheck) throws Exception {
+    protected void checkBasicCacheOperations(Function converterToSqlExpVal, Serializable... valsToCheck)
+        throws Exception {
         assert valsToCheck.length > 0;
 
         Object originalValItem = valsToCheck[0] instanceof SqlStrConvertedValHolder ?
@@ -477,10 +475,12 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             cache.put(originalKey, originalVal);
 
             // Check SELECT query.
-            checkQuery(converterToSqlExpVal, equalsProcessor, dataType, originalKey, originalVal, "SELECT * FROM " + tblName);
+            checkQuery(converterToSqlExpVal, equalsProcessor, dataType, originalKey, originalVal,
+                "SELECT * FROM " + tblName);
 
             // Check SELECT query with where clause.
-            checkQuery(converterToSqlExpVal, equalsProcessor, dataType, originalKey, originalVal, "SELECT * FROM " + tblName + " WHERE _key = " + sqlStrKey);
+            checkQuery(converterToSqlExpVal, equalsProcessor, dataType, originalKey, originalVal,
+                "SELECT * FROM " + tblName + " WHERE _key = " + sqlStrKey);
 
             // Check DELETE.
             checkDelete(tblName, cache, originalKey);
@@ -612,192 +612,5 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
         }
 
         assertEquals("Unexpected rows count.", 1, cnt);
-    }
-
-    /**
-     * Holder for both original value and value to be used as part of sql string.
-     */
-    private interface SqlStrConvertedValHolder extends Serializable {
-
-        /**
-         * @return Original value that might be used as expected result.
-         */
-        Object originalVal();
-
-        /**
-         * @return Value converted to sql string representation.
-         */
-        String sqlStrVal();
-    }
-
-    /**
-     * Holder for quoted values. E.g. Double.NEGATIVE_INFINITY -> 'INFINITY'.
-     */
-    private static class Quoted implements SqlStrConvertedValHolder {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Original value. */
-        private Object val;
-
-        /** Converted value. */
-        private String sqlStrVal;
-
-        /**
-         * Constructor.
-         *
-         * @param val Original value.
-         */
-        Quoted(Object val) {
-            this.val = val;
-            sqlStrVal = "\'" + val + "\'";
-        }
-
-        /** @inheritDoc */
-        @Override public Object originalVal() {
-            return val;
-        }
-
-        /** @inheritDoc */
-        @Override public String sqlStrVal() {
-            return sqlStrVal;
-        }
-    }
-
-
-    /**
-     * Holder for byte array values.
-     */
-    private static class ByteArrayed implements SqlStrConvertedValHolder {
-        /** Original value. */
-        private Object val;
-
-        /** Converted value. */
-        private String sqlStrVal;
-
-        /**
-         * Constructor.
-         *
-         * @param byteArr Original value.
-         */
-        ByteArrayed(byte[] byteArr) {
-            val = byteArr;
-            sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
-        }
-
-        /** @inheritDoc */
-        @Override public Object originalVal() {
-            return val;
-        }
-
-        /** @inheritDoc */
-        @Override public String sqlStrVal() {
-            return sqlStrVal;
-        }
-    }
-
-    /**
-     * Holder for Date and Timestamp values.
-     */
-    // TODO: 03.09.19 Move all that stuff to Util classes and add constructors with both java.util.Data and java.sql.Date.
-    private static class Dated implements SqlStrConvertedValHolder {
-        /** */
-        private static final String PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
-
-        /** */
-        private static final SimpleDateFormat DATE_TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
-
-        /** Original value. */
-        private Object val;
-
-        /** Converted value. */
-        private String sqlStrVal;
-
-        /**
-         * Constructor.
-         *
-         * @param date Original value.
-         */
-        Dated(java.util.Date date) {
-            val = date;
-            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
-        }
-
-        // TODO: 03.09.19 Update comment.
-        /**
-         * Constructor.
-         *
-         * @param date Original value.
-         */
-        Dated(java.sql.Date date) {
-            val = date;
-            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
-        }
-
-        // TODO: 04.09.19 Comment.
-        Dated(LocalDateTime date) {
-            val = date;
-            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(java.sql.Timestamp.valueOf(date)) + "', '" + PATTERN + "')";
-        }
-
-        // TODO: 04.09.19 Comment.
-        Dated(LocalDate date) {
-            val = date;
-            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(java.sql.Timestamp.valueOf(date.atStartOfDay())) + "', '" + PATTERN + "')";
-        }
-
-
-        /** @inheritDoc */
-        @Override public Object originalVal() {
-            return val;
-        }
-
-        /** @inheritDoc */
-        @Override public String sqlStrVal() {
-            return sqlStrVal;
-        }
-    }
-
-    /**
-     * Holder for Sql Time values.
-     */
-    // TODO: 03.09.19 Move all that stuff to Util classes and add constructors with both java.util.Data and java.sql.Date.
-    private static class Timed implements SqlStrConvertedValHolder {
-        /** */
-        private static final String PATTERN = "HH:mm:ss.SSS";
-
-        /** */
-        private static final SimpleDateFormat TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
-
-        /** Original value. */
-        private Object val;
-
-        /** Converted value. */
-        private String sqlStrVal;
-
-        /**
-         * Constructor.
-         *
-         * @param time Original value.
-         */
-        Timed(Time time) {
-            val = time;
-            sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(time) + "', '" + PATTERN + "')";
-        }
-
-        Timed(LocalTime time) {
-            val = time;
-            sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(java.sql.Time.valueOf(time)) + "', '" + PATTERN + "')";
-        }
-
-        /** @inheritDoc */
-        @Override public Object originalVal() {
-            return val;
-        }
-
-        /** @inheritDoc */
-        @Override public String sqlStrVal() {
-            return sqlStrVal;
-        }
     }
 }

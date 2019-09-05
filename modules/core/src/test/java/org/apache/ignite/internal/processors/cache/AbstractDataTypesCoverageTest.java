@@ -16,6 +16,26 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.configuration.Factory;
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import java.io.Serializable;
+import java.sql.Time;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -27,20 +47,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import javax.cache.configuration.Factory;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract data types coverage  test.
@@ -532,6 +538,202 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          */
         public void nestedObjectField(ObjectBasedOnPrimitivesAndCollections nestedObjField) {
             this.nestedObjField = nestedObjField;
+        }
+    }
+
+    /**
+     * Holder for both original value and value to be used as part of sql string.
+     */
+    public interface SqlStrConvertedValHolder extends Serializable {
+        /**
+         * @return Original value that might be used as expected result.
+         */
+        Object originalVal();
+
+        /**
+         * @return Value converted to sql string representation.
+         */
+        String sqlStrVal();
+    }
+
+    /**
+     * Holder for quoted values. E.g. Double.NEGATIVE_INFINITY -> 'INFINITY'.
+     */
+    public static class Quoted implements SqlStrConvertedValHolder {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param val Original value.
+         */
+        public Quoted(Object val) {
+            this.val = val;
+            sqlStrVal = "\'" + val + "\'";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for Sql Time values.
+     */
+    public static class Timed implements SqlStrConvertedValHolder {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        private static final String PATTERN = "HH:mm:ss.SSS";
+
+        /** */
+        private static final SimpleDateFormat TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param time Original value.
+         */
+        public Timed(Time time) {
+            val = time;
+            sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(time) + "', '" + PATTERN + "')";
+        }
+
+        /**
+         * Constructor.
+         *
+         * @param time Original local time value.
+         */
+        public Timed(LocalTime time) {
+            val = time;
+            sqlStrVal = "PARSEDATETIME('" + TIME_DATE_FORMAT.format(
+                java.sql.Time.valueOf(time)) + "', '" + PATTERN + "')";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for Date and Timestamp values.
+     */
+    public static class Dated implements SqlStrConvertedValHolder {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        private static final String PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
+
+        /** */
+        private static final SimpleDateFormat DATE_TIME_DATE_FORMAT = new SimpleDateFormat(PATTERN);
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param date Original value.
+         */
+        public Dated(Date date) {
+            val = date;
+            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + PATTERN + "')";
+        }
+
+        /**
+         * Constructor.
+         *
+         * @param date Original LocalDateTime value.
+         */
+        public Dated(LocalDateTime date) {
+            val = date;
+            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(
+                java.sql.Timestamp.valueOf(date)) + "', '" + PATTERN + "')";
+        }
+
+        /**
+         * Constructor.
+         *
+         * @param date Original LocalDate value.
+         */
+        public Dated(LocalDate date) {
+            val = date;
+            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(
+                java.sql.Timestamp.valueOf(date.atStartOfDay())) + "', '" + PATTERN + "')";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
+        }
+    }
+
+    /**
+     * Holder for byte array values.
+     */
+    public static class ByteArrayed implements SqlStrConvertedValHolder {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Original value. */
+        private Object val;
+
+        /** Converted value. */
+        private String sqlStrVal;
+
+        /**
+         * Constructor.
+         *
+         * @param byteArr Original value.
+         */
+        public ByteArrayed(byte[] byteArr) {
+            val = byteArr;
+            sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
+        }
+
+        /** @inheritDoc */
+        @Override public Object originalVal() {
+            return val;
+        }
+
+        /** @inheritDoc */
+        @Override public String sqlStrVal() {
+            return sqlStrVal;
         }
     }
 }
