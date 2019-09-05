@@ -362,8 +362,8 @@ namespace Apache.Ignite.Core.Tests
             var ec = cfg.ExecutorConfiguration;
             Assert.NotNull(ec);
             Assert.AreEqual(2, ec.Count);
-            Assert.AreEqual("exec2", ec.ElementAt(1).Name);
-            Assert.AreEqual(2, ec.ElementAt(1).Size);
+            Assert.AreEqual(new[] {"exec1", "exec2"}, ec.Select(e => e.Name));
+            Assert.AreEqual(new[] {1, 2}, ec.Select(e => e.Size));
         }
 
         /// <summary>
