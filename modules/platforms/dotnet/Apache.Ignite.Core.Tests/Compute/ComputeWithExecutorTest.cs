@@ -79,7 +79,6 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// <summary>
         /// Tests custom executors.
         /// </summary>
-        [Test]
         [TestCase("dotNetExecutor", "dotNetExecutor-#", true)]
         [TestCase("dotNetExecutor2", "pub-#", true)]
         [TestCase("invalid", "pub-#", true)]
