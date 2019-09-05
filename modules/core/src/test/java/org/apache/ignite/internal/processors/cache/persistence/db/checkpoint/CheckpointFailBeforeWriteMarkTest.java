@@ -104,7 +104,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-            if(file.getName().endsWith("START.bin.tmp"))
+            if(file.getName().contains("START.bin"))
                 sleep();
 
             if (failPredicate.test(file)) {
@@ -174,7 +174,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
         assertTrue(waitForCondition(pageReplacementStarted::get, 20_000));
 
         //and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
-        interceptorIOFactory.triggerIOException((file) -> file.getName().endsWith("START.bin.tmp"));
+        interceptorIOFactory.triggerIOException((file) -> file.getName().contains("START.bin"));
 
         log.info("KILL NODE await to stop");
 
