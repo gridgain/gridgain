@@ -21,11 +21,12 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
  * Result object for {@link VisorAffinityViewTask}
@@ -33,8 +34,14 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 public class VisorAffinityViewTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
-    /** */
-    private List<List<ClusterNode>> assignment;
+
+    /**
+     *  Map containing partitions ids for <@code ClusterNode}>.
+     *  First <@code IgniteBiTuple> item contains primary partitions ids,
+     *  second item contains backup partitions ids.
+     * */
+    private Map<ClusterNode, IgniteBiTuple<char[], char[]>> assignment;
+
     /** */
     private Set<Integer> primariesDifferentToIdeal;
 
@@ -46,7 +53,7 @@ public class VisorAffinityViewTaskResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public VisorAffinityViewTaskResult(List<List<ClusterNode>> assignment,
+    public VisorAffinityViewTaskResult(Map<ClusterNode, IgniteBiTuple<char[], char[]>> assignment,
         Set<Integer> primariesDifferentToIdeal)
     {
         this.assignment = assignment;
@@ -54,24 +61,21 @@ public class VisorAffinityViewTaskResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeCollection(out, assignment);
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+        U.writeMap(out, assignment);
         U.writeCollection(out, primariesDifferentToIdeal);
-
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        assignment = U.readList(in);
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+        assignment = U.readMap(in);
         primariesDifferentToIdeal = U.readSet(in);
     }
 
     /**
      * @return {@code assignment}
      */
-    public List<List<ClusterNode>> getAssignment() {
+    public Map<ClusterNode, IgniteBiTuple<char[], char[]>> getAssignment() {
         return assignment;
     }
 

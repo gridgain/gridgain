@@ -21,9 +21,11 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.UUID;
 import org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Argument for {@link VisorAffinityViewTask}
@@ -44,6 +46,9 @@ public class VisorAffinityViewTaskArg extends IgniteDataTransferObject {
 
         /** Diff. */
         DIFF(AffinityViewCommandArg.DIFF);
+
+        /** Enumerated values. */
+        private static final Mode[] VALS = values();
 
         /** Option name. */
         private final AffinityViewCommandArg modeName;
@@ -67,12 +72,24 @@ public class VisorAffinityViewTaskArg extends IgniteDataTransferObject {
 
             return null;
         }
+
+        /**
+         * Efficiently gets enumerated value from its ordinal.
+         *
+         * @param ord Ordinal value.
+         * @return Enumerated value or {@code null} if ordinal out of range.
+         */
+        @Nullable public static Mode fromOrdinal(int ord) {
+            return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
+        }
     }
 
     /** */
     private String cacheGrpName;
     /** */
     private Mode mode;
+    /** */
+    @Nullable private UUID affinitySrcNodeId;
 
     /**
      * Default constructor. Required for {@link Externalizable} support.
@@ -84,25 +101,26 @@ public class VisorAffinityViewTaskArg extends IgniteDataTransferObject {
     /**
      * @param cacheGrpName Group name.
      * @param mode Mode.
+     * @param affinitySrcNodeId Affinity source node id.
      */
-    public VisorAffinityViewTaskArg(String cacheGrpName, Mode mode) {
+    public VisorAffinityViewTaskArg(String cacheGrpName, Mode mode, @Nullable UUID affinitySrcNodeId) {
         this.cacheGrpName = cacheGrpName;
         this.mode = mode;
-
+        this.affinitySrcNodeId = affinitySrcNodeId;
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void writeExternalData(ObjectOutput out) throws IOException {
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeString(out, cacheGrpName);
         U.writeEnum(out, mode);
+        U.writeUuid(out, affinitySrcNodeId);
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         cacheGrpName = U.readString(in);
-        mode = U.readEnum(in, Mode.class);
+        mode = Mode.fromOrdinal(in.readByte());
+        affinitySrcNodeId = U.readUuid(in);
     }
 
     /**
@@ -117,5 +135,12 @@ public class VisorAffinityViewTaskArg extends IgniteDataTransferObject {
      */
     public Mode getMode() {
         return mode;
+    }
+
+    /**
+     * @return {@code affinitySrcNodeId}
+     */
+    @Nullable public UUID getAffinitySrcNodeId() {
+        return affinitySrcNodeId;
     }
 }

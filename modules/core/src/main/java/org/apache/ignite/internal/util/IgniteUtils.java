@@ -5642,16 +5642,6 @@ public abstract class IgniteUtils {
         out.writeByte(e == null ? -1 : e.ordinal());
     }
 
-    //TODO: docs
-    //TODO: does it work?
-    public static <E extends Enum> E readEnum(DataInput in, Class<E> enumClass) throws IOException {
-        int ord = in.readByte();
-
-        E[] values = enumClass.getEnumConstants();
-
-        return ord >= 0 && ord < values.length ? values[ord] : null;
-    }
-
     /**
      * Gets collection value by index.
      *

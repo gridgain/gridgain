@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
@@ -34,12 +35,15 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.visor.cache.affinityView.VisorAffinityViewTask;
 import org.apache.ignite.internal.visor.cache.affinityView.VisorAffinityViewTaskArg;
 import org.apache.ignite.internal.visor.cache.affinityView.VisorAffinityViewTaskResult;
+import org.apache.ignite.lang.IgniteBiTuple;
 
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.AFFINITY;
@@ -47,6 +51,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.AffinityView
 import static org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg.DIFF;
 import static org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg.GROUP_NAME;
 import static org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg.IDEAL;
+import static org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg.SOURCE_NODE_ID;
 
 /**
  * Command for accessing affinity assignment
@@ -54,8 +59,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.AffinityView
 public class AffinityViewCommand implements Command<AffinityViewCommand.Arguments> {
 
     /** {@inheritDoc} */
-    @Override
-    public void printUsage(Logger logger) {
+    @Override public void printUsage(Logger logger) {
         String commandDesc = "Print information about affinity assignment for cache group.";
 
         Map<String, String> paramsDesc = new HashMap<>();
@@ -64,11 +68,13 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
         paramsDesc.put(IDEAL.toString(), "print affinity assignment calculated by affinity function.");
         paramsDesc.put(DIFF.toString(), "print ids of partitions different from ideal assignment.");
         paramsDesc.put(GROUP_NAME.toString(), "group name.");
+        paramsDesc.put(SOURCE_NODE_ID.toString(), "affinity source node id.");
 
-        String[] args = new String[2];
+        String[] args = new String[3];
 
         args[0] = or(CURRENT, IDEAL, DIFF);
         args[1] = GROUP_NAME + " cache_group_name";
+        args[2] = optional(SOURCE_NODE_ID + " affinity_src_node");
 
         usageCache(logger, AFFINITY, commandDesc, paramsDesc, args);
     }
@@ -81,14 +87,18 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
         private final AffinityViewCommandArg mode;
         /** */
         private final String cacheGrpName;
+        /** */
+        private final UUID affinitySrcNodeId;
 
         /**
          * @param mode Mode.
          * @param cacheGrpName Cache group name.
+         * @param affinitySrcNodeId Affinity source node id.
          */
-        public Arguments(AffinityViewCommandArg mode, String cacheGrpName) {
+        public Arguments(AffinityViewCommandArg mode, String cacheGrpName, UUID affinitySrcNodeId) {
             this.mode = mode;
             this.cacheGrpName = cacheGrpName;
+            this.affinitySrcNodeId = affinitySrcNodeId;
         }
     }
 
@@ -96,14 +106,13 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
     private Arguments args;
 
     /** {@inheritDoc} */
-    @Override
-    public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         VisorAffinityViewTaskResult res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
             VisorAffinityViewTaskArg.Mode mode = VisorAffinityViewTaskArg.Mode.fromAVCmdArg(args.mode);
 
-            VisorAffinityViewTaskArg taskArg = new VisorAffinityViewTaskArg(args.cacheGrpName, mode);
+            VisorAffinityViewTaskArg taskArg = new VisorAffinityViewTaskArg(args.cacheGrpName, mode, args.affinitySrcNodeId);
 
             res = TaskExecutor.executeTask(client, VisorAffinityViewTask.class, taskArg, clientCfg);
 
@@ -133,44 +142,48 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
      * @param assignment Assignment to print.
      * @param logger Logger to use.
      */
-    private void printAssignment(List<List<ClusterNode>> assignment, Logger logger) {
-        Map<ClusterNode, List<Integer>> nodeMap = new HashMap<>();
-
-        for (int partNum = 0; partNum < assignment.size(); partNum++) {
-            for (ClusterNode node: assignment.get(partNum)) {
-                if (!nodeMap.containsKey(node)) {
-                    ArrayList<Integer> initList = new ArrayList<>();
-
-                    initList.add(partNum);
-
-                    nodeMap.put(node, initList);
-
-                    continue;
-                }
-
-                nodeMap.get(node).add(partNum);
-            }
-        }
-
-        List<ClusterNode> nodes = new ArrayList<>(nodeMap.keySet());
+    private static void printAssignment(Map<ClusterNode, IgniteBiTuple<char[], char[]>> assignment, Logger logger) {
+        List<ClusterNode> nodes = new ArrayList<>(assignment.keySet());
 
         nodes.sort(Comparator.comparing(node -> node.consistentId().toString()));
 
         for (ClusterNode node: nodes) {
-            logger.info(node.consistentId() + ":");
+            logger.info(node.getClass().getSimpleName() + " [id=" + node.id() +
+                ", addrs=" + node.addresses() +
+                ", order=" + node.order() +
+                ", ver=" + node.version() +
+                ", isClient=" + node.isClient() +
+                ", consistentId=" + node.consistentId() +
+                "]");
 
-            List<Integer> partIdsForNode = nodeMap.get(node);
+            IgniteBiTuple<char[], char[]> partitions = assignment.get(node);
 
-            logger.info(INDENT + "Partitions num: " + partIdsForNode.size());
+            printPartIds("Primary", partitions.get1(), logger);
 
-            logger.info(INDENT + "Partitions ids:");
-            String ids = DOUBLE_INDENT + partIdsForNode.stream()
-                                                       .map(partNum -> Integer.toString(partNum))
-                                                       .collect(Collectors.joining("; "));
-            logger.info(ids);
-
-            logger.info("");
+            printPartIds("Backup", partitions.get2(), logger);
         }
+    }
+
+    /**
+     * Prints compacted partitions' ids to {@code logger}
+     * @param ids to print
+     * @param logger to use
+     */
+    private static void printPartIds(String partType, char[] ids, Logger logger) {
+        logger.info(INDENT + partType + " partitions num: " + ids.length);
+
+        if (ids.length != 0) {
+            logger.info(INDENT + partType + " partitions ids:");
+
+            List<Integer> partIdsForNodeList = new ArrayList<>();
+
+            for (char c : ids)
+                partIdsForNodeList.add((int)c);
+
+            logger.info(DOUBLE_INDENT + GridToStringBuilder.compact(partIdsForNodeList));
+        }
+
+        logger.info("");
     }
 
     /**
@@ -178,25 +191,25 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
      * @param diff Set of partitions' ids
      * @param logger Logger to use
      */
-    private void printDiff(Set<Integer> diff, Logger logger) {
+    private static void printDiff(Set<Integer> diff, Logger logger) {
         logger.info("Primary partitions different to ideal assignment:");
 
         if (diff.isEmpty())
             logger.info(INDENT + "Not found.");
         else {
-            String ids = INDENT + diff.stream()
-                                      .sorted()
-                                      .map(partNum -> Integer.toString(partNum))
-                                      .collect(Collectors.joining("; "));
-            logger.info(ids);
+            List<Integer> diffIds = diff.stream()
+                                        .sorted()
+                                        .collect(Collectors.toList());
+
+            logger.info(INDENT + GridToStringBuilder.compact(diffIds));
         }
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void parseArguments(CommandArgIterator argIter) {
+    @Override public void parseArguments(CommandArgIterator argIter) {
         AffinityViewCommandArg mode = null;
         String cacheGrpName = "";
+        UUID affinitySrcNodeId = null;
 
         while (argIter.hasNextSubArg()) {
             String arg = argIter.nextArg("");
@@ -217,12 +230,16 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
                     cacheGrpName = argIter.nextArg("Group name expected after " + GROUP_NAME);
                     break;
 
+                case SOURCE_NODE_ID:
+                    affinitySrcNodeId = UUID.fromString(argIter.nextArg("Node id expected after " + SOURCE_NODE_ID));
+                    break;
+
                 default:
                     throw new IllegalArgumentException("Unsupported argument: " + avCmdArg);
             }
         }
 
-        args = new Arguments(mode, cacheGrpName);
+        args = new Arguments(mode, cacheGrpName, affinitySrcNodeId);
 
         validateArgs();
     }
@@ -239,14 +256,12 @@ public class AffinityViewCommand implements Command<AffinityViewCommand.Argument
     }
 
     /** {@inheritDoc} */
-    @Override
-    public Arguments arg() {
+    @Override public Arguments arg() {
         return args;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public String name() {
+    @Override public String name() {
         return AFFINITY.text().toUpperCase();
     }
 }

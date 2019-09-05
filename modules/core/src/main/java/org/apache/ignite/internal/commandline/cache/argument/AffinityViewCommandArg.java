@@ -33,7 +33,10 @@ public enum AffinityViewCommandArg implements CommandArg {
     DIFF("--diff"),
 
     /** Group name. */
-    GROUP_NAME("--group-name");
+    GROUP_NAME("--group-name"),
+
+    /** Affinity source node. */
+    SOURCE_NODE_ID("--src-node-id");
 
     /** Option name. */
     private final String name;
