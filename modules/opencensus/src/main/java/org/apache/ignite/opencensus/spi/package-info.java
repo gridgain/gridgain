@@ -14,25 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
-
-import org.apache.ignite.console.agent.AgentLauncherTest;
-import org.apache.ignite.console.agent.AgentUtilsTest;
-import org.apache.ignite.console.agent.rest.RestExecutorSelfTest;
-import org.apache.ignite.websocket.SerializationTests;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
 /**
- * Web Agent test suite.
+ * <!-- Package description. -->
+ * Contains APIs for OpenCensus framework integration (Metrics & Tracing SPIs).
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    AgentLauncherTest.class,
-    AgentUtilsTest.class,
-    RestExecutorSelfTest.class,
-    SerializationTests.class
-})
-public class IgniteWebAgentTestSuite {
-    // No-op.
-}
+package org.apache.ignite.opencensus.spi;
