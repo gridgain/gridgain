@@ -24,12 +24,6 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.configuration.ConnectorConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -44,7 +38,6 @@ import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -66,33 +59,21 @@ import static org.apache.ignite.internal.commandline.cache.argument.ValidateInde
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests Command Handler parsing arguments.
  */
 @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
-public class CommandHandlerParsingTest extends GridCommonAbstractTest {
+public class CommandHandlerParsingTest {
     /** */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
     /** */
     @Rule public final TestRule methodRule = new SystemPropertiesRule();
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        stopAllGrids();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setConnectorConfiguration(new ConnectorConfiguration());
-
-        return cfg;
-    }
 
     /**
      * validate_indexes command arguments parsing and validation
@@ -358,46 +339,37 @@ public class CommandHandlerParsingTest extends GridCommonAbstractTest {
      * Tests that the auto confirmation flag was correctly parsed.
      */
     @Test
-    public void testParseAutoConfirmationFlag() throws Exception {
-        IgniteEx igniteEx = startGrid(0);
-        igniteEx.cluster().active(true);
-
+    public void testParseAutoConfirmationFlag() {
         for (CommandList cmd : CommandList.values()) {
-            if (skipCommand(cmd))
+            if (cmd.command().confirmationPrompt() == null)
                 continue;
 
-            List<String> args = new ArrayList<>();
-            args.add(cmd.text());
+            ConnectionAndSslParameters args;
 
-            if (cmd == CLUSTER_CHANGE_TAG)
-                args.add("test_tag");
+                if (cmd == CLUSTER_CHANGE_TAG)
+                    args = parseArgs(asList(cmd.text(), "test_tag"));
+                else
+                    args = parseArgs(asList(cmd.text()));
 
-            ConnectionAndSslParameters connAndSslParams = parseArgs(args);
-
-            GridClientConfiguration clientCfg = toGridClientConfiguration(connAndSslParams);
-
-            if (cmd.command().confirmationPrompt(clientCfg, setupTestLogger()) == null)
-                continue;
-
-            checkCommonParametersCorrectlyParsed(cmd, connAndSslParams, false);
+            checkCommonParametersCorrectlyParsed(cmd, args, false);
 
             switch (cmd) {
                 case DEACTIVATE:
                 case READ_ONLY_DISABLE:
                 case READ_ONLY_ENABLE: {
-                    connAndSslParams = parseArgs(asList(cmd.text(), "--yes"));
+                    args = parseArgs(asList(cmd.text(), "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, connAndSslParams, true);
+                    checkCommonParametersCorrectlyParsed(cmd, args, true);
 
                     break;
                 }
                 case BASELINE: {
                     for (String baselineAct : asList("add", "remove", "set")) {
-                        connAndSslParams = parseArgs(asList(cmd.text(), baselineAct, "c_id1,c_id2", "--yes"));
+                        args = parseArgs(asList(cmd.text(), baselineAct, "c_id1,c_id2", "--yes"));
 
-                        checkCommonParametersCorrectlyParsed(cmd, connAndSslParams, true);
+                        checkCommonParametersCorrectlyParsed(cmd, args, true);
 
-                        BaselineArguments arg = ((BaselineCommand)connAndSslParams.command()).arg();
+                        BaselineArguments arg = ((BaselineCommand)args.command()).arg();
 
                         assertEquals(baselineAct, arg.getCmd().text());
                         assertEquals(new HashSet<>(asList("c_id1","c_id2")), new HashSet<>(arg.getConsistentIds()));
@@ -407,11 +379,11 @@ public class CommandHandlerParsingTest extends GridCommonAbstractTest {
                 }
 
                 case TX: {
-                    connAndSslParams = parseArgs(asList(cmd.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
+                    args = parseArgs(asList(cmd.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, connAndSslParams, true);
+                    checkCommonParametersCorrectlyParsed(cmd, args, true);
 
-                    VisorTxTaskArg txTaskArg = ((TxCommands)connAndSslParams.command()).arg();
+                    VisorTxTaskArg txTaskArg = ((TxCommands)args.command()).arg();
 
                     assertEquals("xid1", txTaskArg.getXid());
                     assertEquals(10_000, txTaskArg.getMinDuration().longValue());
@@ -421,11 +393,11 @@ public class CommandHandlerParsingTest extends GridCommonAbstractTest {
                 }
 
                 case CLUSTER_CHANGE_TAG: {
-                    connAndSslParams = parseArgs(asList(cmd.text(), "test_tag", "--yes"));
+                    args = parseArgs(asList(cmd.text(), "test_tag", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, connAndSslParams, true);
+                    checkCommonParametersCorrectlyParsed(cmd, args, true);
 
-                    assertEquals("test_tag", ((ClusterChangeTagCommand)connAndSslParams.command()).arg());
+                    assertEquals("test_tag", ((ClusterChangeTagCommand)args.command()).arg());
 
                     break;
                 }
@@ -568,18 +540,6 @@ public class CommandHandlerParsingTest extends GridCommonAbstractTest {
     private ConnectionAndSslParameters parseArgs(List<String> args) {
         return new CommonArgParser(setupTestLogger()).
             parseAndValidate(args.iterator());
-    }
-
-    /**
-     * Create a thin client configuration to connect to the cluster.
-     *
-     * @param connAndSslParameters
-     * @return Thin client configuration to connect to the cluster.
-     * @throws IgniteCheckedException If error occur.
-     * */
-    private GridClientConfiguration toGridClientConfiguration(ConnectionAndSslParameters connAndSslParameters)
-        throws IgniteCheckedException {
-        return new CommandHandler(setupTestLogger()).getClientConfiguration(connAndSslParameters);
     }
 
     /**

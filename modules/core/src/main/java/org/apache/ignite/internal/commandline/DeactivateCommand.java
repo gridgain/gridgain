@@ -22,6 +22,7 @@ import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
 import static org.apache.ignite.internal.commandline.Command.startClient;
+import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
@@ -30,18 +31,24 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
  * Command to deactivate cluster.
  */
 public class DeactivateCommand implements Command<Void> {
+    /** Cluster name. */
+    private String clusterName;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Deactivate cluster:", DEACTIVATE, optional(CMD_AUTO_CONFIRMATION));
+        usage(logger, "Deactivate cluster:", DEACTIVATE, optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = startClient(clientCfg)) {
-
-            String clusterName = client.state().clusterName();
-            return "Warning: the command will deactivate a cluster \"" + clusterName + "\".";
+            clusterName = client.state().clusterName();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will deactivate a cluster \"" + clusterName + "\".";
     }
 
     /**

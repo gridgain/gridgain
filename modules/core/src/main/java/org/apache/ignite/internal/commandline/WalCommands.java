@@ -110,7 +110,7 @@ public class WalCommands implements Command<T2<String, String>> {
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+    @Override public String confirmationPrompt() {
         if (WAL_DELETE.equals(walAct))
             return "Warning: the command will delete unused WAL segments.";
 

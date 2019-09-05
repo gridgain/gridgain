@@ -189,7 +189,7 @@ public class TxCommands implements Command<VisorTxTaskArg> {
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+    @Override public String confirmationPrompt() {
         if (args != null && args.getOperation() == VisorTxOperation.KILL)
             return "Warning: the command will kill some transactions.";
 

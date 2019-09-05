@@ -70,7 +70,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
     }
 
     /** {@inheritDoc} */
-    @Override public String confirmationPrompt(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+    @Override public String confirmationPrompt() {
         if (baselineArgs != null && BaselineSubcommands.COLLECT != baselineArgs.getCmd())
             return "Warning: the command will perform changes in baseline.";
 
