@@ -47,6 +47,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.GridClosureException;
@@ -120,11 +121,10 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
 
 
     /** @inheritDoc */
+    @SuppressWarnings("RedundantMethodOverride")
     @Before
     @Override
     public void init() throws Exception {
-        Assume.assumeTrue(cacheMode != CacheMode.LOCAL);
-
         super.init();
     }
 
@@ -432,7 +432,12 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
 
         Class<?> dataType = originalValItem.getClass();
 
-        IgniteCache<Object, Object> cache = grid(new Random().nextInt(NODES_CNT)).createCache(
+        IgniteEx ignite =
+            (cacheMode == CacheMode.LOCAL || writeSyncMode == CacheWriteSynchronizationMode.PRIMARY_SYNC) ?
+                grid(0) :
+                grid(new Random().nextInt(NODES_CNT));
+
+        IgniteCache<Object, Object> cache = ignite.createCache(
             new CacheConfiguration<>()
                 .setName(cacheName)
                 .setAtomicityMode(atomicityMode)
