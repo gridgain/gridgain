@@ -1709,6 +1709,7 @@ namespace Apache.Ignite.Core
         /// <summary>
         /// Gets or sets custom executor configuration for compute tasks.
         /// </summary>
+        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public ICollection<ExecutorConfiguration> ExecutorConfiguration { get; set; }
     }
 }
