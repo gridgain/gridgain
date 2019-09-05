@@ -88,6 +88,7 @@ import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSe
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
+import org.apache.ignite.sqltests.SqlDataTypesCoverageTests;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -199,7 +200,9 @@ import org.junit.runners.Suite;
 
     SqlPartOfComplexPkLookupTest.class,
 
-    SqlQueriesTopologyMappingTest.class
+    SqlQueriesTopologyMappingTest.class,
+
+    SqlDataTypesCoverageTests.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }
