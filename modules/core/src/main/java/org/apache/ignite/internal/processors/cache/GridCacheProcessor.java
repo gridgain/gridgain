@@ -2420,7 +2420,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param stop {@code True} for stop cache, {@code false} for close cache.
      * @param restart Restart flag.
      */
-    void blockGateway(String cacheName, boolean stop, boolean restart) {
+    public void blockGateway(String cacheName, boolean stop, boolean restart) {
         // Break the proxy before exchange future is done.
         IgniteCacheProxyImpl<?, ?> proxy = jcacheProxy(cacheName, false);
 

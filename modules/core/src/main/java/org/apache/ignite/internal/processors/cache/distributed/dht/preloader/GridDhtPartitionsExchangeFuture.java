@@ -80,11 +80,13 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.ExchangeContext;
 import org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents;
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -4255,8 +4257,27 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 exchCtx.events().processEvents(this);
 
-                if (localJoinExchange())
-                    cctx.affinity().onLocalJoin(this, msg, resTopVer);
+                if (localJoinExchange()) {
+                    Set<Integer> noAffinityGroups = cctx.affinity().onLocalJoin(this, msg, resTopVer);
+
+                    // Prevent cache usage by a user.
+                    if (!noAffinityGroups.isEmpty())
+                        cctx.cache().internalCaches().stream()
+                                .filter(cache -> noAffinityGroups.contains(cache.context().groupId()))
+                                // Close proxy.
+                                .forEach(cache -> {
+                                    // Add proxy if it's not initialized.
+                                    cctx.cache().addjCacheProxy(cache.context().name(),
+                                            new IgniteCacheProxyImpl(
+                                                    cache.context(),
+                                                    cache,
+                                                    false
+                                            )
+                                    );
+
+                                    cctx.cache().blockGateway(cache.context().name(), false, false);
+                                });
+                }
                 else {
                     if (exchCtx.events().hasServerLeft())
                         cctx.affinity().applyAffinityFromFullMessage(this, msg);

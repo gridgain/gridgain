@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -1518,7 +1519,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param msg Message finish message.
      * @param resTopVer Result topology version.
      */
-    public void onLocalJoin(
+    public Set<Integer> onLocalJoin(
         final GridDhtPartitionsExchangeFuture fut,
         GridDhtPartitionsFullMessage msg,
         final AffinityTopologyVersion resTopVer
@@ -1527,13 +1528,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         final Map<Integer, CacheGroupAffinityMessage> receivedAff = msg.joinedNodeAffinity();
 
-        assert F.isEmpty(affReq) || (!F.isEmpty(receivedAff) && receivedAff.size() >= affReq.size())
-            : ("Requested and received affinity are different " +
-            "[requestedCnt=" + (affReq != null ? affReq.size() : "none") +
-            ", receivedCnt=" + (receivedAff != null ? receivedAff.size() : "none") +
-            ", msg=" + msg + "]");
-
         final Map<Long, ClusterNode> nodesByOrder = new ConcurrentHashMap<>();
+
+        // Such cache group may exist if cache is already destroyed on server nodes
+        // and coordinator have no affinity for that group.
+        final Set<Integer> noAffinityGroups = new GridConcurrentHashSet<>();
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
@@ -1550,7 +1549,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     CacheGroupAffinityMessage affMsg = receivedAff.get(aff.groupId());
 
-                    assert affMsg != null;
+                    if (affMsg == null) {
+                        noAffinityGroups.add(aff.groupId());
+
+                        // Use ideal affinity to resume cache initialize process.
+                        calculateAndInit(evts, aff, evts.topologyVersion());
+
+                        return;
+                    }
 
                     List<List<ClusterNode>> assignments = affMsg.createAssignments(nodesByOrder, evts.discoveryCache());
 
@@ -1581,6 +1587,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     "[grp=" + aff.cacheOrGroupName() + "]");
             }
         });
+
+        return noAffinityGroups;
     }
 
     /**
