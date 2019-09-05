@@ -16,12 +16,18 @@
 
 package org.gridgain.config;
 
+import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -70,6 +76,16 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
         container.setMaxTextMessageBufferSize(131072);
         container.setMaxBinaryMessageBufferSize(131072);
         return container;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean configureMessageConverters(List<MessageConverter> msgConverters) {
+        MappingJackson2MessageConverter smileJsonConverter = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+        smileJsonConverter.setObjectMapper(new ObjectMapper(new SmileFactory()));
+
+        msgConverters.add(smileJsonConverter);
+
+        return false;
     }
 
     /**

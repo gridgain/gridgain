@@ -38,7 +38,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
+import org.gridgain.dto.action.Request;
 import org.gridgain.dto.ClusterInfo;
+import org.gridgain.service.ActionService;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.TopologyService;
 import org.gridgain.service.tracing.TracingService;
@@ -53,6 +55,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.gridgain.agent.AgentUtils.monitoringUri;
 import static org.gridgain.agent.AgentUtils.toWsUri;
+import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
 
@@ -80,6 +83,9 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** Metric service. */
     private MetricsService metricSrvc;
+
+    /** Action service. */
+    private ActionService actionSrvc;
 
     /** Execute service. */
     private ExecutorService execSrvc;
@@ -245,6 +251,7 @@ public class Agent extends ManagementConsoleProcessor {
         topSrvc = new TopologyService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
+        actionSrvc = new ActionService(ctx, mgr);
 
         execSrvc = Executors.newSingleThreadExecutor();
 
@@ -319,6 +326,16 @@ public class Agent extends ManagementConsoleProcessor {
 
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
                     metricSrvc.broadcastPullMetrics();
+                }
+            });
+
+            ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
+                @Override public Type getPayloadType(StompHeaders headers) {
+                    return Request.class;
+                }
+
+                @Override public void handleFrame(StompHeaders headers, Object payload) {
+                    actionSrvc.onActionRequest((Request) payload);
                 }
             });
         }

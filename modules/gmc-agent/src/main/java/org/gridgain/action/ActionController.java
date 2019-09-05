@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-package org.gridgain.testsuites;
+package org.gridgain.action;
 
-import org.gridgain.action.controller.BaselineActionsControllerTest;
-import org.gridgain.action.controller.NodeActionsControllerTest;
-import org.gridgain.agent.AgentSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * GridGain GMC agent self test suite.
+ * Action controller annotation.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    AgentSelfTest.class,
-    BaselineActionsControllerTest.class,
-    NodeActionsControllerTest.class
-})
-public class AgentSelfTestSuite {
-}
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface ActionController {}

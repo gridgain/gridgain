@@ -22,10 +22,13 @@ import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteFuture;
 
 /**
  * Utility methods.
@@ -139,5 +142,20 @@ public class AgentUtils {
         }
 
         return uri;
+    }
+
+    /**
+     * @param igniteFut Ignite future.
+     * @param completableFut Completable future.
+     */
+    public static <T> CompletableFuture<T> completeFuture(IgniteFuture<T> igniteFut, CompletableFuture<T> completableFut) {
+        try {
+            completableFut.complete(igniteFut.get());
+        }
+        catch (Exception ex) {
+            completableFut.completeExceptionally(ex);
+        }
+
+        return completableFut;
     }
 }
