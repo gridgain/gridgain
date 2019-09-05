@@ -379,9 +379,11 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23657")
     @Test
     @Override public void testBigIntegerDataType() throws Exception {
+        expEx.expect(SQLException.class);
+        expEx.expectMessage("Custom objects are not supported");
+
         super.testBigIntegerDataType();
     }
 
