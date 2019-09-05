@@ -85,7 +85,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     protected static final int NODES_CNT = 3;
 
     /** */
-    protected static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 2_000;
+    protected static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 4_000;
 
     /** */
     protected static final int PARTITIONS_CNT = 16;
@@ -342,7 +342,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleField Double field.
          * @param booleanField Boolean field.
          */
-        ObjectBasedOnPrimitives(int intField, double doubleField, boolean booleanField) {
+        protected ObjectBasedOnPrimitives(int intField, double doubleField, boolean booleanField) {
             this.intField = intField;
             this.doubleField = doubleField;
             this.booleanField = booleanField;
@@ -413,7 +413,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleListField Double list field.
          * @param booleanArrField Boolean array field.
          */
-        ObjectBasedOnPrimitivesAndCollections(int intField, List<Double> doubleListField,
+        protected ObjectBasedOnPrimitivesAndCollections(int intField, List<Double> doubleListField,
             boolean[] booleanArrField) {
             this.intField = intField;
             this.doubleListField = doubleListField;
@@ -485,7 +485,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleListField Double list field.
          * @param nestedObjField Nested object field.
          */
-        ObjectBasedOnPrimitivesCollectionsAndNestedObject(int intField, List<Double> doubleListField,
+        protected ObjectBasedOnPrimitivesCollectionsAndNestedObject(int intField, List<Double> doubleListField,
             ObjectBasedOnPrimitivesAndCollections nestedObjField) {
             this.intField = intField;
             this.doubleListField = doubleListField;
