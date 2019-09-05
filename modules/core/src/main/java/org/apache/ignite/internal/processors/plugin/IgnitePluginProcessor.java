@@ -137,10 +137,8 @@ public class IgnitePluginProcessor extends GridProcessorAdapter {
 
             T comp = (T)plugin.createComponent(ctx, cls);
 
-            if (comp != null) {
-                System.out.println("PLUGINS createComponent result: " + comp.getClass().getName() + " from plugin: " + plugin.name());
+            if (comp != null)
                 return comp;
-            }
         }
 
         return null;
