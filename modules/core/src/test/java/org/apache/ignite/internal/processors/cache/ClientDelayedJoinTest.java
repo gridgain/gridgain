@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.Optional;
@@ -5,7 +21,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -17,6 +32,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.spi.communication.CommunicationSpi;
@@ -32,6 +48,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Tests for
+ */
 public class ClientDelayedJoinTest extends GridCommonAbstractTest {
     private static final String CACHE_NAME = "cache";
     private final CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME)
@@ -139,11 +158,11 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         try {
             cacheGet.get(5_000); // Reasonable timeout.
 
-            fail("Cache get operation should throw IllegalStateException");
+            fail("Cache get operation should throw " + CacheStoppedException.class);
         }
         catch (Exception e) {
             assertTrue("Got unexpected exception during cache get " + e,
-                    e.getMessage().contains("Cache has been closed"));
+                    X.hasCause(e, CacheStoppedException.class));
         }
         finally {
             // Resume processing cache destroy on client node.

@@ -4275,7 +4275,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                             )
                                     );
 
-                                    cctx.cache().blockGateway(cache.context().name(), false, false);
+                                    cctx.cache().blockGateway(cache.context().name(), true, false);
                                 });
                 }
                 else {
