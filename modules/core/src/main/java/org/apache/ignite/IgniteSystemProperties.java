@@ -1330,12 +1330,6 @@ public final class IgniteSystemProperties {
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /**
-     * Timeout of waiting of checkpoint from page replacer.
-     */
-    public static final String IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT =
-        "IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT";
-
-    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

@@ -1136,14 +1136,14 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
-        IgniteInternalFuture allowToEvict
+        IgniteInternalFuture allowToReplace
     ) throws IgniteException {
-        return beginCheckpointEx(allowToEvict).get1();
+        return beginCheckpointEx(allowToReplace).get1();
     }
 
     /** {@inheritDoc} */
     @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        IgniteInternalFuture allowToEvict
+        IgniteInternalFuture allowToReplace
     ) throws IgniteException {
         if (segments == null)
             return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
@@ -1159,7 +1159,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             Collection<FullPageId> dirtyPages = seg.dirtyPages;
             collections[i] = dirtyPages;
 
-            seg.checkpointPages = new CheckpointPages(dirtyPages, allowToEvict);
+            seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
             seg.dirtyPages = new GridConcurrentHashSet<>();
         }

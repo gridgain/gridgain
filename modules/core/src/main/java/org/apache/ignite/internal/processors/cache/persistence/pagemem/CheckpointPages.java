@@ -18,31 +18,26 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT;
 
 /**
  * View of pages which should be stored during current checkpoint.
  */
 class CheckpointPages {
-    /** **/
-    private static final long CHECKPOINT_WAIT_TIMEOUT = IgniteSystemProperties.getLong(IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT, 20_000);
     /** */
-    private volatile Collection<FullPageId> segCheckpointPages;
+    private final Collection<FullPageId> segCheckpointPages;
 
-    /** The sign which allows to evict pages from a checkpoint by page replacer. */
-    private final IgniteInternalFuture allowToEvict;
+    /** The sign which allows to replace pages from a checkpoint by page replacer. */
+    private final IgniteInternalFuture allowToReplace;
 
     /**
      * @param pages Pages which would be stored to disk in current checkpoint.
-     * @param evict The sign which allows to evict pages from a checkpoint by page replacer.
+     * @param replaceFuture The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    CheckpointPages(Collection<FullPageId> pages, IgniteInternalFuture evict) {
+    CheckpointPages(Collection<FullPageId> pages, IgniteInternalFuture replaceFuture) {
         segCheckpointPages = pages;
-        allowToEvict = evict;
+        allowToReplace = replaceFuture;
     }
 
     /**
@@ -52,10 +47,10 @@ class CheckpointPages {
     public boolean allowToSave(FullPageId fullPageId) throws IgniteCheckedException {
         Collection<FullPageId> checkpointPages = segCheckpointPages;
 
-        if (checkpointPages == null || allowToEvict == null)
+        if (checkpointPages == null || allowToReplace == null)
             return false;
 
-        allowToEvict.get(CHECKPOINT_WAIT_TIMEOUT);
+        allowToReplace.getUninterruptibly();
 
         return checkpointPages.contains(fullPageId);
     }

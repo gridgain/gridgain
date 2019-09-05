@@ -114,9 +114,9 @@ public interface PageMemoryEx extends PageMemory {
      *
      * @return Collection of dirty page IDs.
      * @throws IgniteException If checkpoint has been already started and was not finished.
-     * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
+     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToEvict) throws IgniteException;
+    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
      * Gets a collection of dirty page IDs since the last checkpoint and dirty pages with user data are presented. If a
@@ -127,10 +127,10 @@ public interface PageMemoryEx extends PageMemory {
      * @return Couple of collection of dirty page IDs and flag. The flag is {@code true}, if since last checkpoint at
      * least one page with user data (not relates with system cache) became a dirty, and {@code false} otherwise.
      * @throws IgniteException If checkpoint has been already started and was not finished.
-     * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
+     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
     public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        IgniteInternalFuture allowToEvict) throws IgniteException;
+        IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
      * Finishes checkpoint operation.

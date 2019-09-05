@@ -4618,10 +4618,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /**
          * @return triple with collections of FullPageIds obtained from each PageMemory, overall number of dirty
          * pages, and flag defines at least one user page became a dirty since last checkpoint.
-         * @param allowToEvict The sign which allows to evict pages from a checkpoint by page replacer.
+         * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
          */
         private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints(
-            IgniteInternalFuture allowToEvict
+            IgniteInternalFuture allowToReplace
         ) {
             Collection<GridMultiCollectionWrapper<FullPageId>> res = new ArrayList(dataRegions().size());
 
@@ -4634,7 +4634,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     continue;
 
                 IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> nextCpPages =
-                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx(allowToEvict);
+                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx(allowToReplace);
 
                 GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = nextCpPages.get1();
 
@@ -5227,10 +5227,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 return super.onDone(res, err, cancel);
             }
         };
-
-        {
-            cpMarkerStored.ignoreInterrupts();
-        }
 
         /** Checkpoint finish phase future. TODO it should be encapsulated. */
         private GridFutureAdapter cpFinishFut = new GridFutureAdapter<Void>() {
