@@ -39,7 +39,7 @@ import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.config.TestChannelInterceptor;
-import org.gridgain.dto.Span;
+import org.gridgain.dto.tracing.Span;
 import org.gridgain.dto.topology.TopologySnapshot;
 import org.junit.After;
 import org.junit.Test;
@@ -200,7 +200,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
 
         assertWithPoll(
             () -> {
-                String metrics = (String) interceptor.getPayload(buildMetricsDest(cluster.id()));
+                String metrics = new String((byte[]) interceptor.getPayload(buildMetricsDest(cluster.id())));
                 return metrics != null && metrics.contains(cluster.tag());
             }
         );

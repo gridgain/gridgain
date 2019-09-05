@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.service.sender.RetryableSender;
 import org.gridgain.agent.WebSocketManager;
-import org.gridgain.dto.Span;
+import org.gridgain.dto.tracing.Span;
 import org.gridgain.service.sender.GmcSender;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;

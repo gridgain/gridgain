@@ -26,6 +26,7 @@ import io.opencensus.common.Functions;
 import io.opencensus.common.Timestamp;
 import io.opencensus.exporter.trace.TimeLimitedHandler;
 import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.MessageEvent;
 import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
@@ -36,7 +37,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.gridgain.service.sender.RetryableSender;
-import org.gridgain.dto.Span;
+import org.gridgain.dto.tracing.Span;
+import org.gridgain.dto.tracing.Annotation;
 import org.gridgain.service.sender.CoordinatorSender;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -147,6 +149,14 @@ public class GmcSpanExporter implements AutoCloseable {
             if (status.getDescription() != null)
                 span.getTags().put(STATUS_DESCRIPTION, status.getDescription());
         }
+
+        spanData.getAnnotations().getEvents().stream()
+                .map(a -> new Annotation(toEpochMillis(a.getTimestamp()), a.getEvent().getDescription()))
+                .forEach(a -> span.getAnnotations().add(a));
+
+        spanData.getMessageEvents().getEvents().stream()
+                .map(e -> new Annotation(toEpochMillis(e.getTimestamp()), e.getEvent().getType().name()))
+                .forEach(a -> span.getAnnotations().add(a));
 
         return span;
     }
