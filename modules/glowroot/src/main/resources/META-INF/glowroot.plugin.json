@@ -1,0 +1,7 @@
+{
+  "name": "GridGain CE Plugin",
+  "id": "gridgain_ce",
+  "aspects": [
+    "org.apache.ignite.glowroot.CacheAPIAspect"
+  ]
+}

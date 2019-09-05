@@ -98,6 +98,7 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
+        <module>modules/glowroot</module>
     </modules>
 
     <profiles>
