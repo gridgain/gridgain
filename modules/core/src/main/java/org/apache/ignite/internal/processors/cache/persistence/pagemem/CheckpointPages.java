@@ -18,13 +18,18 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT;
 
 /**
  * View of pages which should be stored during current checkpoint.
  */
 class CheckpointPages {
+    /** **/
+    private static final long CHECKPOINT_WAIT_TIMEOUT = IgniteSystemProperties.getLong(IGNITE_PAGE_REPLACER_AWAIT_CHECKPOINT_TIMEOUT, 20_000);
     /** */
     private volatile Collection<FullPageId> segCheckpointPages;
 
@@ -50,7 +55,7 @@ class CheckpointPages {
         if (checkpointPages == null || allowToEvict == null)
             return false;
 
-        allowToEvict.get();
+        allowToEvict.get(CHECKPOINT_WAIT_TIMEOUT);
 
         return checkpointPages.contains(fullPageId);
     }
