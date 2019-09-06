@@ -128,9 +128,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     /** */
     protected static File customDiagnosticDir;
 
-    /** Cluster name for tests. */
-    private static final String CLUSTER_NAME = "TEST_CLUSTER_NAME";
-
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -268,12 +265,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      * */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = CLUSTER_NAME)
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
     public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
 
-        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, CLUSTER_NAME);
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, "TEST_CLUSTER_NAME");
     }
 
     /**
