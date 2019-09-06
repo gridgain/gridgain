@@ -84,5 +84,8 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
         }).get();
     }
 
-
+    /** {@inheritDoc} */
+    @Override public String clusterName() throws GridClientException {
+        return withReconnectHandling(GridClientConnection::clusterName).get();
+    }
 }
