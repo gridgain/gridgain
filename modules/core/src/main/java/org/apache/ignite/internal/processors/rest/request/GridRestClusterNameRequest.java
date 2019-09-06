@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,29 +14,24 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests
-{
-    using NUnit.Framework;
+package org.apache.ignite.internal.processors.rest.request;
 
-    /// <summary>
-    /// Tests the JAVA_HOME detection.
-    /// </summary>
-    public class JavaHomeTest
-    {
-        /** Environment variable: JAVA_HOME. */
-        private const string EnvJavaHome = "JAVA_HOME";
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
-        /// <summary>
-        /// Tests the detection.
-        /// </summary>
-        [Test]
-        public void TestDetection([Values(null, "c:\\invalid111")] string javaHome)
-        {
-            using (EnvVar.Set(EnvJavaHome, javaHome))
-            using (var ignite = Ignition.Start(TestUtils.GetTestConfiguration()))
-            {
-                Assert.IsNotNull(ignite);
-            }
-        }
+/**
+ * Grid command request of log file.
+ */
+public class GridRestClusterNameRequest extends GridRestRequest {
+    /**
+     * Constructor.
+     */
+    public GridRestClusterNameRequest() {
+        command(GridRestCommand.CLUSTER_NAME);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRestClusterNameRequest.class, this, super.toString());
     }
 }
