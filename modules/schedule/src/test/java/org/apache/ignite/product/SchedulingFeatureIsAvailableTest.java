@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.product;
+package org.apache.ignite.product;
 
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * The test checks that indexing feature is not available in ignite core module.
+ * The test checks that scheduling feature is available in ignite schedule module.
  */
-public class IndexingFeatureIsNotAvailableTest extends GridCommonAbstractTest {
-    /** Value of expected INDEXING feature availability check. */
-    private static final boolean INDEXING_FEATURE_IS_NOT_AVAILABLE = false;
-
+public class SchedulingFeatureIsAvailableTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGrid();
@@ -38,13 +35,10 @@ public class IndexingFeatureIsNotAvailableTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If fail.
+     * @throws Exception If failed.
      */
     @Test
-    public void testIndexingFeatureIsNotAvailable() throws Exception {
-        assertEquals(
-            INDEXING_FEATURE_IS_NOT_AVAILABLE,
-            IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.INDEXING)
-        );
+    public void schedulingFeatureIsAvailable() throws Exception {
+        assertTrue(IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.SCHEDULING));
     }
 }

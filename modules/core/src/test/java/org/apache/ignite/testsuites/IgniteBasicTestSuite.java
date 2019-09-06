@@ -92,7 +92,7 @@ import org.apache.ignite.internal.processors.odbc.OdbcConfigurationValidationSel
 import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtilsTest;
 import org.apache.ignite.internal.product.GridProductVersionSelfTest;
-import org.apache.ignite.internal.product.IndexingFeatureIsNotAvailableTest;
+import org.apache.ignite.internal.product.FeaturesIsNotAvailableTest;
 import org.apache.ignite.internal.util.collection.BitSetIntSetTest;
 import org.apache.ignite.internal.util.collection.ImmutableIntSetTest;
 import org.apache.ignite.internal.util.GridCleanerTest;
@@ -182,7 +182,7 @@ import org.junit.runners.Suite;
     SetTxTimeoutOnPartitionMapExchangeTest.class,
     DiscoveryDataDeserializationFailureHanderTest.class,
 
-    IndexingFeatureIsNotAvailableTest.class,
+    FeaturesIsNotAvailableTest.class,
 
     IgniteExceptionInNioWorkerSelfTest.class,
     IgniteLocalNodeMapBeforeStartTest.class,
