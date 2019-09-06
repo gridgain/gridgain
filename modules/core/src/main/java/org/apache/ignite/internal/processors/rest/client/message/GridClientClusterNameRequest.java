@@ -14,43 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.rest.request;
+package org.apache.ignite.internal.processors.rest.client.message;
 
 /**
  *
  */
-public class GridRestChangeStateRequest extends GridRestRequest {
-    /** Active. */
-    private boolean active;
-
-    /** Request current state. */
-    private boolean reqCurrentState;
-
-    /**
-     *
-     */
-    public boolean active() {
-        return active;
-    }
-
-    /**
-     *
-     */
-    public void active(boolean active) {
-        this.active = active;
-    }
-
-    /**
-     *
-     */
-    public boolean isReqCurrentState() {
-        return reqCurrentState;
-    }
-
-    /**
-     *
-     */
-    public void reqCurrentState() {
-        reqCurrentState = true;
-    }
+public class GridClientClusterNameRequest extends GridClientAbstractMessage {
+    /** */
+    private static final long serialVersionUID = 0L;
 }

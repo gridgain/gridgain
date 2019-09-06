@@ -16,41 +16,22 @@
 
 package org.apache.ignite.internal.processors.rest.request;
 
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
- *
+ * Grid command request of log file.
  */
-public class GridRestChangeStateRequest extends GridRestRequest {
-    /** Active. */
-    private boolean active;
-
-    /** Request current state. */
-    private boolean reqCurrentState;
-
+public class GridRestClusterNameRequest extends GridRestRequest {
     /**
-     *
+     * Constructor.
      */
-    public boolean active() {
-        return active;
+    public GridRestClusterNameRequest() {
+        command(GridRestCommand.CLUSTER_NAME);
     }
 
-    /**
-     *
-     */
-    public void active(boolean active) {
-        this.active = active;
-    }
-
-    /**
-     *
-     */
-    public boolean isReqCurrentState() {
-        return reqCurrentState;
-    }
-
-    /**
-     *
-     */
-    public void reqCurrentState() {
-        reqCurrentState = true;
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRestClusterNameRequest.class, this, super.toString());
     }
 }

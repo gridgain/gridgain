@@ -25,13 +25,10 @@ import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandle
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVE;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_NAME;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_DEACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_INACTIVE;
@@ -41,14 +38,8 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER
  */
 public class GridChangeStateCommandHandler extends GridRestCommandHandlerAdapter {
     /** Commands. */
-    private static final Collection<GridRestCommand> commands = U.sealList(
-        CLUSTER_ACTIVATE,
-        CLUSTER_DEACTIVATE,
-        CLUSTER_CURRENT_STATE,
-        CLUSTER_ACTIVE,
-        CLUSTER_INACTIVE,
-        CLUSTER_CURRENT_NAME
-    );
+    private static final Collection<GridRestCommand> commands =
+        U.sealList(CLUSTER_ACTIVATE, CLUSTER_DEACTIVATE, CLUSTER_CURRENT_STATE, CLUSTER_ACTIVE, CLUSTER_INACTIVE);
 
     /**
      * @param ctx Context.
@@ -77,11 +68,6 @@ public class GridChangeStateCommandHandler extends GridRestCommandHandlerAdapter
 
                     res.setResponse(currentState);
                     break;
-                case CLUSTER_CURRENT_NAME:
-                    String clusterName = ctx.cluster().clusterName();
-
-                    res.setResponse(clusterName);
-                    break;
                 case CLUSTER_ACTIVE:
                 case CLUSTER_INACTIVE:
                     log.warning(req.command().key() + " is deprecated. Use newer commands.");
@@ -95,14 +81,7 @@ public class GridChangeStateCommandHandler extends GridRestCommandHandlerAdapter
             fut.onDone(res);
         }
         catch (Exception e) {
-            SB sb = new SB();
-
-            sb.a(e.getMessage()).a("\n").a("suppressed: \n");
-
-            for (Throwable t : X.getSuppressedList(e))
-                sb.a(t.getMessage()).a("\n");
-
-            res.setError(sb.toString());
+            res.setError(errorMessage(e));
 
             fut.onDone(res);
         }

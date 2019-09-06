@@ -33,9 +33,6 @@ public class GridClientStateRequest extends GridClientAbstractMessage {
     /** Request current state. */
     private boolean reqCurrentState;
 
-    /** Request cluster name. */
-    private boolean reqClusterName;
-
     /**
      *
      */
@@ -57,21 +54,11 @@ public class GridClientStateRequest extends GridClientAbstractMessage {
         this.reqCurrentState = true;
     }
 
-    /** Setting the request to the cluster name. */
-    public void requestClusterName() {
-        reqClusterName = true;
-    }
-
     /**
      *
      */
     public boolean isReqCurrentState() {
         return reqCurrentState;
-    }
-
-    /** @return Cluster name requested. */
-    public boolean isReqClusterName() {
-        return reqClusterName;
     }
 
     /** {@inheritDoc} */
@@ -80,7 +67,6 @@ public class GridClientStateRequest extends GridClientAbstractMessage {
 
         out.writeBoolean(active);
         out.writeBoolean(reqCurrentState);
-        out.writeBoolean(reqClusterName);
     }
 
     /** {@inheritDoc} */
@@ -89,6 +75,5 @@ public class GridClientStateRequest extends GridClientAbstractMessage {
 
         active = in.readBoolean();
         reqCurrentState = in.readBoolean();
-        reqClusterName = in.readBoolean();
     }
 }
