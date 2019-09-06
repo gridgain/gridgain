@@ -114,6 +114,10 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
         testOut = new ByteArrayOutputStream(16 * 1024);
         sysOut = System.out;
         sysIn = System.in;
@@ -122,6 +126,10 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
 
         cleanIdleVerifyLogFiles();
     }

@@ -62,6 +62,7 @@ import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -89,6 +90,10 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
     /** First version of Ignite that is capable of executing Idle Verify V2. */
     public static final IgniteProductVersion V2_SINCE_VER = IgniteProductVersion.fromString("2.5.3");
 
+    /** Ignite instance. */
+    @IgniteInstanceResource
+    private IgniteEx ignite;
+
     /** Injected logger. */
     @LoggerResource
     private IgniteLogger log;
@@ -101,6 +106,9 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
         List<ClusterNode> subgrid,
         VisorIdleVerifyTaskArg arg
     ) throws IgniteException {
+        if (arg.checkCrc() && ignite.context().security().enabled())
+            throw new VisorIllegalStateException("Checking crc sums isn't allowed with enabled security.");
+
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         for (ClusterNode node : subgrid)

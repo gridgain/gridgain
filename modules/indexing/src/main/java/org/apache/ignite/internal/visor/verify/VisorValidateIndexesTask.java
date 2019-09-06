@@ -32,6 +32,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -65,6 +66,9 @@ public class VisorValidateIndexesTask extends VisorMultiNodeTask<VisorValidateIn
 
     /** {@inheritDoc} */
     @Override protected Collection<UUID> jobNodes(VisorTaskArgument<VisorValidateIndexesTaskArg> arg) {
+        if (arg.getArgument().isCheckCrc() && ignite.context().security().enabled())
+            throw new VisorIllegalStateException("Checking crc sums isn't allowed with enabled security.");
+
         Collection<ClusterNode> srvNodes = ignite.cluster().forServers().nodes();
         Collection<UUID> ret = new ArrayList<>(srvNodes.size());
 
