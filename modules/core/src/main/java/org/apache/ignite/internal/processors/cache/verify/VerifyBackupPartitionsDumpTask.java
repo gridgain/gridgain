@@ -27,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -35,6 +34,7 @@ import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTaskArg;
@@ -71,7 +71,7 @@ public class VerifyBackupPartitionsDumpTask extends ComputeTaskAdapter<VisorIdle
 
     /** */
     @IgniteInstanceResource
-    private Ignite ignite;
+    private IgniteEx ignite;
 
     /** Injected logger. */
     @LoggerResource
@@ -84,6 +84,8 @@ public class VerifyBackupPartitionsDumpTask extends ComputeTaskAdapter<VisorIdle
     ) throws IgniteException {
         if (arg instanceof VisorIdleVerifyDumpTaskArg)
             taskArg = (VisorIdleVerifyDumpTaskArg)arg;
+
+        delegate.injectIgnite(ignite);
 
         return delegate.map(subgrid, arg);
     }

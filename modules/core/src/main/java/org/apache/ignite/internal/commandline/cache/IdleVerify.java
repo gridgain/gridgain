@@ -215,7 +215,9 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             if (args.dump() || idleVerifyV2) {
                 GridClientClusterState state = client.state();
 
-                if (args.idleCheckCrc() && !state.readOnly()) {
+                boolean readOnly = state.readOnly();
+
+                if (args.idleCheckCrc() && !readOnly) {
                     throw new VisorIllegalStateException(
                         "Cluster isn't in read-only mode. " + IDLE_VERIFY + " with " + CHECK_CRC +
                             " not allowed without enabled read-only mode."

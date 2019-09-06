@@ -341,6 +341,29 @@ public final class GridTestUtils {
     }
 
     /**
+     * Checks that one of elements of {@code arr} array is {@code value} value. Logs value, array and throws
+     * {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param value Value.
+     * @param arr Array.
+     */
+    public static <T> void assertContains(@Nullable IgniteLogger log,T value, T... arr) {
+        assertNotNull("Value can't be null.", value);
+        assertNotNull("Array can't be null", arr);
+
+        for (T elem : arr) {
+            if (value.equals(elem))
+                return;
+        }
+
+        U.warn(log, String.format("Array does not contain value: '%s':", value.toString()));
+        U.warn(log, "Array: " + Arrays.toString(arr));
+
+        throw new AssertionError();
+    }
+
+    /**
      * Checks that collection {@param col} contains string {@param str}. Logs collection, string
      * and throws {@link java.lang.AssertionError}, if not.
      *

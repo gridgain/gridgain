@@ -1232,19 +1232,24 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().readOnly(true);
 
-        stopGrid(0);
+        try {
+            stopGrid(0);
 
-        corruptPartition(partitionsDir);
+            corruptPartition(partitionsDir);
 
-        startGrid(0);
+            startGrid(0);
 
-        awaitPartitionMapExchange();
+            awaitPartitionMapExchange();
 
-        forceCheckpoint();
+            forceCheckpoint();
 
-        injectTestSystemOut();
+            injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute(args));
+            assertEquals(EXIT_CODE_OK, execute(args));
+        }
+        finally {
+            grid(1).cluster().readOnly(false);
+        }
     }
 
     /**

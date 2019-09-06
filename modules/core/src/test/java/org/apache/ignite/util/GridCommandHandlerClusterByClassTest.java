@@ -386,10 +386,27 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * Tests that idle verify with --check-crc fails without enabled read-only mode.
      */
     @Test
-    public void testValidateIndexesCrcWithoutReadOnlyFails() {
+    public void testIdleVerifyCrcWithoutReadOnlyFails() {
+        checkIdleVerifyDumpCrcWithoutReadOnlyFails("--cache", "idle_verify", "--check-crc");
+    }
+
+    /**
+     * Tests that  idle verify --dump with --check-crc fails without enabled read-only mode.
+     */
+    @Test
+    public void testIdleVerifyDumpCrcWithoutReadOnlyFails() {
+        checkIdleVerifyDumpCrcWithoutReadOnlyFails("--cache", "idle_verify", "--check-crc", "--dump");
+    }
+
+    /** */
+    private void checkIdleVerifyDumpCrcWithoutReadOnlyFails(String... args) {
+        assertContains(log, "--cache", args);
+        assertContains(log, "idle_verify", args);
+        assertContains(log, "--check-crc", args);
+
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--cache", "idle_verify", "--check-crc"));
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute(args));
 
         assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. idle_verify with --check-crc not allowed without enabled read-only mode.");
     }
@@ -398,13 +415,30 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * Tests that idle verify with --check-crc finished without errors if read-only mode enabled.
      */
     @Test
-    public void testValidateIndexesCrcWithReadOnlyNoErrors() {
+    public void testIdleVerifyCrcWithReadOnlyNoErrors() {
+        checkIdleVerifyCrcWithReadOnlyNoErrors("--cache", "idle_verify", "--check-crc");
+    }
+
+    /**
+     * Tests that idle verify --dump with --check-crc finished without errors if read-only mode enabled.
+     */
+    @Test
+    public void testIdleVerifyDumpCrcWithReadOnlyNoErrors() {
+        checkIdleVerifyCrcWithReadOnlyNoErrors("--cache", "idle_verify", "--check-crc", "--dump");
+    }
+
+    /** */
+    private void checkIdleVerifyCrcWithReadOnlyNoErrors(String... args) {
+        assertContains(log, "--cache", args);
+        assertContains(log, "idle_verify", args);
+        assertContains(log, "--check-crc", args);
+
         injectTestSystemOut();
 
         crd.cluster().readOnly(true);
 
         try {
-            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--check-crc"));
+            assertEquals(EXIT_CODE_OK, execute(args));
 
             assertNotContains(log, testOut.toString(), "Cluster isn't in read-only mode. idle_verify with --check-crc not allowed without enabled read-only mode.");
         }

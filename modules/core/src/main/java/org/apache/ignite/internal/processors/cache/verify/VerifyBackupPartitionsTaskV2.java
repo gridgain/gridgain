@@ -157,6 +157,11 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
     }
 
     /** */
+    protected void injectIgnite(IgniteEx ignite) {
+        this.ignite = ignite;
+    }
+
+    /** */
     private IdleVerifyResultV2 checkConflicts(
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> clusterHashes,
         Map<ClusterNode, Exception> exceptions
