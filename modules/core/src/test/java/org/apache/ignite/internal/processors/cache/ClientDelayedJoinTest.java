@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -49,23 +48,37 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for
+ * Tests for delayed client join.
+ * When client node joins to cluster it sends SingleMessage to coordinator.
+ * During this time topology on server nodes can be changed,
+ * because client exchange doesn't require acknowledgement for SingleMessage on coordinator.
+ * Delay is simulated by blocking sending this SingleMessage and resume sending after topology is changed.
  */
 public class ClientDelayedJoinTest extends GridCommonAbstractTest {
+    /** Cache name. */
     private static final String CACHE_NAME = "cache";
+
+    /** Cache configuration. */
     private final CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME)
             .setReadFromBackup(false)
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 64));
+
+    /** Client mode. */
     private boolean clientMode;
+
+    /** Communication SPI supplier. */
     private Supplier<CommunicationSpi> communicationSpiSupplier = TestRecordingCommunicationSpi::new;
+
+    /** Discovery SPI supplier. */
     private Supplier<DiscoverySpi> discoverySpiSupplier = CustomMessageInterceptingDiscoverySpi::new;
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setCacheConfiguration(ccfg);
         cfg.setConsistentId(igniteInstanceName);
+        cfg.setCacheConfiguration(ccfg);
         cfg.setCommunicationSpi(communicationSpiSupplier.get());
         cfg.setDiscoverySpi(discoverySpiSupplier.get());
         cfg.setClientMode(clientMode);
@@ -73,6 +86,9 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+    /**
+     *
+     */
     @Before
     public void before() throws Exception {
         stopAllGrids();
@@ -80,6 +96,9 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /**
+     *
+     */
     @After
     public void after() throws Exception {
         stopAllGrids();
@@ -87,6 +106,9 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /**
+     *
+     */
     @Test
     public void testClientJoinAndCacheStop() throws Exception {
         IgniteEx crd = (IgniteEx) startGridsMultiThreaded(3);
@@ -181,9 +203,14 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         Assert.assertNull("Cache should be destroyed on client node", client.cache(CACHE_NAME));
     }
 
+    /**
+     *
+     */
     static class CustomMessageInterceptingDiscoverySpi extends TcpDiscoverySpi {
+        /** Interceptor. */
         private volatile IgniteInClosure<DiscoveryCustomMessage> interceptor;
 
+        /** {@inheritDoc} */
         @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
             if (!(msg instanceof TcpDiscoveryCustomEventMessage))
                 return;
@@ -206,10 +233,6 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
 
             if (interceptor != null)
                 interceptor.apply(delegate);
-        }
-
-        static CustomMessageInterceptingDiscoverySpi spi(Ignite node) {
-            return (CustomMessageInterceptingDiscoverySpi) node.configuration().getDiscoverySpi();
         }
     }
 }

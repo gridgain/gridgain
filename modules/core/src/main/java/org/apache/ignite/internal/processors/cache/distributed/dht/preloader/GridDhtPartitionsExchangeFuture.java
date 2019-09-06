@@ -80,7 +80,6 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.ExchangeContext;
 import org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents;
-import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -4264,7 +4263,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     if (!noAffinityGroups.isEmpty())
                         cctx.cache().internalCaches().stream()
                                 .filter(cache -> noAffinityGroups.contains(cache.context().groupId()))
-                                // Close proxy.
                                 .forEach(cache -> {
                                     // Add proxy if it's not initialized.
                                     cctx.cache().addjCacheProxy(cache.context().name(),
@@ -4275,7 +4273,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                             )
                                     );
 
+                                    // Close proxy.
                                     cctx.cache().blockGateway(cache.context().name(), true, false);
+
+                                    log.warning("Affinity for cache " + cache.context().name()
+                                        + " has not received from coordinator during local join. "
+                                        + " Probably cache is already stopped but not processed on local node yet."
+                                        + " Cache proxy will be closed for user interactions for safety.");
                                 });
                 }
                 else {
