@@ -61,6 +61,7 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
                     while (U.currentTimeMillis() < stop) {
                         try (Transaction tx = grid.transactions().withLabel("test" + idx).txStart()) {
                             cache.put(r.nextInt(100), r.nextInt(100));
+                            cache.put(r.nextInt(100), r.nextInt(100));
 
                             tx.commit();
                         }

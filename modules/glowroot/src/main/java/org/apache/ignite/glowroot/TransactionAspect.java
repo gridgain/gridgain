@@ -36,7 +36,7 @@ public class TransactionAspect {
         methodName = "newTx",
         nestingGroup = "ignite",
         methodParameterTypes = {".."},
-        timerName = "process tx")
+        timerName = "process_tx")
     public static class TxStartAdvice {
         private static final TimerName timer = Agent.getTimerName(TxStartAdvice.class);
 
@@ -68,8 +68,30 @@ public class TransactionAspect {
      */
     @Pointcut(className = "org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl",
         methodName = "commit|rollback",
-        methodParameterTypes = {})
+        methodParameterTypes = {},
+        timerName = "finish_tx")
     public static class TxFinishAdvice {
+        private static final TimerName timer = Agent.getTimerName(TxFinishAdvice.class);
+
+        /**
+         * @param ctx Context.
+         */
+        @OnBefore public static TraceEntry onBefore(OptionalThreadContext ctx) {
+            return ctx.startTraceEntry(MessageSupplier.create("commit tx"), // TODO add label
+                timer);
+        }
+
+        @OnReturn
+        public static void onReturn(@BindTraveler TraceEntry traceEntry) {
+            traceEntry.end();
+        }
+
+        @OnThrow
+        public static void onThrow(@BindThrowable Throwable throwable,
+            @BindTraveler TraceEntry traceEntry) {
+            traceEntry.endWithError(throwable);
+        }
+
         @OnAfter public static void onAfter() {
             TraceEntry entry = ctx.get();
 
