@@ -16,16 +16,25 @@
 
 package org.apache.ignite.glowroot;
 
-
-
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 /**
+ * { "name": "GridGain CE Plugin", "id": "gridgain_ce", "aspects": [ "org.apache.ignite.glowroot.CacheAPIAspect" ] }
+ *
+ * { "name": "Ignite Plugin", "id": "ignite", "instrumentation": [ { "captureKind": "transaction", "transactionType":
+ * "Ignite", "transactionNameTemplate": "IgniteCommit", "traceEntryMessageTemplate": "{{this}}", "timerName":
+ * "IgniteCommit", "className": "org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl",
+ * "methodName": "commit", "methodParameterTypes": [] } ] }
  */
 public class GlowrootCacheAPITest extends GridCommonAbstractTest {
     /**
@@ -36,14 +45,37 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
         try {
             IgniteEx grid = startGrid(0);
 
-            IgniteCache<Object, Object> cache = grid.getOrCreateCache(new CacheConfiguration<Object, Object>(DEFAULT_CACHE_NAME));
+            IgniteCache<Object, Object> cache = grid.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).
+                setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-            cache.put("1", "1");
+            long stop = System.currentTimeMillis() + 600_000L;
 
-            LockSupport.park();
+            Random r = new Random();
+
+            AtomicInteger i = new AtomicInteger();
+
+            multithreadedAsync(new Runnable() {
+                @Override public void run() {
+                    int idx = i.getAndIncrement();
+
+                    while (U.currentTimeMillis() < stop) {
+                        try (Transaction tx = grid.transactions().withLabel("test" + idx).txStart()) {
+                            cache.put(r.nextInt(100), r.nextInt(100));
+
+                            tx.commit();
+                        }
+                    }
+
+                }
+            }, 1, "tx-put-thread").get();
         }
         finally {
             stopAllGrids();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return 600_000L;
     }
 }

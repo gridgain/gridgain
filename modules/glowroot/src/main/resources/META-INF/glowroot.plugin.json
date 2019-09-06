@@ -2,6 +2,7 @@
   "name": "GridGain CE Plugin",
   "id": "gridgain_ce",
   "aspects": [
-    "org.apache.ignite.glowroot.CacheAPIAspect"
+    "org.apache.ignite.glowroot.TransactionAspect",
+    "org.apache.ignite.glowroot.CacheAspect"
   ]
 }

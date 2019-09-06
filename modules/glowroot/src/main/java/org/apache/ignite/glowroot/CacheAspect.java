@@ -47,7 +47,7 @@ import org.glowroot.agent.plugin.api.weaving.OnThrow;
 import org.glowroot.agent.plugin.api.weaving.Pointcut;
 import org.glowroot.agent.plugin.api.weaving.Shim;
 
-public class CacheAPIAspect {
+public class CacheAspect {
     // Glowroot will inject this interface into com.example.myapp.Invoice's interface list
     // so that the plugin can access it regardless of what class loader loads com.example.myapp.Invoice
 //    @Shim("org.apache.ignite.IgniteCache")
@@ -57,12 +57,29 @@ public class CacheAPIAspect {
 
     /**
      */
-    @Pointcut(className = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl", methodName = "put", methodParameterTypes = {"java.lang.Object", "java.lang.Object"})
+    @Pointcut(className = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl",
+        methodName = "put",
+        methodParameterTypes = {"java.lang.Object", "java.lang.Object"},
+        timerName = "cache_put"
+    )
     public static class CachePutAdvice {
+        private static final TimerName timer = Agent.getTimerName(CachePutAdvice.class);
 
         @OnBefore
-        public static void onBefore(@BindReceiver IgniteCacheProxyImpl proxy, @BindParameter Object key, @BindParameter Object val) {
-            System.out.println("#### (glowroot-ignite) proxy=" + proxy + ", key=" + key + ", value=" + val);
+        public static TraceEntry onBefore(ThreadContext context, @BindParameter Object key, @BindParameter Object value) {
+            return context.startTraceEntry(
+                MessageSupplier.create("cache put: {} {}", key.toString(), value.toString()), timer);
+        }
+
+        @OnReturn
+        public static void onReturn(@BindTraveler TraceEntry traceEntry) {
+            traceEntry.end();
+        }
+
+        @OnThrow
+        public static void onThrow(@BindThrowable Throwable throwable,
+            @BindTraveler TraceEntry traceEntry) {
+            traceEntry.endWithError(throwable);
         }
     }
 }
