@@ -34,6 +34,7 @@ import org.glowroot.agent.plugin.api.TimerName;
 import org.glowroot.agent.plugin.api.TraceEntry;
 import org.glowroot.agent.plugin.api.checker.Nullable;
 import org.glowroot.agent.plugin.api.weaving.BindClassMeta;
+import org.glowroot.agent.plugin.api.weaving.BindMethodName;
 import org.glowroot.agent.plugin.api.weaving.BindParameter;
 import org.glowroot.agent.plugin.api.weaving.BindReceiver;
 import org.glowroot.agent.plugin.api.weaving.BindThrowable;
@@ -58,17 +59,17 @@ public class CacheAspect {
     /**
      */
     @Pointcut(className = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl",
-        methodName = "put",
-        methodParameterTypes = {"java.lang.Object", "java.lang.Object"},
-        timerName = "cache_put"
+        methodName = "*",
+        methodParameterTypes = {".."},
+        timerName = "cache_op"
     )
     public static class CachePutAdvice {
         private static final TimerName timer = Agent.getTimerName(CachePutAdvice.class);
 
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext context, @BindParameter Object key, @BindParameter Object value) {
+        public static TraceEntry onBefore(ThreadContext context, @BindMethodName String val) {
             return context.startTraceEntry(
-                MessageSupplier.create("cache put: {} {}", key.toString(), value.toString()), timer);
+                MessageSupplier.create("cache {}", val), timer);
         }
 
         @OnReturn

@@ -21,7 +21,7 @@ import org.glowroot.agent.plugin.api.weaving.Pointcut;
 public class TransactionAspect {
     /** Static tl looks safe
      * Thread local not necessary, can extend NearLocalTx and attach trace entry.
-     * */
+     */
     private static ThreadLocal<TraceEntry> ctx = new ThreadLocal<>();
 
     private static ThreadLocal<long[]> ctx2 = new ThreadLocal<long[]>() {
@@ -76,7 +76,8 @@ public class TransactionAspect {
         /**
          * @param ctx Context.
          */
-        @OnBefore public static TraceEntry onBefore(OptionalThreadContext ctx) {
+        @OnBefore
+        public static TraceEntry onBefore(OptionalThreadContext ctx) {
             return ctx.startTraceEntry(MessageSupplier.create("commit tx"), // TODO add label
                 timer);
         }
