@@ -273,14 +273,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
 
-        String clusterName = CLUSTER_NAME;
-
-        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
-
-        igniteEx.cluster().active(true);
-        assertTrue(igniteEx.cluster().active());
-
-        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, CLUSTER_NAME);
     }
 
     /**
@@ -294,8 +287,23 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
 
-        String clusterName = igniteEx.context().cache().utilityCache().context().dynamicDeploymentId().toString();
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
+            igniteEx,
+            igniteEx.context().cache().utilityCache().context().dynamicDeploymentId().toString()
+        );
+    }
 
+    /**
+     * Deactivating the cluster(active and not) with checking the cluster name
+     * in the confirmation.
+     *
+     * @param igniteEx Node.
+     * @param clusterName Cluster name to check in the confirmation message.
+     * */
+    private void deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
+        IgniteEx igniteEx,
+        String clusterName
+    ) {
         deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
 
         igniteEx.cluster().active(true);
