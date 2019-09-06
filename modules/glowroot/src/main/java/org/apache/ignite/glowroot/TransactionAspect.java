@@ -47,7 +47,7 @@ public class TransactionAspect {
         @OnBefore public static TraceEntry onBefore(OptionalThreadContext ctx,
             @BindReceiver IgniteTxManager mgr,
             @BindParameterArray Object[] params) {
-            return ctx.startTransaction("Ignite", "tx" + Thread.currentThread().getName(),
+            return ctx.startTransaction("Ignite", "ignite-" + Thread.currentThread().getName(),
                 MessageSupplier.create("Start tx"), // TODO add label
                 timer);
         }
