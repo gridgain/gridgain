@@ -1,5 +1,6 @@
 package org.apache.ignite.glowroot;
 
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
@@ -8,6 +9,7 @@ import org.glowroot.agent.plugin.api.TimerName;
 import org.glowroot.agent.plugin.api.TraceEntry;
 import org.glowroot.agent.plugin.api.weaving.BindParameterArray;
 import org.glowroot.agent.plugin.api.weaving.BindReceiver;
+import org.glowroot.agent.plugin.api.weaving.BindReturn;
 import org.glowroot.agent.plugin.api.weaving.BindThrowable;
 import org.glowroot.agent.plugin.api.weaving.BindTraveler;
 import org.glowroot.agent.plugin.api.weaving.OnAfter;
@@ -38,13 +40,15 @@ public class TransactionAspect {
         methodParameterTypes = {".."},
         timerName = "process_tx")
     public static class TxStartAdvice {
+        /** Timer. */
         private static final TimerName timer = Agent.getTimerName(TxStartAdvice.class);
 
         /**
          * @param ctx Context.
          * @param params Params.
          */
-        @OnBefore public static TraceEntry onBefore(OptionalThreadContext ctx,
+        @OnBefore
+        public static TraceEntry onBefore(OptionalThreadContext ctx,
             @BindReceiver IgniteTxManager mgr,
             @BindParameterArray Object[] params) {
             return ctx.startTransaction("Ignite", "ignite-" + Thread.currentThread().getName(),
@@ -53,7 +57,7 @@ public class TransactionAspect {
         }
 
         @OnReturn
-        public static void onReturn(@BindTraveler TraceEntry traceEntry) {
+        public static void onReturn(@BindReturn GridNearTxLocal ret, @BindTraveler TraceEntry traceEntry) {
             ctx.set(traceEntry);
         }
 
