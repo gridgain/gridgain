@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -57,13 +56,12 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.rules.TestRule;
 
+import static java.lang.String.join;
 import static java.lang.System.lineSeparator;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
@@ -278,7 +276,7 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     protected void injectTestSystemIn(String... inputStrings) {
         assert nonNull(inputStrings);
 
-        String inputStr = of(inputStrings).collect(joining(lineSeparator()));
+        String inputStr = join(lineSeparator(), inputStrings);
         System.setIn(new ByteArrayInputStream(inputStr.getBytes()));
     }
 

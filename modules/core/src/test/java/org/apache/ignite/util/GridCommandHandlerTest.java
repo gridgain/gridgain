@@ -261,20 +261,57 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test the deactivation command with the output of the cluster name
-     * in the confirmation message.
+     * Test the deactivation command on the active and no cluster with checking
+     * the cluster name(which is set through the system property) in
+     * confirmation.
      *
      * @throws Exception If failed.
      * */
     @Test
     @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = CLUSTER_NAME)
-    public void testDeactivateWithClusterNameInPromptMessage() throws Exception {
+    public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
+
+        String clusterName = CLUSTER_NAME;
+
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
 
         igniteEx.cluster().active(true);
         assertTrue(igniteEx.cluster().active());
 
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+    }
+
+    /**
+     * Test the deactivation command on the active and no cluster with checking
+     * the cluster name(default) in confirmation.
+     *
+     * @throws Exception If failed.
+     * */
+    @Test
+    public void testDeactivateWithCheckClusterNameInConfirmationByDefault() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+        assertFalse(igniteEx.cluster().active());
+
+        String clusterName = igniteEx.context().cache().utilityCache().context().dynamicDeploymentId().toString();
+
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+
+        igniteEx.cluster().active(true);
+        assertTrue(igniteEx.cluster().active());
+
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+    }
+
+    /**
+     * Deactivating the cluster with checking the cluster name in the
+     * confirmation.
+     *
+     * @param igniteEx Node.
+     * @param clusterName Cluster name to check in the confirmation message.
+     * */
+    private void deactivateWithCheckClusterNameInConfirmation(IgniteEx igniteEx, String clusterName) {
         autoConfirmation = false;
         injectTestSystemOut();
         injectTestSystemIn(CONFIRM_MSG);
@@ -285,7 +322,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(
             log,
             testOut.toString(),
-            "Warning: the command will deactivate a cluster \"" + CLUSTER_NAME + "\"."
+            "Warning: the command will deactivate a cluster \"" + clusterName + "\"."
         );
     }
 
