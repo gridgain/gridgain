@@ -99,13 +99,15 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         corruptIndexPartition(idxPath);
 
-        startGrids(2);
+        ignite = startGrids(2);
 
         awaitPartitionMapExchange();
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
+        ignite.cluster().readOnly(true);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME, "--check-crc"));
 
         assertContains(log, testOut.toString(), "issues found (listed above)");
     }
