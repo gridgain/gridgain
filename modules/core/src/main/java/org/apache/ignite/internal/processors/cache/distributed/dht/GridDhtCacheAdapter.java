@@ -87,7 +87,6 @@ import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.C2;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CI2;
-import org.apache.ignite.internal.util.typedef.CI3;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPC;
@@ -582,12 +581,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     /** {@inheritDoc} */
     @Override public void localLoad(Collection<? extends K> keys, final ExpiryPolicy plc, final boolean keepBinary)
         throws IgniteCheckedException {
-        if (ctx.store().isLocal()) {
-            super.localLoad(keys, plc, keepBinary);
-
-            return;
-        }
-
         // Version for all loaded entries.
         final AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
 
@@ -608,12 +601,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
     /** {@inheritDoc} */
     @Override public void localLoadCache(final IgniteBiPredicate<K, V> p, Object[] args) throws IgniteCheckedException {
-        if (ctx.store().isLocal()) {
-            super.localLoadCache(p, args);
-
-            return;
-        }
-
         //TODO IGNITE-7954
         MvccUtils.verifyMvccOperationSupport(ctx, "Load");
 
@@ -634,10 +621,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
             ctx.kernalContext().resource().injectGeneric(p);
 
         try {
-            ctx.store().loadCache(new CI3<KeyCacheObject, Object, GridCacheVersion>() {
-                @Override public void apply(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver) {
-                    assert ver == null;
-
+            ctx.store().loadCache(new IgniteBiInClosure<KeyCacheObject, Object>() {
+                @Override public void apply(KeyCacheObject key, Object val) {
                     loadEntry(key, val, ver0, p, topVer, replicate, plc);
                 }
             }, args);
@@ -997,7 +982,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
                 final Collection<KeyCacheObject> loaded = new HashSet<>();
 
-                return new GridEmbeddedFuture(
+                return new GridEmbeddedFuture<>(
                     ctx.closures().callLocalSafe(ctx.projectSafe(new GPC<Map<K1, V1>>() {
                         @Override public Map<K1, V1> call() throws Exception {
                             ctx.store().loadAll(null/*tx*/, loadKeys.keySet(), new CI2<KeyCacheObject, Object>() {
@@ -1093,8 +1078,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                             return map;
                         }
                     }), true),
-                    new C2<Map<K, V>, Exception, IgniteInternalFuture<Map<K, V>>>() {
-                        @Override public IgniteInternalFuture<Map<K, V>> apply(Map<K, V> map, Exception e) {
+                    new C2<Map<K1, V1>, Exception, IgniteInternalFuture<Map<K1, V1>>>() {
+                        @Override public IgniteInternalFuture<Map<K1, V1>> apply(Map<K1, V1> map, Exception e) {
                             if (e != null) {
                                 clearReservationsIfNeeded(loadKeys, loaded, null);
 
@@ -1114,8 +1099,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                             }
 
                             // There were no misses.
-                            return new GridFinishedFuture<>(Collections.<K,
-                                V>emptyMap());
+                            return new GridFinishedFuture<>(Collections.emptyMap());
                         }
                     },
                     new C2<Map<K1, V1>, Exception, Map<K1, V1>>() {
@@ -1713,30 +1697,29 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     }
 
     /**
-     * @param expVer Expected topology version.
+     * @param mapVer Mapped topology version.
      * @param curVer Current topology version.
      * @return {@code True} if cache affinity changed and operation should be remapped.
      */
-    protected final boolean needRemap(AffinityTopologyVersion expVer, AffinityTopologyVersion curVer,
-        Collection<KeyCacheObject> keys) {
-        if (curVer.equals(expVer))
+    protected final boolean needRemap(AffinityTopologyVersion mapVer, AffinityTopologyVersion curVer) {
+        if (curVer.equals(mapVer))
             return false;
 
-        AffinityTopologyVersion lastAffChangedTopVer = ctx.shared().exchange().lastAffinityChangedTopologyVersion(expVer);
+        AffinityTopologyVersion lastAffChangedTopVer = ctx.shared().exchange().lastAffinityChangedTopologyVersion(mapVer);
 
-        if (curVer.compareTo(lastAffChangedTopVer) >= 0 && curVer.compareTo(expVer) <= 0)
+        if (curVer.isBetween(lastAffChangedTopVer, mapVer))
             return false;
 
         // TODO IGNITE-7164 check mvcc crd for mvcc enabled txs.
 
-        Collection<ClusterNode> cacheNodes0 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), expVer);
+        Collection<ClusterNode> cacheNodes0 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), mapVer);
         Collection<ClusterNode> cacheNodes1 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), curVer);
 
-        if (!cacheNodes0.equals(cacheNodes1) || ctx.affinity().affinityTopologyVersion().compareTo(curVer) < 0)
+        if (!cacheNodes0.equals(cacheNodes1) || ctx.affinity().affinityTopologyVersion().before(curVer))
             return true;
 
         try {
-            List<List<ClusterNode>> aff1 = ctx.affinity().assignments(expVer);
+            List<List<ClusterNode>> aff1 = ctx.affinity().assignments(mapVer);
             List<List<ClusterNode>> aff2 = ctx.affinity().assignments(curVer);
 
             return !aff1.equals(aff2);

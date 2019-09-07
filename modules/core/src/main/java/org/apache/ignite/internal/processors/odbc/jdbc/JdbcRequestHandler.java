@@ -473,6 +473,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         catch (Exception e) {
             U.error(null, "Error processing file batch", e);
 
+            processor.onFail(e);
+
             if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
             else
@@ -1075,7 +1077,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      */
     private JdbcResponse getTablesMeta(JdbcMetaTablesRequest req) {
         try {
-            List<JdbcTableMeta> tabMetas = meta.getTablesMeta(req.schemaName(), req.tableName());
+            List<JdbcTableMeta> tabMetas = meta.getTablesMeta(req.schemaName(), req.tableName(), req.tableTypes());
 
             JdbcMetaTablesResult res = new JdbcMetaTablesResult(tabMetas);
 
@@ -1358,7 +1360,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      *
      * @return True if supported, false otherwise.
      */
-    private boolean isCancellationSupported() {
+    @Override public boolean isCancellationSupported() {
         return (protocolVer.compareTo(VER_2_8_0) >= 0);
     }
 

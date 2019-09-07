@@ -77,6 +77,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
+import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -138,6 +139,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_CONSISTEN
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RESTART_CODE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
@@ -1788,11 +1790,9 @@ public class IgnitionEx {
                                 new IgniteException(S.toString(GridWorker.class, deadWorker))));
                     }
                 },
-                IgniteSystemProperties.getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT,
-                    cfg.getSystemWorkerBlockedTimeout() != null
-                    ? cfg.getSystemWorkerBlockedTimeout()
-                    : cfg.getFailureDetectionTimeout()),
-                log);
+                getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, cfg.getSystemWorkerBlockedTimeout()),
+                log
+            );
 
             stripedExecSvc = new StripedExecutor(
                 cfg.getStripedPoolSize(),
@@ -2121,8 +2121,10 @@ public class IgnitionEx {
                 // If user provided IGNITE_HOME - set it as a system property.
                 U.setIgniteHome(ggHome);
 
+            String userProvidedWorkDir = cfg.getWorkDirectory();
+
             // Correctly resolve work directory and set it back to configuration.
-            String workDir = U.workDirectory(cfg.getWorkDirectory(), ggHome);
+            String workDir = U.workDirectory(userProvidedWorkDir, ggHome);
 
             myCfg.setWorkDirectory(workDir);
 
@@ -2150,6 +2152,9 @@ public class IgnitionEx {
             log = cfgLog.getLogger(G.class);
 
             myCfg.setGridLogger(cfgLog);
+
+            if(F.isEmpty(userProvidedWorkDir) && F.isEmpty(U.IGNITE_WORK_DIR))
+                log.warning("Ignite work directory is not provided, automatically resolved to: " + workDir);
 
             // Check Ignite home folder (after log is available).
             if (ggHome != null) {
@@ -2391,6 +2396,9 @@ public class IgnitionEx {
 
             if (F.isEmpty(cfg.getMetricExporterSpi()))
                 cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+
+            if (cfg.getTracingSpi() == null)
+                cfg.setTracingSpi(new NoopTracingSpi());
         }
 
         /**

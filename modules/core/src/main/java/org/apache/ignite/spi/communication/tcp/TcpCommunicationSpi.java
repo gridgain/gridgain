@@ -16,6 +16,8 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -48,8 +50,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -74,6 +74,11 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.tracing.NoopTracing;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.Tracing;
+import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -98,6 +103,7 @@ import org.apache.ignite.internal.util.nio.GridNioServerListener;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
+import org.apache.ignite.internal.util.nio.GridNioTracerFilter;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.nio.ssl.BlockingSslHandler;
@@ -161,6 +167,10 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
+import static org.apache.ignite.internal.processors.tracing.MTC.trace;
+import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
+import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture.SES_FUT_META;
@@ -374,11 +384,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     public static final int DFLT_CONN_PER_NODE = 1;
 
     /** No-op runnable. */
-    private static final IgniteRunnable NOOP = new IgniteRunnable() {
-        @Override public void run() {
-            // No-op.
-        }
-    };
+    private static final IgniteRunnable NOOP = () -> {};
 
     /** Node ID message type. */
     public static final short NODE_ID_MSG_TYPE = -1;
@@ -391,6 +397,50 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
     /** Handshake wait message type. */
     public static final short HANDSHAKE_WAIT_MSG_TYPE = -28;
+
+    /** Communication metrics group name. */
+    public static final String COMMUNICATION_METRICS_GROUP_NAME = "communication.tcp";
+
+    /** */
+    public static final String SENT_MESSAGES_METRIC_NAME = "sentMessagesCount";
+
+    /** */
+    public static final String SENT_MESSAGES_METRIC_DESC = "Total number of messages sent by current node";
+
+    /** */
+    public static final String RECEIVED_MESSAGES_METRIC_NAME = "receivedMessagesCount";
+
+    /** */
+    public static final String RECEIVED_MESSAGES_METRIC_DESC = "Total number of messages received by current node";
+
+
+    /** */
+    public static String sentMessagesByTypeMetricName(Short directType) {
+        return "sentMessagesByType." + directType;
+    }
+
+    /** */
+    public static final String SENT_MESSAGES_BY_TYPE_METRIC_DESC = "Total number of messages with given type sent by current node";
+
+    /** */
+    public static String receivedMessagesByTypeMetricName(Short directType) {
+        return "receivedMessagesByType." + directType;
+    }
+
+    /** */
+    public static final String RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC = "Total number of messages with given type received by current node";
+
+    /** */
+    public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_NAME = "sentMessagesToNode";
+
+    /** */
+    public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages sent by current node to the given node";
+
+    /** */
+    public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME = "receivedMessagesFromNode";
+
+    /** */
+    public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages received by current node from the given node";
 
     /** */
     private ConnectGateway connectGate;
@@ -742,6 +792,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             }
 
             @Override public void onMessage(final GridNioSession ses, Message msg) {
+                if (isTraceable()) {
+                    trace("Communication received");
+                    traceTag(SpanTags.MESSAGE, traceName(msg));
+                }
+
                 ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
                 if (connKey == null) {
@@ -1210,7 +1265,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     private volatile boolean stopping;
 
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr = new TcpCommunicationMetricsListener();
+    private TcpCommunicationMetricsListener metricsLsnr;
 
     /** Client connect futures. */
     private final ConcurrentMap<ConnectionKey, GridFutureAdapter<GridCommunicationClient>> clientFuts =
@@ -1227,6 +1282,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
     /** */
     private final GridLocalEventListener discoLsnr = new DiscoveryListener();
+
+    /** Tracing. */
+    protected Tracing tracing;
 
     /**
      * @return {@code True} if ssl enabled.
@@ -1271,7 +1329,15 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         if (ignite != null) {
             setAddressResolver(ignite.configuration().getAddressResolver());
             setLocalAddress(ignite.configuration().getLocalHost());
+            tracing = ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().tracing() : new NoopTracing();
         }
+    }
+
+    /** */
+    @MetricManagerResource
+    private void injectMetricManager(GridMetricManager mmgr) {
+        if (mmgr != null)
+            metricsLsnr = new TcpCommunicationMetricsListener(mmgr);
     }
 
     /**
@@ -2420,6 +2486,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     sslFilter.needClientAuth(true);
 
                     filters = new GridNioFilter[] {
+                        new GridNioTracerFilter(log, tracing),
                         new GridNioCodecFilter(parser, log, true),
                         new GridConnectionBytesVerifyFilter(log),
                         sslFilter
@@ -2427,6 +2494,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 }
                 else
                     filters = new GridNioFilter[] {
+                        new GridNioTracerFilter(log, tracing),
                         new GridNioCodecFilter(parser, log, true),
                         new GridConnectionBytesVerifyFilter(log)
                     };
@@ -2446,19 +2514,20 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     .socketReceiveBufferSize(sockRcvBuf)
                     .sendQueueLimit(msgQueueLimit)
                     .directMode(true)
-                    .metricsListener(metricsLsnr)
                     .writeTimeout(sockWriteTimeout)
                     .selectorSpins(selectorSpins)
                     .filters(filters)
                     .writerFactory(writerFactory)
                     .skipRecoveryPredicate(skipRecoveryPred)
                     .messageQueueSizeListener(queueSizeMonitor)
+                    .tracing(tracing)
                     .readWriteSelectorsAssign(usePairedConnections);
 
                 if (ignite instanceof IgniteEx) {
                     IgniteEx igniteEx = (IgniteEx)ignite;
 
-                    builder.workerListener(igniteEx.context().workersRegistry());
+                    builder.workerListener(igniteEx.context().workersRegistry())
+                        .metricRegistry(igniteEx.context().metric().registry(COMMUNICATION_METRICS_GROUP_NAME));
                 }
 
                 GridNioServer<Message> srvr = builder.build();
@@ -2640,6 +2709,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      */
     void onNodeLeft(UUID nodeId) {
         assert nodeId != null;
+
+        metricsLsnr.onNodeLeft(nodeId);
 
         GridCommunicationClient[] clients0 = clients.remove(nodeId);
 
@@ -3126,7 +3197,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             try {
                 client = new GridShmemCommunicationClient(
                     connIdx,
-                    metricsLsnr,
+                    metricsLsnr.metricRegistry(),
                     port,
                     timeoutHelper.nextTimeoutChunk(connTimeout),
                     log,
@@ -3976,6 +4047,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
         CommunicationListener<Message> lsnr = this.lsnr;
 
+        trace( "Communication listeners notified");
+
         if (lsnr != null)
             // Notify listener of a new message.
             lsnr.onMessage(sndId, msg, msgC);
@@ -4349,11 +4422,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 };
 
                 IpcToNioAdapter<Message> adapter = new IpcToNioAdapter<>(
-                    metricsLsnr,
+                    metricsLsnr.metricRegistry(),
                     log,
                     endpoint,
                     srvLsnr,
                     writerFactory,
+                    new GridNioTracerFilter(log, tracing),
                     new GridNioCodecFilter(
                         new GridDirectParser(log.getLogger(GridDirectParser.class), msgFactory, readerFactory),
                         log,

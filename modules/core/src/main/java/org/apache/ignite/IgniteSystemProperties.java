@@ -16,13 +16,13 @@
 
 package org.apache.ignite;
 
+import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -91,10 +91,19 @@ public final class IgniteSystemProperties {
     /**
      * If this system property is set to {@code false} - no checks for new versions will
      * be performed by Ignite. By default, Ignite periodically checks for the new
-     * version and prints out the message into the log if new version of Ignite is
+     * version and prints out the message into the log if a new version of Ignite is
      * available for download.
+     *
+     * Update notifier enabled flag is a cluster-wide value and determined according to the local setting
+     * during the start of the first node in the cluster. The chosen value will survive the first node shutdown
+     * and will override the property value on all newly joining nodes.
      */
     public static final String IGNITE_UPDATE_NOTIFIER = "IGNITE_UPDATE_NOTIFIER";
+
+    /**
+     * Url of updates service.
+     */
+    public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
 
     /**
      * This system property defines interval in milliseconds in which Ignite will check
@@ -564,9 +573,6 @@ public final class IgniteSystemProperties {
     /** Maximum number of nested listener calls before listener notification becomes asynchronous. */
     public static final String IGNITE_MAX_NESTED_LISTENER_CALLS = "IGNITE_MAX_NESTED_LISTENER_CALLS";
 
-    /** Indicating whether local store keeps primary only. Backward compatibility flag. */
-    public static final String IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY = "IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY";
-
     /**
      * Manages {@link OptimizedMarshaller} behavior of {@code serialVersionUID} computation for
      * {@link Serializable} classes.
@@ -805,8 +811,10 @@ public final class IgniteSystemProperties {
     /** Max amount of remembered errors for {@link GridLogThrottle}. */
     public static final String IGNITE_LOG_THROTTLE_CAPACITY = "IGNITE_LOG_THROTTLE_CAPACITY";
 
-    /** If this property is set, {@link DataStorageConfiguration#writeThrottlingEnabled} will be overridden to true
-     * independent of initial value in configuration. */
+    /**
+     * If this property is set, {@link DataStorageConfiguration#isWriteThrottlingEnabled()}
+     * will be overridden to {@code true} regardless the initial value in the configuration.
+     */
     public static final String IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED = "IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED";
 
     /**
@@ -920,11 +928,11 @@ public final class IgniteSystemProperties {
 
     /**
      * Whenever read load balancing is enabled, that means 'get' requests will be distributed between primary and backup
-     * nodes if it is possible and {@link CacheConfiguration#readFromBackup} is {@code true}.
+     * nodes if it is possible and {@link CacheConfiguration#isReadFromBackup()} is {@code true}.
      *
      * Default is {@code true}.
      *
-     * @see CacheConfiguration#readFromBackup
+     * @see CacheConfiguration#isReadFromBackup()
      */
     public static final String IGNITE_READ_LOAD_BALANCING = "IGNITE_READ_LOAD_BALANCING";
 
@@ -1283,6 +1291,43 @@ public final class IgniteSystemProperties {
      * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
      */
     public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
+
+    /** Enable write rebalnce statistics into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
+
+    /**  Enable write rebalnce statistics by partitions into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS =
+        "IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS";
+
+    /**
+     * Threshold timeout for long transactions, if transaction exceeds it, it will be dumped in log with
+     * information about how much time did it spent in system time (time while aquiring locks, preparing,
+     * commiting, etc) and user time (time when client node runs some code while holding transaction and not
+     * waiting it). Equals 0 if not set. No long transactions are dumped in log if nor this parameter
+     * neither {@link #IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT} is set.
+     */
+    public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD = "IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD";
+
+    /**
+     * The coefficient for samples of completed transactions that will be dumped in log. Must be float value
+     * between 0.0 and 1.0 inclusive. Default value is <code>0.0</code>.
+     */
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT";
+
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>. Default value is <code>5</code>.
+     */
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
+
+    /**
+     * Disables smart DR throttling. Default value is <code>false</code>.
+     */
+    public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
+        "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /**
      * Enforces singleton.

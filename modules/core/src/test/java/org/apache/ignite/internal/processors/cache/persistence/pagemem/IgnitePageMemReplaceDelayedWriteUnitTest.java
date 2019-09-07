@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
@@ -59,6 +60,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest.NO_OP_METRICS;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -117,7 +119,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint();
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -180,7 +182,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint();
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -258,7 +260,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
 
         DataRegionConfiguration regCfg = cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration();
 
-        DataRegionMetricsImpl memMetrics = new DataRegionMetricsImpl(regCfg);
+        DataRegionMetricsImpl memMetrics = new DataRegionMetricsImpl(regCfg, kernalCtx.metric(), NO_OP_METRICS);
 
         long[] sizes = prepareSegmentSizes(regCfg.getMaxSize());
 
