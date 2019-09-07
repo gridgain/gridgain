@@ -26,7 +26,6 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
-import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
  * Page memory with some persistence related additions.
