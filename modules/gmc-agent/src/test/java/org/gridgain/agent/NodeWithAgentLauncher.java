@@ -27,6 +27,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -42,9 +43,7 @@ public class NodeWithAgentLauncher {
      * @param args Arguments.
      */
     public static void main(String[] args) {
-        IgniteConfiguration cfg = getConfiguration();
-
-        Ignite ignite = Ignition.start(cfg);
+        Ignite ignite = F.isEmpty(args) ? startFromCode() : startFromSpringXml(args[0]);
 
         ignite.cluster().active(true);
 
@@ -56,10 +55,10 @@ public class NodeWithAgentLauncher {
     }
 
     /**
-     * @return Grid configuration
+     * @return Ignite instance.
      */
-    private static IgniteConfiguration getConfiguration() {
-        return new IgniteConfiguration()
+    private static Ignite startFromCode() {
+        IgniteConfiguration cfg = new IgniteConfiguration()
             .setIgniteInstanceName("node-with-gmc-agent")
             .setAuthenticationEnabled(false)
             .setMetricsLogFrequency(0)
@@ -87,6 +86,7 @@ public class NodeWithAgentLauncher {
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
+                            .setMaxSize(256 * 1024 * 1024)
                     )
             )
             // TODO temporary fix for GG-22214
@@ -97,8 +97,18 @@ public class NodeWithAgentLauncher {
                 new TcpDiscoverySpi()
                     .setIpFinder(
                         new TcpDiscoveryVmIpFinder()
-                            .setAddresses(Collections.singletonList("127.0.0.1:47500..47509"))
+                            .setAddresses(Collections.singletonList("127.0.0.1:47500..47505"))
                     )
             );
+
+        return Ignition.start(cfg);
+    }
+
+    /**
+     * @param springCfgPath Spring XML configuration file path or URL.
+     * @return Ignite instance.
+     */
+    private static Ignite startFromSpringXml(String springCfgPath) {
+        return Ignition.start(springCfgPath);
     }
 }
