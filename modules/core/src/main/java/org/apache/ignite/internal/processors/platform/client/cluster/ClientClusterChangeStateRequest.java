@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
@@ -44,6 +43,6 @@ public class ClientClusterChangeStateRequest extends ClientClusterRequest {
     public ClientResponse process(ClientConnectionContext ctx) {
         ClientCluster clientCluster = ctx.resources().get(clusterId);
         clientCluster.changeGridState(shouldBeActive);
-        return new ClientBooleanResponse(requestId(), clientCluster.isActive());
+        return new ClientResponse(requestId());
     }
 }

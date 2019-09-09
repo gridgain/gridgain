@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritdoc /> */
-        public IClientClusterGroup ForAttribute(string name, string val)
+        public IClientCluster ForAttribute(string name, string val)
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -76,7 +76,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritdoc /> */
-        public IClientClusterGroup ForDotNet()
+        public IClientCluster ForDotNet()
         {
             return ForAttribute(AttrPlatform, Platform);
         }
@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             ThrowIfDisposed();
 
-            DoOutInOp(ClientOp.ClusterChangeState, w => w.WriteBoolean(isActive), r => r.ReadBool());
+            DoOutInOp<object>(ClientOp.ClusterChangeState, w => w.WriteBoolean(isActive), null);
         }
 
         /** <inheritdoc /> */
@@ -193,7 +193,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             }
             finally
             {
-                //no op
+                // No op.
             }
         }
 

@@ -16,11 +16,28 @@
 
 namespace Apache.Ignite.Core.Client
 {
+    using System;
+
     /// <summary>
     /// Represents whole cluster (group of all nodes in a cluster).
     /// </summary>
-    public interface IClientCluster : IClientClusterGroup
+    public interface IClientCluster : IDisposable
     {
+        /// <summary>
+        /// Creates projection for nodes containing given name and value
+        /// specified in user attributes.
+        /// </summary>
+        /// <param name="name">Name of the attribute.</param>
+        /// <param name="val">Optional attribute value to match.</param>
+        /// <returns>Grid projection for nodes containing specified attribute.</returns>
+        IClientCluster ForAttribute(string name, string val);
+
+        /// <summary>
+        /// Creates grid projection for nodes supporting .Net, i.e. for nodes started with Apache.Ignite.exe.
+        /// </summary>
+        /// <returns>Grid projection for nodes supporting .Net.</returns>
+        IClientCluster ForDotNet();
+
         /// <summary>
         /// Changes Ignite grid state to active or inactive.
         /// </summary>
@@ -30,7 +47,7 @@ namespace Apache.Ignite.Core.Client
         /// Determines whether this grid is in active state.
         /// </summary>
         /// <returns>
-        ///   <c>true</c> if the grid is active; otherwise, <c>false</c>.
+        ///  <c>true</c> if the grid is active; otherwise, <c>false</c>.
         /// </returns>
         bool IsActive();
 
@@ -63,7 +80,6 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Name of the cache.</param>
         /// <returns>Whether WAL disabled by this call.</returns>
         bool EnableWal(string cacheName);
-
 
         /// <summary>
         /// Determines whether write-ahead logging is enabled for specified cache.

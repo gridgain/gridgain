@@ -48,9 +48,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             var ignite = Ignition.GetIgnite();
             ignite.GetCluster().SetActive(true);
-            //to make sure there is no persisted cache from previous runs
+            // To make sure there is no persisted cache from previous runs.
             ignite.DestroyCache(PersistentCache);
             ignite.GetOrCreateCache<int, int>(cacheCfg);
+        }
+
+        /// <summary>
+        /// Executes after each test.
+        /// </summary>
+        [TearDown]
+        public void TestTearDown()
+        {
+            Client.GetCluster().SetActive(true);
         }
 
         /** <inheritDoc /> */
@@ -95,16 +104,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         public void TestClusterDeactivation()
         {
             var clientCluster = Client.GetCluster();
-            try
-            {
-                clientCluster.SetActive(false);
-                Assert.IsFalse(clientCluster.IsActive());
-            }
-            finally
-            {
-                //tear down logic requires active cluster
-                clientCluster.SetActive(true);
-            }
+            clientCluster.SetActive(false);
+            Assert.IsFalse(clientCluster.IsActive());
         }
 
         /// <summary>
