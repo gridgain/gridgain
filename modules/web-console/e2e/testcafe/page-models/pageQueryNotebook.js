@@ -60,6 +60,6 @@ export const showStacktraceDialog = {
     rootCauseMsg: stacktraceDialogRootCause.find('span'),
     rootCauseFirstStacktraceLine: stacktraceDialogRootCauseLine,
     causeWithoutStacktrace: showStacktraceDialogSelector.find('.stacktrace-viewer__cause').withText('Cause without stacktrace'),
-    downloadLink: showStacktraceDialogSelector.find('a').withText('GridGain since 8.8.1'),
+    downloadLink: showStacktraceDialogSelector.find('span').withText('Full stacktrace is not available'),
     okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
 };

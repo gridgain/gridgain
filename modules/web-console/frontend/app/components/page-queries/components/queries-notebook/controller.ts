@@ -2189,7 +2189,10 @@ export class NotebookCtrl {
 
                 addToTrace(paragraph.error.root);
 
-                this.stacktraceViewerDialog.show('Error details', stacktrace);
+                this.stacktraceViewerDialog.show(
+                    $translate.instant('queries.notebook.stackTraceDialog.title'),
+                    stacktrace
+                );
             }
         };
 

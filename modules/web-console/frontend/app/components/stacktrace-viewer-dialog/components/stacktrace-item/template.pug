@@ -30,4 +30,4 @@
         span {{ trace }}
 .stacktrace-viewer__trace(ng-if='$ctrl.expanded && !$ctrl.cause.stacktrace')
     .stacktrace-viewer__trace_message
-        span Full stacktrace is available only in #[a(href="https://www.gridgain.com/resources/download" target="_blank") GridGain since 8.8.1] version
+        span {{ "queries.notebook.stackTraceDialog.noStacktraceMessage"|translate }}
