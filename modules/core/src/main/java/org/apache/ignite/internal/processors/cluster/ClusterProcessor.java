@@ -930,7 +930,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     public String clusterName() {
         return IgniteSystemProperties.getString(
             IGNITE_CLUSTER_NAME,
-            ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
+            ctx.grid().cluster().id().toString()
         );
     }
 
