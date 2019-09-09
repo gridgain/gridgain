@@ -16,9 +16,13 @@
 
 package org.apache.ignite.client;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.Collections;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -27,6 +31,9 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -37,14 +44,15 @@ import org.junit.rules.Timeout;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
  * High Availability tests.
  */
 public class MetricTest {
-    /** Default thin client disconnect timeout in msecs. */
-    public static final int DEFAULT_CLIENT_DISCONNECT_TIMEOUT = 1000;
+    /** Default metric change timeout in msecs. */
+    public static final int DEFAULT_METRIC_CHANGE_TIMEOUT = 10000;
 
     /** */
     private static final String METRICS_NAMESPACE_CLIENT = "client";
@@ -57,9 +65,6 @@ public class MetricTest {
 
     /** */
     private static final String METRICS_NAMESPACE_REQUESTS_THIN = METRICS_NAMESPACE_CLIENT + ".requests.thin";
-
-    /** */
-    private static final String METRIC_SESSIONS_WAITING = METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
 
     /** */
     private static final String METRIC_SESSIONS_REJECTED_DUE_TIMEOUT =
@@ -76,6 +81,9 @@ public class MetricTest {
     /** */
     private static final String METRIC_SESSIONS_REJECTED_DUE_AUTH =
         METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueAuthentication";
+
+    /** */
+    private static final String METRIC_SESSIONS_WAITING = METRICS_NAMESPACE_SESSIONS + ".waiting";
 
     /** */
     private static final String METRIC_SESSIONS_ACCEPTED = METRICS_NAMESPACE_SESSIONS_THIN + ".accepted";
@@ -157,7 +165,7 @@ public class MetricTest {
      * Tests metrics when auth failed.
      */
     @Test
-    public void testAuth() throws Exception {
+    public void testAuthFail() throws Exception {
         U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", true);
 
         try (Ignite ignored = startAuthNode()) {
@@ -173,31 +181,68 @@ public class MetricTest {
             checkSessionsState(0, 1, 0, 1);
             checkNothingRejected();
 
-            try {
-                Ignition.startClient(getClientConfiguration());
-
+            try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration()
+                    .setUserName("wrong")
+                    .setUserPassword("WrongToo"))){
                 fail("Should not authenticate");
             }
             catch (ClientAuthenticationException ignored2) {
                 // No-op.
             }
 
-            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_AUTH, 1, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
+            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_AUTH, 1);
 
             checkSessionsState(0, 1, 0, 1);
 
             assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
             assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
             assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
+            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
         }
     }
+
+    /**
+     * Tests metrics when auth failed.
+     */
+    @Test
+    public void testTimeoutFail() throws Exception {
+        try (Ignite ignored = startNode()) {
+            checkSessionsState(0, 0, 0, 0);
+
+            Socket conn = new Socket("localhost", ClientConnectorConfiguration.DFLT_PORT);
+
+            waitLongMetricChange(METRIC_SESSIONS_WAITING, 1);
+
+            checkSessionsState(1, 0, 0, 0);
+
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
+
+            int res = conn.getInputStream().read();
+
+            assertEquals(-1, res);
+
+            waitLongMetricChange(METRIC_SESSIONS_WAITING, 0);
+            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT, 1);
+
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
+            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
+            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
+
+            checkSessionsState(0, 0, 0, 0);
+        }
+    }
+
 
     /**
      * Wait until client disconnects.
      * @param disconnected How much clients should be disconnected.
      */
     private static void waitClientDisconnect(long disconnected) throws Exception {
-        waitLongMetricChange(METRIC_SESSIONS_CLOSED, disconnected, DEFAULT_CLIENT_DISCONNECT_TIMEOUT);
+        waitLongMetricChange(METRIC_SESSIONS_CLOSED, disconnected);
     }
 
     /**
@@ -205,12 +250,18 @@ public class MetricTest {
      * @param metric Metric.
      * @param value Expeced value.
      */
-    private static void waitLongMetricChange(String metric, long value, long timeout) throws Exception {
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+    private static void waitLongMetricChange(String metric, long value) throws Exception {
+        System.out.println("Before: " + System.currentTimeMillis());
+        boolean success = GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                return getLongMetricValue(metric) == value;
+                long val = getLongMetricValue(metric);
+                System.out.println(metric + ": " + val);
+                return val == value;
             }
-        }, timeout);
+        }, DEFAULT_METRIC_CHANGE_TIMEOUT);
+        System.out.println("After: " + System.currentTimeMillis());
+
+        assertTrue(success);
     }
 
     /**
@@ -248,7 +299,7 @@ public class MetricTest {
     private static long getLongMetricValue(String metricFull) {
         LongMetric metric = getMetric(metricFull);
 
-        assertNotNull("Int metric was not found: " + metricFull, metric);
+        assertNotNull("Long metric was not found: " + metricFull, metric);
 
         return metric.value();
     }
@@ -270,14 +321,43 @@ public class MetricTest {
         return registry.findMetric(metricName);
     }
 
+    /** */
+    public static IgniteConfiguration getServerConfiguration() {
+        TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
+
+        ipFinder.registerAddresses(Collections.singletonList(new InetSocketAddress("127.0.0.1", 47500)));
+
+        TcpDiscoverySpi discoverySpi = new TcpDiscoverySpi();
+
+        discoverySpi.setIpFinder(ipFinder);
+
+        IgniteConfiguration igniteCfg = new IgniteConfiguration();
+
+        igniteCfg.setDiscoverySpi(discoverySpi);
+
+        return igniteCfg;
+    }
+
     /** Start node. */
     private static Ignite startNode() {
-        return Ignition.start(new IgniteConfiguration());
+        IgniteConfiguration cfg = getServerConfiguration();
+
+        cfg.setClientConnectorConfiguration(
+            new ClientConnectorConfiguration()
+                .setHandshakeTimeout(500)
+        );
+
+        return Ignition.start(cfg);
     }
 
     /** Start node. */
     private static Ignite startAuthNode() {
-        IgniteConfiguration cfg = new IgniteConfiguration();
+        IgniteConfiguration cfg = getServerConfiguration();
+
+        cfg.setClientConnectorConfiguration(
+            new ClientConnectorConfiguration()
+                .setHandshakeTimeout(20000)
+        );
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()

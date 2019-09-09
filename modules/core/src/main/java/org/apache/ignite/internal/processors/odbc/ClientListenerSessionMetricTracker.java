@@ -95,15 +95,13 @@ public class ClientListenerSessionMetricTracker {
 
         MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
 
-        waiting = mreg.longMetric("waiting", "Number of sessions that did not pass handshake yet.");
+        waiting = mreg.longMetric("waiting", "Number of sessions that did not pass handshake yet");
 
         rejectedDueTimeout = mreg.longMetric("rejectedDueTimeout",
-            "Number of sessions that were not established because of handshake timeout.");
+            "Number of sessions that were not established because of handshake timeout");
 
         rejectedDueParsingError = mreg.longMetric("rejectedDueParsingError",
-            "Number of sessions that were not established because of corrupt handshake message.");
-
-        waiting.increment();
+            "Number of sessions that were not established because of corrupt handshake message");
     }
 
     /**
@@ -114,21 +112,28 @@ public class ClientListenerSessionMetricTracker {
         MetricRegistry mregSes = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
 
         rejectedDueHandshakeParams = mregSes.longMetric("rejectedDueHandshakeParams",
-            "Number of sessions that were not established because of rejected handshake message.");
+            "Number of sessions that were not established because of rejected handshake message");
 
         rejectedDueAuthentication = mregSes.longMetric("rejectedDueAuthentication",
-            "Number of sessions that were not established because of failed authentication.");
+            "Number of sessions that were not established because of failed authentication");
 
-        accepted = mregSes.longMetric("accepted", "Number of successfully established sessions.");
+        accepted = mregSes.longMetric("accepted", "Number of successfully established sessions");
 
-        active = mregSes.longMetric("active", "Number of active sessions.");
+        active = mregSes.longMetric("active", "Number of active sessions");
 
-        closed = mregSes.longMetric("closed", "Number of closed sessions.");
+        closed = mregSes.longMetric("closed", "Number of closed sessions");
 
         MetricRegistry mregReq = ctx.metric().registry(MetricUtils.metricName(CLIENT_REQUESTS_METRIC_GROUP, clientName));
 
-        handledRequests = mregReq.longMetric("handled", "Number of handled requests.");
-        failedRequests = mregReq.longMetric("failed", "Number of failed requests.");
+        handledRequests = mregReq.longMetric("handled", "Number of handled requests");
+        failedRequests = mregReq.longMetric("failed", "Number of failed requests");
+    }
+
+    /**
+     * Handle connection.
+     */
+    public void onSessionEstablished() {
+        waiting.increment();
     }
 
     /**
@@ -175,6 +180,7 @@ public class ClientListenerSessionMetricTracker {
         }
         else
         {
+            System.out.println("onSessionClosed due " + rejectReason);
             waiting.decrement();
 
             switch (rejectReason) {

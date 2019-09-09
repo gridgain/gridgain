@@ -99,6 +99,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
+
+        // Initing metrics
+        ClientListenerSessionMetricTracker metrics = new ClientListenerSessionMetricTracker(ctx);
+        metrics.onHandshakeReceived(clientTypeToMetricNamespace(ODBC_CLIENT));
+        metrics.onHandshakeReceived(clientTypeToMetricNamespace(JDBC_CLIENT));
+        metrics.onHandshakeReceived(clientTypeToMetricNamespace(THIN_CLIENT));
     }
 
     /** {@inheritDoc} */
@@ -106,7 +112,10 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
 
-        ses.addMeta(METRIC_TRACKER_META_KEY, new ClientListenerSessionMetricTracker(ctx));
+        ClientListenerSessionMetricTracker metrics = new ClientListenerSessionMetricTracker(ctx);
+        metrics.onSessionEstablished();
+
+        ses.addMeta(METRIC_TRACKER_META_KEY, metrics);
 
         long handshakeTimeout = cliConnCfg.getHandshakeTimeout();
 
@@ -116,6 +125,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+        System.out.println("onSessionClosed)");
+
         ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
         metrics.onSessionClosed();
 
@@ -285,6 +296,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
      * @param msg Message bytes.
      */
     private void onHandshake(GridNioSession ses, byte[] msg) {
+        System.out.println("onHandshake()");
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
         BinaryReaderExImpl reader = new BinaryReaderExImpl(null, stream, null, true);
@@ -328,6 +340,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             else
                 throw new IgniteCheckedException("Unsupported version.");
 
+            System.out.println("onHandshakeAccepted()");
             metrics.onHandshakeAccepted();
 
             cancelHandshakeTimeout(ses);
@@ -335,6 +348,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             connCtx.handler().writeHandshake(writer);
         }
         catch (IgniteAccessControlException authEx) {
+            System.out.println("onHandshakeRejected(REJECT_REASON_AUTHENTICATION_FAILURE)");
             metrics.onHandshakeRejected(ClientListenerSessionMetricTracker.REJECT_REASON_AUTHENTICATION_FAILURE);
 
             writer.writeBoolean(false);
@@ -349,6 +363,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 writer.writeInt(ClientStatus.AUTH_FAILED);
         }
         catch (IgniteCheckedException e) {
+            System.out.println("onHandshakeAccepted()");
             U.warn(log, "Error during handshake [rmtAddr=" + ses.remoteAddress() + ", msg=" + e.getMessage() + ']');
 
             ClientListenerProtocolVersion currVer;
