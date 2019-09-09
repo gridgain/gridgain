@@ -23,7 +23,13 @@ import java.util.UUID;
 
 import static org.gridgain.dto.action.ActionStatus.FAILED;
 
+/**
+ * Action controller base test.
+ */
 public class ActionControllerBaseTest extends AbstractActionControllerTest{
+    /**
+     * Should send error response with on response with invalid argument.
+     */
     @Test
     public void shouldSendErrorResponseWithInvalidArgument() {
         Request req = new Request()
@@ -34,6 +40,9 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest{
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == -32700);
     }
 
+    /**
+     * Should send error response with on response with incorrect action.
+     */
     @Test
     public void shouldSendErrorResponseWithIncorrectAction() {
         Request req = new Request()

@@ -38,15 +38,27 @@ public class ActionControllerAnnotationProcessorTest {
         assertTrue(methods.containsKey("TestAction.action"));
     }
 
+    /**
+     * Test actiona controller
+     */
     @ActionController
     private static class TestActionController {
+        /**
+         * @param flag Flag.
+         */
         public static CompletableFuture<Boolean> action(boolean flag) {
             return CompletableFuture.completedFuture(flag);
         }
     }
 
+    /**
+     * Test actiona controller with name.
+     */
     @ActionController("TestAction")
     private static class TestActionControllerWithName {
+        /**
+         * @param flag Flag.
+         */
         public static CompletableFuture<Boolean> action(boolean flag) {
             return CompletableFuture.completedFuture(flag);
         }
