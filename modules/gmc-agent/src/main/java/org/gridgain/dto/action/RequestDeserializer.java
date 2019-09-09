@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import org.apache.ignite.IgniteException;
 import org.gridgain.action.ActionMethod;
 
 import java.io.IOException;
@@ -33,6 +32,9 @@ import static org.gridgain.action.ActionControllerAnnotationProcessor.getActions
  * Request deserializer.
  */
 public class RequestDeserializer extends StdDeserializer<Request> {
+    /** Parse error code. */
+    private static final int PARSE_ERROR_CODE = -32700;
+
     /**
      * Default constructor.
      */
@@ -42,17 +44,20 @@ public class RequestDeserializer extends StdDeserializer<Request> {
 
     /** {@inheritDoc} */
     @Override public Request deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        Object arg;
         JsonNode node = p.getCodec().readTree(p);
 
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
-        String act = node.get("actionName").asText();
+        String act = node.get("action").asText();
         ActionMethod actMtd = getActions().get(act);
 
-        if (actMtd == null)
-            throw new IgniteException("Failed to find action method");
-
-        Class<?> argType = actMtd.getMethod().getParameters()[0].getType();
-        Object arg = p.getCodec().treeToValue(node.get("argument"), argType);
+        try {
+            Class<?> argType = actMtd.getMethod().getParameters()[0].getType();
+            arg = p.getCodec().treeToValue(node.get("argument"), argType);
+        }
+        catch (Exception e) {
+            arg = new ResponseError(PARSE_ERROR_CODE, e.getMessage(), e.getStackTrace());
+        }
 
         return new Request().setId(id).setAction(act).setArgument(arg);
     }

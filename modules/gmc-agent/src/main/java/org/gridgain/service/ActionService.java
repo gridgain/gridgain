@@ -68,6 +68,13 @@ public class ActionService implements AutoCloseable {
      * @param req Request.
      */
     public void onActionRequest(Request req) {
+        // Deserialization error occurred.
+        if (req.getArgument() instanceof ResponseError) {
+            sendResponse(new Response().setId(req.getId()).setStatus(FAILED).setError((ResponseError) req.getArgument()));
+
+            return;
+        }
+
         sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
 
         try {
