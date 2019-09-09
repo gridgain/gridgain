@@ -127,19 +127,4 @@ BOOST_AUTO_TEST_CASE(GracefulDeathOnDuplicatedIgnitionInstanceName)
     Ignition::StopAll(true);
 }
 
-BOOST_AUTO_TEST_CASE(GracefulDeathWithoutIgnitionStopCall)
-{
-#ifdef IGNITE_TESTS_32
-    const char* cfgFile = "persistence-store-32.xml";
-#else
-    const char* cfgFile = "persistence-store.xml";
-#endif
-
-    const char* ignitionName = "ignitionTest-1";
-
-    StartNode(cfgFile, ignitionName);
-
-    // This test should not produce memory leaks.
-}
-
 BOOST_AUTO_TEST_SUITE_END()

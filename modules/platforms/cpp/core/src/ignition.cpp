@@ -269,12 +269,13 @@ namespace ignite
         JniErrorInfo jniErr;
 
         SP_IgniteEnvironment* penv = IgniteEnvironment::Create(cfg0);
+        SP_IgniteEnvironment env(*penv);
 
         JvmOptions opts;
         opts.FromConfiguration(cfg, home, cp);
 
         SharedPointer<JniContext> ctx(
-            JniContext::Create(opts.GetOpts(), opts.GetSize(), penv->Get()->GetJniHandlers(penv), &jniErr));
+            JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(penv), &jniErr));
 
         if (!ctx.Get())
         {
@@ -283,7 +284,7 @@ namespace ignite
             return Ignite();
         }
 
-        penv->Get()->SetContext(ctx);
+        env.Get()->SetContext(ctx);
 
         // 6. Start Ignite.
 
@@ -306,7 +307,7 @@ namespace ignite
 
         ctx.Get()->IgnitionStart(&springCfgPath0[0], namep, 2, mem.PointerLong(), &jniErr);
 
-        if (!penv->Get()->GetProcessor() || jniErr.code != java::IGNITE_JNI_ERR_SUCCESS)
+        if (!env.Get()->GetProcessor() || jniErr.code != java::IGNITE_JNI_ERR_SUCCESS)
         {
             IgniteError::SetError(jniErr.code, jniErr.errCls, jniErr.errMsg, err);
 
@@ -314,15 +315,15 @@ namespace ignite
         }
 
         // 7. Ignite is started at this point.
-        penv->Get()->Initialize();
+        env.Get()->Initialize();
 
         started = true;
 
         guard.Reset();
 
-        penv->Get()->ProcessorReleaseStart();
+        env.Get()->ProcessorReleaseStart();
 
-        IgniteImpl* impl = new IgniteImpl(*penv);
+        IgniteImpl* impl = new IgniteImpl(env);
 
         return Ignite(impl);
     }
