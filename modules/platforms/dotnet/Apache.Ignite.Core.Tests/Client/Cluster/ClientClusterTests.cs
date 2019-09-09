@@ -53,25 +53,19 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             ignite.GetOrCreateCache<int, int>(cacheCfg);
         }
 
-        /// <summary>
-        /// Executes after each test.
-        /// </summary>
-        [TearDown]
-        public void TestTearDown()
-        {
-            Client.GetCluster().SetActive(true);
-        }
-
         /** <inheritDoc /> */
         protected override IgniteConfiguration GetIgniteConfiguration()
         {
             var baseConfig = base.GetIgniteConfiguration();
-            baseConfig.DataStorageConfiguration.DataRegionConfigurations = new[]
+            baseConfig.DataStorageConfiguration = new DataStorageConfiguration
             {
-                new DataRegionConfiguration
+                DataRegionConfigurations = new[]
                 {
-                    Name = DataRegionName,
-                    PersistenceEnabled = true
+                    new DataRegionConfiguration
+                    {
+                        Name = DataRegionName,
+                        PersistenceEnabled = true
+                    }
                 }
             };
             return baseConfig;

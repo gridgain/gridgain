@@ -187,14 +187,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         private void ReleaseUnmanagedResources()
         {
-            try
-            {
-                DoOutInOp<object>(ClientOp.ResourceClose, w => w.WriteLong(_ptr), null);
-            }
-            finally
-            {
-                // No op.
-            }
+            DoOutInOp<object>(ClientOp.ResourceClose, w => w.WriteLong(_ptr), null);
         }
 
         /// <summary>
@@ -213,7 +206,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         ~ClientCluster()
         {
-            ReleaseUnmanagedResources();
+            try
+            {
+                ReleaseUnmanagedResources();
+            }
+            catch
+            {
+                // No op.
+            }
         }
 
         /// <summary>
