@@ -34,6 +34,9 @@ public class StompDestinationsUtils {
     /** Cluster active state dest. */
     private static final String CLUSTER_ACTIVE_STATE_DEST = CLUSTER_PREFIX_DEST + "/active-state/";
 
+    /** Cluster node configuration. */
+    private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s/%s";
+
     /** Cluster action response destination. */
     private static final String CLUSTER_ACTION_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/";
 
@@ -65,6 +68,14 @@ public class StompDestinationsUtils {
      */
     public static String buildClusterActiveStateDest(UUID clusterId) {
         return CLUSTER_ACTIVE_STATE_DEST + clusterId;
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     * @return Cluster node configuration.
+     */
+    public static String buildClusterNodeConfigurationDest(UUID clusterId, String consistentId) {
+        return String.format(CLUSTER_NODE_CONFIGURATION, clusterId, consistentId);
     }
 
     /**

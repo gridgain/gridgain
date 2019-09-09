@@ -17,6 +17,7 @@
 package org.gridgain.service.sender;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -71,6 +72,14 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         exSrvc.shutdown();
+    }
+
+    /**
+     * @param element Element to send.
+     */
+    public void send(T element) {
+        if (element != null)
+            addToQueue(Collections.singletonList(element));
     }
 
     /**

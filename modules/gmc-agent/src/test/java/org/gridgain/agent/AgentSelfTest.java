@@ -59,6 +59,7 @@ import static org.awaitility.Awaitility.with;
 import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
@@ -96,12 +97,14 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         Ignite ignite = startGrid();
 
         IgniteCluster cluster = ignite.cluster();
+        String consistentId = cluster.localNode().consistentId().toString();
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterAddDest()) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildBaselineTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterActiveStateDest(cluster.id())) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id(), consistentId)) != null);
         assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
     }
 
