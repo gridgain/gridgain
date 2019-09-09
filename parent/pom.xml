@@ -138,6 +138,7 @@
         <zookeeper.version>3.4.14</zookeeper.version>
         <zstd.version>1.3.7-2</zstd.version>
         <opencensus.version>0.22.0</opencensus.version>
+        <commons.lang3.version>3.9</commons.lang3.version>
 
 
         <!-- Maven plugins versions -->
@@ -504,12 +505,11 @@
                                 <title>Encryption SPI</title>
                                 <packages>org.apache.ignite.spi.encryption*</packages>
                             </group>
+                            <group>
+                                <title>OpenCensus Integration</title>
+                                <packages>org.apache.ignite.opencensus.spi*</packages>
+                            </group>
                         </groups>
-                        <header>
-                            <![CDATA[
-                                    Ignite - In-Memory Database and Caching Platform
-                                ]]>
-                        </header>
                         <bottom>
                             <![CDATA[
                                     <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
