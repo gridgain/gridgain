@@ -36,9 +36,9 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void successPingNode() {
         Request req = new Request()
-            .setActionName("NodeActionsController.pingNode")
-            .setId(UUID.randomUUID())
-            .setArgument(new VisorNodePingTaskArg(cluster.localNode().id()));
+                .setActionName("NodeActions.pingNode")
+                .setId(UUID.randomUUID())
+                .setArgument(new VisorNodePingTaskArg(cluster.localNode().id()));
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED);
     }
@@ -49,7 +49,7 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void errorPingNode() {
         Request req = new Request()
-                .setActionName("NodeActionsController.pingNode")
+                .setActionName("NodeActions.pingNode")
                 .setId(UUID.randomUUID())
                 .setArgument(new VisorNodePingTaskArg(UUID.randomUUID()));
 

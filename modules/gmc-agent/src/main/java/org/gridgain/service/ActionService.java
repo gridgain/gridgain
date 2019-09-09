@@ -16,7 +16,9 @@
 
 package org.gridgain.service;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.action.ActionDispatcher;
 import org.gridgain.dto.action.Request;
 import org.gridgain.dto.action.Response;
@@ -32,7 +34,10 @@ import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
 /**
  * Action service.
  */
-public class ActionService {
+public class ActionService implements AutoCloseable {
+    /** Internal error code. */
+    private  static final int INTERNAL_ERROR_CODE = -32603;
+
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -42,6 +47,9 @@ public class ActionService {
     /** Action dispatcher. */
     private final ActionDispatcher dispatcher;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * @param ctx Context.
      * @param mgr Manager.
@@ -49,6 +57,7 @@ public class ActionService {
     public ActionService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
+        this.log = ctx.log(ActionService.class);
 
         dispatcher = new ActionDispatcher(ctx);
     }
@@ -59,25 +68,32 @@ public class ActionService {
      * @param req Request.
      */
     public void onActionRequest(Request req) {
+        sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
+
         try {
-            CompletableFuture<?> fut = dispatcher.dispatch(req);
-            Response res = new Response().setId(req.getId()).setStatus(RUNNING);
+            CompletableFuture<CompletableFuture> fut = dispatcher.dispatch(req);
 
-            if (fut.isDone())
-                res.setStatus(COMPLETED).setResult(fut.get());
-            else
-                fut.thenAccept(r -> sendResponse(new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r)));
-
-            sendResponse(res);
+            fut.thenApply(CompletableFuture::join)
+                    .thenApply(r -> new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r))
+                    .exceptionally(e -> convertToErrorResponse(req.getId(), e))
+                    .thenAccept(this::sendResponse);
         }
         catch (Exception e) {
-            Response res = new Response();
-            res.setStatus(ERROR)
-                    .setId(req.getId())
-                    .setError(new ResponseError(1, e.getMessage(), e.getStackTrace()));
-
-            sendResponse(res);
+            sendResponse(convertToErrorResponse(req.getId(), e));
         }
+    }
+
+    /**
+     * @param id Id.
+     * @param e Throwable.
+     */
+    private Response convertToErrorResponse(UUID id, Throwable e) {
+        log.error(String.format("Failed to execute action, send error response to GMC: [reqId=%s]", id), e);
+
+        return new Response()
+                .setStatus(ERROR)
+                .setId(id)
+                .setError(new ResponseError(INTERNAL_ERROR_CODE, e.getMessage(), e.getStackTrace()));
     }
 
     /**
@@ -89,5 +105,10 @@ public class ActionService {
         UUID clusterId = ctx.cluster().get().id();
 
         mgr.send(buildActionResponseDest(clusterId, res.getId()), res);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() throws Exception {
+        U.closeQuiet(dispatcher);
     }
 }

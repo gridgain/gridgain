@@ -16,6 +16,7 @@
 
 package org.gridgain.action;
 
+import org.apache.ignite.internal.util.typedef.F;
 import org.reflections.Reflections;
 
 import java.lang.reflect.Method;
@@ -28,13 +29,13 @@ import java.util.Map;
  */
 public class ActionControllerAnnotationProcessor {
     /** Methods. */
-    private static Map<String, ActionMethod> methods = new HashMap<>();
+    private static final Map<String, ActionMethod> methods = Collections.unmodifiableMap(findActionMethods("org.gridgain.action.controller"));
 
     /**
-     * Find the action methods by default package.
+     * @return Founded methods
      */
-    public static Map<String, ActionMethod> findActionMethods() {
-        return findActionMethods("org.gridgain.action.controller");
+    public static Map<String, ActionMethod> getActions() {
+        return methods;
     }
 
     /**
@@ -42,18 +43,20 @@ public class ActionControllerAnnotationProcessor {
      *
      * @param basePkg Base package.
      */
-    public static Map<String, ActionMethod> findActionMethods(String basePkg) {
-        if (!methods.isEmpty())
-            return Collections.unmodifiableMap(methods);
-
+    static Map<String, ActionMethod> findActionMethods(String basePkg) {
+        Map<String, ActionMethod> methods = new HashMap<>();
         Reflections reflections = new Reflections(basePkg);
         for (Class<?> controllerCls : reflections.getTypesAnnotatedWith(ActionController.class)) {
+            ActionController annotation = controllerCls.getAnnotation(ActionController.class);
+            String controllerName = F.isEmpty(annotation.value()) ? controllerCls.getSimpleName() : annotation.value();
+
             for (Method method : controllerCls.getDeclaredMethods()) {
-                ActionMethod actMtd = new ActionMethod(method, controllerCls);
+                String actName = controllerName + "." + method.getName();
+                ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
                 methods.put(actMtd.getActionName(), actMtd);
             }
         }
 
-        return Collections.unmodifiableMap(methods);
+        return methods;
     }
 }

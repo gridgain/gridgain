@@ -27,7 +27,7 @@ import org.gridgain.action.ActionMethod;
 import java.io.IOException;
 import java.util.UUID;
 
-import static org.gridgain.action.ActionControllerAnnotationProcessor.findActionMethods;
+import static org.gridgain.action.ActionControllerAnnotationProcessor.getActions;
 
 /**
  * Request deserializer.
@@ -46,7 +46,7 @@ public class RequestDeserializer extends StdDeserializer<Request> {
 
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
         String actName = node.get("actionName").asText();
-        ActionMethod actMtd = findActionMethods().get(actName);
+        ActionMethod actMtd = getActions().get(actName);
 
         if (actMtd == null)
             throw new IgniteException("Failed to find action method");

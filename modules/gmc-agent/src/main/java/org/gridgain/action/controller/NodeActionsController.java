@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Cluster actions controller.
  */
-@ActionController
+@ActionController("NodeActions")
 public class NodeActionsController {
     /** Compute. */
     private final IgniteCompute compute;

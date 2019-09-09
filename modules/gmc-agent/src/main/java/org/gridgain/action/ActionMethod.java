@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
  * ACtion method structure.
  */
 public class ActionMethod {
+    /** Action name. */
+    private final String actName;
     /** Method. */
     private final Method mtd;
 
@@ -29,10 +31,12 @@ public class ActionMethod {
     private final Class<?> controllerCls;
 
     /**
+     * @param actName Action name.
      * @param mtd Method.
      * @param controllerCls Controller class.
      */
-    public ActionMethod(Method mtd, Class<?> controllerCls) {
+    public ActionMethod(String actName, Method mtd, Class<?> controllerCls) {
+        this.actName = actName;
         this.mtd = mtd;
         this.controllerCls = controllerCls;
     }
@@ -40,7 +44,7 @@ public class ActionMethod {
     /**
      * @return Controller class.
      */
-    public Class<?> getControllerCls() {
+    public Class<?> getControllerClass() {
         return controllerCls;
     }
 
@@ -55,6 +59,6 @@ public class ActionMethod {
      * @return Action name.
      */
     public String getActionName() {
-        return controllerCls.getSimpleName() + "." + mtd.getName();
+        return actName;
     }
 }

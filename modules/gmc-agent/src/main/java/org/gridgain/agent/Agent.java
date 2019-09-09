@@ -135,9 +135,10 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(this.getClass(), execSrvc, log);
 
+        U.closeQuiet(actionSrvc);
+        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
-        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
         U.closeQuiet(mgr);
@@ -247,6 +248,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
+        U.closeQuiet(actionSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);

@@ -16,25 +16,29 @@
 
 package org.gridgain.action;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.gridgain.dto.action.Request;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.gridgain.action.ActionControllerAnnotationProcessor.findActionMethods;
+import static org.gridgain.action.ActionControllerAnnotationProcessor.getActions;
 
 /**
  * Action dispatcher.
  */
-public class ActionDispatcher {
+public class ActionDispatcher implements AutoCloseable {
     /** Context. */
     private final GridKernalContext ctx;
 
     /** Controllers. */
     private final Map<String, Object> controllers = new HashMap<>();
+
+    /** Thread pool. */
+    private final ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     /**
      * @param ctx Context.
@@ -49,15 +53,15 @@ public class ActionDispatcher {
      * @param req Request.
      * @return Completable future with action result.
      */
-    public CompletableFuture dispatch(Request req) throws Exception {
+    public CompletableFuture<CompletableFuture> dispatch(Request req) {
         String actName = req.getActionName();
 
-        ActionMethod mtd = findActionMethods().get(actName);
+        ActionMethod mtd = getActions().get(actName);
 
         if (mtd == null)
-            throw new IgniteException("Action not found");
+            throw new IgniteException("Failed to find action method");
 
-        return invoke(mtd, req.getArgument());
+        return CompletableFuture.supplyAsync(() -> invoke(mtd, req.getArgument()), pool);
     }
 
     /**
@@ -66,10 +70,20 @@ public class ActionDispatcher {
      * @param mtd Method.
      * @param arg Argument.
      */
-    private CompletableFuture invoke(ActionMethod mtd, Object arg) throws Exception {
-        if (!controllers.containsKey(mtd.getActionName()))
-            controllers.put(mtd.getActionName(), mtd.getControllerCls().getConstructor(GridKernalContext.class).newInstance(ctx));
+    private CompletableFuture invoke(ActionMethod mtd, Object arg) {
+        try {
+            if (!controllers.containsKey(mtd.getActionName()))
+                controllers.put(mtd.getActionName(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
 
-        return (CompletableFuture) mtd.getMethod().invoke(controllers.get(mtd.getActionName()), arg);
+            return (CompletableFuture) mtd.getMethod().invoke(controllers.get(mtd.getActionName()), arg);
+        }
+        catch (Exception e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        pool.shutdown();
     }
 }

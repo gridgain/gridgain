@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Baseline actions controller.
  */
-@ActionController
+@ActionController("BaselineActions")
 public class BaselineActionsController {
     /** Context. */
     private final GridKernalContext ctx;
