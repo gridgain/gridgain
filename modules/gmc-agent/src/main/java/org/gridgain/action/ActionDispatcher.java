@@ -54,9 +54,9 @@ public class ActionDispatcher implements AutoCloseable {
      * @return Completable future with action result.
      */
     public CompletableFuture<CompletableFuture> dispatch(Request req) {
-        String actName = req.getActionName();
+        String act = req.getAction();
 
-        ActionMethod mtd = getActions().get(actName);
+        ActionMethod mtd = getActions().get(act);
 
         if (mtd == null)
             throw new IgniteException("Failed to find action method");

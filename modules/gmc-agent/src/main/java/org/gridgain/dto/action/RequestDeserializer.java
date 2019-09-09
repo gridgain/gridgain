@@ -45,8 +45,8 @@ public class RequestDeserializer extends StdDeserializer<Request> {
         JsonNode node = p.getCodec().readTree(p);
 
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
-        String actName = node.get("actionName").asText();
-        ActionMethod actMtd = getActions().get(actName);
+        String act = node.get("actionName").asText();
+        ActionMethod actMtd = getActions().get(act);
 
         if (actMtd == null)
             throw new IgniteException("Failed to find action method");
@@ -54,6 +54,6 @@ public class RequestDeserializer extends StdDeserializer<Request> {
         Class<?> argType = actMtd.getMethod().getParameters()[0].getType();
         Object arg = p.getCodec().treeToValue(node.get("argument"), argType);
 
-        return new Request().setId(id).setActionName(actName).setArgument(arg);
+        return new Request().setId(id).setAction(act).setArgument(arg);
     }
 }

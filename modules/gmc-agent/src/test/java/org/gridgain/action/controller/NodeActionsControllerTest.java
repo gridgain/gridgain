@@ -24,7 +24,7 @@ import org.junit.Test;
 import java.util.UUID;
 
 import static org.gridgain.dto.action.ActionStatus.COMPLETED;
-import static org.gridgain.dto.action.ActionStatus.ERROR;
+import static org.gridgain.dto.action.ActionStatus.FAILED;
 
 /**
  * Cluster actions controller test.
@@ -36,7 +36,7 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void successPingNode() {
         Request req = new Request()
-                .setActionName("NodeActions.pingNode")
+                .setAction("NodeActions.pingNode")
                 .setId(UUID.randomUUID())
                 .setArgument(new VisorNodePingTaskArg(cluster.localNode().id()));
 
@@ -49,10 +49,10 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void errorPingNode() {
         Request req = new Request()
-                .setActionName("NodeActions.pingNode")
+                .setAction("NodeActions.pingNode")
                 .setId(UUID.randomUUID())
                 .setArgument(new VisorNodePingTaskArg(UUID.randomUUID()));
 
-        executeAction(req, (r) -> r.getStatus() == ERROR && !F.isEmpty(r.getError().getMessage()));
+        executeAction(req, (r) -> r.getStatus() == FAILED && !F.isEmpty(r.getError().getMessage()));
     }
 }

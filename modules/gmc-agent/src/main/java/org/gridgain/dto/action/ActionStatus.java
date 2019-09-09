@@ -30,5 +30,5 @@ public enum ActionStatus {
     CANCELED,
 
     /** Action is completed with error. */
-    ERROR
+    FAILED
 }

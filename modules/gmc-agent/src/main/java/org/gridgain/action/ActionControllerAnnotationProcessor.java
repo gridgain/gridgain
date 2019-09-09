@@ -51,6 +51,9 @@ public class ActionControllerAnnotationProcessor {
             String controllerName = F.isEmpty(annotation.value()) ? controllerCls.getSimpleName() : annotation.value();
 
             for (Method method : controllerCls.getDeclaredMethods()) {
+                if (method.isSynthetic())
+                    continue;
+
                 String actName = controllerName + "." + method.getName();
                 ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
                 methods.put(actMtd.getActionName(), actMtd);

@@ -91,7 +91,7 @@ public class ActionService implements AutoCloseable {
         log.error(String.format("Failed to execute action, send error response to GMC: [reqId=%s]", id), e);
 
         return new Response()
-                .setStatus(ERROR)
+                .setStatus(FAILED)
                 .setId(id)
                 .setError(new ResponseError(INTERNAL_ERROR_CODE, e.getMessage(), e.getStackTrace()));
     }

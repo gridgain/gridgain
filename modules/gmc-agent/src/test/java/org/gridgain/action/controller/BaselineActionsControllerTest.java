@@ -34,7 +34,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     public void updateAutoAdjustEnabledToTrue() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
-                .setActionName("BaselineActions.updateAutoAdjustEnabled")
+                .setAction("BaselineActions.updateAutoAdjustEnabled")
                 .setArgument(true);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled());
@@ -47,7 +47,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     public void updateAutoAdjustEnabledToFalse() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
-                .setActionName("BaselineActions.updateAutoAdjustEnabled")
+                .setAction("BaselineActions.updateAutoAdjustEnabled")
                 .setArgument(false);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled());
@@ -60,7 +60,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     public void updateAutoAdjustAwaitingTime() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
-                .setActionName("BaselineActions.updateAutoAdjustAwaitingTime")
+                .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
                 .setArgument(10_000);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000);

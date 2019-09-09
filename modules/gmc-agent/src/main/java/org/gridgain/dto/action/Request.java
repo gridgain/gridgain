@@ -32,7 +32,7 @@ public class Request {
     private Object arg;
 
     /** Action name. */
-    private String actName;
+    private String act;
 
     /**
      * @return Request id.
@@ -53,16 +53,16 @@ public class Request {
     /**
      * @return Action name.
      */
-    public String getActionName() {
-        return actName;
+    public String getAction() {
+        return act;
     }
 
     /**
      * @param actName Action name.
      * @return This for chaining method calls.
      */
-    public Request setActionName(String actName) {
-        this.actName = actName;
+    public Request setAction(String actName) {
+        this.act = actName;
         return this;
     }
 
