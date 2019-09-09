@@ -68,7 +68,6 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
         this.receiverHubs = receiverHubs;
         this.dataNodes = dataNodes;
         this.otherNodes = otherNodes;
-
     }
 
     public byte getDataCenterId() {

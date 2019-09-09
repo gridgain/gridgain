@@ -95,30 +95,6 @@ public class DrTopologyCommand extends
     }
 
     /** {@inheritDoc} */
-    @Override protected UUID nodeId() {
-        throw new UnsupportedOperationException("nodeId");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected VisorDrTopologyTaskResult execute0(
-        GridClientConfiguration clientCfg,
-        GridClient client
-    ) throws Exception {
-        GridClientCompute compute = client.compute();
-
-        Collection<GridClientNode> nodes = compute.nodes();
-
-        if (F.isEmpty(nodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null);
-
-        List<UUID> nodeIds = nodes.stream()
-            .map(GridClientNode::nodeId)
-            .collect(Collectors.toList());
-
-        return compute.execute(visorTaskName(), new VisorTaskArgument<>(nodeIds, arg().toVisorArgs(), false));
-    }
-
-    /** {@inheritDoc} */
     @Override protected void printResult(VisorDrTopologyTaskResult res, Logger log) {
         log.info("Data Center ID: " + res.getDataCenterId());
 

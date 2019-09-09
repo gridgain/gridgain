@@ -39,7 +39,7 @@ public class DrFullStateTransferCommand extends
             ".*",
             false,
             false,
-            DrCacheCommand.CacheFilter.ALL,
+            DrCacheCommand.CacheFilter.SENDING,
             DrCacheCommand.SenderGroup.ALL,
             null,
             DrCacheCommand.Action.FULL_STATE_TRANSFER,

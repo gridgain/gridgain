@@ -34,11 +34,12 @@ public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
     private String mode;
     private List<T2<Byte, List<String>>> senderDataCenters;
     private String receiverAddress;
+    private List<T2<String, Object>> commonConfig;
     private List<T2<String, Object>> senderConfig;
     private List<T2<String, Object>> receiverConfig;
-    private List<String> responseMsgs = new ArrayList<>();
     private List<T2<String, Object>> senderMetrics;
     private List<T2<String, Object>> receiverMetrics;
+    private List<String> responseMsgs = new ArrayList<>();
 
     public void setDataCenterId(byte dataCenterId) {
         this.dataCenterId = dataCenterId;
@@ -128,6 +129,14 @@ public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
         return receiverMetrics;
     }
 
+    public void setCommonConfig(List<T2<String, Object>> commonConfig) {
+        this.commonConfig = commonConfig;
+    }
+
+    public List<T2<String, Object>> getCommonConfig() {
+        return commonConfig;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeByte(dataCenterId);
@@ -136,6 +145,7 @@ public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
         out.writeUTF(mode);
         U.writeCollection(out, senderDataCenters);
         out.writeObject(receiverAddress);
+        U.writeCollection(out, commonConfig);
         U.writeCollection(out, senderConfig);
         U.writeCollection(out, receiverConfig);
         U.writeCollection(out, senderMetrics);
@@ -152,6 +162,7 @@ public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
         mode = in.readUTF();
         senderDataCenters = U.readList(in);
         receiverAddress = (String)in.readObject();
+        commonConfig = U.readList(in);
         senderConfig = U.readList(in);
         receiverConfig = U.readList(in);
         senderMetrics = U.readList(in);

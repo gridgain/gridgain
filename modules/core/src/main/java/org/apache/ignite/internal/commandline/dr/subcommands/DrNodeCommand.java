@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.logging.Logger;
+import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -28,6 +30,7 @@ import org.apache.ignite.internal.visor.dr.VisorDrNodeTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 
 /** */
 public class DrNodeCommand
@@ -91,9 +94,6 @@ public class DrNodeCommand
             argIter.nextArg(null);
         }
 
-        if (config && metrics)
-            throw new IllegalArgumentException("--config and --metrics cannot both be present at the same time.");
-
         return new DrNodeArguments(config, metrics, clearStore, resetState);
     }
 
@@ -106,8 +106,17 @@ public class DrNodeCommand
     }
 
     /** {@inheritDoc} */
-    @Override protected UUID nodeId() {
-        return nodeId;
+    @Override protected VisorDrNodeTaskResult execute0(
+        GridClientConfiguration clientCfg,
+        GridClient client
+    ) throws Exception {
+        return executeTaskByNameOnNode(
+            client,
+            visorTaskName(),
+            arg().toVisorArgs(),
+            nodeId,
+            clientCfg
+        );
     }
 
     /** {@inheritDoc} */
@@ -141,19 +150,28 @@ public class DrNodeCommand
             log.info(INDENT + "Address=" + receiverAddr);
         }
 
-        List<T2<String, Object>> sndCfg = res.getSenderConfig();
-        if (sndCfg != null && !sndCfg.isEmpty()) {
-            log.info("Sender configuration:");
-
-            for (T2<String, Object> t2 : sndCfg)
-                log.info(String.format(INDENT + "%s=%s", t2.toArray()));
-        }
-
         if (!res.getResponseMsgs().isEmpty()) {
             log.info(DELIM);
 
             for (String responseMsg : res.getResponseMsgs())
                 log.info(responseMsg);
+        }
+
+        printList(log, res.getCommonConfig(), "Common configuration:");
+        printList(log, res.getSenderConfig(), "Sender configuration:");
+        printList(log, res.getReceiverConfig(), "Receiver configuration:");
+
+        printList(log, res.getSenderMetrics(), "Sender metrics:");
+        printList(log, res.getReceiverMetrics(), "Receiver metrics:");
+    }
+
+    /** */
+    private static void printList(Logger log, List<T2<String, Object>> cfg, String s) {
+        if (cfg != null && !cfg.isEmpty()) {
+            log.info(s);
+
+            for (T2<String, Object> t2 : cfg)
+                log.info(String.format(INDENT + "%s=%s", t2.toArray()));
         }
     }
 

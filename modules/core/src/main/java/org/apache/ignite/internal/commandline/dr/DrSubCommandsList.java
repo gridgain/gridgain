@@ -39,8 +39,6 @@ public enum DrSubCommandsList {
     NODE("node", new DrNodeCommand()),
     /** */
     CACHE("cache", new DrCacheCommand()),
-//    /** */
-//    RESET_STATE("--reset-state", new DrResetStateCommand()),
     /** */
     FULL_STATE_TRANSFER("full-state-transfer", new DrFullStateTransferCommand()),
     /** */

@@ -16,16 +16,22 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientDisconnectedException;
+import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-
-import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
 
 /** */
 public abstract class DrAbstractSubCommand<
@@ -63,18 +69,23 @@ public abstract class DrAbstractSubCommand<
         return null;
     }
 
-    /** */
+    /** {@inheritDoc} */
     protected VisorResultDto execute0(
         GridClientConfiguration clientCfg,
         GridClient client
     ) throws Exception {
-        return executeTaskByNameOnNode(
-            client,
-            visorTaskName(),
-            args.toVisorArgs(),
-            nodeId(),
-            clientCfg
-        );
+        GridClientCompute compute = client.compute();
+
+        Collection<GridClientNode> nodes = compute.nodes();
+
+        if (F.isEmpty(nodes))
+            throw new GridClientDisconnectedException("Connectable nodes not found", null);
+
+        List<UUID> nodeIds = nodes.stream()
+            .map(GridClientNode::nodeId)
+            .collect(Collectors.toList());
+
+        return compute.execute(visorTaskName(), new VisorTaskArgument<>(nodeIds, args.toVisorArgs(), false));
     }
 
     /** {@inheritDoc} */
@@ -90,11 +101,6 @@ public abstract class DrAbstractSubCommand<
 
     /** */
     protected abstract void printResult(VisorResultDto res, Logger log);
-
-    /** */
-    protected UUID nodeId() {
-        return null;
-    }
 
     /** */
     @SuppressWarnings("PublicInnerClass")

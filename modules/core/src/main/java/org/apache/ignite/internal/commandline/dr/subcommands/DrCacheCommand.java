@@ -16,15 +16,18 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 
 /** */
 public class DrCacheCommand extends
@@ -116,10 +119,15 @@ public class DrCacheCommand extends
             }
         }
 
-        if (config && metrics)
-            throw new IllegalArgumentException("--config and --metrics cannot both be present at the same time.");
-
         return new DrCacheArguments(regex, config, metrics, cacheFilter, senderGroup, senderGroupName, action, (byte)0);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        if (arg().action != null)
+            return "Warning: this command will change data center replication state for selected caches.";
+
+        return null;
     }
 
     /** {@inheritDoc} */
@@ -134,10 +142,59 @@ public class DrCacheCommand extends
             return;
         }
 
-        // metrics, configs...
+        List<String> cacheNames = res.getCacheNames();
+        if (cacheNames.isEmpty()) {
+            log.info("No matching caches found");
+
+            return;
+        }
+
+        log.info(String.format("%d matching cache(s): %s", cacheNames.size(), cacheNames));
+
+        for (String cacheName : cacheNames) {
+            List<T2<String, Object>> cacheSndCfg = res.getSenderConfig().get(cacheName);
+
+            printList(log, cacheSndCfg, String.format(
+                "Sender configuration for cache \"%s\":",
+                cacheName
+            ));
+
+            List<T2<String, Object>> cacheRcvCfg = res.getReceiverConfig().get(cacheName);
+
+            printList(log, cacheRcvCfg, String.format(
+                "Receiver configuration for cache \"%s\":",
+                cacheName
+            ));
+        }
+
+        for (String cacheName : cacheNames) {
+            List<T2<String, Object>> cacheSndMetrics = res.getSenderMetrics().get(cacheName);
+
+            printList(log, cacheSndMetrics, String.format(
+                "Sender metrics for cache \"%s\":",
+                cacheName
+            ));
+
+            List<T2<String, Object>> cacheRcvMetrics = res.getReceiverMetrics().get(cacheName);
+
+            printList(log, cacheRcvMetrics, String.format(
+                "Receiver metrics for cache \"%s\":",
+                cacheName
+            ));
+        }
 
         for (String msg : res.getResultMessages())
             log.info(msg);
+    }
+
+    /** */
+    private static void printList(Logger log, List<T2<String, Object>> cfg, String s) {
+        if (cfg != null && !cfg.isEmpty()) {
+            log.info(s);
+
+            for (T2<String, Object> t2 : cfg)
+                log.info(String.format(INDENT + "%s=%s", t2.toArray()));
+        }
     }
 
     /** {@inheritDoc} */
