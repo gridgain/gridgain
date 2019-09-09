@@ -20,9 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.junit.Test;
@@ -39,51 +37,6 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
  * {@link GridCommandHandlerIndexingClusterByClassTest}.
  */
 public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-    /** */
-    @Test
-    public void testValidateIndexesFailedOnNotIdleCluster() throws Exception {
-        checkpointFreq = 100L;
-
-        Ignite ignite = prepareGridForTest();
-
-        AtomicBoolean stopFlag = new AtomicBoolean();
-
-        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
-
-        Thread loadThread = new Thread(() -> {
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-            while (!stopFlag.get()) {
-                int id = rnd.nextInt();
-
-                cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
-
-                if (Thread.interrupted())
-                    break;
-            }
-        });
-
-        try {
-            loadThread.start();
-
-            doSleep(checkpointFreq);
-
-            injectTestSystemOut();
-
-            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
-        }
-        finally {
-            stopFlag.set(true);
-
-            loadThread.join();
-        }
-
-        String out = testOut.toString();
-
-        assertContains(log, out, "Index validation failed");
-        assertContains(log, out, "Checkpoint with dirty pages started! Cluster not idle!");
-    }
-
     /**
      * Tests that corrupted pages in the index partition are detected.
      */
