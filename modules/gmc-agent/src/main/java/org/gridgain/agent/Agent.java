@@ -39,8 +39,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.ClusterInfo;
+import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.TopologyService;
+import org.gridgain.service.config.NodeConfigurationService;
 import org.gridgain.service.tracing.TracingService;
 import org.gridgain.service.tracing.GmcSpanExporter;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
@@ -78,8 +80,14 @@ public class Agent extends ManagementConsoleProcessor {
     /** Span exporter. */
     private GmcSpanExporter spanExporter;
 
+    /** Node configuration exporter. */
+    private NodeConfigurationExporter nodeConfigurationExporter;
+
     /** Metric service. */
     private MetricsService metricSrvc;
+
+    /** Node configuration service. */
+    private NodeConfigurationService nodeConfigurationSrvc;
 
     /** Execute service. */
     private ExecutorService execSrvc;
@@ -103,12 +111,14 @@ public class Agent extends ManagementConsoleProcessor {
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
         spanExporter = new GmcSpanExporter(ctx);
+        nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
         metaStorage = ctx.cache().context().database().metaStorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
         ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+        nodeConfigurationExporter.export();
     }
 
     /** {@inheritDoc} */
@@ -121,6 +131,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
+        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
         U.closeQuiet(mgr);
@@ -230,6 +241,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
+        U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
@@ -245,6 +257,7 @@ public class Agent extends ManagementConsoleProcessor {
         topSrvc = new TopologyService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
+        nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
 
         execSrvc = Executors.newSingleThreadExecutor();
 
@@ -255,6 +268,9 @@ public class Agent extends ManagementConsoleProcessor {
      * @return Agent configuration.
      */
     private ManagementConfiguration readFromMetaStorage() {
+        if (metaStorage == null)
+            return new ManagementConfiguration();
+
         ManagementConfiguration cfg = null;
 
         ctx.cache().context().database().checkpointReadLock();
