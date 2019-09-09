@@ -328,7 +328,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
      */
     protected void beforeTestsStarted() throws Exception {
-        regularPageHndWrapper = BPlusTree.pageHndWrapper;
+        regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? (tree, hnd) -> hnd : BPlusTree.pageHndWrapper;
     }
 
     /**
