@@ -23,6 +23,7 @@ import java.net.URI;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.ignite.IgniteCheckedException;
@@ -63,7 +64,8 @@ import static org.gridgain.agent.AgentUtils.EMPTY;
  */
 public class WebSocketManager implements AutoCloseable {
     /** Mapper. */
-    private final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+    private final ObjectMapper mapper = new ObjectMapper(new SmileFactory())
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /** Ws max buffer size. */
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;

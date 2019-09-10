@@ -37,6 +37,9 @@ public class StompDestinationsUtils {
     /** Cluster node configuration. */
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s/%s";
 
+    /** Cluster action response destination. */
+    private static final String CLUSTER_ACTION_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/";
+
     /** Save span destination. */
     private static final String SAVE_SPAN_DEST = "/app/agent/spans/%s/add";
 
@@ -91,10 +94,27 @@ public class StompDestinationsUtils {
     }
 
     /**
+     * @param clusterId Cluster id.
+     * @param resId Response id.
+     * @return Action response destination.
+     */
+    public static String buildActionResponseDest(UUID clusterId, UUID resId) {
+        return CLUSTER_ACTION_RESPONSE_DEST + clusterId + "/" + resId;
+    }
+
+    /**
      * @return Metrics pull topic.
      */
     public static String buildMetricsPullTopic() {
         return "/topic/agent/metrics/pull";
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     * @return Action request topic.
+     */
+    public static String buildActionRequestTopic(UUID clusterId) {
+        return "/topic/agent/cluster/actions/" + clusterId;
     }
 
     /**

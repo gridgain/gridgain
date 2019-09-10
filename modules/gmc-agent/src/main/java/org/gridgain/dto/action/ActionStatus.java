@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
-package org.gridgain.testsuites;
-
-import org.gridgain.action.controller.ActionControllerBaseTest;
-import org.gridgain.action.controller.BaselineActionsControllerTest;
-import org.gridgain.action.controller.NodeActionsControllerTest;
-import org.gridgain.agent.AgentSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.gridgain.dto.action;
 
 /**
- * GridGain GMC agent self test suite.
+ * Action status.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    AgentSelfTest.class,
-    BaselineActionsControllerTest.class,
-    NodeActionsControllerTest.class,
-    ActionControllerBaseTest.class
-})
-public class AgentSelfTestSuite {
+public enum ActionStatus {
+    /** Action is running. */
+    RUNNING,
+
+    /** Action is completed. */
+    COMPLETED,
+
+    /** Action is Canceled. */
+    CANCELED,
+
+    /** Action is completed with error. */
+    FAILED
 }

@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
-package org.gridgain.testsuites;
+package org.gridgain.action.controller;
 
-import org.gridgain.action.controller.ActionControllerBaseTest;
-import org.gridgain.action.controller.BaselineActionsControllerTest;
-import org.gridgain.action.controller.NodeActionsControllerTest;
-import org.gridgain.agent.AgentSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.gridgain.action.ActionController;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
- * GridGain GMC agent self test suite.
+ * Test action controller for other tests.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    AgentSelfTest.class,
-    BaselineActionsControllerTest.class,
-    NodeActionsControllerTest.class,
-    ActionControllerBaseTest.class
-})
-public class AgentSelfTestSuite {
+@ActionController
+public class ActionControllerForTests {
+    /**
+     * @param flag Flag.
+     */
+    public CompletableFuture<Boolean> action(boolean flag) {
+        return CompletableFuture.completedFuture(flag);
+    }
+
+    /**
+     * @param num Number.
+     */
+    public CompletableFuture<Boolean> numberAction(long num) {
+        return CompletableFuture.completedFuture(true);
+    }
 }

@@ -38,7 +38,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
+import org.gridgain.dto.action.Request;
 import org.gridgain.dto.ClusterInfo;
+import org.gridgain.service.ActionService;
 import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.TopologyService;
@@ -55,6 +57,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.gridgain.agent.AgentUtils.monitoringUri;
 import static org.gridgain.agent.AgentUtils.toWsUri;
+import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
 
@@ -85,6 +88,9 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** Metric service. */
     private MetricsService metricSrvc;
+
+    /** Action service. */
+    private ActionService actionSrvc;
 
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
@@ -129,9 +135,10 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(this.getClass(), execSrvc, log);
 
+        U.closeQuiet(actionSrvc);
+        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
-        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
         U.closeQuiet(mgr);
@@ -241,6 +248,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
+        U.closeQuiet(actionSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);
@@ -258,6 +266,7 @@ public class Agent extends ManagementConsoleProcessor {
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
+        actionSrvc = new ActionService(ctx, mgr);
 
         execSrvc = Executors.newSingleThreadExecutor();
 
@@ -335,6 +344,16 @@ public class Agent extends ManagementConsoleProcessor {
 
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
                     metricSrvc.broadcastPullMetrics();
+                }
+            });
+
+            ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
+                @Override public Type getPayloadType(StompHeaders headers) {
+                    return Request.class;
+                }
+
+                @Override public void handleFrame(StompHeaders headers, Object payload) {
+                    actionSrvc.onActionRequest((Request) payload);
                 }
             });
         }
