@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import _ from 'lodash';
-
 export const taskResult = (result) => ({
     data: {result},
     error: null,
@@ -111,7 +109,7 @@ export const AGENT_DISCONNECTED_GRID = {
 export const INACTIVE_CLUSTER = {
     hasAgent: true,
     hasDemo: true,
-    clusters: [_.merge({}, CLUSTER_1, {active: false})]
+    clusters: [Object.assign({ ...CLUSTER_1 }, { active: false })]
 };
 
 export const SIMPLE_QUERY_RESPONSE = {
