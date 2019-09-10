@@ -31,10 +31,10 @@ const startTestcafe = (config) => {
                 console.log('Start E2E testing!');
 
                 return runner
+                    .screenshots('./artifacts/screenshots', true)
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .screenshots('./', true)
                     .run({ skipJsErrors: true });
             }
             catch (err) {
