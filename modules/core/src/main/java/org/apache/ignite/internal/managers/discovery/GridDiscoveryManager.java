@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -871,6 +871,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (stateFinishMsg != null)
                     discoWrk.addEvent(EVT_DISCOVERY_CUSTOM_EVT, nextTopVer, node, discoCache, topSnapshot, stateFinishMsg);
+
+                if (type == EVT_CLIENT_NODE_DISCONNECTED)
+                    discoWrk.awaitDisconnectEvent();
             }
         });
 
@@ -2758,6 +2761,14 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         private boolean nodeSegFired;
 
         /**
+         * Future to wait for client disconnect event before an attempt to reconnect.
+         *
+         * Otherwise, we can continue process events from the previous cluster topology when the client already
+         * connected to a new topology.
+         */
+        private volatile GridFutureAdapter disconnectEvtFut;
+
+        /**
          *
          */
         private DiscoveryWorker() {
@@ -2830,6 +2841,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             @Nullable DiscoveryCustomMessage data
         ) {
             assert node != null : data;
+
+            if (type == EVT_CLIENT_NODE_DISCONNECTED)
+                discoWrk.disconnectEvtFut = new GridFutureAdapter();
 
             evts.add(new GridTuple6<>(type, topVer, node, discoCache, topSnapshot, data));
         }
@@ -2941,7 +2955,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 }
 
                 case EVT_CLIENT_NODE_DISCONNECTED: {
-                    // No-op.
+                    disconnectEvtFut.onDone();
 
                     break;
                 }
@@ -3068,6 +3082,16 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 default:
                     assert segPlc == NOOP : "Unsupported segmentation policy value: " + segPlc;
+            }
+        }
+
+        /** Awaits client disconnect event. */
+        private void awaitDisconnectEvent() {
+            try {
+                disconnectEvtFut.get();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException("Failed to wait for handling disconnect event.", e);
             }
         }
 
