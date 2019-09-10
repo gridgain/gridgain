@@ -86,7 +86,7 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
             IgniteEx client = startGrid("client");
 
             IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
-            IgniteCache<Integer, Integer> cache2 = client.cache(DEFAULT_CACHE_NAME_2);
+            IgniteCache<Object, Object> cache2 = client.cache(DEFAULT_CACHE_NAME_2);
 
             // Start complex tx:
             try (Transaction tx = client.transactions().withLabel("myComplexTx").txStart()) {
@@ -105,6 +105,8 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
                 m.put(40, 400);
 
                 cache2.putAll(m);
+
+                cache2.put(13, "testStr");
 
                 SqlFieldsQuery qry = new SqlFieldsQuery("select _KEY from Integer where _KEY=?");
                 qry.setArgs(2);

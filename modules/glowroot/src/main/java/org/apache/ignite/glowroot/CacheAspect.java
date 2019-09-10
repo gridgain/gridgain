@@ -15,6 +15,12 @@
  */
 package org.apache.ignite.glowroot;
 
+import java.util.Arrays;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.util.typedef.X;
@@ -56,10 +62,22 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
-            return "query".equals(val) ?
-                ctx.startTraceEntry(MessageSupplier.create("cache name={} query={}", proxy.getName(), params[0].toString()), timer) :
-                ctx.startTraceEntry(MessageSupplier.create("cache name={} op={}", proxy.getName(), val), timer);
+        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy,
+            @BindMethodName String val, @BindParameterArray Object[] params) {
+            String args = Arrays.stream(params).map(new Function<Object, String>() {
+                @Override public String apply(Object o) {
+                    if (o instanceof String)
+                        return "String(" + ((String)o).length() + ')';
+                    else if (o instanceof byte[])
+                        return "Byte[](" + ((byte[])o).length + ')';
+                    else if (o instanceof BinaryObject)
+                        return "Binary(" + ((BinaryObjectImpl)o).length() + ')';
+
+                    return o.getClass().getSimpleName();
+                }
+            }).collect(Collectors.joining(","));
+
+            return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={} args={}", proxy.getName(), val, args), timer);
         }
 
         /**
