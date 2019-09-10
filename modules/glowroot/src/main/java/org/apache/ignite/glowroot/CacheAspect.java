@@ -62,22 +62,25 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy,
-            @BindMethodName String val, @BindParameterArray Object[] params) {
-            String args = Arrays.stream(params).map(new Function<Object, String>() {
-                @Override public String apply(Object o) {
-                    if (o instanceof String)
-                        return "String(" + ((String)o).length() + ')';
-                    else if (o instanceof byte[])
-                        return "Byte[](" + ((byte[])o).length + ')';
-                    else if (o instanceof BinaryObject)
-                        return "Binary(" + ((BinaryObjectImpl)o).length() + ')';
+        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+            if ("query".equals(val))
+                return ctx.startTraceEntry(MessageSupplier.create("cache name={} query={}", proxy.getName(), params[0].toString()), timer);
+            else {
+                String args = Arrays.stream(params).map(new Function<Object, String>() {
+                    @Override public String apply(Object o) {
+                        if (o instanceof String)
+                            return "String(" + ((String)o).length() + ')';
+                        else if (o instanceof byte[])
+                            return "Byte[](" + ((byte[])o).length + ')';
+                        else if (o instanceof BinaryObject)
+                            return "Binary(" + ((BinaryObjectImpl)o).length() + ')';
 
-                    return o.getClass().getSimpleName();
-                }
-            }).collect(Collectors.joining(","));
+                        return o.getClass().getSimpleName();
+                    }
+                }).collect(Collectors.joining(","));
 
-            return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={} args={}", proxy.getName(), val, args), timer);
+                return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={} args={}", proxy.getName(), val, args), timer);
+            }
         }
 
         /**

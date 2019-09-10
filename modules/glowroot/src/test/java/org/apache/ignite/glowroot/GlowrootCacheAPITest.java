@@ -88,40 +88,42 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
             IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
             IgniteCache<Object, Object> cache2 = client.cache(DEFAULT_CACHE_NAME_2);
 
-            // Start complex tx:
-            try (Transaction tx = client.transactions().withLabel("myComplexTx").txStart()) {
-                int key = 10;
+            for (int i = 0; i < 20_000; i++) {
+                // Start complex tx:
+                try (Transaction tx = client.transactions().withLabel("myComplexTx" + i).txStart()) {
+                    int key = 10;
 
-                Integer val = cache.get(key);
+                    Integer val = cache.get(key);
 
-                if (val == null)
-                    val = 0;
+                    if (val == null)
+                        val = 0;
 
-                cache.put(key, val + 1);
+                    cache.put(key, val + 1);
 
-                Map<Integer, Integer> m = new TreeMap<>();
-                m.put(20, 200);
-                m.put(30, 300);
-                m.put(40, 400);
+                    Map<Integer, Integer> m = new TreeMap<>();
+                    m.put(20, 200);
+                    m.put(30, 300);
+                    m.put(40, 400);
 
-                cache2.putAll(m);
+                    cache2.putAll(m);
 
-                cache2.put(13, "testStr");
+                    cache2.put(13, "testStr");
 
-                SqlFieldsQuery qry = new SqlFieldsQuery("select _KEY from Integer where _KEY=?");
-                qry.setArgs(2);
+                    SqlFieldsQuery qry = new SqlFieldsQuery("select _KEY from Integer where _KEY=?");
+                    qry.setArgs(2);
 
-                try(FieldsQueryCursor<List<?>> query = cache.query(qry)) {
-                    for (List<?> objects : query) {
-                        // No-op.
+                    try (FieldsQueryCursor<List<?>> query = cache.query(qry)) {
+                        for (List<?> objects : query) {
+                            // No-op.
+                        }
                     }
+
+                    client.compute().run(new MyClosure());
+
+                    client.compute().execute(new MyTask(), "testArg");
+
+                    tx.commit();
                 }
-
-                client.compute().run(new MyClosure());
-
-                client.compute().execute(new MyTask(), "testArg");
-
-                tx.commit();
             }
         }
         finally {

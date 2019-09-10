@@ -1,7 +1,9 @@
 package org.apache.ignite.glowroot;
 
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.OptionalThreadContext;
@@ -52,7 +54,7 @@ public class TransactionAspect {
             @BindReceiver IgniteTxManager mgr,
             @BindParameterArray Object[] params) {
             return ctx.startTransaction("Ignite", "ignite-" + Thread.currentThread().getName(),
-                MessageSupplier.create("Start tx"), // TODO add label
+                MessageSupplier.create("start tx"), // TODO add label
                 timer);
         }
 
@@ -89,8 +91,8 @@ public class TransactionAspect {
          * @param ctx Context.
          */
         @OnBefore
-        public static TraceEntry onBefore(OptionalThreadContext ctx) {
-            return ctx.startTraceEntry(MessageSupplier.create("commit tx"), // TODO add label
+        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver TransactionProxyImpl proxy) {
+            return ctx.startTraceEntry(MessageSupplier.create("commit tx: label={}", proxy.label()),
                 timer);
         }
 
@@ -112,7 +114,7 @@ public class TransactionAspect {
                 long cntr = ctx2.get()[0];
                 ctx2.get()[0] = cntr + 1;
 
-                if (cntr % 10_000 == 0)
+                if (cntr % 1_000 == 0)
                     entry.endWithError("Trace");
                 else
                     entry.end();
