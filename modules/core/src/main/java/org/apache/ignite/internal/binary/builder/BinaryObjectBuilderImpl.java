@@ -16,28 +16,6 @@
 
 package org.apache.ignite.internal.binary.builder;
 
-import org.apache.ignite.binary.BinaryInvalidTypeException;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectBuilder;
-import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.binary.BinaryType;
-import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
-import org.apache.ignite.internal.binary.BinaryMetadata;
-import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.binary.GridBinaryMarshaller;
-import org.apache.ignite.internal.binary.BinaryContext;
-import org.apache.ignite.internal.binary.BinaryFieldMetadata;
-import org.apache.ignite.internal.binary.BinarySchema;
-import org.apache.ignite.internal.binary.BinarySchemaRegistry;
-import org.apache.ignite.internal.binary.BinaryObjectOffheapImpl;
-import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.thread.IgniteThread;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -45,6 +23,27 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.apache.ignite.binary.BinaryInvalidTypeException;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.binary.BinaryContext;
+import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
+import org.apache.ignite.internal.binary.BinaryFieldMetadata;
+import org.apache.ignite.internal.binary.BinaryMetadata;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
+import org.apache.ignite.internal.binary.BinaryObjectOffheapImpl;
+import org.apache.ignite.internal.binary.BinarySchema;
+import org.apache.ignite.internal.binary.BinarySchemaRegistry;
+import org.apache.ignite.internal.binary.BinaryUtils;
+import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -88,6 +87,9 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
     /** Affinity key field name. */
     private String affFieldName;
+
+    /** Update time. */
+    private long updateTime = -1;
 
     /**
      * @param clsName Class name.
@@ -140,6 +142,18 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         int typeId = reader.readIntPositioned(start + GridBinaryMarshaller.TYPE_ID_POS);
         ctx = reader.binaryContext();
+
+        if (BinaryUtils.hasUpdateTime(flags)) {
+            int mark = reader.position();
+
+            int totalLen = reader.readInt(start + GridBinaryMarshaller.TOTAL_LEN_POS);
+
+            reader.position(start + totalLen - 8);
+
+            updateTime = reader.readLong();
+
+            reader.position(mark);
+        }
 
         if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
             int mark = reader.position();
@@ -337,7 +351,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 reader.position(start + BinaryUtils.length(reader, start));
             }
 
-            writer.postWrite(true, registeredType);
+            writer.postWrite(true, registeredType, updateTime);
 
             // Update metadata if needed.
             int schemaId = writer.schemaId();
@@ -596,6 +610,27 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      */
     @Override public BinaryObjectBuilderImpl removeField(String name) {
         assignedValues().put(name, REMOVED_FIELD_MARKER);
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getUpdateTime() {
+        return updateTime;
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryObjectBuilder setUpdateTime(long updateTime) {
+        assert updateTime >= 0;
+
+        this.updateTime = updateTime;
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryObjectBuilder removeUpdateTime() {
+        updateTime = -1;
 
         return this;
     }

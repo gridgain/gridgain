@@ -55,6 +55,13 @@ public interface GridCacheDrManager extends GridCacheManager {
         AffinityTopologyVersion topVer)throws IgniteCheckedException;
 
     /**
+     * Enrich value with dr specific data.
+     *
+     * @param val Value, may be {@code null}.
+     */
+    public CacheObject enrich(@Nullable CacheObject val);
+
+    /**
      * Process partitions exchange event.
      *
      * @param topVer Topology version.
