@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_HANDSHAKE_TIMEOUT_TASK;
-import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.METRIC_TRACKER_META_KEY;
 
 /**
  * This class implements stream parser based on {@link ClientListenerNioServerBuffer}.
@@ -70,9 +69,6 @@ public class ClientListenerBufferedParser implements GridNioParser {
             return nioBuf.read(buf, msgLenLimit);
         }
         catch (IgniteCheckedException e) {
-            ClientListenerSessionMetricTracker metrics = ses.meta(METRIC_TRACKER_META_KEY);
-            metrics.onHandshakeRejected(ClientListenerSessionMetricTracker.REJECT_REASON_PARSING_ERROR);
-
             throw new IgniteCheckedException("Failed to parse message from remote " + ses.remoteAddress(), e);
         }
     }

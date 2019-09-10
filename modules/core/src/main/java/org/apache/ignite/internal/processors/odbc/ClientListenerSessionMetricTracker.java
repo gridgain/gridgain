@@ -16,10 +16,15 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.JDBC_CLIENT;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.ODBC_CLIENT;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.THIN_CLIENT;
 
 /**
  * Client listener session metric tracker.
@@ -36,23 +41,8 @@ public class ClientListenerSessionMetricTracker {
     /** Client requests metric group. */
     public static final String CLIENT_REQUESTS_METRIC_GROUP = MetricUtils.metricName(CLIENT_METRIC_GROUP, "requests");
 
-    /** Reject reason: timeout. */
-    public static final int REJECT_REASON_TIMEOUT = 1;
-
-    /** Reject reason: parsing error. */
-    public static final int REJECT_REASON_PARSING_ERROR = 2;
-
-    /** Reject reason: handshake params . */
-    public static final int REJECT_REASON_HANDSHAKE_PARAMS = 3;
-
-    /** Reject reason: timeout. */
-    public static final int REJECT_REASON_AUTHENTICATION_FAILURE = 4;
-
     /** Kernal context. */
     private GridKernalContext ctx;
-
-    /** Reject reaon. */
-    private int rejectReason = REJECT_REASON_HANDSHAKE_PARAMS;
 
     /** Indicate whether handshake was accepted. */
     private boolean established;
@@ -60,17 +50,8 @@ public class ClientListenerSessionMetricTracker {
     /** Number of sessions that did not pass handshake yet. */
     private final AtomicLongMetric waiting;
 
-    /** Number of sessions that were not established because of handshake timeout. */
-    private final AtomicLongMetric rejectedDueTimeout;
-
-    /** Number of sessions that were not established because of invalid handshake message. */
-    private final AtomicLongMetric rejectedDueParsingError;
-
-    /** Number of sessions that were not established because of rejected handshake message. */
-    private AtomicLongMetric rejectedDueHandshakeParams;
-
-    /** Number of sessions that were not established because of failed authentication. */
-    private AtomicLongMetric rejectedDueAuthentication;
+    /** Number of sessions that were rejected. */
+    private final AtomicLongMetric rejected;
 
     /** Number of successfully established sessions. */
     private AtomicLongMetric accepted;
@@ -96,26 +77,17 @@ public class ClientListenerSessionMetricTracker {
         MetricRegistry mreg = ctx.metric().registry(CLIENT_SESSIONS_METRIC_GROUP);
 
         waiting = mreg.longMetric("waiting", "Number of sessions that did not pass handshake yet");
-
-        rejectedDueTimeout = mreg.longMetric("rejectedDueTimeout",
-            "Number of sessions that were not established because of handshake timeout");
-
-        rejectedDueParsingError = mreg.longMetric("rejectedDueParsingError",
-            "Number of sessions that were not established because of corrupt handshake message");
+        rejected = mreg.longMetric("rejected", "Number of sessions that were rejected");
     }
 
     /**
      * Handle handshake.
-     * @param clientName Client name.
+     * @param clientType Client type.
      */
-    public void onHandshakeReceived(String clientName) {
+    public void onHandshakeReceived(byte clientType) {
+        String clientName = clientTypeToMetricNamespace(clientType);
+
         MetricRegistry mregSes = ctx.metric().registry(MetricUtils.metricName(CLIENT_SESSIONS_METRIC_GROUP, clientName));
-
-        rejectedDueHandshakeParams = mregSes.longMetric("rejectedDueHandshakeParams",
-            "Number of sessions that were not established because of rejected handshake message");
-
-        rejectedDueAuthentication = mregSes.longMetric("rejectedDueAuthentication",
-            "Number of sessions that were not established because of failed authentication");
 
         accepted = mregSes.longMetric("accepted", "Number of successfully established sessions");
 
@@ -127,6 +99,18 @@ public class ClientListenerSessionMetricTracker {
 
         handledRequests = mregReq.longMetric("handled", "Number of handled requests");
         failedRequests = mregReq.longMetric("failed", "Number of failed requests");
+    }
+
+    /**
+     * Initialize metrics.
+     * @param ctx Kernal context.
+     */
+    public static void initMetrics(GridKernalContext ctx) {
+        ClientListenerSessionMetricTracker metrics = new ClientListenerSessionMetricTracker(ctx);
+
+        metrics.onHandshakeReceived(ODBC_CLIENT);
+        metrics.onHandshakeReceived(JDBC_CLIENT);
+        metrics.onHandshakeReceived(THIN_CLIENT);
     }
 
     /**
@@ -162,53 +146,36 @@ public class ClientListenerSessionMetricTracker {
     }
 
     /**
-     * Handle sesstion rejection.
-     * @param reason Reject reason.
-     */
-    public void onHandshakeRejected(int reason) {
-        rejectReason = reason;
-    }
-
-    /**
      * Handle session close.
      */
     public void onSessionClosed() {
         if (established) {
             active.decrement();
-
             closed.increment();
-        }
-        else
-        {
-            System.out.println("onSessionClosed due " + rejectReason);
+        } else {
             waiting.decrement();
+            rejected.increment();
+        }
+    }
 
-            switch (rejectReason) {
-                case REJECT_REASON_TIMEOUT: {
-                    rejectedDueTimeout.increment();
+    /**
+     * Get metric namespace from client type.
+     * @param clientType Client type.
+     * @return Metric namespace for client.
+     */
+    private static String clientTypeToMetricNamespace(byte clientType) {
+        switch (clientType) {
+            case ODBC_CLIENT:
+                return "odbc";
 
-                    break;
-                }
+            case JDBC_CLIENT:
+                return "jdbc";
 
-                case REJECT_REASON_PARSING_ERROR: {
-                    rejectedDueParsingError.increment();
+            case THIN_CLIENT:
+                return "thin";
 
-                    break;
-                }
-
-                case REJECT_REASON_AUTHENTICATION_FAILURE: {
-                    rejectedDueAuthentication.increment();
-
-                    break;
-                }
-
-                case REJECT_REASON_HANDSHAKE_PARAMS:
-                default: {
-                    rejectedDueHandshakeParams.increment();
-
-                    break;
-                }
-            }
+            default:
+                throw new IgniteException("Unknown client type: " + clientType);
         }
     }
 }

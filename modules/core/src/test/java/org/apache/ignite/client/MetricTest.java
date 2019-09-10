@@ -37,6 +37,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,23 +68,10 @@ public class MetricTest {
     private static final String METRICS_NAMESPACE_REQUESTS_THIN = METRICS_NAMESPACE_CLIENT + ".requests.thin";
 
     /** */
-    private static final String METRIC_SESSIONS_REJECTED_DUE_TIMEOUT =
-        METRICS_NAMESPACE_SESSIONS + ".rejectedDueTimeout";
-
-    /** */
-    private static final String METRIC_SESSIONS_REJECTED_DUE_PARSING =
-        METRICS_NAMESPACE_SESSIONS + ".rejectedDueParsingError";
-
-    /** */
-    private static final String METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE =
-        METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueHandshakeParams";
-
-    /** */
-    private static final String METRIC_SESSIONS_REJECTED_DUE_AUTH =
-        METRICS_NAMESPACE_SESSIONS_THIN + ".rejectedDueAuthentication";
-
-    /** */
     private static final String METRIC_SESSIONS_WAITING = METRICS_NAMESPACE_SESSIONS + ".waiting";
+
+    /** */
+    private static final String METRIC_SESSIONS_REJECTED = METRICS_NAMESPACE_SESSIONS + ".rejected";
 
     /** */
     private static final String METRIC_SESSIONS_ACCEPTED = METRICS_NAMESPACE_SESSIONS_THIN + ".accepted";
@@ -112,24 +100,20 @@ public class MetricTest {
     public void testSessionsSubsequent() throws Exception {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-                checkSessionsState(0, 1, 1, 0);
-                checkNothingRejected();
+                checkSessionsState(0,0, 1, 1, 0);
             }
 
-            waitClientDisconnect(1);
+            waitLongMetricChange(METRIC_SESSIONS_CLOSED, 1);
 
-            checkSessionsState(0, 1, 0, 1);
-            checkNothingRejected();
+            checkSessionsState(0, 0, 1, 0, 1);
 
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-                checkSessionsState(0, 2, 1, 1);
-                checkNothingRejected();
+                checkSessionsState(0, 0, 2, 1, 1);
             }
 
-            waitClientDisconnect(2);
+            waitLongMetricChange(METRIC_SESSIONS_CLOSED, 2);
 
-            checkSessionsState(0, 2, 0, 2);
-            checkNothingRejected();
+            checkSessionsState(0, 0, 2, 0, 2);
         }
     }
 
@@ -140,24 +124,20 @@ public class MetricTest {
     public void testSessionsParallel() throws Exception {
         try (Ignite ignored = startNode()) {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration())) {
-                checkSessionsState(0, 1, 1, 0);
-                checkNothingRejected();
+                checkSessionsState(0, 0, 1, 1, 0);
 
                 try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration())) {
-                    checkSessionsState(0, 2, 2, 0);
-                    checkNothingRejected();
+                    checkSessionsState(0, 0, 2, 2, 0);
                 }
 
-                waitClientDisconnect(1);
+                waitLongMetricChange(METRIC_SESSIONS_CLOSED, 1);
 
-                checkSessionsState(0, 2, 1, 1);
-                checkNothingRejected();
+                checkSessionsState(0, 0, 2, 1, 1);
             }
 
-            waitClientDisconnect(2);
+            waitLongMetricChange(METRIC_SESSIONS_CLOSED, 2);
 
-            checkSessionsState(0, 2, 0, 2);
-            checkNothingRejected();
+            checkSessionsState(0, 0, 2, 0, 2);
         }
     }
 
@@ -172,14 +152,12 @@ public class MetricTest {
             try (IgniteClient ignored1 = Ignition.startClient(getClientConfiguration()
                     .setUserName("ignite")
                     .setUserPassword("ignite"))) {
-                checkSessionsState(0, 1, 1, 0);
-                checkNothingRejected();
+                checkSessionsState(0, 0, 1, 1, 0);
             }
 
-            waitClientDisconnect(1);
+            waitLongMetricChange(METRIC_SESSIONS_CLOSED, 1);
 
-            checkSessionsState(0, 1, 0, 1);
-            checkNothingRejected();
+            checkSessionsState(0, 0, 1, 0, 1);
 
             try (IgniteClient ignored2 = Ignition.startClient(getClientConfiguration()
                     .setUserName("wrong")
@@ -190,14 +168,9 @@ public class MetricTest {
                 // No-op.
             }
 
-            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_AUTH, 1);
+            waitLongMetricChange(METRIC_SESSIONS_REJECTED, 1);
 
-            checkSessionsState(0, 1, 0, 1);
-
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
-            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
+            checkSessionsState(0, 1, 1, 0, 1);
         }
     }
 
@@ -207,42 +180,22 @@ public class MetricTest {
     @Test
     public void testTimeoutFail() throws Exception {
         try (Ignite ignored = startNode()) {
-            checkSessionsState(0, 0, 0, 0);
+            checkSessionsState(0, 0, 0, 0, 0);
 
             Socket conn = new Socket("localhost", ClientConnectorConfiguration.DFLT_PORT);
 
             waitLongMetricChange(METRIC_SESSIONS_WAITING, 1);
 
-            checkSessionsState(1, 0, 0, 0);
-
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
+            checkSessionsState(1, 0,0, 0, 0);
 
             int res = conn.getInputStream().read();
 
             assertEquals(-1, res);
 
-            waitLongMetricChange(METRIC_SESSIONS_WAITING, 0);
-            waitLongMetricChange(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT, 1);
+            waitLongMetricChange(METRIC_SESSIONS_REJECTED, 1);
 
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
-            assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
-            assertEquals(1, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
-
-            checkSessionsState(0, 0, 0, 0);
+            checkSessionsState(0, 1, 0, 0, 0);
         }
-    }
-
-
-    /**
-     * Wait until client disconnects.
-     * @param disconnected How much clients should be disconnected.
-     */
-    private static void waitClientDisconnect(long disconnected) throws Exception {
-        waitLongMetricChange(METRIC_SESSIONS_CLOSED, disconnected);
     }
 
     /**
@@ -251,37 +204,24 @@ public class MetricTest {
      * @param value Expeced value.
      */
     private static void waitLongMetricChange(String metric, long value) throws Exception {
-        System.out.println("Before: " + System.currentTimeMillis());
         boolean success = GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                long val = getLongMetricValue(metric);
-                System.out.println(metric + ": " + val);
-                return val == value;
+                return getLongMetricValue(metric) == value;
             }
         }, DEFAULT_METRIC_CHANGE_TIMEOUT);
-        System.out.println("After: " + System.currentTimeMillis());
 
         assertTrue(success);
     }
 
     /**
-     * Check that nothing was rejected.
+     * Check current state of session.
      */
-    private static void checkSessionsState(long waiting, long accepted, long active, long closed) {
+    private static void checkSessionsState(long waiting, long rejected, long accepted, long active, long closed) {
         assertEquals(waiting, getLongMetricValue(METRIC_SESSIONS_WAITING));
+        assertEquals(rejected, getLongMetricValue(METRIC_SESSIONS_REJECTED));
         assertEquals(accepted, getLongMetricValue(METRIC_SESSIONS_ACCEPTED));
         assertEquals(active, getLongMetricValue(METRIC_SESSIONS_ACTIVE));
         assertEquals(closed, getLongMetricValue(METRIC_SESSIONS_CLOSED));
-    }
-
-    /**
-     * Check that nothing was rejected.
-     */
-    private static void checkNothingRejected() {
-        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_TIMEOUT));
-        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_PARSING));
-        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_HANDSHAKE));
-        assertEquals(0, getLongMetricValue(METRIC_SESSIONS_REJECTED_DUE_AUTH));
     }
 
     /**
@@ -338,26 +278,30 @@ public class MetricTest {
         return igniteCfg;
     }
 
-    /** Start node. */
-    private static Ignite startNode() {
+    /**
+     * @return Test node configuration.
+     */
+    @NotNull private static IgniteConfiguration getNodeConfiguration() {
         IgniteConfiguration cfg = getServerConfiguration();
 
         cfg.setClientConnectorConfiguration(
             new ClientConnectorConfiguration()
-                .setHandshakeTimeout(500)
+                .setHandshakeTimeout(2000)
         );
+
+        return cfg;
+    }
+
+    /** Start node. */
+    private static Ignite startNode() {
+        IgniteConfiguration cfg = getNodeConfiguration();
 
         return Ignition.start(cfg);
     }
 
     /** Start node. */
     private static Ignite startAuthNode() {
-        IgniteConfiguration cfg = getServerConfiguration();
-
-        cfg.setClientConnectorConfiguration(
-            new ClientConnectorConfiguration()
-                .setHandshakeTimeout(20000)
-        );
+        IgniteConfiguration cfg = getNodeConfiguration();
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
