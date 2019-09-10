@@ -56,11 +56,19 @@ public class TransactionAspect {
                 timer);
         }
 
+        /**
+         * @param ret Ret.
+         * @param traceEntry Trace entry.
+         */
         @OnReturn
         public static void onReturn(@BindReturn GridNearTxLocal ret, @BindTraveler TraceEntry traceEntry) {
             ctx.set(traceEntry);
         }
 
+        /**
+         * @param throwable Throwable.
+         * @param traceEntry Trace entry.
+         */
         @OnThrow
         public static void onThrow(@BindThrowable Throwable throwable,
             @BindTraveler TraceEntry traceEntry) {
