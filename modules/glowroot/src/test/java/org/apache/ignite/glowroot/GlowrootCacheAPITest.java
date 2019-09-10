@@ -129,7 +129,7 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
 
     private static final class MyClosure implements IgniteRunnable {
         @Override public void run() {
-
+            // No-op.
         }
     }
 

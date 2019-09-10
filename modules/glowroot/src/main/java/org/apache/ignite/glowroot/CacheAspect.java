@@ -24,6 +24,7 @@ import org.glowroot.agent.plugin.api.ThreadContext;
 import org.glowroot.agent.plugin.api.TimerName;
 import org.glowroot.agent.plugin.api.TraceEntry;
 import org.glowroot.agent.plugin.api.weaving.BindMethodName;
+import org.glowroot.agent.plugin.api.weaving.BindParameterArray;
 import org.glowroot.agent.plugin.api.weaving.BindReceiver;
 import org.glowroot.agent.plugin.api.weaving.BindThrowable;
 import org.glowroot.agent.plugin.api.weaving.BindTraveler;
@@ -55,8 +56,10 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val) {
-            return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={}", proxy.getName(), val), timer);
+        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+            return "query".equals(val) ?
+                ctx.startTraceEntry(MessageSupplier.create("cache name={} query={}", proxy.getName(), params[0].toString()), timer) :
+                ctx.startTraceEntry(MessageSupplier.create("cache name={} op={}", proxy.getName(), val), timer);
         }
 
         /**
