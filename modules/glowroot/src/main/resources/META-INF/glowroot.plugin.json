@@ -3,6 +3,7 @@
   "id": "gridgain_ce",
   "aspects": [
     "org.apache.ignite.glowroot.TransactionAspect",
-    "org.apache.ignite.glowroot.CacheAspect"
+    "org.apache.ignite.glowroot.CacheAspect",
+    "org.apache.ignite.glowroot.ComputeAspect"
   ]
 }

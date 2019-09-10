@@ -1,11 +1,14 @@
 package org.apache.ignite.glowroot;
 
+import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.ThreadContext;
 import org.glowroot.agent.plugin.api.TimerName;
 import org.glowroot.agent.plugin.api.TraceEntry;
 import org.glowroot.agent.plugin.api.weaving.BindMethodName;
+import org.glowroot.agent.plugin.api.weaving.BindParameterArray;
 import org.glowroot.agent.plugin.api.weaving.BindThrowable;
 import org.glowroot.agent.plugin.api.weaving.BindTraveler;
 import org.glowroot.agent.plugin.api.weaving.OnBefore;
@@ -22,14 +25,22 @@ public class ComputeAspect {
     @Pointcut(className = "org.apache.ignite.internal.processors.task.GridTaskProcessor",
         methodName = "execute",
         methodParameterTypes = {".."},
-        timerName = "task_execute"
+        timerName = "task_execute",
+        suppressibleUsingKey = "task",
+        suppressionKey = "task"
     )
-    public static class CachePutAdvice {
-        private static final TimerName timer = Agent.getTimerName(CachePutAdvice.class);
+    public static class TaskAdvice {
+        private static final TimerName timer = Agent.getTimerName(TaskAdvice.class);
 
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext context, @BindMethodName String val) {
-            return context.startTraceEntry(MessageSupplier.create("cache {}", val), timer);
+        public static TraceEntry onBefore(ThreadContext context, @BindMethodName String val, @BindParameterArray Object[] params) {
+            GridStringBuilder b = new GridStringBuilder(500);
+            for (Object param : params) {
+                b.a(param == null ? "NULL" : param.toString());
+                b.a(" ");
+            }
+
+            return context.startTraceEntry(MessageSupplier.create("task {}", b.toString()), timer);
         }
 
         @OnReturn

@@ -17,6 +17,7 @@ package org.apache.ignite.glowroot;
 
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.util.typedef.X;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.ThreadContext;
@@ -37,11 +38,13 @@ import org.glowroot.agent.plugin.api.weaving.Pointcut;
 public class CacheAspect {
     /**
      */
-    @Pointcut(className = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl",
+    @Pointcut(className = "org.apache.ignite.IgniteCache",
+        subTypeRestriction = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl",
         methodName = "*",
-        superTypeRestriction = "org.apache.ignite.IgniteCache",
         methodParameterTypes = {".."},
-        timerName = "cache_op"
+        timerName = "cache_op",
+        suppressionKey = "cache",
+        suppressibleUsingKey = "cache"
     )
     public static class CachePutAdvice {
         /** */
@@ -53,7 +56,7 @@ public class CacheAspect {
          */
         @OnBefore
         public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val) {
-            return ctx.startTraceEntry(MessageSupplier.create("cache {}", val), timer);
+            return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={}", proxy.getName(), val), timer);
         }
 
         /**

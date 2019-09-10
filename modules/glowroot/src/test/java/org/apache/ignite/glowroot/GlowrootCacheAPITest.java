@@ -17,19 +17,25 @@
 package org.apache.ignite.glowroot;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.LockSupport;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.compute.ComputeJob;
+import org.apache.ignite.compute.ComputeJobAdapter;
+import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -39,14 +45,12 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
- * { "name": "GridGain CE Plugin", "id": "gridgain_ce", "aspects": [ "org.apache.ignite.glowroot.CacheAPIAspect" ] }
- *
- * { "name": "Ignite Plugin", "id": "ignite", "instrumentation": [ { "captureKind": "transaction", "transactionType":
- * "Ignite", "transactionNameTemplate": "IgniteCommit", "traceEntryMessageTemplate": "{{this}}", "timerName":
- * "IgniteCommit", "className": "org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl",
- * "methodName": "commit", "methodParameterTypes": [] } ] }
  */
 public class GlowrootCacheAPITest extends GridCommonAbstractTest {
+    /** */
+    private static final String DEFAULT_CACHE_NAME_2 = DEFAULT_CACHE_NAME + "2";
+
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -56,7 +60,13 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
 
         ccfg.setIndexedTypes(Integer.class, Integer.class);
 
-        cfg.setCacheConfiguration(ccfg);
+        CacheConfiguration<Integer, Integer> ccfg2 = new CacheConfiguration<Integer, Integer>(DEFAULT_CACHE_NAME_2).
+            setAtomicityMode(TRANSACTIONAL).
+            setWriteSynchronizationMode(FULL_SYNC);
+
+        ccfg.setIndexedTypes(Long.class, Long.class);
+
+        cfg.setCacheConfiguration(ccfg, ccfg2);
 
         cfg.setClientMode(igniteInstanceName.equals("client"));
 
@@ -71,65 +81,86 @@ public class GlowrootCacheAPITest extends GridCommonAbstractTest {
         try {
             IgniteEx grid = startGrids(2);
 
+            awaitPartitionMapExchange();
+
             IgniteEx client = startGrid("client");
 
-            IgniteCache<Object, Object> cache = client.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).
-                setAtomicityMode(TRANSACTIONAL).setWriteSynchronizationMode(FULL_SYNC));
+            IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
+            IgniteCache<Integer, Integer> cache2 = client.cache(DEFAULT_CACHE_NAME_2);
 
-            long stop = System.currentTimeMillis() + 600_000L;
+            // Start complex tx:
+            try (Transaction tx = client.transactions().withLabel("myComplexTx").txStart()) {
+                int key = 10;
 
-            Random r = new Random();
+                Integer val = cache.get(key);
 
-            AtomicInteger i = new AtomicInteger();
+                if (val == null)
+                    val = 0;
 
-            multithreadedAsync(new Runnable() {
-                @Override public void run() {
-                    int idx = i.getAndIncrement();
+                cache.put(key, val + 1);
 
-                    while (U.currentTimeMillis() < stop) {
-                        try (Transaction tx = client.transactions().withLabel("test" + idx).txStart()) {
-                            switch (r.nextInt(4)) {
-                                case 0:
-                                    cache.put(r.nextInt(100), r.nextInt(100));
+                Map<Integer, Integer> m = new TreeMap<>();
+                m.put(20, 200);
+                m.put(30, 300);
+                m.put(40, 400);
 
-                                    break;
-                                case 1:
-                                    Map<Integer, Integer> m = new TreeMap<>();
-                                    m.put(r.nextInt(100), r.nextInt(100));
-                                    m.put(r.nextInt(100), r.nextInt(100));
-                                    m.put(r.nextInt(100), r.nextInt(100));
+                cache2.putAll(m);
 
-                                    cache.putAll(m);
+                SqlFieldsQuery qry = new SqlFieldsQuery("select _KEY from Integer where _KEY=?");
+                qry.setArgs(2);
 
-                                    break;
-                                case 2:
-                                    SqlFieldsQuery qry = new SqlFieldsQuery("select _KEY from Integer where _KEY=?");
-                                    qry.setArgs(r.nextInt(100));
-
-                                    cache.query(qry).getAll();
-
-                                    break;
-                                case 3:
-                                    client.compute().run(new MyTask());
-
-                                    break;
-                            }
-
-                            tx.commit();
-                        }
+                try(FieldsQueryCursor<List<?>> query = cache.query(qry)) {
+                    for (List<?> objects : query) {
+                        // No-op.
                     }
-
                 }
-            }, 2, "tx-put-thread").get();
+
+                client.compute().run(new MyClosure());
+
+                client.compute().execute(new MyTask(), "testArg");
+
+                tx.commit();
+            }
         }
         finally {
             stopAllGrids();
         }
     }
 
-    private static final class MyTask implements IgniteRunnable{
+    private static final class MyClosure implements IgniteRunnable {
         @Override public void run() {
 
+        }
+    }
+
+    private static final class MyTask extends ComputeTaskAdapter<String, Long> {
+        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+            String arg) throws IgniteException {
+
+            Map<MyJob, ClusterNode> map = new HashMap<>();
+
+            for (ClusterNode node : subgrid)
+                map.put(new MyJob(), node);
+
+            return map;
+        }
+
+        @Override public Long reduce(List<ComputeJobResult> results) throws IgniteException {
+            return results.stream().map(new Function<ComputeJobResult, Long>() {
+                @Override public Long apply(ComputeJobResult result) {
+                    return (Long)result.getData();
+                }
+            }).reduce(new BinaryOperator<Long>() {
+                @Override public Long apply(Long aLong, Long aLong2) {
+                    return aLong + aLong2;
+                }
+            }).get();
+        }
+
+        private static class MyJob extends ComputeJobAdapter {
+            @Override public Long execute() throws IgniteException {
+                return 1L;
+            }
         }
     }
 
