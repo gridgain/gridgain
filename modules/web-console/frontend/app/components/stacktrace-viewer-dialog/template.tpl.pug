@@ -13,16 +13,17 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 
-mixin form-field__input({ name, model, disabled, required, placeholder, namePostfix = '' })
-    input(
-        id=`{{ ${name} }}${ namePostfix }Input`
-        name=`{{ ${name} }}`
-        translate-attr=`{placeholder: "${placeholder}"}`
-
-        ng-model=model
-
-        ng-required=required && `${required}`
-        ng-disabled=disabled && `${disabled}`
-        ng-ref='$input'
-        ng-ref-read='ngModel'
-    )&attributes(attributes ? attributes.attributes ? attributes.attributes : attributes : {})
+.modal.modal--ignite.theme--ignite.center(tabindex='-1' role='dialog')
+    .modal-dialog.modal-stacktrace
+        .modal-content
+            .modal-header
+                button.close(ng-click='$hide()' aria-hidden='true')
+                    svg(ignite-icon="cross")
+                h4.modal-title
+                    svg(ignite-icon="attention")
+                    | {{$ctrl.title}}
+            .stacktrace-viewer-body
+                stacktrace-tree(data-items="$ctrl.stacktrace")
+            .modal-footer
+                div
+                    button.btn-ignite.btn-ignite--success(ng-click='$hide()') {{ "queries.notebook.stackTraceDialog.closeButtonLabel"|translate }}

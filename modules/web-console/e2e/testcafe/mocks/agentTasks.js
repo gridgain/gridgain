@@ -138,6 +138,27 @@ export const SIMPLE_QUERY_RESPONSE = {
     }
 };
 
+export const SIMPLE_FAILED_QUERY_RESPONSE = {
+    error: {
+        message: 'Outer error message',
+        stackTrace: [
+            'Outer error trace 1',
+            'Outer error trace 2'
+        ],
+        cause: {
+            message: 'Inner error message',
+            stackTrace: [
+                'Inner error trace 1',
+                'Inner error trace 2'
+            ],
+            cause: {
+                message: 'Cause without stacktrace'
+            }
+        }
+    },
+    result: null
+};
+
 export const FAKE_CACHES = {
     caches: {
         Cache1: 'a',

@@ -290,16 +290,16 @@ class Paragraph {
 
 // Controller for SQL notebook screen.
 export class NotebookCtrl {
-    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo', '$translate'];
+    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo', '$translate', 'StacktraceViewerDialog'];
 
     /**
      * @param {CSV} CSV
      */
-    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo, private $translate: ng.translate.ITranslateService) {
+    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo, private $translate: ng.translate.ITranslateService, stacktraceViewerDialog) {
         const $ctrl = this;
 
         this.CSV = CSV;
-        Object.assign(this, { $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo });
+        Object.assign(this, { $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo, stacktraceViewerDialog });
 
         // Define template urls.
         $ctrl.paragraphRateTemplateUrl = paragraphRateTemplateUrl;
@@ -2177,18 +2177,18 @@ export class NotebookCtrl {
             }
         };
 
-        $scope.showStackTrace = function(paragraph) {
+        $scope.showStackTrace = (paragraph) => {
             if (!_.isNil(paragraph)) {
-                const scope = $scope.$new();
-
-                scope.title = $translate.instant('queries.notebook.stackTraceDialog.title');
-                scope.content = [];
-
-                const tab = '&nbsp;&nbsp;&nbsp;&nbsp;';
+                const stacktrace = [];
 
                 const addToTrace = (item) => {
                     if (nonNil(item)) {
-                        scope.content.push((scope.content.length > 0 ? tab : '') + errorParser.extractFullMessage(item));
+                        const content = {message: errorParser.extractFullMessage(item)};
+
+                        if (!_.isEmpty(item.stackTrace))
+                            content.stacktrace = item.stackTrace;
+
+                        stacktrace.push(content);
 
                         addToTrace(item.cause);
 
@@ -2198,8 +2198,10 @@ export class NotebookCtrl {
 
                 addToTrace(paragraph.error.root);
 
-                // Show a basic modal from a controller
-                $modal({scope, templateUrl: messageTemplateUrl, show: true});
+                this.stacktraceViewerDialog.show(
+                    $translate.instant('queries.notebook.stackTraceDialog.title'),
+                    stacktrace
+                );
             }
         };
 
@@ -2219,8 +2221,13 @@ export class NotebookCtrl {
             const paragraphs = _.get(this, '$scope.notebook.paragraphs');
 
             if (this._hasRunningQueries(paragraphs)) {
-                return Confirm.confirm($translate.instant('queries.notebook.leaveWithRunningQueriesConfirmationMessage'))
-                    .then(() => this._closeOpenedQueries(paragraphs));
+                try {
+                    return Confirm.confirm($translate.instant('queries.notebook.leaveWithRunningQueriesConfirmationMessage'))
+                        .then(() => this._closeOpenedQueries(paragraphs));
+                }
+                catch (err) {
+                    return Promise.reject(new CancellationError());
+                }
             }
 
             return Promise.resolve(true);
