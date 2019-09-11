@@ -114,7 +114,7 @@ public class StompDestinationsUtils {
      * @return Action request topic.
      */
     public static String buildActionRequestTopic(UUID clusterId) {
-        return "/topic/agent/cluster/actions/" + clusterId;
+        return "/topic/agent/cluster/action/" + clusterId;
     }
 
     /**

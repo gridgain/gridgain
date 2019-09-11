@@ -82,7 +82,7 @@ public class ResponseError {
     /**
      * @return Stack trace.
      */
-    public StackTraceElement[] getData() {
+    public StackTraceElement[] getStackTrace() {
         return stackTrace;
     }
 
@@ -90,7 +90,7 @@ public class ResponseError {
      * @param stackTrace Stack trace.
      * @return This for chaining method calls.
      */
-    public ResponseError setData(StackTraceElement[] stackTrace) {
+    public ResponseError setStackTrace(StackTraceElement[] stackTrace) {
         this.stackTrace = stackTrace;
         return this;
     }
