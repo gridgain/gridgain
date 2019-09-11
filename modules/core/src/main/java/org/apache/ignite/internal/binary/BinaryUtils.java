@@ -893,12 +893,15 @@ public class BinaryUtils {
 
         if (hasSchema(flags)) {
             // Schema exists.
-            if (hasRaw(flags))
-                return hasUpdateTime(flags)
-                    // Raw offset is set, it is at the end rigth before update time.
-                    ? in.readIntPositioned(start + len - 4 - 8)
-                    // Raw offset is set, it is at the very end of the object.
-                    : in.readIntPositioned(start + len - 4);
+            if (hasRaw(flags)) {
+                // Raw offset is set.
+                if (hasUpdateTime(flags))
+                    // Update time is set, raw offset just before it.
+                    return in.readIntPositioned(start + len - 4 - 8);
+                else
+                    // Update time is not set, raw offset is at the very end of the object.
+                    return in.readIntPositioned(start + len - 4);
+            }
             else
                 // Raw offset is not set, so just return schema offset.
                 return in.readIntPositioned(start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
