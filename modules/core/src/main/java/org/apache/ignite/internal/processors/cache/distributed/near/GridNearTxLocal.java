@@ -4086,6 +4086,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         enterSystemSection();
 
+        //this value should not be changed after set once
+        commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
+
         if (!onTimeout && trackTimeout)
             removeTimeoutHandler();
 
