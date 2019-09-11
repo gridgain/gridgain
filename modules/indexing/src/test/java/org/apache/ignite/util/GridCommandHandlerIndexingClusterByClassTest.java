@@ -38,7 +38,6 @@ import java.util.Iterator;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.commandline.cache.IdleVerify.CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
@@ -72,7 +71,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
 
         assertContains(log, out, "no issues found");
 
-        assertContains(log, out,CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
+        assertContains(log, out,"Cluster isn't in read-only mode. The report may have false positive errors.");
     }
 
     /**
@@ -93,7 +92,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
 
             assertContains(log, out, "no issues found");
 
-            assertNotContains(log, out, CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
+            assertNotContains(log, out, "Cluster isn't in read-only mode. The report may have false positive errors.");
         }
         finally {
             crd.cluster().readOnly(false);

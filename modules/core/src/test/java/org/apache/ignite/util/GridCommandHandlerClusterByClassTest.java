@@ -88,7 +88,6 @@ import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
-import static org.apache.ignite.internal.commandline.cache.IdleVerify.CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -461,7 +460,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
             assertContains(log, testOut.toString(), "no conflicts have been found");
-            assertNotContains(log, testOut.toString(), CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
+            assertNotContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
         }
         finally {
             crd.cluster().readOnly(false);
@@ -470,7 +469,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
         assertContains(log, testOut.toString(), "no conflicts have been found");
-        assertContains(log, testOut.toString(), CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
 
         HashSet<Integer> clearKeys = new HashSet<>(asList(1, 2, 3, 4, 5, 6));
 
@@ -479,7 +478,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
         assertContains(log, testOut.toString(), "conflict partitions");
-        assertContains(log, testOut.toString(), CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
+        assertContains(log, testOut.toString(), "Cluster isn't in read-only mode. The report may have false positive errors.");
     }
 
     /** */
