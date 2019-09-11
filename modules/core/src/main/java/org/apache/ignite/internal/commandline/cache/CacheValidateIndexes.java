@@ -51,6 +51,7 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.OP_NODE_ID;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
+import static org.apache.ignite.internal.commandline.cache.IdleVerify.CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
@@ -60,6 +61,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY
  * Validate indexes command.
  */
 public class CacheValidateIndexes implements Command<CacheValidateIndexes.Arguments> {
+    /** Number of arguments. */
+    private static final int NUMBER_OF_ARGUMENTS = 5;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         String description = "Validate consistency between primary and secondary indexes for all or specified caches on " +
@@ -186,7 +190,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             }
 
             if (!state.readOnly())
-                logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+                logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
 
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
                 client, "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask", taskArg, null, clientCfg);
@@ -243,7 +247,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             logger.info("");
 
             if (errors && !state.readOnly()) {
-                logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+                logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
 
                 logger.warning("");
             }
@@ -262,7 +266,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
         int argsCnt = 0;
 
-        while (argIter.hasNextSubArg() && argsCnt++ < 5) {
+        while (argIter.hasNextSubArg() && argsCnt++ < NUMBER_OF_ARGUMENTS) {
             String nextArg = argIter.nextArg("");
 
             ValidateIndexesCommandArg arg = CommandArgUtils.of(nextArg, ValidateIndexesCommandArg.class);

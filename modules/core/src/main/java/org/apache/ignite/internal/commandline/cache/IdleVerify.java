@@ -77,6 +77,10 @@ import static org.apache.ignite.internal.visor.verify.CacheFilterEnum.USER;
  *
  */
 public class IdleVerify implements Command<IdleVerify.Arguments> {
+    /** Warn message. */
+    public static final String CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE =
+        "Cluster isn't in read-only mode. The report may have false positive errors.";
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         String CACHES = "cacheName1,...,cacheNameN";
@@ -225,7 +229,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
                 }
 
                 if (!state.readOnly())
-                    logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+                    logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
 
                 if (args.dump())
                     cacheIdleVerifyDump(client, clientCfg, logger);
@@ -233,7 +237,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
                     cacheIdleVerifyV2(client, clientCfg, logger);
 
                 if (!state.readOnly())
-                    logger.warning("Cluster isn't in read-only mode. The report may have false positive errors.");
+                    logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
             }
             else
                 legacyCacheIdleVerify(client, clientCfg, logger);
