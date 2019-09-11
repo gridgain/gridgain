@@ -228,7 +228,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
                     );
                 }
 
-                if (!state.readOnly())
+                if (!readOnly)
                     logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
 
                 if (args.dump())

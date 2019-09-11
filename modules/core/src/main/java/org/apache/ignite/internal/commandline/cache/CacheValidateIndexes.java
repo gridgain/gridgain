@@ -182,14 +182,16 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            if (args.checkCrc() && !state.readOnly()) {
+            boolean readOnly = state.readOnly();
+
+            if (args.checkCrc() && !readOnly) {
                 throw new VisorIllegalStateException(
                     "Cluster isn't in read-only mode. " + VALIDATE_INDEXES + " with " + CHECK_CRC +
                         " not allowed without enabled read-only mode."
                 );
             }
 
-            if (!state.readOnly())
+            if (!readOnly)
                 logger.warning(CLUSTER_NOT_IN_READ_ONLY_WARN_MESSAGE);
 
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
