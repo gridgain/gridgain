@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInter
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptTxCacheOperationTest;
 import org.apache.ignite.internal.processors.query.SqlLocalQueryConnectionAndStatementTest;
 import org.apache.ignite.internal.processors.query.SqlPartOfComplexPkLookupTest;
+import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
@@ -85,6 +86,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest.class,
     SqlIndexConsistencyAfterInterruptTxCacheOperationTest.class,
+    SqlTwoCachesInGroupWithSameEntryTest.class,
 
     // Dynamic index create/drop tests.
     DynamicIndexPartitionedAtomicConcurrentSelfTest.class,
