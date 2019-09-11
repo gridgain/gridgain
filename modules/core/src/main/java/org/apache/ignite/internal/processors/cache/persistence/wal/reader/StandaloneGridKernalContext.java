@@ -605,6 +605,16 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     }
 
     /** {@inheritDoc} */
+    @Override public ExecutorService getRebalanceExecutorService() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteStripedThreadPoolExecutor getStripedRebalanceExecutorService() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public IgniteExceptionRegistry exceptionRegistry() {
         return null;
     }
