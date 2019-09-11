@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -33,7 +34,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -44,7 +44,6 @@ import java.util.regex.Matcher;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.nonNull;
-import static java.util.function.Function.identity;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
@@ -104,6 +103,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Coordinator. */
     private IgniteEx crd;
 
+    /** Cache group name. */
+    private String grpName;
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
@@ -139,15 +141,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, parts));
         ccfg.setBackups(backups);
+        ccfg.setGroupName(grpName);
         return ccfg;
     }
 
     /**
-     * Test check that not present statistics in log output, if we not set
-     * system properties {@code IGNITE_QUIET},
+     * Test check that not present statistics in log output, if we not set system properties {@code IGNITE_QUIET},
      * {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
      *
-     * @throws Exception
+     * @throws Exception if any error occurs.
      * @see IgniteSystemProperties#IGNITE_QUIET
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
      */
@@ -173,11 +175,10 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test check that not present partition distribution in log output,
-     * if we not set system properties
-     * {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
+     * Test check that not present partition distribution in log output, if we not set system properties {@code
+     * IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
      *
-     * @throws Exception
+     * @throws Exception if any error occurs.
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
      */
     @Test
@@ -197,11 +198,33 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * The test checks the correctness of the output rebalance statistics.
      *
-     * @throws Exception
-     * */
+     * @throws Exception if any error occurs.
+     */
     @Test
     public void testPrintCorrectStatistic() throws Exception {
-        cacheCfgs = defaultCacheConfigurations(10,2);
+        checkOutputStatisticsOneJvm();
+    }
+
+    /**
+     * The test checks the correctness of the statistics output
+     * for two cache groups.
+     *
+     * @throws Exception if any error occurs.
+     */
+    @Test
+    public void testPrintCorrectStatisticTwoCacheGroups() throws Exception {
+        grpName = "Test";
+
+        checkOutputStatisticsOneJvm();
+    }
+
+    /**
+     * Starting nodes and checking statistics for one jvm.
+     *
+     * @throws Exception if any error occurs.
+     * */
+    private void checkOutputStatisticsOneJvm() throws Exception {
+        cacheCfgs = defaultCacheConfigurations(10, 2);
 
         crd = startGrids(DEFAULT_NODE_CNT);
 
@@ -221,8 +244,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        //+1 - because ignite-sys-cache
-        assertEquals(cacheCfgs.length + 1, statPerCacheGrps.size());
+        assertEquals(newNode.context().cache().cacheGroups().size(), statPerCacheGrps.size());
         assertEquals(1, totalStats.size());
 
         Map<String, Integer> partDistribution = perCacheGroupPartitionDistribution(newNode);
@@ -234,18 +256,17 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * The test checks the correctness of the output rebalance statistics
-     * in multi jvm mode.
+     * The test checks the correctness of the output rebalance statistics in multi jvm mode.
      *
-     * @throws Exception
-     * */
+     * @throws Exception if any error occurs.
+     */
     @Test
-    public void testPrintCorrectStatisticInMultiJvm() throws Exception{
+    public void testPrintCorrectStatisticInMultiJvm() throws Exception {
         multiJvm = true;
 
-        cacheCfgs = defaultCacheConfigurations(100,2);
+        cacheCfgs = defaultCacheConfigurations(100, 2);
 
-        crd = startGrids(3);
+        crd = startGrids(DEFAULT_NODE_CNT);
 
         fillCaches(100);
 
@@ -269,8 +290,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        //+1 - because ignite-sys-cache
-        assertEquals(cacheCfgs.length + 1, statPerCacheGrps.size());
+        assertEquals(newNode.context().cache().cacheGroups().size(), statPerCacheGrps.size());
         assertEquals(1, totalStats.size());
 
         Map<String, Integer> newPartDistribution = perCacheGroupPartitionDistribution(newNode);
@@ -328,17 +348,21 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * Return partition distribution per cache groups use internal api.
      *
      * @param node Require not null.
-     * @return Partition distribution per cache groups
-     * */
+     * @return Partition distribution per cache group.
+     */
     private Map<String, Integer> perCacheGroupPartitionDistribution(final IgniteEx node) {
         assert nonNull(node);
 
         ClusterNode localNode = node.localNode();
 
         return node.context().cache().cacheGroups().stream()
-            .map(CacheGroupContext::config)
-            .map(CacheConfiguration::getName)
-            .collect(toMap(identity(), cacheName -> node.affinity(cacheName).allPartitions(localNode).length));
+            .collect(toMap(
+                CacheGroupContext::cacheOrGroupName,
+                cacheGrpCtx -> cacheGrpCtx.caches().stream()
+                    .map(GridCacheContext::name)
+                    .mapToInt(cacheName -> node.affinity(cacheName).allPartitions(localNode).length)
+                    .sum()
+            ));
     }
 
     /**
@@ -347,7 +371,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @param parts Count of partitions.
      * @param backups Count backup.
      * @return Cache group configurations.
-     * */
+     */
     private CacheConfiguration[] defaultCacheConfigurations(final int parts, final int backups) {
         return of(DEFAULT_CACHE_NAMES)
             .map(cacheName -> cacheConfiguration(cacheName, parts, backups))

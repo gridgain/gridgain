@@ -83,7 +83,6 @@ import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_LOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STARTED;
@@ -1612,8 +1611,15 @@ public class GridDhtPartitionDemander {
 
         List<GridDhtPartitionDemander> demanders = demanders();
 
-        Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs =
-            demanders.stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
+        Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs = new HashMap<>();
+
+        for (GridDhtPartitionDemander demander : demanders) {
+            rebFutrs.computeIfAbsent(demander.grp, cacheGrpCtx -> new ArrayList<>());
+            rebFutrs.merge(demander.grp, demander.lastStatFutures, (rebFutrs1, rebFutrs2) -> {
+                rebFutrs1.addAll(rebFutrs2);
+                return rebFutrs1;
+            });
+        }
 
         try {
             log.info(rebalanceStatistics(true, rebFutrs));
