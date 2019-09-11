@@ -234,7 +234,6 @@ public class AgentsService extends AbstractSocketHandler {
                     U.closeQuiet(ws);
 
                 tryCleanupIndexes(accIds, emptySet());
-                sendAgentStats(accIds);
             }
         });
         
