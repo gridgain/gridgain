@@ -897,13 +897,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         affectedCaches.forEach(cache -> {
             // Add proxy if it's not initialized.
-            addjCacheProxy(cache.context().name(),
-                new IgniteCacheProxyImpl(
-                    cache.context(),
-                    cache,
-                    false
-                )
-            );
+            addjCacheProxy(cache.context().name(), new IgniteCacheProxyImpl(cache.context(), cache));
 
             // Stop proxy.
             blockGateway(cache.context().name(), true, false);
