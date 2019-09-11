@@ -1835,6 +1835,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 H2TwoStepCachedQuery cachedQry;
 
                 if ((cachedQry = twoStepCache.get(cachedQryKey)) != null) {
+                    if (ctx.security().enabled())
+                        checkSecurity(cachedQry.query().cacheIds());
+
                     checkQueryType(qry, true);
 
                     GridCacheTwoStepQuery twoStepQry = cachedQry.query().copy();
