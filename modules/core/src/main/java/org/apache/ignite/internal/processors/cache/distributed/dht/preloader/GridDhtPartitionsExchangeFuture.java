@@ -5113,6 +5113,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return nextTimeout <= limit ? nextTimeout : limit;
     }
 
+    public Set<Integer> clearingPartitions(CacheGroupContext grp) {
+        return clearingPartitions.get(grp.groupId());
+    }
+
     /**
      * @param grp Group.
      * @param part Partition.
@@ -5142,6 +5146,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     public void addClearingPartition(CacheGroupContext grp, int part) {
         if (!grp.persistenceEnabled())
             return;
+
+//        U.dumpStack(log, "addClearingPartition: " + part + " for group: " + grp.cacheOrGroupName());
 
         synchronized (mux) {
             clearingPartitions.computeIfAbsent(grp.groupId(), k -> new HashSet()).add(part);

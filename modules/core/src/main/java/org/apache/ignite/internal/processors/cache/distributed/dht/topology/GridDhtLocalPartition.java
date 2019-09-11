@@ -743,10 +743,18 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Initiates single clear process if partition is in MOVING state or continues cleaning for RENTING state.
-     * Method does nothing if clear process is already running.
+     * Clear partition asynchronously.
      */
     public void clearAsync() {
+        clearAsync(true);
+    }
+
+    /**
+     * Initiates single clear process if partition is in MOVING state or continues cleaning for RENTING state.
+     * Method does nothing if clear process is already running.
+     * @param waitForRebalance True means, that clearing will be waiting completion of rebalance, false - otherwise.
+     */
+    public void clearAsync(boolean waitForRebalance) {
         GridDhtPartitionState state0 = state();
 
         if (state0 != MOVING && state0 != RENTING)
@@ -760,7 +768,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         // Make sure current rebalance future finishes before clearing
         // to avoid clearing currently rebalancing partition.
         // NOTE: this invariant is not true for initial rebalance future.
-        if (rebFut.topologyVersion() != null && state0 == MOVING && !rebFut.isDone())
+        if (waitForRebalance && rebFut.topologyVersion() != null && state0 == MOVING && !rebFut.isDone())
             rebFut.listen(fut -> clearAsync0(false));
         else
             clearAsync0(false);

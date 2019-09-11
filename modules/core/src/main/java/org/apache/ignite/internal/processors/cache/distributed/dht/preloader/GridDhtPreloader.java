@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -231,6 +232,13 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
+
+        if (exchFut != null && exchFut.clearingPartitions(grp) != null)
+            log.info("DBG: ClearingPartitions: " + exchFut.clearingPartitions(grp).stream().map(u -> {
+                GridDhtLocalPartition part1 = top.localPartition(u);
+
+                return u + ": " + (part1 == null ? EVICTED : part1.state());
+            }).collect(Collectors.joining(", ")));
 
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingExchange()) {

@@ -550,7 +550,7 @@ class GridDhtPartitionSupplier {
     }
 
     private boolean isRebalanceContinuouse(GridDhtPartitionDemandMessage demandMsg, SupplyContext sctx) {
-        return sctx != null && demandMsg.rebalanceId() != sctx.rebalanceId;
+        return continuousRebalanceSupported() && sctx != null && demandMsg.rebalanceId() > sctx.rebalanceId;
     }
 
     /** */
@@ -578,6 +578,8 @@ class GridDhtPartitionSupplier {
 
             if (!rebalanceIterator.fullParts().contains(partId)) {
                 try {
+                    log.info("New partiotn " + partId + " added to iterator");
+
                     partIter = grp.offheap().reservedIterator(partId, demandMsg.topologyVersion());
 
                     if (partIter == null)

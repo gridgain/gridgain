@@ -602,7 +602,7 @@ public class GridDhtPartitionDemander {
 
             GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-            if (part != null && part.state() == MOVING && false) {
+            if (part != null && part.state() == MOVING) {
                 part.onClearFinished(f -> {
                     if (!fut.isDone()) {
                         // Cancel rebalance if partition clearing was failed.
@@ -698,8 +698,10 @@ public class GridDhtPartitionDemander {
                 return;
             }
 
+            boolean latesSupplayMessage = fut.rebalanceId == supplyMsg.rebalanceId();
+
             // Topology already changed (for the future that supply message based on).
-            if (/*topologyChanged(fut) || */!fut.isActual(supplyMsg.rebalanceId())) {
+            if (!fut.isActual(supplyMsg.rebalanceId())) {
                 if (log.isDebugEnabled())
                     log.debug("Supply message ignored (topology changed) [" + demandRoutineInfo(topicId, nodeId, supplyMsg) + "]");
 
@@ -762,6 +764,9 @@ public class GridDhtPartitionDemander {
                 // Preload.
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
                     int p = e.getKey();
+
+                    if (!latesSupplayMessage && !fut.requestedPartitionFromNode(p, nodeId))
+                        continue;
 
                     if (aff.get(p).contains(ctx.localNode())) {
                         GridDhtLocalPartition part;
@@ -1221,7 +1226,7 @@ public class GridDhtPartitionDemander {
         private final IgniteLogger log;
 
         /** Remaining. */
-        private final Map<UUID, IgniteDhtDemandedPartitionsMap> remaining = new HashMap<>();
+        private Map<UUID, IgniteDhtDemandedPartitionsMap> remaining = new HashMap<>();
 
         /** Missed. */
         private final Map<UUID, Collection<Integer>> missed = new HashMap<>();
@@ -1299,26 +1304,65 @@ public class GridDhtPartitionDemander {
          * @param assignments
          * @param rebalanceId
          */
-        public synchronized void update(GridDhtPreloaderAssignments assignments, long rebalanceId) {
+        public void update(GridDhtPreloaderAssignments assignments, long rebalanceId) {
+            cancelLock.writeLock().lock();
 
-            exchId = assignments.exchangeId();
-            topVer = assignments.topologyVersion();
+            try {
+                synchronized (this) {
+                    exchId = assignments.exchangeId();
+                    topVer = assignments.topologyVersion();
 
-            assignments.forEach((k, v) -> {
-                assert v.partitions() != null :
-                    "Partitions are null [grp=" + grp.cacheOrGroupName() + ", fromNode=" + k.id() + "]";
+                    Map<UUID, IgniteDhtDemandedPartitionsMap> oldRemaining = remaining;
 
-                for (Integer p: doneParts) {
-                    if  (v.partitions().hasFull(p))
-                        v.partitions().remove(p);
+                    remaining = new HashMap<>();
+
+                    assignments.forEach((k, v) -> {
+                        assert v.partitions() != null :
+                            "Partitions are null [grp=" + grp.cacheOrGroupName() + ", fromNode=" + k.id() + "]";
+
+                        for (Integer p: doneParts)
+                            v.partitions().remove(p);
+
+                        IgniteDhtDemandedPartitionsMap oldPartMap = oldRemaining.get(k.id());
+
+                        for (int p : v.partitions().fullSet()) {
+                            GridDhtLocalPartition locPart = grp.topology().localPartition(p);
+
+                            if (locPart.state() == MOVING && !oldPartMap.hasFull(p)) {
+                                log.info("Partition will be cleaned before rebalancing: part " + p
+                                    + " cache " + grp.cacheOrGroupName());
+
+                                locPart.clearAsync(false);
+                            }
+                        }
+
+                        if (!v.partitions().isEmpty())
+                            remaining.put(k.id(), v.partitions());
+                    });
+
+                    this.routines = remaining.size();
+
+                    this.rebalanceId = rebalanceId;
                 }
+            }
+            finally {
+                cancelLock.writeLock().unlock();
+            }
+        }
 
-                remaining.put(k.id(), v.partitions());
-            });
+        /**
+         * Checks is partition @part fully requested for node with id @nodeId.
+         * @param part Partiton.
+         * @param nodeId Node identifier.
+         * @return True if partition was requested, false otherwise.
+         */
+        public synchronized boolean requestedPartitionFromNode(int part, UUID nodeId ) {
+            IgniteDhtDemandedPartitionsMap map = remaining.get(nodeId);
 
-            this.routines = remaining.size();
+            if (map == null)
+                return false;
 
-            this.rebalanceId = rebalanceId;
+            return map.hasFull(part);
         }
 
         /**
