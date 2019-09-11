@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /** */
@@ -31,18 +32,19 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /** Data center id. */
     private byte dataCenterId;
-
+    /** Server nodes count. */
     private int serverNodesCnt;
-
+    /** Client nodes count. */
     private int clientNodesCnt;
-
+    /** Sender hubs. */
     private List<T3<UUID, String, String>> senderHubs;
-
+    /** Receiver hubs. */
     private List<T3<UUID, String, String>> receiverHubs;
-
+    /** Data nodes. */
     private List<T2<UUID, String>> dataNodes;
-
+    /** Other nodes. */
     private List<T3<UUID, String, String>> otherNodes;
 
     /**
@@ -52,6 +54,7 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
         // No-op.
     }
 
+    /** */
     public VisorDrTopologyTaskResult(
         byte dataCenterId,
         int serverNodesCnt,
@@ -70,30 +73,37 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
         this.otherNodes = otherNodes;
     }
 
+    /** */
     public byte getDataCenterId() {
         return dataCenterId;
     }
 
+    /** */
     public int getServerNodesCount() {
         return serverNodesCnt;
     }
 
+    /** */
     public int getClientNodesCount() {
         return clientNodesCnt;
     }
 
+    /** */
     public List<T3<UUID, String, String>> getSenderHubs() {
         return senderHubs;
     }
 
+    /** */
     public List<T3<UUID, String, String>> getReceiverHubs() {
         return receiverHubs;
     }
 
+    /** */
     public List<T2<UUID, String>> getDataNodes() {
         return dataNodes;
     }
 
+    /** */
     public List<T3<UUID, String, String>> getOtherNodes() {
         return otherNodes;
     }
@@ -123,5 +133,10 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
         receiverHubs = U.readList(in);
         dataNodes = U.readList(in);
         otherNodes = U.readList(in);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(VisorDrTopologyTaskResult.class, this);
     }
 }

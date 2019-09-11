@@ -24,71 +24,94 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+/** */
 public class VisorDrCacheTaskResult extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+    /** Data center id. */
     private byte dataCenterId;
+    /** Cache names. */
     private List<String> cacheNames;
+    /** Sender config. */
     private Map<String, List<T2<String, Object>>> senderConfig;
+    /** Receiver config. */
     private Map<String, List<T2<String, Object>>> receiverConfig;
+    /** Sender metrics. */
     private Map<String, List<T2<String, Object>>> senderMetrics;
+    /** Receiver metrics. */
     private Map<String, List<T2<String, Object>>> receiverMetrics;
+    /** Result messages. */
     private List<String> resultMessages = new ArrayList<>();
 
+    /** */
     public byte getDataCenterId() {
         return dataCenterId;
     }
 
+    /** */
     public void setDataCenterId(byte dataCenterId) {
         this.dataCenterId = dataCenterId;
     }
 
+    /** */
     public void setCacheNames(List<String> cacheNames) {
         this.cacheNames = cacheNames;
     }
 
+    /** */
     public List<String> getCacheNames() {
         return cacheNames;
     }
 
+    /** */
     public void setSenderConfig(Map<String, List<T2<String, Object>>> senderConfig) {
         this.senderConfig = senderConfig;
     }
 
+    /** */
     public Map<String, List<T2<String, Object>>> getSenderConfig() {
         return senderConfig;
     }
 
+    /** */
     public void setReceiverConfig(Map<String, List<T2<String, Object>>> receiverConfig) {
         this.receiverConfig = receiverConfig;
     }
 
+    /** */
     public Map<String, List<T2<String, Object>>> getReceiverConfig() {
         return receiverConfig;
     }
 
+    /** */
     public void setSenderMetrics(Map<String, List<T2<String, Object>>> senderMetrics) {
         this.senderMetrics = senderMetrics;
     }
 
+    /** */
     public Map<String, List<T2<String, Object>>> getSenderMetrics() {
         return senderMetrics;
     }
 
+    /** */
     public void setReceiverMetrics(Map<String, List<T2<String, Object>>> receiverMetrics) {
         this.receiverMetrics = receiverMetrics;
     }
 
+    /** */
     public Map<String, List<T2<String, Object>>> getReceiverMetrics() {
         return receiverMetrics;
     }
 
+    /** */
     public List<String> getResultMessages() {
         return resultMessages;
     }
 
+    /** */
     public void addResultMessage(String resultMessage) {
         resultMessages.add(resultMessage);
     }
@@ -114,5 +137,10 @@ public class VisorDrCacheTaskResult extends IgniteDataTransferObject {
         receiverConfig = U.readMap(in);
         senderMetrics = U.readMap(in);
         receiverMetrics = U.readMap(in);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(VisorDrCacheTaskResult.class, this);
     }
 }

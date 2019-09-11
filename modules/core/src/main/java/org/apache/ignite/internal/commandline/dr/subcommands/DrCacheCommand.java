@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -33,6 +34,17 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 public class DrCacheCommand extends
     DrAbstractSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
 {
+    /** Config parameter. */
+    public static final String CONFIG_PARAM = "--config";
+    /** Metrics parameter. */
+    public static final String METRICS_PARAM = "--metrics";
+    /** Cache filter parameter. */
+    public static final String CACHE_FILTER_PARAM = "--cache-filter";
+    /** Sender group parameter. */
+    public static final String SENDER_GROUP_PARAM = "--sender-group";
+    /** Action parameter. */
+    public static final String ACTION_PARAM = "--action";
+
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
         return "org.gridgain.grid.internal.visor.dr.console.VisorDrCacheTask";
@@ -42,38 +54,41 @@ public class DrCacheCommand extends
     @Override public DrCacheArguments parseArguments0(CommandArgIterator argIter) {
         String regex = argIter.nextArg("Cache name regex expected.");
 
+        if (CommandArgIterator.isCommandOrOption(regex))
+            throw new IllegalArgumentException("Cache name regex expected.");
+
         try {
             Pattern.compile(regex);
         }
-        catch (Exception e) {
+        catch (PatternSyntaxException e) {
             throw new IllegalArgumentException("Cache name regex is not valid.", e);
         }
 
-        boolean config = false;
+        boolean cfg = false;
         boolean metrics = false;
         CacheFilter cacheFilter = CacheFilter.ALL;
-        SenderGroup senderGroup = SenderGroup.ALL;
-        String senderGroupName = null;
-        Action action = null;
+        SenderGroup sndGrp = SenderGroup.ALL;
+        String sndGrpName = null;
+        Action act = null;
 
         String nextArg;
 
         //noinspection LabeledStatement
         args_loop: while ((nextArg = argIter.peekNextArg()) != null) {
             switch (nextArg.toLowerCase(Locale.ENGLISH)) {
-                case "--config":
+                case CONFIG_PARAM:
                     argIter.nextArg(null);
-                    config = true;
+                    cfg = true;
 
                     break;
 
-                case "--metrics":
+                case METRICS_PARAM:
                     argIter.nextArg(null);
                     metrics = true;
 
                     break;
 
-                case "--cache-filter": {
+                case CACHE_FILTER_PARAM: {
                     argIter.nextArg(null);
 
                     String errorMsg = "--cache-filter parameter value required.";
@@ -87,27 +102,27 @@ public class DrCacheCommand extends
                     break;
                 }
 
-                case "--sender-group": {
+                case SENDER_GROUP_PARAM: {
                     argIter.nextArg(null);
 
                     String arg = argIter.nextArg("--sender-group parameter value required.");
 
-                    senderGroup = SenderGroup.parse(arg);
+                    sndGrp = SenderGroup.parse(arg);
 
-                    if (senderGroup == null)
-                        senderGroupName = arg;
+                    if (sndGrp == null)
+                        sndGrpName = arg;
 
                     break;
                 }
 
-                case "--action": {
+                case ACTION_PARAM: {
                     argIter.nextArg(null);
 
                     String errorMsg = "--action parameter value required.";
 
-                    action = Action.parse(argIter.nextArg(errorMsg));
+                    act = Action.parse(argIter.nextArg(errorMsg));
 
-                    if (action == null)
+                    if (act == null)
                         throw new IllegalArgumentException(errorMsg);
 
                     break;
@@ -119,7 +134,7 @@ public class DrCacheCommand extends
             }
         }
 
-        return new DrCacheArguments(regex, config, metrics, cacheFilter, senderGroup, senderGroupName, action, (byte)0);
+        return new DrCacheArguments(regex, cfg, metrics, cacheFilter, sndGrp, sndGrpName, act, (byte)0);
     }
 
     /** {@inheritDoc} */
@@ -203,20 +218,21 @@ public class DrCacheCommand extends
     }
 
     /** */
-    public enum CacheFilter {
-        ALL,
-        SENDING,
-        RECEIVING,
-        PAUSED,
-        ERROR
+    @SuppressWarnings("PublicInnerClass") public enum CacheFilter {
+        /** All. */ ALL,
+        /** Sending. */ SENDING,
+        /** Receiving. */ RECEIVING,
+        /** Paused. */ PAUSED,
+        /** Error. */ ERROR
     }
 
     /** */
-    public enum SenderGroup {
-        ALL,
-        DEFAULT,
-        NONE;
+    @SuppressWarnings("PublicInnerClass") public enum SenderGroup {
+        /** All. */ ALL,
+        /** Default. */ DEFAULT,
+        /** None. */ NONE;
 
+        /** */
         public static SenderGroup parse(String text) {
             try {
                 return valueOf(text.toUpperCase(Locale.ENGLISH));
@@ -228,21 +244,25 @@ public class DrCacheCommand extends
     }
 
     /** */
-    public enum Action {
-        STOP("stop"),
-        START("start"),
-        FULL_STATE_TRANSFER("full-state-transfer");
+    @SuppressWarnings("PublicInnerClass") public enum Action {
+        /** Stop. */ STOP("stop"),
+        /** Start. */ START("start"),
+        /** Full state transfer. */ FULL_STATE_TRANSFER("full-state-transfer");
 
+        /** String representation. */
         private final String text;
 
+        /** */
         Action(String text) {
             this.text = text;
         }
 
+        /** */
         public String text() {
             return text;
         }
 
+        /** */
         public static Action parse(String text) {
             for (Action action : values()) {
                 if (action.text.equalsIgnoreCase(text))
@@ -254,16 +274,26 @@ public class DrCacheCommand extends
     }
 
     /** */
+    @SuppressWarnings("PublicInnerClass")
     public static class DrCacheArguments implements DrAbstractSubCommand.Arguments<VisorDrCacheTaskArgs> {
+        /** Regex. */
         private final String regex;
+        /** Config. */
         private final boolean config;
+        /** Metrics. */
         private final boolean metrics;
+        /** Filter. */
         private final CacheFilter filter;
+        /** Sender group. */
         private final SenderGroup senderGroup;
+        /** Sender group name. */
         private final String senderGroupName;
+        /** Action. */
         private final Action action;
+        /** Remote data center id. */
         private final byte remoteDataCenterId;
 
+        /** */
         public DrCacheArguments(
             String regex,
             boolean config,

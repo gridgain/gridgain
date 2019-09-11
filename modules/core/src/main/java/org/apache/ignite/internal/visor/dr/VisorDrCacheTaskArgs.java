@@ -25,59 +25,88 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /** Cache filter all. */
     public static final int CACHE_FILTER_ALL = 0;
+    /** Cache filter sending. */
     public static final int CACHE_FILTER_SENDING = 1;
+    /** Cache filter receiving. */
     public static final int CACHE_FILTER_RECEIVING = 2;
+    /** Cache filter paused. */
     public static final int CACHE_FILTER_PAUSED = 3;
+    /** Cache filter error. */
     public static final int CACHE_FILTER_ERROR = 4;
 
+    /** Sender group all. */
     public static final int SENDER_GROUP_ALL = 0;
+    /** Sender group default. */
     public static final int SENDER_GROUP_DEFAULT = 1;
+    /** Sender group none. */
     public static final int SENDER_GROUP_NONE = 2;
+    /** Sender group named. */
     public static final int SENDER_GROUP_NAMED = 3;
 
+    /** Action stop. */
     public static final int ACTION_STOP = 0;
+    /** Action start. */
     public static final int ACTION_START = 1;
+    /** Action full state transfer. */
     public static final int ACTION_FULL_STATE_TRANSFER = 2;
+    /** Action none. */
     public static final int ACTION_NONE = 3;
 
+    /** Regex. */
     private String regex;
+    /** Config. */
     private boolean config;
+    /** Metrics. */
     private boolean metrics;
+    /** Filter. */
     private int filter;
+    /** Sender group. */
     private int senderGroup;
+    /** Sender group name. */
     private String senderGroupName;
+    /** Action. */
     private int action;
+    /** Remote data center id. */
     private byte remoteDataCenterId;
 
+    /** */
     public String getRegex() {
         return regex;
     }
 
+    /** */
     public boolean isConfig() {
         return config;
     }
 
+    /** */
     public boolean isMetrics() {
         return metrics;
     }
 
+    /** */
     public int getFilter() {
         return filter;
     }
 
+    /** */
     public int getSenderGroup() {
         return senderGroup;
     }
 
+    /** */
     public String getSenderGroupName() {
         return senderGroupName;
     }
 
+    /** */
     public int getAction() {
         return action;
     }
 
+    /** */
     public byte getRemoteDataCenterId() {
         return remoteDataCenterId;
     }
@@ -89,6 +118,7 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         // No-op.
     }
 
+    /** */
     public VisorDrCacheTaskArgs(
         String regex,
         boolean config,

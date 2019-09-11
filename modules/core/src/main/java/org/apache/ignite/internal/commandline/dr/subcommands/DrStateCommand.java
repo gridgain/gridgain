@@ -22,6 +22,8 @@ import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 import org.apache.ignite.internal.visor.dr.VisorDrStateTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrStateTaskResult;
 
+import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
+
 /** */
 public class DrStateCommand extends
     DrAbstractSubCommand<VisorDrStateTaskArgs, VisorDrStateTaskResult, DrStateCommand.DrStateArguments>
@@ -46,7 +48,18 @@ public class DrStateCommand extends
 
     /** {@inheritDoc} */
     @Override protected void printResult(VisorDrStateTaskResult res, Logger log) {
+        log.info("Data Center ID: " + res.getDataCenterId());
 
+        log.info(DELIM);
+
+        if (res.getDataCenterId() == 0) {
+            log.info("Data Replication state: is not configured.");
+
+            return;
+        }
+
+        for (String msg : res.getResultMessages())
+            log.info(msg);
     }
 
     /** {@inheritDoc} */

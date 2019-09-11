@@ -21,12 +21,17 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
+/** */
 public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+    /** Config. */
     private boolean config;
+    /** Metrics. */
     private boolean metrics;
+    /** Clear store. */
     private boolean clearStore;
+    /** Reset state. */
     private boolean resetState;
 
     /**
@@ -36,6 +41,7 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
         // No-op.
     }
 
+    /** */
     public VisorDrNodeTaskArgs(boolean config, boolean metrics, boolean clearStore, boolean resetState) {
         this.config = config;
         this.metrics = metrics;
@@ -43,18 +49,22 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
         this.resetState = resetState;
     }
 
+    /** */
     public boolean config() {
         return config;
     }
 
+    /** */
     public boolean metrics() {
         return metrics;
     }
 
+    /** */
     public boolean clearStore() {
         return clearStore;
     }
 
+    /** */
     public boolean resetState() {
         return resetState;
     }

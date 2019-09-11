@@ -69,7 +69,7 @@ public abstract class DrAbstractSubCommand<
         return null;
     }
 
-    /** {@inheritDoc} */
+    /** */
     protected VisorResultDto execute0(
         GridClientConfiguration clientCfg,
         GridClient client

@@ -38,6 +38,11 @@ public class VisorDrStateTaskArgs extends IgniteDataTransferObject {
         this.verbose = verbose;
     }
 
+    /** */
+    public boolean isVerbose() {
+        return verbose;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(verbose);
