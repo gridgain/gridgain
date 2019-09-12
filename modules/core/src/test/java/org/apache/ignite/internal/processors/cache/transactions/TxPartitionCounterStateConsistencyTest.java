@@ -213,7 +213,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertFalse(backups.contains(prim));
 
-        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB( 3 * 60_000, 30_000);
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
         long seed = System.nanoTime();
 
