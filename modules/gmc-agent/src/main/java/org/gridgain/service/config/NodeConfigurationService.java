@@ -19,11 +19,16 @@ package org.gridgain.service.config;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.agent.WebSocketManager;
 import org.gridgain.dto.IgniteConfigurationWrapper;
+import org.gridgain.dto.NodeConfiguration;
 import org.gridgain.service.sender.GmcSender;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
@@ -36,6 +41,9 @@ public class NodeConfigurationService implements AutoCloseable {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;
 
+    /** Mapper. */
+    private final ObjectMapper mapper = new ObjectMapper();
+
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -43,7 +51,10 @@ public class NodeConfigurationService implements AutoCloseable {
     private final WebSocketManager mgr;
 
     /** Sender. */
-    private final GmcSender<IgniteConfigurationWrapper> snd;
+    private final GmcSender<NodeConfiguration> snd;
+
+    /** Logger. */
+    private final IgniteLogger log;
 
     /** On node traces listener. */
     private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeConfiguration;
@@ -56,6 +67,7 @@ public class NodeConfigurationService implements AutoCloseable {
         this.ctx = ctx;
         this.mgr = mgr;
         this.snd = createSender();
+        this.log = ctx.log(NodeConfigurationService.class);
 
         ctx.grid().message().localListen(NODE_CONFIGURATION_TOPIC, lsnr);
     }
@@ -71,7 +83,16 @@ public class NodeConfigurationService implements AutoCloseable {
      * @param cfgList Config list.
      */
     boolean onNodeConfiguration(UUID uuid, Object cfgList) {
-        snd.send((List<IgniteConfigurationWrapper>) cfgList);
+        try {
+            IgniteConfigurationWrapper cfg = F.first((List<IgniteConfigurationWrapper>) cfgList);
+            String consistentId = ctx.cluster().get().localNode().consistentId().toString();
+            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, mapper.writeValueAsString(cfg));
+
+            snd.send(nodeCfg);
+        }
+        catch (JsonProcessingException e) {
+            log.error("Failed to serialiaze the IgniteConfigurationWrapper to string", e);
+        }
 
         return true;
     }
@@ -79,9 +100,8 @@ public class NodeConfigurationService implements AutoCloseable {
     /**
      * @return Sender which send messages from queue to gmc.
      */
-    private GmcSender<IgniteConfigurationWrapper> createSender() {
+    private GmcSender<NodeConfiguration> createSender() {
         UUID clusterId = ctx.cluster().get().id();
-        String consistentId = ctx.cluster().get().localNode().consistentId().toString();
-        return new GmcSender<>(ctx, mgr, QUEUE_CAP, buildClusterNodeConfigurationDest(clusterId, consistentId));
+        return new GmcSender<>(ctx, mgr, QUEUE_CAP, buildClusterNodeConfigurationDest(clusterId));
     }
 }
