@@ -17,6 +17,7 @@
 package org.gridgain.dto.action;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.UUID;
 
@@ -33,6 +34,9 @@ public class Request {
 
     /** Action name. */
     private String act;
+
+    /** Timestamp. */
+    private long ts;
 
     /**
      * @return Request id.
@@ -80,5 +84,25 @@ public class Request {
     public Request setArgument(Object arg) {
         this.arg = arg;
         return this;
+    }
+
+    /**
+     * @return Timestamp.
+     */
+    public long getTimestamp() {
+        return ts;
+    }
+
+    /**
+     * @param ts Timestamp.
+     */
+    public Request setTimestamp(long ts) {
+        this.ts = ts;
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(Request.class, this);
     }
 }

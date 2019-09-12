@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.util.UUID;
 
 /**
@@ -33,6 +35,9 @@ public class Response {
 
     /** Status. */
     private ActionStatus status;
+
+    /** Timestamp. */
+    private long ts = System.currentTimeMillis();
 
     /**
      * @return Response id.
@@ -96,5 +101,25 @@ public class Response {
     public Response setStatus(ActionStatus status) {
         this.status = status;
         return this;
+    }
+
+    /**
+     * @return Timestamp.
+     */
+    public long getTimestamp() {
+        return ts;
+    }
+
+    /**
+     * @param ts Timestamp.
+     */
+    public Response setTimestamp(long ts) {
+        this.ts = ts;
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(Response.class, this);
     }
 }
