@@ -16,28 +16,24 @@
 
 package org.apache.ignite.client;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
 /**
- * Tests for Java thin client.
+ * Indicates that previous connection was lost and a new connection established,
+ * which can lead to inconsistency of non-atomic operations.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    ClientConfigurationTest.class,
-    ClientCacheConfigurationTest.class,
-    FunctionalTest.class,
-    IgniteBinaryTest.class,
-    LoadTest.class,
-    ReliabilityTest.class,
-    SecurityTest.class,
-    FunctionalQueryTest.class,
-    IgniteBinaryQueryTest.class,
-    SslParametersTest.class,
-    ConnectionTest.class,
-    ConnectToStartingNodeTest.class,
-    AsyncChannelTest.class
-})
-public class ClientTestSuite {
-    // No-op.
+public class ClientReconnectedException extends ClientException {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * Default constructor.
+     */
+    public ClientReconnectedException() {
+    }
+
+    /**
+     * Constructs a new exception with the specified message.
+     */
+    public ClientReconnectedException(String msg) {
+        super(msg);
+    }
 }
