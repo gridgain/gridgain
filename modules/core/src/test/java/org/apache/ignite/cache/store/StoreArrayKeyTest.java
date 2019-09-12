@@ -132,7 +132,9 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
      */
     @After
     public void tearDown() throws Exception {
-        stopAllGrids();
+        stopGrid(0);
+        stopGrid(1);
+
         cleanPersistenceDir();
     }
 
