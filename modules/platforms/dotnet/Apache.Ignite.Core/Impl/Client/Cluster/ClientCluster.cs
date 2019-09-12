@@ -21,30 +21,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
-    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Ignite client cluster implementation.
     /// </summary>
     internal class ClientCluster : IClientCluster
     {
-        /** Attribute: platform. */
-        private const string AttrPlatform = "org.apache.ignite.platform";
-
-        /** Platform. */
-        private const string Platform = "dotnet";
-
         /** Ignite. */
         private readonly IgniteClient _ignite;
 
-        /** Cluster object pointer. */
-        private readonly long _ptr;
-
         /** Marshaller. */
         private readonly Marshaller _marsh;
-
-        /** Disposed flag. */
-        private volatile bool _disposed;
 
         /// <summary>
         /// Constructor.
@@ -52,56 +39,27 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="ignite">Ignite.</param>
         /// <param name="marsh">Marshaller.</param>
         /// <param name="ptr">Remote cluster object pointer.</param>
-        public ClientCluster(IgniteClient ignite, Marshaller marsh, long ptr)
+        public ClientCluster(IgniteClient ignite, Marshaller marsh)
         {
             _ignite = ignite;
             _marsh = marsh;
-            _ptr = ptr;
-        }
-
-        /** <inheritdoc /> */
-        public IClientCluster ForAttribute(string name, string val)
-        {
-            IgniteArgumentCheck.NotNull(name, "name");
-
-            ThrowIfDisposed();
-
-            Action<BinaryWriter> action = w =>
-            {
-                w.WriteString(name);
-                w.WriteString(val);
-            };
-            var newPtr = DoOutInOp(ClientOp.ClusterForAttributes, action, r => r.ReadLong());
-            return new ClientCluster(_ignite, _marsh, newPtr);
-        }
-
-        /** <inheritdoc /> */
-        public IClientCluster ForDotNet()
-        {
-            return ForAttribute(AttrPlatform, Platform);
         }
 
         /** <inheritdoc /> */
         public void SetActive(bool isActive)
         {
-            ThrowIfDisposed();
-
             DoOutInOp<object>(ClientOp.ClusterChangeState, w => w.WriteBoolean(isActive), null);
         }
 
         /** <inheritdoc /> */
         public bool IsActive()
         {
-            ThrowIfDisposed();
-
             return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBool());
         }
 
         /** <inheritdoc /> */
         public bool DisableWal(string cacheName)
         {
-            ThrowIfDisposed();
-
             Action<BinaryWriter> action = w =>
             {
                 w.WriteString(cacheName);
@@ -113,8 +71,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool EnableWal(string cacheName)
         {
-            ThrowIfDisposed();
-
             Action<BinaryWriter> action = w =>
             {
                 w.WriteString(cacheName);
@@ -126,8 +82,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool IsWalEnabled(string cacheName)
         {
-            ThrowIfDisposed();
-
             return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBool());
         }
 
@@ -145,8 +99,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
         {
-            stream.WriteLong(_ptr);
-
             if (writeAction != null)
             {
                 var writer = _marsh.StartMarshal(stream);
@@ -163,65 +115,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private T HandleError<T>(ClientStatusCode status, string msg)
         {
             throw new IgniteClientException(msg, null, status);
-        }
-
-
-        /** <inheritdoc /> */
-        public void Dispose()
-        {
-            lock (this)
-            {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                ReleaseUnmanagedResources();
-                GC.SuppressFinalize(this);
-                _disposed = true;
-            }
-        }
-
-        /// <summary>
-        /// Releases unmanaged resources.
-        /// </summary>
-        private void ReleaseUnmanagedResources()
-        {
-            DoOutInOp<object>(ClientOp.ResourceClose, w => w.WriteLong(_ptr), null);
-        }
-
-        /// <summary>
-        /// Throws <see cref="ObjectDisposedException"/> if this instance has been disposed.
-        /// </summary>
-        private void ThrowIfDisposed()
-        {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException(GetType().Name, "Object has been disposed.");
-            }
-        }
-
-        /// <summary>
-        /// Finalizer.
-        /// </summary>
-        ~ClientCluster()
-        {
-            try
-            {
-                ReleaseUnmanagedResources();
-            }
-            catch
-            {
-                // No op.
-            }
-        }
-
-        /// <summary>
-        /// Get simple copy of object for testing purposes.
-        /// </summary>
-        internal ClientCluster GetCopyForUnitTesting()
-        {
-            return new ClientCluster(_ignite, _marsh, _ptr);
         }
     }
 }

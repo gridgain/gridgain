@@ -16,14 +16,16 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
  * Change cache WAL state request.
  */
-public class ClientClusterWalChangeStateRequest extends ClientClusterRequest {
+public class ClientClusterWalChangeStateRequest extends ClientRequest {
 
     /** Cache name. */
     private final String cacheName;
@@ -45,10 +47,10 @@ public class ClientClusterWalChangeStateRequest extends ClientClusterRequest {
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
-        ClientCluster clientCluster = ctx.resources().get(clusterId);
+        IgniteCluster cluster = ctx.kernalContext().grid().cluster();
         boolean res = shouldBeActive
-            ? clientCluster.enableWal(cacheName)
-            : clientCluster.disableWal(cacheName);
+            ? cluster.enableWal(cacheName)
+            : cluster.disableWal(cacheName);
         return new ClientClusterWalChangeStateResponse(requestId(), res);
     }
 }
