@@ -152,8 +152,6 @@ public class GridDhtPartitionDemander {
             syncFut.onDone();
         }
 
-        Map<Integer, Object> tops = new HashMap<>();
-
         rebalanceTopic = GridCachePartitionExchangeManager.rebalanceTopic(0);
     }
 

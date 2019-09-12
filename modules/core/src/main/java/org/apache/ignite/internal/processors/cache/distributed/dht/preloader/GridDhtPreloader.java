@@ -43,7 +43,6 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
@@ -176,7 +175,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         if (!grp.affinity().cachedVersions().contains(rebTopVer)) {
             assert rebTopVer.compareTo(grp.localStartVersion()) <= 0 :
-                "Empty hisroty allowed only for newly started cache group [rebTopVer=" + rebTopVer +
+                "Empty history allowed only for newly started cache group [rebTopVer=" + rebTopVer +
                     ", localStartTopVer=" + grp.localStartVersion() + ']';
 
             return true; // Required, since no history info available.
@@ -190,7 +189,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         AffinityTopologyVersion lastAffChangeTopVer =
             ctx.exchange().lastAffinityChangedTopologyVersion(exchFut.topologyVersion());
 
-        return lastAffChangeTopVer.compareTo(rebTopVer) > 0;
+        return lastAffChangeTopVer.after(rebTopVer);
     }
 
     /** {@inheritDoc} */
