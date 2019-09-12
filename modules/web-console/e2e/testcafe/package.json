@@ -23,6 +23,7 @@
     "win32"
   ],
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.0.20",
     "get-port": "^5.0.0",
     "glob": "7.1.3",
     "lodash": "4.17.11",

@@ -31,6 +31,7 @@ const startTestcafe = (config) => {
                 console.log('Start E2E testing!');
 
                 return runner
+                    .video(process.env.VIDEOS_DIR || 'artifacts/videos', {failedOnly: true})
                     .screenshots('./artifacts/screenshots', true)
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)

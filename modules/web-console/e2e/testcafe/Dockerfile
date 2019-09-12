@@ -23,6 +23,8 @@ COPY . .
 
 ENV NPM_CONFIG_LOGLEVEL error
 
+run npm install @ffmpeg-installer/ffmpeg -g
+
 RUN npm install
 
 ENTRYPOINT ["node", "./index.js"]
