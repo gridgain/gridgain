@@ -162,7 +162,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
 
-        long stop = U.currentTimeMillis() + SF.applyUB(20_000, 60_000);
+        long stop = U.currentTimeMillis() + SF.applyLB(2 * 60_000, 30_000);
 
         Random r = new Random();
 
@@ -214,7 +214,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertFalse(backups.contains(prim));
 
-        long stop = U.currentTimeMillis() + SF.applyUB(20_000, 60_000);
+        long stop = U.currentTimeMillis() + SF.applyLB(2 * 60_000, 30_000);
 
         long seed = System.nanoTime();
 
@@ -627,9 +627,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         Integer key0 = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
         Integer key = primaryKey(grid(0).cache(DEFAULT_CACHE_NAME));
 
-        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+        TestRecordingCommunicationSpi crdSpi = TestRecordingCommunicationSpi.spi(crd);
 
-        spi.blockMessages((node, message) -> {
+        crdSpi.blockMessages((node, message) -> {
             if (message instanceof GridDhtPartitionsFullMessage) {
                 GridDhtPartitionsFullMessage tmp = (GridDhtPartitionsFullMessage)message;
 
@@ -642,11 +642,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         // Locks mapped wait.
         CountDownLatch l = new CountDownLatch(1);
 
-        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+        IgniteInternalFuture startNodeFut = GridTestUtils.runAsync(() -> {
             U.awaitQuiet(l);
 
             try {
-                startGrid(SERVER_NODES);
+                startGrid(SERVER_NODES); // Start node out of BLT.
             }
             catch (Exception e) {
                 fail(X.getFullStackTrace(e));
@@ -678,7 +678,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                 l.countDown();
 
-                spi.waitForBlocked(); // Block PME after finish on crd and wait on others.
+                crdSpi.waitForBlocked(); // Block PME after finish on crd and wait on others.
 
                 cliSpi.stopBlock(); // Start remote lock mapping.
             }
@@ -687,12 +687,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        txFut.get(); // Transaction should not be blocked by concurrent PME.
         lockFut.get();
-
-        spi.stopBlock();
-
-        fut.get();
+        crdSpi.stopBlock();
+        txFut.get();
+        startNodeFut.get();
 
         awaitPartitionMapExchange();
 
