@@ -89,7 +89,6 @@ public class NodeConfigurationService implements AutoCloseable {
             NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, mapper.writeValueAsString(cfg));
 
             snd.send(nodeCfg);
-
         }
         catch (JsonProcessingException e) {
             log.error("Failed to serialiaze the IgniteConfigurationWrapper to string", e);
