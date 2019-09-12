@@ -34,14 +34,16 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Lock request message.
  */
-public class GridDistributedLockRequest extends GridDistributedBaseMessage implements TimeLoggableMessage {
+public class GridDistributedLockRequest extends GridDistributedBaseMessage implements TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -98,6 +100,13 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
 
     /** Additional flags. */
     private byte flags;
+
+    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor.
@@ -352,6 +361,26 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
     }
 
     /** {@inheritDoc} */
+    @Override public long getSendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -427,18 +456,24 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
                 writer.incrementState();
 
             case 18:
-                if (!writer.writeLong("threadId", threadId))
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
                     return false;
 
                 writer.incrementState();
 
             case 19:
-                if (!writer.writeLong("timeout", timeout))
+                if (!writer.writeLong("threadId", threadId))
                     return false;
 
                 writer.incrementState();
 
             case 20:
+                if (!writer.writeLong("timeout", timeout))
+                    return false;
+
+                writer.incrementState();
+
+            case 21:
                 if (!writer.writeInt("txSize", txSize))
                     return false;
 
@@ -545,7 +580,7 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
                 reader.incrementState();
 
             case 18:
-                threadId = reader.readLong("threadId");
+                sendTimestamp = reader.readLong("sendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
@@ -553,7 +588,7 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
                 reader.incrementState();
 
             case 19:
-                timeout = reader.readLong("timeout");
+                threadId = reader.readLong("threadId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -561,6 +596,14 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
                 reader.incrementState();
 
             case 20:
+                timeout = reader.readLong("timeout");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 21:
                 txSize = reader.readInt("txSize");
 
                 if (!reader.isLastRead())
@@ -580,7 +623,7 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage imple
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 21;
+        return 22;
     }
 
     /** {@inheritDoc} */

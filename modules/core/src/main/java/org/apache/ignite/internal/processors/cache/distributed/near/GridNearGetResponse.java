@@ -79,6 +79,17 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
     /** Serialized error. */
     private byte[] errBytes;
 
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
     /**
      * Empty constructor required for {@link Externalizable}.
      */
@@ -213,6 +224,37 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
         return addDepInfo;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -259,12 +301,18 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 writer.incrementState();
 
             case 9:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
 
             case 10:
+                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                    return false;
+
+                writer.incrementState();
+
+            case 11:
                 if (!writer.writeMessage("ver", ver))
                     return false;
 
@@ -327,7 +375,7 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 reader.incrementState();
 
             case 9:
-                topVer = reader.readAffinityTopologyVersion("topVer");
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
@@ -335,6 +383,14 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 reader.incrementState();
 
             case 10:
+                topVer = reader.readAffinityTopologyVersion("topVer");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 11:
                 ver = reader.readMessage("ver");
 
                 if (!reader.isLastRead())
@@ -354,7 +410,7 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 12;
     }
 
     /** {@inheritDoc} */

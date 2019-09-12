@@ -222,7 +222,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                 msg.miniId(),
                 ctx.deploymentEnabled());
 
-            res.setResponseId(msg.messageId());
+            res.setReqSendTimestamp(msg.getSendTimestamp());
+            res.setReqReceivedTimestamp(msg.getReceiveTimestamp());
 
             GridDhtPartitionTopology top = ctx.topology();
 
@@ -1346,7 +1347,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     res.error(e);
                 }
 
-                res.setResponseId(req.messageId());
+                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+                res.setReqSendTimestamp(req.getReceiveTimestamp());
 
                 try {
                     ctx.io().send(nodeId, res, ctx.ioPolicy());
@@ -1397,7 +1399,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     req.version(),
                     req.deployInfo() != null);
 
-                res.setResponseId(req.messageId());
+                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+                res.setReqSendTimestamp(req.getReceiveTimestamp());
 
                 GridDhtFuture<Collection<GridCacheEntryInfo>> fut =
                     (GridDhtFuture<Collection<GridCacheEntryInfo>>)f;

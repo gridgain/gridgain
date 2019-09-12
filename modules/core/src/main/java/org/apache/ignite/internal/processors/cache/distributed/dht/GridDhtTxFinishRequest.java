@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -34,15 +35,17 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
+
 /**
  * Near transaction finish request.
  */
-public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest implements TimeLoggableMessage {
+public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest implements TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -74,6 +77,13 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
     /** */
     @GridDirectCollection(PartitionUpdateCountersMessage.class)
     private Collection<PartitionUpdateCountersMessage> updCntrs;
+
+    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -379,6 +389,26 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
     }
 
     /** {@inheritDoc} */
+    @Override public long getSendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -430,12 +460,18 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
                 writer.incrementState();
 
             case 28:
-                if (!writer.writeCollection("updCntrs", updCntrs, MessageCollectionItemType.MSG))
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
                     return false;
 
                 writer.incrementState();
 
             case 29:
+                if (!writer.writeCollection("updCntrs", updCntrs, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 30:
                 if (!writer.writeMessage("writeVer", writeVer))
                     return false;
 
@@ -510,7 +546,7 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
                 reader.incrementState();
 
             case 28:
-                updCntrs = reader.readCollection("updCntrs", MessageCollectionItemType.MSG);
+                sendTimestamp = reader.readLong("sendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
@@ -518,6 +554,14 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
                 reader.incrementState();
 
             case 29:
+                updCntrs = reader.readCollection("updCntrs", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 30:
                 writeVer = reader.readMessage("writeVer");
 
                 if (!reader.isLastRead())
@@ -537,7 +581,7 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 30;
+        return 31;
     }
 
     /** {@inheritDoc} */

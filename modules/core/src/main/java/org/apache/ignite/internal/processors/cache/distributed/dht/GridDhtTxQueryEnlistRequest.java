@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -38,12 +39,14 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
+
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  *
  */
-public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage {
+public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 5103887309729425173L;
 
@@ -69,6 +72,13 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
     /** */
     @GridDirectCollection(Message.class)
     private List<Message> vals;
+
+    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      *
@@ -165,6 +175,26 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
     /** {@inheritDoc} */
     @Override public boolean addDeploymentInfo() {
         return addDepInfo;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getSendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
     }
 
     /** {@inheritDoc} */
@@ -310,6 +340,12 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
                 writer.incrementState();
 
             case 10:
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
+                    return false;
+
+                writer.incrementState();
+
+            case 11:
                 if (!writer.writeCollection("vals", vals, MessageCollectionItemType.MSG))
                     return false;
 
@@ -384,6 +420,14 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
                 reader.incrementState();
 
             case 10:
+                sendTimestamp = reader.readLong("sendTimestamp");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 11:
                 vals = reader.readCollection("vals", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -398,7 +442,7 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 12;
     }
 
     /** {@inheritDoc} */

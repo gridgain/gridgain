@@ -74,6 +74,17 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
     @GridDirectCollection(UUID.class)
     private Collection<UUID> newDhtNodes;
 
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
     /**
      * Default constructor.
      */
@@ -92,7 +103,8 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param dhtVer Dht version.
      * @param dhtFutId Dht future id.
      * @param newDhtNodes New DHT nodes involved into transaction.
-     * @param reqId Id of request that triggered response createion.
+     * @param reqReceivedTimestamp Request receive timestamp.
+     * @param reqSendTimestamp request send timestamp.
      */
     public GridNearTxEnlistResponse(int cacheId,
         IgniteUuid futId,
@@ -102,7 +114,9 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         GridCacheVersion dhtVer,
         IgniteUuid dhtFutId,
         Set<UUID> newDhtNodes,
-        long reqId) {
+        long reqReceivedTimestamp,
+        long reqSendTimestamp)
+    {
         this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
@@ -111,7 +125,9 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         this.dhtVer = dhtVer;
         this.dhtFutId = dhtFutId;
         this.newDhtNodes = newDhtNodes;
-        setResponseId(reqId);
+
+        setReqReceivedTimestamp(reqReceivedTimestamp);
+        setReqSendTimestamp(reqSendTimestamp);
     }
 
     /**
@@ -122,16 +138,19 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param miniId Mini future id.
      * @param lockVer Lock version.
      * @param err Error.
-     * @param reqId Id of request that triggered response createion.
+     * @param reqReceivedTimestamp Request receive timestamp.
+     * @param reqSendTimestamp request send timestamp.
      */
     public GridNearTxEnlistResponse(int cacheId, IgniteUuid futId, int miniId, GridCacheVersion lockVer,
-        Throwable err, long reqId) {
+        Throwable err, long reqReceivedTimestamp, long reqSendTimestamp) {
         this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
         this.lockVer = lockVer;
         this.err = err;
-        setResponseId(reqId);
+
+        setReqReceivedTimestamp(reqReceivedTimestamp);
+        setReqSendTimestamp(reqSendTimestamp);
     }
 
     /**
@@ -193,9 +212,40 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         return newDhtNodes;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 12;
+        return 13;
     }
 
     /** {@inheritDoc} */
@@ -257,6 +307,12 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
 
             case 11:
                 if (!writer.writeMessage("res", res))
+                    return false;
+
+                writer.incrementState();
+
+            case 12:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -335,6 +391,14 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
 
             case 11:
                 res = reader.readMessage("res");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 12:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;

@@ -58,10 +58,7 @@ public abstract class GridCacheMessage implements Message {
     private static final AtomicInteger msgIdx = new AtomicInteger();
 
     /** Null message ID. */
-    public static final long NULL_MSG_ID = -1;
-
-    /** Minimal valid message ID. */
-    public static final long MIN_MSG_ID = -NULL_MSG_ID + 1;
+    private static final long NULL_MSG_ID = -1;
 
     /** ID of this message. */
     private long msgId = NULL_MSG_ID;
@@ -179,15 +176,6 @@ public abstract class GridCacheMessage implements Message {
      */
     void messageId(long msgId) {
         this.msgId = msgId;
-    }
-
-    /**
-     * Sets response id based on corresponding request id.
-     * @param reqId Request id.
-     */
-    public void setResponseId(long reqId) {
-        if (reqId > MIN_MSG_ID)
-            msgId = -reqId;
     }
 
     /**

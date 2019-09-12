@@ -19,14 +19,11 @@ package org.apache.ignite.spi.communication.tcp;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
@@ -35,13 +32,12 @@ import org.apache.ignite.internal.util.nio.GridNioMetricsListener;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
-import org.jetbrains.annotations.NotNull;
-import org.jsr166.ConcurrentLinkedHashMap;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STORE_TIME;
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Statistics for {@link org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi}.
@@ -54,11 +50,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     private static final String BOUNDS_PARAM_DELIMITER = ",";
 
     /** Counter factory. */
-    private static final Callable<LongHolder> HOLDER_FACTORY = new Callable<LongHolder>() {
-        @Override public LongHolder call() {
-            return new LongHolder();
-        }
-    };
+    private static final Callable<LongHolder> HOLDER_FACTORY = LongHolder::new;
 
     /** Received bytes count. */
     private final LongAdder rcvdBytesCnt = new LongAdder();
@@ -70,15 +62,13 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     private final Set<ThreadMetrics> allMetrics = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Thread-local metrics. */
-    private final ThreadLocal<ThreadMetrics> threadMetrics = new ThreadLocal<ThreadMetrics>() {
-        @Override protected ThreadMetrics initialValue() {
-            ThreadMetrics metrics = new ThreadMetrics();
+    private final ThreadLocal<ThreadMetrics> threadMetrics = ThreadLocal.withInitial(() -> {
+        ThreadMetrics metrics = new ThreadMetrics();
 
-            allMetrics.add(metrics);
+        allMetrics.add(metrics);
 
-            return metrics;
-        }
-    };
+        return metrics;
+    });
 
     /** */
     private final MsgTimeMetric msgTimeMetric = new MsgTimeMetric();
@@ -117,8 +107,35 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             ThreadMetrics metrics = threadMetrics.get();
 
             metrics.onMessageSent(msg, nodeId);
+        }
+    }
 
-            msgTimeMetric.addTimestamp(nodeId, msg, true);
+    /**
+     * Writes message send timestamp.
+     * @param msg message.
+     */
+    public void writeMessageSendTimestamp(Message msg) {
+        if (!msgTimeMetric.isTimeLoggingEnabled)
+            return;
+
+        assert msg != null;
+
+        if (msg instanceof GridIoMessage) {
+            msg = ((GridIoMessage) msg).message();
+
+            if (msg instanceof TimeLoggableResponse) {
+                TimeLoggableResponse tlResp = (TimeLoggableResponse)msg;
+
+                long reqSentTimestamp = tlResp.getReqSentTimestamp();
+                long reqReceivedTimestamp = tlResp.getReqReceivedTimestamp();
+
+                if (reqSentTimestamp != INVALID_TIMESTAMP && reqReceivedTimestamp != INVALID_TIMESTAMP)
+                    tlResp.setResponseSendTimestamp(reqSentTimestamp + System.nanoTime() - reqReceivedTimestamp);
+            } else if (msg instanceof TimeLoggableRequest) {
+                TimeLoggableRequest cacheMsg = (TimeLoggableRequest)msg;
+
+                cacheMsg.setSendTimestamp(System.nanoTime());
+            }
         }
     }
 
@@ -141,7 +158,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
             metrics.onMessageReceived(msg, nodeId);
 
-            msgTimeMetric.addTimestamp(nodeId, msg, false);
+            msgTimeMetric.processIncomingMsg(nodeId, msg);
         }
     }
 
@@ -281,17 +298,10 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     }
 
     /**
-     * @return Map containing histogram metrics for outcoming messages by node by message class name.
+     * @return Map containing histogram metrics for outgoing messages by node by message class name.
      */
     public Map<UUID, Map<String, HistogramMetric>> outMetricsByNodeByMsgClass() {
         return convertMap(msgTimeMetric.outMetricsMap);
-    }
-
-    /**
-     * @return Map containing histogram metrics for incoming messages by node by message class name.
-     */
-    public Map<UUID, Map<String, HistogramMetric>> inMetricsByNodeByMsgClass() {
-        return convertMap(msgTimeMetric.inMetricsMap);
     }
 
     /**
@@ -407,15 +417,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         /** Stores time latencies for each sent request class and each node */
         private final Map<UUID, Map<Short, HistogramMetric>> outMetricsMap = new ConcurrentHashMap<>();
 
-        /** Stores sent requests' timestamps that did't get response for each request class and each node */
-        private final Map<UUID, Map<Short, Map<Long, Long>>> outTimestamps = new ConcurrentHashMap<>();
-
-        /** Stores time latencies for each sent request class and each node */
-        private final Map<UUID, Map<Short, HistogramMetric>> inMetricsMap = new ConcurrentHashMap<>();
-
-        /** Stores sent requests' timestamps that did't get response for each request class and each node */
-        private final Map<UUID, Map<Short, Map<Long, Long>>> inTimestamps = new ConcurrentHashMap<>();
-
         /** Is time logging enabled. */
         private final boolean isTimeLoggingEnabled = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
 
@@ -426,118 +427,14 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          * Reset metrics.
          */
         private void reset() {
-            inMetricsMap.clear();
-            inTimestamps.clear();
-
             outMetricsMap.clear();
-            outTimestamps.clear();
         }
 
         /**
          * Removes metrics data corresponding to {@code nodeId}
          */
         private void clearNodeMetrics(UUID nodeId) {
-            inMetricsMap.remove(nodeId);
-            inTimestamps.remove(nodeId);
-
             outMetricsMap.remove(nodeId);
-            outTimestamps.remove(nodeId);
-        }
-
-        /**
-         * Adds information about message timestamp. Messages from local node are ignored.
-         *
-         * @param nodeId Node id.
-         * @param msg Message.
-         */
-        private void addTimestamp(UUID nodeId, @NotNull Message msg, boolean outcoming) {
-            if (!isTimeLoggingEnabled || !(msg instanceof TimeLoggableMessage))
-                return;
-
-            TimeLoggableMessage tlmsg = (TimeLoggableMessage)msg;
-
-            if (tlmsg.messageId() > 0)
-                processRequest(nodeId, tlmsg, outcoming);
-            else
-                processResponse(nodeId, tlmsg, !outcoming);
-        }
-
-        /**
-         * Processes request. Request id, node id and request system time are added to {@code timestampMap}
-         *
-         * @param nodeId Request sender node Id.
-         * @param req Request message.
-         * @param thisNodeSender {@code true} for outcoming requests and incoming responses.
-         *  {@code false} for incoming requests and outcoming responses.
-         */
-        private void processRequest(UUID nodeId, @NotNull TimeLoggableMessage req, boolean thisNodeSender) {
-            Map<UUID, Map<Short, Map<Long, Long>>> reqTimestamps = timestampMap(thisNodeSender);
-            Map<UUID, Map<Short, HistogramMetric>> metricsMap    = metricsMap(thisNodeSender);
-
-            if (!reqTimestamps.containsKey(nodeId)) {
-                // No requests were sent to or received from nodeId
-                synchronized (this) {
-                    if (!reqTimestamps.containsKey(nodeId)) {
-                        reqTimestamps.put(nodeId, new ConcurrentHashMap<>());
-
-                        metricsMap.put(nodeId, new ConcurrentHashMap<>());
-                    }
-                }
-            }
-
-            Map<Short, Map<Long, Long>> nodeMap = reqTimestamps.get(nodeId);
-
-            if (!nodeMap.containsKey(req.directType())) {
-                // No message of certain class were sent to or received from nodeId
-                synchronized (this) {
-                    if (!nodeMap.containsKey(req.directType())) {
-                        nodeMap.put(req.directType(), new TimestampMap());
-
-                        metricsMap.get(nodeId).put(req.directType(), new HistogramMetric(metricBounds));
-                    }
-                }
-            }
-
-            Map<Long, Long> reqResTimeMap = nodeMap.get(req.directType());
-
-            reqResTimeMap.put(req.messageId(), System.nanoTime());
-        }
-
-        /**
-         * Processes response. If {@code timestampMap} contains corresponding request time difference between response
-         * and request is added to metric.
-         *
-         * @param nodeId Response sender id.
-         * @param resp Response message.
-         */
-        private void processResponse(UUID nodeId, @NotNull TimeLoggableMessage resp, boolean outcoming) {
-            Map<UUID, Map<Short, Map<Long, Long>>> reqTimestamps = timestampMap(outcoming);
-            Map<UUID, Map<Short, HistogramMetric>> metricsMap    = metricsMap(outcoming);
-
-            if (!reqTimestamps.containsKey(nodeId))
-                return;
-
-            Map<Short, Map<Long, Long>> nodeMap = reqTimestamps.get(nodeId);
-
-            // No message of certain class were sent to or received from nodeId
-            for (Map.Entry<Short, Map<Long, Long>> entry : nodeMap.entrySet()) {
-                Map<Long, Long> reqResTimeMap = entry.getValue();
-
-                long reqId = -resp.messageId();
-
-                if (reqResTimeMap.containsKey(reqId)) {
-                    Long reqTimestamp = reqResTimeMap.get(reqId);
-
-                    if (reqResTimeMap == null)
-                        break;
-
-                    metricsMap.get(nodeId).get(entry.getKey()).value(U.nanosToMillis(System.nanoTime() - reqTimestamp));
-
-                    reqResTimeMap.remove(reqId);
-
-                    break;
-                }
-            }
         }
 
         /**
@@ -561,17 +458,62 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         }
 
         /**
+         * Processes incoming messages.
          *
+         * @param id Sender node id.
+         * @param msg Incoming message.
          */
-        private Map<UUID, Map<Short, HistogramMetric>> metricsMap(boolean isThisNodeSender) {
-            return isThisNodeSender ? outMetricsMap : inMetricsMap;
+        private void processIncomingMsg(UUID id, Message msg) {
+            if (!isTimeLoggingEnabled)
+                return;
+
+            if (msg instanceof TimeLoggableResponse)
+                addMetricsData(id, msg);
+            else if (msg instanceof TimeLoggableRequest) {
+                TimeLoggableRequest tlReq = (TimeLoggableRequest)msg;
+
+                tlReq.setReceiveTimestamp(System.nanoTime());
+            }
         }
 
         /**
+         * Adds data to hist metrics.
          *
+         * @param nodeId Sender node id.
+         * @param msg Incoming message.
          */
-        private Map<UUID, Map<Short, Map<Long, Long>>> timestampMap(boolean isThisNodeSender) {
-            return isThisNodeSender ? outTimestamps : inTimestamps;
+        private void addMetricsData(UUID nodeId, Message msg) {
+            if (!(msg instanceof TimeLoggableResponse))
+                return;
+
+            TimeLoggableResponse timeLoggableRes = (TimeLoggableResponse)msg;
+
+            if (timeLoggableRes.getResponseSendTimestamp() == INVALID_TIMESTAMP)
+                return;
+
+            if (!outMetricsMap.containsKey(nodeId)) {
+                // No requests were sent to nodeId
+                synchronized (this) {
+                    if (!outMetricsMap.containsKey(nodeId))
+                        outMetricsMap.put(nodeId, new ConcurrentHashMap<>());
+                }
+            }
+
+            Map<Short, HistogramMetric> nodeMap = outMetricsMap.get(nodeId);
+
+            short msgType = timeLoggableRes.directType();
+
+            if (!nodeMap.containsKey(msgType)) {
+                // No message of certain class were sent to nodeId
+                synchronized (this) {
+                    if (!nodeMap.containsKey(msgType))
+                        nodeMap.put(msgType, new HistogramMetric(metricBounds));
+                }
+            }
+
+            HistogramMetric metric = nodeMap.get(msgType);
+
+            metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.getResponseSendTimestamp()));
         }
     }
 
@@ -647,57 +589,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
             rcvdMsgsCntByType.clear();
             rcvdMsgsCntByNode.clear();
-        }
-    }
-
-    /**
-     * Map with old entries eviction.
-     */
-    public static class TimestampMap extends ConcurrentLinkedHashMap<Long, Long> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        private static final int EVICT_FREQ = 1000;
-
-        /** Max timestamp age in nanoseconds */
-        private final long maxTimestampAge = TimeUnit.SECONDS.toNanos(IgniteSystemProperties.getLong(IGNITE_MESSAGES_INFO_STORE_TIME, 300));
-
-        /** Evict counter. */
-        private final AtomicInteger evictCntr = new AtomicInteger(0);
-
-        /** {@inheritDoc} */
-        @Override public Long putIfAbsent(Long k, Long v) {
-            evict();
-
-            return super.putIfAbsent(k, v);
-        }
-
-        /** {@inheritDoc} */
-        @Override public Long put(Long k, Long v) {
-            evict();
-
-            return super.put(k, v);
-        }
-
-        /**
-         * Evicts messages older then {@code MAX_TIMESTAMP_AGE}
-         */
-        private void evict() {
-            int currOpsNum = evictCntr.incrementAndGet();
-
-            // Second part of condition is added to eliminate even tiny
-            // risk of evictCntr skipping EVICT_FREQ
-            if (currOpsNum == EVICT_FREQ || currOpsNum > 2 * EVICT_FREQ) {
-                evictCntr.set(0);
-
-                Iterator<Map.Entry<Long, Long>> iter = entrySet().iterator();
-
-                long curTime = System.nanoTime();
-
-                while (iter.hasNext() && curTime - iter.next().getValue() > maxTimestampAge)
-                    iter.remove();
-            }
         }
     }
 }

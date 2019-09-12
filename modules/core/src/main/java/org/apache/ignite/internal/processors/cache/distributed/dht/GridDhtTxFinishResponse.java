@@ -55,6 +55,17 @@ public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse imp
     /** Cache return value. */
     private GridCacheReturn retVal;
 
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
@@ -159,6 +170,36 @@ public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse imp
     }
 
     /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -186,6 +227,12 @@ public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse imp
                 writer.incrementState();
 
             case 9:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                    return false;
+
+                writer.incrementState();
+
+            case 10:
                 if (!writer.writeMessage("retVal", retVal))
                     return false;
 
@@ -224,6 +271,14 @@ public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse imp
                 reader.incrementState();
 
             case 9:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 10:
                 retVal = reader.readMessage("retVal");
 
                 if (!reader.isLastRead())
@@ -243,7 +298,7 @@ public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse imp
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 10;
+        return 11;
     }
 
     /** {@inheritDoc} */

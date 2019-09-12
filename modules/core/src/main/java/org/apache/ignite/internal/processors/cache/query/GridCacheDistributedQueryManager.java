@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -50,7 +51,6 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteReducer;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -294,6 +294,8 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             req.id(),
             req.includeMetaData(),
             req.allPages(),
+            req.getSendTimestamp(),
+            req.getReceiveTimestamp(),
             req.arguments()
         );
     }
@@ -451,10 +453,17 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
         if (e != null) {
             if (loc)
                 fut.onPage(null, null, e, true);
-            else
+            else {
+                GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(), e,
+                    cctx.deploymentEnabled());
+
+                res.setReqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
+                res.setReqSendTimestamp(qryInfo.reqSendTimestamp());
+
                 sendQueryResponse(qryInfo.senderId(),
-                    new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(), e, cctx.deploymentEnabled()),
+                    res,
                     qryInfo.query().timeout());
+            }
 
             return true;
         }
@@ -467,6 +476,9 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
 
             res.data(data);
             res.finished(finished);
+
+            res.setReqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
+            res.setReqSendTimestamp(qryInfo.reqSendTimestamp());
 
             if (!sendQueryResponse(qryInfo.senderId(), res, qryInfo.query().timeout()))
                 return false;

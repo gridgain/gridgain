@@ -121,6 +121,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
@@ -1710,7 +1711,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             ctx.deploymentEnabled());
 
-        res.setResponseId(req.messageId());
+        // For full sync mode response can be sent to node that didn't send request.
+        if (req.syncMode != FULL_SYNC) {
+            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            res.setReqSendTimestamp(req.getSendTimestamp());
+        }
 
         res.addFailedKeys(req.keys(), e);
 
@@ -1736,7 +1741,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             ctx.deploymentEnabled());
 
-        res.setResponseId(req.messageId());
+        // For full sync mode response can be sent to node that didn't send request.
+        if (req.syncMode != FULL_SYNC) {
+            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            res.setReqSendTimestamp(req.getSendTimestamp());
+        }
 
         assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
 
@@ -1751,7 +1760,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
             // If batch store update is enabled, we need to lock all entries.
             // First, need to acquire locks on cache entries, then check filter.
-            List<GridDhtCacheEntry> locked = lockEntries(req, req.topologyVersion());;
+            List<GridDhtCacheEntry> locked = lockEntries(req, req.topologyVersion());
 
             Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = null;
 
@@ -3282,7 +3291,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             false);
 
-        res.setResponseId(checkReq.messageId());
+        res.setReqSendTimestamp(checkReq.getSendTimestamp());
+        res.setReqReceivedTimestamp(checkReq.getReceiveTimestamp());
 
         GridCacheReturn ret = new GridCacheReturn(false, true);
 
@@ -3445,7 +3455,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     ctx.deploymentEnabled());
 
                 dhtRes.nearEvicted(nearEvicted);
-                dhtRes.setResponseId(req.messageId());
+
+                dhtRes.setReqReceivedTimestamp(req.getReceiveTimestamp());
+                dhtRes.setReqSendTimestamp(req.getSendTimestamp());
             }
         }
 
@@ -3479,13 +3491,15 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 req.futureId(),
                 ctx.deploymentEnabled());
 
-            dhtRes.setResponseId(req.messageId());
+            dhtRes.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            dhtRes.setReqSendTimestamp(req.getSendTimestamp());
         }
 
         if (dhtRes != null)
             sendDhtPrimaryResponse(nodeId, req, dhtRes);
         else
-            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId(), req.messageId());
+            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId(), req.getSendTimestamp(),
+                                       req.getReceiveTimestamp());
     }
 
     /**
@@ -3497,8 +3511,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateRequest req,
         GridDhtAtomicUpdateResponse dhtRes) {
         try {
-            dhtRes.setResponseId(req.messageId());
-
             ctx.io().send(nodeId, dhtRes, ctx.ioPolicy());
 
             if (msgLog.isDebugEnabled()) {
@@ -3525,8 +3537,10 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param part Partition.
      * @param primaryId Primary ID.
      * @param futId Future ID.
+     * @param reqSendTs Request send timestamp.
+     * @param reqReceiveTs Request receive timestamp.
      */
-    private void sendDeferredUpdateResponse(int part, UUID primaryId, long futId, long reqId) {
+    private void sendDeferredUpdateResponse(int part, UUID primaryId, long futId, long reqSendTs, long reqReceiveTs) {
         Map<UUID, GridDhtAtomicDeferredUpdateResponse> resMap = defRes.get();
 
         GridDhtAtomicDeferredUpdateResponse msg = resMap.get(primaryId);
@@ -3543,8 +3557,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 ctx.time().addTimeoutObject(timeoutSnd);
             }
 
-            msg.setResponseId(reqId);
-
             resMap.put(primaryId, msg);
         }
 
@@ -3557,7 +3569,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (futIds.size() >= DEFERRED_UPDATE_RESPONSE_BUFFER_SIZE) {
             resMap.remove(primaryId);
 
-            msg.setResponseId(reqId);
+            msg.setReqSendTimestamp(reqSendTs);
+            msg.setReqReceivedTimestamp(reqReceiveTs);
 
             sendDeferredUpdateResponse(primaryId, msg);
         }

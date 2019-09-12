@@ -1967,14 +1967,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         return metricsLsnr.outMetricsByNodeByMsgClass();
     }
 
-    /**
-     * @return Map containing histogram metrics for incoming messages by node by message class name.
-     */
-    public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass() {
-        return metricsLsnr.inMetricsByNodeByMsgClass();
-    }
-
-
     /** {@inheritDoc} */
     @Override public int getOutboundMessagesQueueSize() {
         GridNioServer<Message> srv = nioSrvr;
@@ -2781,6 +2773,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                     if (!client.async())
                         nodeId = node.id();
+
+                    metricsLsnr.writeMessageSendTimestamp(msg);
 
                     retry = client.sendMessage(nodeId, msg, ackC);
 
@@ -5129,11 +5123,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         /** {@inheritDoc} */
         @Override public Map<UUID, Map<String, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
             return TcpCommunicationSpi.this.getOutMetricsByNodeByMsgClass();
-        }
-
-        /** {@inheritDoc} */
-        @Override public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass() {
-            return TcpCommunicationSpi.this.getInMetricsByNodeByMsgClass();
         }
 
         /** {@inheritDoc} */

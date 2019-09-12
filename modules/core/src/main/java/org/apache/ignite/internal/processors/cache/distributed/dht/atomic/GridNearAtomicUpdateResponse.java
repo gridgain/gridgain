@@ -84,6 +84,17 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
     @GridDirectTransient
     private boolean nodeLeft;
 
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
@@ -390,6 +401,37 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
         return ctx.atomicMessageLogger();
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -442,6 +484,12 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
                 writer.incrementState();
 
             case 10:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                    return false;
+
+                writer.incrementState();
+
+            case 11:
                 if (!writer.writeMessage("ret", ret))
                     return false;
 
@@ -512,6 +560,14 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
                 reader.incrementState();
 
             case 10:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 11:
                 ret = reader.readMessage("ret");
 
                 if (!reader.isLastRead())
@@ -531,7 +587,7 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 12;
     }
 
     /** {@inheritDoc} */

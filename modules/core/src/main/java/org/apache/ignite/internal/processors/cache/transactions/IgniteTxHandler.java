@@ -316,8 +316,7 @@ public class IgniteTxHandler {
                         e,
                         null,
                         req.onePhaseCommit(),
-                        req.deployInfo() != null,
-                        req.messageId());
+                        req.deployInfo() != null);
                 }
             }
         });
@@ -476,8 +475,7 @@ public class IgniteTxHandler {
                             null,
                             top.lastTopologyChangeVersion(),
                             req.onePhaseCommit(),
-                            req.deployInfo() != null,
-                            req.messageId());
+                            req.deployInfo() != null);
 
                         try {
                             ctx.io().send(nearNode, res, req.policy());
@@ -702,8 +700,7 @@ public class IgniteTxHandler {
             e,
             null,
             req.onePhaseCommit(),
-            req.deployInfo() != null,
-            req.messageId());
+            req.deployInfo() != null);
 
         try {
             ctx.io().send(node.id(), res, req.policy());
@@ -1196,7 +1193,8 @@ public class IgniteTxHandler {
                 req.miniId(),
                 req.deployInfo() != null);
 
-            res.setResponseId(req.messageId());
+            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            res.setReqSendTimestamp(req.getSendTimestamp());
 
             // Start near transaction first.
             nearTx = !F.isEmpty(req.nearWrites()) ? startNearRemoteTx(ctx.deploy().globalLoader(), nodeId, req) : null;
@@ -1268,7 +1266,8 @@ public class IgniteTxHandler {
                 e,
                 req.deployInfo() != null);
 
-            res.setResponseId(req.messageId());
+            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            res.setReqSendTimestamp(req.getSendTimestamp());
         }
 
         if (req.onePhaseCommit()) {
@@ -1603,7 +1602,8 @@ public class IgniteTxHandler {
                 req.futureId(),
                 req.miniId());
 
-            res.setResponseId(req.messageId());
+            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+            res.setReqSendTimestamp(req.getSendTimestamp());
 
             if (req.checkCommitted()) {
                 res.checkCommitted(true);
@@ -2169,7 +2169,8 @@ public class IgniteTxHandler {
             prepared,
             req.deployInfo() != null);
 
-        res.setResponseId(req.messageId());
+        res.setReqReceivedTimestamp(req.getReceiveTimestamp());
+        res.setReqSendTimestamp(req.getSendTimestamp());
 
         try {
             ctx.io().send(nodeId, res, req.system() ? UTILITY_CACHE_POOL : SYSTEM_POOL);

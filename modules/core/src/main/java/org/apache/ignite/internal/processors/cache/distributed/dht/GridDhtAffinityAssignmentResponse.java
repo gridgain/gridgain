@@ -70,6 +70,17 @@ public class GridDhtAffinityAssignmentResponse extends GridCacheGroupIdMessage i
     /** */
     private byte[] partBytes;
 
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
     /**
      * Empty constructor.
      */
@@ -93,6 +104,36 @@ public class GridDhtAffinityAssignmentResponse extends GridCacheGroupIdMessage i
         this.topVer = topVer;
 
         affAssignmentIds = ids(affAssignment);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
     }
 
     /**
@@ -215,7 +256,7 @@ public class GridDhtAffinityAssignmentResponse extends GridCacheGroupIdMessage i
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 9;
+        return 10;
     }
 
     /**
@@ -297,6 +338,12 @@ public class GridDhtAffinityAssignmentResponse extends GridCacheGroupIdMessage i
                 writer.incrementState();
 
             case 8:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                    return false;
+
+                writer.incrementState();
+
+            case 9:
                 if (!writer.writeAffinityTopologyVersion("topVer", topVer))
                     return false;
 
@@ -351,6 +398,14 @@ public class GridDhtAffinityAssignmentResponse extends GridCacheGroupIdMessage i
                 reader.incrementState();
 
             case 8:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 9:
                 topVer = reader.readAffinityTopologyVersion("topVer");
 
                 if (!reader.isLastRead())

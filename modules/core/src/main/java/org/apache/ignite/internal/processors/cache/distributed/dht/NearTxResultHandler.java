@@ -88,10 +88,11 @@ public final class NearTxResultHandler implements CI1<IgniteInternalFuture<GridC
             }
 
             return new GridNearTxEnlistResponse(fut.cctx.cacheId(), fut.nearFutId, fut.nearMiniId,
-                fut.nearLockVer, res, ver, id, fut.newDhtNodes, fut.reqId());
+                fut.nearLockVer, res, ver, id, fut.newDhtNodes, fut.getReceiveTimestamp(), fut.getSendTimestamp());
         }
         catch (IgniteCheckedException e) {
-            return new GridNearTxEnlistResponse(fut.cctx.cacheId(), fut.nearFutId, fut.nearMiniId, fut.nearLockVer, e, fut.reqId());
+            return new GridNearTxEnlistResponse(fut.cctx.cacheId(), fut.nearFutId, fut.nearMiniId, fut.nearLockVer, e,
+                fut.getReceiveTimestamp(), fut.getSendTimestamp());
         }
     }
 

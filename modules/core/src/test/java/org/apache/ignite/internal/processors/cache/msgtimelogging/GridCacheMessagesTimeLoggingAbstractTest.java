@@ -14,7 +14,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -26,6 +25,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
@@ -70,20 +70,14 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
         stopAllGrids();
 
         System.clearProperty(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
+        System.clearProperty(IGNITE_COMM_SPI_TIME_HIST_BOUNDS);
     }
 
     /**
      *
      */
-    protected void checkOutcomingEventsNum(Class msgClass) throws MalformedObjectNameException {
-        checkEventsNum(0, 1, msgClass, true);
-    }
-
-    /**
-     *
-     */
-    protected void checkIncomingEventsNum(Class msgClass) throws MalformedObjectNameException {
-        checkEventsNum(0, 1, msgClass, false);
+    protected void checkOutcomingEventsNum(Class reqClass, Class respClass) throws MalformedObjectNameException {
+        checkEventsNum(0, 1, reqClass, respClass);
     }
 
     /**
@@ -92,67 +86,61 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      */
     private void checkEventsNum(int sourceIdx,
         int targetIdx,
-        Class msgClass,
-        boolean outcoming
+        Class reqClass,
+        Class respClass
     )
         throws MalformedObjectNameException
     {
-        IgniteEx spiGrid = outcoming ? grid(sourceIdx) : grid(targetIdx);
-        IgniteEx metricNameGrid = outcoming ? grid(targetIdx) : grid(sourceIdx);
+        RecordingSpi spi = (RecordingSpi)grid(sourceIdx).configuration().getCommunicationSpi();
 
-        RecordingSpi spi = (RecordingSpi)spiGrid.configuration().getCommunicationSpi();
-
-        HistogramMetric metric = getMetric(sourceIdx, targetIdx, msgClass, outcoming);
+        HistogramMetric metric = getMetric(sourceIdx, targetIdx, respClass);
         assertNotNull("HistogramMetric not found", metric);
 
-        String metricName = metricName(metricNameGrid.localNode().id(), msgClass);
+        String metricName = metricName(grid(targetIdx).localNode().id(), reqClass);
 
         long sum = LongStream.of(metric.value()).sum();
 
-        Integer eventsNum = spi.classesMap.get(metricName);
+        Integer eventsNum = spi.classesMap.get(metricName(grid(targetIdx).localNode().id(), reqClass));
         assertNotNull("Value " + metricName + " not found in classesMap", eventsNum);
 
-        assertTrue("Unexpected metric data amount for " + msgClass + ": " + sum +
-                   ". Events num: " + eventsNum, sum == eventsNum);
+        assertEquals("Unexpected metric data amount for " + respClass + ": " + sum + ". Events num: " + eventsNum,
+            sum, (long)eventsNum);
     }
 
     /**
      * @param sourceNodeIdx Index of node that stores metric.
      * @param targetNodeIdx Index of node where requests are sent.
-     * @param msgClass Metric request class.
-     * @return {@code HistogramMetric} for {@code msgClass}.
+     * @param respCls Metric request class.
+     * @return {@code HistogramMetric} for {@code respCls}.
      */
     @Nullable public HistogramMetric getMetric(
         int sourceNodeIdx,
         int targetNodeIdx,
-        Class msgClass,
-        boolean outcoming
+        Class respCls
     )
         throws MalformedObjectNameException
     {
-        return getMetric(sourceNodeIdx, grid(targetNodeIdx).localNode().id(), msgClass, outcoming);
+        return getMetric(sourceNodeIdx, grid(targetNodeIdx).localNode().id(), respCls);
     }
 
     /**
-     * @param sourceNodeIdx Index of node that stores metric.
+     * @param srcNodeIdx Index of node that stores metric.
      * @param targetNodeId Id of node where requests are sent.
-     * @param msgClass Metric request class.
-     * @return {@code HistogramMetric} for {@code msgClass}.
+     * @param respCls Metric request class.
+     * @return {@code HistogramMetric} for {@code respCls}.
      */
-    @Nullable public HistogramMetric getMetric(int sourceNodeIdx,
+    @Nullable public HistogramMetric getMetric(int srcNodeIdx,
         UUID targetNodeId,
-        Class msgClass,
-        boolean outcoming
+        Class respCls
     )
         throws MalformedObjectNameException
     {
-        TcpCommunicationSpiMBean mbean = mbean(sourceNodeIdx);
+        TcpCommunicationSpiMBean mbean = mbean(srcNodeIdx);
 
         if (mbean == null)
             return null;
 
-        Map<UUID, Map<String, HistogramMetric>> nodeMap =
-            outcoming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
+        Map<UUID, Map<String, HistogramMetric>> nodeMap = mbean.getOutMetricsByNodeByMsgClass();
 
         assertNotNull(nodeMap);
 
@@ -161,7 +149,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
         if (clsNameMap == null)
             return null;
 
-        return clsNameMap.get(msgClass.getName());
+        return clsNameMap.get(respCls.getName());
     }
 
     /**
@@ -170,7 +158,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      * @param nodeIdx Node index.
      * @return MBean instance.
      */
-    private TcpCommunicationSpiMBean mbean(int nodeIdx) throws MalformedObjectNameException {
+    protected TcpCommunicationSpiMBean mbean(int nodeIdx) throws MalformedObjectNameException {
         ObjectName mbeanName = U.makeMBeanName(getTestIgniteInstanceName(nodeIdx), "SPIs",
             RecordingSpi.class.getSimpleName());
 
@@ -188,7 +176,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     /**
      *
      */
-    private static String metricName(UUID nodeId, Class msgClass) {
+    protected static String metricName(UUID nodeId, Class msgClass) {
         return nodeId + "." + msgClass.getSimpleName();
     }
 
@@ -209,7 +197,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     /**
      * Counts sent messages num per message class.
      */
-    private static class RecordingSpi extends TcpCommunicationSpi {
+    protected static class RecordingSpi extends TcpCommunicationSpi {
         /** */
         private Map<String, Integer> classesMap = new HashMap<>();
 
@@ -240,6 +228,11 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
 
                 classesMap.merge(metricName(node.id(), msg0.getClass()), 1, Integer::sum);
             }
+        }
+
+        /**  */
+        public Map<String, Integer> getClassesMap() {
+            return classesMap;
         }
     }
 }

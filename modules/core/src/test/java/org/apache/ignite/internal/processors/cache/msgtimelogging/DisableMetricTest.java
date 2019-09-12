@@ -2,7 +2,7 @@ package org.apache.ignite.internal.processors.cache.msgtimelogging;
 
 import javax.management.MalformedObjectNameException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.junit.Test;
 
@@ -26,7 +26,7 @@ public class DisableMetricTest extends GridCacheMessagesTimeLoggingAbstractTest 
 
         populateCache(cache);
 
-        HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareRequest.class, true);
+        HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareResponse.class);
 
         assertNull("Metrics unexpectedly enabled", metric);
     }

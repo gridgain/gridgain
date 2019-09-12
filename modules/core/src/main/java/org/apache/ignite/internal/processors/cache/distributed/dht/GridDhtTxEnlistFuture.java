@@ -34,7 +34,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.cache.GridCacheMessage.NULL_MSG_ID;
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Future processing transaction enlisting and locking of entries produces by cache API operations.
@@ -52,8 +52,11 @@ public final class GridDhtTxEnlistFuture extends GridDhtTxAbstractEnlistFuture<G
     /** Need result flag. If {@code True} previous value should be returned as well. */
     private boolean needRes;
 
-    /** Id of request that triggered feature creation. */
-    private long reqId = NULL_MSG_ID;
+    /** Send timestamp. */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** Receive timestamp. */
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Constructor.
@@ -86,7 +89,8 @@ public final class GridDhtTxEnlistFuture extends GridDhtTxAbstractEnlistFuture<G
         EnlistOperation op,
         @Nullable CacheEntryPredicate filter,
         boolean needRes,
-        boolean keepBinary) {
+        boolean keepBinary)
+    {
         super(nearNodeId,
             nearLockVer,
             mvccSnapshot,
@@ -162,17 +166,27 @@ public final class GridDhtTxEnlistFuture extends GridDhtTxAbstractEnlistFuture<G
         return S.toString(GridDhtTxEnlistFuture.class, this);
     }
 
-    /**
-     *
-     */
-    public long reqId() {
-        return reqId;
+    /**  */
+    public void setSendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /**  */
+    public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
     }
 
     /**
-     *
+     * @return Request send timestamp.
      */
-    public void reqId(long reqId) {
-        this.reqId = reqId;
+    public long getSendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /**
+     * @return Request receive timestamp.
+     */
+    public long getReceiveTimestamp() {
+        return receiveTimestamp;
     }
 }

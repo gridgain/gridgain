@@ -181,18 +181,11 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
     public Map<UUID, Long> getSentMessagesByNode();
 
     /**
-     * @return Map containing outcoming cache messages processing duration histograms
-     * grouped by message class name and node ids.
+     * @return Map containing netrowrk time for passing request and response
+     * grouped by response class name and node ids.
      */
-    @MXBeanDescription("Outcoming messages processing duration grouped by message class name and node.")
+    @MXBeanDescription("Network time for message grouped by message class name and node.")
     public Map<UUID, Map<String, HistogramMetric>> getOutMetricsByNodeByMsgClass();
-
-    /**
-     * @return Map containing incoming cache messages processing duration histograms
-     * grouped by message class name and node ids.
-     */
-    @MXBeanDescription("Incoming messages processing duration grouped by message class name and node.")
-    public Map<UUID, Map<String, HistogramMetric>> getInMetricsByNodeByMsgClass();
 
     /**
      * Gets outbound messages queue size.

@@ -96,7 +96,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
-import static org.apache.ignite.internal.processors.cache.GridCacheMessage.NULL_MSG_ID;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
@@ -104,6 +103,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.REA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
@@ -903,8 +903,10 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             prepErr,
             null,
             tx.onePhaseCommit(),
-            tx.activeCachesDeploymentEnabled(),
-            req == null ? NULL_MSG_ID : req.messageId());
+            tx.activeCachesDeploymentEnabled());
+
+        res.setReqReceivedTimestamp(req == null ? INVALID_TIMESTAMP : req.getReceiveTimestamp());
+        res.setReqSendTimestamp(req == null ? INVALID_TIMESTAMP :req.getSendTimestamp());
 
         if (prepErr == null) {
             if (tx.needReturnValue() || tx.nearOnOriginatingNode() || tx.hasInterceptor())

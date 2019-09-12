@@ -22,12 +22,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
+
+import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  *
  */
-public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage implements TimeLoggableMessage {
+public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage implements TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -43,6 +45,13 @@ public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage impleme
 
     /** */
     private long futId;
+
+    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      *
@@ -95,13 +104,33 @@ public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage impleme
     }
 
     /** {@inheritDoc} */
+    @Override public long getSendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public short directType() {
         return -50;
     }
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 6;
+        return 7;
     }
 
     /** {@inheritDoc} */
@@ -127,6 +156,12 @@ public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage impleme
 
             case 5:
                 if (!writer.writeInt("partId", partId))
+                    return false;
+
+                writer.incrementState();
+
+            case 6:
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -157,6 +192,14 @@ public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage impleme
 
             case 5:
                 partId = reader.readInt("partId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 6:
+                sendTimestamp = reader.readLong("sendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
