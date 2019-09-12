@@ -379,6 +379,17 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      * @throws Exception If failed.
      */
     @Test
+    public void testSQLTimestampDataType() throws Exception {
+        checkBasicCacheOperations(
+            new Dated(Timestamp.valueOf(LocalDateTime.now()), "yyyy-MM-dd HH:mm:ss.SSS"),
+            new Dated(Timestamp.valueOf(LocalDateTime.now()), "yyyy-MM-dd HH:mm:ss.SSSS"),
+            new Dated(Timestamp.valueOf(LocalDateTime.now()), "yyyy-MM-dd HH:mm:ss.SSSSSS"));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     @Override public void testBigIntegerDataType() throws Exception {
         expEx.expect(SQLException.class);
         expEx.expectMessage("Custom objects are not supported");
