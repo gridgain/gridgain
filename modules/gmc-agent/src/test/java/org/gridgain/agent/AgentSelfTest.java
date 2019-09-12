@@ -97,14 +97,13 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         Ignite ignite = startGrid();
 
         IgniteCluster cluster = ignite.cluster();
-        String consistentId = cluster.localNode().consistentId().toString();
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterAddDest()) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildBaselineTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterActiveStateDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id(), consistentId)) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
     }
 
