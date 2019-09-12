@@ -23,6 +23,7 @@ import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import java.io.Serializable;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -679,6 +680,16 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
             val = date;
             sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(
                 java.sql.Timestamp.valueOf(date)) + "', '" + PATTERN + "')";
+        }
+
+        /**
+         * Constructor.
+         *
+         * @param ts Original Timestamp value.
+         */
+        public Dated(Timestamp ts, String ptrn) {
+            val = ts;
+            sqlStrVal = "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(ts) + "', '" + ptrn + "')";
         }
 
         /**
