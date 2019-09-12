@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * DTO for response error.
  */
@@ -93,5 +95,10 @@ public class ResponseError {
     public ResponseError setStackTrace(StackTraceElement[] stackTrace) {
         this.stackTrace = stackTrace;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ResponseError.class, this);
     }
 }

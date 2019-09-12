@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.util.UUID;
 
 /**
@@ -114,5 +116,10 @@ public class Response {
     public Response setTimestamp(long ts) {
         this.ts = ts;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(Response.class, this);
     }
 }
