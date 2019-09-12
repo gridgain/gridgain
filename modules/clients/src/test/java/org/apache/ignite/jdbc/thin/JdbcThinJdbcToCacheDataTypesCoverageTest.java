@@ -18,7 +18,6 @@ package org.apache.ignite.jdbc.thin;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Random;
@@ -60,6 +59,13 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
     @Override
     public void init() throws Exception {
         super.init();
+
+        conn = DriverManager.getConnection(url);
+
+        stmt = conn.createStatement();
+
+        assert stmt != null;
+        assert !stmt.isClosed();
     }
 
     /**
@@ -158,8 +164,6 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
 
         ignite.addCacheConfiguration(cfg);
 
-        prepareStatment();
-
         stmt.execute("CREATE TABLE " + tblName +
             "(id " + dataType + " PRIMARY KEY," +
             " val " + dataType + ")" +
@@ -168,9 +172,7 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
         if (cacheMode != CacheMode.LOCAL)
             stmt.execute("CREATE INDEX " + idxName + " ON " + tblName + "(id, val)");
 
-        for (int i = 0; i < valsToCheck.length; i++) {
-            Object valToCheck = valsToCheck[i];
-
+        for (Object valToCheck : valsToCheck) {
             Object sqlStrVal = valToCheck instanceof SqlStrConvertedValHolder ?
                 ((SqlStrConvertedValHolder)valToCheck).sqlStrVal() :
                 valToCheck;
@@ -209,19 +211,5 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
 
             assertNull(ignite.cache(cacheName).get(orignialVal));
         }
-    }
-
-    /**
-     * Prepare jdbc thin connection and statement.
-     *
-     * @throws SQLException If Failed.
-     */
-    private void prepareStatment() throws SQLException {
-        conn = DriverManager.getConnection(url);
-
-        stmt = conn.createStatement();
-
-        assert stmt != null;
-        assert !stmt.isClosed();
     }
 }
