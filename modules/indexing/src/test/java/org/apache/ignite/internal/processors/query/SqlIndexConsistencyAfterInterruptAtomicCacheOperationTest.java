@@ -150,6 +150,3 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
         assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
     }
 }
-
-
-

@@ -142,6 +142,3 @@ public class SqlTwoCachesInGroupWithSameEntryTest extends AbstractIndexingCommon
             .setArgs(args), false);
     }
 }
-
-
-

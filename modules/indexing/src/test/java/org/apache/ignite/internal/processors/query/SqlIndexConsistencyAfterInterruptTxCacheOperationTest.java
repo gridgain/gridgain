@@ -29,6 +29,3 @@ public class SqlIndexConsistencyAfterInterruptTxCacheOperationTest
         return CacheAtomicityMode.TRANSACTIONAL;
     }
 }
-
-
-
