@@ -90,7 +90,8 @@ public class NodeConfigurationService implements AutoCloseable {
 
             snd.send(nodeCfg);
 
-        } catch (JsonProcessingException e) {
+        }
+        catch (JsonProcessingException e) {
             log.error("Failed to serialiaze the IgniteConfigurationWrapper to string", e);
         }
 
