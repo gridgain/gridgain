@@ -122,8 +122,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /** @inheritDoc */
     @SuppressWarnings("RedundantMethodOverride")
     @Before
-    @Override
-    public void init() throws Exception {
+    @Override public void init() throws Exception {
         super.init();
     }
 
@@ -228,7 +227,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23620")
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20663")
     @Test
     @Override public void testListDataType() throws Exception {
         expEx.expect(SQLException.class);
@@ -251,7 +250,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23620")
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20663")
     @Test
     @Override public void testQueueDataType() throws Exception {
         expEx.expect(SQLException.class);
@@ -379,14 +378,16 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23657")
     @Test
     @Override public void testBigIntegerDataType() throws Exception {
+        expEx.expect(SQLException.class);
+        expEx.expectMessage("Custom objects are not supported");
+
         super.testBigIntegerDataType();
     }
 
     /**
-     * Verification that jdbc thin SELECT and SELECT with where clause works correctlry
+     * Verification that jdbc thin SELECT and SELECT with where clause works correctly
      * in context of cache to jdbc data types convertion.
      *
      * @param valsToCheck Array of values to check.
@@ -397,7 +398,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     }
 
     /**
-     * Verification that jdbc thin SELECT and SELECT with where clause works correctlry
+     * Verification that jdbc thin SELECT and SELECT with where clause works correctly
      * in context of cache to jdbc data types convertion.
      *
      * @param converterToSqlExpVal Converter to expected value.
@@ -451,7 +452,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
                     new QueryEntity(dataType, dataType).setTableName(tblName))));
 
         // Prepare jdbc thin statement.
-        prepareStatment(cacheName);
+        prepareStatement(cacheName);
 
         Map<Serializable, Serializable> keyValMap = new HashMap<>();
 
@@ -466,7 +467,8 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             if (keyValEntry.getKey() instanceof SqlStrConvertedValHolder) {
                 originalKey = ((SqlStrConvertedValHolder) keyValEntry.getKey()).originalVal();
                 sqlStrKey =  ((SqlStrConvertedValHolder) keyValEntry.getKey()).sqlStrVal();
-            } else {
+            }
+            else {
                 originalKey = keyValEntry.getKey();
                 sqlStrKey = keyValEntry.getKey();
             }
@@ -498,7 +500,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      * @param cacheName Cache name.
      * @throws SQLException If Failed.
      */
-    private void prepareStatment(String cacheName) throws SQLException {
+    private void prepareStatement(String cacheName) throws SQLException {
         conn = DriverManager.getConnection(url);
 
         conn.setSchema('"' + cacheName + '"');
@@ -550,7 +552,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
 
     /**
      *
-     * @param converterToSqlExpVal Fгnction that converts expected key/value in conformity with a format of jdbc
+     * @param converterToSqlExpVal Function that converts expected key/value in conformity with a format of jdbc
      *  return key/value.
      * @param equalsProcessor Equals processor that process equality check of expected and got keys/values.
      * @param dataType Data type.
@@ -598,7 +600,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
         assertEquals("Unexpected metadata data type name for key.", metaType, meta.getColumnType(1));
         assertEquals("Unexpected metadata data type name for value.", metaType, meta.getColumnType(2));
 
-        assertEquals("Unexpected colums count.", 2, meta.getColumnCount());
+        assertEquals("Unexpected columns count.", 2, meta.getColumnCount());
 
         int cnt = 0;
 

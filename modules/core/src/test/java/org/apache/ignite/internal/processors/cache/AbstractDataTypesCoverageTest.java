@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -43,6 +42,7 @@ import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicyFactory;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.runner.RunWith;
@@ -723,7 +723,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          */
         public ByteArrayed(byte[] byteArr) {
             val = byteArr;
-            sqlStrVal = "x'" + Hex.encodeHexString(byteArr) + "'";
+            sqlStrVal = "x'" + U.byteArray2HexString(byteArr) + "'";
         }
 
         /** @inheritDoc */
