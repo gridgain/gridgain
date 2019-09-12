@@ -978,6 +978,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     private void destroyCacheDataStore() {
         try {
+            log.info("Destroy partiton p:" + id);
+
             grp.offheap().destroyCacheDataStore(dataStore());
         }
         catch (IgniteCheckedException e) {

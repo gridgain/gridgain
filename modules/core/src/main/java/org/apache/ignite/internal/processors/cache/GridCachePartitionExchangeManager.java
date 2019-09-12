@@ -1246,8 +1246,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             sendAllPartitions(rmts, rmtTopVer, grps);
         }
         else {
-            if (log.isDebugEnabled())
-                log.debug("Refreshing local partitions from non-oldest node: " +
+            if (log.isInfoEnabled())
+                log.info("Refreshing local partitions from non-oldest node: " +
                     cctx.localNodeId());
 
             sendLocalPartitions(oldest, null, grps);
@@ -1858,8 +1858,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         try {
             if (msg.exchangeId() == null) {
-                if (log.isDebugEnabled())
-                    log.debug("Received local partition update [nodeId=" + node.id() + ", parts=" +
+                if (log.isInfoEnabled())
+                    log.info("Received local partition update [nodeId=" + node.id() + ", parts=" +
                         msg + ']');
 
                 boolean updated = false;
@@ -1888,8 +1888,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 }
 
                 if (updated) {
-                    if (log.isDebugEnabled())
-                        log.debug("Partitions have been scheduled to resend [reason=Single update from " + node.id() + "]");
+                    if (log.isInfoEnabled())
+                        log.info("Partitions have been scheduled to resend [reason=Single update from " + node.id() + "]");
 
                     scheduleResendPartitions();
                 }
@@ -3433,8 +3433,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     try {
                         if (started.compareAndSet(false, true)) {
-                            if (log.isDebugEnabled())
-                                log.debug("Refresh partitions due to scheduled timeout");
+                            if (log.isInfoEnabled())
+                                log.info("Refresh partitions due to scheduled timeout");
 
                             refreshPartitions();
                         }

@@ -75,6 +75,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
@@ -290,39 +291,11 @@ public class GridDhtPartitionDemander {
 
         long delay = grp.config().getRebalanceDelay();
 
-        final RebalanceFuture fut;
-
         if ((delay == 0 || force) && assignments != null) {
-            final RebalanceFuture oldFut = rebalanceFut;
-
-            if (oldFut == null || oldFut.isInitial() || oldFut.isDone() || !continuousRebalanceSupported()) {
-                if (oldFut != null && !oldFut.isInitial() && !oldFut.isDone())
-                    oldFut.cancel();
-
-                fut = new RebalanceFuture(grp, assignments, log, rebalanceId);
-
-                if (!grp.localWalEnabled())
-                    fut.listen(new IgniteInClosureX<IgniteInternalFuture<Boolean>>() {
-                        @Override
-                        public void applyx(IgniteInternalFuture<Boolean> future) throws IgniteCheckedException {
-                            if (future.get())
-                                ctx.walState().onGroupRebalanceFinished(grp.groupId(), fut.topologyVersion());
-                        }
-                    });
-
-                if (oldFut.isInitial())
-                    fut.listen(f -> oldFut.onDone(f.result()));
-            }
-            else {
-                oldFut.update(assignments, rebalanceId);
-
-                fut = oldFut;
-            }
+            final RebalanceFuture fut = prepareRebalanceFuture(assignments, rebalanceId);
 
             if (forcedRebFut != null)
                 forcedRebFut.add(fut);
-
-            rebalanceFut = fut;
 
             for (final GridCacheContext cctx : grp.caches()) {
                 if (cctx.statisticsEnabled()) {
@@ -424,6 +397,56 @@ public class GridDhtPartitionDemander {
         }
 
         return null;
+    }
+
+    /**
+     * Having prepared rebalance future for current rebalance process and will store it to field @rebalanceFuture.
+     * @param assignments Demander assigment.
+     * @param rebalanceId Rebalance id.
+     * @return Rebalance future.
+     */
+    @NotNull
+    private GridDhtPartitionDemander.RebalanceFuture prepareRebalanceFuture(GridDhtPreloaderAssignments assignments,
+        long rebalanceId) {
+        RebalanceFuture fut = rebalanceFut;
+
+        if (isRebalancePregressing() && continuousRebalanceSupported())
+            fut.update(assignments, rebalanceId);
+        else {
+            if (isRebalancePregressing())
+                fut.cancel();
+            else if (fut.isInitial()) {
+                RebalanceFuture oldFut = fut;
+
+                fut = new RebalanceFuture(grp, assignments, log, rebalanceId);
+
+                fut.listen(f -> oldFut.onDone(f.result()));
+            }
+            else
+                fut = new RebalanceFuture(grp, assignments, log, rebalanceId);
+
+            if (!grp.localWalEnabled()) {
+                fut.listen(new IgniteInClosureX<IgniteInternalFuture<Boolean>>() {
+                    @Override
+                    public void applyx(IgniteInternalFuture<Boolean> future) throws IgniteCheckedException {
+                        if (future.get())
+                            ctx.walState().onGroupRebalanceFinished(grp.groupId(), ((RebalanceFuture)future).topologyVersion());
+                    }
+                });
+            }
+
+            rebalanceFut = fut;
+        }
+        return fut;
+    }
+
+    /**
+     * @return True means rebalance progressing, false otherwise.
+     */
+    private boolean isRebalancePregressing() {
+        RebalanceFuture rebFut = rebalanceFut;
+
+        return rebFut != null && !rebFut.isInitial() && !rebFut.isDone();
     }
 
     /** */
@@ -1312,6 +1335,8 @@ public class GridDhtPartitionDemander {
                     exchId = assignments.exchangeId();
                     topVer = assignments.topologyVersion();
 
+                    cancelNotLongerSupplied(assignments);
+
                     Map<UUID, IgniteDhtDemandedPartitionsMap> oldRemaining = remaining;
 
                     remaining = new HashMap<>();
@@ -1328,7 +1353,7 @@ public class GridDhtPartitionDemander {
                         for (int p : v.partitions().fullSet()) {
                             GridDhtLocalPartition locPart = grp.topology().localPartition(p);
 
-                            if (locPart.state() == MOVING && !oldPartMap.hasFull(p)) {
+                            if (locPart.state() == MOVING && (oldPartMap == null || !oldPartMap.hasFull(p))) {
                                 log.info("Partition will be cleaned before rebalancing: part " + p
                                     + " cache " + grp.cacheOrGroupName());
 
@@ -1347,6 +1372,24 @@ public class GridDhtPartitionDemander {
             }
             finally {
                 cancelLock.writeLock().unlock();
+            }
+        }
+
+        /**
+         * It cancels rebalance from nodes, which have not longer supplied partitions.
+         * @param assignments New demander assignment.
+         */
+        private void cancelNotLongerSupplied(GridDhtPreloaderAssignments assignments) {
+            for (UUID nodeId : remaining.keySet()) {
+                ClusterNode node = ctx.node(nodeId);
+
+                if (node != null && assignments.get(node) == null) {
+                    U.log(log, "Cancelled rebalancing from node [node=" + node +
+                        ", grp=" + grp.cacheOrGroupName() +
+                        ", topVer=" + topologyVersion() + "]");
+
+                    cleanupRemoteContexts(nodeId);
+                }
             }
         }
 
