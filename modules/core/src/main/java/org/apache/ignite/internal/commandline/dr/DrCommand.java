@@ -20,7 +20,24 @@ import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
-import org.apache.ignite.internal.commandline.CommandList;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
+
+import static org.apache.ignite.internal.commandline.Command.usage;
+import static org.apache.ignite.internal.commandline.CommandList.DATA_CENTER_REPLICATION;
+import static org.apache.ignite.internal.commandline.CommandLogger.join;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
 
 /** */
 public class DrCommand implements Command<Object> {
@@ -29,13 +46,73 @@ public class DrCommand implements Command<Object> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
-        // ???
-//        delegate.printUsage(log);
+        usage(log, "Print data center replication command help:",
+            DATA_CENTER_REPLICATION,
+            HELP.toString()
+        );
+
+        usage(log, "Print state of data center replication:",
+            DATA_CENTER_REPLICATION,
+            STATE.toString(),
+            optional(DrStateCommand.VERBOSE_PARAM)
+        );
+
+        usage(log, "Print topology of the cluster with the datacenter replication related details:",
+            DATA_CENTER_REPLICATION,
+            TOPOLOGY.toString(),
+            optional(DrTopologyCommand.SENDER_HUBS_PARAM),
+            optional(DrTopologyCommand.RECEIVER_HUBS_PARAM),
+            optional(DrTopologyCommand.DATA_NODES_PARAM),
+            optional(DrTopologyCommand.OTHER_NODES_PARAM)
+        );
+
+        usage(log, "Print node specific data center replication related details and clear node's DR store:",
+            DATA_CENTER_REPLICATION,
+            NODE.toString(),
+            "<nodeId>",
+            optional(DrNodeCommand.CONFIG_PARAM),
+            optional(DrNodeCommand.METRICS_PARAM),
+            optional(DrNodeCommand.CLEAR_STORE_PARAM),
+            optional(DrNodeCommand.RESET_STATE_PARAM),
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Print cache specific data center replication related details about caches and maybe change replication state on them:",
+            DATA_CENTER_REPLICATION,
+            CACHE.toString(),
+            "<regExp>",
+            optional(DrCacheCommand.CONFIG_PARAM),
+            optional(DrCacheCommand.METRICS_PARAM),
+            optional(DrCacheCommand.CACHE_FILTER_PARAM, join("|", DrCacheCommand.CacheFilter.values())),
+            optional(DrCacheCommand.SENDER_GROUP_PARAM, "<groupName>|" + join("|", DrCacheCommand.SenderGroup.values())),
+            optional(DrCacheCommand.ACTION_PARAM, join("|", DrCacheCommand.Action.values())),
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Execute full state transfer on all caches in cluster is data center replication is configured:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Stop data center replication on all caches in cluster:",
+            DATA_CENTER_REPLICATION,
+            PAUSE.toString(),
+            "<remoteDataCenterId>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Start data center replication on all caches in cluster:",
+            DATA_CENTER_REPLICATION,
+            RESUME.toString(),
+            "<remoteDataCenterId>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
     }
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return CommandList.DATA_CENTER_REPLICATION.toCommandName();
+        return DATA_CENTER_REPLICATION.toCommandName();
     }
 
     /** {@inheritDoc} */

@@ -36,6 +36,14 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 public class DrNodeCommand
     extends DrAbstractSubCommand<VisorDrNodeTaskArgs, VisorDrNodeTaskResult, DrNodeCommand.DrNodeArguments>
 {
+    /** Config parameter. */
+    public static final String CONFIG_PARAM = "--config";
+    /** Metrics parameter. */
+    public static final String METRICS_PARAM = "--metrics";
+    /** Clear store parameter. */
+    public static final String CLEAR_STORE_PARAM = "--clear-store";
+    /** Reset state parameter. */
+    public static final String RESET_STATE_PARAM = "--reset-state";
     /** Node Id. */
     private UUID nodeId;
 
@@ -65,22 +73,22 @@ public class DrNodeCommand
         //noinspection LabeledStatement
         args_loop: while ((nextArg = argIter.peekNextArg()) != null) {
             switch (nextArg.toLowerCase(Locale.ENGLISH)) {
-                case "--config":
+                case CONFIG_PARAM:
                     config = true;
 
                     break;
 
-                case "--metrics":
+                case METRICS_PARAM:
                     metrics = true;
 
                     break;
 
-                case "--clear-store":
+                case CLEAR_STORE_PARAM:
                     clearStore = true;
 
                     break;
 
-                case "--reset-state":
+                case RESET_STATE_PARAM:
                     resetState = true;
 
                     break;

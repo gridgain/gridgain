@@ -78,4 +78,9 @@ public enum DrSubCommandsList {
 
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return name;
+    }
 }

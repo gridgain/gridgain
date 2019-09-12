@@ -28,6 +28,9 @@ import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 public class DrStateCommand extends
     DrAbstractSubCommand<VisorDrStateTaskArgs, VisorDrStateTaskResult, DrStateCommand.DrStateArguments>
 {
+    /** Verbose parameter. */
+    public static final String VERBOSE_PARAM = "--verbose";
+
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
         return "org.gridgain.grid.internal.visor.dr.console.VisorDrStateTask";
@@ -37,7 +40,7 @@ public class DrStateCommand extends
     @Override protected DrStateArguments parseArguments0(CommandArgIterator argIter) {
         boolean verbose = false;
 
-        if ("--verbose".equalsIgnoreCase(argIter.peekNextArg())) {
+        if (VERBOSE_PARAM.equalsIgnoreCase(argIter.peekNextArg())) {
             argIter.nextArg("--verbose is expected");
 
             verbose = true;

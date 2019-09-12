@@ -16,23 +16,14 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientCompute;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientDisconnectedException;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
-import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.dr.VisorDrTopologyTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrTopologyTaskResult;
 
@@ -47,6 +38,15 @@ import static org.apache.ignite.internal.visor.dr.VisorDrTopologyTaskArgs.SENDER
 public class DrTopologyCommand extends
     DrAbstractSubCommand<VisorDrTopologyTaskArgs, VisorDrTopologyTaskResult, DrTopologyCommand.DrTopologyArguments>
 {
+    /** Sender hubs parameter. */
+    public static final String SENDER_HUBS_PARAM = "--sender-hubs";
+    /** Receiver hubs parameter. */
+    public static final String RECEIVER_HUBS_PARAM = "--receiver-hubs";
+    /** Data nodes parameter. */
+    public static final String DATA_NODES_PARAM = "--data-nodes";
+    /** Other nodes parameter. */
+    public static final String OTHER_NODES_PARAM = "--other-nodes";
+
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
         return "org.gridgain.grid.internal.visor.dr.console.VisorDrTopologyTask";
@@ -64,19 +64,19 @@ public class DrTopologyCommand extends
         //noinspection LabeledStatement
         args_loop: while ((nextArg = argIter.peekNextArg()) != null) {
             switch (nextArg.toLowerCase(Locale.ENGLISH)) {
-                case "--sender-hubs":
+                case SENDER_HUBS_PARAM:
                     senderHubs = true;
                     break;
 
-                case "--receiver-hubs":
+                case RECEIVER_HUBS_PARAM:
                     receiverHubs = true;
                     break;
 
-                case "--data-nodes":
+                case DATA_NODES_PARAM:
                     dataNodes = true;
                     break;
 
-                case "--other-nodes":
+                case OTHER_NODES_PARAM:
                     otherNodes = true;
                     break;
 

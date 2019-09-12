@@ -271,6 +271,11 @@ public class DrCacheCommand extends
 
             return null;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return text;
+        }
     }
 
     /** */
