@@ -17,6 +17,7 @@
 package org.apache.ignite.spi;
 
 import java.io.Serializable;
+import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
