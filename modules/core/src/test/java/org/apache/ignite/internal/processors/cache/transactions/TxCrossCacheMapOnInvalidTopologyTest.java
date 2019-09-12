@@ -32,6 +32,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
@@ -42,17 +43,21 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -81,9 +86,6 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setFailureDetectionTimeout(1000000000L);
-        cfg.setClientFailureDetectionTimeout(1000000000L);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setClientMode("client".equals(igniteInstanceName));
@@ -181,6 +183,8 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
 
             AtomicReference<Set<Integer>> full = new AtomicReference<>();
 
+            GridConcurrentSkipListSet<Integer> leftVerParts = new GridConcurrentSkipListSet<>();
+
             crdSpi.blockMessages((node, m) -> {
                 if (m instanceof GridDhtPartitionSupplyMessage) {
                     GridDhtPartitionSupplyMessage msg = (GridDhtPartitionSupplyMessage)m;
@@ -202,8 +206,13 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
                         return true;
                     }
 
-                    if (msg.topologyVersion().equals(leftVer))
+                    if (msg.topologyVersion().equals(leftVer)) {
+                        Map<Integer, Long> last = U.field(msg, "last");
+
+                        leftVerParts.addAll(last.keySet());
+
                         return true;
+                    }
                 } else if (m instanceof GridDhtPartitionsFullMessage) {
                     GridDhtPartitionsFullMessage msg = (GridDhtPartitionsFullMessage)m;
 
@@ -320,10 +329,15 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
                 }
             }, 1, "tx-thread");
 
+            // Wait until all missing supply messages are blocked.
+            assertTrue(GridTestUtils.waitForCondition(() -> leftVerParts.size() == PARTS_CNT - full.get().size(), 5_000));
+
             // Delay first lock request on late topology.
             TestRecordingCommunicationSpi.spi(client).waitForBlocked();
 
-            crdSpi.stopBlock(true, null, false, true); // Continue rebalance and trigger ideal topology switch.
+            // At this point only supply messages should be blocked.
+            // Unblock to continue rebalance and trigger ideal topology switch.
+            crdSpi.stopBlock(true, null, false, true);
 
             // Wait until ideal topology is ready on crd.
             crd.context().cache().context().exchange().affinityReadyFuture(idealVer).get(10_000);
