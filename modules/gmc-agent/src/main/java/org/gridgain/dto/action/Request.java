@@ -34,6 +34,9 @@ public class Request {
     /** Action name. */
     private String act;
 
+    /** Timestamp. */
+    private long ts;
+
     /**
      * @return Request id.
      */
@@ -79,6 +82,21 @@ public class Request {
      */
     public Request setArgument(Object arg) {
         this.arg = arg;
+        return this;
+    }
+
+    /**
+     * @return Timestamp.
+     */
+    public long getTimestamp() {
+        return ts;
+    }
+
+    /**
+     * @param ts Timestamp.
+     */
+    public Request setTimestamp(long ts) {
+        this.ts = ts;
         return this;
     }
 }

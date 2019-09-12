@@ -34,6 +34,9 @@ public class Response {
     /** Status. */
     private ActionStatus status;
 
+    /** Timestamp. */
+    private long ts = System.currentTimeMillis();
+
     /**
      * @return Response id.
      */
@@ -95,6 +98,21 @@ public class Response {
      */
     public Response setStatus(ActionStatus status) {
         this.status = status;
+        return this;
+    }
+
+    /**
+     * @return Timestamp.
+     */
+    public long getTimestamp() {
+        return ts;
+    }
+
+    /**
+     * @param ts Timestamp.
+     */
+    public Response setTimestamp(long ts) {
+        this.ts = ts;
         return this;
     }
 }
