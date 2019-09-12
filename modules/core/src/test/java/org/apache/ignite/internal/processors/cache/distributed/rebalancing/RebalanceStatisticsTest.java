@@ -21,12 +21,9 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -38,15 +35,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.nonNull;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
+import static java.util.stream.IntStream.rangeClosed;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
@@ -56,7 +58,9 @@ import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 @WithSystemProperty(key = IGNITE_QUIET, value = "false")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
-/** For testing of rebalance statistics. */
+/**
+ * For testing of rebalance statistics.
+ */
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Class rule. */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
@@ -157,11 +161,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_QUIET, value = "true")
     @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "false")
     public void testNotPrintStat() throws Exception {
-        cacheCfgs = defaultCacheConfigurations(10, 0);
-
-        crd = startGrids(DEFAULT_NODE_CNT);
-
-        fillCaches(100);
+        createCluster();
 
         log.registerListener(pw::write);
 
@@ -184,11 +184,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "false")
     public void testNotPrintPartitionDistribution() throws Exception {
-        cacheCfgs = defaultCacheConfigurations(10, 0);
-
-        crd = startGrids(DEFAULT_NODE_CNT);
-
-        fillCaches(100);
+        createCluster();
 
         log.registerListener(pw::write);
 
@@ -202,12 +198,13 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPrintCorrectStatistic() throws Exception {
-        checkOutputStatisticsOneJvm();
+        createCluster();
+
+        checkOutputRebalanceStatistics(DEFAULT_NODE_CNT);
     }
 
     /**
-     * The test checks the correctness of the statistics output
-     * for two cache groups.
+     * The test checks the correctness of the statistics output for two cache groups.
      *
      * @throws Exception if any error occurs.
      */
@@ -215,44 +212,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     public void testPrintCorrectStatisticTwoCacheGroups() throws Exception {
         grpName = "Test";
 
-        checkOutputStatisticsOneJvm();
-    }
+        createCluster();
 
-    /**
-     * Starting nodes and checking statistics for one jvm.
-     *
-     * @throws Exception if any error occurs.
-     * */
-    private void checkOutputStatisticsOneJvm() throws Exception {
-        cacheCfgs = defaultCacheConfigurations(10, 2);
-
-        crd = startGrids(DEFAULT_NODE_CNT);
-
-        fillCaches(100);
-
-        List<String> statPerCacheGrps = new ArrayList<>();
-        List<String> totalStats = new ArrayList<>();
-
-        log.registerListener(logStr -> {
-            if (!logStr.contains(INFORMATION_PER_CACHE_GROUP_TEXT))
-                return;
-
-            (logStr.contains(TOTAL_INFORMATION_TEXT) ? totalStats : statPerCacheGrps).add(logStr);
-        });
-
-        IgniteEx newNode = startGrid(DEFAULT_NODE_CNT);
-
-        awaitPartitionMapExchange();
-
-        assertEquals(newNode.context().cache().cacheGroups().size(), statPerCacheGrps.size());
-        assertEquals(1, totalStats.size());
-
-        Map<String, Integer> partDistribution = perCacheGroupPartitionDistribution(newNode);
-
-        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(totalStats.get(0)).entrySet().stream()
-            .collect(toMap(Map.Entry::getKey, entry -> sumNum(entry.getValue(), "p=([0-9]+)")));
-
-        partDistribution.forEach((cacheName, partCnt) -> assertEquals(partCnt, topicStats.get(cacheName)));
+        checkOutputRebalanceStatistics(DEFAULT_NODE_CNT);
     }
 
     /**
@@ -264,44 +226,51 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     public void testPrintCorrectStatisticInMultiJvm() throws Exception {
         multiJvm = true;
 
-        cacheCfgs = defaultCacheConfigurations(100, 2);
-
-        crd = startGrids(DEFAULT_NODE_CNT);
-
-        fillCaches(100);
-
-        Map<String, Integer> partDistribution = perCacheGroupPartitionDistribution(crd);
+        createCluster();
 
         stopGrid(0);
 
         awaitPartitionMapExchange();
 
-        List<String> statPerCacheGrps = new ArrayList<>();
-        List<String> totalStats = new ArrayList<>();
+        checkOutputRebalanceStatistics(0);
+    }
 
-        log.registerListener(logStr -> {
-            if (!logStr.contains(INFORMATION_PER_CACHE_GROUP_TEXT))
-                return;
+    /**
+     * Creating a cluster and populating caches.
+     *
+     * @throws Exception if any error occurs.
+     * */
+    private void createCluster() throws Exception{
+        cacheCfgs = defaultCacheConfigurations(10, 2);
 
-            (logStr.contains(TOTAL_INFORMATION_TEXT) ? totalStats : statPerCacheGrps).add(logStr);
-        });
+        crd = startGrids(DEFAULT_NODE_CNT);
 
-        IgniteEx newNode = startGrid(0);
+        fillCaches(100);
+    }
+
+    /**
+     * Starting a node with checking rebalance statistics.
+     *
+     * @param nodeId ID of the new node.
+     * @throws Exception if any error occurs.
+     */
+    private void checkOutputRebalanceStatistics(int nodeId) throws Exception {
+        LogListener logLsnr = new LogListener();
+
+        log.registerListener(logLsnr);
+
+        IgniteEx newNode = startGrid(nodeId);
 
         awaitPartitionMapExchange();
 
-        assertEquals(newNode.context().cache().cacheGroups().size(), statPerCacheGrps.size());
-        assertEquals(1, totalStats.size());
+        assertEquals(newNode.context().cache().cacheGroups().size(), logLsnr.statPerCacheGrps.size());
+        assertEquals(1, logLsnr.totalStats.size());
 
-        Map<String, Integer> newPartDistribution = perCacheGroupPartitionDistribution(newNode);
-
-        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(totalStats.get(0)).entrySet().stream()
+        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(logLsnr.totalStats.get(0)).entrySet().stream()
             .collect(toMap(Map.Entry::getKey, entry -> sumNum(entry.getValue(), "p=([0-9]+)")));
 
-        newPartDistribution.forEach((cacheName, partCnt) -> {
-            assertEquals(partCnt, topicStats.get(cacheName));
-            assertEquals(partCnt, partDistribution.get(cacheName));
-        });
+        logLsnr.cacheGrpRebParts
+            .forEach((cacheGrpName, parts) -> assertEquals(parts.size(), topicStats.get(cacheGrpName).intValue()));
     }
 
     /**
@@ -342,27 +311,6 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         }
 
         return perCacheGroupTopicStatistics;
-    }
-
-    /**
-     * Return partition distribution per cache groups use internal api.
-     *
-     * @param node Require not null.
-     * @return Partition distribution per cache group.
-     */
-    private Map<String, Integer> perCacheGroupPartitionDistribution(final IgniteEx node) {
-        assert nonNull(node);
-
-        ClusterNode localNode = node.localNode();
-
-        return node.context().cache().cacheGroups().stream()
-            .collect(toMap(
-                CacheGroupContext::cacheOrGroupName,
-                cacheGrpCtx -> cacheGrpCtx.caches().stream()
-                    .map(GridCacheContext::name)
-                    .mapToInt(cacheName -> node.affinity(cacheName).allPartitions(localNode).length)
-                    .sum()
-            ));
     }
 
     /**
@@ -428,5 +376,81 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             num += parseInt(matcher.group(1));
 
         return num;
+    }
+
+    /**
+     * Log listener for testing rebalance statistics.
+     */
+    private class LogListener implements Consumer<String> {
+        /** Started rebalance routine text. */
+        static final String STARTED_REBALANCE_ROUTINE_TEXT = "Started rebalance routine";
+
+        /** Output statistics per cache group. */
+        List<String> statPerCacheGrps = new ArrayList<>();
+
+        /** Output total statistics. */
+        List<String> totalStats = new ArrayList<>();
+
+        /** Rebalanced partitions by cache groups. */
+        Map<String, Set<Integer>> cacheGrpRebParts = new HashMap<>();
+
+        /** Pattern for extracting the name of a cache group. */
+        Pattern cacheGrpExtractor = compile(STARTED_REBALANCE_ROUTINE_TEXT + " \\[(.+?)\\,");
+
+        /** Pattern for extracting fullPartitions for a cache group. */
+        Pattern fullPartsExtractor = compile("fullPartitions=\\[(.+?)\\]");
+
+        /** {@inheritDoc} */
+        @Override public void accept(String logStr) {
+            if (logStr.contains(INFORMATION_PER_CACHE_GROUP_TEXT))
+                (logStr.contains(TOTAL_INFORMATION_TEXT) ? totalStats : statPerCacheGrps).add(logStr);
+
+            if (logStr.contains(STARTED_REBALANCE_ROUTINE_TEXT)) {
+                cacheGrpRebParts.computeIfAbsent(extractValue(cacheGrpExtractor, logStr), s -> new HashSet<>())
+                    .addAll(parseParts(extractValue(fullPartsExtractor, logStr)));
+            }
+        }
+
+        /**
+         * Parsing partition.
+         *
+         * @param s Partition string.
+         * @return Parsed partition.
+         */
+        private Set<Integer> parseParts(String s) {
+            assert nonNull(s);
+
+            Set<Integer> parts = new HashSet<>();
+
+            for (String num : s.split(", ")) {
+                if (num.contains("-")) {
+                    String[] range = num.split("-");
+
+                    rangeClosed(parseInt(range[0]), parseInt(range[1])).forEach(parts::add);
+                }
+                else
+                    parts.add(parseInt(num));
+            }
+
+            return parts;
+        }
+
+        /**
+         * Extracting a value from a string by pattern.
+         *
+         * @param extractor Pattern for extracting value.
+         * @param s String to extract the value.
+         * @return Extracted value.
+         */
+        private String extractValue(Pattern extractor, String s) {
+            assert nonNull(extractor);
+            assert nonNull(s);
+
+            Matcher matcher = extractor.matcher(s);
+
+            assert matcher.find();
+
+            return matcher.group(1);
+        }
     }
 }
