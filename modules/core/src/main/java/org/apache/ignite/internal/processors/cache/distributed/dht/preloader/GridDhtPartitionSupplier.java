@@ -31,6 +31,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -259,8 +260,10 @@ class GridDhtPartitionSupplier {
 
             assert !(sctx != null && !demandMsg.partitions().isEmpty());
 
-            long maxBatchesCnt = /* Each thread should gain prefetched batches. */
-                grp.preloader().batchesPrefetchCount() * grp.shared().gridConfig().getRebalanceThreadPoolSize();
+            // Saturate remote thread pool for first demand request.
+            int rmtThreadPoolSize = demanderNode.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE);
+
+            long maxBatchesCnt = grp.preloader().batchesPrefetchCount() * rmtThreadPoolSize;
 
             if (sctx == null) {
                 if (log.isDebugEnabled())
