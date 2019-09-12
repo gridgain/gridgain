@@ -68,6 +68,7 @@ import org.h2.command.dml.SelectUnion;
 import org.h2.command.dml.Update;
 import org.h2.engine.Constants;
 import org.h2.engine.FunctionAlias;
+import org.h2.engine.UserAggregate;
 import org.h2.expression.Alias;
 import org.h2.expression.BinaryOperation;
 import org.h2.expression.Expression;
@@ -80,6 +81,7 @@ import org.h2.expression.ValueExpression;
 import org.h2.expression.aggregate.AbstractAggregate;
 import org.h2.expression.aggregate.Aggregate;
 import org.h2.expression.aggregate.AggregateType;
+import org.h2.expression.aggregate.JavaAggregate;
 import org.h2.expression.condition.CompareLike;
 import org.h2.expression.condition.Comparison;
 import org.h2.expression.condition.ConditionAndOr;
@@ -412,6 +414,12 @@ public class GridSqlQueryParser {
 
     /** */
     private static final Getter<Column, Expression> COLUMN_CHECK_CONSTRAINT = getter(Column.class, "checkConstraint");
+
+    /** */
+    private static final Getter<JavaAggregate, UserAggregate> JAVA_AGGREGATE_USER_AGGREGATE = getter(JavaAggregate.class, "userAggregate");
+
+    /** */
+    private static final Getter<AbstractAggregate, Expression[]> JAVA_AGGREGATE_USER_ARGS = getter(AbstractAggregate.class, "args");
 
     /** Class for private class: 'org.h2.command.CommandList'. */
     private static final Class<? extends Command> CLS_COMMAND_LIST;
@@ -2324,6 +2332,20 @@ public class GridSqlQueryParser {
 
         if (expression instanceof Parameter)
             return new GridSqlParameter(((Parameter)expression).getIndex());
+
+        if(expression instanceof JavaAggregate){
+            JavaAggregate agg = (JavaAggregate) expression;
+
+            UserAggregate userAgg = JAVA_AGGREGATE_USER_AGGREGATE.get(agg);
+            Expression[] args = JAVA_AGGREGATE_USER_ARGS.get(agg);
+
+            GridSqlFunction fun = new GridSqlFunction(null, userAgg.getName());
+
+            for (Expression arg : args)
+                fun.addChild(parseExpression(arg,calcTypes));
+
+            return fun;
+        }
 
         if (expression instanceof Aggregate) {
             AggregateType type = TYPE.get((Aggregate)expression);
