@@ -52,7 +52,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
         IgniteEx ign = startGrid(0);
 
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAtomicityMode(atomicity())
             .setIndexedTypes(Integer.class, Integer.class));
 
         Thread t = new Thread(() -> {
@@ -76,6 +76,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
         IgniteEx ign = startGrid(0);
 
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(atomicity())
             .setIndexedTypes(Integer.class, Integer.class));
 
         final Map<Integer, Integer> batch = new HashMap<>();
@@ -102,6 +103,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
         IgniteEx ign = startGrid(0);
 
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(atomicity())
             .setIndexedTypes(Integer.class, Integer.class));
 
         cache.put(1, 1);
@@ -127,6 +129,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
         IgniteEx ign = startGrid(0);
 
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(atomicity())
             .setIndexedTypes(Integer.class, Integer.class));
 
         final Map<Integer, Integer> batch = new HashMap<>();
