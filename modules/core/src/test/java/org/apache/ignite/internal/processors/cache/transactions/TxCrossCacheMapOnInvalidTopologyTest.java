@@ -332,7 +332,7 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
             assertFalse(GridTestUtils.waitForCondition(() ->
                 grid(2).context().cache().context().exchange().affinityReadyFuture(idealVer).isDone(), 1_000));
 
-                // Map on unstable topology (PME is in progress on other node).
+            // Map on unstable topology (PME is in progress on other node).
             TestRecordingCommunicationSpi.spi(client).stopBlock();
 
             // Capture local transaction.
