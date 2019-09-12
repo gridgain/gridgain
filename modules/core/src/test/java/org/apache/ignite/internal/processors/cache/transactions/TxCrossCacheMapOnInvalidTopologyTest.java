@@ -82,6 +82,9 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setFailureDetectionTimeout(1000000000L);
+        cfg.setClientFailureDetectionTimeout(1000000000L);
+
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setClientMode("client".equals(igniteInstanceName));
         cfg.setCacheConfiguration(cacheConfiguration(CACHE1), cacheConfiguration(CACHE2).setRebalanceOrder(10));
@@ -323,33 +326,13 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
             crdSpi.stopBlock(true, null, false, true); // Continue rebalance and trigger ideal topology switch.
 
             // Wait until ideal topology is ready on crd.
-            TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+            crd.context().cache().context().exchange().affinityReadyFuture(idealVer).get(10_000);
 
-            // Check for expected topology versions.
-            for (Ignite ignite : G.allGrids()) {
-                IgniteEx ex = (IgniteEx)ignite;
+            // Other node must wait for full message.
+            assertFalse(GridTestUtils.waitForCondition(() ->
+                grid(2).context().cache().context().exchange().affinityReadyFuture(idealVer).isDone(), 1_000));
 
-                GridDhtTopologyFuture fut = ex.cachex(DEFAULT_CACHE_NAME).context().topology().topologyVersionFuture();
-
-                if (ex.localNode().order() == 1) {
-                    assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                        @Override public boolean apply() {
-                            return fut.isDone();
-                        }
-                    }, 5_000));
-                    assertTrue(fut.topologyVersion().equals(idealVer));
-                }
-                else {
-                    assertFalse(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                        @Override public boolean apply() {
-                            return fut.isDone();
-                        }
-                    }, 1_000));
-
-                    assertTrue(fut.initialVersion().equals(idealVer));
-                }
-            }
-
+                // Map on unstable topology (PME is in progress on other node).
             TestRecordingCommunicationSpi.spi(client).stopBlock();
 
             // Capture local transaction.
