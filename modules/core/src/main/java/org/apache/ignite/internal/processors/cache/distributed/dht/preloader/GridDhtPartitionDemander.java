@@ -1615,9 +1615,14 @@ public class GridDhtPartitionDemander {
 
         for (GridDhtPartitionDemander demander : demanders) {
             rebFutrs.computeIfAbsent(demander.grp, cacheGrpCtx -> new ArrayList<>());
-            rebFutrs.merge(demander.grp, demander.lastStatFutures, (rebFutrs1, rebFutrs2) -> {
-                rebFutrs1.addAll(rebFutrs2);
-                return rebFutrs1;
+
+            rebFutrs.merge(
+                demander.grp,
+                demander.lastStatFutures,
+                (rebFutrs1, rebFutrs2) -> {
+                    rebFutrs1.addAll(rebFutrs2);
+                    
+                    return rebFutrs1;
             });
         }
 
