@@ -185,7 +185,7 @@ public class CacheGroupContext {
     /** */
     private volatile boolean hasAtomicCaches;
 
-    /** Cache group metrics. */
+    /** Store cache group metrics. */
     private final CacheGroupMetricsImpl metrics;
 
     /**

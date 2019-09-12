@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.cache.CacheGroupMetrics;
 
 /**
  * This interface defines JMX view on {@link CacheGroupContext}.
@@ -29,7 +30,7 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
  */
 @Deprecated
 @MXBeanDescription("MBean that provides access to cache group descriptor.")
-public interface CacheGroupMetricsMXBean {
+public interface CacheGroupMetricsMXBean extends CacheGroupMetrics{
     /**
      * Gets cache group id.
      *
@@ -201,5 +202,5 @@ public interface CacheGroupMetricsMXBean {
      * A value of 0 indicates that the index is built.
      */
     @MXBeanDescription("Count of partitions need processed for finished indexes create or rebuilding.")
-    public long getIndexBuildCountPartitionsLeft();
+    @Override public long getIndexBuildCountPartitionsLeft();
 }

@@ -45,7 +45,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 /**
  * Cache group metrics.
  */
-public class CacheGroupMetricsImpl {
+public class CacheGroupMetricsImpl implements CacheGroupMetrics{
     /** Cache group metrics prefix. */
     public static final String CACHE_GROUP_METRICS_PREFIX = "cacheGroups";
 
@@ -149,8 +149,8 @@ public class CacheGroupMetricsImpl {
             groupPageAllocationTracker = new LongAdderMetric("NO_OP", null);
     }
 
-    /** */
-    public long getIndexBuildCountPartitionsLeft() {
+    /** {@inheritDoc} */
+    @Override public long getIndexBuildCountPartitionsLeft() {
         return idxBuildCntPartitionsLeft.value();
     }
 
