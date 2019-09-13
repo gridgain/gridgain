@@ -32,7 +32,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 
 /** */
 public class DrCacheCommand extends
-    DrAbstractSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
+    DrAbstractRemoteSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
 {
     /** Config parameter. */
     public static final String CONFIG_PARAM = "--config";
@@ -280,7 +280,7 @@ public class DrCacheCommand extends
 
     /** */
     @SuppressWarnings("PublicInnerClass")
-    public static class DrCacheArguments implements DrAbstractSubCommand.Arguments<VisorDrCacheTaskArgs> {
+    public static class DrCacheArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrCacheTaskArgs> {
         /** Regex. */
         private final String regex;
         /** Config. */

@@ -26,7 +26,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 
 /** */
 public class DrPauseCommand extends
-    DrAbstractSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
+    DrAbstractRemoteSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
 {
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {

@@ -26,7 +26,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 
 /** */
 public class DrStateCommand extends
-    DrAbstractSubCommand<VisorDrStateTaskArgs, VisorDrStateTaskResult, DrStateCommand.DrStateArguments>
+    DrAbstractRemoteSubCommand<VisorDrStateTaskArgs, VisorDrStateTaskResult, DrStateCommand.DrStateArguments>
 {
     /** Verbose parameter. */
     public static final String VERBOSE_PARAM = "--verbose";
@@ -72,7 +72,7 @@ public class DrStateCommand extends
 
     /** */
     @SuppressWarnings("PublicInnerClass")
-    public static class DrStateArguments implements DrAbstractSubCommand.Arguments<VisorDrStateTaskArgs> {
+    public static class DrStateArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrStateTaskArgs> {
         /** */
         public final boolean verbose;
 

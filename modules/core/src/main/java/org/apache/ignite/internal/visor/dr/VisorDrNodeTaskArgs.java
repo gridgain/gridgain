@@ -31,8 +31,6 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
     private boolean metrics;
     /** Clear store. */
     private boolean clearStore;
-    /** Reset state. */
-    private boolean resetState;
 
     /**
      * Default constructor.
@@ -42,11 +40,10 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
     }
 
     /** */
-    public VisorDrNodeTaskArgs(boolean config, boolean metrics, boolean clearStore, boolean resetState) {
+    public VisorDrNodeTaskArgs(boolean config, boolean metrics, boolean clearStore) {
         this.config = config;
         this.metrics = metrics;
         this.clearStore = clearStore;
-        this.resetState = resetState;
     }
 
     /** */
@@ -64,17 +61,12 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
         return clearStore;
     }
 
-    /** */
-    public boolean resetState() {
-        return resetState;
-    }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(config);
         out.writeBoolean(metrics);
         out.writeBoolean(clearStore);
-        out.writeBoolean(resetState);
     }
 
     /** {@inheritDoc} */
@@ -83,6 +75,5 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
         config = in.readBoolean();
         metrics = in.readBoolean();
         clearStore = in.readBoolean();
-        resetState = in.readBoolean();
     }
 }

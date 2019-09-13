@@ -19,6 +19,7 @@ package org.apache.ignite.internal.commandline.dr.subcommands;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
+import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 
 /** */
@@ -30,6 +31,8 @@ public class DrHelpCommand implements Command<Void> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
+        new DrCommand().printUsage(log);
+
         return null;
     }
 

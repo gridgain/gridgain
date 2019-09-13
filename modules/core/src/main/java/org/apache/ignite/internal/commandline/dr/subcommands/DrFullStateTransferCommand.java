@@ -26,7 +26,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 
 /** */
 public class DrFullStateTransferCommand extends
-    DrAbstractSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
+    DrAbstractRemoteSubCommand<VisorDrCacheTaskArgs, VisorDrCacheTaskResult, DrCacheCommand.DrCacheArguments>
 {
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
@@ -64,8 +64,14 @@ public class DrFullStateTransferCommand extends
             return;
         }
 
-        for (String msg : res.getResultMessages())
-            log.info(msg);
+        if (res.getCacheNames().isEmpty())
+            log.info("No suitable caches found for transfer.");
+        else if (res.getResultMessages().isEmpty())
+            log.info("Full state transfer command completed successfully for caches " + res.getCacheNames());
+        else {
+            for (String msg : res.getResultMessages())
+                log.info(msg);
+        }
     }
 
     /** {@inheritDoc} */

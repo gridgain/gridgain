@@ -36,7 +36,7 @@ import static org.apache.ignite.internal.visor.dr.VisorDrTopologyTaskArgs.SENDER
 
 /** */
 public class DrTopologyCommand extends
-    DrAbstractSubCommand<VisorDrTopologyTaskArgs, VisorDrTopologyTaskResult, DrTopologyCommand.DrTopologyArguments>
+    DrAbstractRemoteSubCommand<VisorDrTopologyTaskArgs, VisorDrTopologyTaskResult, DrTopologyCommand.DrTopologyArguments>
 {
     /** Sender hubs parameter. */
     public static final String SENDER_HUBS_PARAM = "--sender-hubs";
@@ -174,7 +174,7 @@ public class DrTopologyCommand extends
 
     /** */
     @SuppressWarnings("PublicInnerClass")
-    public static class DrTopologyArguments implements DrAbstractSubCommand.Arguments<VisorDrTopologyTaskArgs> {
+    public static class DrTopologyArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrTopologyTaskArgs> {
         /** */
         private final boolean senderHubs;
         /** */

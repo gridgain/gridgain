@@ -57,7 +57,7 @@ public class DrCommand implements Command<Object> {
             optional(DrStateCommand.VERBOSE_PARAM)
         );
 
-        usage(log, "Print topology of the cluster with the datacenter replication related details:",
+        usage(log, "Print topology of the cluster with the data center replication related details:",
             DATA_CENTER_REPLICATION,
             TOPOLOGY.toString(),
             optional(DrTopologyCommand.SENDER_HUBS_PARAM),
@@ -73,7 +73,6 @@ public class DrCommand implements Command<Object> {
             optional(DrNodeCommand.CONFIG_PARAM),
             optional(DrNodeCommand.METRICS_PARAM),
             optional(DrNodeCommand.CLEAR_STORE_PARAM),
-            optional(DrNodeCommand.RESET_STATE_PARAM),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
@@ -89,7 +88,7 @@ public class DrCommand implements Command<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Execute full state transfer on all caches in cluster is data center replication is configured:",
+        usage(log, "Execute full state transfer on all caches in cluster if data center replication is configured:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
             optional(CMD_AUTO_CONFIRMATION)

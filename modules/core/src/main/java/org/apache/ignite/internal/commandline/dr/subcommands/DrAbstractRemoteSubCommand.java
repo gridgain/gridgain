@@ -34,10 +34,10 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
 /** */
-public abstract class DrAbstractSubCommand<
+public abstract class DrAbstractRemoteSubCommand<
     VisorArgsDto extends IgniteDataTransferObject,
     VisorResultDto extends IgniteDataTransferObject,
-    DrArgs extends DrAbstractSubCommand.Arguments<VisorArgsDto>
+    DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>
 > implements Command<DrArgs> {
     /** */
     private DrArgs args;

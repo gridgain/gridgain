@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 
 /** */
 public class DrNodeCommand
-    extends DrAbstractSubCommand<VisorDrNodeTaskArgs, VisorDrNodeTaskResult, DrNodeCommand.DrNodeArguments>
+    extends DrAbstractRemoteSubCommand<VisorDrNodeTaskArgs, VisorDrNodeTaskResult, DrNodeCommand.DrNodeArguments>
 {
     /** Config parameter. */
     public static final String CONFIG_PARAM = "--config";
@@ -42,8 +42,6 @@ public class DrNodeCommand
     public static final String METRICS_PARAM = "--metrics";
     /** Clear store parameter. */
     public static final String CLEAR_STORE_PARAM = "--clear-store";
-    /** Reset state parameter. */
-    public static final String RESET_STATE_PARAM = "--reset-state";
     /** Node Id. */
     private UUID nodeId;
 
@@ -66,7 +64,6 @@ public class DrNodeCommand
         boolean config = false;
         boolean metrics = false;
         boolean clearStore = false;
-        boolean resetState = false;
 
         String nextArg;
 
@@ -88,11 +85,6 @@ public class DrNodeCommand
 
                     break;
 
-                case RESET_STATE_PARAM:
-                    resetState = true;
-
-                    break;
-
                 default:
                     //noinspection BreakStatementWithLabel
                     break args_loop;
@@ -102,12 +94,12 @@ public class DrNodeCommand
             argIter.nextArg(null);
         }
 
-        return new DrNodeArguments(config, metrics, clearStore, resetState);
+        return new DrNodeArguments(config, metrics, clearStore);
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        if (arg().resetState || arg().clearStore)
+        if (arg().clearStore)
             return "Warning: this command will clear DR store.";
 
         return null;
@@ -190,32 +182,28 @@ public class DrNodeCommand
 
     /** */
     @SuppressWarnings("PublicInnerClass")
-    public static class DrNodeArguments implements DrAbstractSubCommand.Arguments<VisorDrNodeTaskArgs> {
+    public static class DrNodeArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrNodeTaskArgs> {
         /** Config. */
         private final boolean config;
         /** Metrics. */
         private final boolean metrics;
         /** Clear store. */
         private final boolean clearStore;
-        /** Reset state. */
-        private final boolean resetState;
 
         /**
          * @param config Config.
          * @param metrics Metrics.
          * @param clearStore Clear store.
-         * @param resetState Reset state.
          */
-        public DrNodeArguments(boolean config, boolean metrics, boolean clearStore, boolean resetState) {
+        public DrNodeArguments(boolean config, boolean metrics, boolean clearStore) {
             this.config = config;
             this.metrics = metrics;
             this.clearStore = clearStore;
-            this.resetState = resetState;
         }
 
         /** {@inheritDoc} */
         @Override public VisorDrNodeTaskArgs toVisorArgs() {
-            return new VisorDrNodeTaskArgs(config, metrics, clearStore, resetState);
+            return new VisorDrNodeTaskArgs(config, metrics, clearStore);
         }
     }
 }
