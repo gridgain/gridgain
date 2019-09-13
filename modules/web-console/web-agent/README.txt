@@ -32,6 +32,7 @@ Configuration file:
     server-trust-store
     server-trust-store-password
     passwords-key-store
+    passwords-key-store-password
     cipher-suites
 
   Example configuration file:
