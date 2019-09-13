@@ -16,6 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -31,17 +42,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.nonNull;
@@ -55,12 +55,12 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PA
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
-@WithSystemProperty(key = IGNITE_QUIET, value = "false")
-@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
-@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
 /**
  * For testing of rebalance statistics.
  */
+@WithSystemProperty(key = IGNITE_QUIET, value = "false")
+@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
+@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Class rule. */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
@@ -346,7 +346,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      *
      * @param idx New node index.
      * @param notContainsStr String for assertNotContains in log output.
-     * @throws Exception
+     * @throws Exception if any error occurs.
      */
     private void assertNotContainsAfterCreateNewNode(final int idx, final String notContainsStr) throws Exception {
         baos.reset();
