@@ -848,6 +848,13 @@ public class GridCacheUtils {
     }
 
     /**
+     * Alias for {@link #txString(IgniteInternalTx)}.
+     */
+    public static String txDump(@Nullable IgniteInternalTx tx) {
+        return txString(tx);
+    }
+
+    /**
      * @param tx Transaction.
      * @return String view of all safe-to-print transaction properties.
      */
@@ -857,15 +864,18 @@ public class GridCacheUtils {
 
         return tx.getClass().getSimpleName() + "[xid=" + tx.xid() +
             ", xidVersion=" + tx.xidVersion() +
+            ", nearXidVersion=" + tx.nearXidVersion() +
             ", concurrency=" + tx.concurrency() +
             ", isolation=" + tx.isolation() +
             ", state=" + tx.state() +
+            ", topVer=" + tx.topologyVersionSnapshot() +
             ", invalidate=" + tx.isInvalidate() +
             ", rollbackOnly=" + tx.isRollbackOnly() +
             ", nodeId=" + tx.nodeId() +
             ", timeout=" + tx.timeout() +
+            ", startTime=" + tx.startTime() +
             ", duration=" + (U.currentTimeMillis() - tx.startTime()) +
-            (tx instanceof GridNearTxLocal ? ", label=" + ((GridNearTxLocal)tx).label() : "") +
+            (tx instanceof GridNearTxLocal ? ", label=" + tx.label() : "") +
             ']';
     }
 

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.jdbc;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -43,7 +44,7 @@ import static java.sql.Types.TIME;
 import static java.sql.Types.TIMESTAMP;
 import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
-
+import static java.sql.Types.DECIMAL;
 /**
  * Utility methods for JDBC driver.
  *
@@ -189,8 +190,10 @@ class JdbcUtils {
             return TIME;
         else if (Timestamp.class.getName().equals(cls))
             return TIMESTAMP;
-        else if (Date.class.getName().equals(cls))
+        else if (Date.class.getName().equals(cls) || java.sql.Date.class.getName().equals(cls))
             return DATE;
+        else if (BigDecimal.class.getName().equals(cls))
+            return DECIMAL;
         else
             return OTHER;
     }
@@ -225,8 +228,10 @@ class JdbcUtils {
             return "TIME";
         else if (Timestamp.class.getName().equals(cls))
             return "TIMESTAMP";
-        else if (Date.class.getName().equals(cls))
+        else if (Date.class.getName().equals(cls) || java.sql.Date.class.getName().equals(cls))
             return "DATE";
+        else if (BigDecimal.class.getName().equals(cls))
+            return "DECIMAL";
         else
             return "OTHER";
     }

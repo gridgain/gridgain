@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.result.LazyResult;
@@ -57,6 +58,7 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
                 .setKeyFieldName("id")
                 .setValueFieldName("val")
             ))
+            .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 10)));
 
         for (long i = 0; i < KEY_CNT; ++i)
@@ -93,13 +95,118 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Test use valid query context for local lazy queries.
+     * @throws Exception On error.
+     */
+    @Test
+    public void testDuplicates() throws Exception {
+        IgniteEx g0 = grid();
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        int r0 = sql(g0, "SELECT * FROM test").getAll().size();
+        int r1 = sql(g1, "SELECT * FROM test").getAll().size();
+
+        // Check that primary partitions are scanned on each node.
+        assertTrue(r0 < KEY_CNT);
+        assertTrue(r1 < KEY_CNT);
+        assertEquals(KEY_CNT, r0 + r1);
+    }
+
+    /** */
+    @Test
+    public void testParallelIteratorWithReducePhase() throws Exception {
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        Iterator<List<?>> cursorIter0 = sql(g1, "SELECT * FROM test limit 3").iterator();
+        Iterator<List<?>> cursorIter1 = distributedSql(g1, "SELECT * FROM test limit 3").iterator();
+
+        int r0 = 0;
+        int r1 = 0;
+
+        for (int i =0; i<KEY_CNT; i++) {
+            if (cursorIter0.hasNext()) {
+                r0++;
+
+                cursorIter0.next();
+            }
+
+            if (cursorIter1.hasNext()) {
+                r1++;
+
+                cursorIter1.next();
+            }
+        }
+
+        assertEquals(3, r0);
+        assertEquals(3, r1);
+    }
+
+    /** */
+    @Test
+    public void testParallelIterator() throws Exception {
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        Iterator<List<?>> cursorIter0 = sql(g1, "SELECT * FROM test").iterator();
+        Iterator<List<?>> cursorIter1 = distributedSql(g1, "SELECT * FROM test").iterator();
+
+        int r0 = 0;
+        int r1 = 0;
+
+        for (int i =0; i<KEY_CNT; i++) {
+            if (cursorIter0.hasNext()) {
+                r0++;
+
+                cursorIter0.next();
+            }
+
+            if (cursorIter1.hasNext()) {
+                r1++;
+
+                cursorIter1.next();
+            }
+        }
+
+        assertTrue(r0 < KEY_CNT);
+        assertEquals(KEY_CNT, r1);
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
-        return grid().context().query().querySqlFields(new SqlFieldsQuery(sql)
+        return sql(grid(), sql, args);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLocal(true)
+            .setLazy(true)
+            .setSchema("TEST")
+            .setArgs(args), false);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> distributedSql(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
             .setSchema("TEST")
             .setArgs(args), false);

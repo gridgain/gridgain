@@ -313,9 +313,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Decompressor. */
     private FileDecompressor decompressor;
 
-    /** */
-    private final ThreadLocal<WALPointer> lastWALPtr = new ThreadLocal<>();
-
     /** Current log segment handle. */
     private volatile FileWriteHandle currHnd;
 
@@ -477,7 +474,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             segmentRouter = new SegmentRouter(walWorkDir, walArchiveDir, segmentAware, dsCfg);
 
             fileHandleManager = fileHandleManagerFactory.build(
-                cctx, metrics, mmap, lastWALPtr::get, serializer, this::currentHandle
+                cctx, metrics, mmap, serializer, this::currentHandle
             );
 
             lockedSegmentFileInputFactory = new LockedSegmentFileInputFactory(
@@ -828,8 +825,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (ptr != null) {
                 metrics.onWalRecordLogged();
 
-                lastWALPtr.set(ptr);
-
                 if (walAutoArchiveAfterInactivity > 0)
                     lastRecordLoggedMs.set(U.currentTimeMillis());
 
@@ -864,8 +859,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public void flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException {
-        fileHandleManager.flush(ptr, explicitFsync);
+    @Override public WALPointer flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException {
+        return fileHandleManager.flush(ptr, explicitFsync);
     }
 
     /** {@inheritDoc} */
@@ -899,7 +894,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (hnd != null)
             end = hnd.position();
 
-        return new RecordsIterator(
+        RecordsIterator iter = new RecordsIterator(
             cctx,
             walArchiveDir,
             walWorkDir,
@@ -914,6 +909,17 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             segmentAware,
             segmentRouter,
             lockedSegmentFileInputFactory);
+
+        try {
+            iter.init(); // Make sure iterator is closed on any error.
+        }
+        catch (Throwable t) {
+            iter.close();
+
+            throw t;
+        }
+
+        return iter;
     }
 
     /** {@inheritDoc} */
@@ -2675,10 +2681,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             this.decompressor = decompressor;
             this.segmentRouter = segmentRouter;
             this.segmentAware = segmentAware;
-
-            init();
-
-            advance();
         }
 
         /** {@inheritDoc} */
@@ -2762,6 +2764,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             if (log.isDebugEnabled())
                 log.debug("Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" + curWalSegmIdx + ']');
+
+            advance();
         }
 
         /** {@inheritDoc} */

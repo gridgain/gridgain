@@ -78,7 +78,7 @@
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
         <javassist.version>3.20.0-GA</javassist.version>
         <javax.cache.bundle.version>1.0.0_1</javax.cache.bundle.version>
-        <javax.cache.tck.version>1.0.1</javax.cache.tck.version>
+        <javax.cache.tck.version>1.1.0</javax.cache.tck.version>
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
@@ -485,11 +485,6 @@
                                 <packages>org.apache.ignite.console*</packages>
                             </group>
                         </groups>
-                        <header>
-                            <![CDATA[
-                                    Ignite - In-Memory Database and Caching Platform
-                                ]]>
-                        </header>
                         <bottom>
                             <![CDATA[
                                     <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
@@ -841,6 +836,8 @@
                                         <exclude>src/main/java/org/jsr166/*.java</exclude>
                                         <exclude>src/main/java/org/mindrot/*.java</exclude>
                                         <exclude>src/test/java/org/apache/ignite/p2p/p2p.properties</exclude><!--test depends on file content-->
+                                        <exclude>src/test/resources/org.apache.ignite.util/control.sh_cache_help.output</exclude><!--test depends on file content-->
+                                        <exclude>src/test/resources/org.apache.ignite.util/control.sh_help.output</exclude><!--test depends on file content-->
                                         <exclude>src/test/resources/log/ignite.log.tst</exclude><!--test resource-->
                                         <exclude>src/test/java/org/apache/ignite/spi/deployment/uri/META-INF/ignite.incorrefs</exclude><!--test resource-->
                                         <exclude>src/test/java/org/apache/ignite/spi/deployment/uri/META-INF/ignite.empty</exclude><!--should be empty-->

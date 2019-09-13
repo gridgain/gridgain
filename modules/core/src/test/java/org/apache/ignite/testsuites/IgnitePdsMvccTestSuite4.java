@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.Set;
 import junit.framework.TestSuite;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTaskCancelingTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPartitionPreloadTest;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManagerTest;
@@ -50,6 +51,9 @@ public class IgnitePdsMvccTestSuite4  extends TestSuite {
         // Skip irrelevant test
         ignoredTests.add(FileDownloaderTest.class);
         ignoredTests.add(IgnitePdsTaskCancelingTest.class);
+
+        // TODO https://issues.apache.org/jira/browse/IGNITE-11937
+        ignoredTests.add(IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes.class);
 
         // Skip page lock tracker tests for MVCC suite.
         ignoredTests.add(PageLockTrackerManagerTest.class);

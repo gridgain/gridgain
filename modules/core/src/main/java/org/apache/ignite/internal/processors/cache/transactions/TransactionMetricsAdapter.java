@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,11 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -38,6 +39,9 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.transactions.TransactionMetrics;
 import org.apache.ignite.transactions.TransactionState;
+
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TIME_BUCKETS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJson;
 
 /**
  * Tx metrics adapter.
@@ -60,6 +64,18 @@ public class TransactionMetricsAdapter implements TransactionMetrics, Externaliz
 
     /** Last rollback time. */
     private volatile long rollbackTime;
+
+    /** Metric for total system time on node. */
+    private final LongAdder totalNodeSystemTime = new LongAdder();
+
+    /** Metric for total user time on node. */
+    private final LongAdder totalNodeUserTime = new LongAdder();
+
+    /** Metric for system time histogram on node. */
+    private final HistogramMetric nodeSystemTimeHistogram = new HistogramMetric(METRIC_TIME_BUCKETS);
+
+    /** Metric for user time histogram on node. */
+    private final HistogramMetric nodeUserTimeHistogram = new HistogramMetric(METRIC_TIME_BUCKETS);
 
     /**
      * Create TransactionMetricsAdapter.
@@ -286,6 +302,48 @@ public class TransactionMetricsAdapter implements TransactionMetrics, Externaliz
         GridCacheMvccManager mvccManager = gridKernalCtx.cache().context().mvcc();
 
         return mvccManager.lockedKeys().size() + mvccManager.nearLockedKeys().size();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getTotalNodeSystemTime() {
+        return totalNodeSystemTime.longValue();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getTotalNodeUserTime() {
+        return totalNodeUserTime.longValue();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getNodeSystemTimeHistogram() {
+        return toJson(nodeSystemTimeHistogram);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getNodeUserTimeHistogram() {
+        return toJson(nodeUserTimeHistogram);
+    }
+
+    /**
+     * Saves transaction system time of single transaction. Transaction is not needed as data in metrics is aggregated.
+     *
+     * @param time System time value in millis.
+     */
+    public void writeTxSystemTime(long time) {
+        totalNodeSystemTime.add(time);
+
+        nodeSystemTimeHistogram.value(time);
+    }
+
+    /**
+     * Saves transaction user time of single transaction. Transaction is not needed as data in metrics is aggregated.
+     *
+     * @param time User time value in millis.
+     */
+    public void writeTxUserTime(long time) {
+        totalNodeUserTime.add(time);
+
+        nodeUserTimeHistogram.value(time);
     }
 
     /** {@inheritDoc} */

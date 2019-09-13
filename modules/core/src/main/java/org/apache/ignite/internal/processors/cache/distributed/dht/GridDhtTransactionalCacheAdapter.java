@@ -530,9 +530,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             e,
             ctx.deploymentEnabled());
 
-        res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-        res.setReqSendTimestamp(req.getSendTimestamp());
-
         try {
             ctx.io().send(nodeId, res, ctx.ioPolicy());
         }
@@ -1108,7 +1105,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                     if (tx == null) {
                         tx = new GridDhtTxLocal(
                             ctx.shared(),
-                            req.topologyVersion(),
+                            topology().readyTopologyVersion(),
                             nearNode.id(),
                             req.version(),
                             req.futureId(),
@@ -1357,7 +1354,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             0,
             null,
             topVer,
-            ctx.deploymentEnabled());
+            ctx.deploymentEnabled(),
+            false);
 
         res.setReqReceivedTimestamp(req.getReceiveTimestamp());
         res.setReqSendTimestamp(req.getSendTimestamp());
@@ -1397,6 +1395,12 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         assert tx == null || tx.xidVersion().equals(mappedVer);
 
         try {
+            // All subsequent lock requests must use actual topology version to avoid mapping on invalid primaries.
+            AffinityTopologyVersion clienRemapVer = req.firstClientRequest() &&
+                tx != null &&
+                topology().readyTopologyVersion().after(req.topologyVersion()) ?
+                topology().readyTopologyVersion() : null;
+
             // Send reply back to originating near node.
             GridNearLockResponse res = new GridNearLockResponse(ctx.cacheId(),
                 req.version(),
@@ -1405,8 +1409,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 tx != null && tx.onePhaseCommit(),
                 entries.size(),
                 err,
-                null,
-                ctx.deploymentEnabled());
+                clienRemapVer,
+                ctx.deploymentEnabled(),
+                clienRemapVer != null);
 
             res.setReqReceivedTimestamp(req.getReceiveTimestamp());
             res.setReqSendTimestamp(req.getSendTimestamp());
@@ -1520,7 +1525,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 entries.size(),
                 e,
                 null,
-                ctx.deploymentEnabled());
+                ctx.deploymentEnabled(),
+                false);
 
             res.setReqReceivedTimestamp(req.getReceiveTimestamp());
             res.setReqSendTimestamp(req.getSendTimestamp());

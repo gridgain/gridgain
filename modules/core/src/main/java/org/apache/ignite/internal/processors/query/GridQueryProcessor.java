@@ -1439,9 +1439,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                 GridCacheContext cctx = cache.context();
 
-                SchemaIndexCacheFilter filter = new TableCacheFilter(cctx, op0.tableName());
+                if (cctx.group().metrics0() != null)
+                    cctx.group().metrics0().setIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
-                SchemaIndexCacheVisitor visitor = new SchemaIndexCacheVisitorImpl(cctx, filter, cancelTok, op0.parallel());
+                SchemaIndexCacheVisitor visitor = new SchemaIndexCacheVisitorImpl(cctx, cancelTok, op0.parallel());
 
                 idx.dynamicIndexCreate(op0.schemaName(), op0.tableName(), idxDesc, op0.ifNotExists(), visitor);
             }
@@ -1543,7 +1544,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             ccfg.setBackups(backups);
 
         ccfg.setEncryptionEnabled(encrypted);
-        ccfg.setSqlSchema(schemaName);
+        ccfg.setSqlSchema('"' + schemaName + '"');
         ccfg.setSqlEscapeAll(true);
         ccfg.setQueryEntities(Collections.singleton(entity));
 
@@ -3119,45 +3120,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             assert this.mgr == null;
 
             this.mgr = mgr;
-        }
-    }
-
-    /** */
-    private static class TableCacheFilter implements SchemaIndexCacheFilter {
-        /** */
-        @GridToStringExclude
-        private final GridCacheContext cctx;
-
-        /** */
-        @GridToStringExclude
-        private final GridQueryProcessor query;
-
-        /** */
-        private final String cacheName;
-
-        /** */
-        private final String tableName;
-
-        /**
-         * @param cctx Cache context.
-         * @param tableName Target table name.
-         */
-        TableCacheFilter(GridCacheContext cctx, String tableName) {
-            this.cctx = cctx;
-            this.tableName = tableName;
-
-            cacheName = cctx.name();
-            query = cctx.kernalContext().query();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(CacheDataRow row) throws IgniteCheckedException {
-            return query.belongsToTable(cctx, cacheName, tableName, row.key(), row.value());
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(TableCacheFilter.class, this);
         }
     }
 

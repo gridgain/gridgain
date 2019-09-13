@@ -118,7 +118,7 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
      * @param retVal Need return value
      * @param waitRemoteTxs Wait remote transactions flag
      * @param mvccSnapshot Mvcc snapshot.
-     * @param updCntrs Update counters for mvcc Tx.
+     * @param updCntrs Update counters. Null is possible due to compatibility issues.
      */
     public GridDhtTxFinishRequest(
         UUID nearNodeId,
@@ -146,7 +146,7 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest imple
         boolean retVal,
         boolean waitRemoteTxs,
         MvccSnapshot mvccSnapshot,
-        Collection<PartitionUpdateCountersMessage> updCntrs
+        @Nullable Collection<PartitionUpdateCountersMessage> updCntrs
     ) {
         super(
             xidVer,

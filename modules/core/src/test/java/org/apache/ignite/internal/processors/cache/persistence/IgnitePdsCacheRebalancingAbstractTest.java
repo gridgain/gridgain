@@ -143,6 +143,8 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
             .setConcurrencyLevel(Runtime.getRuntime().availableProcessors() * 4)
             .setCheckpointFrequency(checkpointFrequency())
             .setWalMode(WALMode.LOG_ONLY)
+            .setPageSize(1024)
+            .setWalSegmentSize(8 * 1024 * 1024) // For faster node restarts with enabled persistence.
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setName("dfltDataRegion")
                 .setPersistenceEnabled(true)
@@ -596,6 +598,8 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
             for (; keys < 10_000; keys++)
                 ds.addData(keys, keys);
         }
+
+        assertPartitionsSame(idleVerify(grid(0), CACHE));
 
         for (int it = 0; it < SF.applyLB(10, 3); it++) {
             final int it0 = it;

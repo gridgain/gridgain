@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,6 +70,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -135,7 +136,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
     public ClusterProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, false));
+        notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, true));
 
         updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
@@ -564,6 +565,18 @@ public class ClusterProcessor extends GridProcessorAdapter {
      */
     public String latestVersion() {
         return verChecker != null ? verChecker.latestVersion() : null;
+    }
+
+    /**
+     * Get cluster name.
+     *
+     * @return Cluster name.
+     * */
+    public String clusterName() {
+        return IgniteSystemProperties.getString(
+            IGNITE_CLUSTER_NAME,
+            ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
+        );
     }
 
     /**

@@ -59,12 +59,32 @@ public enum IgniteFeatures {
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
+    
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
+
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
 
     /** Distributed metastorage. */
     IGNITE_SECURITY_PROCESSOR(13),
 
     /** Replacing TcpDiscoveryNode field with nodeId field in discovery messages. */
-    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14);
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
+
+    /** LRT system and user time dump settings.  */
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
+
+    /**
+     * A mode when data nodes throttle update rate regarding to DR sender load
+     */
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /**
+     * Support enabling DR events from  Web Console.
+     */
+    WC_DR_EVENTS(20)
+    ;
 
     /**
      * Unique feature identifier.

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,17 +16,24 @@
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -37,15 +44,16 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
@@ -53,7 +61,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  * Test scenarios with rebalancing, IGNITE_DISABLE_WAL_DURING_REBALANCING optimization and topology changes
  * such as client nodes join/leave, server nodes from BLT leave/join, server nodes out of BLT join/leave.
  */
-@RunWith(JUnit4.class)
 public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstractTest {
     /** Block message predicate to set to Communication SPI in node configuration. */
     private IgniteBiPredicate<ClusterNode, Message> blockMessagePredicate;
@@ -73,6 +80,18 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
     /** */
     private static final String CACHE3_NAME = "cache3";
 
+    /** Function to generate cache values. */
+    private static final BiFunction<String, Integer, String> GENERATING_FUNC = (s, i) -> s + "_value_" + i;
+
+    /** Flag to block rebalancing. */
+    private static final AtomicBoolean blockRebalanceEnabled = new AtomicBoolean(false);
+
+    /**  */
+    private static final Semaphore fileIoBlockingSemaphore = new Semaphore(Integer.MAX_VALUE);
+
+    /** */
+    private boolean useBlockingFileIO;
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -84,6 +103,10 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        fileIoBlockingSemaphore.drainPermits();
+
+        fileIoBlockingSemaphore.release(Integer.MAX_VALUE);
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -94,6 +117,9 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        // This is required because some tests do full clearing of persistence folder losing BLT info on next join.
+        cfg.setConsistentId(igniteInstanceName);
 
         CacheConfiguration ccfg1 = new CacheConfiguration("cache1")
             .setAtomicityMode(CacheAtomicityMode.ATOMIC)
@@ -125,6 +151,9 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
                         .setPersistenceEnabled(true)
                         .setMaxSize(256 * 1024 * 1024));
 
+            if (useBlockingFileIO)
+                dsCfg.setFileIOFactory(new BlockingCheckpointFileIOFactory());
+
             cfg.setDataStorageConfiguration(dsCfg);
         }
 
@@ -147,14 +176,14 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
 
         ig0.active(true);
 
-        for (int i = 0; i < 3; i++)
-            fillCache(ig0.getOrCreateCache("cache" + i), CACHE_SIZE);
+        for (int i = 1; i < 4; i++)
+          fillCache(ig0.dataStreamer("cache" + i), CACHE_SIZE, GENERATING_FUNC);
 
-        String ig1Name = "node01-" + grid(1).localNode().consistentId();
+        String ig1Name = grid(1).name();
 
         stopGrid(1);
 
-        cleanPersistenceFiles(ig1Name);
+        cleanPersistenceDir(ig1Name);
 
         int groupId = ((IgniteEx) ig0).cachex(CACHE3_NAME).context().groupId();
 
@@ -201,7 +230,7 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
     public void testServerNodesFromBltLeavesAndJoinsDuringRebalancing() throws Exception {
         Ignite ig0 = startGridsMultiThreaded(4);
 
-        fillCache(ig0.cache(CACHE3_NAME), CACHE_SIZE);
+        fillCache(ig0.dataStreamer(CACHE3_NAME), CACHE_SIZE, GENERATING_FUNC);
 
         List<Integer> nonAffinityKeys1 = nearKeys(grid(1).cache(CACHE3_NAME), 100, CACHE_SIZE / 2);
         List<Integer> nonAffinityKeys2 = nearKeys(grid(2).cache(CACHE3_NAME), 100, CACHE_SIZE / 2);
@@ -214,7 +243,7 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
         nonAffinityKeysSet.addAll(nonAffinityKeys1);
         nonAffinityKeysSet.addAll(nonAffinityKeys2);
 
-        fillCache(ig0.cache(CACHE3_NAME), nonAffinityKeysSet);
+        fillCache(ig0.dataStreamer(CACHE3_NAME), nonAffinityKeysSet, GENERATING_FUNC);
 
         int groupId = ((IgniteEx) ig0).cachex(CACHE3_NAME).context().groupId();
 
@@ -243,29 +272,204 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
             " partitions in MOVING state", allOwned);
     }
 
-    /** */
-    private void cleanPersistenceFiles(String igName) throws Exception {
-        String ig1DbPath = Paths.get(DFLT_STORE_DIR, igName).toString();
+    /**
+     * Scenario: when rebalanced MOVING partitions are owning by checkpointer,
+     * concurrent affinity change (caused by BLT change) may lead for additional partitions in MOVING state to appear.
+     *
+     * In such situation no partitions should be owned until new rebalancing process starts and finishes.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalancedPartitionsOwningWithConcurrentAffinityChange() throws Exception {
+        Ignite ig0 = startGridsMultiThreaded(4);
+        fillCache(ig0.dataStreamer(CACHE3_NAME), CACHE_SIZE, GENERATING_FUNC);
 
-        File igDbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), ig1DbPath, false);
+        // Stop idx=2 to prepare for baseline topology change later.
+        stopGrid(2);
 
-        U.delete(igDbDir);
-        Files.createDirectory(igDbDir.toPath());
+        // Stop idx=1 and cleanup LFS to trigger full rebalancing after it restart.
+        String ig1Name = grid(1).name();
+        stopGrid(1);
+        cleanPersistenceDir(ig1Name);
 
-        String ig1DbWalPath = Paths.get(DFLT_STORE_DIR, "wal", igName).toString();
+        // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
+        useBlockingFileIO = true;
+        int groupId = ((IgniteEx) ig0).cachex(CACHE3_NAME).context().groupId();
+        blockMessagePredicate = (node, msg) -> {
+            if (blockRebalanceEnabled.get() && msg instanceof GridDhtPartitionDemandMessage)
+                return ((GridDhtPartitionDemandMessage) msg).groupId() == groupId;
 
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), ig1DbWalPath, false));
+            return false;
+        };
+
+        // Enable blocking checkpointer on node idx=1 (see BlockingCheckpointFileIOFactory).
+        fileIoBlockingSemaphore.drainPermits();
+
+        IgniteEx ig1 = startGrid(1);
+
+        CacheGroupMetricsMXBean mxBean = ig1.cachex(CACHE3_NAME).context().group().mxBean();
+        int locMovingPartsNum = mxBean.getLocalNodeMovingPartitionsCount();
+
+        // Partitions remain in MOVING state even after PME and rebalancing when checkpointer is blocked.
+        assertTrue("Expected non-zero value for local moving partitions count on node idx = 1: " +
+            locMovingPartsNum, 0 < locMovingPartsNum && locMovingPartsNum < CACHE3_PARTS_NUM);
+
+        blockRebalanceEnabled.set(true);
+
+        // Change baseline topology and release checkpointer to verify
+        // that no partitions will be owned after affinity change.
+        ig0.cluster().setBaselineTopology(ig1.context().discovery().topologyVersion());
+        fileIoBlockingSemaphore.release(Integer.MAX_VALUE);
+
+        locMovingPartsNum = mxBean.getLocalNodeMovingPartitionsCount();
+        assertTrue("Expected moving partitions count on node idx = 1 equals to all partitions of the cache " +
+             CACHE3_NAME + ": " + locMovingPartsNum, locMovingPartsNum == CACHE3_PARTS_NUM);
+
+        TestRecordingCommunicationSpi commSpi = (TestRecordingCommunicationSpi) ig1
+            .configuration().getCommunicationSpi();
+
+        // When we stop blocking demand message rebalancing should complete and all partitions should be owned.
+        commSpi.stopBlock();
+
+        boolean res = GridTestUtils.waitForCondition(
+            () -> mxBean.getLocalNodeMovingPartitionsCount() == 0, 30_000);
+
+        assertTrue("All partitions on node idx = 1 are expected to be owned", res);
+
+        verifyCache(ig1.cache(CACHE3_NAME), GENERATING_FUNC);
+    }
+
+    /**
+     * Scenario: when rebalanced MOVING partitions are owning by checkpointer,
+     * concurrent no-op exchange should not trigger partition clearing.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalancedPartitionsOwningWithAffinitySwitch() throws Exception {
+        Ignite ig0 = startGridsMultiThreaded(4);
+        fillCache(ig0.dataStreamer(CACHE3_NAME), CACHE_SIZE, GENERATING_FUNC);
+
+        // Stop idx=2 to prepare for baseline topology change later.
+        stopGrid(2);
+
+        // Stop idx=1 and cleanup LFS to trigger full rebalancing after it restart.
+        String ig1Name = grid(1).name();
+        stopGrid(1);
+        cleanPersistenceDir(ig1Name);
+
+        // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
+        useBlockingFileIO = true;
+
+        // Enable blocking checkpointer on node idx=1 (see BlockingCheckpointFileIOFactory).
+        fileIoBlockingSemaphore.drainPermits();
+
+        // Wait for rebalance (all partitions will be in MOVING state until cp is finished).
+        startGrid(1).cachex(CACHE3_NAME).context().group().preloader().rebalanceFuture().get();
+
+        startGrid("client");
+
+        fileIoBlockingSemaphore.release(Integer.MAX_VALUE);
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(grid(0), CACHE3_NAME));
+    }
+
+    /** FileIOFactory implementation that enables blocking of writes to disk so checkpoint can be blocked. */
+    private static class BlockingCheckpointFileIOFactory implements FileIOFactory {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** Delegate factory. */
+        private final FileIOFactory delegateFactory = new RandomAccessFileIOFactory();
+
+        /** {@inheritDoc} */
+        @Override public FileIO create(File file, OpenOption... modes) throws IOException {
+            FileIO delegate = delegateFactory.create(file, modes);
+
+            return new FileIODecorator(delegate) {
+                @Override public int write(ByteBuffer srcBuf) throws IOException {
+                    if (Thread.currentThread().getName().contains("checkpoint")) {
+                        try {
+                            fileIoBlockingSemaphore.acquire();
+                        }
+                        catch (InterruptedException ignored) {
+                            // No-op.
+                        }
+                    }
+
+                    return delegate.write(srcBuf);
+                }
+
+                @Override public int write(ByteBuffer srcBuf, long position) throws IOException {
+                    if (Thread.currentThread().getName().contains("checkpoint")) {
+                        try {
+                            fileIoBlockingSemaphore.acquire();
+                        }
+                        catch (InterruptedException ignored) {
+                            // No-op.
+                        }
+                    }
+
+                    return delegate.write(srcBuf, position);
+                }
+
+                @Override public int write(byte[] buf, int off, int len) throws IOException {
+                    if (Thread.currentThread().getName().contains("checkpoint")) {
+                        try {
+                            fileIoBlockingSemaphore.acquire();
+                        }
+                        catch (InterruptedException ignored) {
+                            // No-op.
+                        }
+                    }
+
+                    return delegate.write(buf, off, len);
+                }
+            };
+        }
     }
 
     /** */
-    private void fillCache(IgniteCache cache, int cacheSize) {
+    private void fillCache(
+        IgniteDataStreamer streamer,
+        int cacheSize,
+        BiFunction<String, Integer, String> generatingFunc
+    ) {
+        String name = streamer.cacheName();
+
         for (int i = 0; i < cacheSize; i++)
-            cache.put(i, "value_" + i);
+            streamer.addData(i, generatingFunc.apply(name, i));
+
+        streamer.close();
     }
 
     /** */
-    private void fillCache(IgniteCache cache, Collection<Integer> keys) {
+    private void fillCache(
+        IgniteDataStreamer streamer,
+        Collection<Integer> keys,
+        BiFunction<String, Integer, String> generatingFunc
+    ) {
+        String cacheName = streamer.cacheName();
+
         for (Integer key : keys)
-            cache.put(key, "value_" + key);
+            streamer.addData(key, generatingFunc.apply(cacheName, key));
+
+        streamer.close();
+    }
+
+    /** */
+    private void verifyCache(IgniteCache cache, BiFunction<String, Integer, String> generatingFunc) {
+        int size = cache.size(CachePeekMode.PRIMARY);
+
+        String cacheName = cache.getName();
+
+        for (int i = 0; i < size; i++) {
+            String value = (String) cache.get(i);
+
+            assertEquals(generatingFunc.apply(cacheName, i), value);
+        }
     }
 }

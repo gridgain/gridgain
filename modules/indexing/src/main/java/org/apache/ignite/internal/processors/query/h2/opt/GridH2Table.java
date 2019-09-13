@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,8 +27,13 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteInterruptedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
@@ -36,10 +41,14 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IndexRebuildPartialClosure;
+import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2RowFactory;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.ddl.CreateTableData;
 import org.h2.command.dml.Insert;
 import org.h2.engine.DbObject;
@@ -59,6 +68,8 @@ import org.h2.table.TableType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
+import static org.apache.ignite.internal.processors.query.h2.opt.GridH2PrimaryScanIndex.SCAN_INDEX_NAME_SUFFIX;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2KeyValueRowOnheap.DEFAULT_COLUMNS_COUNT;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2KeyValueRowOnheap.KEY_COL;
 
@@ -126,6 +137,10 @@ public class GridH2Table extends TableBase {
 
     /** Flag remove index or not when table will be destroyed. */
     private volatile boolean rmIndex;
+
+    /** Logger. */
+    @GridToStringExclude
+    private IgniteLogger log;
 
     /**
      * Creates table.
@@ -208,6 +223,62 @@ public class GridH2Table extends TableBase {
         sysIdxsCnt = idxs.size();
 
         lock = new ReentrantReadWriteLock();
+
+        if (desc != null && desc.context() != null) {
+            GridKernalContext ctx = desc.context().kernalContext();
+
+            log = ctx.log(getClass());
+        }
+    }
+
+    /**
+     * @return Information about all indexes related to the table.
+     */
+    @SuppressWarnings("ZeroLengthArrayAllocation")
+    public List<IndexInformation> indexesInformation() {
+        List<IndexInformation> res = new ArrayList<>();
+
+        IndexColumn keyCol = indexColumn(KEY_COL, SortOrder.ASCENDING);
+
+        List<IndexColumn> wrappedKeyCols = H2Utils.treeIndexColumns(rowDescriptor(),
+            new ArrayList<>(2), keyCol, affKeyCol);
+
+        // Explicit add HASH index, due to we know all their parameters and it doesn't created on non affinity nodes.
+        res.add(
+            new IndexInformation(false,
+                true, PK_HASH_IDX_NAME,
+                H2IndexType.HASH,
+                H2Utils.indexColumnsSql(wrappedKeyCols.toArray(new IndexColumn[0])),
+                null));
+
+        // Explicit add SCAN index, due to we know all their parameters and it depends on affinity node or not.
+        res.add(new IndexInformation(false, false, SCAN_INDEX_NAME_SUFFIX, H2IndexType.SCAN, null, null));
+
+        for (Index idx : idxs) {
+            if (idx instanceof H2TreeIndex) {
+                res.add(new IndexInformation(
+                    idx.getIndexType().isPrimaryKey(),
+                    idx.getIndexType().isUnique(),
+                    idx.getName(),
+                    H2IndexType.BTREE,
+                    H2Utils.indexColumnsSql(idx.getIndexColumns()),
+                    ((H2TreeIndex)idx).inlineSize()
+                ));
+            }
+            else if (idx.getIndexType().isSpatial()) {
+                res.add(
+                    new IndexInformation(
+                        false,
+                        false,
+                        idx.getName(),
+                        H2IndexType.SPATIAL,
+                        H2Utils.indexColumnsSql(idx.getIndexColumns()),
+                        null)
+                );
+            }
+        }
+
+        return res;
     }
 
     /**
@@ -614,6 +685,52 @@ public class GridH2Table extends TableBase {
     }
 
     /**
+     * Checks index presence, return {@link Index} if index with same name or same fields and search direction already
+     * exist or {@code null} othervise.
+     *
+     * @param curIdx Index to check.
+     * @return Index if equal or subset index exist.
+     * @throws IgniteCheckedException If failed.
+     */
+    private @Nullable Index checkIndexPresence(Index curIdx) throws IgniteCheckedException {
+        IndexColumn[] curColumns = curIdx.getIndexColumns();
+
+        Index registredIdx = null;
+
+        for (Index idx : idxs) {
+            if (!(idx instanceof H2TreeIndex))
+                continue;
+
+            if (F.eq(curIdx.getName(), idx.getName()))
+                throw new IgniteCheckedException("Index already exists: " + idx.getName());
+
+            IndexColumn[] idxColumns = idx.getIndexColumns();
+
+            for (int i = 0; i < Math.min(idxColumns.length, curColumns.length); ++i) {
+                IndexColumn idxCol = idxColumns[i];
+                IndexColumn curCol = curColumns[i];
+
+                // pk attach at the end of listed fields.
+                if (curCol.column.getColumnId() == 0 && registredIdx != null)
+                    continue;
+
+                if (H2Utils.equals(idxCol, curCol) && idxCol.sortType == curCol.sortType)
+                    registredIdx = idx;
+                else {
+                    registredIdx = null;
+
+                    break;
+                }
+            }
+
+            if (registredIdx != null)
+                return registredIdx;
+        }
+
+        return null;
+    }
+
+    /**
      * Add index that is in an intermediate state and is still being built, thus is not used in queries until it is
      * promoted.
      *
@@ -628,9 +745,17 @@ public class GridH2Table extends TableBase {
         try {
             ensureNotDestroyed();
 
-            for (Index oldIdx : idxs) {
-                if (F.eq(oldIdx.getName(), idx.getName()))
-                    throw new IgniteCheckedException("Index already exists: " + idx.getName());
+            Index idxExist = checkIndexPresence(idx);
+
+            if (idxExist != null) {
+                String idxCols = Stream.of(idxExist.getIndexColumns())
+                    .map(k -> k.columnName).collect(Collectors.joining(", "));
+
+                U.warn(log, "Index with the given set or subset of columns already exists " +
+                    "(consider dropping either new or existing index) [cacheName=" + cctx.name() + ", " +
+                    "schemaName=" + getSchema().getName() + ", tableName=" + getName() +
+                    ", newIndexName=" + idx.getName() + ", existingIndexName=" + idxExist.getName() +
+                    ", existingIndexColumns=[" + idxCols + "]]");
             }
 
             Index oldTmpIdx = tmpIdxs.put(idx.getName(), (GridH2IndexBase)idx);
@@ -738,6 +863,8 @@ public class GridH2Table extends TableBase {
         lock(true);
 
         try {
+            ensureNotDestroyed();
+
             ArrayList<Index> idxs = new ArrayList<>(this.idxs);
 
             Index targetIdx = (h2Idx instanceof GridH2ProxyIndex) ?
@@ -749,18 +876,28 @@ public class GridH2Table extends TableBase {
                 if (idx == targetIdx || (idx instanceof GridH2ProxyIndex &&
                     ((GridH2ProxyIndex)idx).underlyingIndex() == targetIdx)) {
 
-                    idxs.remove(i);
+                    Index idx0 = idxs.remove(i);
 
-                    if (idx instanceof GridH2ProxyIndex &&
+                    if (idx0 instanceof GridH2ProxyIndex &&
                         idx.getSchema().findIndex(session, idx.getName()) != null)
                         database.removeSchemaObject(session, idx);
+
+                    if (idx0 instanceof GridH2IndexBase) {
+                        cache().shared().database().checkpointReadLock();
+
+                        try {
+                            ((GridH2IndexBase)idx0).destroy(rmIndex);
+                        }
+                        finally {
+                            cache().shared().database().checkpointReadUnlock();
+                        }
+                    }
 
                     continue;
                 }
 
                 i++;
             }
-
             this.idxs = idxs;
         }
         finally {

@@ -28,7 +28,7 @@ public class NodeStoppingException extends IgniteCheckedException {
     /**
      * @param cause Original node stopping cause.
      */
-    public NodeStoppingException(NodeStoppingException cause) {
+    public NodeStoppingException(Throwable cause) {
         super(cause);
     }
 

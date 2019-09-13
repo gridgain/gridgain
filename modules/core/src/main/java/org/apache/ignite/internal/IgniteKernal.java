@@ -225,6 +225,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_USE_POOL_FOR_LAZY_QUERIES;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.snapshot;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
@@ -271,6 +272,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_PORT_RAN
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USE_POOL_FOR_LAZY_QUERIES;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.BUILD_TSTAMP_STR;
@@ -291,8 +293,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Ignite site that is shown in log messages. */
-    public static final String SITE = "ignite.apache.org";
+    /** GridGain site that is shown in log messages. */
+    public static final String SITE = "gridgain.com";
 
     /** System line separator. */
     private static final String NL = U.nl();
@@ -1606,6 +1608,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void fillNodeAttributes(boolean notifyEnabled) throws IgniteCheckedException {
         ctx.addNodeAttribute(ATTR_REBALANCE_POOL_SIZE, configuration().getRebalanceThreadPoolSize());
         ctx.addNodeAttribute(ATTR_DATA_STREAMER_POOL_SIZE, configuration().getDataStreamerThreadPoolSize());
+        ctx.addNodeAttribute(ATTR_USE_POOL_FOR_LAZY_QUERIES, IgniteSystemProperties.getBoolean(IGNITE_USE_POOL_FOR_LAZY_QUERIES));
 
         final String[] incProps = cfg.getIncludeProperties();
 
@@ -4472,6 +4475,24 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public void clearNodeLocalMap() {
         ctx.cluster().get().clearNodeMap();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean readOnlyMode() {
+        return ctx.state().publicApiReadOnlyMode();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readOnlyMode(boolean readOnly) {
+        ctx.state().changeGlobalState(readOnly);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReadOnlyModeDuration() {
+        if (ctx.state().publicApiReadOnlyMode())
+            return U.currentTimeMillis() - ctx.state().readOnlyModeStateChangeTime();
+        else
+            return 0;
     }
 
     /** {@inheritDoc} */

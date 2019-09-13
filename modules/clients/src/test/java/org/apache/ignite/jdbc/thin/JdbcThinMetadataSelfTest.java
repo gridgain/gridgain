@@ -44,13 +44,16 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.util.typedef.F;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import static java.sql.Types.INTEGER;
-import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
+import static java.sql.Types.DECIMAL;
+import static java.sql.Types.DATE;
+import static java.sql.Types.OTHER;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
@@ -139,6 +142,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             stmt.execute("CREATE INDEX IDX ON TEST (ID ASC)");
             stmt.execute("CREATE TABLE TEST_DECIMAL_COLUMN (ID INT primary key, DEC_COL DECIMAL(8, 3))");
             stmt.execute("CREATE TABLE TEST_DECIMAL_COLUMN_PRECISION (ID INT primary key, DEC_COL DECIMAL(8))");
+            stmt.execute("CREATE TABLE TEST_DECIMAL_DATE_COLUMN_META (ID INT primary key, DEC_COL DECIMAL(8), DATE_COL DATE)");
         }
     }
 
@@ -177,6 +181,41 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         assert meta.getColumnType(2) == INTEGER;
         assert "INTEGER".equals(meta.getColumnTypeName(2));
         assert "java.lang.Integer".equals(meta.getColumnClassName(2));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDecimalAndDateTypeMetaData() throws Exception {
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            Statement stmt = conn.createStatement();
+
+            ResultSet rs = stmt.executeQuery(
+                    "select t.dec_col, t.date_col from TEST_DECIMAL_DATE_COLUMN_META as t");
+
+            Assert.assertNotNull("Result set should not be null", rs);
+
+            ResultSetMetaData meta = rs.getMetaData();
+
+            Assert.assertNotNull("Result set metadata should not be null", meta);
+
+            Assert.assertEquals("Column count mismatch", 2, meta.getColumnCount());
+
+            Assert.assertEquals("Table name mismatch", "TEST_DECIMAL_DATE_COLUMN_META", meta.getTableName(1));
+            Assert.assertEquals("Column name mismatch", "DEC_COL", meta.getColumnName(1));
+            Assert.assertEquals("Column label mismatch", "DEC_COL", meta.getColumnLabel(1));
+            Assert.assertEquals("Column type mismatch", DECIMAL, meta.getColumnType(1));
+            Assert.assertEquals("Column type name mismatch", "DECIMAL", meta.getColumnTypeName(1));
+            Assert.assertEquals("Column class mismatch", "java.math.BigDecimal", meta.getColumnClassName(1));
+
+            Assert.assertEquals("Table name mismatch", "TEST_DECIMAL_DATE_COLUMN_META", meta.getTableName(2));
+            Assert.assertEquals("Column name mismatch", "DATE_COL", meta.getColumnName(2));
+            Assert.assertEquals("Column label mismatch", "DATE_COL", meta.getColumnLabel(2));
+            Assert.assertEquals("Column type mismatch", DATE, meta.getColumnType(2));
+            Assert.assertEquals("Column type name mismatch", "DATE", meta.getColumnTypeName(2));
+            Assert.assertEquals("Column class mismatch", "java.sql.Date", meta.getColumnClassName(2));
+        }
     }
 
     /**
@@ -241,7 +280,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "PUBLIC.TEST",
                 "PUBLIC.Quoted",
                 "PUBLIC.TEST_DECIMAL_COLUMN",
-                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION"));
+                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META"));
 
             Set<String> actualTbls = new HashSet<>(expectedTbls.size());
 
@@ -395,7 +435,10 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "PUBLIC.TEST_DECIMAL_COLUMN.ID.null",
                 "PUBLIC.TEST_DECIMAL_COLUMN.DEC_COL.null.8.3",
                 "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.null",
-                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.DEC_COL.null.8"
+                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.DEC_COL.null.8",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DEC_COL.null.8",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null"
             ));
 
             Set<String> actualCols = new HashSet<>(expectedCols.size());
@@ -553,7 +596,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "PUBLIC.TEST.PK_PUBLIC_TEST.NAME",
                 "PUBLIC.Quoted.PK_PUBLIC_Quoted.Id",
                 "PUBLIC.TEST_DECIMAL_COLUMN.ID.ID",
-                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.ID"));
+                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.ID",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.ID"));
 
             Set<String> actualPks = new HashSet<>(expectedPks.size());
 

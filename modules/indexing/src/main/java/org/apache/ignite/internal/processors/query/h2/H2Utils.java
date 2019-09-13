@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -143,9 +143,25 @@ public class H2Utils {
             .a(fullTblName)
             .a(" (");
 
+        sb.a(indexColumnsSql(h2Idx.getIndexColumns()));
+
+        sb.a(')');
+
+        return sb.toString();
+    }
+
+    /**
+     * Generate String represenation of given indexed columns.
+     *
+     * @param idxCols Indexed columns.
+     * @return String represenation of given indexed columns.
+     */
+    public static String indexColumnsSql(IndexColumn[] idxCols) {
+        GridStringBuilder sb = new SB();
+
         boolean first = true;
 
-        for (IndexColumn col : h2Idx.getIndexColumns()) {
+        for (IndexColumn col : idxCols) {
             if (first)
                 first = false;
             else
@@ -153,8 +169,6 @@ public class H2Utils {
 
             sb.a(withQuotes(col.columnName)).a(" ").a(col.sortType == SortOrder.ASCENDING ? "ASC" : "DESC");
         }
-
-        sb.a(')');
 
         return sb.toString();
     }

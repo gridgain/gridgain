@@ -26,12 +26,14 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -150,6 +152,7 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
         String tblName,
         ReuseList reuseList,
         int grpId,
+        String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -171,6 +174,7 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
         super(
             name,
             grpId,
+            grpName,
             pageMem,
             wal,
             globalRmvId,
@@ -205,6 +209,9 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
 
             if (metaInfo.useUnwrappedPk())
                 throw new IgniteCheckedException("Unwrapped PK is not supported by current version");
+
+            if (inlineSize != metaInfo.inlineSize())
+                log.warning("New inline size for idx=" + idxName + " will not be applied");
 
             inlineSize = metaInfo.inlineSize();
 
@@ -323,7 +330,7 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
     /**
      * @return Inline size.
      */
-    private int inlineSize() {
+    public int inlineSize() {
         return inlineSize;
     }
 
@@ -714,5 +721,22 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(H2Tree.class, this, "super", super.toString());
+    }
+
+    /**
+     * Construct the exception and invoke failure processor.
+     *
+     * @param msg Message.
+     * @param cause Cause.
+     * @param grpId Group id.
+     * @param pageIds Pages ids.
+     * @return New CorruptedTreeException instance.
+     */
+    @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
+
+        processFailure(FailureType.CRITICAL_ERROR, e);
+
+        return e;
     }
 }

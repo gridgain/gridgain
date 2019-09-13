@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxSelectForUpdateFuture;
@@ -134,6 +135,7 @@ import org.apache.ignite.internal.processors.query.h2.sys.SqlSystemTableEngine;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemView;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewBaselineNodes;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewCaches;
+import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewIndexes;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodeAttributes;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodeMetrics;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodes;
@@ -168,6 +170,7 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -630,9 +633,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         try {
             // Populate index with existing cache data.
-            final GridH2RowDescriptor rowDesc = h2Tbl.rowDescriptor();
+            IndexRebuildPartialClosure idxBuild = new IndexRebuildPartialClosure(h2Tbl.cache());
 
-            cacheVisitor.visit(new IndexBuildClosure(rowDesc, h2Idx));
+            idxBuild.addIndex(h2Tbl, h2Idx);
+
+            cacheVisitor.visit(idxBuild);
 
             // At this point index is in consistent state, promote it through H2 SQL statement, so that cached
             // prepared statements are re-built.
@@ -653,6 +658,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public void dynamicIndexDrop(final String schemaName, String idxName, boolean ifExists)
         throws IgniteCheckedException{
         String sql = H2Utils.indexDropSql(schemaName, idxName, ifExists);
+
+        GridH2Table tbl = dataTableForIndex(schemaName, idxName);
+
+        tbl.setRemoveIndexOnDestroy(true);
 
         executeSql(schemaName, sql);
     }
@@ -812,7 +821,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @SuppressWarnings("unchecked")
     GridQueryFieldsResult queryLocalSqlFields(final String schemaName, String qry,
         @Nullable final Collection<Object> params, final IndexingQueryFilter filter, boolean enforceJoinOrder,
-        boolean startTx, int qryTimeout, boolean lazy, final GridQueryCancel cancel,
+        boolean startTx, int qryTimeout, final boolean lazy, final GridQueryCancel cancel,
         MvccQueryTracker mvccTracker) throws IgniteCheckedException {
 
         GridNearTxLocal tx = null;
@@ -927,7 +936,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             return new GridQueryFieldsResultAdapter(meta, null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
-                    assert GridH2QueryContext.get() == null;
+                    // TODO: HOT FIX: must be fixed by GG-21372
+                    // assert GridH2QueryContext.get() == null;
+                    if (GridH2QueryContext.get() != null) {
+                        log.warning("Query context is reset for local query. The result may be invalid " +
+                            "if the explicit partitions are specified. [oldQctx=" + GridH2QueryContext.get() + ']');
+
+                        GridH2QueryContext.clearThreadLocal();
+                    }
 
                     GridH2QueryContext.set(ctx);
 
@@ -994,7 +1010,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         }
 
                         return new H2FieldsIterator(rs, mvccTracker0, sfuFut0 != null,
-                            detachedConn);
+                            detachedConn, lazy);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
                         try {
@@ -1008,7 +1024,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         throw e;
                     }
                     finally {
-                        GridH2QueryContext.clearThreadLocal();
+                        if (!lazy)
+                            GridH2QueryContext.clearThreadLocal();
 
                         runs.remove(run.id());
                     }
@@ -1818,6 +1835,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 H2TwoStepCachedQuery cachedQry;
 
                 if ((cachedQry = twoStepCache.get(cachedQryKey)) != null) {
+                    if (ctx.security().enabled())
+                        checkSecurity(cachedQry.query().cacheIds());
+
                     checkQueryType(qry, true);
 
                     GridCacheTwoStepQuery twoStepQry = cachedQry.query().copy();
@@ -1949,6 +1969,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     }
                 }
                 catch (IgniteCheckedException e) {
+                    IgniteClusterReadOnlyException roEx = X.cause(e, IgniteClusterReadOnlyException.class);
+
+                    if (roEx != null) {
+                        throw new IgniteSQLException(
+                            "Failed to execute DML statement. Cluster in read-only mode [stmt=" + sqlQry +
+                                ", params=" + Arrays.deepToString(qry.getArgs()) + "]",
+                            IgniteQueryErrorCode.CLUSTER_READ_ONLY_MODE_ENABLED,
+                            e
+                        );
+                    }
+
                     throw new IgniteSQLException("Failed to execute DML statement [stmt=" + sqlQry +
                         ", params=" + Arrays.deepToString(qry.getArgs()) + "]", e);
                 }
@@ -2136,6 +2167,18 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return new ParsingResult(prepared, newQry, remainingSql, twoStepQry, cachedQryKey, meta);
         }
 
+
+        // The part executed in user thread. In case user open few iterators ThreadLocal context will be invalid.
+        // To prevent it we keep old context and restore after.
+        GridH2QueryContext oldCtx = GridH2QueryContext.get();
+
+        if (oldCtx != null) {
+            GridH2QueryContext.clearThreadLocal();
+
+            log.debug("Query context is not empty. Single thread is shared between few queries." +
+                " Saving query context for switching between queries. [oldCtx=" + oldCtx + ']');
+        }
+
         try {
             GridH2QueryContext.set(new GridH2QueryContext(locNodeId, locNodeId, 0, PREPARE)
                 .distributedJoinMode(distributedJoinMode(qry.isLocal(), qry.isDistributedJoins())));
@@ -2159,6 +2202,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
         finally {
             GridH2QueryContext.clearThreadLocal();
+
+            if(oldCtx != null)
+                GridH2QueryContext.set(oldCtx);
         }
     }
 
@@ -2568,6 +2614,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /**
+     * @return all known tables.
+     */
+    public Collection<GridH2Table> dataTables() {
+        return dataTables.values();
+    }
+
+    /**
      * @param h2Tbl Remove data table.
      */
     public void removeDataTable(GridH2Table h2Tbl) {
@@ -2697,7 +2750,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
         else {
             // Otherwise iterate over tables looking for missing indexes.
-            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure();
+            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
 
             for (H2TableDescriptor tblDesc : tables(cctx.name())) {
                 assert tblDesc.table() != null;
@@ -2715,6 +2768,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final GridWorkerFuture<?> fut = new GridWorkerFuture<>();
 
         markIndexRebuild(cctx.name(), true);
+
+        if (cctx.group().metrics0() != null)
+            cctx.group().metrics0().setIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), "index-rebuild-worker-" + cctx.name(), log) {
             @Override protected void body() {
@@ -2905,6 +2961,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         views.add(new SqlSystemViewBaselineNodes(ctx));
         views.add(new SqlSystemViewNodeMetrics(ctx));
         views.add(new SqlSystemViewCaches(ctx));
+        views.add(new SqlSystemViewIndexes(ctx, this));
 
         return views;
     }
@@ -3207,6 +3264,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         BPlusTree<GridH2SearchRow, GridH2Row> tree = new BPlusTree<GridH2SearchRow, GridH2Row>(
             indexName,
             grpId,
+            grpName,
             pageMemory,
             ctx.cache().context().wal(),
             removeId,

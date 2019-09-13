@@ -43,6 +43,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientConnectionRes
 import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.java.JavaLoggerFileHandler;
 import org.apache.ignite.logger.java.JavaLoggerFormatter;
@@ -53,6 +54,7 @@ import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.System.lineSeparator;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
@@ -99,7 +101,7 @@ public class CommandHandler {
     private static final long DFLT_PING_TIMEOUT = 30_000L;
 
     /** */
-    private static final Scanner IN = new Scanner(System.in);
+    private final Scanner in = new Scanner(System.in);
 
     /** Utility name. */
     public static final String UTILITY_NAME = "control.(sh|bat)";
@@ -228,30 +230,31 @@ public class CommandHandler {
             Command command = args.command();
             commandName = command.name();
 
-            if (!args.autoConfirmation() && !confirm(command.confirmationPrompt())) {
-                logger.info("Operation cancelled.");
-
-                return EXIT_CODE_OK;
-            }
+            GridClientConfiguration clientCfg = getClientConfiguration(args);
 
             int tryConnectMaxCount = 3;
 
             boolean suppliedAuth = !F.isEmpty(args.userName()) && !F.isEmpty(args.password());
 
-            GridClientConfiguration clientCfg = getClientConfiguration(args);
-
-            logger.info("Command [" + commandName + "] started");
-            logger.info("Common arguments: " + args.toString());
-
-            if (command.arg() != null)
-                logger.info("Command arguments: " + command.argumentString());
-
-            logger.info(DELIM);
-
             boolean credentialsRequested = false;
 
             while (true) {
                 try {
+                    if (!args.autoConfirmation()) {
+                        command.prepareConfirmation(clientCfg);
+
+                        if (!confirm(command.confirmationPrompt())) {
+                            logger.info("Operation cancelled.");
+
+                            return EXIT_CODE_OK;
+                        }
+                    }
+
+                    logger.info("Command [" + commandName + "] started");
+                    logger.info("Arguments: " + argumentsToString(rawArgs));
+
+                    logger.info(DELIM);
+
                     lastOperationRes = command.execute(clientCfg, logger);
 
                     break;
@@ -305,10 +308,17 @@ public class CommandHandler {
             if (isConnectionError(e)) {
                 IgniteCheckedException cause = X.cause(e, IgniteCheckedException.class);
 
-                if (cause != null && cause.getMessage() != null && cause.getMessage().contains("SSL"))
-                    e = cause;
+                if (isConnectionClosedSilentlyException(e))
+                    logger.severe("Connection to cluster failed. Please check firewall settings and " +
+                        "client and server are using the same SSL configuration.");
+                else {
+                    if (isSSLMisconfigurationError(cause))
+                        e = cause;
 
-                logger.severe("Connection to cluster failed. " + CommandLogger.errorMessage(e));
+                    logger.severe("Connection to cluster failed. " + CommandLogger.errorMessage(e));
+
+                }
+
                 logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_CONNECTION_FAILED);
 
                 return EXIT_CODE_CONNECTION_FAILED;
@@ -331,6 +341,81 @@ public class CommandHandler {
                   .filter(handler -> handler instanceof FileHandler)
                   .forEach(Handler::close);
         }
+    }
+
+    /**
+     * Analyses passed exception to find out whether it is related to SSL misconfiguration issues.
+     *
+     * (!) Implementation depends heavily on structure of exception stack trace
+     * thus is very fragile to any changes in that structure.
+     *
+     * @param e Exception to analyze.
+     *
+     * @return {@code True} if exception may be related to SSL misconfiguration issues.
+     */
+    private boolean isSSLMisconfigurationError(Throwable e) {
+        return e != null && e.getMessage() != null && e.getMessage().contains("SSL");
+    }
+
+    /**
+     * Analyses passed exception to find out whether it is caused by server closing connection silently.
+     * This happens when client tries to establish unprotected connection
+     * to the cluster supporting only secured communications (e.g. when server is configured to use SSL certificates
+     * and client is not).
+     *
+     * (!) Implementation depends heavily on structure of exception stack trace
+     * thus is very fragile to any changes in that structure.
+     *
+     * @param e Exception to analyse.
+     * @return {@code True} if exception may be related to the attempt to establish unprotected connection
+     * to secured cluster.
+     */
+    private boolean isConnectionClosedSilentlyException(Throwable e) {
+        if (!(e instanceof GridClientDisconnectedException))
+            return false;
+
+        Throwable cause = e.getCause();
+
+        if (cause == null)
+            return false;
+
+        cause = cause.getCause();
+
+        if (cause instanceof GridClientConnectionResetException &&
+            cause.getMessage() != null &&
+            cause.getMessage().contains("Failed to perform handshake")
+        )
+            return true;
+
+        return false;
+    }
+
+    /**
+     * @param rawArgs Arguments which user has provided.
+     * @return String which could be shown in console and pritned to log.
+     */
+    private String argumentsToString(List<String> rawArgs) {
+        boolean hide = false;
+
+        SB sb = new SB();
+
+        for (int i = 0; i < rawArgs.size(); i++) {
+            if (hide) {
+                sb.a("***** ");
+
+                hide = false;
+
+                continue;
+            }
+
+            String arg = rawArgs.get(i);
+
+            sb.a(arg).a(' ');
+
+            hide = CommonArgParser.isSensitiveArgument(arg);
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -483,7 +568,7 @@ public class CommandHandler {
     private String readLine(String prompt) {
         System.out.print(prompt);
 
-        return IN.nextLine();
+        return in.nextLine();
     }
 
 
@@ -492,11 +577,11 @@ public class CommandHandler {
      *
      * @return {@code true} if operation confirmed (or not needed), {@code false} otherwise.
      */
-    private <T> boolean confirm(String str) {
+    private boolean confirm(String str) {
         if (str == null)
             return true;
 
-        String prompt = str + "\nPress '" + CONFIRM_MSG + "' to continue . . . ";
+        String prompt = str + lineSeparator() + "Press '" + CONFIRM_MSG + "' to continue . . . ";
 
         return CONFIRM_MSG.equalsIgnoreCase(readLine(prompt));
     }

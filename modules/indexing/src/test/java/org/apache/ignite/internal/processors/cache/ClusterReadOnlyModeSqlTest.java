@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,13 +24,12 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.util.typedef.G;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+
+import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.checkThatRootCauseIsReadOnly;
 
 /**
  * Tests SQL queries in read-only cluster mode.
  */
-@RunWith(JUnit4.class)
 public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest {
     /**
      *
@@ -62,7 +61,7 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     cur.getAll();
                 }
 
-                boolean failed = false;
+                Throwable failed = null;
 
                 try (FieldsQueryCursor<?> cur = cache.query(new SqlFieldsQuery("DELETE FROM Integer"))) {
                     cur.getAll();
@@ -71,13 +70,15 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     if (!readOnly)
                         log.error("Failed to delete data", ex);
 
-                    failed = true;
+                    failed = ex;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("SQL delete from " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
 
-                failed = false;
+                checkThatRootCauseIsReadOnly(failed);
+
+                failed = null;
 
                 try (FieldsQueryCursor<?> cur = cache.query(new SqlFieldsQuery(
                     "INSERT INTO Integer(_KEY, _VAL) VALUES (?, ?)").setArgs(rnd.nextInt(1000), rnd.nextInt()))) {
@@ -87,11 +88,13 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     if (!readOnly)
                         log.error("Failed to insert data", ex);
 
-                    failed = true;
+                    failed = ex;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("SQL insert into " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
+
+                checkThatRootCauseIsReadOnly(failed);
             }
         }
     }

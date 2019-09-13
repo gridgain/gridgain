@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -101,4 +101,32 @@ public interface TransactionMetrics extends Serializable {
      * @return The number of active transactions for which this node is the initiator.
      */
     public long getOwnerTransactionsNumber();
+
+    /**
+     * Returns total transaction system time on this node.
+     *
+     * @return Total system time.
+     */
+    public long getTotalNodeSystemTime();
+
+    /**
+     * Returns total transaction user time on this node.
+     *
+     * @return Total user time.
+     */
+    public long getTotalNodeUserTime();
+
+    /**
+     * Returns histogram of transaction system time on this node.
+     *
+     * @return Histogram as json.
+     */
+    public String getNodeSystemTimeHistogram();
+
+    /**
+     * Returns histogram of transaction user time on this node.
+     *
+     * @return Histogram as json.
+     */
+    public String getNodeUserTimeHistogram();
 }

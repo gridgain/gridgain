@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.query.continuous;
+package org.apache.ignite.internal.processors.rest.request;
 
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.NearCacheConfiguration;
-
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- *
+ * Grid command request of log file.
  */
-public class CacheContinuousQueryFailoverAtomicNearEnabledSelfSelfTest
-    extends CacheContinuousQueryFailoverAtomicSelfTest {
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
+public class GridRestClusterNameRequest extends GridRestRequest {
+    /**
+     * Constructor.
+     */
+    public GridRestClusterNameRequest() {
+        command(GridRestCommand.CLUSTER_NAME);
     }
 
     /** {@inheritDoc} */
-    @Override protected NearCacheConfiguration nearCacheConfiguration() {
-        return super.nearCacheConfiguration();
+    @Override public String toString() {
+        return S.toString(GridRestClusterNameRequest.class, this, super.toString());
     }
 }

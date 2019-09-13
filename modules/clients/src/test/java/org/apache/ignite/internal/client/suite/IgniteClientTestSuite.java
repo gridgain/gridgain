@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -69,6 +69,7 @@ import org.apache.ignite.internal.processors.rest.protocols.tcp.TcpRestParserSel
 import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.RedisProtocolConnectSelfTest;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.RedisProtocolGetAllAsArrayTest;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.RedisProtocolServerSelfTest;
+import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.RedisProtocolStringAtomicDatastructuresSelfTest;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.RedisProtocolStringSelfTest;
 import org.apache.ignite.testframework.IgniteTestSuite;
 
@@ -110,6 +111,7 @@ public class IgniteClientTestSuite extends TestSuite {
             suite.addTest(new JUnit4TestAdapter(RedisProtocolGetAllAsArrayTest.class));
             suite.addTest(new JUnit4TestAdapter(RedisProtocolConnectSelfTest.class));
             suite.addTest(new JUnit4TestAdapter(RedisProtocolServerSelfTest.class));
+            suite.addTest(new JUnit4TestAdapter(RedisProtocolStringAtomicDatastructuresSelfTest.class));
 
             suite.addTest(new JUnit4TestAdapter(RestProcessorStartSelfTest.class));
 

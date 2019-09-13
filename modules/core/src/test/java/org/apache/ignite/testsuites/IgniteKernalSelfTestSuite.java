@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,6 +49,8 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAliveCa
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAttributesSelfTest;
 import org.apache.ignite.internal.managers.discovery.IgniteTopologyPrintFormatSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerSelfTest;
+import org.apache.ignite.internal.processors.cluster.ClusterReadOnlyModeNodeJoinTest;
+import org.apache.ignite.internal.processors.cluster.ClusterReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridAddressResolverSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridUpdateNotifierSelfTest;
 import org.apache.ignite.internal.processors.port.GridPortProcessorSelfTest;
@@ -174,7 +176,9 @@ public class IgniteKernalSelfTestSuite extends TestSuite {
         suite.addTest(new JUnit4TestAdapter(IgniteServiceDeployment2ClassLoadersDefaultMarshallerTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteServiceDeployment2ClassLoadersJdkMarshallerTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteServiceDeployment2ClassLoadersOptimizedMarshallerTest.class));
-        suite.addTest(new JUnit4TestAdapter(NodeWithFilterRestartTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(ClusterReadOnlyModeSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(ClusterReadOnlyModeNodeJoinTest.class));
 
         return suite;
     }

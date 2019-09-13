@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -100,6 +100,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Sto
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridClientPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -111,6 +112,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchang
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -975,7 +977,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param ver Topology version.
      * @return Future or {@code null} is future is already completed.
      */
-    @Nullable public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuture(AffinityTopologyVersion ver) {
+    @NotNull public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuture(AffinityTopologyVersion ver) {
         GridDhtPartitionsExchangeFuture lastInitializedFut0 = lastInitializedFut;
 
         if (lastInitializedFut0 != null && lastInitializedFut0.initialVersion().compareTo(ver) == 0
@@ -1792,7 +1794,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             null,
                             msg.partsToReload(cctx.localNodeId(), grpId),
                             partsSizes.getOrDefault(grpId, Collections.emptyMap()),
-                            msg.topologyVersion());
+                            msg.topologyVersion(),
+                            null
+                        );
                     }
                 }
 
@@ -1830,8 +1834,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         try {
             if (msg.exchangeId() == null) {
-                if (log.isTraceEnabled())
-                    log.trace("Received local partition update [nodeId=" + node.id() + ", parts=" +
+                if (log.isDebugEnabled())
+                    log.debug("Received local partition update [nodeId=" + node.id() + ", parts=" +
                         msg + ']');
 
                 boolean updated = false;
@@ -1880,7 +1884,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         U.warn(log, "Client node tries to connect but its exchange " +
                             "info is cleaned up from exchange history. " +
                             "Consider increasing 'IGNITE_EXCHANGE_HISTORY_SIZE' property " +
-                            "or start clients in  smaller batches. " +
+                            "or start clients in smaller batches. " +
                             "Current settings and versions: " +
                             "[IGNITE_EXCHANGE_HISTORY_SIZE=" + EXCHANGE_HISTORY_SIZE + ", " +
                             "initVer=" + initVer + ", " +
@@ -2016,6 +2020,41 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * Builds warning string for long running transaction.
+     *
+     * @param tx Transaction.
+     * @param curTime Current timestamp.
+     * @return Warning string.
+     */
+    private String longRunningTransactionWarning(IgniteInternalTx tx, long curTime) {
+        GridStringBuilder warning = new GridStringBuilder()
+            .a(">>> Transaction [startTime=")
+            .a(formatTime(tx.startTime()))
+            .a(", curTime=")
+            .a(formatTime(curTime));
+
+        if (tx instanceof GridNearTxLocal) {
+            GridNearTxLocal nearTxLoc = (GridNearTxLocal)tx;
+
+            long sysTimeCurr = nearTxLoc.systemTimeCurrent();
+
+            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+            long userTime = Math.max(curTime - nearTxLoc.startTime() - sysTimeCurr, 0);
+
+            warning.a(", systemTime=")
+                .a(sysTimeCurr)
+                .a(", userTime=")
+                .a(userTime);
+        }
+
+        warning.a(", tx=")
+            .a(tx)
+            .a("]");
+
+        return warning.toString();
+    }
+
+    /**
      * @param timeout Operation timeout.
      * @return {@code True} if found long running operations.
      */
@@ -2041,8 +2080,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         found = true;
 
                         if (warnings.canAddMessage()) {
-                            warnings.add(">>> Transaction [startTime=" + formatTime(tx.startTime()) +
-                                ", curTime=" + formatTime(curTime) + ", tx=" + tx + ']');
+                            warnings.add(longRunningTransactionWarning(tx, curTime));
 
                             if (ltrDumpLimiter.allowAction(tx))
                                 dumpLongRunningTransaction(tx);
@@ -2955,7 +2993,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     err = e;
             }
             catch (Throwable e) {
-                if (!(stop && X.hasCause(e, IgniteInterruptedCheckedException.class)))
+                if (!(e == stopErr || (stop && (X.hasCause(e, IgniteInterruptedCheckedException.class)))))
                     err = e;
             }
             finally {

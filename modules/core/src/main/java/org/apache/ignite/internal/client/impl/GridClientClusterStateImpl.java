@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,8 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
     @Override public void active(final boolean active) throws GridClientException {
         withReconnectHandling(new ClientProjectionClosure<Void>() {
             @Override public GridClientFuture apply(
-                GridClientConnection conn, UUID nodeId
+                GridClientConnection conn,
+                UUID nodeId
             ) throws GridClientConnectionResetException, GridClientClosedException {
                 return conn.changeState(active, nodeId);
             }
@@ -63,12 +64,28 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
 
     /** {@inheritDoc} */
     @Override public boolean active() throws GridClientException {
-        return withReconnectHandling(new ClientProjectionClosure<Boolean>() {
-            @Override public GridClientFuture<Boolean> apply(
-                GridClientConnection conn, UUID nodeId
+        return withReconnectHandling(GridClientConnection::currentState).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean readOnly() throws GridClientException {
+        return withReconnectHandling(GridClientConnection::readOnlyState).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readOnly(boolean readOnly) throws GridClientException {
+        withReconnectHandling(new ClientProjectionClosure<Void>() {
+            @Override public GridClientFuture apply(
+                GridClientConnection conn,
+                UUID nodeId
             ) throws GridClientConnectionResetException, GridClientClosedException {
-                return conn.currentState(nodeId);
+                return conn.changeReadOnlyState(readOnly, nodeId);
             }
         }).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String clusterName() throws GridClientException {
+        return withReconnectHandling(GridClientConnection::clusterName).get();
     }
 }
