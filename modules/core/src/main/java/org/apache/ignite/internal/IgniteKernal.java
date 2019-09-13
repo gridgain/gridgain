@@ -1354,6 +1354,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                     if (stripedExecSvc != null)
                         stripedExecSvc.detectStarvation();
+
+                    if (dataStreamExecSvc != null)
+                        dataStreamExecSvc.detectStarvation();
                 }
 
                 /**

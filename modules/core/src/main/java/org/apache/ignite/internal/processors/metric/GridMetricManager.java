@@ -350,7 +350,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridSystemExecutor", sysExecSvc);
         monitorExecutor("GridClassLoadingExecutor", p2pExecSvc);
         monitorExecutor("GridManagementExecutor", mgmtExecSvc);
-        monitorExecutor("GridDataStreamExecutor", dataStreamExecSvc);
         monitorExecutor("GridAffinityExecutor", affExecSvc);
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
         monitorExecutor("GridQueryExecutor", qryExecSvc);
@@ -364,8 +363,10 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         if (stripedExecSvc != null) {
             // Striped executor uses a custom adapter.
-            monitorStripedPool(stripedExecSvc);
+            monitorStripedPool(stripedExecSvc, "StripedExecutor");
         }
+
+        monitorStripedPool(dataStreamExecSvc, "GridDataStreamExecutor");
 
         if (customExecSvcs != null) {
             for (Map.Entry<String, ? extends ExecutorService> entry : customExecSvcs.entrySet())
@@ -431,8 +432,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      *
      * @param svc Executor.
      */
-    private void monitorStripedPool(StripedExecutor svc) {
-        MetricRegistry mreg = registry(metricName(THREAD_POOLS, "StripedExecutor"));
+    private void monitorStripedPool(StripedExecutor svc, String name) {
+        MetricRegistry mreg = registry(metricName(THREAD_POOLS, name));
 
         mreg.register("DetectStarvation",
             svc::detectStarvation,

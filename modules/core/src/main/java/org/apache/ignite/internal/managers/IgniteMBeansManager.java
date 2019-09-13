@@ -155,7 +155,6 @@ public class IgniteMBeansManager {
         registerExecutorMBean("GridSystemExecutor", sysExecSvc);
         registerExecutorMBean("GridClassLoadingExecutor", p2pExecSvc);
         registerExecutorMBean("GridManagementExecutor", mgmtExecSvc);
-        registerExecutorMBean("GridDataStreamExecutor", dataStreamExecSvc);
         registerExecutorMBean("GridAffinityExecutor", affExecSvc);
         registerExecutorMBean("GridCallbackExecutor", callbackExecSvc);
         registerExecutorMBean("GridQueryExecutor", qryExecSvc);
@@ -174,6 +173,12 @@ public class IgniteMBeansManager {
                 new StripedExecutorMXBeanAdapter(stripedExecSvc),
                 StripedExecutorMXBean.class);
         }
+
+        registerMBean("Thread Pools",
+            "GridDataStreamExecutor",
+            new StripedExecutorMXBeanAdapter(dataStreamExecSvc),
+            StripedExecutorMXBean.class);
+
 
         if (customExecSvcs != null) {
             for (Map.Entry<String, ? extends ExecutorService> entry : customExecSvcs.entrySet())
