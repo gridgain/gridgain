@@ -1,0 +1,122 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.cache;
+
+import java.io.Serializable;
+import javax.cache.Cache;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.lang.IgniteBiTuple;
+
+/**
+ * Cache interceptor (see {@link CacheInterceptor}) operates with {@link BinaryObject}.
+ */
+public interface CacheInterceptorBinary<K, V> extends Serializable {
+    /**
+     * This method is called within {@link IgniteCache#get(Object)}
+     * and similar operations to provide control over returned value.
+     * <p>
+     * If this method returns {@code null}, then {@code get()} operation
+     * results in {@code null} as well.
+     * <p>
+     * This method should not throw any exception.
+     *
+     * @param key Key.
+     * @param val Value mapped to {@code key} at the moment of {@code get()} operation
+     *            ({@code null} if no mapping was present).
+     * @return The new value to be returned as result of {@code get()} operation (may be {@code null}).
+     * @see Cache#get(Object)
+     */
+    public V onGet(K key, V val);
+
+    /**
+     * This method is called within {@link IgniteCache#put(Object, Object)}
+     * and similar operations before new value is stored in cache.
+     * <p>
+     * Implementations should not execute any complex logic,
+     * including locking, networking or cache operations,
+     * as it may lead to deadlock, since this method is called
+     * from sensitive synchronization blocks.
+     * <p>
+     * This method should not throw any exception.
+     * <p>
+     * <b>IMPORTANT:</b> for this method to take affect, {@code newVal} and
+     * the returned value have to be different instances. I.e., you should
+     * not mutate {@code newVal} directly, but instead create a copy, update
+     * it and then return from the interceptor.
+     *
+     * @param entry Old entry. If {@link CacheConfiguration#isCopyOnRead()} is {@code true}, then is copy.
+     * @param newVal New value.
+     * @return Value to be put to cache. Returning {@code null} cancels the update.
+     * @see IgniteCache#put(Object, Object)
+     */
+    public CacheInterceptorBinaryValue<V> onBeforePut(
+        CacheInterceptorBinaryEntry<K, V> entry,
+        CacheInterceptorBinaryValue<V> newVal);
+
+    /**
+     * This method is called after new value has been stored.
+     * <p>
+     * Implementations should not execute any complex logic,
+     * including locking, networking or cache operations,
+     * as it may lead to deadlock, since this method is called
+     * from sensitive synchronization blocks.
+     * <p>
+     * This method should not throw any exception.
+     *
+     * @param entry Current entry. If {@link CacheConfiguration#isCopyOnRead()} is {@code true} then
+     *      entry is a copy.
+     */
+    public void onAfterPut(CacheInterceptorBinaryEntry<K, V> entry);
+
+    /**
+     * This method is called within {@link IgniteCache#remove(Object)}
+     * and similar operations to provide control over returned value.
+     * <p>
+     * Implementations should not execute any complex logic,
+     * including locking, networking or cache operations,
+     * as it may lead to deadlock, since this method is called
+     * from sensitive synchronization blocks.
+     * <p>
+     * This method should not throw any exception.
+     *
+     * @param entry Old entry. If {@link CacheConfiguration#isCopyOnRead()} is {@code true} then
+     *      entry is a copy.
+     * @return Tuple. The first value is the flag whether remove should be cancelled or not.
+     *      The second is the value to be returned as result of {@code remove()} operation,
+     *      may be {@code null}.
+     * @see IgniteCache#remove(Object)
+     */
+    public IgniteBiTuple<Boolean, CacheInterceptorBinaryValue<V>> onBeforeRemove(
+        CacheInterceptorBinaryEntry<K, V> entry);
+
+    /**
+     * This method is called after value has been removed.
+     * <p>
+     * Implementations should not execute any complex logic,
+     * including locking, networking or cache operations,
+     * as it may lead to deadlock, since this method is called
+     * from sensitive synchronization blocks.
+     * <p>
+     * This method should not throw any exception.
+     *
+     * @param entry Removed entry. If {@link CacheConfiguration#isCopyOnRead()} is {@code true} then
+     *      entry is a copy.
+     */
+    public void onAfterRemove(CacheInterceptorBinaryEntry<K, V> entry);
+}

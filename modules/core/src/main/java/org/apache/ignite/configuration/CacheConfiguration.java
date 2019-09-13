@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheInterceptor;
+import org.apache.ignite.cache.CacheInterceptorBinary;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -350,6 +351,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private CacheInterceptor<K, V> interceptor;
 
     /** */
+    private CacheInterceptorBinary<K, V> interceptorBin;
+
+    /** */
     private Class<?>[] sqlFuncCls;
 
     /** */
@@ -518,6 +522,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         sqlOnheapCache = cc.isSqlOnheapCacheEnabled();
         sqlOnheapCacheMaxSize = cc.getSqlOnheapCacheMaxSize();
         evtsDisabled = cc.isEventsDisabled();
+        interceptorBin = cc.getInterceptorBinary();
     }
 
     /**
@@ -1695,6 +1700,27 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     public CacheConfiguration<K, V> setInterceptor(CacheInterceptor<K, V> interceptor) {
         this.interceptor = interceptor;
+
+        return this;
+    }
+
+    /**
+     * Gets binary cache interceptor.
+     *
+     * @return Binary cache interceptor.
+     */
+    public CacheInterceptorBinary<K, V> getInterceptorBinary() {
+        return interceptorBin;
+    }
+
+    /**
+     * Sets binary cache interceptor.
+     *
+     * @param interceptorBin Binary cache interceptor.
+     * @return {@code this} for chaining.
+     */
+    public CacheConfiguration<K, V> setInterceptorBinary(CacheInterceptorBinary<K, V> interceptorBin) {
+        this.interceptorBin = interceptorBin;
 
         return this;
     }
