@@ -1640,11 +1640,11 @@ public class GridDhtPartitionDemander {
 
         Set<GridDhtPartitionDemander> demanders = demanders();
 
-        Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs = demanders.stream()
+        Map<CacheGroupContext, Collection<RebalanceFuture>> rebFuts = demanders.stream()
             .collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
 
         try {
-            log.info(rebalanceStatistics(true, rebFutrs));
+            log.info(rebalanceStatistics(true, rebFuts));
         }
         finally {
             demanders.forEach(demander -> {
