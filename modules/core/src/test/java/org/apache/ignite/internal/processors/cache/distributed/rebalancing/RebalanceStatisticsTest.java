@@ -54,10 +54,12 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PA
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
+/**
+ * For testing of rebalance statistics.
+ */
 @WithSystemProperty(key = IGNITE_QUIET, value = "false")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
-/** For testing of rebalance statistics. */
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Class rule. */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
@@ -71,11 +73,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Partitions distribution text. */
     private static final String PARTITIONS_DISTRIBUTION_TEXT = "Partitions distribution per cache group";
 
-    /** Topic statistics text. */
-    public static final String TOPIC_STATISTICS_TEXT = "Topic statistics:";
-
     /** Supplier statistics text. */
-    public static final String SUPPLIER_STATISTICS_TEXT = "Supplier statistics:";
+    public static final String SUPPLIER_STATISTICS_TEXT = "[id=";
 
     /** Information per cache group text. */
     public static final String INFORMATION_PER_CACHE_GROUP_TEXT = "Information per cache group";
@@ -87,7 +86,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     private boolean multiJvm;
 
     /** Node count. */
-    private static final int DEFAULT_NODE_CNT = 3;
+    private static final int DEFAULT_NODE_CNT = 2;
 
     /** Logger for listen messages. */
     private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
@@ -114,6 +113,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
         cfg.setCacheConfiguration(cacheCfgs);
         cfg.setRebalanceThreadPoolSize(5);
         cfg.setGridLogger(log);
@@ -201,7 +201,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * */
     @Test
     public void testPrintCorrectStatistic() throws Exception {
-        cacheCfgs = defaultCacheConfigurations(10,2);
+        cacheCfgs = defaultCacheConfigurations(10, 2);
 
         crd = startGrids(DEFAULT_NODE_CNT);
 
@@ -227,7 +227,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         Map<String, Integer> partDistribution = perCacheGroupPartitionDistribution(newNode);
 
-        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(totalStats.get(0)).entrySet().stream()
+        Map<String, Integer> topicStats = perCacheGroupNodeStatistics(totalStats.get(0)).entrySet().stream()
             .collect(toMap(Map.Entry::getKey, entry -> sumNum(entry.getValue(), "p=([0-9]+)")));
 
         partDistribution.forEach((cacheName, partCnt) -> assertEquals(partCnt, topicStats.get(cacheName)));
@@ -243,7 +243,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     public void testPrintCorrectStatisticInMultiJvm() throws Exception{
         multiJvm = true;
 
-        cacheCfgs = defaultCacheConfigurations(100,2);
+        cacheCfgs = defaultCacheConfigurations(100, 2);
 
         crd = startGrids(3);
 
@@ -275,7 +275,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         Map<String, Integer> newPartDistribution = perCacheGroupPartitionDistribution(newNode);
 
-        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(totalStats.get(0)).entrySet().stream()
+        Map<String, Integer> topicStats = perCacheGroupNodeStatistics(totalStats.get(0)).entrySet().stream()
             .collect(toMap(Map.Entry::getKey, entry -> sumNum(entry.getValue(), "p=([0-9]+)")));
 
         newPartDistribution.forEach((cacheName, partCnt) -> {
@@ -285,12 +285,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Parsing and extract topic statistics string for each caches.
+     * Parsing and extract node statistics string for each caches.
      *
-     * @param s String with statisctics for parsing, require not null.
-     * @return key - Name cache, string topic statistics.
+     * @param s String with statistics for parsing, require not null.
+     * @return key - Name cache, string node statistics.
      */
-    private Map<String, String> perCacheGroupTopicStatistics(final String s) {
+    private Map<String, String> perCacheGroupNodeStatistics(final String s) {
         assert nonNull(s);
 
         Map<String, String> perCacheGroupTopicStatistics = new HashMap<>();
@@ -298,12 +298,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         int startI = s.indexOf(INFORMATION_PER_CACHE_GROUP_TEXT);
 
         for (; ; ) {
-            int tsti = s.indexOf(TOPIC_STATISTICS_TEXT, startI);
-            if (tsti == -1)
+            int ssti = s.indexOf(SUPPLIER_STATISTICS_TEXT, startI);
+            if (ssti == -1)
                 break;
 
-            int ssti = s.indexOf(SUPPLIER_STATISTICS_TEXT, tsti);
-            if (ssti == -1)
+            int ssti1 = s.indexOf(SUPPLIER_STATISTICS_TEXT, ssti + 1);
+            if (ssti1 == -1)
                 break;
 
             int nai = s.indexOf(NAME_ATTRIBUTE, startI);
@@ -315,10 +315,13 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
                 break;
 
             String cacheName = s.substring(nai + NAME_ATTRIBUTE.length() + 1, ci);
-            String topicStat = s.substring(tsti + TOPIC_STATISTICS_TEXT.length(), ssti);
+            String nodeStat = s.substring(ssti, ssti1);
 
-            perCacheGroupTopicStatistics.put(cacheName, topicStat);
-            startI = ssti;
+            if (!nodeStat.contains("Supplier statistics"))
+                break;
+
+            perCacheGroupTopicStatistics.put(cacheName, nodeStat);
+            startI = ssti1;
         }
 
         return perCacheGroupTopicStatistics;

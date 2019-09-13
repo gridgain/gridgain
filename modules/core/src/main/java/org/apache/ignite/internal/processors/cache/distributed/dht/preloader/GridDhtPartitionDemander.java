@@ -495,6 +495,8 @@ public class GridDhtPartitionDemander {
                                 ", fullPartitions=" + S.compact(parts.fullSet()) +
                                 ", histPartitions=" + S.compact(parts.historicalSet()) + "]");
 
+                        fut.stat.addMessageStatistics(node);
+
                         ctx.io().sendOrderedMessage(node, rebalanceTopic,
                             d.convertIfNeeded(node.version()), grp.ioPolicy(), d.timeout());
 
@@ -734,7 +736,7 @@ public class GridDhtPartitionDemander {
             }
 
             try {
-                fut.stat.addReceivePartitionStatistics(0, ctx.node(nodeId), supplyMsg);
+                fut.stat.addReceivePartitionStatistics(ctx.node(nodeId), supplyMsg);
 
                 AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 

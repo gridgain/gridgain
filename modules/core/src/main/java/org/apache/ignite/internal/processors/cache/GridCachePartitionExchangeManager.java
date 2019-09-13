@@ -3322,7 +3322,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             // Just pick first worker to do this, so we don't
                             // invoke topology callback more than once for the
                             // same event.
-
                             boolean changed = false;
 
                             for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
