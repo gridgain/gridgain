@@ -109,7 +109,6 @@ public class AgentDownloadController {
                     "#server-trust-store=ca.jks",
                     "#server-trust-store-password=MY_PASSWORD",
                     "#passwords-key-store=Path to key store that keeps encrypted passwords",
-                    "#passwords-key-store-password=MY_PASSWORD",
                     "#cipher-suites=CIPHER1,CIPHER2,CIPHER3"
                 );
 
