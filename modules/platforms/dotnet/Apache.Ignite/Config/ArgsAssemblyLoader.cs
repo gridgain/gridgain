@@ -37,6 +37,7 @@ namespace Apache.Ignite.Config
                 .Where(x => x.Item1.StartsWith(Configurator.CmdAssembly, StringComparison.InvariantCultureIgnoreCase))
                 .Select(Configurator.ValidateArgValue);
 
+            // TODO: Load one by one, return filtered.
             Ignition.LoadAssemblies(assemblies);
         }
     }

@@ -90,7 +90,8 @@ namespace Apache.Ignite
                 {
                     // Pick application configuration first, command line arguments second.
                     var allArgs = AppSettingsConfigurator.GetArgs(ConfigurationManager.AppSettings)
-                        .Concat(ArgsConfigurator.GetArgs(args)).ToArray();
+                        .Concat(ArgsConfigurator.GetArgs(args))
+                        .ToArray();
 
                     // Load assemblies before instantiating configuration:
                     // Configuration can reference types from those assemblies.
