@@ -124,8 +124,7 @@ namespace Apache.Ignite
             // If we are here, then this is a service call.
             // Use only arguments, not app.config.
             var cfg = Configurator.GetConfiguration(ArgsConfigurator.GetArgs(args).ToArray());
-
-            ServiceBase.Run(new IgniteService(cfg));
+            IgniteService.Run(cfg);
         }
 
         /// <summary>
