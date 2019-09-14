@@ -101,12 +101,14 @@ namespace Apache.Ignite
                         IgniteService.DoInstall(allArgs);
                     else
                     {
-                        var ignite = Ignition.Start(Configurator.GetConfiguration(allArgs));
-
-                        // Wait until stopped.
-                        var evt = new ManualResetEventSlim(false);
-                        ignite.Stopped += (s, a) => evt.Set();
-                        evt.Wait();
+                        using (var ignite = Ignition.Start(Configurator.GetConfiguration(allArgs)))
+                        {
+                            // Wait until stopped.
+                            var evt = new ManualResetEventSlim(false);
+                            ignite.Stopped += (s, a) => evt.Set();
+                            Console.CancelKeyPress += (s, a) => evt.Set();
+                            evt.Wait();
+                        }
                     }
 
                     return;

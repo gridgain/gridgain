@@ -11,6 +11,7 @@
     <AssemblyName>Apache.Ignite</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <StartupObject>Apache.Ignite.IgniteRunner</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -49,6 +50,7 @@
     <Compile Include="Config\ConfigValueParser.cs" />
     <Compile Include="Config\ArgsAssemblyLoader.cs" />
     <Compile Include="ConsoleUtils.cs" />
+    <Compile Include="IgniteCoreRunner.cs" />
     <Compile Include="IgniteRunner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\IgniteService.cs">

@@ -52,6 +52,7 @@ namespace Apache.Ignite
                     }
                 }
 
+                // TODO: Remove code duplication.
                 // Pick application configuration first, command line arguments second.
                 var allArgs = AppSettingsConfigurator.GetArgs(ConfigurationManager.AppSettings)
                     .Concat(ArgsConfigurator.GetArgs(args)).ToArray();
