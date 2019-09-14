@@ -94,6 +94,7 @@ namespace Apache.Ignite
 
                     // Load assemblies before instantiating configuration:
                     // Configuration can reference types from those assemblies.
+                    // TODO: Avoid double load call: load only -assembly stuff here, and don't pass it along.
                     ArgsAssemblyLoader.LoadAssemblies(allArgs);
 
                     if (install)
