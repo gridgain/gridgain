@@ -92,7 +92,8 @@ namespace Apache.Ignite
                     var allArgs = AppSettingsConfigurator.GetArgs(ConfigurationManager.AppSettings)
                         .Concat(ArgsConfigurator.GetArgs(args)).ToArray();
 
-                    // load additional assemblies if required
+                    // Load assemblies before instantiating configuration:
+                    // Configuration can reference types from those assemblies.
                     ArgsAssemblyLoader.LoadAssemblies(allArgs);
 
                     if (install)
