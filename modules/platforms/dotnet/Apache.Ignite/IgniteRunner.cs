@@ -20,7 +20,6 @@ namespace Apache.Ignite
     using System.Collections.Generic;
     using System.Configuration;
     using System.Linq;
-    using System.ServiceProcess;
     using System.Threading;
     using Apache.Ignite.Config;
     using Apache.Ignite.Core;
@@ -89,14 +88,12 @@ namespace Apache.Ignite
                 if (!svc)
                 {
                     // Pick application configuration first, command line arguments second.
+                    // Load assemblies before instantiating IgniteConfiguration:
+                    // Configuration can reference types from those assemblies.
                     var allArgs = AppSettingsConfigurator.GetArgs(ConfigurationManager.AppSettings)
                         .Concat(ArgsConfigurator.GetArgs(args))
+                        .LoadAssemblies()
                         .ToArray();
-
-                    // Load assemblies before instantiating configuration:
-                    // Configuration can reference types from those assemblies.
-                    // TODO: Avoid double load call: load only -assembly stuff here, and don't pass it along.
-                    ArgsAssemblyLoader.LoadAssemblies(allArgs);
 
                     if (install)
                         IgniteService.DoInstall(allArgs);

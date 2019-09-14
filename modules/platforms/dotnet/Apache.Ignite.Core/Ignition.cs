@@ -517,7 +517,7 @@ namespace Apache.Ignite.Core
         /// Load assemblies.
         /// </summary>
         /// <param name="assemblies">Assemblies.</param>
-        internal static void LoadAssemblies(IEnumerable<string> assemblies)
+        private static void LoadAssemblies(IEnumerable<string> assemblies)
         {
             if (assemblies != null)
             {
