@@ -370,6 +370,15 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Tests a scenario where XML config has references to types from dynamically loaded assemblies.
+        /// </summary>
+        [Test]
+        public void TestXmlConfigurationReferencesTypesFromDynamicallyLoadedAssemblies()
+        {
+            // TODO
+        }
+
+        /// <summary>
         /// Get remote node configuration.
         /// </summary>
         /// <returns>Configuration.</returns>
