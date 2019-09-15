@@ -88,17 +88,18 @@ namespace Apache.Ignite
                 if (!svc)
                 {
                     // Pick application configuration first, command line arguments second.
-                    // Load assemblies before instantiating IgniteConfiguration:
-                    // Configuration can reference types from those assemblies.
                     var allArgs = AppSettingsConfigurator.GetArgs(ConfigurationManager.AppSettings)
                         .Concat(ArgsConfigurator.GetArgs(args))
-                        .LoadAssemblies()
                         .ToArray();
 
                     if (install)
                         IgniteService.DoInstall(allArgs);
                     else
                     {
+                        // Load assemblies before instantiating IgniteConfiguration,
+                        // it can reference types from those assemblies.
+                        allArgs = allArgs.LoadAssemblies().ToArray();
+
                         using (var ignite = Ignition.Start(Configurator.GetConfiguration(allArgs)))
                         {
                             // Wait until stopped.
