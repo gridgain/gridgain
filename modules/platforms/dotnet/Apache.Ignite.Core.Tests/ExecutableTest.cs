@@ -131,14 +131,13 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestAssemblyCmd()
         {
-            GenerateDll("test-1.dll");
-            GenerateDll("test-2.dll");
+            var dll1 = GenerateDll("test-1.dll", true);
+            var dll2 = GenerateDll("test-2.dll", true);
 
             var proc = new IgniteProcess(
                 "-springConfigUrl=" + SpringCfgPath,
-                "-assembly=test-1.dll",
-                "-assembly=test-2.dll"
-                );
+                "-assembly=" + dll1,
+                "-assembly=" + dll2);
 
             Assert.IsTrue(proc.Alive);
             Assert.IsTrue(_grid.WaitTopology(2));
@@ -394,7 +393,7 @@ namespace Apache.Ignite.Core.Tests
                         public bool IsEnabled(LogLevel level) { return true; } 
                 } }";
 
-            var dllPath = GenerateDll("CustomAsm.dll", code);
+            var dllPath = GenerateDll("CustomAsm.dll", true, code);
 
             var proc = new IgniteProcess(
                 "-configFileName=config\\ignite-dotnet-cfg-logger.xml",
@@ -420,11 +419,12 @@ namespace Apache.Ignite.Core.Tests
         /// Generates a DLL dynamically.
         /// </summary>
         /// <param name="outputPath">Target path.</param>
+        /// <param name="randomPath">Whether to use random path.</param>
         /// <param name="code">Code to compile.</param>
-        private string GenerateDll(string outputPath, string code = null)
+        private string GenerateDll(string outputPath, bool randomPath = false, string code = null)
         {
             // Put resulting DLLs to the random temp dir to make sure they are not resolved from current dir.
-            var resPath = Path.Combine(_tempDir, outputPath);
+            var resPath = randomPath ? Path.Combine(_tempDir, outputPath) : outputPath;
 
             var parameters = new CompilerParameters
             {
