@@ -423,6 +423,7 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="code">Code to compile.</param>
         private string GenerateDll(string outputPath, string code = null)
         {
+            // Put resulting DLLs to the random temp dir to make sure they are not resolved from current dir.
             var resPath = Path.Combine(_tempDir, outputPath);
 
             var parameters = new CompilerParameters
