@@ -111,6 +111,7 @@ namespace Apache.Ignite.Core.Tests
 
             CollectionAssert.Contains(cfg.LoadedAssemblies, "test-1");
             CollectionAssert.Contains(cfg.LoadedAssemblies, "test-2");
+            Assert.Null(cfg.Assemblies);
 
             CollectionAssert.Contains(cfg.JvmOptions, "-DOPT1");
             CollectionAssert.Contains(cfg.JvmOptions, "-DOPT2");
