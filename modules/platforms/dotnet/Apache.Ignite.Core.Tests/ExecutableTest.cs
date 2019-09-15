@@ -132,7 +132,8 @@ namespace Apache.Ignite.Core.Tests
 
             var cfg = RemoteConfig();
 
-            Assert.IsTrue(cfg.Assemblies.Contains("test-1.dll") && cfg.Assemblies.Contains("test-2.dll"));
+            CollectionAssert.Contains(cfg.LoadedAssemblies, "test-1");
+            CollectionAssert.Contains(cfg.LoadedAssemblies, "test-2");
         }
 
         /// <summary>
@@ -431,6 +432,7 @@ namespace Apache.Ignite.Core.Tests
                     JvmClasspath = cfg.JvmClasspath,
                     JvmOptions = cfg.JvmOptions,
                     Assemblies = cfg.Assemblies,
+                    LoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetName().Name).ToArray(),
                     JvmInitialMemoryMb = cfg.JvmInitialMemoryMb,
                     JvmMaxMemoryMb = cfg.JvmMaxMemoryMb
                 };
@@ -475,6 +477,11 @@ namespace Apache.Ignite.Core.Tests
             /// Assemblies.
             /// </summary>
             public ICollection<string> Assemblies { get; set; }
+
+            /// <summary>
+            /// Assemblies.
+            /// </summary>
+            public ICollection<string> LoadedAssemblies { get; set; }
 
             /// <summary>
             /// Minimum JVM memory (Xms).
