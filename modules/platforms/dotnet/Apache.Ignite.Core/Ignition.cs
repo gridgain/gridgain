@@ -389,14 +389,14 @@ namespace Apache.Ignite.Core
             // 1. Load assemblies.
             IgniteConfiguration cfg = _startup.Configuration;
 
-            LoadAssemblies(cfg.Assemblies);
+            LoadAllAssemblies(cfg.Assemblies);
 
             ICollection<string> cfgAssembllies;
             BinaryConfiguration binaryCfg;
 
             BinaryUtils.ReadConfiguration(reader, out cfgAssembllies, out binaryCfg);
 
-            LoadAssemblies(cfgAssembllies);
+            LoadAllAssemblies(cfgAssembllies);
 
             // 2. Create marshaller only after assemblies are loaded.
             if (cfg.BinaryConfiguration == null)
@@ -514,10 +514,22 @@ namespace Apache.Ignite.Core
         }
 
         /// <summary>
+        /// Loads assemblies.
+        /// </summary>
+        /// <param name="assemblies">Assemblies.</param>
+        [Obsolete("Do not use, internal implementation detail, will be removed in future versions.")]
+        // ReSharper disable once UnusedMember.Global
+        // Was added to public API by mistake, keeping for compatibility.
+        public static void LoadAssemblies(IEnumerable<string> assemblies)
+        {
+            LoadAllAssemblies(assemblies);
+        }
+
+        /// <summary>
         /// Load assemblies.
         /// </summary>
         /// <param name="assemblies">Assemblies.</param>
-        private static void LoadAssemblies(IEnumerable<string> assemblies)
+        private static void LoadAllAssemblies(IEnumerable<string> assemblies)
         {
             if (assemblies != null)
             {
