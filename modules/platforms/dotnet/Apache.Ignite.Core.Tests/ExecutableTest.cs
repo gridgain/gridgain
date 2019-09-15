@@ -375,7 +375,25 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestXmlConfigurationReferencesTypesFromDynamicallyLoadedAssemblies()
         {
-            // TODO
+            const string code = @"
+                using System;
+                using Apache.Ignite.Core.Log;
+                namespace CustomNs { 
+                    class CustomLogger : ILogger { 
+                        public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, 
+                                        string category, string nativeErrorInfo, Exception ex) {} 
+                        public bool IsEnabled(LogLevel level) { return true; } 
+                } }";
+
+            GenerateDll("CustomAsm.dll", code);
+
+            var proc = new IgniteProcess("-configFileName=config\\ignite-dotnet-cfg-logger.xml");
+
+            Assert.IsTrue(proc.Alive);
+            Assert.IsTrue(_grid.WaitTopology(2));
+
+            var remoteCfg = RemoteConfig();
+            Assert.NotNull(remoteCfg); // TODO
         }
 
         /// <summary>
@@ -388,22 +406,26 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        /// Generates a DLL dynamically.
         /// </summary>
-        /// <param name="outputPath"></param>
-        private static void GenerateDll(string outputPath)
+        /// <param name="outputPath">Target path.</param>
+        /// <param name="code">Code to compile.</param>
+        private static void GenerateDll(string outputPath, string code = null)
         {
             var parameters = new CompilerParameters
             {
                 GenerateExecutable = false,
-                OutputAssembly = outputPath
+                OutputAssembly = outputPath,
+                ReferencedAssemblies = { typeof(IIgnite).Assembly.Location }
             };
 
-            var src = "namespace Apache.Ignite.Client.Test { public class Foo {}}";
+            var src = code ?? "namespace Apache.Ignite.Client.Test { public class Foo {}}";
 
             var results = CodeDomProvider.CreateProvider("CSharp").CompileAssemblyFromSource(parameters, src);
 
-            Assert.False(results.Errors.HasErrors);
+            Assert.False(
+                results.Errors.HasErrors,
+                string.Join(Environment.NewLine, results.Errors.Cast<CompilerError>().Select(e => e.ToString())));
         }
 
         /// <summary>
