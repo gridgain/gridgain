@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests
     using System;
     using System.CodeDom.Compiler;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Compute;
@@ -48,12 +49,17 @@ namespace Apache.Ignite.Core.Tests
         /** Grid. */
         private IIgnite _grid;
 
+        /** Temp dir for assemblies. */
+        private string _tempDir;
+
         /// <summary>
         /// Set-up routine.
         /// </summary>
         [SetUp]
         public void SetUp()
         {
+            _tempDir = TestUtils.GetTempDirectoryName();
+
             TestUtils.KillProcesses();
 
             _grid = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
@@ -85,6 +91,8 @@ namespace Apache.Ignite.Core.Tests
             TestUtils.KillProcesses();
 
             IgniteProcess.RestoreConfigurationBackup();
+
+            Directory.Delete(_tempDir, true);
         }
 
         /// <summary>
@@ -386,9 +394,11 @@ namespace Apache.Ignite.Core.Tests
                         public bool IsEnabled(LogLevel level) { return true; } 
                 } }";
 
-            GenerateDll("CustomAsm.dll", code);
+            var dllPath = GenerateDll("CustomAsm.dll", code);
 
-            var proc = new IgniteProcess("-configFileName=config\\ignite-dotnet-cfg-logger.xml");
+            var proc = new IgniteProcess(
+                "-configFileName=config\\ignite-dotnet-cfg-logger.xml",
+                "-assembly=" + dllPath);
 
             Assert.IsTrue(proc.Alive);
             Assert.IsTrue(_grid.WaitTopology(2));
@@ -411,12 +421,14 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         /// <param name="outputPath">Target path.</param>
         /// <param name="code">Code to compile.</param>
-        private static void GenerateDll(string outputPath, string code = null)
+        private string GenerateDll(string outputPath, string code = null)
         {
+            var resPath = Path.Combine(_tempDir, outputPath);
+
             var parameters = new CompilerParameters
             {
                 GenerateExecutable = false,
-                OutputAssembly = outputPath,
+                OutputAssembly = resPath,
                 ReferencedAssemblies = { typeof(IIgnite).Assembly.Location }
             };
 
@@ -427,6 +439,8 @@ namespace Apache.Ignite.Core.Tests
             Assert.False(
                 results.Errors.HasErrors,
                 string.Join(Environment.NewLine, results.Errors.Cast<CompilerError>().Select(e => e.ToString())));
+
+            return resPath;
         }
 
         /// <summary>
