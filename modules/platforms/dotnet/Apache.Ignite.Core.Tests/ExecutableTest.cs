@@ -106,10 +106,14 @@ namespace Apache.Ignite.Core.Tests
             var cfg = RemoteConfig();
 
             Assert.AreEqual(SpringCfgPath, cfg.SpringConfigUrl);
-            Assert.IsTrue(cfg.JvmOptions.Contains("-DOPT1") && cfg.JvmOptions.Contains("-DOPT2"));
-            Assert.IsTrue(cfg.Assemblies.Contains("test-1.dll") && cfg.Assemblies.Contains("test-2.dll"));
             Assert.AreEqual(602, cfg.JvmInitialMemoryMb);
             Assert.AreEqual(702, cfg.JvmMaxMemoryMb);
+
+            CollectionAssert.Contains(cfg.LoadedAssemblies, "test-1");
+            CollectionAssert.Contains(cfg.LoadedAssemblies, "test-2");
+
+            CollectionAssert.Contains(cfg.JvmOptions, "-DOPT1");
+            CollectionAssert.Contains(cfg.JvmOptions, "-DOPT2");
         }
 
         /// <summary>
