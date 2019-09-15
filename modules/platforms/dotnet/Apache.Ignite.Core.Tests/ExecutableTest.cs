@@ -393,7 +393,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.IsTrue(_grid.WaitTopology(2));
 
             var remoteCfg = RemoteConfig();
-            Assert.NotNull(remoteCfg); // TODO
+            Assert.AreEqual("CustomNs.CustomLogger", remoteCfg.LoggerTypeName);
         }
 
         /// <summary>
@@ -469,7 +469,8 @@ namespace Apache.Ignite.Core.Tests
                     Assemblies = cfg.Assemblies,
                     LoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetName().Name).ToArray(),
                     JvmInitialMemoryMb = cfg.JvmInitialMemoryMb,
-                    JvmMaxMemoryMb = cfg.JvmMaxMemoryMb
+                    JvmMaxMemoryMb = cfg.JvmMaxMemoryMb,
+                    LoggerTypeName = cfg.Logger == null ? null : cfg.Logger.GetType().FullName
                 };
 
                 Console.WriteLine("RETURNING CFG: " + cfg);
@@ -527,6 +528,11 @@ namespace Apache.Ignite.Core.Tests
             /// Maximum JVM memory (Xms).
             /// </summary>
             public int JvmMaxMemoryMb { get; set; }
+
+            /// <summary>
+            /// Logger type name.
+            /// </summary>
+            public string LoggerTypeName { get; set; }
         }
     }
 }
