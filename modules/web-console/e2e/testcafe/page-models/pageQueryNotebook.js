@@ -22,11 +22,14 @@ import {ace, enterAceText} from '../components/ace';
 export class Paragraph extends PanelCollapsible {
     constructor(title) {
         super(title);
-        this.executeButton = this.body.find('button').withExactText('Execute');
+
+        this.topRightExecuteButton = this.body.find('query-actions-button').find('button').withExactText('Execute');
+        this.bottomExecuteButton = this.body.find('.sql-controls').find('button').withExactText('Execute');
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');
-        this.clearResultButton = this.body.find('i.fa.fa-eraser')
+        this.clearResultButton = this.body.find('i.fa.fa-eraser');
+        this.showStacktraceButton = this.body.find('a').withExactText('Show more');
     }
     async enterQuery(text, options = {replace: false}) {
         return await enterAceText(this.queryField.with({timeout: 0}), text, options);
@@ -47,4 +50,18 @@ const confirmClearQueryDialogSelector = Selector('.modal-header').withText('Conf
 export const confirmClearQueryDialog = {
     dialog: confirmClearQueryDialogSelector,
     confirmButton: confirmClearQueryDialogSelector.find('button').withExactText('Confirm')
+};
+
+const showStacktraceDialogSelector = Selector('.modal-header').withText('Error details').parent('.modal');
+const stacktraceDialogRootCause = showStacktraceDialogSelector.find('.stacktrace-viewer__cause');
+const stacktraceDialogRootCauseLine = showStacktraceDialogSelector.find('.stacktrace-viewer__trace');
+
+export const showStacktraceDialog = {
+    dialog: showStacktraceDialogSelector,
+    rootCause: stacktraceDialogRootCause,
+    rootCauseMsg: stacktraceDialogRootCause.find('span'),
+    rootCauseFirstStacktraceLine: stacktraceDialogRootCauseLine,
+    causeWithoutStacktrace: showStacktraceDialogSelector.find('.stacktrace-viewer__cause').withText('Cause without stacktrace'),
+    downloadLink: showStacktraceDialogSelector.find('span').withText('Full stacktrace is not available'),
+    okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
 };
