@@ -38,7 +38,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="marsh">Marshaller.</param>
-        /// <param name="ptr">Remote cluster object pointer.</param>
         public ClientCluster(IgniteClient ignite, Marshaller marsh)
         {
             _ignite = ignite;
