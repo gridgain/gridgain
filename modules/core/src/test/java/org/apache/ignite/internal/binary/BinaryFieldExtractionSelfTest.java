@@ -16,10 +16,13 @@
 
 package org.apache.ignite.internal.binary;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Time;
 import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -27,6 +30,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  *
@@ -119,6 +124,35 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
         buf.flip();
 
         assertEquals(field.value(binObj), field.<Time>readField(buf));
+    }
+
+    /**
+     * Checking the exception and its text when changing the typeId of a BinaryField.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCheckExceptionAndMessageWhenChangeTypeIdOfBinaryField() throws Exception {
+        BinaryMarshaller marsh = createMarshaller();
+
+        TimeValue timeVal = new TimeValue(11111L);
+        DecimalValue decimalVal = new DecimalValue(BigDecimal.ZERO);
+
+        BinaryObjectImpl timeValBinObj = toBinary(timeVal, marsh);
+        BinaryObjectImpl decimalValBinObj = toBinary(decimalVal, marsh);
+
+        BinaryFieldEx timeBinField = (BinaryFieldEx)timeValBinObj.type().field("time");
+
+        Field typeIdField = U.findField(timeBinField.getClass(), "typeId");
+        typeIdField.set(timeBinField, decimalValBinObj.typeId());
+
+        String expMsg = "Failed to get field because type ID of passed object differs from type ID this " +
+            "BinaryField belongs to [expected=[typeId=" + decimalValBinObj.typeId() + ", typeName=" +
+            decimalVal.getClass().getName() + "], actual=[typeId=" + timeValBinObj.typeId() + ", typeName=" +
+            timeVal.getClass().getName() + "], fieldId=" + U.field(timeBinField, "fieldId") + ", fieldName="
+            + timeBinField.name() + ", fieldType=null]";
+
+        assertThrows(log, () -> timeBinField.value(timeValBinObj), BinaryObjectException.class, expMsg);
     }
 
     /**
