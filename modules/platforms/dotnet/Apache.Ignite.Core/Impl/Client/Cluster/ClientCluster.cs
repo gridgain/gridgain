@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Handles the error.
         /// </summary>
-        private T HandleError<T>(ClientStatusCode status, string msg)
+        private static T HandleError<T>(ClientStatusCode status, string msg)
         {
             throw new IgniteClientException(msg, null, status);
         }
