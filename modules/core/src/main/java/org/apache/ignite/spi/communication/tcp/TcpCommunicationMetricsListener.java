@@ -62,13 +62,16 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     private final Set<ThreadMetrics> allMetrics = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Thread-local metrics. */
-    private final ThreadLocal<ThreadMetrics> threadMetrics = ThreadLocal.withInitial(() -> {
-        ThreadMetrics metrics = new ThreadMetrics();
+    @SuppressWarnings("AnonymousHasLambdaAlternative")
+    private final ThreadLocal<ThreadMetrics> threadMetrics = new ThreadLocal<ThreadMetrics>() {
+        @Override protected ThreadMetrics initialValue() {
+            ThreadMetrics metrics = new ThreadMetrics();
 
-        allMetrics.add(metrics);
+            allMetrics.add(metrics);
 
-        return metrics;
-    });
+            return metrics;
+        }
+    };
 
     /** */
     private final MsgTimeMetric msgTimeMetric = new MsgTimeMetric();
