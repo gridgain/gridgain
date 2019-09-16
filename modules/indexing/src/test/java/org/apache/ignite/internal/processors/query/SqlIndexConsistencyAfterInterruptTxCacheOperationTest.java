@@ -14,30 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.client;
+package org.apache.ignite.internal.processors.query;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.cache.CacheAtomicityMode;
 
 /**
- * Tests for Java thin client.
+ *
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    ClientConfigurationTest.class,
-    ClientCacheConfigurationTest.class,
-    FunctionalTest.class,
-    IgniteBinaryTest.class,
-    LoadTest.class,
-    ReliabilityTest.class,
-    SecurityTest.class,
-    FunctionalQueryTest.class,
-    IgniteBinaryQueryTest.class,
-    SslParametersTest.class,
-    ConnectionTest.class,
-    ConnectToStartingNodeTest.class,
-    AsyncChannelTest.class
-})
-public class ClientTestSuite {
-    // No-op.
+public class SqlIndexConsistencyAfterInterruptTxCacheOperationTest
+    extends SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest {
+    /**
+     */
+    protected CacheAtomicityMode atomicity() {
+        return CacheAtomicityMode.TRANSACTIONAL;
+    }
 }
