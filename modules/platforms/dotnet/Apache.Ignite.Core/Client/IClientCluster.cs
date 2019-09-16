@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Client
         /// WAL state can be changed only for persistent caches.
         /// </summary>
         /// <param name="cacheName">Name of the cache.</param>
-        /// <returns>Whether WAL enabled by this call.</returns>
+        /// <returns>Whether WAL was enabled by this call.</returns>
         bool DisableWal(string cacheName);
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Apache.Ignite.Core.Client
         /// WAL state can be changed only for persistent caches.
         /// </summary>
         /// <param name="cacheName">Name of the cache.</param>
-        /// <returns>Whether WAL disabled by this call.</returns>
+        /// <returns>Whether WAL was disabled by this call.</returns>
         bool EnableWal(string cacheName);
 
         /// <summary>
