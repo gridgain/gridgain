@@ -33,6 +33,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryField;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.nonNull;
 
 /**
  * Implementation of binary field descriptor.
@@ -286,9 +287,10 @@ public class BinaryFieldImpl implements BinaryFieldEx {
 
             throw new BinaryObjectException("Failed to get field because type ID of passed object differs" +
                 " from type ID this " + BinaryField.class.getSimpleName() + " belongs to [expected=[typeId=" + typeId +
-                ", typeName=" + expType.typeName() + "], actual=[typeId=" + actualType.typeId() + ", typeName=" +
-                actualType.typeName() + "], fieldId=" + fieldId + ", fieldName=" + fieldName + ", fieldType=" +
-                expType.fieldTypeName(fieldName) + ']');
+                ", typeName=" + (nonNull(expType) ? expType.typeName() : null) + "], actual=[typeId=" +
+                actualType.typeId() + ", typeName=" + actualType.typeName() + "], fieldId=" + fieldId +
+                ", fieldName=" + fieldName + ", fieldType=" +
+                (nonNull(expType) ? expType.fieldTypeName(fieldName) : null) + ']');
         }
 
         int schemaId = obj.schemaId();
