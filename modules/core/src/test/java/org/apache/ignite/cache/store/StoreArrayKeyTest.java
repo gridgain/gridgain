@@ -120,7 +120,7 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
      *
      */
     @Before
-    public void setUp() throws Exception {
+    public void init() throws Exception {
         node1 = startGrid(0);
         node2 = startGrid(1);
 
@@ -131,8 +131,9 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
      *
      */
     @After
-    public void tearDown() throws Exception {
+    public void cleanup() throws Exception {
         stopAllGrids();
+
         cleanPersistenceDir();
     }
 
