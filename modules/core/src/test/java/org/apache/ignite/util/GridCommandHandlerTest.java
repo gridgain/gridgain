@@ -596,7 +596,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "set", "invalidConsistentId"));
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--baseline", "set", "invalidConsistentId"));
     }
 
     /**
@@ -1851,7 +1851,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
             (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR,
             execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
     }
 
