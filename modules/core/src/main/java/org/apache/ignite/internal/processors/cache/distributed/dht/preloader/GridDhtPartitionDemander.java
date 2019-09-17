@@ -629,19 +629,10 @@ public class GridDhtPartitionDemander {
         final RebalanceFuture fut = rebalanceFut;
 
         if (!topologyChanged(fut) && fut.isActual(supplyMsg.rebalanceId())) {
-            boolean historical = false;
-
-            for (Integer p : supplyMsg.infos().keySet()) {
+            for (Integer p : supplyMsg.infos().keySet())
                 fut.queued.get(p).increment();
 
-                if (fut.historical.contains(p))
-                    historical = true;
-            }
-
-            if (historical) // Can not be reordered.
-                ctx.kernalContext().getStripedRebalanceExecutorService().execute(r, Math.abs(nodeId.hashCode()));
-            else // Can be reordered.
-                ctx.kernalContext().getRebalanceExecutorService().execute(r);
+            ctx.kernalContext().getRebalanceExecutorService().execute(r);
         }
     }
 
@@ -1258,7 +1249,7 @@ public class GridDhtPartitionDemander {
         final RebalanceFutureStatistics stat = new RebalanceFutureStatistics();
 
         /** Entries batches queued. */
-        private final Map<Integer, LongAdder> queued = new HashMap<>();
+        private final Map<Integer /* Partition id. */, LongAdder /* Batch count. */ > queued = new HashMap<>();
 
         /** Entries batches processed. */
         private final Map<Integer, LongAdder> processed = new HashMap<>();
