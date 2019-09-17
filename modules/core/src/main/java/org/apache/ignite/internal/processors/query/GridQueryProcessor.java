@@ -39,6 +39,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
@@ -1208,7 +1209,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         assert nonNull(qryField);
 
         try {
-            String binaryFieldType = ctx.cacheObjects().metadata(typeId).fieldTypeName(qryField.name());
+            BinaryType binaryType = ctx.cacheObjects().metadata(typeId);
+            String binaryFieldType = nonNull(binaryType) ? binaryType.fieldTypeName(qryField.name()) : null;
 
             return isNull(binaryFieldType) ||
                 binaryFieldType.equals(fieldTypeName(typeByClass(Class.forName(qryField.typeName()))));
