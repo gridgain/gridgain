@@ -42,12 +42,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Near cache prepare response.
  */
-public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse {
+public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse implements TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -95,6 +96,17 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
     /** Not {@code null} if client node should remap transaction. */
     private AffinityTopologyVersion clientRemapVer;
+
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -343,6 +355,37 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
     }
 
     /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -357,50 +400,56 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
         }
 
         switch (writer.state()) {
-            case 12:
+            case 11:
                 if (!writer.writeAffinityTopologyVersion("clientRemapVer", clientRemapVer))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 12:
                 if (!writer.writeMessage("dhtVer", dhtVer))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 13:
                 if (!writer.writeCollection("filterFailedKeys", filterFailedKeys, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 15:
+            case 14:
                 if (!writer.writeIgniteUuid("futId", futId))
                     return false;
 
                 writer.incrementState();
 
-            case 16:
+            case 15:
                 if (!writer.writeInt("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 17:
+            case 16:
                 if (!writer.writeCollection("ownedValKeys", ownedValKeys, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 18:
+            case 17:
                 if (!writer.writeCollection("ownedValVals", ownedValVals, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 19:
+            case 18:
                 if (!writer.writeCollection("pending", pending, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 19:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -433,7 +482,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
             return false;
 
         switch (reader.state()) {
-            case 12:
+            case 11:
                 clientRemapVer = reader.readAffinityTopologyVersion("clientRemapVer");
 
                 if (!reader.isLastRead())
@@ -441,7 +490,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 13:
+            case 12:
                 dhtVer = reader.readMessage("dhtVer");
 
                 if (!reader.isLastRead())
@@ -449,7 +498,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 14:
+            case 13:
                 filterFailedKeys = reader.readCollection("filterFailedKeys", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -457,7 +506,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 15:
+            case 14:
                 futId = reader.readIgniteUuid("futId");
 
                 if (!reader.isLastRead())
@@ -465,7 +514,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 16:
+            case 15:
                 miniId = reader.readInt("miniId");
 
                 if (!reader.isLastRead())
@@ -473,7 +522,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 17:
+            case 16:
                 ownedValKeys = reader.readCollection("ownedValKeys", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -481,7 +530,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 18:
+            case 17:
                 ownedValVals = reader.readCollection("ownedValVals", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -489,8 +538,16 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
                 reader.incrementState();
 
-            case 19:
+            case 18:
                 pending = reader.readCollection("pending", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 19:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;

@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -40,11 +41,12 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * DHT transaction prepare response.
  */
-public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
+public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse implements TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -66,6 +68,18 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
     /** Preload entries. */
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> preloadEntries;
+
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
+
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -230,6 +244,37 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
     }
 
     /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -244,32 +289,38 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
         }
 
         switch (writer.state()) {
-            case 12:
+            case 11:
                 if (!writer.writeIgniteUuid("futId", futId))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 12:
                 if (!writer.writeMap("invalidParts", invalidParts, MessageCollectionItemType.INT, MessageCollectionItemType.INT_ARR))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 13:
                 if (!writer.writeInt("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 15:
+            case 14:
                 if (!writer.writeCollection("nearEvicted", nearEvicted, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 16:
+            case 15:
                 if (!writer.writeCollection("preloadEntries", preloadEntries, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 16:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -290,7 +341,7 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
             return false;
 
         switch (reader.state()) {
-            case 12:
+            case 11:
                 futId = reader.readIgniteUuid("futId");
 
                 if (!reader.isLastRead())
@@ -298,7 +349,7 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
 
                 reader.incrementState();
 
-            case 13:
+            case 12:
                 invalidParts = reader.readMap("invalidParts", MessageCollectionItemType.INT, MessageCollectionItemType.INT_ARR, false);
 
                 if (!reader.isLastRead())
@@ -306,7 +357,7 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
 
                 reader.incrementState();
 
-            case 14:
+            case 13:
                 miniId = reader.readInt("miniId");
 
                 if (!reader.isLastRead())
@@ -314,7 +365,7 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
 
                 reader.incrementState();
 
-            case 15:
+            case 14:
                 nearEvicted = reader.readCollection("nearEvicted", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -322,8 +373,16 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse {
 
                 reader.incrementState();
 
-            case 16:
+            case 15:
                 preloadEntries = reader.readCollection("preloadEntries", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 16:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;

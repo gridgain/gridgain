@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockResponse;
@@ -31,12 +32,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Near cache lock response.
  */
-public class GridNearLockResponse extends GridDistributedLockResponse {
+public class GridNearLockResponse extends GridDistributedLockResponse implements TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -64,6 +66,17 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
     /** {@code True} if remap version is compatible with current version. Used together with clientRemapVer. */
     private boolean compatibleRemapVer;
+
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor (required by {@link Externalizable}).
@@ -208,6 +221,37 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
     }
 
     /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -222,44 +266,50 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
         }
 
         switch (writer.state()) {
-            case 12:
+            case 11:
                 if (!writer.writeAffinityTopologyVersion("clientRemapVer", clientRemapVer))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 12:
                 if (!writer.writeBoolean("compatibleRemapVer", compatibleRemapVer))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 13:
                 if (!writer.writeObjectArray("dhtVers", dhtVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 15:
+            case 14:
                 if (!writer.writeBooleanArray("filterRes", filterRes))
                     return false;
 
                 writer.incrementState();
 
-            case 16:
+            case 15:
                 if (!writer.writeObjectArray("mappedVers", mappedVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 17:
+            case 16:
                 if (!writer.writeInt("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 18:
+            case 17:
                 if (!writer.writeCollection("pending", pending, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 18:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -280,7 +330,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
             return false;
 
         switch (reader.state()) {
-            case 12:
+            case 11:
                 clientRemapVer = reader.readAffinityTopologyVersion("clientRemapVer");
 
                 if (!reader.isLastRead())
@@ -288,7 +338,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 13:
+            case 12:
                 compatibleRemapVer = reader.readBoolean("compatibleRemapVer");
 
                 if (!reader.isLastRead())
@@ -296,7 +346,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 14:
+            case 13:
                 dhtVers = reader.readObjectArray("dhtVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
 
                 if (!reader.isLastRead())
@@ -304,7 +354,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 15:
+            case 14:
                 filterRes = reader.readBooleanArray("filterRes");
 
                 if (!reader.isLastRead())
@@ -312,7 +362,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 16:
+            case 15:
                 mappedVers = reader.readObjectArray("mappedVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
 
                 if (!reader.isLastRead())
@@ -320,7 +370,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 17:
+            case 16:
                 miniId = reader.readInt("miniId");
 
                 if (!reader.isLastRead())
@@ -328,8 +378,16 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 18:
+            case 17:
                 pending = reader.readCollection("pending", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 18:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;

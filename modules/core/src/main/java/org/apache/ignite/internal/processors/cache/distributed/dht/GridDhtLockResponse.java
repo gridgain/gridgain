@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -37,11 +38,12 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * DHT cache lock response.
  */
-public class GridDhtLockResponse extends GridDistributedLockResponse {
+public class GridDhtLockResponse extends GridDistributedLockResponse implements TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -61,6 +63,17 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
     /** Preload entries. */
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> preloadEntries;
+
+    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    private long responseSendTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor (required by {@link Externalizable}).
@@ -192,6 +205,37 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
     }
 
     /** {@inheritDoc} */
+    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+        this.reqSendTimestamp = reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqSentTimestamp() {
+        return reqSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+        this.responseSendTimestamp = responseSendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getResponseSendTimestamp() {
+        return responseSendTimestamp;
+    }
+
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -206,26 +250,32 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
         }
 
         switch (writer.state()) {
-            case 12:
+            case 11:
                 if (!writer.writeCollection("invalidParts", invalidParts, MessageCollectionItemType.INT))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 12:
                 if (!writer.writeIgniteUuid("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 13:
                 if (!writer.writeCollection("nearEvicted", nearEvicted, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 15:
+            case 14:
                 if (!writer.writeCollection("preloadEntries", preloadEntries, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 15:
+                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
                     return false;
 
                 writer.incrementState();
@@ -246,7 +296,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
             return false;
 
         switch (reader.state()) {
-            case 12:
+            case 11:
                 invalidParts = reader.readCollection("invalidParts", MessageCollectionItemType.INT);
 
                 if (!reader.isLastRead())
@@ -254,7 +304,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 13:
+            case 12:
                 miniId = reader.readIgniteUuid("miniId");
 
                 if (!reader.isLastRead())
@@ -262,7 +312,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 14:
+            case 13:
                 nearEvicted = reader.readCollection("nearEvicted", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -270,8 +320,16 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 15:
+            case 14:
                 preloadEntries = reader.readCollection("preloadEntries", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 15:
+                responseSendTimestamp = reader.readLong("responseSendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
