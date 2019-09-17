@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
  * Get cache WAL state request.
  */
 public class ClientClusterWalGetStateRequest extends ClientRequest {
-
     /** Cache name. */
     private final String cacheName;
 

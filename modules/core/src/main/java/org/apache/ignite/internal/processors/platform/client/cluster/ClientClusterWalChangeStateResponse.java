@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
  * Change cache WAL state response.
  */
 public class ClientClusterWalChangeStateResponse extends ClientResponse {
-
     /**
      * Operation result.
      */

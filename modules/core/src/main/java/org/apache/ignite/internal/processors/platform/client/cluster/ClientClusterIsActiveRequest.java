@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
  * Cluster status request.
  */
 public class ClientClusterIsActiveRequest extends ClientRequest {
-
     /**
      * Constructor.
      *

@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
  * Cluster status request.
  */
 public class ClientClusterChangeStateRequest extends ClientRequest {
-
     /** Next state. */
     private final boolean isActive;
 
