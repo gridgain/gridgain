@@ -96,7 +96,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestEnableWal()
         {
-
             var clientCluster = Client.GetCluster();
             clientCluster.SetActive(true);
             clientCluster.EnableWal(PersistentCache);
