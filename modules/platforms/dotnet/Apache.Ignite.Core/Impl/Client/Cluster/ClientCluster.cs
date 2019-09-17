@@ -18,9 +18,11 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
+    using System.Diagnostics;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Ignite client cluster implementation.
@@ -40,6 +42,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="marsh">Marshaller.</param>
         public ClientCluster(IgniteClient ignite, Marshaller marsh)
         {
+            Debug.Assert(ignite != null);
+            Debug.Assert(marsh != null);
+
             _ignite = ignite;
             _marsh = marsh;
         }
@@ -59,6 +64,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool DisableWal(string cacheName)
         {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
             Action<BinaryWriter> action = w =>
             {
                 w.WriteString(cacheName);
@@ -70,6 +77,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool EnableWal(string cacheName)
         {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
             Action<BinaryWriter> action = w =>
             {
                 w.WriteString(cacheName);
@@ -81,6 +90,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool IsWalEnabled(string cacheName)
         {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
             return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBool());
         }
 

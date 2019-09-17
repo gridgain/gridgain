@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
+    using System;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
@@ -116,6 +117,28 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test enable WAL validates cache name.
+        /// </summary>
+        [TestCase(null)]
+        [TestCase("")]
+        public void TestEnableWalValidatesCacheNameArgument(string cacheName)
+        {
+            Assert.Throws<ArgumentException>(() => GetCluster().EnableWal(cacheName),
+                "'cacheName' argument should not be null or empty.");
+        }
+
+        /// <summary>
+        /// Test WAL enabled method validates cache name.
+        /// </summary>
+        [TestCase(null)]
+        [TestCase("")]
+        public void TestIsWalEnabledValidatesCacheNameArgument(string cacheName)
+        {
+            Assert.Throws<ArgumentException>(() => GetCluster().IsWalEnabled(cacheName),
+                "'cacheName' argument should not be null or empty.");
+        }
+
+        /// <summary>
         /// Test disable WAL.
         /// </summary>
         [Test]
@@ -137,6 +160,17 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             clientCluster.EnableWal(PersistentCache);
             Assert.IsTrue(clientCluster.DisableWal(PersistentCache));
             Assert.IsFalse(clientCluster.DisableWal(PersistentCache));
+        }
+
+        /// <summary>
+        /// Test disable WAL validates cache name.
+        /// </summary>
+        [TestCase(null)]
+        [TestCase("")]
+        public void TestDisableWalValidatesCacheNameArgument(string cacheName)
+        {
+            Assert.Throws<ArgumentException>(() => GetCluster().DisableWal(cacheName),
+                "'cacheName' argument should not be null or empty.");
         }
 
         /// <summary>
