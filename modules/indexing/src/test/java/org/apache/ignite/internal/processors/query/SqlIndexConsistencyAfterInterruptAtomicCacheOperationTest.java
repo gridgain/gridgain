@@ -174,9 +174,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
             .setAtomicityMode(atomicity)
             .setIndexedTypes(Integer.class, Integer.class));
 
-        Thread t = new Thread(() -> {
-            cache.query(new SqlFieldsQuery("INSERT INTO Integer (_KEY, _VAL) VALUES (1, 1)"));
-        });
+        Thread t = new Thread(() -> cache.query(new SqlFieldsQuery("INSERT INTO Integer (_KEY, _VAL) VALUES (1, 1)")));
 
         t.start();
         t.interrupt();
@@ -203,9 +201,7 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
 
         cache.putAll(batch);
 
-        Thread t = new Thread(() -> {
-            cache.query(new SqlFieldsQuery("DELETE FROM Integer WHERE _KEY > " + KEYS / 2));
-        });
+        Thread t = new Thread(() -> cache.query(new SqlFieldsQuery("DELETE FROM Integer WHERE _KEY > " + KEYS / 2)));
 
         t.start();
         t.interrupt();
