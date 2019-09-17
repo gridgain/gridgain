@@ -67,6 +67,7 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
 
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(prim);
 
+        // Catch supply message and swap updates to simulate reordering.
         spi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode node, Message message) {
                 if (message instanceof GridDhtPartitionSupplyMessage) {
@@ -82,7 +83,7 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
                     infos.set(0, infos.get(1));
                     infos.set(1, tmp);
 
-                    System.out.println();
+                    assertTrue(infos.get(0).version().compareTo(infos.get(1).version()) > 0);
                 }
 
                 return false;

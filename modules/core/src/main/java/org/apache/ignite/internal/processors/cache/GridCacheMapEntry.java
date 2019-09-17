@@ -3331,7 +3331,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             val = cctx.kernalContext().cacheObjects().prepareForCache(val, cctx);
 
-            final boolean unswapped = ((flags & IS_UNSWAPPED_MASK) != 0);
+            final boolean unswapped = (flags & IS_UNSWAPPED_MASK) != 0;
 
             boolean update;
 
@@ -3490,6 +3490,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (val != null)
                         cctx.store().put(null, key, val, ver);
                 }
+
+                return true;
+            }
+            else if (preload && val == null && cctx.shared().versions().isStartVersion(this.ver)){
+                // Entry is absent in the tree but was removed on supplier.
+                // Need to mark it as deleted to prevent conflict with subsequent lower version writes.
+                update(null, expTime, ttl, ver, true);
+
+                if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal())
+                    deletedUnlocked(true);
 
                 return true;
             }
