@@ -33,7 +33,9 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.events.CacheEvent;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -239,6 +241,8 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
                 assertEquals(entry.getValue(), cache.get(entry.getKey()));
         }
         finally {
+            U.dumpThreads(log);
+
             if (kafkaStmr != null)
                 kafkaStmr.stop();
         }
