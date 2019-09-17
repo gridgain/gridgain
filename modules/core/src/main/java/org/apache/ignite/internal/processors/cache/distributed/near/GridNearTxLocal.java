@@ -226,9 +226,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private IgniteTxManager.TxDumpsThrottling txDumpsThrottling;
 
     /** */
-    private IgniteTxManager txManager;
-
-    /** */
     @GridToStringExclude
     private TransactionProxyImpl proxy;
 
@@ -275,7 +272,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param lb Label.
      * @param tracingEnabled {@code true} if the transaction should be traced.
      * @param txDumpsThrottling Log throttling information.
-     * @param txManager Transaction manager.
      */
     public GridNearTxLocal(
         GridCacheSharedContext ctx,
@@ -293,8 +289,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         int taskNameHash,
         @Nullable String lb,
         boolean tracingEnabled,
-        IgniteTxManager.TxDumpsThrottling txDumpsThrottling,
-        IgniteTxManager txManager
+        IgniteTxManager.TxDumpsThrottling txDumpsThrottling
     ) {
         super(
             ctx,
@@ -320,8 +315,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         this.mvccOp = mvccOp;
 
         this.txDumpsThrottling = txDumpsThrottling;
-
-        this.txManager = txManager;
 
         initResult();
 
@@ -3824,17 +3817,17 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         if (state == COMMITTED || state == ROLLED_BACK) {
             leaveSystemSection();
 
-            //if commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once
+            // If commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once.
             if (!commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
                 return res;
 
             long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
 
-            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+            // In some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision.
             long userTimeMillis = Math.max(totalTimeMillis - systemTimeMillis, 0);
 
-            txManager.writeNearTxMetrics(systemTimeMillis, userTimeMillis);
+            cctx.txMetrics().onNearTxComplete(systemTimeMillis, userTimeMillis);
 
             boolean willBeSkipped = txDumpsThrottling == null || txDumpsThrottling.skipCurrent();
 
@@ -3923,7 +3916,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public IgniteInternalFuture<?> prepareNearTxLocal() {
         enterSystemSection();
 
-        //we assume that prepare start time should be set only once for the transaction
+        // We assume that prepare start time should be set only once for the transaction.
         prepareStartTime.compareAndSet(0, System.nanoTime());
 
         GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)prepFut;
@@ -4024,7 +4017,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
-                    //these values should not be changed after set once
+                    // These values should not be changed after set once.
                     prepareTime.compareAndSet(0, System.nanoTime() - prepareStartTime.get());
 
                     commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
@@ -4092,6 +4085,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             log.debug("Rolling back near tx: " + this);
 
         enterSystemSection();
+
+        // This value should not be changed after set once.
+        commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
 
         if (!onTimeout && trackTimeout)
             removeTimeoutHandler();
@@ -5062,8 +5058,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * Enters the section when system time for this transaction is counted.
      */
     public void enterSystemSection() {
-        //setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
-        //and sould do nothing.
+        // Setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
+        // and should do nothing.
         systemStartTime.compareAndSet(0, System.nanoTime());
     }
 
