@@ -203,9 +203,6 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
                     return entries;
                 });
 
-            // Start kafka streamer.
-            kafkaStmr.start();
-
             final CountDownLatch latch = new CountDownLatch(CNT);
 
             IgnitePredicate<CacheEvent> locLsnr = new IgnitePredicate<CacheEvent>() {
@@ -233,16 +230,25 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
 
             ignite.events(ignite.cluster().forCacheNodes(DEFAULT_CACHE_NAME)).localListen(locLsnr, EVT_CACHE_OBJECT_PUT);
 
-            // Checks all events successfully processed in 10 seconds.
-            assertTrue("Failed to wait latch completion, still wait " + latch.getCount() + " events",
-                latch.await(10, TimeUnit.SECONDS));
+            // Start kafka streamer.
+            kafkaStmr.start();
+
+            try {
+                // Checks all events successfully processed in 10 seconds.
+                assertTrue("Failed to wait latch completion, still wait " + latch.getCount() + " events",
+                    latch.await(10, TimeUnit.SECONDS));
+
+            }
+            catch (Throwable e) {
+                U.dumpThreads(log);
+
+                throw e;
+            }
 
             for (Map.Entry<String, String> entry : keyValMap.entrySet())
                 assertEquals(entry.getValue(), cache.get(entry.getKey()));
         }
         finally {
-            U.dumpThreads(log);
-
             if (kafkaStmr != null)
                 kafkaStmr.stop();
         }
