@@ -160,7 +160,7 @@ namespace ignite
             /**
              * Create a new cluster group which includes all nodes that pass the given predicate filter.
              *
-             * @param pred Pointer to predicate heap object.
+             * @param pred Pointer to predicate heap object. User should NOT free the memory used by object.
              * @return Newly created cluster group.
              *
              * @throw IgniteError if there are no nodes in the cluster group.

@@ -144,7 +144,7 @@ namespace ignite
             return ret;
         }
 
-        void IgniteImpl::SetBaselineTopologyVersion(long topVer)
+        void IgniteImpl::SetBaselineTopologyVersion(int64_t topVer)
         {
             IgniteError err;
 
@@ -153,7 +153,7 @@ namespace ignite
             IgniteError::ThrowIfNeeded(err);
         }
 
-        void IgniteImpl::SetTxTimeoutOnPartitionMapExchange(long timeout)
+        void IgniteImpl::SetTxTimeoutOnPartitionMapExchange(int64_t timeout)
         {
             IgniteError err;
 

@@ -106,7 +106,7 @@ namespace ignite
                 return isLocal;
             }
 
-            long ClusterNodeImpl::GetOrder()
+            int64_t ClusterNodeImpl::GetOrder()
             {
                 return order;
             }

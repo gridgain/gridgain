@@ -74,7 +74,7 @@ namespace ignite
             return impl.Get()->IsLocal();
         }
 
-        long ClusterNode::GetOrder()
+        int64_t ClusterNode::GetOrder()
         {
             return impl.Get()->GetOrder();
         }

@@ -126,7 +126,7 @@ namespace ignite
              *
              * @return Node order.
              */
-            long GetOrder();
+            int64_t GetOrder();
 
             /**
              * Get node version.

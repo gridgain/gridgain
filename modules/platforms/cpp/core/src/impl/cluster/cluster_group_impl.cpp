@@ -106,14 +106,11 @@ namespace ignite
                  */
                 bool operator()(ClusterNode& node)
                 {
-                    bool ret = true;
                     for (size_t i = 0; i < preds.size(); i++)
-                    {
-                        IgnitePredicate<ClusterNode>* p = preds.at(i).Get();
-                        ret &= p->operator()(node);
-                    }
+                        if (!preds.at(i).Get()->operator()(node))
+                            return false;
 
-                    return ret;
+                    return true;
                 }
 
                 /**
@@ -253,7 +250,7 @@ namespace ignite
                     return false;
                 }
 
-                HostPredicate(std::string hostName)
+                HostPredicate(const std::string& hostName)
                 {
                     names.push_back(hostName);
                 }
@@ -368,10 +365,11 @@ namespace ignite
                     if (newPredHolder.Get()->operator()(allNodes.at(i)))
                         nodeIds.push_back(allNodes.at(i).GetId());
 
+                SP_ClusterGroupImpl ret;
                 if (nodeIds.empty())
-                    throw IgniteError(IgniteError::IGNITE_ERR_CLUSTER_GROUP_EMPTY, "The empty cluster group cannot be created.");
-
-                SP_ClusterGroupImpl ret = ForNodeIds(nodeIds);
+                    ret = GetEmptyClusterGroup();
+                else
+                    ret = ForNodeIds(nodeIds);
 
                 ret.Get()->SetPredicate(newPredHolder);
 
@@ -520,14 +518,14 @@ namespace ignite
                 return proc.IsWalEnabled(cacheName);
             }
 
-            void ClusterGroupImpl::SetBaselineTopologyVersion(long topVer)
+            void ClusterGroupImpl::SetBaselineTopologyVersion(int64_t topVer)
             {
                 IgniteImpl proc(GetEnvironmentPointer());
 
                 proc.SetBaselineTopologyVersion(topVer);
             }
 
-            void ClusterGroupImpl::SetTxTimeoutOnPartitionMapExchange(long timeout)
+            void ClusterGroupImpl::SetTxTimeoutOnPartitionMapExchange(int64_t timeout)
             {
                 IgniteImpl proc(GetEnvironmentPointer());
 
@@ -547,7 +545,7 @@ namespace ignite
                 return predHolder.Get();
             }
 
-            std::vector<ClusterNode> ClusterGroupImpl::GetTopology(long version)
+            std::vector<ClusterNode> ClusterGroupImpl::GetTopology(int64_t version)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -568,11 +566,16 @@ namespace ignite
                 return *ReadNodes(reader).Get();
             }
 
-            long ClusterGroupImpl::GetTopologyVersion()
+            int64_t ClusterGroupImpl::GetTopologyVersion()
             {
                 RefreshNodes();
 
                 return static_cast<long>(topVer);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::GetEmptyClusterGroup()
+            {
+                return ForNodeId(Guid(0, 0));
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForCacheNodes(std::string name, int32_t op)

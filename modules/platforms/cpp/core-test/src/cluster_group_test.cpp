@@ -27,7 +27,7 @@ using namespace ignite::cluster;
 using namespace boost::unit_test;
 
 /*
- * Cluster node predicate example 0.
+ * Check if cluster node contain the attribute with name provided.
  */
 class HasAttrName : public IgnitePredicate<ClusterNode>
 {
@@ -41,10 +41,8 @@ public:
     bool operator()(ClusterNode& node)
     {
         std::vector<std::string> attrs = node.GetAttributes();
-        if (std::find(attrs.begin(), attrs.end(), name) != attrs.end())
-            return true;
 
-        return false;
+        return std::find(attrs.begin(), attrs.end(), name) != attrs.end();
     }
 
 private:
@@ -52,7 +50,7 @@ private:
 };
 
 /*
- * Cluster node predicate example 1.
+ * Check if cluster node contain the attribute with value provided.
  */
 class HasAttrValue : public IgnitePredicate<ClusterNode>
 {
@@ -66,9 +64,7 @@ public:
     bool operator()(ClusterNode& node)
     {
         try {
-            std::string val = node.GetAttribute<std::string>(name);
-            if (val == this->val)
-                return true;
+            return node.GetAttribute<std::string>(name) == this->val;
         }
         catch (...) {}
 
@@ -81,7 +77,8 @@ private:
 };
 
 /*
- * Predicate holder.
+ * Predicate holder is required to demonstrate
+ * how to pass IgnitePredicate pointer to the stl container.
  */
 class PredHolder
 {
@@ -290,7 +287,9 @@ BOOST_AUTO_TEST_CASE(IgniteForHostName)
 
     std::string hostName = "someHostName";
 
-    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHost(hostName), IgniteError);
+    ClusterGroup group0 = cluster.AsClusterGroup().ForHost(hostName);
+
+    BOOST_REQUIRE(group0.GetNodes().size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForHostNames)
@@ -303,7 +302,9 @@ BOOST_AUTO_TEST_CASE(IgniteForHostNames)
     hostNames.push_back("hostName0");
     hostNames.push_back("hostName1");
 
-    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForHosts(hostNames), IgniteError);
+    ClusterGroup group0 = cluster.AsClusterGroup().ForHosts(hostNames);
+
+    BOOST_REQUIRE(group0.GetNodes().size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForNode)
@@ -351,6 +352,15 @@ BOOST_AUTO_TEST_CASE(IgniteForNodeIds)
 
     BOOST_REQUIRE(group1.GetNodes().size() == 4);
     BOOST_REQUIRE(group2.GetNodes().size() == 2);
+
+    std::vector<Guid> emptyIds;
+    BOOST_CHECK_THROW(cluster.AsClusterGroup().ForNodeIds(emptyIds), IgniteError);
+
+    std::vector<Guid> notExistIds;
+    notExistIds.push_back(Guid(100, 500));
+    ClusterGroup group3 = cluster.AsClusterGroup().ForNodeIds(notExistIds);
+
+    BOOST_REQUIRE(group3.GetNodes().size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForNodes)
@@ -388,22 +398,24 @@ BOOST_AUTO_TEST_CASE(IgniteForPredicate)
     ClusterGroup groupClients = group0.ForClients();
     ClusterGroup group1 = groupServers.ForPredicate(new HasAttrValue("TestAttribute", "Value0"));
     ClusterGroup group2 = groupServers.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
-    BOOST_CHECK_THROW(groupServers.ForClients(), IgniteError);
+    ClusterGroup group3 = groupServers.ForClients();
 
     BOOST_REQUIRE(group0.GetNodes().size() == 4);
     BOOST_REQUIRE(groupServers.GetNodes().size() == 3);
     BOOST_REQUIRE(groupClients.GetNodes().size() == 1);
     BOOST_REQUIRE(group1.GetNodes().size() == 1);
     BOOST_REQUIRE(group2.GetNodes().size() == 2);
+    BOOST_REQUIRE(group3.GetNodes().size() == 0);
 
     ClusterGroup group4 = group0.ForPredicate(new HasAttrName("TestAttribute"));
     ClusterGroup group5 = group4.ForPredicate(new HasAttrValue("TestAttribute", "Value0"));
     ClusterGroup group6 = group4.ForPredicate(new HasAttrValue("TestAttribute", "Value1"));
-    BOOST_CHECK_THROW(group4.ForPredicate(new HasAttrValue("TestAttribute", "ValueInvalid")), IgniteError);
+    ClusterGroup group7 = group4.ForPredicate(new HasAttrValue("TestAttribute", "ValueInvalid"));
 
     BOOST_REQUIRE(group4.GetNodes().size() == 3);
     BOOST_REQUIRE(group5.GetNodes().size() == 1);
     BOOST_REQUIRE(group6.GetNodes().size() == 2);
+    BOOST_REQUIRE(group7.GetNodes().size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForRandom)
