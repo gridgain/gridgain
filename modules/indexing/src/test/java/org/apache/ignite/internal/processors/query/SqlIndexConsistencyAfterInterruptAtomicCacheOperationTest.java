@@ -18,13 +18,16 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,17 +43,37 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
     /**
      * Test's parameters.
      */
-    @Parameterized.Parameters(name = "atomicity={0}")
+    @Parameterized.Parameters(name = "atomicity={0}, nodesCount={1}")
     public static Iterable<Object[]> params() {
         return Arrays.asList(
-            new Object[] {CacheAtomicityMode.ATOMIC},
-            new Object[] {CacheAtomicityMode.TRANSACTIONAL}
+            new Object[] {CacheAtomicityMode.ATOMIC,            1},
+            new Object[] {CacheAtomicityMode.TRANSACTIONAL,     1},
+            new Object[] {CacheAtomicityMode.ATOMIC,            2},
+            new Object[] {CacheAtomicityMode.TRANSACTIONAL,     2}
         );
     }
 
     /** Enable persistence for the test. */
     @Parameterized.Parameter(0)
     public CacheAtomicityMode atomicity;
+
+    /** Enable persistence for the test. */
+    @Parameterized.Parameter(1)
+    public int nodesCnt;
+
+    /** Test cache. */
+    private IgniteCache<Object, Object> cache;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        startGrids(nodesCnt);
+
+        cache = grid(0).createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(atomicity)
+            .setIndexedTypes(Integer.class, Integer.class));
+    }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -62,23 +85,9 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
      */
     @Test
     public void testCachePut() throws Exception {
-        IgniteEx ign = startGrid(0);
+        interruptOperation(() -> cache.put(1, 1));
 
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
-        Thread t = new Thread(() -> {
-            cache.put(1, 1);
-        });
-
-        t.start();
-
-        t.interrupt();
-
-        t.join();
-
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
     }
 
     /**
@@ -86,26 +95,14 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
      */
     @Test
     public void testCachePutAll() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
         final Map<Integer, Integer> batch = new HashMap<>();
 
         for (int i = 0; i < KEYS; ++i)
             batch.put(i, i);
 
-        Thread t = new Thread(() -> {
-            cache.putAll(batch);
-        });
+        interruptOperation(() -> cache.putAll(batch));
 
-        t.start();
-        t.interrupt();
-        t.join();
-
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
     }
 
     /**
@@ -113,25 +110,11 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
      */
     @Test
     public void testCacheRemove() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
         cache.put(1, 1);
 
-        Thread t = new Thread(() -> {
-            cache.remove(1);
-        });
+        interruptOperation(() -> cache.remove(1));
 
-        t.start();
-
-        t.interrupt();
-
-        t.join();
-
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
     }
 
     /**
@@ -139,12 +122,6 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
      */
     @Test
     public void testCacheRemoveAll() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
         final Map<Integer, Integer> batch = new HashMap<>();
 
         for (int i = 0; i < KEYS; ++i)
@@ -152,61 +129,96 @@ public class SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest extends A
 
         cache.putAll(batch);
 
+        interruptOperation(() -> cache.removeAll(batch.keySet()));
+
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+    }
+
+    /**
+     * @throws Exception On error.
+     */
+    @Test
+    public void testSqlInsert() throws Exception {
+        interruptOperation(() -> cache.query(new SqlFieldsQuery("INSERT INTO Integer (_KEY, _VAL) VALUES (1, 1)")));
+
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+    }
+
+    /**
+     * @throws Exception On error.
+     */
+    @Test
+    public void testSqlDelete() throws Exception {
+        final Map<Integer, Integer> batch = new HashMap<>();
+
+        for (int i = 0; i < KEYS; ++i)
+            batch.put(i, i);
+
+        cache.putAll(batch);
+
+        interruptOperation(() -> cache.query(new SqlFieldsQuery("DELETE FROM Integer WHERE _KEY > " + KEYS / 2)));
+
+        waitEquals(() -> cache.size(), () -> cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+    }
+
+    /**
+     * @throws Exception On error.
+     */
+    @Test
+    public void testSqlUpdate() throws Exception {
+        final Map<Integer, Integer> batch = new HashMap<>();
+
+        for (int i = 0; i < KEYS; ++i)
+            batch.put(i, i);
+
+        cache.putAll(batch);
+
+        interruptOperation(() -> cache.query(new SqlFieldsQuery("UPDATE Integer SET _VAL = VAL + 1" + KEYS / 2)));
+
+        final List<List<?>> res = cache.query(new SqlFieldsQuery("select _KEY, _VAL from Integer")).getAll();
+
+        waitEquals(() -> cache.size(), res::size);
+
+        for (List<?> r : res) {
+            Integer k = (Integer)r.get(0);
+
+            assertEquals(cache.get(k), r.get(0));
+        }
+    }
+
+    /**
+     * @param r Test operation to run and interrupt.
+     * @throws Exception On error.
+     */
+    private void interruptOperation(Runnable r) throws Exception {
+        final boolean[] interrupted = {false};
+
         Thread t = new Thread(() -> {
-            cache.removeAll(batch.keySet());
+            try {
+                r.run();
+            }
+            finally {
+                interrupted[0] = Thread.currentThread().isInterrupted();
+            }
         });
 
         t.start();
         t.interrupt();
         t.join();
 
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+        assertTrue(interrupted[0]);
     }
 
     /**
-     * @throws Exception On error.
+     * Check that result of two operations equal.
+     * @param op0 One test operation.
+     * @param op1 Other test operation.
+     * @throws IgniteInterruptedCheckedException On error.
      */
-    @Test
-    public void testCacheInsert() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
-        Thread t = new Thread(() -> cache.query(new SqlFieldsQuery("INSERT INTO Integer (_KEY, _VAL) VALUES (1, 1)")));
-
-        t.start();
-        t.interrupt();
-        t.join();
-
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
-    }
-
-    /**
-     * @throws Exception On error.
-     */
-    @Test
-    public void testCacheDelete() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(atomicity)
-            .setIndexedTypes(Integer.class, Integer.class));
-
-        final Map<Integer, Integer> batch = new HashMap<>();
-
-        for (int i = 0; i < KEYS; ++i)
-            batch.put(i, i);
-
-        cache.putAll(batch);
-
-        Thread t = new Thread(() -> cache.query(new SqlFieldsQuery("DELETE FROM Integer WHERE _KEY > " + KEYS / 2)));
-
-        t.start();
-        t.interrupt();
-        t.join();
-
-        assertEquals(cache.size(), cache.query(new SqlFieldsQuery("select * from Integer")).getAll().size());
+    private void waitEquals(Supplier<Integer> op0, Supplier<Integer> op1) throws IgniteInterruptedCheckedException {
+        if (!GridTestUtils.waitForCondition
+            (() -> op0.get().equals(op1.get()),
+                2000))
+            fail("Not equals:\nExpected: " + op0.get() +"\nActual: " + op1.get());
     }
 }
