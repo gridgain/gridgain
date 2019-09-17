@@ -3307,7 +3307,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      * @param binObj0 Object #0.
      * @param binObj1 Object #1.
      */
-    private void checkEquals(Object binObj0, Object binObj1) {
+    private void  checkEquals(Object binObj0, Object binObj1) {
         assertEquals(binObj0, binObj1);
         assertEquals(binObj1, binObj0);
         assertEquals(binObj0, binObj0);

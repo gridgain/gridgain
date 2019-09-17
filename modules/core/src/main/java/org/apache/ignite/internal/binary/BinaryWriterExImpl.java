@@ -85,6 +85,9 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
     /** */
     private boolean failIfUnregistered;
 
+    /** Class name. */
+    private String clsName;
+
     /**
      * @param ctx Context.
      */
@@ -134,6 +137,10 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
      */
     public void typeId(int typeId) {
         this.typeId = typeId;
+    }
+
+    public void className(String clsName) {
+        this.clsName = clsName;
     }
 
     /**
@@ -257,12 +264,12 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
     /**
      * Perform pre-write. Reserves space for header and writes class name if needed.
      *
-     * @param clsName Class name (optional).
+     * @param registered Whether type is registered.
      */
-    public void preWrite(@Nullable String clsName) {
+    public void preWrite(boolean registered) {
         out.position(out.position() + GridBinaryMarshaller.DFLT_HDR_LEN);
 
-        if (clsName != null)
+        if (!registered && false)
             doWriteString(clsName);
     }
 
@@ -275,6 +282,8 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
     public void postWrite(boolean userType, boolean registered) {
         short flags;
         boolean useCompactFooter;
+
+        int dataLen = out.position() - start - GridBinaryMarshaller.DFLT_HDR_LEN;
 
         if (userType) {
             if (ctx.isCompactFooter()) {
@@ -292,44 +301,53 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         }
 
         int finalSchemaId;
-        int offset;
 
         if (fieldCnt != 0) {
             finalSchemaId = schemaId;
-            offset = out.position() - start;
 
             // Write the schema.
             flags |= BinaryUtils.FLAG_HAS_SCHEMA;
+        }
+        else
+            finalSchemaId = 0;
 
-            int offsetByteCnt = schema.write(out, fieldCnt, useCompactFooter);
+        if (rawOffPos != 0)
+            flags |= BinaryUtils.FLAG_HAS_RAW;
 
-            if (offsetByteCnt == BinaryUtils.OFFSET_1)
-                flags |= BinaryUtils.FLAG_OFFSET_ONE_BYTE;
-            else if (offsetByteCnt == BinaryUtils.OFFSET_2)
-                flags |= BinaryUtils.FLAG_OFFSET_TWO_BYTES;
-
-            // Write raw offset if needed.
-            if (rawOffPos != 0) {
-                flags |= BinaryUtils.FLAG_HAS_RAW;
-
+        if (BinaryUtils.hasMetaSection(typeId, flags) || !registered) {
+            if (BinaryUtils.hasRaw(flags))
                 out.writeInt(rawOffPos - start);
+
+            int footerOffPos = out.position();
+
+            if (BinaryUtils.hasSchema(flags))
+                out.position(footerOffPos + 4);
+
+            if (!registered)
+                doWriteString(clsName);
+
+            if (BinaryUtils.hasSchema(flags)) {
+                int footerOff = out.position() - start;
+
+                out.position(footerOffPos);
+
+                out.writeInt(footerOff);
+
+                out.position(start + footerOff);
             }
         }
-        else {
-            if (rawOffPos != 0) {
-                finalSchemaId = 0;
-                offset = rawOffPos - start;
 
-                // If there is no schema, we are free to write raw offset to schema offset.
-                flags |= BinaryUtils.FLAG_HAS_RAW;
-            }
-            else {
-                finalSchemaId = 0;
-                offset = 0;
-            }
+        int rawOrFooterPos = BinaryUtils.hasSchema(flags) ? out.position() - start : rawOffPos - flags;
+
+        if (BinaryUtils.hasSchema(flags)) {
+            int offByteCnt = schema.write(out, fieldCnt, useCompactFooter);
+
+            if (offByteCnt == BinaryUtils.OFFSET_1)
+                flags |= BinaryUtils.FLAG_OFFSET_ONE_BYTE;
+            else if (offByteCnt == BinaryUtils.OFFSET_2)
+                flags |= BinaryUtils.FLAG_OFFSET_TWO_BYTES;
         }
 
-        // Actual write.
         int retPos = out.position();
 
         out.unsafePosition(start);
@@ -341,7 +359,11 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         out.unsafePosition(start + GridBinaryMarshaller.TOTAL_LEN_POS);
         out.unsafeWriteInt(retPos - start);
         out.unsafeWriteInt(finalSchemaId);
-        out.unsafeWriteInt(offset);
+
+        if (true)
+            out.unsafeWriteInt(dataLen);
+        else
+            out.unsafeWriteInt(rawOrFooterPos);
 
         out.unsafePosition(retPos);
     }
@@ -1934,6 +1956,7 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         res.failIfUnregistered(failIfUnregistered);
 
         res.typeId(typeId);
+        res.className(clsName);
 
         return res;
     }

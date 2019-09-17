@@ -99,7 +99,10 @@ public class BinaryObjectExceptionSelfTest extends GridCommonAbstractTest {
 
         StringBuilder sb = new StringBuilder(4 << 10);
 
-        for (int i = b.dataStartOffset(), j = b.footerStartOffset(); i < j; ++i) {
+        int dataStartOff = b.dataStartOffset();
+        int dataLen = b.dataLength();
+
+        for (int i = dataStartOff, j = dataStartOff + dataLen; i < j; ++i) {
             byte old = a[i];
 
             a[i] = -1;

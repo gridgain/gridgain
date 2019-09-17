@@ -56,6 +56,9 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     private final BinaryContext ctx;
 
     /** */
+    private final byte ver;
+
+    /** */
     private final int typeId;
 
     /** May be null. */
@@ -80,7 +83,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     private final short flags;
 
     /** Total header length */
-    private final int hdrLen;
+    private final int dataOff;
 
     /** Context of BinaryObject reading process. Or {@code null} if object is not created from BinaryObject. */
     private final BinaryBuilderReader reader;
@@ -108,8 +111,9 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         start = -1;
         flags = -1;
+        ver = GridBinaryMarshaller.PROTO_VER;
         reader = null;
-        hdrLen = GridBinaryMarshaller.DFLT_HDR_LEN;
+        dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
 
         readCache = Collections.emptyMap();
     }
@@ -133,7 +137,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         this.start = start;
         this.flags = reader.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
 
-        byte ver = reader.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
+        this.ver = reader.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
 
         BinaryUtils.checkProtocolVersion(ver);
 
@@ -160,13 +164,13 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
             registeredType = false;
 
-            hdrLen = reader.position() - mark;
+            dataOff = reader.position() - mark;
 
             reader.position(mark);
         }
         else {
             this.typeId = typeId;
-            hdrLen = GridBinaryMarshaller.DFLT_HDR_LEN;
+            dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
         }
     }
 
@@ -179,6 +183,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 writer.failIfUnregistered(((IgniteThread)curThread).isForbiddenToRequestBinaryMetadata());
 
             writer.typeId(typeId);
+            writer.className(clsNameToWrite);
 
             BinaryBuilderSerializer serializationCtx = new BinaryBuilderSerializer();
 
@@ -198,7 +203,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      */
     void serializeTo(BinaryWriterExImpl writer, BinaryBuilderSerializer serializer) {
         try {
-            writer.preWrite(registeredType ? null : clsNameToWrite);
+            writer.preWrite(registeredType && ver == 1);
 
             Set<Integer> remainsFlds = null;
 
@@ -244,7 +249,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 int rawPos = BinaryUtils.rawOffsetAbsolute(reader, start);
 
                 // Position reader on data.
-                reader.position(start + hdrLen);
+                reader.position(start + dataOff);
 
                 int idx = 0;
 
@@ -281,11 +286,8 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
                             if (fieldLen == 0)
                                 val = null;
-                            else if (readCache == null) {
+                            else if (readCache == null)
                                 val = reader.parseValue();
-
-                                assert reader.position() == postPos;
-                            }
                             else
                                 val = readCache.get(fieldId);
 

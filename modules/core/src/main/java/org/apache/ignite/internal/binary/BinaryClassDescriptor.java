@@ -562,6 +562,7 @@ public class BinaryClassDescriptor {
             assert mode != BinaryWriteMode.OPTIMIZED : "OptimizedMarshaller should not be used here: " + cls.getName();
 
             writer.typeId(typeId);
+            writer.className(cls.getName());
 
             switch (mode) {
                 case P_BYTE:
@@ -988,7 +989,7 @@ public class BinaryClassDescriptor {
         if (writer.tryWriteAsHandle(obj))
             return false;
 
-        writer.preWrite(registered ? null : cls.getName());
+        writer.preWrite(registered);
 
         return true;
     }

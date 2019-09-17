@@ -63,9 +63,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     private byte[] arr;
 
     /** */
-    private int start;
-
-    /** */
     @GridDirectTransient
     private Object obj;
 
@@ -182,7 +179,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (detached())
             return this;
 
-        return (BinaryObjectImpl)detach();
+        return detach();
     }
 
     /** {@inheritDoc} */
@@ -271,6 +268,9 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Override public int typeId() {
+        if (true)
+            return typeIdV2();
+
         int off = start + GridBinaryMarshaller.TYPE_ID_POS;
 
         int typeId = BinaryPrimitives.readInt(arr, off);
@@ -283,6 +283,33 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
             int len = BinaryPrimitives.readInt(arr, ++off);
 
             String clsName = new String(arr, off + 4, len, UTF_8);
+
+            typeId = ctx.typeId(clsName);
+        }
+
+        return typeId;
+    }
+
+    private int typeIdV2() {
+        int typeId = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TYPE_ID_POS);
+
+        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
+            short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
+
+            int clsNamePos = start + GridBinaryMarshaller.DFLT_HDR_LEN
+                + BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.DATA_LEN_POS);
+
+            if (BinaryUtils.hasRaw(flags))
+                clsNamePos += 4;
+
+            if (BinaryUtils.hasSchema(flags))
+                clsNamePos += 4;
+
+            assert arr[clsNamePos] == GridBinaryMarshaller.STRING : arr[clsNamePos];
+
+            int len = BinaryPrimitives.readInt(arr, ++clsNamePos);
+
+            String clsName = new String(arr, clsNamePos + 4, len, UTF_8);
 
             typeId = ctx.typeId(clsName);
         }
@@ -326,25 +353,54 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public int dataStartOffset() {
-        int typeId = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            int len = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.DFLT_HDR_LEN + 1);
-
-            return start + GridBinaryMarshaller.DFLT_HDR_LEN + len + 5;
-        } else
-            return start + GridBinaryMarshaller.DFLT_HDR_LEN;
+    @Override protected byte readByte(int pos) {
+        return BinaryPrimitives.readByte(arr, pos);
     }
 
     /** {@inheritDoc} */
-    @Override public int footerStartOffset() {
+    @Override protected int readInt(int pos) {
+        return BinaryPrimitives.readInt(arr, pos);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected short readShort(int pos) {
+        return BinaryPrimitives.readShort(arr, pos);
+    }
+
+    private int fieldPos(int order) {
         short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
+        int typeId = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TYPE_ID_POS);
+        int off = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.DATA_LEN_POS) + GridBinaryMarshaller.DFLT_HDR_LEN;
 
-        if (!BinaryUtils.hasSchema(flags))
-            return start + length();
+        int schemaOff;
 
-        return start + BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
+        if (!BinaryUtils.hasMetaSection(typeId, flags))
+            schemaOff = off;
+
+        else {
+            if (BinaryUtils.hasRaw(flags))
+                off += 4;
+
+            schemaOff = BinaryPrimitives.readInt(arr, off);
+        }
+
+        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
+        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
+
+        int fieldOffPos = start + schemaOff + order * (fieldIdLen + fieldOffLen) + fieldIdLen;
+
+        int fieldPos;
+
+        if (fieldOffLen == BinaryUtils.OFFSET_1)
+            fieldPos = start + ((int)BinaryPrimitives.readByte(arr, fieldOffPos) & 0xFF);
+
+        else if (fieldOffLen == BinaryUtils.OFFSET_2)
+            fieldPos = start + ((int)BinaryPrimitives.readShort(arr, fieldOffPos) & 0xFFFF);
+
+        else
+            fieldPos = start + BinaryPrimitives.readInt(arr, fieldOffPos);
+
+        return fieldPos;
     }
 
     /** {@inheritDoc} */
@@ -354,24 +410,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
         Object val;
 
-        // Calculate field position.
-        int schemaOff = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
-
-        short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
-
-        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
-        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
-
-        int fieldOffsetPos = start + schemaOff + order * (fieldIdLen + fieldOffLen) + fieldIdLen;
-
-        int fieldPos;
-
-        if (fieldOffLen == BinaryUtils.OFFSET_1)
-            fieldPos = start + ((int)BinaryPrimitives.readByte(arr, fieldOffsetPos) & 0xFF);
-        else if (fieldOffLen == BinaryUtils.OFFSET_2)
-            fieldPos = start + ((int)BinaryPrimitives.readShort(arr, fieldOffsetPos) & 0xFFFF);
-        else
-            fieldPos = start + BinaryPrimitives.readInt(arr, fieldOffsetPos);
+        int fieldPos = fieldPos(order);
 
         // Read header and try performing fast lookup for well-known types (the most common types go first).
         byte hdr = BinaryPrimitives.readByte(arr, fieldPos);
@@ -882,8 +921,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
                 int firstDataStart = first.dataStartOffset();
                 int secondDataStart = second.dataStartOffset();
 
-                int firstLen = first.footerStartOffset() - firstDataStart;
-                int secondLen = second.footerStartOffset() - secondDataStart;
+                int firstLen = first.dataLength();
+                int secondLen = second.dataLength();
 
                 res = Integer.compare(firstLen, secondLen);
 

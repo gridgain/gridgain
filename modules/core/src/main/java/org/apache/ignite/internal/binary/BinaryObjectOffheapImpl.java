@@ -92,12 +92,38 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
 
     /** {@inheritDoc} */
     @Override public int typeId() {
+        if (true)
+            return typeIdV2();
+
         int typeId = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.TYPE_ID_POS);
 
         if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
             int off = start + GridBinaryMarshaller.DFLT_HDR_LEN;
 
             String clsName = BinaryUtils.doReadClassName(new BinaryOffheapInputStream(ptr + off, size));
+
+            typeId = ctx.typeId(clsName);
+        }
+
+        return typeId;
+    }
+
+    private int typeIdV2() {
+        int typeId = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.TYPE_ID_POS);
+
+        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
+            short flags = BinaryPrimitives.readShort(ptr, start + GridBinaryMarshaller.FLAGS_POS);
+
+            int clsNamePos = start + GridBinaryMarshaller.DFLT_HDR_LEN
+                + BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.DATA_LEN_POS);
+
+            if (BinaryUtils.hasRaw(flags))
+                clsNamePos += 4;
+
+            if (BinaryUtils.hasSchema(flags))
+                clsNamePos += 4;
+
+            String clsName = BinaryUtils.doReadClassName(new BinaryOffheapInputStream(ptr + clsNamePos, size));
 
             typeId = ctx.typeId(clsName);
         }
@@ -221,25 +247,18 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     }
 
     /** {@inheritDoc} */
-    @Override public int dataStartOffset() {
-        int typeId = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            int len = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.DFLT_HDR_LEN + 1);
-
-            return start + GridBinaryMarshaller.DFLT_HDR_LEN + len + 5;
-        } else
-            return start + GridBinaryMarshaller.DFLT_HDR_LEN;
+    @Override protected byte readByte(int pos) {
+        return BinaryPrimitives.readByte(ptr, pos);
     }
 
     /** {@inheritDoc} */
-    @Override public int footerStartOffset() {
-        short flags = BinaryPrimitives.readShort(ptr, start + GridBinaryMarshaller.FLAGS_POS);
+    @Override protected int readInt(int pos) {
+        return BinaryPrimitives.readInt(ptr, pos);
+    }
 
-        if (!BinaryUtils.hasSchema(flags))
-            return start + length();
-
-        return start + BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
+    /** {@inheritDoc} */
+    @Override protected short readShort(int pos) {
+        return BinaryPrimitives.readShort(ptr, pos);
     }
 
     /** {@inheritDoc} */

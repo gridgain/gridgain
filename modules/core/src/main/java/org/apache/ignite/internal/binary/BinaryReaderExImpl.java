@@ -106,7 +106,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     /** */
     private final int start;
 
-    /** Start of actual data. Positioned right after the header. */
+    /** Start of actual data. */
     private final int dataStart;
 
     /** Type ID. */
@@ -215,8 +215,10 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
         // Perform full header parsing in case of binary object.
         if (!skipHdrCheck && (in.readByte() == GridBinaryMarshaller.OBJ)) {
+            byte ver = in.readByte();
+
             // Ensure protocol is fine.
-            BinaryUtils.checkProtocolVersion(in.readByte());
+            BinaryUtils.checkProtocolVersion(ver);
 
             // Read header content.
             short flags = in.readShort();
@@ -233,52 +235,110 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
             fieldIdLen = BinaryUtils.fieldIdLength(flags);
             fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
 
-            // Calculate footer borders and raw offset.
-            if (BinaryUtils.hasSchema(flags)) {
-                // Schema exists.
-                footerStart = start + offset;
-
-                if (BinaryUtils.hasRaw(flags)) {
+            if (ver == 1) {
+                if (BinaryUtils.hasSchema(flags)) {
+                    footerStart = start + offset;
                     footerLen = len - offset;
-                    rawOff = start + in.readIntPositioned(start + len - 4);
+
+                    if (BinaryUtils.hasRaw(flags))
+                        rawOff = start + in.readIntPositioned(start + len - 4);
+                    else
+                        rawOff = start + len;
                 }
                 else {
-                    footerLen = len - offset;
-                    rawOff = start + len;
+                    // No schema.
+                    footerStart = start + len;
+                    footerLen = 0;
+
+                    if (BinaryUtils.hasRaw(flags))
+                        rawOff = start + offset;
+                    else
+                        rawOff = start + len;
+                }
+
+                // Finally, we have to resolve real type ID.
+                if (typeId0 == UNREGISTERED_TYPE_ID) {
+                    int off = in.position();
+
+                    if (forUnmarshal) {
+                        // Registers class by type ID, at least locally if the cache is not ready yet.
+                        desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), true, false);
+
+                        typeId = desc.typeId();
+                    }
+                    else
+                        typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
+
+                    int clsNameLen = in.position() - off;
+
+                    dataStart = start + DFLT_HDR_LEN + clsNameLen + 4;
+                }
+                else {
+                    typeId = typeId0;
+
+                    dataStart = start + DFLT_HDR_LEN + 4;
                 }
             }
             else {
-                // No schema.
-                footerStart = start + len;
-                footerLen = 0;
-
-                if (BinaryUtils.hasRaw(flags))
-                    rawOff = start + offset;
-                else
-                    rawOff = start + len;
-            }
-
-            // Finally, we have to resolve real type ID.
-            if (typeId0 == UNREGISTERED_TYPE_ID) {
-                int off = in.position();
-
-                if (forUnmarshal) {
-                    // Registers class by type ID, at least locally if the cache is not ready yet.
-                    desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), true, false);
-
-                    typeId = desc.typeId();
-                }
-                else
-                    typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-
-                int clsNameLen = in.position() - off;
-
-                dataStart = start + DFLT_HDR_LEN + clsNameLen;
-            }
-            else {
-                typeId = typeId0;
-
                 dataStart = start + DFLT_HDR_LEN;
+
+                int dataLen = in.readIntPositioned(start + GridBinaryMarshaller.DATA_LEN_POS);
+
+                if (BinaryUtils.hasMetaSection(typeId0, flags)) {
+                    int off = dataStart + dataLen;
+
+                    if (BinaryUtils.hasRaw(flags)) {
+                        rawOff = start + in.readIntPositioned(off);
+
+                        off += 4;
+                    }
+                    else
+                        rawOff = start + len;
+
+                    if (BinaryUtils.hasSchema(flags)) {
+                        footerStart = start + in.readIntPositioned(off);
+                        footerLen = len + start - footerStart;
+
+                        off += 4;
+                    }
+                    else {
+                        footerStart = start + len;
+                        footerLen = 0;
+                    }
+
+                    if (typeId0 == UNREGISTERED_TYPE_ID) {
+                        in.position(off);
+
+                        if (forUnmarshal) {
+                            // Registers class by type ID, at least locally if the cache is not ready yet.
+                            desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), false, false);
+
+                            typeId = desc.typeId();
+                        }
+                        else
+                            typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
+                    }
+                    else
+                        typeId = typeId0;
+                }
+                else if (BinaryUtils.hasSchema(flags)) {
+                    footerStart = dataStart + dataLen;
+                    footerLen = len + start - footerStart;
+                    rawOff = start + len;
+                    typeId = typeId0;
+                }
+                else if (BinaryUtils.hasRaw(flags)) {
+                    footerStart = start + len;
+                    footerLen = 0;
+                    rawOff = dataStart;
+                    typeId = typeId0;
+                }
+                else {
+                    typeId = typeId0;
+                    rawOff = dataStart + dataLen;
+                    footerStart = dataStart + dataLen;
+                    footerLen = 0;
+                }
             }
 
             mapper = userType ? ctx.userTypeMapper(typeId) : BinaryContext.defaultMapper();

@@ -38,6 +38,9 @@ import org.jetbrains.annotations.Nullable;
  * Internal binary object interface.
  */
 public abstract class BinaryObjectExImpl implements BinaryObjectEx {
+    /** Start. */
+    protected int start;
+
     /**
      * @return Length.
      */
@@ -87,14 +90,59 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      *
      * @return Field value.
      */
-    public abstract int dataStartOffset();
+    public int dataStartOffset() {
+        byte ver = readByte(start + GridBinaryMarshaller.PROTO_VER_POS);
+
+        if (ver == 1)
+            return dataStartOffsetV1();
+        else
+            return dataStartOffsetV2();
+    }
 
     /**
-     * Get offset of the footer begin.
      *
-     * @return Field value.
      */
-    public abstract int footerStartOffset();
+    private int dataStartOffsetV1() {
+        int typeId = readInt(start + GridBinaryMarshaller.TYPE_ID_POS);
+
+        if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
+            return start + GridBinaryMarshaller.DFLT_HDR_LEN;
+
+        int len = readInt(start + GridBinaryMarshaller.DFLT_HDR_LEN + 1);
+
+        return start + GridBinaryMarshaller.DFLT_HDR_LEN + len + 5;
+    }
+
+    /**
+     *
+     */
+    private int dataStartOffsetV2() {
+        return start + GridBinaryMarshaller.DFLT_HDR_LEN;
+    }
+
+    /**
+     * @param pos Pos.
+     */
+    protected abstract byte readByte(int pos);
+
+    /**
+     * @param pos Pos.
+     */
+    protected abstract int readInt(int pos);
+
+    /**
+     * @param pos Pos.
+     */
+    protected abstract short readShort(int pos);
+
+    /**
+     * Get data length.
+     *
+     * @return Data length.
+     */
+    public int dataLength() {
+        return readInt(start + GridBinaryMarshaller.DATA_LEN_POS);
+    }
 
     /**
      * Get field by offset.

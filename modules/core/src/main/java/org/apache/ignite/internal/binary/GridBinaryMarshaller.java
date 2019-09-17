@@ -198,7 +198,7 @@ public class GridBinaryMarshaller {
     public static final int UNREGISTERED_TYPE_ID = 0;
 
     /** Protocol version. */
-    public static final byte PROTO_VER = 1;
+    public static final byte PROTO_VER = 2;
 
     /** Protocol version position. */
     public static final int PROTO_VER_POS = 1;
@@ -218,10 +218,13 @@ public class GridBinaryMarshaller {
     /** */
     public static final int SCHEMA_ID_POS = 16;
 
-    /** Schema or raw offset position. */
+    /** Schema or raw offset position in protocol version 1. */
     public static final int SCHEMA_OR_RAW_OFF_POS = 20;
 
-    /** */
+    /** Data length position in protocol version 2. */
+    public static final byte DATA_LEN_POS = 20;
+
+    /** Default header length. */
     public static final byte DFLT_HDR_LEN = 24;
 
     /** */

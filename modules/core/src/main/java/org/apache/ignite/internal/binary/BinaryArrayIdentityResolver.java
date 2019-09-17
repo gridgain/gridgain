@@ -55,7 +55,7 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
             BinaryObjectExImpl ex = (BinaryObjectExImpl)obj;
 
             int start = ex.dataStartOffset();
-            int end = ex.footerStartOffset();
+            int end = start + ex.dataLength();
 
             if (ex.hasArray()) {
                 // Handle heap object.
@@ -137,16 +137,18 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
 
         assert arr1 != null && arr2 != null;
 
+        int len = o1.dataLength();
+
+        // Check length.
+        if (len != o2.dataLength())
+            return false;
+
         int i = o1.dataStartOffset();
         int j = o2.dataStartOffset();
 
-        int end = o1.footerStartOffset();
+        int dataEndOff = i + len;
 
-        // Check length.
-        if (end - i != o2.footerStartOffset() - j)
-            return false;
-
-        for (; i < end; i++, j++) {
+        for (; i < dataEndOff; i++, j++) {
             if (arr1[i] != arr2[j])
                 return false;
         }
@@ -167,16 +169,18 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
 
         assert arr1 != null && ptr2 != 0;
 
+        int len = o1.dataLength();
+
+        // Check length.
+        if (len != o2.dataLength())
+            return false;
+
         int i = o1.dataStartOffset();
         int j = o2.dataStartOffset();
 
-        int end = o1.footerStartOffset();
+        int dataEndOff = i + len;
 
-        // Check length.
-        if (end - i != o2.footerStartOffset() - j)
-            return false;
-
-        for (; i < end; i++, j++) {
+        for (; i < dataEndOff; i++, j++) {
             if (arr1[i] != BinaryPrimitives.readByte(ptr2, j))
                 return false;
         }
@@ -197,16 +201,18 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
 
         assert ptr1 != 0 && ptr2 != 0;
 
+        int len = o1.dataLength();
+
+        // Check length.
+        if (len != o2.dataLength())
+            return false;
+
         int i = o1.dataStartOffset();
         int j = o2.dataStartOffset();
 
-        int end = o1.footerStartOffset();
+        int dataEndOff = i + len;
 
-        // Check length.
-        if (end - i != o2.footerStartOffset() - j)
-            return false;
-
-        for (; i < end; i++, j++) {
+        for (; i < dataEndOff; i++, j++) {
             if (BinaryPrimitives.readByte(ptr1, i) != BinaryPrimitives.readByte(ptr2, j))
                 return false;
         }
