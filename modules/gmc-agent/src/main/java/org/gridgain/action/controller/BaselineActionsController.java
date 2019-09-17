@@ -17,9 +17,11 @@
 package org.gridgain.action.controller;
 
 import org.apache.ignite.internal.GridKernalContext;
-import org.gridgain.action.ActionController;
-
+import org.apache.ignite.plugin.security.SecurityPermission;
+import org.gridgain.action.annotation.ActionController;
 import java.util.concurrent.CompletableFuture;
+
+import static org.gridgain.agent.AgentUtils.authorizeIfNeeded;
 
 /**
  * Baseline actions controller.
@@ -40,6 +42,8 @@ public class BaselineActionsController {
      * @param isAutoAdjustEnabled Is auto adjust enabled.
      */
     public CompletableFuture<Void> updateAutoAdjustEnabled(boolean isAutoAdjustEnabled) {
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+
         ctx.grid().cluster().baselineAutoAdjustEnabled(isAutoAdjustEnabled);
 
         return CompletableFuture.completedFuture(null);
@@ -49,6 +53,8 @@ public class BaselineActionsController {
      * @param isAutoAdjustEnabled Is auto adjust enabled.
      */
     public CompletableFuture<Void> updateAutoAdjustAwaitingTime(long isAutoAdjustEnabled) {
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+
         ctx.grid().cluster().baselineAutoAdjustTimeout(isAutoAdjustEnabled);
 
         return CompletableFuture.completedFuture(null);

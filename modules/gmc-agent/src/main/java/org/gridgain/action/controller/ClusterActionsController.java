@@ -17,36 +17,47 @@
 package org.gridgain.action.controller;
 
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
 import java.util.concurrent.CompletableFuture;
 
+import static org.gridgain.agent.AgentUtils.authorizeIfNeeded;
+
 /**
- * Test action controller for other tests.
+ * Controller for cluster actions.
  */
-@ActionController
-public class ActionControllerForTests {
+@ActionController("ClusterActions")
+public class ClusterActionsController {
     /** Context. */
     private final GridKernalContext ctx;
 
     /**
      * @param ctx Context.
      */
-    public ActionControllerForTests(GridKernalContext ctx) {
+    public ClusterActionsController(GridKernalContext ctx) {
         this.ctx = ctx;
     }
 
     /**
-     * @param flag Flag.
+     * Activate cluster.
      */
-    public CompletableFuture<Boolean> action(boolean flag) {
-        return CompletableFuture.completedFuture(flag);
+    public CompletableFuture<Void> activate() {
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+
+        ctx.grid().cluster().active(true);
+
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
-     * @param num Number.
+     * Deactivate cluster.
      */
-    public CompletableFuture<Boolean> numberAction(long num) {
-        return CompletableFuture.completedFuture(true);
+    public CompletableFuture<Void> deactivate() {
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+
+        ctx.grid().cluster().active(false);
+
+        return CompletableFuture.completedFuture(null);
     }
 }

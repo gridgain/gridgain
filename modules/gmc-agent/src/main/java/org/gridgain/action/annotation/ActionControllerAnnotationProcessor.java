@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.gridgain.action;
+package org.gridgain.action.annotation;
 
 import org.apache.ignite.internal.util.typedef.F;
+import org.gridgain.action.ActionMethod;
 import org.reflections.Reflections;
 
 import java.lang.reflect.Method;
@@ -54,8 +55,11 @@ public class ActionControllerAnnotationProcessor {
                 if (method.isSynthetic())
                     continue;
 
+                boolean isNeedAuth = !method.isAnnotationPresent(WithoutAuth.class)
+                        && !controllerCls.isAnnotationPresent(WithoutAuth.class);
+
                 String actName = controllerName + "." + method.getName();
-                ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
+                ActionMethod actMtd = new ActionMethod(actName, method, controllerCls, isNeedAuth);
                 methods.put(actMtd.getActionName(), actMtd);
             }
         }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.action;
+package org.gridgain.action.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

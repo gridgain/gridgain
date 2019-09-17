@@ -97,8 +97,6 @@ abstract class AbstractActionControllerTest extends GridCommonAbstractTest {
      * @param assertFn Assert fn.
      */
     protected void executeAction(Request req, Function<Response, Boolean> assertFn) {
-        cluster.active(true);
-
         assertWithPoll(
             () -> interceptor.isSubscribedOn(buildActionRequestTopic(cluster.id()))
         );

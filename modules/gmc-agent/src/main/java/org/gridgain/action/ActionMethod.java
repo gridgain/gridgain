@@ -30,15 +30,19 @@ public class ActionMethod {
     /** Controller class. */
     private final Class<?> controllerCls;
 
+    /** Is need auth. */
+    private final boolean isNeedAuth;
+
     /**
      * @param actName Action name.
      * @param mtd Method.
      * @param controllerCls Controller class.
      */
-    public ActionMethod(String actName, Method mtd, Class<?> controllerCls) {
+    public ActionMethod(String actName, Method mtd, Class<?> controllerCls, boolean isNeedAuth) {
         this.actName = actName;
         this.mtd = mtd;
         this.controllerCls = controllerCls;
+        this.isNeedAuth = isNeedAuth;
     }
 
     /**
@@ -60,5 +64,12 @@ public class ActionMethod {
      */
     public String getActionName() {
         return actName;
+    }
+
+    /**
+     * @return {@code True} if action requiere authentication.
+     */
+    public boolean isNeedAuth() {
+        return isNeedAuth;
     }
 }
