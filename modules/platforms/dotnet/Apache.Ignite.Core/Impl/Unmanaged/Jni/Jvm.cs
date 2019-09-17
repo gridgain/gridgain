@@ -58,6 +58,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         private readonly JvmDelegates.AttachCurrentThread _attachCurrentThread;
 
         /** */
+        private readonly JvmDelegates.DetachCurrentThread _detachCurrentThread;
+
+        /** */
         private readonly MethodId _methodId;
 
         /** Callbacks. */
@@ -90,6 +93,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             var funcPtr = (JvmInterface**)jvmPtr;
             var func = **funcPtr;
             GetDelegate(func.AttachCurrentThread, out _attachCurrentThread);
+            GetDelegate(func.DetachCurrentThread, out _detachCurrentThread);
 
             var env = AttachCurrentThread();
             _methodId = new MethodId(env);
