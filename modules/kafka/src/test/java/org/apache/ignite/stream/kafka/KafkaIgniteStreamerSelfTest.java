@@ -35,6 +35,7 @@ import org.apache.ignite.events.CacheEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -205,7 +206,7 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
 
             final CountDownLatch latch = new CountDownLatch(CNT);
 
-            IgniteBiPredicate<UUID, CacheEvent> locLsnr = new IgniteBiPredicate<UUID, CacheEvent>() {
+            IgnitePredicate<CacheEvent> locLsnr = new IgnitePredicate<CacheEvent>() {
                 @IgniteInstanceResource
                 private Ignite ig;
 
@@ -213,7 +214,7 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
                 private IgniteLogger log;
 
                 /** {@inheritDoc} */
-                @Override public boolean apply(UUID uuid, CacheEvent evt) {
+                @Override public boolean apply(CacheEvent evt) {
                     latch.countDown();
 
                     if (log.isInfoEnabled()) {
@@ -228,7 +229,7 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
                 }
             };
 
-            ignite.events(ignite.cluster().forCacheNodes(DEFAULT_CACHE_NAME)).remoteListen(locLsnr, null, EVT_CACHE_OBJECT_PUT);
+            ignite.events(ignite.cluster().forCacheNodes(DEFAULT_CACHE_NAME)).localListen(locLsnr, EVT_CACHE_OBJECT_PUT);
 
             // Checks all events successfully processed in 10 seconds.
             assertTrue("Failed to wait latch completion, still wait " + latch.getCount() + " events",
