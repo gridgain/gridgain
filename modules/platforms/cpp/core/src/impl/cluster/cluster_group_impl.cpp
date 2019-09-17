@@ -570,7 +570,7 @@ namespace ignite
             {
                 RefreshNodes();
 
-                return static_cast<long>(topVer);
+                return topVer;
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::GetEmptyClusterGroup()

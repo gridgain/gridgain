@@ -41,7 +41,7 @@ namespace ignite
                 ReadAddresses(reader);
                 ReadHosts(reader);
 
-                order = static_cast<long>(reader.ReadInt64());
+                order = reader.ReadInt64();
                 isLocal = reader.ReadBool();
                 isDaemon = reader.ReadBool();
                 isClient = reader.ReadBool();

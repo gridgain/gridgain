@@ -221,7 +221,7 @@ namespace ignite
                 bool isLocal;
 
                 /** Order. */
-                long order;
+                int64_t order;
 
                 /** Consistent ID */
                 common::concurrent::SharedPointer<std::string> consistentId;
