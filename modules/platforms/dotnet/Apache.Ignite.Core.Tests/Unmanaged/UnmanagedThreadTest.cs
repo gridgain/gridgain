@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         [Test]
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
+            // TODO: Add integration test with JVM - verify that threads do not leak.
             var evt = new ManualResetEventSlim();
             var threadLocalVal = new IntPtr(42);
             var resultThreadLocalVal = IntPtr.Zero;
