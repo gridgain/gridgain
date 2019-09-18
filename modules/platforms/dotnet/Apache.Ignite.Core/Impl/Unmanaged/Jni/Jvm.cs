@@ -97,6 +97,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 
             var env = AttachCurrentThread();
 
+            // JVM is a singleton, so this is one-time subscription.
             // TODO: This can cause double detach (from multiple appdomains) - is that ok?
             UnmanagedThread.ThreadExit += DetachCurrentThread;
 
