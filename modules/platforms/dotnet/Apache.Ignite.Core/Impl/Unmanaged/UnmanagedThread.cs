@@ -24,79 +24,48 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     /// </summary>
     internal static class UnmanagedThread
     {
-        /** Destructor callback delegate (same for Windows and Linux). */
-        private delegate void DestructorCallback(IntPtr dataPtr);
-
-        /** Delegate instance - do not inline, we should keep this alive. */
-        private static readonly DestructorCallback DestructorCallbackDelegate = OnThreadExit;
-
-        /** Callback function pointer. */
-        private static readonly IntPtr DestructorCallbackPtr =
-            Marshal.GetFunctionPointerForDelegate(DestructorCallbackDelegate);
-
-        /** Storage index. */
-        private static readonly int StorageIndex;
-
         /// <summary>
-        /// Static initializer.
+        /// Sets the thread exit callback, and returns an id to pass to <see cref="EnableCurrentThreadExitEvent"/>.
         /// </summary>
-        static unsafe UnmanagedThread()
+        /// <param name="callbackPtr">Pointer to a callback function with signature of void(IntPtr).</param>
+        public static unsafe int SetThreadExitCallback(IntPtr callbackPtr)
         {
             if (Os.IsWindows)
             {
-                StorageIndex = NativeMethodsWindows.FlsAlloc(DestructorCallbackPtr);
+                return NativeMethodsWindows.FlsAlloc(callbackPtr);
             }
-            else if (Os.IsLinux)
+
+            if (Os.IsLinux)
             {
                 int tlsIndex;
-                var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), DestructorCallbackPtr);
+                var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
                 CheckResult(res);
 
-                StorageIndex = tlsIndex;
+                return tlsIndex;
             }
-            else
-            {
-                // TODO: Add MacOS support.
-                throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
-            }
-        }
 
-        /// <summary>
-        /// Occurs just before a thread exits.
-        /// Fired on that exact thread.
-        /// </summary>
-        public static event Action<IntPtr> ThreadExit;
+            // TODO: Add MacOS support.
+            throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
+        }
 
         /// <summary>
         /// Enables thread exit even for current thread.
         /// </summary>
-        public static void EnableCurrentThreadExitEvent(IntPtr threadLocalValue)
+        public static void EnableCurrentThreadExitEvent(int callbackId, IntPtr threadLocalValue)
         {
             // Store any value so that destructor callback is fired.
             if (Os.IsWindows)
             {
-                NativeMethodsWindows.FlsSetValue(StorageIndex, threadLocalValue);
+                NativeMethodsWindows.FlsSetValue(callbackId, threadLocalValue);
             }
             else if (Os.IsLinux)
             {
-                NativeMethodsLinux.pthread_setspecific(StorageIndex, threadLocalValue);
+                NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
             }
             else
             {
                 // TODO: Add MacOS support.
                 throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
-            }
-        }
-
-        /// <summary>
-        /// Thread exit callback.
-        /// </summary>
-        private static void OnThreadExit(IntPtr threadLocalValue)
-        {
-            var handler = ThreadExit;
-            if (handler != null)
-            {
-                handler(threadLocalValue);
             }
         }
 

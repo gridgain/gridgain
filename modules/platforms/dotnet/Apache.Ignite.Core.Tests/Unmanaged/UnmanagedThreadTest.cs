@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
     using System;
+    using System.Runtime.InteropServices;
     using System.Threading;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using NUnit.Framework;
@@ -47,14 +48,14 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 }
             };
 
-            UnmanagedThread.ThreadExit += callback;
+            var callbackId = UnmanagedThread.SetThreadExitCallback(Marshal.GetFunctionPointerForDelegate(callback));
 
             try
             {
                 ParameterizedThreadStart threadStart = _ =>
                 {
                     if (enableThreadExitCallback)
-                        UnmanagedThread.EnableCurrentThreadExitEvent(threadLocalVal);
+                        UnmanagedThread.EnableCurrentThreadExitEvent(callbackId, threadLocalVal);
                 };
 
                 var t = new Thread(threadStart)
@@ -76,7 +77,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             }
             finally
             {
-                UnmanagedThread.ThreadExit -= callback;
+                // TODO: Cleanup the callback.
             }
         }
     }

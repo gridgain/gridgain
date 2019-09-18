@@ -58,13 +58,13 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         private readonly JvmDelegates.AttachCurrentThread _attachCurrentThread;
 
         /** */
-        private readonly JvmDelegates.DetachCurrentThread _detachCurrentThread;
-
-        /** */
         private readonly MethodId _methodId;
 
         /** Callbacks. */
         private readonly Callbacks _callbacks;
+
+        /** Thread exit callback id. */
+        private readonly int _threadExitCallbackId;
 
         /** Static instance */
         private static volatile Jvm _instance;
@@ -93,13 +93,14 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             var funcPtr = (JvmInterface**)jvmPtr;
             var func = **funcPtr;
             GetDelegate(func.AttachCurrentThread, out _attachCurrentThread);
-            GetDelegate(func.DetachCurrentThread, out _detachCurrentThread);
 
             var env = AttachCurrentThread();
 
             // JVM is a singleton, so this is one-time subscription.
+            // This is a shortcut - we pass DetachCurrentThread pointer directly as a thread exit callback,
+            // because signatures happen to match exactly.
             // TODO: This can cause double detach (from multiple appdomains) - is that ok?
-            UnmanagedThread.ThreadExit += DetachCurrentThread;
+            _threadExitCallbackId = UnmanagedThread.SetThreadExitCallback(func.DetachCurrentThread);
 
             _methodId = new MethodId(env);
 
@@ -190,7 +191,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 }
 
                 _env = new Env(envPtr, this);
-                UnmanagedThread.EnableCurrentThreadExitEvent(_jvmPtr);
+                UnmanagedThread.EnableCurrentThreadExitEvent(_threadExitCallbackId, _jvmPtr);
             }
 
             return _env;
@@ -237,15 +238,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 var writerId = _callbacks.RegisterConsoleWriter(ConsoleWriter);
                 AppDomain.CurrentDomain.DomainUnload += (s, a) => _callbacks.ReleaseConsoleWriter(writerId);
             }
-        }
-
-        /// <summary>
-        /// Detaches current thread from JVM.
-        /// </summary>
-        private void DetachCurrentThread(IntPtr jvmPtr)
-        {
-            // Can't use _jvmPtr because all thread locals are cleared at this point.
-            _detachCurrentThread(jvmPtr);
         }
 
         /// <summary>
