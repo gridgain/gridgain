@@ -3415,9 +3415,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                 }
-                else
+                else {
                     // Optimization to access storage only once.
-                    update = storeValue(val, expTime, ver, p);
+                    UpdateClosure c = storeValue(val, expTime, ver, p);
+
+                    update = c.operationType() != IgniteTree.OperationType.NOOP ||
+                        preload && val == null && c.oldRow() == null;
+                }
             }
 
             if (update) {
@@ -4264,10 +4268,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param ver New entry version.
      * @throws IgniteCheckedException If update failed.
      */
-    protected boolean storeValue(@Nullable CacheObject val,
+    protected void storeValue(@Nullable CacheObject val,
         long expireTime,
         GridCacheVersion ver) throws IgniteCheckedException {
-        return storeValue(val, expireTime, ver, null);
+        storeValue(val, expireTime, ver, null);
     }
 
     /**
@@ -4276,23 +4280,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param val Value.
      * @param expireTime Expire time.
      * @param ver New entry version.
-     * @param predicate Optional predicate.
-     * @return {@code True} if storage was modified.
+     * @param pred Optional predicate.
+     * @return Update closure containing invocation context.
      * @throws IgniteCheckedException If update failed.
      */
-    protected boolean storeValue(
+    protected UpdateClosure storeValue(
         @Nullable CacheObject val,
         long expireTime,
         GridCacheVersion ver,
-        @Nullable IgnitePredicate<CacheDataRow> predicate) throws IgniteCheckedException {
+        @Nullable IgnitePredicate<CacheDataRow> pred) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
         assert localPartition() == null || localPartition().state() != RENTING : localPartition();
 
-        UpdateClosure closure = new UpdateClosure(this, val, ver, expireTime, predicate);
+        UpdateClosure c = new UpdateClosure(this, val, ver, expireTime, pred);
 
-        cctx.offheap().invoke(cctx, key, localPartition(), closure);
+        cctx.offheap().invoke(cctx, key, localPartition(), c);
 
-        return closure.treeOp != IgniteTree.OperationType.NOOP;
+        return c;
     }
 
     /**
