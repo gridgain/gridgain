@@ -95,9 +95,6 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     private static final long EPSILON = 300;
 
     /** */
-    private static final int TX_SKIPPED_WHEN_LOG_THROTTLING_CHECK = 2;
-
-    /** */
     private static final long LONG_TRAN_TIMEOUT = Math.min(SYSTEM_DELAY, USER_DELAY);
 
     /** */
@@ -191,6 +188,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         GridTestUtils.setFieldValue(IgniteTxAdapter.class, "log", oldLog);
 
         oldLog = null;
+
+        gridStarted = false;
 
         stopAllGrids();
 
