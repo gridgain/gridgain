@@ -26,12 +26,13 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Tests to verify the addition of columns in tables.
  */
-public class IgniteSqlAddColumn extends GridCommonAbstractTest {
+public class IgniteSqlAddColumnTest extends GridCommonAbstractTest {
     /** Cache. */
     private static IgniteCache<Object, Object> cache;
 
@@ -43,15 +44,16 @@ public class IgniteSqlAddColumn extends GridCommonAbstractTest {
 
         cache = node.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery(
-            "Create table Person (id int PRIMARY KEY, name varchar, birthday timestamp, PRIMARY KEY (id))"
-        )).getAll();
+        cache.query(
+            new SqlFieldsQuery("Create table Person (id int PRIMARY KEY, name varchar, birthday timestamp)")
+        ).getAll();
+
+        SqlFieldsQuery insertQry = new SqlFieldsQuery("INSERT INTO Person (id, name, birthday) VALUES (?, ?, ?)");
 
         for (int i = 0; i < 10; i++) {
-            SqlFieldsQuery qry = new SqlFieldsQuery("INSERT INTO Person (id, name, birthday) VALUES (?, ?, ?)");
             Date birthday = new Date(365L * 24 * 60 * 60 * 1000 * i);
-            qry.setArgs(i, "name" + i, birthday);
-            cache.query(qry).getAll();
+            insertQry.setArgs(i, "name" + i, birthday);
+            cache.query(insertQry).getAll();
         }
     }
 
@@ -60,14 +62,13 @@ public class IgniteSqlAddColumn extends GridCommonAbstractTest {
         super.afterTestsStopped();
 
         stopAllGrids();
-        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setSqlSchema("PUBLIC"));
+        cfg.setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setSqlSchema(DFLT_SCHEMA));
 
         return cfg;
     }

@@ -1201,8 +1201,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * It is checked that if a new column already existed in BinaryType,
      * then its type does not change.
      *
-     * @param typeId Type ID BinaryType.
-     * @param qryField New QueryField.
+     * @param typeId The type id of the binary type.
+     * @param qryField New query field.
      * @return {@code True} if the field is not added or type does not change.
      */
     private boolean checkFieldOnBinaryType(int typeId, QueryField qryField) {
@@ -1216,7 +1216,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 binaryFieldType.equals(fieldTypeName(typeByClass(Class.forName(qryField.typeName()))));
         }
         catch (ClassNotFoundException e) {
-            throw new IgniteException("Class not found for property: " + qryField.typeName());
+            throw new IgniteException(
+                "Class not found for property [name=" + qryField.name() + ", type=" + qryField.typeName() + ']'
+            );
         }
     }
 
