@@ -227,6 +227,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         /// </summary>
         private void DetachCurrentThread(IntPtr jvmPtr)
         {
+            // Can't use _jvmPtr because all thread locals are cleared at this point.
             _detachCurrentThread(jvmPtr);
         }
 
