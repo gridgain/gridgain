@@ -14,29 +14,8 @@
  * limitations under the License.
  */
 
-import './style.scss';
-import template from './template.pug';
-import controller from './controller';
+import {Selector} from 'testcafe';
 
-export default {
-    controller,
-    template,
-    transclude: true,
-    require: {
-        ngModel: 'ngModel'
-    },
-    bindings: {
-        label: '@',
-        placeholder: '@',
-        min: '@?',
-        max: '@?',
-        tip: '@',
-        required: '<?',
-        sizeType: '@?',
-        sizeScaleLabel: '@?',
-        onScaleChange: '&?',
-        ngDisabled: '<?',
-        autofocus: '<?',
-        inputDebounce: '<?'
-    }
-};
+export const assumedIdentityNotification = Selector('permanent-notifications .wch-notification').withText('You are currently viewing user');
+export const assumedUserFullName = assumedIdentityNotification.find('strong');
+export const revertIdentityButton = assumedIdentityNotification.find('a').withText('Revert to your identity?');

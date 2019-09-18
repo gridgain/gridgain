@@ -14,29 +14,8 @@
  * limitations under the License.
  */
 
-import './style.scss';
-import template from './template.pug';
-import controller from './controller';
+import {Selector} from 'testcafe';
+import {Table} from '../components/Table';
 
-export default {
-    controller,
-    template,
-    transclude: true,
-    require: {
-        ngModel: 'ngModel'
-    },
-    bindings: {
-        label: '@',
-        placeholder: '@',
-        min: '@?',
-        max: '@?',
-        tip: '@',
-        required: '<?',
-        sizeType: '@?',
-        sizeScaleLabel: '@?',
-        onScaleChange: '&?',
-        ngDisabled: '<?',
-        autofocus: '<?',
-        inputDebounce: '<?'
-    }
-};
+export const usersTable = new Table(Selector('ignite-list-of-registered-users'));
+export const userNameCell = Selector('.ui-grid-cell-contents');
