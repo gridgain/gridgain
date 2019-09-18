@@ -3066,7 +3066,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * @return Found data region.
          */
         private DataRegionConfiguration findDataRegion(DataStorageConfiguration dsCfg, String drName) {
-            if (dsCfg.getDataRegionConfigurations() == null)
+            if (dsCfg.getDataRegionConfigurations() == null || drName == null)
                 return dsCfg.getDefaultDataRegionConfiguration();
 
             if (dsCfg.getDefaultDataRegionConfiguration().getName().equals(drName))
