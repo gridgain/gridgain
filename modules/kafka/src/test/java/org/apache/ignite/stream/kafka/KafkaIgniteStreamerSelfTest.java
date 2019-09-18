@@ -233,17 +233,26 @@ public class KafkaIgniteStreamerSelfTest extends GridCommonAbstractTest {
             // Start kafka streamer.
             kafkaStmr.start();
 
-            try {
-                // Checks all events successfully processed in 10 seconds.
-                assertTrue("Failed to wait latch completion, still wait " + latch.getCount() + " events",
-                    latch.await(10, TimeUnit.SECONDS));
+            boolean failed = false;
 
-            }
-            catch (Throwable e) {
-                U.dumpThreads(log);
+            for (int i = 0; i < 10; i++) {
+                try {
+                    // Checks all events successfully processed in 10 seconds.
+                    assertTrue("Failed to wait latch completion, still wait " + latch.getCount() + " events",
+                        latch.await(10, TimeUnit.SECONDS));
 
-                throw e;
+                }
+                catch (Throwable e0) {
+                    log.info("Iteration " + i + " " + e0);
+
+                    U.dumpThreads(log);
+
+                    failed = true;
+                }
             }
+
+            if (failed)
+                fail();
 
             for (Map.Entry<String, String> entry : keyValMap.entrySet())
                 assertEquals(entry.getValue(), cache.get(entry.getKey()));
