@@ -22,7 +22,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     /// <summary>
     /// Unmanaged thread utils.
     /// </summary>
-    public static class UnmanagedThread
+    internal static class UnmanagedThread
     {
         /** Destructor callback delegate (same for Windows and Linux). */
         private delegate void DestructorCallback(IntPtr dataPtr);
@@ -34,9 +34,26 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// <summary>
         /// Static initializer.
         /// </summary>
-        static UnmanagedThread()
+        static unsafe UnmanagedThread()
         {
+            if (Os.IsWindows)
+            {
+                var flsIndex = NativeMethodsWindows.FlsAlloc(DestructorCallbackPtr);
+                NativeMethodsWindows.FlsSetValue(flsIndex, new IntPtr(1));
+            }
+            else if (Os.IsLinux)
+            {
+                uint tlsIndex;
+                var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), DestructorCallbackPtr);
+                CheckResult(res);
 
+                NativeMethodsLinux.pthread_setspecific(tlsIndex, new IntPtr(1));
+            }
+            else
+            {
+                // TODO: Add MacOS support.
+                throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
+            }
         }
 
         /// <summary>
@@ -54,6 +71,17 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             if (handler != null)
             {
                 handler(null, EventArgs.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Checks native call result.
+        /// </summary>
+        private static void CheckResult(int res)
+        {
+            if (res != 0)
+            {
+                throw new InvalidOperationException("Native call failed: " + res);
             }
         }
 
