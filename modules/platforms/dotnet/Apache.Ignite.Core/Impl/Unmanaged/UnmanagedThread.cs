@@ -27,9 +27,12 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /** Destructor callback delegate (same for Windows and Linux). */
         private delegate void DestructorCallback(IntPtr dataPtr);
 
+        /** Delegate instance - do not inline, we should keep this alive. */
+        private static readonly DestructorCallback DestructorCallbackDelegate = OnThreadExit;
+
         /** Callback function pointer. */
         private static readonly IntPtr DestructorCallbackPtr =
-            Marshal.GetFunctionPointerForDelegate((DestructorCallback) OnThreadExit);
+            Marshal.GetFunctionPointerForDelegate(DestructorCallbackDelegate);
 
         /** Storage index. */
         private static readonly int StorageIndex;
