@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.opencensus.spi;
+package org.apache.ignite.internal.processors.query;
 
-import org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpiTest;
-import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpiTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.cache.CacheAtomicityMode;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    OpenCensusMetricExporterSpiTest.class,
-    OpenCensusTracingSpiTest.class
-})
 /**
- * Suite to test OpenCensus integration.
+ *
  */
-public class IgniteOpenCensusSuite {
+public class SqlIndexConsistencyAfterInterruptTxCacheOperationTest
+    extends SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest {
+    /**
+     */
+    protected CacheAtomicityMode atomicity() {
+        return CacheAtomicityMode.TRANSACTIONAL;
+    }
 }
