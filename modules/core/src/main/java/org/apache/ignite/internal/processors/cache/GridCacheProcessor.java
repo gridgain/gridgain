@@ -3913,9 +3913,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Authorize dynamic cache management.
+     * Authorizes cache change request.
      *
-     * @param req start/stop cache request.
+     * @param security Security.
+     * @param req Cache change request.
      */
     static void authorizeCacheChange(IgniteSecurity security, DynamicCacheChangeRequest req) {
         if (req.cacheType() == null || req.cacheType() == CacheType.USER) {
@@ -3926,10 +3927,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
     }
 
+    /**
+     * Authorizes cache destroy.
+     *
+     * @param security Security.
+     * @param cacheName Cache name.
+     */
     static void authorizeCacheDestroy(IgniteSecurity security, String cacheName) {
         security.authorize(cacheName, SecurityPermission.CACHE_DESTROY);
     }
 
+    /**
+     * Authorizes cache create.
+     *
+     * @param security Security.
+     * @param cacheCfg Cache configuration.
+     */
     static void authorizeCacheCreate(IgniteSecurity security, @Nullable CacheConfiguration cacheCfg) {
         if (cacheCfg == null)
             return;
