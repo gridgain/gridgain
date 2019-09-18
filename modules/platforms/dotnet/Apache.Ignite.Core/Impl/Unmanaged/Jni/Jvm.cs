@@ -198,7 +198,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         /// </summary>
         public Env AttachCurrentThread(IntPtr envPtr)
         {
-            if (_env == null)
+            // TODO: Is the second check valid?
+            if (_env == null || _env.EnvPtr != envPtr)
             {
                 _env = new Env(envPtr, this);
             }
