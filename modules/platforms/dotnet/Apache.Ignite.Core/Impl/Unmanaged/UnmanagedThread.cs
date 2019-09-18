@@ -1,0 +1,60 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+namespace Apache.Ignite.Core.Impl.Unmanaged
+{
+    using System;
+    using System.Runtime.InteropServices;
+
+    /// <summary>
+    /// Unmanaged thread utils.
+    /// </summary>
+    public static class UnmanagedThread
+    {
+        /** Destructor callback delegate (same for Windows and Linux). */
+        private delegate void DestructorCallback(IntPtr dataPtr);
+
+        /// <summary>
+        /// Windows imports.
+        /// </summary>
+        private static class NativeMethodsWindows
+        {
+            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
+                ThrowOnUnmappableChar = true)]
+            public static extern int FlsAlloc(IntPtr destructorCallback);
+
+            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
+                ThrowOnUnmappableChar = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool FlsSetValue(int dwFlsIndex, IntPtr lpFlsData);
+        }
+
+        /// <summary>
+        /// Linux imports.
+        /// </summary>
+        private static class NativeMethodsLinux
+        {
+            // key is `typedef unsigned int pthread_key_t`
+            [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
+                ThrowOnUnmappableChar = true)]
+            public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
+
+            [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
+                ThrowOnUnmappableChar = true)]
+            public static extern int pthread_setspecific(uint key, IntPtr value);
+        }
+    }
+}
