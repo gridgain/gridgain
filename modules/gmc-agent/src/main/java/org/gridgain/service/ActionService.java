@@ -34,23 +34,15 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.gridgain.dto.action.ActionStatus.*;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
+import static org.gridgain.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.INTERNAL_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
  * Action service.
  */
 public class ActionService implements AutoCloseable {
-    /** Internal error code. */
-    private  static final int INTERNAL_ERROR_CODE = -32603;
-
-    /** Authentication error code. */
-    private  static final int AUTHENTICATION_ERROR_CODE = -32001;
-
-    /** Authorize error code. */
-    private  static final int AUTHORIZE_ERROR_CODE = -32002;
-
-    /** Parse error code. */
-    private static final int PARSE_ERROR_CODE = -32700;
-
     /** Context. */
     private final GridKernalContext ctx;
 

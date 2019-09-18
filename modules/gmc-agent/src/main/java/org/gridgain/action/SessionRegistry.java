@@ -21,9 +21,11 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.agent.AgentUtils;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,12 +37,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEO
  * Session registry.
  */
 public class SessionRegistry {
-    /** The default interval used to invalidate sessions, in seconds. */
-    private static final int DFLT_SES_TOKEN_INVALIDATE_INTERVAL = 5 * 60;
-
-    /** Default session timeout, in seconds. */
-    private static final int DFLT_SES_TIMEOUT = 30;
-
     /** Instance. */
     private static volatile SessionRegistry instance;
 
@@ -54,10 +50,10 @@ public class SessionRegistry {
     private final ConcurrentMap<UUID, Session> sesId2Ses = new ConcurrentHashMap<>();
 
     /** Session time to live. */
-    private final long sesTtl;
+    private final Duration sesTtl;
 
     /** Interval to invalidate session tokens. */
-    private final long sesTokTtl;
+    private final Duration sesTokTtl;
 
     /**
      * @param ctx Context.
@@ -66,8 +62,10 @@ public class SessionRegistry {
         this.ctx = ctx;
         this.log = ctx.log(SessionRegistry.class);
 
-        sesTtl = IgniteSystemProperties.getLong(IGNITE_REST_SESSION_TIMEOUT, DFLT_SES_TIMEOUT) * 1000;
-        sesTokTtl = IgniteSystemProperties.getLong(IGNITE_REST_SECURITY_TOKEN_TIMEOUT, DFLT_SES_TOKEN_INVALIDATE_INTERVAL) * 1000;
+        ManagementConfiguration cfg = ctx.gmc().configuration();
+
+        sesTtl = Duration.ofMillis(cfg.getSessionTimeout());
+        sesTokTtl = Duration.ofMillis(cfg.getSessionExpirationTimeout());
     }
 
     /**
@@ -109,7 +107,7 @@ public class SessionRegistry {
         if (ses == null)
             throw new IgniteAuthenticationException("Failed to retrieve session by session id, [sessionId=" + sesId + "]");
 
-        if (!ses.touch() || ses.isTimedOut(sesTtl)) {
+        if (!ses.touch() || ses.isTimedOut(sesTtl.toMillis())) {
             sesId2Ses.remove(ses.id(), ses);
 
             if (ctx.security().enabled() && ses.securityContext() != null && ses.securityContext().subject() != null)
@@ -118,7 +116,7 @@ public class SessionRegistry {
             return null;
         }
 
-        if (ses.isSessionExpired(sesTokTtl)) {
+        if (ses.isSessionExpired(sesTokTtl.toMillis())) {
             ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
             sesId2Ses.put(ses.id(), ses);

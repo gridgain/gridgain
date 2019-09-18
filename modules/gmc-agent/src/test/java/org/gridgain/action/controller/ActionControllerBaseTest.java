@@ -22,6 +22,7 @@ import org.junit.Test;
 import java.util.UUID;
 
 import static org.gridgain.dto.action.ActionStatus.FAILED;
+import static org.gridgain.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
  * Action controller base test.
@@ -37,7 +38,7 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
                 .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
                 .setArgument("value");
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == -32700);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }
 
     /**
@@ -50,6 +51,6 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
                 .setAction("InvalidAction.updateAutoAdjustEnabled")
                 .setArgument(true);
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == -32700);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }
 }

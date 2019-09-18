@@ -63,6 +63,12 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private List<String> cipherSuites;
 
+    /** Session timeout, in milliseconds. */
+    private long sesTimeout = 5 * 60 * 1000;
+
+    /** Session expiration timeout, in milliseconds. */
+    private long sesExpirationTimeout = 30 * 1000;
+
     /**
      * @return value of enable
      */
@@ -183,6 +189,36 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
+     * @return Session timeout.
+     */
+    public long getSessionTimeout() {
+        return sesTimeout;
+    }
+
+    /**
+     * @param sesTimeout Session timeout in milliseconds.
+     */
+    public ManagementConfiguration setSessionTimeout(long sesTimeout) {
+        this.sesTimeout = sesTimeout;
+        return this;
+    }
+
+    /**
+     * @return Session expiration timeout in milliseconds after which we are try to re-authenticate.
+     */
+    public long getSessionExpirationTimeout() {
+        return sesExpirationTimeout;
+    }
+
+    /**
+     * @param sesExpirationTimeout Session expiration timeout.
+     */
+    public ManagementConfiguration setSessionExpirationTimeout(long sesExpirationTimeout) {
+        this.sesExpirationTimeout = sesExpirationTimeout;
+        return this;
+    }
+
+    /**
      * @return {@code True} if contains server endpoints.
      */
     public boolean hasServerUris() {
@@ -205,7 +241,9 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
             Objects.equals(srvKeyStorePass, that.srvKeyStorePass) &&
             Objects.equals(srvTrustStore, that.srvTrustStore) &&
             Objects.equals(srvTrustStorePass, that.srvTrustStorePass) &&
-            Objects.equals(cipherSuites, that.cipherSuites);
+            Objects.equals(cipherSuites, that.cipherSuites) &&
+            Objects.equals(sesTimeout, that.sesTimeout) &&
+            Objects.equals(sesExpirationTimeout, that.sesExpirationTimeout);
     }
 
     /** {@inheritDoc} */
@@ -217,7 +255,9 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
             srvKeyStorePass,
             srvTrustStore,
             srvTrustStorePass,
-            cipherSuites
+            cipherSuites,
+                sesTimeout,
+                sesExpirationTimeout
         );
     }
 

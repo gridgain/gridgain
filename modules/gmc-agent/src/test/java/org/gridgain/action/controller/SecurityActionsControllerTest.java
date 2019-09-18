@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.gridgain.dto.action.ActionStatus.COMPLETED;
 import static org.gridgain.dto.action.ActionStatus.FAILED;
+import static org.gridgain.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 
 /**
  * Security actions controller test.
@@ -53,7 +54,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithS
                 .setAction("SecurityActions.authenticate")
                 .setArgument(new AuthenticateCredentials());
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == -32001);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 
     /**
@@ -66,6 +67,6 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithS
                 .setAction("SecurityActions.authenticate")
                 .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite2")));
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == -32001);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 }

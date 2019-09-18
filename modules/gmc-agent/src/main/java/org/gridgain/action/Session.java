@@ -31,10 +31,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * Session.
  */
 public class Session {
-    /** Expiration flag. It's a final state of lastTouchTime. */
-    private static final Long TIMEDOUT_FLAG = 0L;
+    /** Expiration STATE. It's a final state of lastTouchTime. */
+    private static final Long TIMEDOUT_STATE = 0L;
 
-    /** Client id. */
+    /** Session ID. */
     private final UUID id;
 
     /** Address. */
@@ -59,7 +59,7 @@ public class Session {
     private volatile SecurityCredentials creds;
 
     /**
-     * @param id ID.
+     * @param id Session ID.
      */
     private Session(UUID id) {
         this.id = id;
@@ -89,7 +89,7 @@ public class Session {
     }
 
     /**
-     * @param secCtx Sec context.
+     * @param secCtx Security context.
      */
     public void securityContext(SecurityContext secCtx) {
         this.secCtx = secCtx;
@@ -103,7 +103,7 @@ public class Session {
     }
 
     /**
-     * @param authCtx Auth context.
+     * @param authCtx Authorization context.
      */
     public void authorizationContext(AuthorizationContext authCtx) {
         this.authCtx = authCtx;
@@ -154,10 +154,10 @@ public class Session {
     public boolean isTimedOut(long sesTimeout) {
         long time0 = lastTouchTime.get();
 
-        if (time0 == TIMEDOUT_FLAG)
+        if (time0 == TIMEDOUT_STATE)
             return true;
 
-        return U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_FLAG);
+        return U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_STATE);
     }
 
     /**
@@ -180,7 +180,7 @@ public class Session {
         while (true) {
             long time0 = lastTouchTime.get();
 
-            if (time0 == TIMEDOUT_FLAG)
+            if (time0 == TIMEDOUT_STATE)
                 return false;
 
             if (lastTouchTime.compareAndSet(time0, U.currentTimeMillis()))
