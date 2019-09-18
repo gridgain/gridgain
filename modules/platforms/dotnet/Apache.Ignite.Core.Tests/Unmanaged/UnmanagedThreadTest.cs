@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
     using System;
-    using System.Diagnostics;
     using System.Threading;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using NUnit.Framework;
@@ -32,9 +31,10 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         /// with <see cref="UnmanagedThread.EnableCurrentThreadExitEvent"/>.
         /// </summary>
         [Test]
-        public void TestThreadExitFiresWhenEnabled()
+        public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
             var evt = new ManualResetEventSlim();
+
             Action callback = () =>
             {
                 if (Thread.CurrentThread.Priority == ThreadPriority.Lowest)
@@ -42,18 +42,31 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                     evt.Set();
                 }
             };
+
             UnmanagedThread.ThreadExit += callback;
 
             try
             {
-                var t = new Thread(_ => UnmanagedThread.EnableCurrentThreadExitEvent())
+                ParameterizedThreadStart threadStart = _ =>
                 {
+                    if (enableThreadExitCallback)
+                        UnmanagedThread.EnableCurrentThreadExitEvent();
+                };
+
+                var t = new Thread(threadStart)
+                {
+                    // We use thread priority as a very hacky way to identify thread.
+                    // Thread.CurrentThread.ManagedThreadId can't be used, because we receive callback after
+                    // "managed" part of the thread was cleared up, and ManagedThreadId changes as a result.
+                    // We could use unmanaged thread ID from the OS, but it requires P/Invoke
+                    // and making it work on every OS is cumbersome.
                     Priority = ThreadPriority.Lowest
                 };
+
                 t.Start();
 
                 var threadExitCallbackCalled = evt.Wait(TimeSpan.FromSeconds(1));
-                Assert.True(threadExitCallbackCalled);
+                Assert.AreEqual(enableThreadExitCallback, threadExitCallbackCalled);
             }
             finally
             {
