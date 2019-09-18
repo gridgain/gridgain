@@ -62,7 +62,7 @@ namespace ignite
             prjImpl.Init(common::Bind(this, &IgniteImpl::InternalGetProjection));
         }
 
-        IgniteImpl::SP_CacheAffinityImpl IgniteImpl::GetAffinity(std::string cacheName, IgniteError& err)
+        IgniteImpl::SP_CacheAffinityImpl IgniteImpl::GetAffinity(const std::string& cacheName, IgniteError& err)
         {
             SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
             InteropMemory* mem0 = mem.Get();

@@ -58,10 +58,22 @@ namespace ignite
         /**
          * Get affinity service to provide information about data partitioning and distribution.
          *
+         * @tparam K Cache affinity key type.
+         *
          * @param cacheName Cache name.
          * @return Cache data affinity service.
          */
-        cache::CacheAffinity GetAffinity(std::string cacheName);
+        template<typename K>
+        cache::CacheAffinity<K> GetAffinity(const std::string& cacheName)
+        {
+            IgniteError err;
+
+            cache::CacheAffinity<K> ret(impl.Get()->GetAffinity(cacheName, err));
+
+            IgniteError::ThrowIfNeeded(err);
+
+            return ret;
+        }
 
         /**
          * Get Ignite instance name.

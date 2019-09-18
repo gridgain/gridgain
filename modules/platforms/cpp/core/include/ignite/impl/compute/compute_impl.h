@@ -82,7 +82,7 @@ namespace ignite
                  * @throw IgniteError in case of error.
                  */
                 template<typename R, typename K, typename F>
-                Future<R> AffinityCallAsync(std::string cacheName, K key, const F& func)
+                Future<R> AffinityCallAsync(const std::string& cacheName, const K& key, const F& func)
                 {
                     typedef ComputeJobHolderImpl<F, R> JobType;
                     typedef SingleJobComputeTaskHolder<F, R> TaskType;
@@ -105,7 +105,7 @@ namespace ignite
                  * @throw IgniteError in case of error.
                  */
                 template<typename K, typename F>
-                Future<void> AffinityRunAsync(std::string cacheName, K key, const F& action)
+                Future<void> AffinityRunAsync(const std::string& cacheName, const K& key, const F& action)
                 {
                     typedef ComputeJobHolderImpl<F, void> JobType;
                     typedef SingleJobComputeTaskHolder<F, void> TaskType;
@@ -285,7 +285,7 @@ namespace ignite
                  *  once it's ready.
                  */
                 template<typename R, typename K, typename F, typename J, typename T>
-                Future<R> PerformAffinityTask(std::string cacheName, K key, const F& func)
+                Future<R> PerformAffinityTask(const std::string& cacheName, const K& key, const F& func)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(mem.Get());

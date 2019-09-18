@@ -92,7 +92,7 @@ namespace ignite
                  *
                  * @return Number of partitions.
                  */
-                int GetPartitions();
+                int32_t GetPartitions();
 
                 /**
                  * Get partition id for the given key.
@@ -103,12 +103,12 @@ namespace ignite
                  * @return Partition id.
                  */
                 template <typename K>
-                int GetPartition(K key)
+                int32_t GetPartition(const K& key)
                 {
                     IgniteError err;
                     In1Operation<K> inOp(key);
 
-                    int ret = static_cast<int>(InStreamOutLong(Command::PARTITION, inOp, err));
+                    int32_t ret = static_cast<int32_t>(InStreamOutLong(Command::PARTITION, inOp, err));
                     IgniteError::ThrowIfNeeded(err);
 
                     return ret;
@@ -124,7 +124,7 @@ namespace ignite
                  * @return True if given node is primary node for given key.
                  */
                 template <typename K>
-                bool IsPrimary(ignite::cluster::ClusterNode node, K key)
+                bool IsPrimary(ignite::cluster::ClusterNode node, const K& key)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
@@ -154,7 +154,7 @@ namespace ignite
                  * @return True if local node is one of the backup nodes for given key.
                  */
                 template <typename K>
-                bool IsBackup(ignite::cluster::ClusterNode node, K key)
+                bool IsBackup(ignite::cluster::ClusterNode node, const K &key)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
@@ -187,7 +187,7 @@ namespace ignite
                  * @return True if local node is primary or one of the backup nodes.
                  */
                 template <typename K>
-                bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, K key)
+                bool IsPrimaryOrBackup(ignite::cluster::ClusterNode node, const K& key)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     interop::InteropOutputStream out(memIn.Get());
@@ -213,7 +213,7 @@ namespace ignite
                  * @param node Cluster node.
                  * @return Container of partition ids for which the given cluster node has primary ownership.
                  */
-                std::vector<int> GetPrimaryPartitions(ignite::cluster::ClusterNode node);
+                std::vector<int32_t> GetPrimaryPartitions(ignite::cluster::ClusterNode node);
 
                 /**
                  * Get partition ids for which given cluster node has backup ownership.
@@ -221,7 +221,7 @@ namespace ignite
                  * @param node Cluster node.
                  * @return Container of partition ids for which given cluster node has backup ownership.
                  */
-                std::vector<int> GetBackupPartitions(ignite::cluster::ClusterNode node);
+                std::vector<int32_t> GetBackupPartitions(ignite::cluster::ClusterNode node);
 
                 /**
                  * Get partition ids for which given cluster node has any ownership (either primary or backup).
@@ -229,7 +229,7 @@ namespace ignite
                  * @param node Cluster node.
                  * @return Container of partition ids for which given cluster node has any ownership (either primary or backup).
                  */
-                std::vector<int> GetAllPartitions(ignite::cluster::ClusterNode node);
+                std::vector<int32_t> GetAllPartitions(ignite::cluster::ClusterNode node);
 
                 /**
                  * Map passed in key to a key which will be used for node affinity.
@@ -241,7 +241,7 @@ namespace ignite
                  * @return Key to be used for node-to-affinity mapping (may be the same key as passed in).
                  */
                 template <typename TK, typename TR>
-                TR GetAffinityKey(TK key)
+                TR GetAffinityKey(const TK& key)
                 {
                     TR ret;
                     In1Operation<TK> inOp(key);
@@ -265,7 +265,7 @@ namespace ignite
                  * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
                  */
                 template<typename TK>
-                std::map<ignite::cluster::ClusterNode, std::list<TK> > MapKeysToNodes(std::list<TK> keys)
+                std::map<ignite::cluster::ClusterNode, std::list<TK> > MapKeysToNodes(const std::list<TK>& keys)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -273,7 +273,7 @@ namespace ignite
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
                     writer.WriteInt32(static_cast<int32_t>(keys.size()));
-                    for (typename std::list<TK>::iterator it = keys.begin(); it != keys.end(); ++it)
+                    for (typename std::list<TK>::const_iterator it = keys.begin(); it != keys.end(); ++it)
                         writer.WriteObject<TK>(*it);
 
                     out.Synchronize();
@@ -312,7 +312,7 @@ namespace ignite
                  * @return Primary node for the key.
                  */
                 template <typename TK>
-                ignite::cluster::ClusterNode MapKeyToNode(TK key)
+                ignite::cluster::ClusterNode MapKeyToNode(const TK& key)
                 {
                     Guid nodeId;
                     In1Operation<TK> inOp(key);
@@ -335,7 +335,7 @@ namespace ignite
                  * @return Collection of cluster nodes.
                  */
                 template <typename TK>
-                std::list<ignite::cluster::ClusterNode> MapKeyToPrimaryAndBackups(TK key)
+                std::vector<ignite::cluster::ClusterNode> MapKeyToPrimaryAndBackups(const TK& key)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -353,8 +353,9 @@ namespace ignite
                     interop::InteropInputStream inStream(memOut.Get());
                     binary::BinaryReaderImpl reader(&inStream);
 
-                    std::list<ignite::cluster::ClusterNode> ret;
+                    std::vector<ignite::cluster::ClusterNode> ret;
                     int32_t cnt = reader.ReadInt32();
+                    ret.reserve(cnt);
                     for (int32_t i = 0; i < cnt; i++)
                         ret.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
 
@@ -367,7 +368,7 @@ namespace ignite
                  * @param part Partition id.
                  * @return Primary node for the given partition.
                  */
-                ignite::cluster::ClusterNode MapPartitionToNode(int part);
+                ignite::cluster::ClusterNode MapPartitionToNode(int32_t part);
 
                 /**
                  * Get primary nodes for the given partitions.
@@ -375,7 +376,7 @@ namespace ignite
                  * @param parts Partition ids.
                  * @return Mapping of given partitions to their primary nodes.
                  */
-                std::map<int, ignite::cluster::ClusterNode> MapPartitionsToNodes(std::vector<int> parts);
+                std::map<int32_t, ignite::cluster::ClusterNode> MapPartitionsToNodes(const std::vector<int32_t>& parts);
 
                 /**
                  * Get primary and backup nodes for partition.
@@ -384,7 +385,7 @@ namespace ignite
                  * @param part Partition to get affinity nodes for.
                  * @return Collection of primary and backup nodes for partition with primary node always first.
                  */
-                std::list<ignite::cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int part);
+                std::vector<ignite::cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int32_t part);
 
             private:
                 /**
@@ -394,7 +395,7 @@ namespace ignite
                  * @param node Cluster node.
                  * @return Container of partition ids.
                  */
-                std::vector<int> GetPartitions(int32_t opType, ignite::cluster::ClusterNode node);
+                std::vector<int32_t> GetPartitions(int32_t opType, ignite::cluster::ClusterNode node);
             };
         }
     }

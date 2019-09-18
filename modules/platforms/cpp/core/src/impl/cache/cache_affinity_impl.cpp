@@ -34,36 +34,36 @@ namespace ignite
 
             }
 
-            int CacheAffinityImpl::GetPartitions()
+            int32_t CacheAffinityImpl::GetPartitions()
             {
                 IgniteError err;
 
-                int ret = static_cast<int>(OutInOpLong(Command::PARTITIONS, 0, err));
+                int32_t ret = static_cast<int32_t>(OutInOpLong(Command::PARTITIONS, 0, err));
 
                 IgniteError::ThrowIfNeeded(err);
 
                 return ret;
             }
 
-            std::vector<int> CacheAffinityImpl::GetPrimaryPartitions(ClusterNode node)
+            std::vector<int32_t> CacheAffinityImpl::GetPrimaryPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::PRIMARY_PARTITIONS, node);
             }
 
-            std::vector<int> CacheAffinityImpl::GetBackupPartitions(ClusterNode node)
+            std::vector<int32_t> CacheAffinityImpl::GetBackupPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::BACKUP_PARTITIONS, node);
             }
 
-            std::vector<int> CacheAffinityImpl::GetAllPartitions(ClusterNode node)
+            std::vector<int32_t> CacheAffinityImpl::GetAllPartitions(ClusterNode node)
             {
                 return GetPartitions(Command::ALL_PARTITIONS, node);
             }
 
-            ClusterNode CacheAffinityImpl::MapPartitionToNode(int part)
+            ClusterNode CacheAffinityImpl::MapPartitionToNode(int32_t part)
             {
                 Guid nodeId;
-                In1Operation<int> inOp(part);
+                In1Operation<int32_t> inOp(part);
                 Out1Operation<Guid> outOp(nodeId);
 
                 IgniteError err;
@@ -73,7 +73,7 @@ namespace ignite
                 return GetEnvironment().GetNode(nodeId);
             }
 
-            std::map<int, ClusterNode> CacheAffinityImpl::MapPartitionsToNodes(std::vector<int> parts)
+            std::map<int32_t, ClusterNode> CacheAffinityImpl::MapPartitionsToNodes(const std::vector<int32_t>& parts)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -82,7 +82,7 @@ namespace ignite
 
                 writer.WriteInt32(static_cast<int32_t>(parts.size()));
                 for (size_t i = 0; i < parts.size(); i++)
-                    writer.WriteObject<int>(parts.at(i));
+                    writer.WriteObject<int32_t>(parts.at(i));
 
                 out.Synchronize();
 
@@ -93,21 +93,21 @@ namespace ignite
                 interop::InteropInputStream inStream(memOut.Get());
                 binary::BinaryReaderImpl reader(&inStream);
 
-                std::map<int, ClusterNode> ret;
+                std::map<int32_t, ClusterNode> ret;
 
                 int32_t cnt = reader.ReadInt32();
                 for (int32_t i = 0; i < cnt; i++)
                 {
-                    int key = reader.ReadInt32();
+                    int32_t key = reader.ReadInt32();
                     ClusterNode val(GetEnvironment().GetNode(reader.ReadGuid()));
 
-                    ret.insert(std::pair<int, ClusterNode>(key, val));
+                    ret.insert(std::pair<int32_t, ClusterNode>(key, val));
                 }
 
                 return ret;
             }
 
-            std::list<ClusterNode> CacheAffinityImpl::MapPartitionToPrimaryAndBackups(int part)
+            std::vector<ClusterNode> CacheAffinityImpl::MapPartitionToPrimaryAndBackups(int32_t part)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -125,15 +125,16 @@ namespace ignite
                 interop::InteropInputStream inStream(memOut.Get());
                 binary::BinaryReaderImpl reader(&inStream);
 
-                std::list<ClusterNode> ret;
+                std::vector<ClusterNode> ret;
                 int32_t cnt = reader.ReadInt32();
+                ret.reserve(cnt);
                 for (int32_t i = 0; i < cnt; i++)
                     ret.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
 
                 return ret;
             }
 
-            std::vector<int> CacheAffinityImpl::GetPartitions(int32_t opType, ClusterNode node)
+            std::vector<int32_t> CacheAffinityImpl::GetPartitions(int32_t opType, ClusterNode node)
             {
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -151,10 +152,11 @@ namespace ignite
                 interop::InteropInputStream inStream(memOut.Get());
                 binary::BinaryReaderImpl reader(&inStream);
 
-                std::vector<int> ret;
+                std::vector<int32_t> ret;
 
                 reader.ReadInt8();
                 int32_t cnt = reader.ReadInt32();
+                ret.reserve(cnt);
                 for (int32_t i = 0; i < cnt; i++)
                     ret.push_back(reader.ReadInt32());
 

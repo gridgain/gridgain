@@ -34,17 +34,6 @@ namespace ignite
         // No-op.
     }
 
-    cache::CacheAffinity Ignite::GetAffinity(std::string cacheName)
-    {
-        IgniteError err;
-
-        cache::CacheAffinity ret(impl.Get()->GetAffinity(cacheName, err));
-
-        IgniteError::ThrowIfNeeded(err);
-
-        return ret;
-    }
-
     const char* Ignite::GetName() const
     {
         return impl.Get()->GetName();

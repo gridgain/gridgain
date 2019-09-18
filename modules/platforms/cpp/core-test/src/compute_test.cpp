@@ -246,7 +246,7 @@ struct Func3 : ComputeFunc<void>
 
 std::string Func3::res;
 
-int GetPrimaryKey(ClusterNode& node, CacheAffinity& affinity)
+int GetPrimaryKey(ClusterNode& node, CacheAffinity<int>& affinity)
 {
     for (int i = 0; i < INT_MAX; i++)
         if (affinity.IsPrimary(node, i))
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
 {
     std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
     Cache<int, int> cache = node.GetCache<int, int>("cache1");
-    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    CacheAffinity<int> affinity = node.GetAffinity<int>(cache.GetName());
     Compute compute = node.GetCompute();
 
     int key = GetPrimaryKey(nodes.front(), affinity);
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
 {
     std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
     Cache<int, int> cache = node.GetCache<int, int>("cache1");
-    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    CacheAffinity<int> affinity = node.GetAffinity<int>(cache.GetName());
     Compute compute = node.GetCompute();
 
     int key = GetPrimaryKey(nodes.front(), affinity);
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
 {
     std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
     Cache<int, int> cache = node.GetCache<int, int>("cache1");
-    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    CacheAffinity<int> affinity = node.GetAffinity<int>(cache.GetName());
     Compute compute = node.GetCompute();
 
     int key = GetPrimaryKey(nodes.front(), affinity);
@@ -399,7 +399,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
 {
     std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
     Cache<int, int> cache = node.GetCache<int, int>("cache1");
-    CacheAffinity affinity = node.GetAffinity(cache.GetName());
+    CacheAffinity<int> affinity = node.GetAffinity<int>(cache.GetName());
     Compute compute = node.GetCompute();
 
     int key = GetPrimaryKey(nodes.front(), affinity);

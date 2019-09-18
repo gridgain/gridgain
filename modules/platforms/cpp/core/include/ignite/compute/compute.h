@@ -103,7 +103,7 @@ namespace ignite
              * @throw IgniteError in case of error.
              */
             template<typename R, typename K, typename F>
-            R AffinityCall(std::string cacheName, K key, const F& func)
+            R AffinityCall(const std::string& cacheName, const K& key, const F& func)
             {
                 return impl.Get()->AffinityCallAsync<R, K, F>(cacheName, key, func).GetValue();
             }
@@ -126,7 +126,7 @@ namespace ignite
              * @throw IgniteError in case of error.
              */
             template<typename R, typename K, typename F>
-            Future<R> AffinityCallAsync(std::string cacheName, K key, const F& func)
+            Future<R> AffinityCallAsync(const std::string& cacheName, const K& key, const F& func)
             {
                 return impl.Get()->AffinityCallAsync<R, K, F>(cacheName, key, func);
             }
@@ -144,7 +144,7 @@ namespace ignite
              * @throw IgniteError in case of error.
              */
             template<typename K, typename F>
-            void AffinityRun(std::string cacheName, K key, const F& action)
+            void AffinityRun(const std::string& cacheName, const K& key, const F& action)
             {
                 return impl.Get()->AffinityRunAsync<K, F>(cacheName, key, action).GetValue();
             }
@@ -164,7 +164,7 @@ namespace ignite
              * @throw IgniteError in case of error.
              */
             template<typename K, typename F>
-            Future<void> AffinityRunAsync(std::string cacheName, K key, const F& action)
+            Future<void> AffinityRunAsync(const std::string& cacheName, const K& key, const F& action)
             {
                 return impl.Get()->AffinityRunAsync<K, F>(cacheName, key, action);
             }

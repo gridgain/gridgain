@@ -61,7 +61,7 @@ namespace ignite
              * @param err Error.
              * @return Pointer to cache affinity implementation.
              */
-            SP_CacheAffinityImpl GetAffinity(std::string cacheName, IgniteError& err);
+            SP_CacheAffinityImpl GetAffinity(const std::string& cacheName, IgniteError& err);
             /**
              * Get name of the Ignite.
              *

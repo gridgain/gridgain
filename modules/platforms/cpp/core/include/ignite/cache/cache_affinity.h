@@ -34,7 +34,10 @@ namespace ignite
          * Provides affinity information to detect which node is primary and which nodes are backups
          * for a partitioned or replicated cache.
          * You can get an instance of this interface by calling Ignite.GetAffinity(cacheName) method.
+         *
+         * @tparam K Cache affinity key type.
          */
+        template<typename K>
         class IGNITE_IMPORT_EXPORT CacheAffinity
         {
         public:
@@ -54,7 +57,7 @@ namespace ignite
              *
              * @return Number of partitions.
              */
-            int GetPartitions()
+            int32_t GetPartitions()
             {
                 return impl.Get()->GetPartitions();
             }
@@ -62,13 +65,10 @@ namespace ignite
             /**
              * Get partition id for the given key.
              *
-             * @tparam K Key type.
-             *
              * @param key Key to get partition id for.
              * @return Partition id.
              */
-            template <typename K>
-            int GetPartition(K key)
+            int32_t GetPartition(const K& key)
             {
                 return impl.Get()->GetPartition(key);
             }
@@ -76,14 +76,11 @@ namespace ignite
             /**
              * Return true if given node is the primary node for given key.
              *
-             * @tparam K Key type.
-             *
              * @param node Cluster node.
              * @param key Key to check.
              * @return True if given node is primary node for given key.
              */
-            template<typename K>
-            bool IsPrimary(cluster::ClusterNode node, K key)
+            bool IsPrimary(cluster::ClusterNode node, const K& key)
             {
                 return impl.Get()->IsPrimary(node, key);
             }
@@ -91,14 +88,11 @@ namespace ignite
             /**
              * Return true if local node is one of the backup nodes for given key.
              *
-             * @tparam K Key type.
-             *
              * @param node Cluster node.
              * @param key Key to check.
              * @return True if local node is one of the backup nodes for given key.
              */
-            template <typename K>
-            bool IsBackup(cluster::ClusterNode node, K key)
+            bool IsBackup(cluster::ClusterNode node, const K& key)
             {
                 return impl.Get()->IsBackup(node, key);
             }
@@ -109,14 +103,11 @@ namespace ignite
              * "isPrimary(ClusterNode, Object) || isBackup(ClusterNode, Object))",
              * however it is more efficient as it makes both checks at once.
              *
-             * @tparam K Key type.
-             *
              * @param node Cluster node.
              * @param key Key to check.
              * @return True if local node is primary or one of the backup nodes.
              */
-            template <typename K>
-            bool IsPrimaryOrBackup(cluster::ClusterNode node, K key)
+            bool IsPrimaryOrBackup(cluster::ClusterNode node, const K& key)
             {
                 return impl.Get()->IsPrimaryOrBackup(node, key);
             }
@@ -127,7 +118,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which the given cluster node has primary ownership.
              */
-            std::vector<int> GetPrimaryPartitions(cluster::ClusterNode node)
+            std::vector<int32_t> GetPrimaryPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetPrimaryPartitions(node);
             }
@@ -138,7 +129,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which given cluster node has backup ownership.
              */
-            std::vector<int> GetBackupPartitions(cluster::ClusterNode node)
+            std::vector<int32_t> GetBackupPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetBackupPartitions(node);
             }
@@ -149,7 +140,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Container of partition ids for which given cluster node has any ownership (either primary or backup).
              */
-            std::vector<int> GetAllPartitions(cluster::ClusterNode node)
+            std::vector<int32_t> GetAllPartitions(cluster::ClusterNode node)
             {
                 return impl.Get()->GetAllPartitions(node);
             }
@@ -157,16 +148,15 @@ namespace ignite
             /**
              * Map passed in key to a key which will be used for node affinity.
              *
-             * @tparam TK Key to map type.
              * @tparam TR Key to be used for node-to-affinity mapping type.
              *
              * @param key Key to map.
              * @return Key to be used for node-to-affinity mapping (may be the same key as passed in).
              */
-            template <typename TK, typename TR>
-            TR GetAffinityKey(TK key)
+            template <typename TR>
+            TR GetAffinityKey(const K& key)
             {
-                return impl.Get()->GetAffinityKey<TK, TR>(key);
+                return impl.Get()->GetAffinityKey<K, TR>(key);
             }
 
             /**
@@ -174,13 +164,10 @@ namespace ignite
              * Use it to determine which nodes are storing which keys prior to sending
              * jobs that access these keys.
              *
-             * @tparam TK Key to map type.
-             *
              * @param keys Keys to map to nodes.
              * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
              */
-            template<typename TK>
-            std::map<cluster::ClusterNode, std::list<TK> > MapKeysToNodes(std::list<TK> keys)
+            std::map<cluster::ClusterNode, std::list<K> > MapKeysToNodes(const std::list<K>& keys)
             {
                 return impl.Get()->MapKeysToNodes(keys);
             }
@@ -189,14 +176,11 @@ namespace ignite
              * This method provides ability to detect to which primary node the given key is mapped.
              * Use it to determine which nodes are storing which keys prior to sending
              * jobs that access these keys.
-
-             * @tparam TK Key to map type.
              *
              * @param key Key to map to node.
              * @return Primary node for the key.
              */
-            template <typename TK>
-            cluster::ClusterNode MapKeyToNode(TK key)
+            cluster::ClusterNode MapKeyToNode(const K& key)
             {
                 return impl.Get()->MapKeyToNode(key);
             }
@@ -205,13 +189,10 @@ namespace ignite
              * Get primary and backup nodes for the key.
              * Note that primary node is always first in the returned collection.
              *
-             * @tparam TK Key to map type.
-             *
              * @param key Key to map to nodes.
              * @return Collection of cluster nodes.
              */
-            template <typename TK>
-            std::list<cluster::ClusterNode> MapKeyToPrimaryAndBackups(TK key)
+            std::vector<cluster::ClusterNode> MapKeyToPrimaryAndBackups(const K& key)
             {
                 return impl.Get()->MapKeyToPrimaryAndBackups(key);
             }
@@ -222,7 +203,7 @@ namespace ignite
              * @param part Partition id.
              * @return Primary node for the given partition.
              */
-            cluster::ClusterNode MapPartitionToNode(int part)
+            cluster::ClusterNode MapPartitionToNode(int32_t part)
             {
                 return impl.Get()->MapPartitionToNode(part);
             }
@@ -233,7 +214,7 @@ namespace ignite
              * @param parts Partition ids.
              * @return Mapping of given partitions to their primary nodes.
              */
-            std::map<int, cluster::ClusterNode> MapPartitionsToNodes(std::vector<int> parts)
+            std::map<int32_t, cluster::ClusterNode> MapPartitionsToNodes(const std::vector<int32_t>& parts)
             {
                 return impl.Get()->MapPartitionsToNodes(parts);
             }
@@ -245,7 +226,7 @@ namespace ignite
              * @param part Partition to get affinity nodes for.
              * @return Collection of primary and backup nodes for partition with primary node always first.
              */
-            std::list<cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int part)
+            std::vector<cluster::ClusterNode> MapPartitionToPrimaryAndBackups(int32_t part)
             {
                 return impl.Get()->MapPartitionToPrimaryAndBackups(part);
             }
