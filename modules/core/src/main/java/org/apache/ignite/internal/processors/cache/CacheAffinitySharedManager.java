@@ -2017,6 +2017,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 fut.timeBag().finishLocalStage("Affinity centralized initialization (crd) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");
+
+                validator.validateCacheGroup(desc);
             }
         });
 
