@@ -5277,7 +5277,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         public void fail(Throwable error) {
             failCause = error;
 
-            doFinishFuturesWhichLessOrEqualTo(FINISHED);
+            transitTo(FINISHED);
         }
 
         /**
