@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 var threadExitCallbackCalled = evt.Wait(TimeSpan.FromSeconds(1));
 
                 Assert.AreEqual(enableThreadExitCallback, threadExitCallbackCalled);
-                Assert.AreEqual(enableThreadExitCallback ? IntPtr.Zero : threadLocalVal, resultThreadLocalVal);
+                Assert.AreEqual(enableThreadExitCallback ? threadLocalVal : IntPtr.Zero, resultThreadLocalVal);
             }
             finally
             {
