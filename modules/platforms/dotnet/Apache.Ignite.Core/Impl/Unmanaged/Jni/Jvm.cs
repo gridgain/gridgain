@@ -198,7 +198,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         /// </summary>
         public Env AttachCurrentThread(IntPtr envPtr)
         {
-            // TODO: Is the second check valid?
+            // TODO: Make sure all Java callbacks use this overload.
             if (_env == null || _env.EnvPtr != envPtr)
             {
                 _env = new Env(envPtr, this);
