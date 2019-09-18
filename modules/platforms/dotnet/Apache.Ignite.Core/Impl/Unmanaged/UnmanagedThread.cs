@@ -27,6 +27,36 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /** Destructor callback delegate (same for Windows and Linux). */
         private delegate void DestructorCallback(IntPtr dataPtr);
 
+        /** Callback function pointer. */
+        private static readonly IntPtr DestructorCallbackPtr =
+            Marshal.GetFunctionPointerForDelegate((DestructorCallback) OnThreadExit);
+
+        /// <summary>
+        /// Static initializer.
+        /// </summary>
+        static UnmanagedThread()
+        {
+
+        }
+
+        /// <summary>
+        /// Occurs just before a thread exits.
+        /// Fired on that exact thread.
+        /// </summary>
+        public static event EventHandler ThreadExit;
+
+        /// <summary>
+        /// Thread exit callback.
+        /// </summary>
+        private static void OnThreadExit(IntPtr dataPtr)
+        {
+            var handler = ThreadExit;
+            if (handler != null)
+            {
+                handler(null, EventArgs.Empty);
+            }
+        }
+
         /// <summary>
         /// Windows imports.
         /// </summary>
@@ -50,6 +80,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             // key is `typedef unsigned int pthread_key_t`
             [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
                 ThrowOnUnmappableChar = true)]
+
             public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
 
             [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
