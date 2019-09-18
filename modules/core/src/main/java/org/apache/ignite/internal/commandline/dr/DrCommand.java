@@ -128,7 +128,7 @@ public class DrCommand implements Command<Object> {
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return delegate.confirmationPrompt();
+        return delegate != null ? delegate.confirmationPrompt() : null;
     }
 
     /** {@inheritDoc} */
