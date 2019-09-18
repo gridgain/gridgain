@@ -1707,6 +1707,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 break;
             }
             catch (IgniteFutureTimeoutCheckedException ignored) {
+                log.warning("Failed to wait for partitions release future: " + partReleaseFut);
+
                 // Print pending transactions and locks that might have led to hang.
                 if (nextDumpTime <= U.currentTimeMillis()) {
                     dumpPendingObjects(partReleaseFut, curTimeout <= 0 && !txRolledBack);
