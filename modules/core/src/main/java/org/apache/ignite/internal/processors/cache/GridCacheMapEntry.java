@@ -3419,8 +3419,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p);
 
+                    // Update if tree is changed or removal is replicated from supplier node and is absent locally.
                     update = c.operationType() != IgniteTree.OperationType.NOOP ||
-                        preload && val == null && c.oldRow() == null;
+                        preload && val == null && !c.filtered() && c.oldRow() == null;
                 }
             }
 
@@ -3494,16 +3495,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (val != null)
                         cctx.store().put(null, key, val, ver);
                 }
-
-                return true;
-            }
-            else if (preload && val == null && cctx.shared().versions().isStartVersion(this.ver)){
-                // Entry is absent in the tree but was removed on supplier.
-                // Need to mark it as deleted to prevent conflict with subsequent lower version writes.
-                update(null, expTime, ttl, ver, true);
-
-                if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal())
-                    deletedUnlocked(true);
 
                 return true;
             }
@@ -5739,6 +5730,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** */
         private IgniteTree.OperationType treeOp = IgniteTree.OperationType.PUT;
 
+        /** */
+        private boolean filtered;
+
         /**
          * @param entry Entry.
          * @param val New value.
@@ -5766,6 +5760,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             this.oldRow = oldRow;
 
             if (predicate != null && !predicate.apply(oldRow)) {
+                filtered = true;
+
                 treeOp = IgniteTree.OperationType.NOOP;
 
                 return;
@@ -5800,6 +5796,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** {@inheritDoc} */
         @Nullable @Override public CacheDataRow oldRow() {
             return oldRow;
+        }
+
+        /** {@inheritDoc} */
+        protected boolean filtered() {
+            return filtered;
         }
 
         /**
