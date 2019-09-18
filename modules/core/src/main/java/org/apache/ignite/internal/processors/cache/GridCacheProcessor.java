@@ -625,7 +625,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param joinVer Topology version of local join.
      * @return Future indicates that rebalance for SYNC rebalance mode caches has completed.
      */
-    private GridCompoundFuture awaitRebalance(AffinityTopologyVersion joinVer) {
+    private GridCompoundFuture<?, ?> awaitRebalance(AffinityTopologyVersion joinVer) {
         return internalCaches().stream()
             .map(GridCacheAdapter::context)
             .filter(GridCacheContext::affinityNode) // Only affinity caches.
@@ -745,21 +745,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (locallyConfiguredCachesStartReqs.isEmpty())
             return new GridFinishedFuture<>();
 
-        GridCompoundFuture<Boolean, ?> awaitStartNewCaches = new GridCompoundFuture<>();
+        return locallyConfiguredCachesStartReqs.stream()
+                .map(req -> {
+                    DynamicCacheStartFuture fut = new DynamicCacheStartFuture(req.requestId());
 
-        // Exchange manager is not running, no cache start processes are running at the moment
-        // It's safe to register callback on future cache start.
-        for (DynamicCacheChangeRequest req : locallyConfiguredCachesStartReqs) {
-            DynamicCacheStartFuture fut = new DynamicCacheStartFuture(req.requestId());
+                    // Exchange manager is not running, no cache start processes are running at the moment
+                    // It's safe to register callback on future cache start.
+                    proxyStartFutures.put(req.cacheName(), fut);
 
-            proxyStartFutures.put(req.cacheName(), fut);
-
-            awaitStartNewCaches.add(fut);
-        }
-
-        awaitStartNewCaches.markInitialized();
-
-        return awaitStartNewCaches;
+                    return fut;
+                })
+                .collect(IgniteCollectors.toCompoundFuture());
     }
 
     /**
@@ -3750,14 +3746,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return compound future.
      */
     @NotNull public IgniteInternalFuture<?> dynamicChangeCaches(List<DynamicCacheChangeRequest> reqs) {
-        GridCompoundFuture<?, ?> compoundFut = new GridCompoundFuture<>();
-
-        for (DynamicCacheStartFuture fut : initiateCacheChanges(reqs))
-            compoundFut.add((IgniteInternalFuture)fut);
-
-        compoundFut.markInitialized();
-
-        return compoundFut;
+        return initiateCacheChanges(reqs).stream().collect(IgniteCollectors.toCompoundFuture());
     }
 
     /**
@@ -3807,14 +3796,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             reqs.add(req);
         }
 
-        GridCompoundFuture fut = new GridCompoundFuture();
-
-        for (DynamicCacheStartFuture f : initiateCacheChanges(reqs))
-            fut.add(f);
-
-        fut.markInitialized();
-
-        return fut;
+        return initiateCacheChanges(reqs).stream().collect(IgniteCollectors.toCompoundFuture());
     }
 
     /**
