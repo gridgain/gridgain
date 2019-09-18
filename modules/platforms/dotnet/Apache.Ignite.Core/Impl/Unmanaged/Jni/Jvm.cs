@@ -194,6 +194,19 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         }
 
         /// <summary>
+        /// Attaches current thread to the JVM using known envPtr and returns JNIEnv.
+        /// </summary>
+        public Env AttachCurrentThread(IntPtr envPtr)
+        {
+            if (_env == null)
+            {
+                _env = new Env(envPtr, this);
+            }
+
+            return _env;
+        }
+
+        /// <summary>
         /// Registers the callbacks.
         /// </summary>
         public void RegisterCallbacks(UnmanagedCallbacks cbs)
