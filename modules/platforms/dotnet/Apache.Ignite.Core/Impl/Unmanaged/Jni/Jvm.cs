@@ -187,7 +187,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 }
 
                 _env = new Env(envPtr, this);
-                UnmanagedThread.EnableCurrentThreadExitEvent();
+                UnmanagedThread.EnableCurrentThreadExitEvent(_jvmPtr);
             }
 
             return _env;
@@ -225,9 +225,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         /// <summary>
         /// Detaches current thread from JVM.
         /// </summary>
-        private void DetachCurrentThread()
+        private void DetachCurrentThread(IntPtr jvmPtr)
         {
-            _detachCurrentThread(_jvmPtr);
+            _detachCurrentThread(jvmPtr);
         }
 
         /// <summary>

@@ -34,12 +34,15 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
             var evt = new ManualResetEventSlim();
+            var threadLocalVal = new IntPtr(42);
+            var resultThreadLocalVal = IntPtr.Zero;
 
-            Action callback = () =>
+            Action<IntPtr> callback = val =>
             {
                 if (Thread.CurrentThread.Priority == ThreadPriority.Lowest)
                 {
                     evt.Set();
+                    resultThreadLocalVal = val;
                 }
             };
 
@@ -50,7 +53,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 ParameterizedThreadStart threadStart = _ =>
                 {
                     if (enableThreadExitCallback)
-                        UnmanagedThread.EnableCurrentThreadExitEvent();
+                        UnmanagedThread.EnableCurrentThreadExitEvent(threadLocalVal);
                 };
 
                 var t = new Thread(threadStart)
@@ -66,7 +69,9 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 t.Start();
 
                 var threadExitCallbackCalled = evt.Wait(TimeSpan.FromSeconds(1));
+
                 Assert.AreEqual(enableThreadExitCallback, threadExitCallbackCalled);
+                Assert.AreEqual(enableThreadExitCallback ? IntPtr.Zero : threadLocalVal, resultThreadLocalVal);
             }
             finally
             {

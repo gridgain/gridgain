@@ -62,21 +62,21 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// Occurs just before a thread exits.
         /// Fired on that exact thread.
         /// </summary>
-        public static event Action ThreadExit;
+        public static event Action<IntPtr> ThreadExit;
 
         /// <summary>
         /// Enables thread exit even for current thread.
         /// </summary>
-        public static void EnableCurrentThreadExitEvent()
+        public static void EnableCurrentThreadExitEvent(IntPtr threadLocalValue)
         {
             // Store any value so that destructor callback is fired.
             if (Os.IsWindows)
             {
-                NativeMethodsWindows.FlsSetValue(StorageIndex, new IntPtr(1));
+                NativeMethodsWindows.FlsSetValue(StorageIndex, threadLocalValue);
             }
             else if (Os.IsLinux)
             {
-                NativeMethodsLinux.pthread_setspecific(StorageIndex, new IntPtr(1));
+                NativeMethodsLinux.pthread_setspecific(StorageIndex, threadLocalValue);
             }
             else
             {
@@ -88,12 +88,12 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// <summary>
         /// Thread exit callback.
         /// </summary>
-        private static void OnThreadExit(IntPtr dataPtr)
+        private static void OnThreadExit(IntPtr threadLocalValue)
         {
             var handler = ThreadExit;
             if (handler != null)
             {
-                handler();
+                handler(threadLocalValue);
             }
         }
 
