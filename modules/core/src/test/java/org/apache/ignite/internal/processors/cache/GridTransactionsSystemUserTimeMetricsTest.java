@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -93,9 +92,6 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
     /** */
     private static final long EPSILON = 300;
-
-    /** */
-    private static final long LONG_TRAN_TIMEOUT = Math.min(SYSTEM_DELAY, USER_DELAY);
 
     /** */
     private static final String TRANSACTION_TIME_DUMP_REGEX = ".*?ransaction time dump .*?totalTime=[0-9]{1,4}, " +
@@ -250,7 +246,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /** */
-    private void doAsyncTransactions(Ignite client, int txCount, long userDelay) throws ExecutionException, InterruptedException {
+    private void doAsyncTransactions(Ignite client, int txCount, long userDelay) {
         ExecutorService executorService = Executors.newFixedThreadPool(txCount);
 
         List<Future> futures = new LinkedList<>();
@@ -511,6 +507,17 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         int txCnt = 10;
 
+        List<String> txLogLines = new LinkedList<>();
+
+        txLogLines.add("First 10 long running transactions \\[total=" + txCnt + "\\]");
+
+        for (int i = 0; i < txCnt; i++)
+            txLogLines.add(".*?>>> Transaction .*? systemTime=[0-4]{1,4}, userTime=[0-4]{1,4}.*");
+
+        LogListener lrtLogLsnr = new MessageOrderLogListener(txLogLines.toArray(new String[0]));
+
+        listeningTestLog.registerListener(lrtLogLsnr);
+
         applyJmxParameters(5000L, null, txCnt);
 
         doAsyncTransactions(client, txCnt, 5200);
@@ -523,6 +530,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(logTxDumpLsnr.check());
         assertTrue(transactionDumpLsnr.check());
+        assertTrue(lrtLogLsnr.check());
 
         assertEquals(txCnt, transactionDumpLsnr.value());
     }
@@ -636,140 +644,6 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertFalse(logTxDumpLsnr.check());
     }
-
-    /** */
-    /*@Test
-    public void testTransactionsSystemUserTime() throws Exception {
-        Ignite ignite = startGrids(2);
-
-        Ignite client = startGrid(CLIENT);
-
-        IgniteLogger oldLog = GridTestUtils.getFieldValue(IgniteTxAdapter.class, "log");
-
-        GridTestUtils.setFieldValue(IgniteTxAdapter.class, "log", testLog);
-
-        try {
-            assertTrue(client.configuration().isClientMode());
-
-            IgniteCache<Integer, Integer> cache = client.getOrCreateCache(CACHE_NAME);
-
-            cache.put(1, 1);
-
-            Callable<Object> txCallable = () -> {
-                Integer val = cache.get(1);
-
-                cache.put(1, val + 1);
-
-                return null;
-            };
-
-            DynamicMBean tranMBean = metricSet(CLIENT, null, TX_METRICS);
-
-            //slow user
-            slowPrepare = false;
-
-            doInTransaction(client, () -> {
-                Integer val = cache.get(1);
-
-                doSleep(USER_DELAY);
-
-                cache.put(1, val + 1);
-
-                return null;
-            });
-
-            assertEquals(2, cache.get(1).intValue());
-
-            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_USER_TIME) >= USER_DELAY);
-            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME) < LONG_TRAN_TIMEOUT);
-
-            try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-                Integer val = cache.get(1);
-
-                doSleep(USER_DELAY);
-
-                cache.put(1, val + 1);
-
-                tx.rollback();
-            }
-
-            assertEquals(2, cache.get(1).intValue());
-
-            assertTrue(rollbackDumpLsnr.check());
-
-            //slow prepare
-            slowPrepare = true;
-
-            doInTransaction(client, txCallable);
-
-            assertTrue(logTxDumpLsnr.check());
-
-            assertEquals(3, cache.get(1).intValue());
-
-            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME) >= SYSTEM_DELAY);
-
-            long[] sysTimeHisto = (long[])tranMBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM);
-            long[] userTimeHisto = (long[])tranMBean.getAttribute(METRIC_USER_TIME_HISTOGRAM);
-
-            assertNotNull(sysTimeHisto);
-            assertNotNull(userTimeHisto);
-
-            assertTrue(sysTimeHisto != null && sysTimeHisto.length > 0);
-            assertTrue(userTimeHisto != null && userTimeHisto.length > 0);
-
-            logTxDumpLsnr.reset();
-
-            //checking settings changing via JMX with second client
-            Ignite client2 = startGrid(CLIENT_2);
-
-            TransactionsMXBean tmMxBean = getMxBean(
-                CLIENT,
-                "Transactions",
-                TransactionsMXBean.class,
-                TransactionsMXBeanImpl.class
-            );
-
-            tmMxBean.setLongTransactionTimeDumpThreshold(0);
-            tmMxBean.setTransactionTimeDumpSamplesCoefficient(0.0);
-
-            doInTransaction(client2, txCallable);
-
-            assertFalse(logTxDumpLsnr.check());
-
-            //testing dumps limit
-
-            doSleep(1000);
-
-            transactionDumpLsnr.reset();
-
-            transactionDumpsSkippedLsnr.reset();
-
-            tmMxBean.setTransactionTimeDumpSamplesCoefficient(1.0);
-
-            tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(TX_COUNT_FOR_LOG_THROTTLING_CHECK / 2);
-
-            slowPrepare = false;
-
-            for (int i = 0; i < TX_COUNT_FOR_LOG_THROTTLING_CHECK; i++)
-                doInTransaction(client, txCallable);
-
-            assertEquals(TX_COUNT_FOR_LOG_THROTTLING_CHECK / 2, transactionDumpLsnr.value());
-
-            //testing skipped message in log
-
-            doSleep(1000);
-
-            doInTransaction(client, txCallable);
-
-            assertTrue(transactionDumpsSkippedLsnr.check());
-
-            U.log(log, sysTimeHisto);
-            U.log(log, userTimeHisto);
-        }
-        finally {
-            GridTestUtils.setFieldValue(IgniteTxAdapter.class, "log", oldLog);
-        }
-    }*/
 
     /**
      *
