@@ -96,6 +96,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             GetDelegate(func.DetachCurrentThread, out _detachCurrentThread);
 
             var env = AttachCurrentThread();
+            UnmanagedThread.ThreadExit += DetachCurrentThread;
+
             _methodId = new MethodId(env);
 
             // Keep AppDomain check here to avoid JITting GetCallbacksFromDefaultDomain method on .NET Core
@@ -185,6 +187,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 }
 
                 _env = new Env(envPtr, this);
+                UnmanagedThread.EnableCurrentThreadExitEvent();
             }
 
             return _env;
@@ -217,6 +220,14 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 var writerId = _callbacks.RegisterConsoleWriter(ConsoleWriter);
                 AppDomain.CurrentDomain.DomainUnload += (s, a) => _callbacks.ReleaseConsoleWriter(writerId);
             }
+        }
+
+        /// <summary>
+        /// Detaches current thread from JVM.
+        /// </summary>
+        private void DetachCurrentThread()
+        {
+            _detachCurrentThread(_jvmPtr);
         }
 
         /// <summary>

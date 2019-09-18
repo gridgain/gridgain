@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// Occurs just before a thread exits.
         /// Fired on that exact thread.
         /// </summary>
-        public static event EventHandler ThreadExit;
+        public static event Action ThreadExit;
 
         /// <summary>
         /// Enables thread exit even for current thread.
@@ -93,7 +93,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             var handler = ThreadExit;
             if (handler != null)
             {
-                handler(null, EventArgs.Empty);
+                handler();
             }
         }
 
