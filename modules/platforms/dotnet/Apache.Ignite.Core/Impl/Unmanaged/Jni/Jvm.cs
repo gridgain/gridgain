@@ -96,6 +96,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             GetDelegate(func.DetachCurrentThread, out _detachCurrentThread);
 
             var env = AttachCurrentThread();
+
+            // TODO: This can cause double detach (from multiple appdomains) - is that ok?
             UnmanagedThread.ThreadExit += DetachCurrentThread;
 
             _methodId = new MethodId(env);
