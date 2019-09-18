@@ -26,7 +26,7 @@ import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cluster.ClusterNode;
 
 /**
- *
+ * Affinity function for {@link org.apache.ignite.cache.CacheMode#LOCAL} caches.
  */
 public class LocalAffinityFunction implements AffinityFunction {
     /**
