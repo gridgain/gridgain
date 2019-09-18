@@ -275,7 +275,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 
                     if (writer != null)
                     {
-                        // TODO: This is wrong, we may already have a thread-local Env object.
                         var env = _jvm.AttachCurrentThread(envPtr);
                         var msg = env.JStringToString(message);
 
