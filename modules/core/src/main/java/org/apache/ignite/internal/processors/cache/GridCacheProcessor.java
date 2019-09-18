@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -76,8 +76,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheA
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.StopCachesOnClientReconnectExchangeTask;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionDefferedDeleteQueueCleanupTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
@@ -124,7 +123,6 @@ import org.apache.ignite.internal.processors.query.schema.message.SchemaAbstract
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
@@ -134,7 +132,6 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainClosure;
-import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -609,7 +606,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (!ctx.clientNode())
-            addRemovedItemsCleanupTask(Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000));
+            sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
+                sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
         // Escape if cluster inactive.
         if (!active)
@@ -799,13 +797,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public void cancelStartLocallyConfiguredCaches() {
         proxyStartFutures.forEach((name, fut) -> fut.onDone(false, null));
-    }
-
-    /**
-     * @param timeout Cleanup timeout.
-     */
-    private void addRemovedItemsCleanupTask(long timeout) {
-        ctx.timeout().addTimeoutObject(new RemovedItemsCleanupTask(timeout));
     }
 
     /** {@inheritDoc} */
@@ -1812,7 +1803,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException if failed.
      */
     Map<StartCacheInfo, IgniteCheckedException> prepareStartCachesIfPossible(
-        Collection<StartCacheInfo> startCacheInfos) throws IgniteCheckedException {
+        Collection<StartCacheInfo> startCacheInfos
+    ) throws IgniteCheckedException {
         HashMap<StartCacheInfo, IgniteCheckedException> failedCaches = new HashMap<>();
 
         prepareStartCaches(startCacheInfos, (data, operation) -> {
@@ -3945,16 +3937,26 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     static void authorizeCacheChange(IgniteSecurity security, DynamicCacheChangeRequest req) {
         if (req.cacheType() == null || req.cacheType() == CacheType.USER) {
-            if (req.stop())
-                security.authorize(req.cacheName(), SecurityPermission.CACHE_DESTROY);
-            else if (req.startCacheConfiguration() != null) {
-                security.authorize(req.cacheName(), SecurityPermission.CACHE_CREATE);
-
-                if (req.startCacheConfiguration().isOnheapCacheEnabled() &&
-                    IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_ONHEAP_CACHE))
-                    throw new SecurityException("Authorization failed for enabling on-heap cache.");
-            }
+            if (req.start())
+                authorizeCacheCreate(security, req.startCacheConfiguration());
+            else if (req.stop())
+                authorizeCacheDestroy(security, req.cacheName());
         }
+    }
+
+    static void authorizeCacheDestroy(IgniteSecurity security, String cacheName) {
+        security.authorize(cacheName, SecurityPermission.CACHE_DESTROY);
+    }
+
+    static void authorizeCacheCreate(IgniteSecurity security, @Nullable CacheConfiguration cacheCfg) {
+        if (cacheCfg == null)
+            return;
+
+        security.authorize(cacheCfg.getName(), SecurityPermission.CACHE_CREATE);
+
+        if (cacheCfg.isOnheapCacheEnabled() &&
+                IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_ONHEAP_CACHE))
+            throw new SecurityException("Authorization failed for enabling on-heap cache.");
     }
 
     /**
@@ -5320,77 +5322,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(TemplateConfigurationFuture.class, this);
-        }
-    }
-
-    /**
-     *
-     */
-    private class RemovedItemsCleanupTask implements GridTimeoutObject {
-        /** */
-        private final IgniteUuid id = IgniteUuid.randomUuid();
-
-        /** */
-        private final long endTime;
-
-        /** */
-        private final long timeout;
-
-        /**
-         * @param timeout Timeout.
-         */
-        RemovedItemsCleanupTask(long timeout) {
-            this.timeout = timeout;
-
-            endTime = U.currentTimeMillis() + timeout;
-        }
-
-        /** {@inheritDoc} */
-        @Override public IgniteUuid timeoutId() {
-            return id;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long endTime() {
-            return endTime;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onTimeout() {
-            ctx.closure().runLocalSafe(new GridPlainRunnable() {
-                @Override public void run() {
-                    try {
-                        for (CacheGroupContext grp : sharedCtx.cache().cacheGroups()) {
-                            if (!grp.isLocal() && grp.affinityNode()) {
-                                GridDhtPartitionTopology top = null;
-
-                                try {
-                                    top = grp.topology();
-                                }
-                                catch (IllegalStateException ignore) {
-                                    // Cache stopped.
-                                }
-
-                                if (top != null) {
-                                    for (GridDhtLocalPartition part : top.currentLocalPartitions())
-                                        part.cleanupRemoveQueue();
-                                }
-
-                                if (ctx.isStopping())
-                                    return;
-                            }
-                        }
-                    }
-                    catch (Exception e) {
-                        U.error(log, "Failed to cleanup removed cache items: " + e, e);
-                    }
-
-                    if (ctx.isStopping())
-                        return;
-
-                    addRemovedItemsCleanupTask(timeout);
-                }
-            }, true);
         }
     }
 
