@@ -174,6 +174,16 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             managementArgs.setCipherSuites(argIter.nextStringSet("cipher suites"));
 
                             break;
+                        case SESSION_TIMEOUT:
+                            managementArgs.setSessionTimeout(argIter.nextLongArg("session timeout"));
+
+                            break;
+
+                        case SESSION_EXPIRATION_TIMEOUT:
+                            managementArgs.setSessionExpirationTimeout(argIter.nextLongArg("session expiration timeout"));
+
+                            break;
+
                         default:
 
                     }
@@ -218,7 +228,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
             .setServerKeyStore(args.getKeyStore())
             .setServerKeyStorePassword(args.getKeyStorePassword())
             .setServerTrustStore(args.getTrustStore())
-            .setServerTrustStorePassword(args.getTrustStorePassword());
+            .setServerTrustStorePassword(args.getTrustStorePassword())
+            .setSessionTimeout(args.getSessionTimeout())
+            .setSessionExpirationTimeout(args.getSessionExpirationTimeout());
     }
 
     /**
@@ -232,7 +244,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
             optional("--management-keystore", "MANAGEMENT_KEYSTORE_PATH"),
             optional("--management-keystore-password", "MANAGEMENT_KEYSTORE_PASSWORD"),
             optional("--management-truststore", "MANAGEMENT_TRUSTSTORE_PATH"),
-            optional("--management-truststore-password", "MANAGEMENT_TRUSTSTORE_PASSWORD")
+            optional("--management-truststore-password", "MANAGEMENT_TRUSTSTORE_PASSWORD"),
+            optional("--management-session-timeout", "MANAGEMENT_SESSION_TIMEOUT"),
+            optional("--management-session-expiration-timeout", "MANAGEMENT_SESSION_EXPIRATION_TIMEOUT")
         ).toArray(String[]::new);
     }
 
@@ -259,6 +273,8 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
         log.info("Management key store: " + flag(!F.isEmpty(cfg.getServerKeyStore())));
         log.info("Management trust store: " + flag(!F.isEmpty(cfg.getServerTrustStore())));
+        log.info("Management session timeout: " + cfg.getSessionTimeout());
+        log.info("Management session expiration timeout: " + cfg.getSessionExpirationTimeout());
         log.info("");
     }
 }
