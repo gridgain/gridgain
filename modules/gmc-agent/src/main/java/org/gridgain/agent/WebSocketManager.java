@@ -71,10 +71,10 @@ public class WebSocketManager implements AutoCloseable {
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;
 
     /** Agent version header. */
-    private static final String AGENT_VERSION_HDR = "AGENT_VERSION";
+    private static final String AGENT_VERSION_HDR = "agent-version";
 
     /** Cluster id header. */
-    private static final String CLUSTER_ID_HDR = "CLUSTER_ID";
+    private static final String CLUSTER_ID_HDR = "cluster-id";
 
     /** Current version. */
     private static final String CURR_VER = "9.0.0";
@@ -238,6 +238,7 @@ public class WebSocketManager implements AutoCloseable {
      * @param log Logger.
      * @param cfg Config.
      */
+    @SuppressWarnings("deprecation")
     private SslContextFactory createServerSslFactory(IgniteLogger log, ManagementConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
@@ -251,7 +252,7 @@ public class WebSocketManager implements AutoCloseable {
         boolean ssl = trustAll || !F.isEmpty(cfg.getServerTrustStore()) || !F.isEmpty(cfg.getServerKeyStore());
 
         if (!ssl)
-            return null;
+            return new SslContextFactory();
 
         return sslContextFactory(
                 cfg.getServerKeyStore(),

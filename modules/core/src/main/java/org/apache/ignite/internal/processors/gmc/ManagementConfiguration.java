@@ -35,14 +35,17 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Default server URI. */
+    /** Gmc server uri. */
+    private static final String GMC_SERVER_URI = "https://gmc.gridgain.com";
+
+    /** Default server uri. */
     private static final String DFLT_SERVER_URI = "http://localhost:3000";
 
     /** */
     private boolean enable = true;
 
     /** */
-    private List<String> srvUris = Collections.singletonList(DFLT_SERVER_URI);
+    private List<String> srvUris = F.asList(GMC_SERVER_URI, DFLT_SERVER_URI);
 
     /** */
     @GridToStringExclude
