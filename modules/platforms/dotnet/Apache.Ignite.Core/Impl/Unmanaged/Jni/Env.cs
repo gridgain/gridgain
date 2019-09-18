@@ -120,6 +120,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             var funcPtr = (EnvInterface**)envPtr;
             var func = **funcPtr;
 
+            // TODO: We initialize this for every Thread, is it really necessary? Is envPtr different?
             GetDelegate(func.CallStaticVoidMethod, out _callStaticVoidMethod);
             GetDelegate(func.CallStaticBooleanMethod, out _callStaticBoolMethod);
             GetDelegate(func.FindClass, out _findClass);

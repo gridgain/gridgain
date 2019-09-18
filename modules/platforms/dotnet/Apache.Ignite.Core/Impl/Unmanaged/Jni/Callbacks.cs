@@ -182,7 +182,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             try
             {
                 var cbs = _callbackRegistry.Get<UnmanagedCallbacks>(igniteId, true);
-                var env = _jvm.AttachCurrentThread();
+                var env = new Env(envPtr, _jvm);
 
                 var message0 = env.JStringToString(message);
                 var category0 = env.JStringToString(category);
@@ -192,7 +192,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                _jvm.AttachCurrentThread().ThrowToJava(e);
+                new Env(envPtr, _jvm).ThrowToJava(e);
             }
         }
 
@@ -210,7 +210,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                _jvm.AttachCurrentThread().ThrowToJava(e);
+                new Env(env, _jvm).ThrowToJava(e);
                 return false;
             }
         }
@@ -230,7 +230,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                _jvm.AttachCurrentThread().ThrowToJava(e);
+                new Env(env, _jvm).ThrowToJava(e);
                 return 0;
             }
         }
@@ -250,7 +250,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                _jvm.AttachCurrentThread().ThrowToJava(e);
+                new Env(env, _jvm).ThrowToJava(e);
 
                 return 0;
             }
@@ -275,7 +275,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 
                     if (writer != null)
                     {
-                        var env = _jvm.AttachCurrentThread();
+                        var env = new Env(envPtr, _jvm);
                         var msg = env.JStringToString(message);
 
                         writer.Write(msg, isError);
@@ -284,7 +284,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                _jvm.AttachCurrentThread().ThrowToJava(e);
+                new Env(envPtr, _jvm).ThrowToJava(e);
             }
         }
     }
