@@ -70,6 +70,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 };
 
                 t.Start();
+                t.Join();
 
                 var threadExitCallbackCalled = evt.Wait(TimeSpan.FromSeconds(1));
 
