@@ -89,7 +89,11 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         [Test]
         public void TestInvalidCallbackIdThrowsException()
         {
-            // TODO
+            Assert.Throws<InvalidOperationException>(() =>
+                UnmanagedThread.EnableCurrentThreadExitEvent(int.MaxValue, IntPtr.Zero));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                UnmanagedThread.RemoveThreadExitCallback(int.MaxValue));
         }
     }
 }
