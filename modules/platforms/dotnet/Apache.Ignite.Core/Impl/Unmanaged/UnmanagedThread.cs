@@ -70,7 +70,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 return tlsIndex;
             }
 
-            // TODO: Add Mono support?
             throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
         }
 
