@@ -186,13 +186,13 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// </summary>
         private static class NativeMethodsMacOs
         {
-            [DllImport("libsystem_pthread.dylib")]
+            [DllImport("libSystem.dylib")]
             public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
 
-            [DllImport("libsystem_pthread.dylib")]
+            [DllImport("libSystem.dylib")]
             public static extern int pthread_key_delete(int key);
 
-            [DllImport("libsystem_pthread.dylib")]
+            [DllImport("libSystem.dylib")]
             public static extern int pthread_setspecific(int key, IntPtr value);
         }
     }
