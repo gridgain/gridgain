@@ -469,11 +469,11 @@ public class GridDhtPartitionDemander {
                     break;
 
                 parts = fut.remaining.get(node.id());
-
-                U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
-                    + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + node.id() + ", partitionsCount=" + parts.size()
-                    + ", topVer=" + fut.topologyVersion() + "]");
             }
+
+            U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
+                + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + node.id() + ", partitionsCount=" + parts.size()
+                + ", topVer=" + fut.topologyVersion() + "]");
 
             if (!parts.isEmpty()) {
                 d.topic(rebalanceTopic);

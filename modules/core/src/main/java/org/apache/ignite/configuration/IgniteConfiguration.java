@@ -159,7 +159,7 @@ public class IgniteConfiguration {
     /** Default rebalance message timeout in milliseconds (value is {@code 10000}). */
     public static final long DFLT_REBALANCE_TIMEOUT = 10000;
 
-    /** Default rebalance batches prefetch count (value is {@code 3}). */
+    /** Default rebalance batches prefetch count (value is {@code 2}). */
     public static final long DFLT_REBALANCE_BATCHES_PREFETCH_COUNT = 2;
 
     /** Time to wait between rebalance messages in milliseconds to avoid overloading CPU (value is {@code 0}). */
