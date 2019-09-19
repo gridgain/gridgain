@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
+    using System.Linq;
     using NUnit.Framework;
 
     /// <summary>
@@ -30,9 +31,26 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         public void TestUseIgniteFromClrThreadsDoesNotLeakJvmThreads()
         {
             var cache = Ignite.GetOrCreateCache<int, int>("c");
+            cache.Put(0, 0);
 
-            // TODO: Verify Java threads before and after the run.
+            var threadNamesBefore = GetJavaThreadNames();
+
             TestUtils.RunMultiThreaded(() => cache.Put(1, 1), 100);
+
+            var threadNamesAfter = GetJavaThreadNames();
+
+            Assert.AreEqual(threadNamesBefore, threadNamesAfter);
+        }
+
+        /// <summary>
+        /// Gets Java thread names.
+        /// </summary>
+        private string[] GetJavaThreadNames()
+        {
+            return Ignite.GetCompute()
+                .ExecuteJavaTask<string[]>("PlatformThreadNamesTask", null)
+                .OrderBy(x => x)
+                .ToArray();
         }
     }
 }
