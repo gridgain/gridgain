@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Unmanaged
 {
     using System;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
 
     /// <summary>
@@ -38,6 +39,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// </param>
         public static unsafe int SetThreadExitCallback(IntPtr callbackPtr)
         {
+            Debug.Assert(callbackPtr != IntPtr.Zero);
+
             if (Os.IsWindows)
             {
                 var res = NativeMethodsWindows.FlsAlloc(callbackPtr);
@@ -109,6 +112,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// </summary>
         public static void EnableCurrentThreadExitEvent(int callbackId, IntPtr threadLocalValue)
         {
+            Debug.Assert(threadLocalValue != IntPtr.Zero);
+
             // Store any value so that destructor callback is fired.
             if (Os.IsWindows)
             {
@@ -181,7 +186,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
 
         /// <summary>
-        /// Linux imports.
+        /// macOS imports.
         /// </summary>
         private static class NativeMethodsMacOs
         {
