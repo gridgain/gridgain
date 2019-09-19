@@ -16,7 +16,6 @@
 
 package org.gridgain.action.controller;
 
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -25,25 +24,17 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.gridgain.config.TestChannelInterceptor;
+import org.gridgain.AbstractGridWithAgentTest;
 import org.gridgain.dto.action.Request;
 import org.gridgain.dto.action.Response;
-import org.junit.After;
 import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
@@ -58,36 +49,16 @@ import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
 /**
  * Abstract test for action controllers.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = "server.port=3000")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-abstract class AbstractActionControllerTest extends GridCommonAbstractTest {
-    /** Template. */
-    @Autowired
-    private SimpMessagingTemplate template;
-
-    /** Interceptor. */
-    @Autowired
-    private TestChannelInterceptor interceptor;
-
-    /** Cluster. */
-    protected IgniteCluster cluster;
-
+abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
     /**
      * Start grid.
      */
     @Before
     public void startup() throws Exception {
-        cluster = startGrid().cluster();
-    }
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
 
-    /**
-     * Stop all grids and clear persistence dir.
-     */
-    @After
-    public void stopAndClear() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
+        cluster = ignite.cluster();
     }
 
     /**

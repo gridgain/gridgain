@@ -20,8 +20,9 @@ import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
@@ -96,7 +97,7 @@ public class Agent extends ManagementConsoleProcessor {
     private NodeConfigurationService nodeConfigurationSrvc;
 
     /** Execute service. */
-    private ExecutorService execSrvc;
+    private ThreadPoolExecutor execSrvc;
 
     /** Meta storage. */
     private MetaStorage metaStorage;
@@ -161,7 +162,8 @@ public class Agent extends ManagementConsoleProcessor {
         if (oldCfg.isEnable() != cfg.isEnable())
             toggleAgentState(cfg.isEnable());
         else
-            execSrvc.submit(this::connect0);
+            if (execSrvc.getActiveCount() == 0)
+                execSrvc.submit(this::connect0);
     }
 
     /**
@@ -268,7 +270,7 @@ public class Agent extends ManagementConsoleProcessor {
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actionSrvc = new ActionService(ctx, mgr);
 
-        execSrvc = Executors.newSingleThreadExecutor();
+        execSrvc = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
 
         execSrvc.submit(this::connect0);
     }
@@ -364,7 +366,8 @@ public class Agent extends ManagementConsoleProcessor {
                 if (disconnected.compareAndSet(false, true)) {
                     log.error("Lost websocket connection with server: " + curSrvUri);
 
-                    execSrvc.submit(Agent.this::connect0);
+                    if (execSrvc.getActiveCount() == 0)
+                        execSrvc.submit(Agent.this::connect0);
                 }
             }
         }

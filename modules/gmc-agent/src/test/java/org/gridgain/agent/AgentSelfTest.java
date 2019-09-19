@@ -31,24 +31,17 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.gridgain.config.TestChannelInterceptor;
+import org.gridgain.AbstractGridWithAgentTest;
 import org.gridgain.dto.tracing.Span;
 import org.gridgain.dto.topology.TopologySnapshot;
-import org.junit.After;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -68,33 +61,14 @@ import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 /**
  * Agent integration tests.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = "server.port=3000")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public class AgentSelfTest extends GridCommonAbstractTest {
-    /** Template. */
-    @Autowired
-    private SimpMessagingTemplate template;
-
-    /** Interceptor. */
-    @Autowired
-    private TestChannelInterceptor interceptor;
-
-    /**
-     * Stop all grids and clear persistence dir.
-     */
-    @After
-    public void stopAndClear() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
+public class AgentSelfTest extends AbstractGridWithAgentTest {
     /**
      * Should send initial states to backend.
      */
     @Test
     public void shouldSendInitialStates() throws Exception {
-        Ignite ignite = startGrid();
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
         cluster.active(true);
@@ -112,8 +86,10 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void shouldSendChangedClusterTopology() throws Exception {
-        IgniteClusterEx cluster = startGrid(0).cluster();
+        IgniteEx ignite = startGrid(0);
+        changeGmcUri(ignite);
 
+        IgniteClusterEx cluster = ignite.cluster();
         cluster.active(true);
 
         startGrid(1);
@@ -121,7 +97,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         assertWithPoll(
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
-                return top.getNodes().size() == 2;
+                return top != null && top.getNodes().size() == 2;
             }
         );
     }
@@ -132,7 +108,8 @@ public class AgentSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void shouldSendChangedBaselineTopology() throws Exception {
-        Ignite ignite_1 = startGrid(0);
+        IgniteEx ignite_1 = startGrid(0);
+        changeGmcUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
@@ -162,7 +139,8 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void shouldSendChangedActiveState() throws Exception {
-        Ignite ignite_1 = startGrid(0);
+        IgniteEx ignite_1 = startGrid(0);
+        changeGmcUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
@@ -189,7 +167,8 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void shouldSendMetricsOnPoll() throws Exception {
-        Ignite ignite_1 = startGrid(0);
+        IgniteEx ignite_1 = startGrid(0);
+        changeGmcUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
@@ -213,7 +192,8 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void shouldSendSpans() throws Exception {
-        Ignite ignite_1 = startGrid(0);
+        IgniteEx ignite_1 = startGrid(0);
+        changeGmcUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
