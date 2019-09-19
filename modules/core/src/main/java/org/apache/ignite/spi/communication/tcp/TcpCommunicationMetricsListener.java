@@ -131,17 +131,11 @@ class TcpCommunicationMetricsListener {
 
 
         sentMsgsCntByConsistentIdMetricFactory = consistentId -> getOrCreateMetricRegistry(mmgr, consistentId)
-            .longMetric(
-                SENT_MESSAGES_BY_NODE_ID_METRIC_NAME,
-                SENT_MESSAGES_BY_NODE_ID_METRIC_DESC
-            );
+            .findMetric(SENT_MESSAGES_BY_NODE_ID_METRIC_NAME);
 
 
         rcvdMsgsCntByConsistentIdMetricFactory = consistentId -> getOrCreateMetricRegistry(mmgr, consistentId)
-            .longMetric(
-                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME,
-                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC
-            );
+            .findMetric(RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME);
 
         sentBytesMetric = mreg.longMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
         rcvdBytesMetric = mreg.longMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
