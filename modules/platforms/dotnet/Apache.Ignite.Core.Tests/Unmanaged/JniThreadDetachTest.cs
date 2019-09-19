@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
     using System.Linq;
+    using System.Threading;
     using NUnit.Framework;
 
     /// <summary>
@@ -33,12 +34,12 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             var cache = Ignite.GetOrCreateCache<int, int>("c");
             cache.Put(0, 0);
 
+            GetJavaThreadNames(); // Compute warm-up - starts pub-# thread.
             var threadNamesBefore = GetJavaThreadNames();
 
-            TestUtils.RunMultiThreaded(() => cache.Put(1, 1), 100);
+            TestUtils.RunMultiThreaded(() => cache.Put(1, 1), 10);
 
             var threadNamesAfter = GetJavaThreadNames();
-
             Assert.AreEqual(threadNamesBefore, threadNamesAfter);
         }
 
@@ -48,7 +49,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         private string[] GetJavaThreadNames()
         {
             return Ignite.GetCompute()
-                .ExecuteJavaTask<string[]>("PlatformThreadNamesTask", null)
+                .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
                 .OrderBy(x => x)
                 .ToArray();
         }
