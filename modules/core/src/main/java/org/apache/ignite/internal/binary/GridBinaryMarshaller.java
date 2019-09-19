@@ -222,10 +222,13 @@ public class GridBinaryMarshaller {
     public static final int SCHEMA_OR_RAW_OFF_POS = 20;
 
     /** Data length position in protocol version 2. */
-    public static final byte DATA_LEN_POS = 20;
+    public static final byte DATA_LEN_POS = 16;
 
     /** Default header length. */
     public static final byte DFLT_HDR_LEN = 24;
+
+    /** Default header length. */
+    public static final byte DFLT_HDR_LEN_V2 = 20;
 
     /** */
     private final BinaryContext ctx;
@@ -306,7 +309,7 @@ public class GridBinaryMarshaller {
         BinaryContext oldCtx = pushContext(ctx);
 
         try {
-            return (T)new BinaryReaderExImpl(ctx, BinaryHeapInputStream.create(arr, 0), ldr, true).deserialize();
+            return (T)BinaryUtils.createReader(ctx, BinaryHeapInputStream.create(arr, 0), ldr, true).deserialize();
         }
         finally {
             popContext(oldCtx);
@@ -350,7 +353,7 @@ public class GridBinaryMarshaller {
     public BinaryReaderExImpl reader(BinaryInputStream stream) {
         assert stream != null;
 
-        return new BinaryReaderExImpl(ctx, stream, null, true);
+        return BinaryUtils.createReader(ctx, stream, null, true);
     }
 
     /**

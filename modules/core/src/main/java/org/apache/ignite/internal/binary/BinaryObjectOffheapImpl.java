@@ -33,6 +33,7 @@ import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
+import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOffheapInputStream;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -52,13 +53,7 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     private static final long serialVersionUID = 0L;
 
     /** */
-    private final BinaryContext ctx;
-
-    /** */
     private final long ptr;
-
-    /** */
-    private final int start;
 
     /** */
     private final int size;
@@ -88,47 +83,6 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
      */
     public BinaryObject heapCopy() {
         return new BinaryObjectImpl(ctx, U.copyMemory(ptr, size), start);
-    }
-
-    /** {@inheritDoc} */
-    @Override public int typeId() {
-        if (true)
-            return typeIdV2();
-
-        int typeId = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            int off = start + GridBinaryMarshaller.DFLT_HDR_LEN;
-
-            String clsName = BinaryUtils.doReadClassName(new BinaryOffheapInputStream(ptr + off, size));
-
-            typeId = ctx.typeId(clsName);
-        }
-
-        return typeId;
-    }
-
-    private int typeIdV2() {
-        int typeId = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            short flags = BinaryPrimitives.readShort(ptr, start + GridBinaryMarshaller.FLAGS_POS);
-
-            int clsNamePos = start + GridBinaryMarshaller.DFLT_HDR_LEN
-                + BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.DATA_LEN_POS);
-
-            if (BinaryUtils.hasRaw(flags))
-                clsNamePos += 4;
-
-            if (BinaryUtils.hasSchema(flags))
-                clsNamePos += 4;
-
-            String clsName = BinaryUtils.doReadClassName(new BinaryOffheapInputStream(ptr + clsNamePos, size));
-
-            typeId = ctx.typeId(clsName);
-        }
-
-        return typeId;
     }
 
     /** {@inheritDoc} */
@@ -259,6 +213,10 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     /** {@inheritDoc} */
     @Override protected short readShort(int pos) {
         return BinaryPrimitives.readShort(ptr, pos);
+    }
+
+    @Override protected BinaryInputStream inputStream() {
+        return new BinaryOffheapInputStream(ptr, size, false);
     }
 
     /** {@inheritDoc} */
@@ -521,25 +479,6 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
      * @return Deserialized value.
      */
     private Object deserializeValue() {
-        return reader(null, true).deserialize();
-    }
-
-    /**
-     * Create new reader for this object.
-     *
-     * @param rCtx Reader context.
-     * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
-     * @return Reader.
-     */
-    private BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
-        BinaryOffheapInputStream stream = new BinaryOffheapInputStream(ptr, size, false);
-
-        stream.position(start);
-
-        return new BinaryReaderExImpl(ctx,
-            stream,
-            ctx.configuration().getClassLoader(),
-            rCtx,
-            forUnmarshal);
+        return reader(null, null, true).deserialize();
     }
 }

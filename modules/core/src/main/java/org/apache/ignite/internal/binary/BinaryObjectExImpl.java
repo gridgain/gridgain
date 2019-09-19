@@ -27,7 +27,9 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
+import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteUuid;
@@ -38,6 +40,10 @@ import org.jetbrains.annotations.Nullable;
  * Internal binary object interface.
  */
 public abstract class BinaryObjectExImpl implements BinaryObjectEx {
+    /** */
+    @GridDirectTransient
+    protected BinaryContext ctx;
+
     /** Start. */
     protected int start;
 
@@ -75,51 +81,6 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      */
     @Nullable public abstract <F> F field(int fieldId) throws BinaryObjectException;
 
-    /** {@inheritDoc} */
-    @Override public int enumOrdinal() throws BinaryObjectException {
-        throw new BinaryObjectException("Object is not enum.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public String enumName() throws BinaryObjectException {
-        throw new BinaryObjectException("Object is not enum.");
-    }
-
-    /**
-     * Get offset of data begin.
-     *
-     * @return Field value.
-     */
-    public int dataStartOffset() {
-        byte ver = readByte(start + GridBinaryMarshaller.PROTO_VER_POS);
-
-        if (ver == 1)
-            return dataStartOffsetV1();
-        else
-            return dataStartOffsetV2();
-    }
-
-    /**
-     *
-     */
-    private int dataStartOffsetV1() {
-        int typeId = readInt(start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-            return start + GridBinaryMarshaller.DFLT_HDR_LEN;
-
-        int len = readInt(start + GridBinaryMarshaller.DFLT_HDR_LEN + 1);
-
-        return start + GridBinaryMarshaller.DFLT_HDR_LEN + len + 5;
-    }
-
-    /**
-     *
-     */
-    private int dataStartOffsetV2() {
-        return start + GridBinaryMarshaller.DFLT_HDR_LEN;
-    }
-
     /**
      * @param pos Pos.
      */
@@ -136,13 +97,9 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     protected abstract short readShort(int pos);
 
     /**
-     * Get data length.
      *
-     * @return Data length.
      */
-    public int dataLength() {
-        return readInt(start + GridBinaryMarshaller.DATA_LEN_POS);
-    }
+    protected abstract BinaryInputStream inputStream();
 
     /**
      * Get field by offset.
@@ -200,6 +157,73 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      * @return Binary context.
      */
     public abstract BinaryContext context();
+
+    /** {@inheritDoc} */
+    @Override public int enumOrdinal() throws BinaryObjectException {
+        throw new BinaryObjectException("Object is not enum.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public String enumName() throws BinaryObjectException {
+        throw new BinaryObjectException("Object is not enum.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public int typeId() {
+        return reader(null, false).typeId();
+    }
+
+    /**
+     * Get offset of data begin.
+     *
+     * @return Field value.
+     */
+    public int dataStartOffset() {
+        return reader(null, false).dataStartOffset();
+    }
+
+    /**
+     * Create new reader for this object.
+     *
+     * @param rCtx Reader context.
+     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
+     * @return Reader.
+     */
+    protected BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
+        return reader(rCtx, null, forUnmarshal);
+    }
+
+    /**
+     * Create new reader for this object.
+     *
+     * @param rCtx Reader context.
+     * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
+     * @return Reader.
+     */
+    protected BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, @Nullable ClassLoader ldr,
+        boolean forUnmarshal) {
+        if (ldr == null)
+            ldr = ctx.configuration().getClassLoader();
+
+        BinaryInputStream stream = inputStream();
+
+        stream.position(start);
+
+        return BinaryUtils.createReader(ctx,
+            stream,
+            ldr,
+            rCtx,
+            forUnmarshal);
+    }
+
+    /**
+     * Get data length.
+     *
+     * @return Data length.
+     */
+    public int dataLength() {
+        return reader(null, false).dataLength();
+    }
 
     /** {@inheritDoc} */
     @Override public BinaryObjectBuilder toBuilder() throws BinaryObjectException {

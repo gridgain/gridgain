@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import org.apache.ignite.binary.BinaryInvalidTypeException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -135,43 +134,46 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         this.reader = reader;
         this.start = start;
-        this.flags = reader.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
+        this.flags = reader.reader().flags();
 
-        this.ver = reader.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
+        this.ver = reader.reader().version();
 
         BinaryUtils.checkProtocolVersion(ver);
 
-        int typeId = reader.readIntPositioned(start + GridBinaryMarshaller.TYPE_ID_POS);
-        ctx = reader.binaryContext();
+        this.typeId = reader.reader().typeId();
+        this.ctx = reader.binaryContext();
+        this.dataOff = reader.reader().dataStartOffset();
+        // TODO: read class name
+        this.clsNameToWrite = null;
 
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            int mark = reader.position();
-
-            reader.position(start + GridBinaryMarshaller.DFLT_HDR_LEN);
-
-            clsNameToWrite = reader.readString();
-
-            Class cls;
-
-            try {
-                cls = U.forName(clsNameToWrite, ctx.configuration().getClassLoader());
-            }
-            catch (ClassNotFoundException e) {
-                throw new BinaryInvalidTypeException("Failed to load the class: " + clsNameToWrite, e);
-            }
-
-            this.typeId = ctx.registerClass(cls, true, false).typeId();
-
-            registeredType = false;
-
-            dataOff = reader.position() - mark;
-
-            reader.position(mark);
-        }
-        else {
-            this.typeId = typeId;
-            dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
-        }
+//        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
+//            int mark = reader.position();
+//
+//            reader.position(start + GridBinaryMarshaller.DFLT_HDR_LEN);
+//
+//            clsNameToWrite = reader.readString();
+//
+//            Class cls;
+//
+//            try {
+//                cls = U.forName(clsNameToWrite, ctx.configuration().getClassLoader());
+//            }
+//            catch (ClassNotFoundException e) {
+//                throw new BinaryInvalidTypeException("Failed to load the class: " + clsNameToWrite, e);
+//            }
+//
+//            this.typeId = ctx.descriptorForClass(cls, false, false).typeId();
+//
+//            registeredType = false;
+//
+//            dataOff = reader.position() - mark;
+//
+//            reader.position(mark);
+//        }
+//        else {
+//            this.typeId = typeId;
+//            dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
+//        }
     }
 
     /** {@inheritDoc} */
@@ -240,23 +242,20 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 int fieldIdLen = BinaryUtils.fieldIdLength(flags);
                 int fieldOffsetLen = BinaryUtils.fieldOffsetLength(flags);
 
-                IgniteBiTuple<Integer, Integer> footer = BinaryUtils.footerAbsolute(reader, start);
+                int footerPos = reader.reader().footerStartOffset();
+                int footerEnd = footerPos + reader.reader().footerLength();
 
-                int footerPos = footer.get1();
-                int footerEnd = footer.get2();
-
-                // Get raw position.
-                int rawPos = BinaryUtils.rawOffsetAbsolute(reader, start);
+                int dataEnd = BinaryUtils.hasRaw(flags) ? reader.reader().rawOffset() : footerPos;
 
                 // Position reader on data.
-                reader.position(start + dataOff);
+                reader.position(dataOff);
 
                 int idx = 0;
 
-                while (reader.position() < rawPos) {
+                while (reader.position() < dataEnd) {
                     int fieldId = schema.fieldId(idx++);
                     int fieldLen =
-                        fieldPositionAndLength(footerPos, footerEnd, rawPos, fieldIdLen, fieldOffsetLen).get2();
+                        fieldPositionAndLength(footerPos, footerEnd, dataEnd, fieldIdLen, fieldOffsetLen).get2();
 
                     int postPos = reader.position() + fieldLen; // Position where reader will be placed afterwards.
 
@@ -325,8 +324,8 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
             if (reader != null) {
                 // Write raw data if any.
-                int rawOff = BinaryUtils.rawOffsetAbsolute(reader, start);
-                int footerStart = BinaryUtils.footerStartAbsolute(reader, start);
+                int rawOff = reader.reader().rawOffset();
+                int footerStart = reader.reader().footerStartOffset();
 
                 if (rawOff < footerStart) {
                     writer.rawWriter();
@@ -335,7 +334,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 }
 
                 // Shift reader to the end of the object.
-                reader.position(start + BinaryUtils.length(reader, start));
+                reader.position(start + reader.reader().length());
             }
 
             writer.postWrite(true, registeredType);
@@ -370,7 +369,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
             }
 
             // Update hash code after schema is written.
-            writer.postWriteHashCode(registeredType ? null : clsNameToWrite);
+            writer.postWriteHashCode(registeredType);
         }
         finally {
             writer.popSchema();
@@ -488,12 +487,10 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
             Map<Integer, Object> readCache = new HashMap<>();
 
-            IgniteBiTuple<Integer, Integer> footer = BinaryUtils.footerAbsolute(reader, start);
+            int footerPos = reader.reader().footerStartOffset();
+            int footerEnd = footerPos + reader.reader().footerLength();
 
-            int footerPos = footer.get1();
-            int footerEnd = footer.get2();
-
-            int rawPos = BinaryUtils.rawOffsetAbsolute(reader, start);
+            int dataEnd = BinaryUtils.hasRaw(flags) ? reader.reader().rawOffset() : footerPos;
 
             int idx = 0;
 
@@ -501,7 +498,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 int fieldId = schema.fieldId(idx++);
 
                 IgniteBiTuple<Integer, Integer> posAndLen =
-                    fieldPositionAndLength(footerPos, footerEnd, rawPos, fieldIdLen, fieldOffsetLen);
+                    fieldPositionAndLength(footerPos, footerEnd, dataEnd, fieldIdLen, fieldOffsetLen);
 
                 Object val = reader.getValueQuickly(posAndLen.get1(), posAndLen.get2());
 

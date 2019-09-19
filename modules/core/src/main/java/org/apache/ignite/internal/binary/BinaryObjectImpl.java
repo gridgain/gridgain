@@ -34,6 +34,7 @@ import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
+import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectAdapter;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -54,10 +55,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public final class BinaryObjectImpl extends BinaryObjectExImpl implements Externalizable, KeyCacheObject {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    @GridDirectTransient
-    private BinaryContext ctx;
 
     /** */
     private byte[] arr;
@@ -267,57 +264,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public int typeId() {
-        if (true)
-            return typeIdV2();
-
-        int off = start + GridBinaryMarshaller.TYPE_ID_POS;
-
-        int typeId = BinaryPrimitives.readInt(arr, off);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            off = start + GridBinaryMarshaller.DFLT_HDR_LEN;
-
-            assert arr[off] == GridBinaryMarshaller.STRING : arr[off];
-
-            int len = BinaryPrimitives.readInt(arr, ++off);
-
-            String clsName = new String(arr, off + 4, len, UTF_8);
-
-            typeId = ctx.typeId(clsName);
-        }
-
-        return typeId;
-    }
-
-    private int typeIdV2() {
-        int typeId = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-            short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
-
-            int clsNamePos = start + GridBinaryMarshaller.DFLT_HDR_LEN
-                + BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.DATA_LEN_POS);
-
-            if (BinaryUtils.hasRaw(flags))
-                clsNamePos += 4;
-
-            if (BinaryUtils.hasSchema(flags))
-                clsNamePos += 4;
-
-            assert arr[clsNamePos] == GridBinaryMarshaller.STRING : arr[clsNamePos];
-
-            int len = BinaryPrimitives.readInt(arr, ++clsNamePos);
-
-            String clsName = new String(arr, clsNamePos + 4, len, UTF_8);
-
-            typeId = ctx.typeId(clsName);
-        }
-
-        return typeId;
-    }
-
-    /** {@inheritDoc} */
     @Nullable @Override public BinaryType type() throws BinaryObjectException {
         return BinaryUtils.typeProxy(ctx, this);
     }
@@ -365,6 +311,11 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     /** {@inheritDoc} */
     @Override protected short readShort(int pos) {
         return BinaryPrimitives.readShort(arr, pos);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected BinaryInputStream inputStream() {
+        return BinaryHeapInputStream.create(arr, start);
     }
 
     private int fieldPos(int order) {
@@ -844,37 +795,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
      */
     private boolean needCopy(CacheObjectValueContext ctx) {
         return ctx.copyOnGet() && obj != null && !ctx.kernalContext().cacheObjects().immutable(obj);
-    }
-
-    /**
-     * Create new reader for this object.
-     *
-     * @param rCtx Reader context.
-     * @param ldr Class loader.
-     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
-     * @return Reader.
-     */
-    private BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, @Nullable ClassLoader ldr,
-        boolean forUnmarshal) {
-        if (ldr == null)
-            ldr = ctx.configuration().getClassLoader();
-
-        return new BinaryReaderExImpl(ctx,
-            BinaryHeapInputStream.create(arr, start),
-            ldr,
-            rCtx,
-            forUnmarshal);
-    }
-
-    /**
-     * Create new reader for this object.
-     *
-     * @param rCtx Reader context.
-     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
-     * @return Reader.
-     */
-    private BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
-        return reader(rCtx, null, forUnmarshal);
     }
 
     /**

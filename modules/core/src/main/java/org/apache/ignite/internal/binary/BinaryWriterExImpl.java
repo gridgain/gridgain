@@ -267,7 +267,7 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
      * @param registered Whether type is registered.
      */
     public void preWrite(boolean registered) {
-        out.position(out.position() + GridBinaryMarshaller.DFLT_HDR_LEN);
+        out.position(out.position() + GridBinaryMarshaller.DFLT_HDR_LEN_V2);
 
         if (!registered && false)
             doWriteString(clsName);
@@ -283,7 +283,7 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         short flags;
         boolean useCompactFooter;
 
-        int dataLen = out.position() - start - GridBinaryMarshaller.DFLT_HDR_LEN;
+        int dataLen = out.position() - start - GridBinaryMarshaller.DFLT_HDR_LEN_V2;
 
         if (userType) {
             if (ctx.isCompactFooter()) {
@@ -318,10 +318,15 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
             if (BinaryUtils.hasRaw(flags))
                 out.writeInt(rawOffPos - start);
 
-            int footerOffPos = out.position();
+            int footerOffPos = 0;
 
-            if (BinaryUtils.hasSchema(flags))
+            if (BinaryUtils.hasSchema(flags)) {
+                out.writeInt(finalSchemaId);
+
+                footerOffPos = out.position();
+
                 out.position(footerOffPos + 4);
+            }
 
             if (!registered)
                 doWriteString(clsName);
@@ -358,7 +363,7 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         out.unsafeWriteInt(registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID);
         out.unsafePosition(start + GridBinaryMarshaller.TOTAL_LEN_POS);
         out.unsafeWriteInt(retPos - start);
-        out.unsafeWriteInt(finalSchemaId);
+//        out.unsafeWriteInt(finalSchemaId);
 
         if (true)
             out.unsafeWriteInt(dataLen);
@@ -373,8 +378,8 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
      *
      * @param clsName Class name. Always null if class is registered.
      */
-    public void postWriteHashCode(@Nullable String clsName) {
-        int typeId = clsName == null ? this.typeId : ctx.typeId(clsName);
+    public void postWriteHashCode(boolean registered) {
+        int typeId = registered ? this.typeId : ctx.typeId(clsName);
 
         BinaryIdentityResolver identity = ctx.identity(typeId);
 

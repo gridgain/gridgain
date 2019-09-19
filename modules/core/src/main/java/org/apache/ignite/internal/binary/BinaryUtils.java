@@ -47,6 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryCollectionFactory;
 import org.apache.ignite.binary.BinaryInvalidTypeException;
@@ -308,8 +309,7 @@ public class BinaryUtils {
      * @param flags Flags.
      */
     public static boolean hasMetaSection(int typeId, short flags) {
-        return typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID
-            || (hasRaw(flags) && hasSchema(flags));
+        return typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID || hasSchema(flags);
     }
 
     /**
@@ -813,214 +813,6 @@ public class BinaryUtils {
      */
     public static int length(BinaryPositionReadable in, int start) {
         return in.readIntPositioned(start + GridBinaryMarshaller.TOTAL_LEN_POS);
-    }
-
-    /**
-     * Get footer start of the object.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Footer start.
-     */
-    public static int footerStartRelative(BinaryPositionReadable in, int start) {
-        byte ver = in.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
-
-        if (ver == 1)
-            return footerStartRelativeV1(in, start);
-        else
-            return footerStartRelativeV2(in, start);
-    }
-
-    /**
-     * Get footer start of the object for protocol version 1.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Footer start.
-     */
-    private static int footerStartRelativeV1(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        if (hasSchema(flags))
-            // Schema exists, use offset.
-            return in.readIntPositioned(start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
-        else
-            // No schema, footer start equals to object end.
-            return length(in, start);
-    }
-
-    /**
-     * Get footer start of the object for protocol version 2.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Footer start.
-     */
-    private static int footerStartRelativeV2(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        if (!hasSchema(flags))
-            return in.readIntPositioned(start + GridBinaryMarshaller.TOTAL_LEN_POS);
-
-        int typeId = in.readIntPositioned(start + GridBinaryMarshaller.TYPE_ID_POS);
-
-        int off = GridBinaryMarshaller.DFLT_HDR_LEN + in.readIntPositioned(start + GridBinaryMarshaller.DATA_LEN_POS);
-
-        if (!hasMetaSection(typeId, flags))
-            return off;
-
-        if (hasRaw(flags))
-            off += 4;
-
-        return in.readIntPositioned(off);
-    }
-
-    /**
-     * Get object's footer.
-     *
-     * @param in Input stream.
-     * @param start Start position.
-     * @return Footer start.
-     */
-    public static int footerStartAbsolute(BinaryPositionReadable in, int start) {
-        return footerStartRelative(in, start) + start;
-    }
-
-    /**
-     * Get object's footer.
-     *
-     * @param in Input stream.
-     * @param start Start position.
-     * @return Footer.
-     */
-    public static IgniteBiTuple<Integer, Integer> footerAbsolute(BinaryPositionReadable in, int start) {
-        byte ver = in.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
-
-        if (ver == 1)
-            return footerAbsoluteV1(in, start);
-        else
-            return footerAbsoluteV2(in, start);
-    }
-
-    /**
-     * Get object's footer for protocol version 2.
-     *
-     * @param in Input stream.
-     * @param start Start position.
-     * @return Footer.
-     */
-    private static IgniteBiTuple<Integer, Integer> footerAbsoluteV2(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        int footerEnd = length(in, start);
-
-        if (!hasSchema(flags))
-            return F.t(start + footerEnd, start + footerEnd);
-
-        int footerStart = footerStartRelativeV2(in, start);
-
-        assert footerStart <= footerEnd;
-
-        return F.t(start + footerStart, start + footerEnd);
-    }
-
-    /**
-     * Get object's footer for protocol version 1.
-     *
-     * @param in Input stream.
-     * @param start Start position.
-     * @return Footer.
-     */
-    private static IgniteBiTuple<Integer, Integer> footerAbsoluteV1(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        int footerEnd = length(in, start);
-
-        if (!hasSchema(flags))
-            return F.t(start + footerEnd, start + footerEnd);
-
-        int footerStart = footerStartRelativeV1(in, start);
-
-        if (hasRaw(flags))
-            footerEnd -= 4;
-
-        assert footerStart <= footerEnd;
-
-        return F.t(start + footerStart, start + footerEnd);
-    }
-
-    /**
-     * Get relative raw offset of the object.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Raw offset.
-     */
-    public static int rawOffsetRelative(BinaryPositionReadable in, int start) {
-        byte ver = in.readBytePositioned(start + GridBinaryMarshaller.PROTO_VER_POS);
-
-        if (ver == 1)
-            return rawOffsetRelativeV1(in, start);
-        else
-            return rawOffsetRelativeV2(in, start);
-    }
-
-    /**
-     * Get relative raw offset of the object for protocol version 1.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Raw offset.
-     */
-    private static int rawOffsetRelativeV1(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        int len = length(in, start);
-
-        if (hasSchema(flags)) {
-            // Schema exists.
-            if (hasRaw(flags))
-                // Raw offset is set, it is at the very end of the object.
-                return in.readIntPositioned(start + len - 4);
-            else
-                // Raw offset is not set, so just return schema offset.
-                return in.readIntPositioned(start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
-        }
-        else
-            // No schema, raw offset is located on schema offset position.
-            return in.readIntPositioned(start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
-    }
-
-    /**
-     * Get relative raw offset of the object for protocol version 2.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Raw offset.
-     */
-    private static int rawOffsetRelativeV2(BinaryPositionReadable in, int start) {
-        short flags = in.readShortPositioned(start + GridBinaryMarshaller.FLAGS_POS);
-
-        if (!hasRaw(flags))
-            return in.readIntPositioned(start + GridBinaryMarshaller.TOTAL_LEN_POS);
-
-        int off = in.readIntPositioned(start + GridBinaryMarshaller.DATA_LEN_POS);
-
-        if (hasSchema(flags) || in.readBytePositioned(start + GridBinaryMarshaller.TYPE_ID_POS) == 0)
-            return in.readIntPositioned(off);
-
-        return off;
-    }
-
-    /**
-     * Get absolute raw offset of the object.
-     *
-     * @param in Input stream.
-     * @param start Object start position inside the stream.
-     * @return Raw offset.
-     */
-    public static int rawOffsetAbsolute(BinaryPositionReadable in, int start) {
-        return start + rawOffsetRelative(in, start);
     }
 
     /**
@@ -1917,7 +1709,7 @@ public class BinaryUtils {
      */
     @Nullable public static Object doReadObject(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles) throws BinaryObjectException {
-        return new BinaryReaderExImpl(ctx, in, ldr, handles.handles(), true).deserialize();
+        return createReader(ctx, in, ldr, handles.handles(), true).deserialize();
     }
 
     /**
@@ -2630,6 +2422,59 @@ public class BinaryUtils {
         }
 
         return mergedMap;
+    }
+
+    public static BinaryReaderExImpl createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        boolean forUnmarshal) {
+        return createReader(ctx, in, ldr, null, forUnmarshal);
+    }
+
+    public static BinaryReaderExImpl createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        @Nullable BinaryReaderHandles hnds,
+        boolean forUnmarshal) {
+        return createReader(ctx, in, ldr, hnds, false, forUnmarshal);
+    }
+
+    public static BinaryReaderExImpl createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        @Nullable BinaryReaderHandles hnds,
+        boolean skipHdrCheck,
+        boolean forUnmarshal) {
+
+        if (skipHdrCheck)
+            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+
+        int pos = in.position();
+
+        if (in.readByte() != GridBinaryMarshaller.OBJ) {
+            in.position(pos);
+
+            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+        }
+
+        byte ver = in.readByte();
+
+        in.position(pos);
+
+        checkProtocolVersion(ver);
+
+        switch (ver) {
+            case 1:
+                throw new RuntimeException();
+            case 2:
+                return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+            default:
+                throw new IgniteException("Unknown protocol version: " + ver);
+
+        }
     }
 
     /**

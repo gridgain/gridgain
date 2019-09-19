@@ -64,6 +64,7 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
@@ -290,7 +291,7 @@ class TcpClientChannel implements ClientChannel {
         else {
             resIn = new BinaryHeapInputStream(read(resSize - hdrSize));
 
-            String err = new BinaryReaderExImpl(null, resIn, null, true).readString();
+            String err = BinaryUtils.createReader(null, resIn, null, true).readString();
 
             switch (status) {
                 case ClientStatus.SECURITY_VIOLATION:
@@ -393,7 +394,7 @@ class TcpClientChannel implements ClientChannel {
         if (!res.readBoolean()) { // success flag
             ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
 
-            try (BinaryReaderExImpl r = new BinaryReaderExImpl(null, res, null, true)) {
+            try (BinaryReaderExImpl r = BinaryUtils.createReader(null, res, null, true)) {
                 String err = r.readString();
 
                 int errCode = ClientStatus.FAILED;

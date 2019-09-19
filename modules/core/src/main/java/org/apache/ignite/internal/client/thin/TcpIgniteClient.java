@@ -217,7 +217,7 @@ public class TcpIgniteClient implements IgniteClient {
     /** Deserialize string. */
     private String readString(BinaryInputStream in) throws BinaryObjectException {
         try {
-            try (BinaryReaderExImpl r = new BinaryReaderExImpl(marsh.context(), in, null, true)) {
+            try (BinaryReaderExImpl r = BinaryUtils.createReader(marsh.context(), in, null, true)) {
                 return r.readString();
             }
         }

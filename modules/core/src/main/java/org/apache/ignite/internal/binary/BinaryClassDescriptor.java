@@ -1012,7 +1012,7 @@ public class BinaryClassDescriptor {
     private void postWriteHashCode(BinaryWriterExImpl writer, Object obj) {
         // No need to call "postWriteHashCode" here because we do not care about hash code.
         if (!(obj instanceof CacheObjectImpl))
-            writer.postWriteHashCode(registered ? null : cls.getName());
+            writer.postWriteHashCode(registered);
     }
 
     /**

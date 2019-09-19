@@ -56,7 +56,6 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DATE;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DATE_ARR;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DECIMAL;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DECIMAL_ARR;
-import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DFLT_HDR_LEN;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DOUBLE;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DOUBLE_ARR;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.ENUM;
@@ -82,7 +81,6 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIME;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIMESTAMP;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIMESTAMP_ARR;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIME_ARR;
-import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
 
@@ -90,12 +88,12 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
  * Binary reader implementation.
  */
 @SuppressWarnings("unchecked")
-public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, BinaryReaderHandlesHolder, ObjectInput {
+public abstract class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
     /** Binary context. */
     private final BinaryContext ctx;
 
     /** Input stream. */
-    private final BinaryInputStream in;
+    protected final BinaryInputStream in;
 
     /** Class loaded. */
     private final ClassLoader ldr;
@@ -104,43 +102,16 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     private BinaryReaderHandles hnds;
 
     /** */
-    private final int start;
-
-    /** Start of actual data. */
-    private final int dataStart;
-
-    /** Type ID. */
-    private final int typeId;
-
-    /** Raw offset. */
-    private final int rawOff;
-
-    /** Footer start. */
-    private final int footerStart;
-
-    /** Footer end. */
-    private final int footerLen;
-
-    /** Class descriptor. */
-    private BinaryClassDescriptor desc;
-
-    /** Mapper. */
-    private final BinaryInternalMapper mapper;
-
-    /** Schema Id. */
-    private final int schemaId;
-
-    /** Whether this is user type or not. */
-    private final boolean userType;
-
-    /** Whether field IDs exist. */
-    private final int fieldIdLen;
-
-    /** Offset size in bytes. */
-    private final int fieldOffLen;
+    protected final int start;
 
     /** Object schema. */
-    private final BinarySchema schema;
+    private BinarySchema schema;
+
+    /** Class descriptor. */
+    protected BinaryClassDescriptor desc;
+
+    /** Mapper. */
+    private BinaryInternalMapper mapper;
 
     /** Whether passed IDs matches schema order. Reset to false as soon as a single mismatch detected. */
     private boolean matching = true;
@@ -157,54 +128,12 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      * @param ctx Context.
      * @param in Input stream.
      * @param ldr Class loader.
-     * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
-     */
-    public BinaryReaderExImpl(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
-        this(ctx,
-            in,
-            ldr,
-            null,
-            forUnmarshal);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param ctx Context.
-     * @param in Input stream.
-     * @param ldr Class loader.
      * @param hnds Context.
-     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
      */
     public BinaryReaderExImpl(BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
-        @Nullable BinaryReaderHandles hnds,
-        boolean forUnmarshal) {
-        this(ctx,
-            in,
-            ldr,
-            hnds,
-            false,
-            forUnmarshal);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param ctx Context.
-     * @param in Input stream.
-     * @param ldr Class loader.
-     * @param hnds Context.
-     * @param skipHdrCheck Whether to skip header check.
-     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
-     */
-    public BinaryReaderExImpl(BinaryContext ctx,
-        BinaryInputStream in,
-        ClassLoader ldr,
-        @Nullable BinaryReaderHandles hnds,
-        boolean skipHdrCheck,
-        boolean forUnmarshal) {
+        @Nullable BinaryReaderHandles hnds) {
         // Initialize base members.
         this.ctx = ctx;
         this.in = in;
@@ -213,152 +142,89 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
         start = in.position();
 
-        // Perform full header parsing in case of binary object.
-        if (!skipHdrCheck && (in.readByte() == GridBinaryMarshaller.OBJ)) {
-            byte ver = in.readByte();
+//        // Perform full header parsing in case of binary object.
+//        if (!skipHdrCheck && (in.readByte() == GridBinaryMarshaller.OBJ)) {
+//            byte ver = in.readByte();
+//
+//            // Ensure protocol is fine.
+//            BinaryUtils.checkProtocolVersion(ver);
+//
+//            // Read header content.
+//            short flags = in.readShort();
+//            int typeId0 = in.readInt();
+//
+//            in.readInt(); // Skip hash code.
+//
+//            int len = in.readInt();
+//            schemaId = in.readInt();
+//            int offset = in.readInt();
+//
+//            // Get trivial flag values.
+//            userType = BinaryUtils.isUserType(flags);
+//            fieldIdLen = BinaryUtils.fieldIdLength(flags);
+//            fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
+//
+//                if (BinaryUtils.hasSchema(flags)) {
+//                    footerStart = start + offset;
+//                    footerLen = len - offset;
+//
+//                    if (BinaryUtils.hasRaw(flags))
+//                        rawOff = start + in.readIntPositioned(start + len - 4);
+//                    else
+//                        rawOff = start + len;
+//                }
+//                else {
+//                    // No schema.
+//                    footerStart = start + len;
+//                    footerLen = 0;
+//
+//                    if (BinaryUtils.hasRaw(flags))
+//                        rawOff = start + offset;
+//                    else
+//                        rawOff = start + len;
+//                }
+//
+//                // Finally, we have to resolve real type ID.
+//                if (typeId0 == UNREGISTERED_TYPE_ID) {
+//                    int off = in.position();
+//
+//                    if (forUnmarshal) {
+//                        // Registers class by type ID, at least locally if the cache is not ready yet.
+//                        desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), false, false);
+//
+//                        typeId = desc.typeId();
+//                    }
+//                    else
+//                        typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
+//
+//                    int clsNameLen = in.position() - off;
+//
+//                    dataStart = start + DFLT_HDR_LEN + clsNameLen + 4;
+//                }
+//                else {
+//                    typeId = typeId0;
+//
+//                    dataStart = start + DFLT_HDR_LEN + 4;
+//                }
 
-            // Ensure protocol is fine.
-            BinaryUtils.checkProtocolVersion(ver);
-
-            // Read header content.
-            short flags = in.readShort();
-            int typeId0 = in.readInt();
-
-            in.readInt(); // Skip hash code.
-
-            int len = in.readInt();
-            schemaId = in.readInt();
-            int offset = in.readInt();
-
-            // Get trivial flag values.
-            userType = BinaryUtils.isUserType(flags);
-            fieldIdLen = BinaryUtils.fieldIdLength(flags);
-            fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
-
-            if (ver == 1) {
-                if (BinaryUtils.hasSchema(flags)) {
-                    footerStart = start + offset;
-                    footerLen = len - offset;
-
-                    if (BinaryUtils.hasRaw(flags))
-                        rawOff = start + in.readIntPositioned(start + len - 4);
-                    else
-                        rawOff = start + len;
-                }
-                else {
-                    // No schema.
-                    footerStart = start + len;
-                    footerLen = 0;
-
-                    if (BinaryUtils.hasRaw(flags))
-                        rawOff = start + offset;
-                    else
-                        rawOff = start + len;
-                }
-
-                // Finally, we have to resolve real type ID.
-                if (typeId0 == UNREGISTERED_TYPE_ID) {
-                    int off = in.position();
-
-                    if (forUnmarshal) {
-                        // Registers class by type ID, at least locally if the cache is not ready yet.
-                        desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), true, false);
-
-                        typeId = desc.typeId();
-                    }
-                    else
-                        typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-
-                    int clsNameLen = in.position() - off;
-
-                    dataStart = start + DFLT_HDR_LEN + clsNameLen + 4;
-                }
-                else {
-                    typeId = typeId0;
-
-                    dataStart = start + DFLT_HDR_LEN + 4;
-                }
-            }
-            else {
-                dataStart = start + DFLT_HDR_LEN;
-
-                int dataLen = in.readIntPositioned(start + GridBinaryMarshaller.DATA_LEN_POS);
-
-                if (BinaryUtils.hasMetaSection(typeId0, flags)) {
-                    int off = dataStart + dataLen;
-
-                    if (BinaryUtils.hasRaw(flags)) {
-                        rawOff = start + in.readIntPositioned(off);
-
-                        off += 4;
-                    }
-                    else
-                        rawOff = start + len;
-
-                    if (BinaryUtils.hasSchema(flags)) {
-                        footerStart = start + in.readIntPositioned(off);
-                        footerLen = len + start - footerStart;
-
-                        off += 4;
-                    }
-                    else {
-                        footerStart = start + len;
-                        footerLen = 0;
-                    }
-
-                    if (typeId0 == UNREGISTERED_TYPE_ID) {
-                        in.position(off);
-
-                        if (forUnmarshal) {
-                            // Registers class by type ID, at least locally if the cache is not ready yet.
-                            desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), false, false);
-
-                            typeId = desc.typeId();
-                        }
-                        else
-                            typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-                    }
-                    else
-                        typeId = typeId0;
-                }
-                else if (BinaryUtils.hasSchema(flags)) {
-                    footerStart = dataStart + dataLen;
-                    footerLen = len + start - footerStart;
-                    rawOff = start + len;
-                    typeId = typeId0;
-                }
-                else if (BinaryUtils.hasRaw(flags)) {
-                    footerStart = start + len;
-                    footerLen = 0;
-                    rawOff = dataStart;
-                    typeId = typeId0;
-                }
-                else {
-                    typeId = typeId0;
-                    rawOff = dataStart + dataLen;
-                    footerStart = dataStart + dataLen;
-                    footerLen = 0;
-                }
-            }
-
-            mapper = userType ? ctx.userTypeMapper(typeId) : BinaryContext.defaultMapper();
-            schema = BinaryUtils.hasSchema(flags) ? getOrCreateSchema() : null;
-        }
-        else {
-            dataStart = 0;
-            typeId = 0;
-            rawOff = 0;
-            footerStart = 0;
-            footerLen = 0;
-            mapper = null;
-            schemaId = 0;
-            userType = false;
-            fieldIdLen = 0;
-            fieldOffLen = 0;
-            schema = null;
-        }
-
-        streamPosition(start);
+//            mapper = userType ? ctx.userTypeMapper(typeId) : BinaryContext.defaultMapper();
+//            schema = BinaryUtils.hasSchema(flags) ? getOrCreateSchema() : null;
+//        }
+//        else {
+//            dataStart = 0;
+//            typeId = 0;
+//            rawOff = 0;
+//            footerStart = 0;
+//            footerLen = 0;
+//            mapper = null;
+//            schemaId = 0;
+//            userType = false;
+//            fieldIdLen = 0;
+//            fieldOffLen = 0;
+//            schema = null;
+//        }
+//
+//        streamPosition(start);
     }
 
     /**
@@ -373,7 +239,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      */
     BinaryClassDescriptor descriptor() {
         if (desc == null)
-            desc = ctx.descriptorForTypeId(userType, typeId, ldr, false);
+            desc = ctx.descriptorForTypeId(userType(), typeId(), ldr, false);
 
         return desc;
     }
@@ -1752,7 +1618,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     /** {@inheritDoc} */
     @Override public BinaryRawReader rawReader() {
         if (!raw) {
-            streamPositionRandom(rawOff);
+            streamPositionRandom(rawOffset());
 
             raw = true;
 
@@ -1812,16 +1678,16 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
             case OBJ:
                 if (desc == null)
-                    desc = ctx.descriptorForTypeId(userType, typeId, ldr, false);
+                    desc = ctx.descriptorForTypeId(userType(), typeId(), ldr, true);
 
-                streamPosition(dataStart);
+                streamPosition(dataStartOffset());
 
                 if (desc == null)
-                    throw new BinaryInvalidTypeException("Unknown type ID: " + typeId);
+                    throw new BinaryInvalidTypeException("Unknown type ID: " + typeId());
 
                 obj = desc.read(this);
 
-                streamPosition(footerStart + footerLen);
+                streamPosition(start + length());
 
                 break;
 
@@ -2039,7 +1905,11 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         if (!findFieldById(fieldId))
             return null;
 
-        return new BinaryReaderExImpl(ctx, in, ldr, hnds, true).deserialize();
+        return new BinaryReaderExImplV2(ctx, in, ldr, hnds, false, true).deserialize();
+    }
+
+    private boolean userType() {
+        return BinaryUtils.isUserType(flags());
     }
 
     /**
@@ -2049,7 +1919,14 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     private int fieldId(String name) {
         assert name != null;
 
-        return mapper.fieldId(typeId, name);
+        return mapper().fieldId(typeId(), name);
+    }
+
+    private BinaryInternalMapper mapper() {
+        if (mapper == null)
+            mapper = userType() ? ctx.userTypeMapper(typeId()) : BinaryContext.defaultMapper();
+
+        return mapper;
     }
 
     /**
@@ -2058,22 +1935,22 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      * @return Schema.
      */
     public BinarySchema getOrCreateSchema() {
-        BinarySchema schema = ctx.schemaRegistry(typeId).schema(schemaId);
+        BinarySchema schema = ctx.schemaRegistry(typeId()).schema(schemaId());
 
         if (schema == null) {
-            if (fieldIdLen != BinaryUtils.FIELD_ID_LEN) {
-                BinaryTypeImpl type = (BinaryTypeImpl) ctx.metadata(typeId, schemaId);
+            if (fieldIdLen() != BinaryUtils.FIELD_ID_LEN) {
+                BinaryTypeImpl type = (BinaryTypeImpl) ctx.metadata(typeId(), schemaId());
 
                 BinaryMetadata meta = type != null ? type.metadata() : null;
 
                 if (type == null || meta == null)
                     throw new BinaryObjectException("Cannot find metadata for object with compact footer: " +
-                        typeId);
+                        typeId());
 
                 Collection<BinarySchema> existingSchemas = meta.schemas();
 
                 for (BinarySchema existingSchema : existingSchemas) {
-                    if (schemaId == existingSchema.schemaId()) {
+                    if (schemaId() == existingSchema.schemaId()) {
                         schema = existingSchema;
 
                         break;
@@ -2088,8 +1965,8 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
                     throw new BinaryObjectException("Cannot find schema for object with compact footer" +
                         " [typeName=" + type.typeName() +
-                        ", typeId=" + typeId +
-                        ", missingSchemaId=" + schemaId +
+                        ", typeId=" + typeId() +
+                        ", missingSchemaId=" + schemaId() +
                         ", existingSchemaIds=" + existingSchemaIds + ']'
                     );
                 }
@@ -2099,7 +1976,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
             assert schema != null;
 
-            ctx.schemaRegistry(typeId).addSchema(schemaId, schema);
+            ctx.schemaRegistry(typeId()).addSchema(schemaId(), schema);
         }
 
         return schema;
@@ -2111,19 +1988,19 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      * @return Schema.
      */
     private BinarySchema createSchema() {
-        assert fieldIdLen == BinaryUtils.FIELD_ID_LEN;
+        assert fieldIdLen() == BinaryUtils.FIELD_ID_LEN;
 
         BinarySchema.Builder builder = BinarySchema.Builder.newBuilder();
 
-        int searchPos = footerStart;
-        int searchEnd = searchPos + footerLen;
+        int searchPos = footerStartOffset();
+        int searchEnd = start + length();
 
         while (searchPos < searchEnd) {
             int fieldId = in.readIntPositioned(searchPos);
 
             builder.addField(fieldId);
 
-            searchPos += BinaryUtils.FIELD_ID_LEN + fieldOffLen;
+            searchPos += BinaryUtils.FIELD_ID_LEN + fieldOffLen();
         }
 
         return builder.build();
@@ -2139,25 +2016,25 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         if (raw)
             throw new BinaryObjectException("Failed to read named field because reader is in raw mode.");
 
-        assert dataStart != start;
+        assert dataStartOffset() != start;
 
-        if (footerLen == 0)
+        if (!hasSchema())
             return false;
 
-        if (userType) {
+        if (userType()) {
             int order;
 
             if (matching) {
                 int expOrder = matchingOrder++;
 
-                BinarySchema.Confirmation confirm = schema.confirmOrder(expOrder, name);
+                BinarySchema.Confirmation confirm = schema().confirmOrder(expOrder, name);
 
                 switch (confirm) {
                     case CONFIRMED:
                         // The best case: got order without ID calculation and (ID -> order) lookup.
                         if (expOrder == 0)
                             // When we read the very first field, position is set to start, hence this re-positioning.
-                            streamPosition(dataStart);
+                            streamPosition(dataStartOffset());
 
                         return true;
 
@@ -2165,7 +2042,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                         // Rejected, no more speculations are possible. Fallback to the slowest scenario.
                         matching = false;
 
-                        order = schema.order(fieldId(name));
+                        order = schema().order(fieldId(name));
 
                         break;
 
@@ -2174,14 +2051,14 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                         assert confirm == BinarySchema.Confirmation.CLARIFY;
 
                         int id = fieldId(name);
-                        int realId = schema.fieldId(expOrder);
+                        int realId = schema().fieldId(expOrder);
 
                         if (id == realId) {
                             // IDs matched, cache field name inside schema.
-                            schema.clarifyFieldName(expOrder, name);
+                            schema().clarifyFieldName(expOrder, name);
 
                             if (expOrder == 0)
-                                streamPosition(dataStart);
+                                streamPosition(dataStartOffset());
 
                             return true;
                         }
@@ -2189,14 +2066,14 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                             // No match, stop further speculations.
                             matching = false;
 
-                            order = schema.order(id);
+                            order = schema().order(id);
                         }
 
                         break;
                 }
             }
             else
-                order = schema.order(fieldId(name));
+                order = schema().order(fieldId(name));
 
             return trySetUserFieldPosition(order);
         }
@@ -2213,23 +2090,23 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      */
     private boolean findFieldById(int id) {
         assert !raw; // Assert, not exception, because this is called only from internals for Serializable types.
-        assert dataStart != start;
+        assert dataStartOffset() != start;
 
-        if (footerLen == 0)
+        if (!hasSchema())
             return false;
 
-        if (userType) {
+        if (userType()) {
             int order;
 
             if (matching) {
                 // Trying to get field order speculatively.
                 int expOrder = matchingOrder++;
 
-                int realId = schema.fieldId(expOrder);
+                int realId = schema().fieldId(expOrder);
 
                 if (realId == id) {
                     if (expOrder == 0)
-                        streamPosition(dataStart);
+                        streamPosition(dataStartOffset());
 
                     return true;
                 }
@@ -2237,16 +2114,44 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                     // Mismatch detected, no need for further speculations.
                     matching = false;
 
-                    order = schema.order(id);
+                    order = schema().order(id);
                 }
             }
             else
-                order = schema.order(id);
+                order = schema().order(id);
 
             return trySetUserFieldPosition(order);
         }
         else
             return trySetSystemFieldPosition(id);
+    }
+
+    /**
+     *
+     */
+    private BinarySchema schema() {
+        if (schema == null)
+            schema = BinaryUtils.hasSchema(flags()) ? getOrCreateSchema() : null;
+
+        return schema;
+    }
+
+    private boolean hasSchema() {
+        return BinaryUtils.hasSchema(flags());
+    }
+
+    private int fieldOffLen() {
+        if (hasSchema())
+            return BinaryUtils.fieldOffsetLength(flags());
+
+        return 0;
+    }
+
+    private int fieldIdLen() {
+        if (hasSchema())
+            return BinaryUtils.fieldIdLength(flags());
+
+        return 0;
     }
 
     /**
@@ -2257,9 +2162,9 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      */
     private boolean trySetUserFieldPosition(int order) {
         if (order != BinarySchema.ORDER_NOT_FOUND) {
-            int offsetPos = footerStart + order * (fieldIdLen + fieldOffLen) + fieldIdLen;
+            int offPos = footerStartOffset() + order * (fieldIdLen() + fieldOffLen()) + fieldIdLen();
 
-            int pos = start + BinaryUtils.fieldOffsetRelative(in, offsetPos, fieldOffLen);
+            int pos = start + BinaryUtils.fieldOffsetRelative(in, offPos, fieldOffLen());
 
             streamPosition(pos);
 
@@ -2277,10 +2182,10 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      */
     private boolean trySetSystemFieldPosition(int id) {
         // System types are never written with compact footers because they do not have metadata.
-        assert fieldIdLen == BinaryUtils.FIELD_ID_LEN;
+        assert fieldIdLen() == BinaryUtils.FIELD_ID_LEN;
 
-        int searchPos = footerStart;
-        int searchTail = searchPos + footerLen;
+        int searchPos = footerStartOffset();
+        int searchTail = start + length();
 
         while (true) {
             if (searchPos >= searchTail)
@@ -2290,14 +2195,14 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
             if (id0 == id) {
                 int pos = start + BinaryUtils.fieldOffsetRelative(in, searchPos + BinaryUtils.FIELD_ID_LEN,
-                    fieldOffLen);
+                    fieldOffLen());
 
                 streamPosition(pos);
 
                 return true;
             }
 
-            searchPos += BinaryUtils.FIELD_ID_LEN + fieldOffLen;
+            searchPos += BinaryUtils.FIELD_ID_LEN + fieldOffLen();
         }
     }
 
@@ -2306,7 +2211,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      *
      * @param pos Position.
      */
-    private void streamPosition(int pos) {
+    protected void streamPosition(int pos) {
         in.position(pos);
     }
 
