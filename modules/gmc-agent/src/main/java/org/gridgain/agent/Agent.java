@@ -162,8 +162,7 @@ public class Agent extends ManagementConsoleProcessor {
         if (oldCfg.isEnable() != cfg.isEnable())
             toggleAgentState(cfg.isEnable());
         else
-            if (execSrvc.getActiveCount() == 0)
-                execSrvc.submit(this::connect0);
+            submitConnectTask();
     }
 
     /**
@@ -272,7 +271,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         execSrvc = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
 
-        execSrvc.submit(this::connect0);
+        submitConnectTask();
     }
 
     /**
@@ -366,10 +365,18 @@ public class Agent extends ManagementConsoleProcessor {
                 if (disconnected.compareAndSet(false, true)) {
                     log.error("Lost websocket connection with server: " + curSrvUri);
 
-                    if (execSrvc.getActiveCount() == 0)
-                        execSrvc.submit(Agent.this::connect0);
+                    submitConnectTask();
                 }
             }
         }
+    }
+
+    /**
+     * Send the connect task to executor service.
+     */
+    private void submitConnectTask() {
+        // Submit a reconnection task only if we are no longer trying to reconnect
+        if (execSrvc.getActiveCount() == 0)
+            execSrvc.submit(this::connect0);
     }
 }
