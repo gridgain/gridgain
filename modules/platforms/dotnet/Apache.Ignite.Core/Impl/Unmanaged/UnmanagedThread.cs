@@ -25,9 +25,17 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     internal static class UnmanagedThread
     {
         /// <summary>
+        /// Delegate for <see cref="SetThreadExitCallback"/>.
+        /// </summary>
+        /// <param name="threadLocalValue">Value from <see cref="EnableCurrentThreadExitEvent"/></param>
+        public delegate void ThreadExitCallback(IntPtr threadLocalValue);
+
+        /// <summary>
         /// Sets the thread exit callback, and returns an id to pass to <see cref="EnableCurrentThreadExitEvent"/>.
         /// </summary>
-        /// <param name="callbackPtr">Pointer to a callback function with signature of void(IntPtr).</param>
+        /// <param name="callbackPtr">
+        /// Pointer to a callback function that matches <see cref="ThreadExitCallback"/>.
+        /// </param>
         public static unsafe int SetThreadExitCallback(IntPtr callbackPtr)
         {
             if (Os.IsWindows)
@@ -85,12 +93,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// </summary>
         private static class NativeMethodsWindows
         {
-            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
-                ThrowOnUnmappableChar = true)]
+            [DllImport("kernel32.dll")]
             public static extern int FlsAlloc(IntPtr destructorCallback);
 
-            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
-                ThrowOnUnmappableChar = true)]
+            [DllImport("kernel32.dll")]
             [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool FlsSetValue(int dwFlsIndex, IntPtr lpFlsData);
         }
@@ -100,14 +106,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// </summary>
         private static class NativeMethodsLinux
         {
-            // key is `typedef unsigned int pthread_key_t`
-            [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
-                ThrowOnUnmappableChar = true)]
-
+            [DllImport("libuv.so")]
             public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
 
-            [DllImport("libuv.so", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false,
-                ThrowOnUnmappableChar = true)]
+            [DllImport("libuv.so")]
             public static extern int pthread_setspecific(int key, IntPtr value);
         }
     }

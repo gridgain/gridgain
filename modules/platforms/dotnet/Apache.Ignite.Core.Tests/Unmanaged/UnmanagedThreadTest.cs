@@ -35,13 +35,20 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
             // TODO: Add integration test with JVM - verify that threads do not leak.
+
+            // We use priority as a very hacky way to identify the thread which performed the callback.
+            // Thread.CurrentThread.ManagedThreadId can't be used, because we receive callback after
+            // "managed" part of the thread was cleared up, and ManagedThreadId changes as a result.
+            // We could use unmanaged thread ID from the OS, but it requires P/Invoke
+            // and making it work on every OS is cumbersome.
+            const ThreadPriority testThreadPriority = ThreadPriority.Lowest;
             var evt = new ManualResetEventSlim();
             var threadLocalVal = new IntPtr(42);
             var resultThreadLocalVal = IntPtr.Zero;
 
-            Action<IntPtr> callback = val =>
+            UnmanagedThread.ThreadExitCallback callback = val =>
             {
-                if (Thread.CurrentThread.Priority == ThreadPriority.Lowest)
+                if (Thread.CurrentThread.Priority == testThreadPriority)
                 {
                     evt.Set();
                     resultThreadLocalVal = val;
@@ -60,12 +67,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
 
                 var t = new Thread(threadStart)
                 {
-                    // We use thread priority as a very hacky way to identify thread.
-                    // Thread.CurrentThread.ManagedThreadId can't be used, because we receive callback after
-                    // "managed" part of the thread was cleared up, and ManagedThreadId changes as a result.
-                    // We could use unmanaged thread ID from the OS, but it requires P/Invoke
-                    // and making it work on every OS is cumbersome.
-                    Priority = ThreadPriority.Lowest
+                    Priority = testThreadPriority
                 };
 
                 t.Start();
