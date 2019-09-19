@@ -23,7 +23,7 @@ export const userMenu = {
     button: _selector.find('[bs-dropdown]'),
     /** 
      * Clicks on user menu option.
-     * @param {string} label Menu option label to click on
+     * @param {'Profile'|'Admin panel'|'Log out'} label Menu option label to click on
      */
     async clickOption(label) {
         return t

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-/**
- * <!-- Package description. -->
- * Contains APIs for OpenCensus framework integration (Metrics & Tracing SPIs).
- */
-package org.apache.ignite.opencensus.spi;
+import {Selector} from 'testcafe';
+
+export const assumedIdentityNotification = Selector('permanent-notifications .wch-notification').withText('You are currently viewing user');
+export const assumedUserFullName = assumedIdentityNotification.find('strong');
+export const revertIdentityButton = assumedIdentityNotification.find('a').withText('Revert to your identity?');

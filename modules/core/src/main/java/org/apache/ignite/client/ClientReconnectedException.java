@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.opencensus.spi;
+package org.apache.ignite.client;
 
-import org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpiTest;
-import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpiTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    OpenCensusMetricExporterSpiTest.class,
-    OpenCensusTracingSpiTest.class
-})
 /**
- * Suite to test OpenCensus integration.
+ * Indicates that previous connection was lost and a new connection established,
+ * which can lead to inconsistency of non-atomic operations.
  */
-public class IgniteOpenCensusSuite {
+public class ClientReconnectedException extends ClientException {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * Default constructor.
+     */
+    public ClientReconnectedException() {
+    }
+
+    /**
+     * Constructs a new exception with the specified message.
+     */
+    public ClientReconnectedException(String msg) {
+        super(msg);
+    }
 }
