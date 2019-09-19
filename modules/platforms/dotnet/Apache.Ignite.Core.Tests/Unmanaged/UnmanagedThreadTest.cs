@@ -78,7 +78,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         public void TestInvalidCallbackIdThrowsException()
         {
             Assert.Throws<InvalidOperationException>(() =>
-                UnmanagedThread.EnableCurrentThreadExitEvent(int.MaxValue, IntPtr.Zero));
+                UnmanagedThread.EnableCurrentThreadExitEvent(int.MaxValue, new IntPtr(1)));
 
             Assert.Throws<InvalidOperationException>(() =>
                 UnmanagedThread.RemoveThreadExitCallback(int.MaxValue));
