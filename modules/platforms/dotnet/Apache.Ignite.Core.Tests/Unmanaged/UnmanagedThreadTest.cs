@@ -53,6 +53,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                 }
             };
 
+            GC.KeepAlive(callback);
             var callbackId = UnmanagedThread.SetThreadExitCallback(Marshal.GetFunctionPointerForDelegate(callback));
 
             try
