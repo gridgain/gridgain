@@ -79,8 +79,17 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             }
             finally
             {
-                // TODO: Cleanup the callback.
+                UnmanagedThread.RemoveThreadExitCallback(callbackId);
             }
+        }
+
+        /// <summary>
+        /// Tests that invalid callback id causes and exception.
+        /// </summary>
+        [Test]
+        public void TestInvalidCallbackIdThrowsException()
+        {
+            // TODO
         }
     }
 }

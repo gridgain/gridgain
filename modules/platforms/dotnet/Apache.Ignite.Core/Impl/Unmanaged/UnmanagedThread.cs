@@ -40,14 +40,22 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             if (Os.IsWindows)
             {
-                return NativeMethodsWindows.FlsAlloc(callbackPtr);
+                var res = NativeMethodsWindows.FlsAlloc(callbackPtr);
+
+                if (res == NativeMethodsWindows.FLS_OUT_OF_INDEXES)
+                {
+                    throw new InvalidOperationException("FlsAlloc failed: " + Marshal.GetLastWin32Error());
+                }
+
+                return res;
             }
 
             if (Os.IsLinux)
             {
                 int tlsIndex;
                 var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
-                CheckResult(res);
+
+                NativeMethodsLinux.CheckResult(res);
 
                 return tlsIndex;
             }
@@ -64,15 +72,21 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             if (Os.IsWindows)
             {
-                // TODO
+                var res = NativeMethodsWindows.FlsFree(callbackId);
+
+                if (!res)
+                {
+                    throw new InvalidOperationException("FlsFree failed: " + Marshal.GetLastWin32Error());
+                }
             }
             else if (Os.IsLinux)
             {
                 var res = NativeMethodsLinux.pthread_key_delete(callbackId);
-                CheckResult(res);
+                NativeMethodsLinux.CheckResult(res);
             }
             else
             {
+                // TODO: Add MacOS support.
                 throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
             }
         }
@@ -85,7 +99,12 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             // Store any value so that destructor callback is fired.
             if (Os.IsWindows)
             {
-                NativeMethodsWindows.FlsSetValue(callbackId, threadLocalValue);
+                var res = NativeMethodsWindows.FlsSetValue(callbackId, threadLocalValue);
+
+                if (!res)
+                {
+                    throw new InvalidOperationException("FlsSetValue failed: " + Marshal.GetLastWin32Error());
+                }
             }
             else if (Os.IsLinux)
             {
@@ -99,25 +118,20 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
 
         /// <summary>
-        /// Checks native call result.
-        /// </summary>
-        private static void CheckResult(int res)
-        {
-            if (res != 0)
-            {
-                throw new InvalidOperationException("Native call failed: " + res);
-            }
-        }
-
-        /// <summary>
         /// Windows imports.
         /// </summary>
         private static class NativeMethodsWindows
         {
-            [DllImport("kernel32.dll")]
+            // ReSharper disable once InconsistentNaming
+            public const int FLS_OUT_OF_INDEXES = -1;
+
+            [DllImport("kernel32.dll", SetLastError = true)]
             public static extern int FlsAlloc(IntPtr destructorCallback);
 
-            [DllImport("kernel32.dll")]
+            [DllImport("kernel32.dll", SetLastError = true)]
+            public static extern bool FlsFree(int dwFlsIndex);
+
+            [DllImport("kernel32.dll", SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool FlsSetValue(int dwFlsIndex, IntPtr lpFlsData);
         }
@@ -135,6 +149,17 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
             [DllImport("libuv.so")]
             public static extern int pthread_setspecific(int key, IntPtr value);
+
+            /// <summary>
+            /// Checks native call result.
+            /// </summary>
+            public static void CheckResult(int res)
+            {
+                if (res != 0)
+                {
+                    throw new InvalidOperationException("Native call failed: " + res);
+                }
+            }
         }
     }
 }
