@@ -34,23 +34,14 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         [Test]
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
-            // We use priority as a very hacky way to identify the thread which performed the callback.
-            // Thread.CurrentThread.ManagedThreadId can't be used, because we receive callback after
-            // "managed" part of the thread was cleared up, and ManagedThreadId changes as a result.
-            // We could use unmanaged thread ID from the OS, but it requires P/Invoke
-            // and making it work on every OS is cumbersome.
-            const ThreadPriority testThreadPriority = ThreadPriority.Lowest;
             var evt = new ManualResetEventSlim();
             var threadLocalVal = new IntPtr(42);
             var resultThreadLocalVal = IntPtr.Zero;
 
             UnmanagedThread.ThreadExitCallback callback = val =>
             {
-                if (Thread.CurrentThread.Priority == testThreadPriority)
-                {
-                    evt.Set();
-                    resultThreadLocalVal = val;
-                }
+                evt.Set();
+                resultThreadLocalVal = val;
             };
 
             GC.KeepAlive(callback);
@@ -64,10 +55,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
                         UnmanagedThread.EnableCurrentThreadExitEvent(callbackId, threadLocalVal);
                 };
 
-                var t = new Thread(threadStart)
-                {
-                    Priority = testThreadPriority
-                };
+                var t = new Thread(threadStart);
 
                 t.Start();
                 t.Join();
