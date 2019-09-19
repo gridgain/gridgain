@@ -50,20 +50,20 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 return res;
             }
 
-            if (Os.IsLinux)
+            if (Os.IsMacOs)
             {
                 int tlsIndex;
-                var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
+                var res = NativeMethodsMacOs.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
 
                 NativeMethodsLinux.CheckResult(res);
 
                 return tlsIndex;
             }
 
-            if (Os.IsMacOs)
+            if (Os.IsLinux)
             {
                 int tlsIndex;
-                var res = NativeMethodsMacOs.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
+                var res = NativeMethodsLinux.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
 
                 NativeMethodsLinux.CheckResult(res);
 
@@ -89,14 +89,14 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                     throw new InvalidOperationException("FlsFree failed: " + Marshal.GetLastWin32Error());
                 }
             }
-            else if (Os.IsLinux)
-            {
-                var res = NativeMethodsLinux.pthread_key_delete(callbackId);
-                NativeMethodsLinux.CheckResult(res);
-            }
             else if (Os.IsMacOs)
             {
                 var res = NativeMethodsMacOs.pthread_key_delete(callbackId);
+                NativeMethodsLinux.CheckResult(res);
+            }
+            else if (Os.IsLinux)
+            {
+                var res = NativeMethodsLinux.pthread_key_delete(callbackId);
                 NativeMethodsLinux.CheckResult(res);
             }
             else
@@ -120,14 +120,14 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                     throw new InvalidOperationException("FlsSetValue failed: " + Marshal.GetLastWin32Error());
                 }
             }
-            else if (Os.IsLinux)
-            {
-                var res = NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
-                NativeMethodsLinux.CheckResult(res);
-            }
             else if (Os.IsMacOs)
             {
                 var res = NativeMethodsMacOs.pthread_setspecific(callbackId, threadLocalValue);
+                NativeMethodsLinux.CheckResult(res);
+            }
+            else if (Os.IsLinux)
+            {
+                var res = NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
                 NativeMethodsLinux.CheckResult(res);
             }
             else
