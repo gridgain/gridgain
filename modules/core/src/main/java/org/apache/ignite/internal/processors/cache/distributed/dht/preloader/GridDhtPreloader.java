@@ -376,7 +376,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public void handleDemandMessage(int idx, UUID nodeId, GridDhtPartitionDemandMessage d) {
-        ctx.kernalContext().getStripedRebalanceExecutorService().execute(() -> {
+        ctx.kernalContext().getRebalanceExecutorService().execute(Math.abs(nodeId.hashCode()), () -> {
             if (!enterBusy())
                 return;
 
@@ -386,7 +386,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             finally {
                 leaveBusy();
             }
-        }, Math.abs(nodeId.hashCode()));
+        });
     }
 
     /** {@inheritDoc} */
