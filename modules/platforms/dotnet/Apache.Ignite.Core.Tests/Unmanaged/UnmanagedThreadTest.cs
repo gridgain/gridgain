@@ -34,8 +34,6 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         [Test]
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
-            // TODO: Add integration test with JVM - verify that threads do not leak.
-
             // We use priority as a very hacky way to identify the thread which performed the callback.
             // Thread.CurrentThread.ManagedThreadId can't be used, because we receive callback after
             // "managed" part of the thread was cleared up, and ManagedThreadId changes as a result.
