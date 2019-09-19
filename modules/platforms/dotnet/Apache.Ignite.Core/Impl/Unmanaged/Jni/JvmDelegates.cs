@@ -26,8 +26,5 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
     {
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         internal delegate JniResult AttachCurrentThread(IntPtr jvm, out IntPtr env, IntPtr args);
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        internal delegate JniResult DetachCurrentThread(IntPtr jvm);
     }
 }
