@@ -55,11 +55,8 @@ public class ActionControllerAnnotationProcessor {
                 if (method.isSynthetic())
                     continue;
 
-                boolean isNeedAuth = !method.isAnnotationPresent(WithoutAuth.class)
-                        && !controllerCls.isAnnotationPresent(WithoutAuth.class);
-
                 String actName = controllerName + "." + method.getName();
-                ActionMethod actMtd = new ActionMethod(actName, method, controllerCls, isNeedAuth);
+                ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
                 methods.put(actMtd.getActionName(), actMtd);
             }
         }

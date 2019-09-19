@@ -89,13 +89,14 @@ public class ActionDispatcher implements AutoCloseable {
      */
     private CompletableFuture<?> handleRequest(ActionMethod mtd, Request req) {
         try {
-            boolean authenticationEnabled = ctx.authentication().enabled();
             boolean securityEnabled = ctx.security().enabled();
+            boolean authenticationEnabled = ctx.authentication().enabled();
 
             if (!controllers.containsKey(mtd.getActionName()))
                 controllers.put(mtd.getActionName(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
 
-            if ((authenticationEnabled || securityEnabled) && mtd.isNeedAuth()) {
+            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
+            if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
                 UUID sesId = req.getSessionId();
                 Session ses = sesRegistry.getSession(sesId);
 

@@ -19,7 +19,6 @@ package org.gridgain.action;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 
 import java.net.InetSocketAddress;
@@ -44,10 +43,10 @@ public class Session {
      * Time when session is used last time.
      * If this time was set at TIMEDOUT_FLAG, then it should never be changed.
      */
-    private final AtomicLong lastTouchTime = new AtomicLong(U.currentTimeMillis());
+    private final AtomicLong lastTouchTime = new AtomicLong(System.currentTimeMillis());
 
     /** Time when session was invalidated last time. */
-    private final AtomicLong lastInvalidateTime = new AtomicLong(U.currentTimeMillis());
+    private final AtomicLong lastInvalidateTime = new AtomicLong(System.currentTimeMillis());
 
     /** Security context. */
     private volatile SecurityContext secCtx;
@@ -157,7 +156,7 @@ public class Session {
         if (time0 == TIMEDOUT_STATE)
             return true;
 
-        return U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_STATE);
+        return System.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_STATE);
     }
 
     /**
@@ -167,7 +166,7 @@ public class Session {
      * @return {@code true} if session should be invalidated.
      */
     public boolean isSessionExpired(long sesTokTtl) {
-        return U.currentTimeMillis() - lastInvalidateTime.get() > sesTokTtl;
+        return System.currentTimeMillis() - lastInvalidateTime.get() > sesTokTtl;
     }
 
     /**
@@ -183,7 +182,7 @@ public class Session {
             if (time0 == TIMEDOUT_STATE)
                 return false;
 
-            if (lastTouchTime.compareAndSet(time0, U.currentTimeMillis()))
+            if (lastTouchTime.compareAndSet(time0, System.currentTimeMillis()))
                 return true;
         }
     }

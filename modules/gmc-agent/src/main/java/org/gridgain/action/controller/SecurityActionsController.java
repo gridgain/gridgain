@@ -23,7 +23,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.gridgain.action.annotation.ActionController;
-import org.gridgain.action.annotation.WithoutAuth;
 import org.gridgain.agent.AgentUtils;
 import org.gridgain.dto.action.AuthenticateCredentials;
 import org.gridgain.action.Session;
@@ -34,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Controller for security actions.
  */
-@WithoutAuth
 @ActionController("SecurityActions")
 public class SecurityActionsController {
     /** Context. */

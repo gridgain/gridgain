@@ -159,6 +159,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             managementArgs.setKeyStorePassword(argIter.nextArg("key store password"));
 
                             break;
+
                         case TRUSTSTORE: {
                             String path = argIter.nextArg("trust store path");
 
@@ -170,10 +171,12 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             managementArgs.setTrustStorePassword(argIter.nextArg("trust store password"));
 
                             break;
+
                         case CIPHER_SUITES:
                             managementArgs.setCipherSuites(argIter.nextStringSet("cipher suites"));
 
                             break;
+
                         case SESSION_TIMEOUT:
                             managementArgs.setSessionTimeout(argIter.nextLongArg("session timeout"));
 

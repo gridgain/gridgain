@@ -256,8 +256,8 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
             srvTrustStore,
             srvTrustStorePass,
             cipherSuites,
-                sesTimeout,
-                sesExpirationTimeout
+            sesTimeout,
+            sesExpirationTimeout
         );
     }
 
