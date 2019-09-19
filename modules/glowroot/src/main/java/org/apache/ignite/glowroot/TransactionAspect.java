@@ -1,9 +1,5 @@
 package org.apache.ignite.glowroot;
 
-import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
-import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.OptionalThreadContext;
@@ -19,10 +15,16 @@ import org.glowroot.agent.plugin.api.weaving.OnBefore;
 import org.glowroot.agent.plugin.api.weaving.OnReturn;
 import org.glowroot.agent.plugin.api.weaving.OnThrow;
 import org.glowroot.agent.plugin.api.weaving.Pointcut;
+import org.glowroot.agent.plugin.api.weaving.Shim;
 
 /**
  */
 public class TransactionAspect {
+    @Shim("org.apache.ignite.transactions.Transaction")
+    public interface Transaction {
+        String label();
+    }
+
     /** Static tl looks safe
      * Thread local not necessary, can extend NearLocalTx and attach trace entry.
      */
@@ -51,7 +53,7 @@ public class TransactionAspect {
          */
         @OnBefore
         public static TraceEntry onBefore(OptionalThreadContext ctx,
-            @BindReceiver IgniteTxManager mgr,
+            @BindReceiver Object mgr,
             @BindParameterArray Object[] params) {
             return ctx.startTransaction("Ignite", "ignite-" + Thread.currentThread().getName(),
                 MessageSupplier.create("start tx"), // TODO add label
@@ -63,7 +65,7 @@ public class TransactionAspect {
          * @param traceEntry Trace entry.
          */
         @OnReturn
-        public static void onReturn(@BindReturn GridNearTxLocal ret, @BindTraveler TraceEntry traceEntry) {
+        public static void onReturn(@BindReturn Object ret, @BindTraveler TraceEntry traceEntry) {
             ctx.set(traceEntry);
         }
 
@@ -91,7 +93,7 @@ public class TransactionAspect {
          * @param ctx Context.
          */
         @OnBefore
-        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver TransactionProxyImpl proxy) {
+        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver Transaction proxy) {
             return ctx.startTraceEntry(MessageSupplier.create("commit tx: label={}", proxy.label()),
                 timer);
         }

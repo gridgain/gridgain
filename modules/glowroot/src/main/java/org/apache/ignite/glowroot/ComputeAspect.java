@@ -1,7 +1,5 @@
 package org.apache.ignite.glowroot;
 
-import org.apache.ignite.internal.util.GridStringBuilder;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.ThreadContext;
@@ -34,10 +32,10 @@ public class ComputeAspect {
 
         @OnBefore
         public static TraceEntry onBefore(ThreadContext context, @BindMethodName String val, @BindParameterArray Object[] params) {
-            GridStringBuilder b = new GridStringBuilder(500);
+            StringBuilder b = new StringBuilder(500);
             for (Object param : params) {
-                b.a(param == null ? "NULL" : param.toString());
-                b.a(" ");
+                b.append(param == null ? "NULL" : param.toString());
+                b.append(" ");
             }
 
             return context.startTraceEntry(MessageSupplier.create("task {}", b.toString()), timer);

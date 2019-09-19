@@ -16,14 +16,8 @@
 package org.apache.ignite.glowroot;
 
 import java.util.Arrays;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
-import org.apache.ignite.internal.util.typedef.X;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.ThreadContext;
@@ -38,11 +32,17 @@ import org.glowroot.agent.plugin.api.weaving.OnBefore;
 import org.glowroot.agent.plugin.api.weaving.OnReturn;
 import org.glowroot.agent.plugin.api.weaving.OnThrow;
 import org.glowroot.agent.plugin.api.weaving.Pointcut;
+import org.glowroot.agent.plugin.api.weaving.Shim;
 
 /**
  * Trace cache operations.
  */
 public class CacheAspect {
+    @Shim("org.apache.ignite.IgniteCache")
+    public interface IgniteCache {
+        String getName();
+    }
+
     /**
      */
     @Pointcut(className = "org.apache.ignite.IgniteCache",
@@ -62,7 +62,7 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCacheProxyImpl proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCache proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
             if ("query".equals(val))
                 return ctx.startTraceEntry(MessageSupplier.create("cache name={} query={}", proxy.getName(), params[0].toString()), timer);
             else {
@@ -72,8 +72,6 @@ public class CacheAspect {
                             return "String(" + ((String)o).length() + ')';
                         else if (o instanceof byte[])
                             return "Byte[](" + ((byte[])o).length + ')';
-                        else if (o instanceof BinaryObject)
-                            return "Binary(" + ((BinaryObjectImpl)o).length() + ')';
 
                         return o.getClass().getSimpleName();
                     }
