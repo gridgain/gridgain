@@ -71,10 +71,10 @@ public class WebSocketManager implements AutoCloseable {
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;
 
     /** Agent version header. */
-    private static final String AGENT_VERSION_HDR = "agent-version";
+    private static final String AGENT_VERSION_HDR = "Agent-Version";
 
     /** Cluster id header. */
-    private static final String CLUSTER_ID_HDR = "cluster-id";
+    private static final String CLUSTER_ID_HDR = "Cluster-Id";
 
     /** Current version. */
     private static final String CURR_VER = "9.0.0";
