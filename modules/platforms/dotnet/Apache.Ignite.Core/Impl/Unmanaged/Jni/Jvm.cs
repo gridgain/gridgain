@@ -97,7 +97,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             // JVM is a singleton, so this is one-time subscription.
             // This is a shortcut - we pass DetachCurrentThread pointer directly as a thread exit callback,
             // because signatures happen to match exactly.
-            // TODO: This can cause double detach (from multiple appdomains) - is that ok?
             _threadExitCallbackId = UnmanagedThread.SetThreadExitCallback(func.DetachCurrentThread);
 
             var env = AttachCurrentThread();
