@@ -45,7 +45,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     private boolean enable = true;
 
     /** */
-    private List<String> srvUris = F.asList(GMC_SERVER_URI, DFLT_SERVER_URI);
+    private List<String> srvUris = F.asList(DFLT_SERVER_URI, GMC_SERVER_URI);
 
     /** */
     @GridToStringExclude
