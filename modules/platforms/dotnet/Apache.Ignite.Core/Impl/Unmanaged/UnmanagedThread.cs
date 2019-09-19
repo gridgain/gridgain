@@ -60,7 +60,17 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 return tlsIndex;
             }
 
-            // TODO: Add MacOS support.
+            if (Os.IsMacOs)
+            {
+                int tlsIndex;
+                var res = NativeMethodsMacOs.pthread_key_create(new IntPtr(&tlsIndex), callbackPtr);
+
+                NativeMethodsLinux.CheckResult(res);
+
+                return tlsIndex;
+            }
+
+            // TODO: Add Mono support?
             throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
         }
 
@@ -84,9 +94,13 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 var res = NativeMethodsLinux.pthread_key_delete(callbackId);
                 NativeMethodsLinux.CheckResult(res);
             }
+            else if (Os.IsMacOs)
+            {
+                var res = NativeMethodsMacOs.pthread_key_delete(callbackId);
+                NativeMethodsLinux.CheckResult(res);
+            }
             else
             {
-                // TODO: Add MacOS support.
                 throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
             }
         }
@@ -111,9 +125,13 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 var res = NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
                 NativeMethodsLinux.CheckResult(res);
             }
+            else if (Os.IsMacOs)
+            {
+                var res = NativeMethodsMacOs.pthread_setspecific(callbackId, threadLocalValue);
+                NativeMethodsLinux.CheckResult(res);
+            }
             else
             {
-                // TODO: Add MacOS support.
                 throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
             }
         }
@@ -161,6 +179,21 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                     throw new InvalidOperationException("Native call failed: " + res);
                 }
             }
+        }
+
+        /// <summary>
+        /// Linux imports.
+        /// </summary>
+        private static class NativeMethodsMacOs
+        {
+            [DllImport("libsystem_pthread.dylib")]
+            public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
+
+            [DllImport("libsystem_pthread.dylib")]
+            public static extern int pthread_key_delete(int key);
+
+            [DllImport("libsystem_pthread.dylib")]
+            public static extern int pthread_setspecific(int key, IntPtr value);
         }
     }
 }
