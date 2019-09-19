@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CANCEL_FST;
 
 /** */
 public class DrCommand implements Command<Object> {
@@ -105,6 +106,13 @@ public class DrCommand implements Command<Object> {
             DATA_CENTER_REPLICATION,
             RESUME.toString(),
             "<remoteDataCenterId>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Cancel data center full state transfer:",
+            DATA_CENTER_REPLICATION,
+            CANCEL_FST.toString(),
+            "<transfer-id>",
             optional(CMD_AUTO_CONFIRMATION)
         );
     }

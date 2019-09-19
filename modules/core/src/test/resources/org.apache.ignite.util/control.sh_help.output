@@ -89,6 +89,9 @@ This utility can do the following commands:
   Start data center replication on all caches in cluster:
     control.(sh|bat) --dr resume <remoteDataCenterId> [--yes]
 
+  Cancel data center full state transfer:
+    control.(sh|bat) --dr cancel-full-state-transfer <transfer-id> [--yes]
+
   Enable read-only mode on active cluster:
     control.(sh|bat) --read-only-on [--yes]
 
