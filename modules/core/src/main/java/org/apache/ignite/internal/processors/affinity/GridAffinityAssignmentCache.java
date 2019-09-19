@@ -780,8 +780,8 @@ public class GridAffinityAssignmentCache {
                 cache = e.getValue();
 
             if (cache == null) {
-                throw new IllegalStateException("Getting affinity for too old topology version that is already " +
-                    "out of history [locNode=" + ctx.discovery().localNode() +
+                throw new IllegalStateException("Getting affinity for topology version earlier than affinity is " +
+                    "calculated [locNode=" + ctx.discovery().localNode() +
                     ", grp=" + cacheOrGrpName +
                     ", topVer=" + topVer +
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
@@ -791,8 +791,8 @@ public class GridAffinityAssignmentCache {
             }
 
             if (cache.topologyVersion().compareTo(topVer) > 0) {
-                throw new IllegalStateException("Getting affinity for topology version earlier than affinity is " +
-                    "calculated [locNode=" + ctx.discovery().localNode() +
+                throw new IllegalStateException("Getting affinity for too old topology version that is already " +
+                    "out of history [locNode=" + ctx.discovery().localNode() +
                     ", grp=" + cacheOrGrpName +
                     ", topVer=" + topVer +
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
@@ -944,6 +944,12 @@ public class GridAffinityAssignmentCache {
                 HistoryAffinityAssignment aff0 = it.next();
 
                 if (aff0.requiresHistoryCleanup()) { // Don't decrement counter in case of fullHistoryCleanupRequired copy remove.
+                    if (fullHistSize.get() == 1) {
+                        ctx.affinity().removeCachedAffinity(aff0.topologyVersion());
+
+                        return; // Last non-shallow item should never be removed.
+                    }
+
                     fullRmvCnt--;
 
                     fullHistSize.decrementAndGet();
