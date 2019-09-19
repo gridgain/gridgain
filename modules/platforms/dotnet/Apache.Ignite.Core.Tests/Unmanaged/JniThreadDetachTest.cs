@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
     using System.Linq;
-    using System.Threading;
     using NUnit.Framework;
 
     /// <summary>
