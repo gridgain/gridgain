@@ -226,6 +226,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             {
                 var cbs = _callbackRegistry.Get<UnmanagedCallbacks>(igniteId, true);
 
+                _jvm.AttachCurrentThread(env);
+
                 return cbs.InLongLongLongObjectOutLong(op, arg1, arg2, arg3, arg);
             }
             catch (Exception e)
@@ -245,6 +247,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             try
             {
                 var cbs = _callbackRegistry.Get<UnmanagedCallbacks>(igniteId, true);
+
+                _jvm.AttachCurrentThread(env);
 
                 return cbs.InLongOutLong(op, arg);
             }
