@@ -20,9 +20,8 @@ import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
@@ -269,7 +268,7 @@ public class Agent extends ManagementConsoleProcessor {
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actionSrvc = new ActionService(ctx, mgr);
 
-        execSrvc = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+        execSrvc = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
         submitConnectTask();
     }
