@@ -57,7 +57,28 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
 
         /// <summary>
-        /// Enables thread exit even for current thread.
+        /// Removes thread exit callback that has been set with <see cref="SetThreadExitCallback"/>.
+        /// </summary>
+        /// <param name="callbackId">Callback id returned from <see cref="SetThreadExitCallback"/>.</param>
+        public static void RemoveThreadExitCallback(int callbackId)
+        {
+            if (Os.IsWindows)
+            {
+                // TODO
+            }
+            else if (Os.IsLinux)
+            {
+                var res = NativeMethodsLinux.pthread_key_delete(callbackId);
+                CheckResult(res);
+            }
+            else
+            {
+                throw new InvalidOperationException("Unsupported OS: " + Environment.OSVersion);
+            }
+        }
+
+        /// <summary>
+        /// Enables thread exit event for current thread.
         /// </summary>
         public static void EnableCurrentThreadExitEvent(int callbackId, IntPtr threadLocalValue)
         {
@@ -108,6 +129,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             [DllImport("libuv.so")]
             public static extern int pthread_key_create(IntPtr key, IntPtr destructorCallback);
+
+            [DllImport("libuv.so")]
+            public static extern int pthread_key_delete(int key);
 
             [DllImport("libuv.so")]
             public static extern int pthread_setspecific(int key, IntPtr value);
