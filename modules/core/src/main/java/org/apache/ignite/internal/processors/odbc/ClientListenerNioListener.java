@@ -282,7 +282,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(verMajor, verMinor, verMaintenance);
 
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(8), null, null);
+        BinaryWriterExImpl writer = BinaryUtils.createWriter(null, new BinaryHeapOutputStream(8), null, null);
 
         byte clientType = reader.readByte();
 

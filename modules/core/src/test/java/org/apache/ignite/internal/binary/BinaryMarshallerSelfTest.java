@@ -2829,7 +2829,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
         BinaryMarshaller marsh = binaryMarshaller();
 
-        try (BinaryWriterExImpl writer = new BinaryWriterExImpl(binaryContext(marsh))) {
+        try (BinaryWriterExImpl writer = BinaryUtils.createWriter(binaryContext(marsh))) {
             assertEquals(true, INSTANCE.isAcquired());
 
             writer.writeString("Thread local test");

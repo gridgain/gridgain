@@ -189,7 +189,7 @@ final class ClientUtils {
 
     /** Serialize binary type metadata to stream. */
     void binaryMetadata(BinaryMetadata meta, BinaryOutputStream out) {
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(marsh.context(), out, null, null)) {
+        try (BinaryRawWriterEx w = BinaryUtils.createWriter(marsh.context(), out, null, null)) {
             w.writeInt(meta.typeId());
             w.writeString(meta.typeName());
             w.writeString(meta.affinityKeyFieldName());
@@ -234,7 +234,7 @@ final class ClientUtils {
 
     /** Serialize configuration to stream. */
     void cacheConfiguration(ClientCacheConfiguration cfg, BinaryOutputStream out, ProtocolVersion ver) {
-        try (BinaryRawWriterEx writer = new BinaryWriterExImpl(marsh.context(), out, null, null)) {
+        try (BinaryRawWriterEx writer = BinaryUtils.createWriter(marsh.context(), out, null, null)) {
             int origPos = out.position();
 
             writer.writeInt(0); // configuration length is to be assigned in the end

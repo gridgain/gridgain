@@ -345,7 +345,7 @@ class TcpClientChannel implements ClientChannel {
     /** Serialize String for thin client protocol. */
     private static byte[] marshalString(String s) {
         try (BinaryOutputStream out = new BinaryHeapOutputStream(s == null ? 1 : s.length() + 20);
-             BinaryRawWriterEx writer = new BinaryWriterExImpl(null, out, null, null)
+             BinaryRawWriterEx writer = BinaryUtils.createWriter(null, out, null, null)
         ) {
             writer.writeString(s);
 

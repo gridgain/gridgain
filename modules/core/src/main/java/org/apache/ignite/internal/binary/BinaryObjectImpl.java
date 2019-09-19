@@ -319,21 +319,10 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     private int fieldPos(int order) {
-        short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
-        int typeId = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TYPE_ID_POS);
-        int off = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.DATA_LEN_POS) + GridBinaryMarshaller.DFLT_HDR_LEN;
+        BinaryReaderEx reader = reader(null, false);
 
-        int schemaOff;
-
-        if (!BinaryUtils.hasMetaSection(typeId, flags))
-            schemaOff = off;
-
-        else {
-            if (BinaryUtils.hasRaw(flags))
-                off += 4;
-
-            schemaOff = BinaryPrimitives.readInt(arr, off);
-        }
+        short flags = reader.flags();
+        int schemaOff = reader.footerStartOffset();
 
         int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
         int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);

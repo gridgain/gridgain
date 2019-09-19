@@ -139,92 +139,7 @@ public abstract class BinaryReaderExImpl implements BinaryReader, BinaryRawReade
         this.in = in;
         this.ldr = ldr;
         this.hnds = hnds;
-
-        start = in.position();
-
-//        // Perform full header parsing in case of binary object.
-//        if (!skipHdrCheck && (in.readByte() == GridBinaryMarshaller.OBJ)) {
-//            byte ver = in.readByte();
-//
-//            // Ensure protocol is fine.
-//            BinaryUtils.checkProtocolVersion(ver);
-//
-//            // Read header content.
-//            short flags = in.readShort();
-//            int typeId0 = in.readInt();
-//
-//            in.readInt(); // Skip hash code.
-//
-//            int len = in.readInt();
-//            schemaId = in.readInt();
-//            int offset = in.readInt();
-//
-//            // Get trivial flag values.
-//            userType = BinaryUtils.isUserType(flags);
-//            fieldIdLen = BinaryUtils.fieldIdLength(flags);
-//            fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
-//
-//                if (BinaryUtils.hasSchema(flags)) {
-//                    footerStart = start + offset;
-//                    footerLen = len - offset;
-//
-//                    if (BinaryUtils.hasRaw(flags))
-//                        rawOff = start + in.readIntPositioned(start + len - 4);
-//                    else
-//                        rawOff = start + len;
-//                }
-//                else {
-//                    // No schema.
-//                    footerStart = start + len;
-//                    footerLen = 0;
-//
-//                    if (BinaryUtils.hasRaw(flags))
-//                        rawOff = start + offset;
-//                    else
-//                        rawOff = start + len;
-//                }
-//
-//                // Finally, we have to resolve real type ID.
-//                if (typeId0 == UNREGISTERED_TYPE_ID) {
-//                    int off = in.position();
-//
-//                    if (forUnmarshal) {
-//                        // Registers class by type ID, at least locally if the cache is not ready yet.
-//                        desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), false, false);
-//
-//                        typeId = desc.typeId();
-//                    }
-//                    else
-//                        typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-//
-//                    int clsNameLen = in.position() - off;
-//
-//                    dataStart = start + DFLT_HDR_LEN + clsNameLen + 4;
-//                }
-//                else {
-//                    typeId = typeId0;
-//
-//                    dataStart = start + DFLT_HDR_LEN + 4;
-//                }
-
-//            mapper = userType ? ctx.userTypeMapper(typeId) : BinaryContext.defaultMapper();
-//            schema = BinaryUtils.hasSchema(flags) ? getOrCreateSchema() : null;
-//        }
-//        else {
-//            dataStart = 0;
-//            typeId = 0;
-//            rawOff = 0;
-//            footerStart = 0;
-//            footerLen = 0;
-//            mapper = null;
-//            schemaId = 0;
-//            userType = false;
-//            fieldIdLen = 0;
-//            fieldOffLen = 0;
-//            schema = null;
-//        }
-//
-//        streamPosition(start);
+        this.start = in.position();
     }
 
     /**
@@ -1905,7 +1820,7 @@ public abstract class BinaryReaderExImpl implements BinaryReader, BinaryRawReade
         if (!findFieldById(fieldId))
             return null;
 
-        return new BinaryReaderExImplV2(ctx, in, ldr, hnds, false, true).deserialize();
+        return BinaryUtils.createReader(ctx, in, ldr, hnds, false, true).deserialize();
     }
 
     private boolean userType() {

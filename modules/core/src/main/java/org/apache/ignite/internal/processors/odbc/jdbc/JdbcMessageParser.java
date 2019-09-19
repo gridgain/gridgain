@@ -66,7 +66,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
      * @return Writer.
      */
     protected BinaryWriterExImpl createWriter(int cap) {
-        return new BinaryWriterExImpl(null, new BinaryHeapOutputStream(cap), null, null);
+        return BinaryUtils.createWriter(null, new BinaryHeapOutputStream(cap), null, null);
     }
 
     /** {@inheritDoc} */

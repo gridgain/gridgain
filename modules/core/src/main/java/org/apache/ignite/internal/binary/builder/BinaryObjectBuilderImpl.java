@@ -110,9 +110,9 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         start = -1;
         flags = -1;
-        ver = GridBinaryMarshaller.PROTO_VER;
+        ver = GridBinaryMarshaller.CUR_PROTO_VER;
         reader = null;
-        dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
+        dataOff = GridBinaryMarshaller.HDR_LEN_V2;
 
         readCache = Collections.emptyMap();
     }
@@ -149,7 +149,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 //        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
 //            int mark = reader.position();
 //
-//            reader.position(start + GridBinaryMarshaller.DFLT_HDR_LEN);
+//            reader.position(start + GridBinaryMarshaller.HDR_LEN_V1);
 //
 //            clsNameToWrite = reader.readString();
 //
@@ -172,13 +172,13 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 //        }
 //        else {
 //            this.typeId = typeId;
-//            dataOff = GridBinaryMarshaller.DFLT_HDR_LEN;
+//            dataOff = GridBinaryMarshaller.HDR_LEN_V1;
 //        }
     }
 
     /** {@inheritDoc} */
     @Override public BinaryObject build() {
-        try (BinaryWriterExImpl writer = new BinaryWriterExImpl(ctx)) {
+        try (BinaryWriterExImpl writer = BinaryUtils.createWriter(ctx)) {
             Thread curThread = Thread.currentThread();
 
             if (curThread instanceof IgniteThread)
@@ -205,7 +205,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      */
     void serializeTo(BinaryWriterExImpl writer, BinaryBuilderSerializer serializer) {
         try {
-            writer.preWrite(registeredType && ver == 1);
+            writer.preWrite(registeredType);
 
             Set<Integer> remainsFlds = null;
 

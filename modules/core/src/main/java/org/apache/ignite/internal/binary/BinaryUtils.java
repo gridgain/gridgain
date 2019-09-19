@@ -59,7 +59,9 @@ import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.internal.binary.builder.BinaryLazyValue;
+import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
+import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.cache.CacheObjectByteArrayImpl;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
@@ -69,12 +71,13 @@ import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
+import static org.apache.ignite.internal.binary.BinaryWriterExImpl.INIT_CAP;
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.CUR_PROTO_VER;
 
 /**
  * Binary utils.
@@ -800,7 +803,7 @@ public class BinaryUtils {
      * @param protoVer Protocol version.
      */
     public static void checkProtocolVersion(byte protoVer) {
-        if (protoVer <= 0 || protoVer > GridBinaryMarshaller.PROTO_VER)
+        if (protoVer <= 0 || protoVer > CUR_PROTO_VER)
             throw new BinaryObjectException("Unsupported protocol version: " + protoVer);
     }
 
@@ -2468,12 +2471,47 @@ public class BinaryUtils {
 
         switch (ver) {
             case 1:
-                throw new RuntimeException();
+                return new BinaryReaderExImplV1(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
             case 2:
                 return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
             default:
                 throw new IgniteException("Unknown protocol version: " + ver);
 
+        }
+    }
+
+    public static BinaryWriterExImpl createWriter(BinaryContext ctx) {
+        return createWriter(CUR_PROTO_VER, ctx, BinaryThreadLocalContext.get());
+    }
+
+    public static BinaryWriterExImpl createWriter(BinaryContext ctx, BinaryThreadLocalContext tlsCtx) {
+        return createWriter(CUR_PROTO_VER, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+    }
+
+    public static BinaryWriterExImpl createWriter(BinaryContext ctx, BinaryOutputStream out,
+        BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
+        return createWriter(CUR_PROTO_VER, ctx, out, schema, handles);
+    }
+
+    public static BinaryWriterExImpl createWriter(byte ver, BinaryContext ctx) {
+        return createWriter(ver, ctx, BinaryThreadLocalContext.get());
+    }
+
+    public static BinaryWriterExImpl createWriter(byte ver, BinaryContext ctx, BinaryThreadLocalContext tlsCtx) {
+        return createWriter(ver, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+    }
+
+    public static BinaryWriterExImpl createWriter(byte ver, BinaryContext ctx, BinaryOutputStream out,
+        BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
+        checkProtocolVersion(ver);
+
+        switch (ver) {
+            case 1:
+                return new BinaryWriterExImplV1(ctx, out, schema, handles);
+            case 2:
+                return new BinaryWriterExImplV2(ctx, out, schema, handles);
+            default:
+                throw new IgniteException("Unknown protocol version: " + ver);
         }
     }
 

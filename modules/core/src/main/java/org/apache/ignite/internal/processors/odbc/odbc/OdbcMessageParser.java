@@ -250,7 +250,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         OdbcResponse msg = (OdbcResponse)msg0;
 
         // Creating new binary writer
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
+        BinaryWriterExImpl writer = BinaryUtils.createWriter(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
             BinaryThreadLocalContext.get().schemaHolder(), null);
 
         // Writing status.
