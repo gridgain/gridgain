@@ -40,6 +40,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
 
             var threadNamesAfter = GetJavaThreadNames();
             Assert.AreEqual(threadNamesBefore, threadNamesAfter);
+            Assert.IsNotEmpty(threadNamesAfter);
         }
 
         /// <summary>
