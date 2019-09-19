@@ -20,24 +20,34 @@ import org.glowroot.agent.plugin.api.weaving.Shim;
 /**
  */
 public class TransactionAspect {
-    @Shim("org.apache.ignite.transactions.Transaction")
-    public interface Transaction {
-        String label();
-    }
+    /** */
+    private static final int SAMPLE_RATE = 1_000;
 
-    /** Static tl looks safe
-     * Thread local not necessary, can extend NearLocalTx and attach trace entry.
+    /** */
+    private static final String TRACE_LOG = "Trace";
+
+    /**
+     * Per thread tx context holder.
      */
-    private static ThreadLocal<TraceEntry> ctx = new ThreadLocal<>();
+    private static ThreadLocal<TraceEntry> traceCtx = new ThreadLocal<>();
 
-    private static ThreadLocal<long[]> ctx2 = new ThreadLocal<long[]>() {
+    /**
+     * Per thread tx counter for sampling.
+     */
+    private static ThreadLocal<long[]> samplingCtx = new ThreadLocal<long[]>() {
         @Override protected long[] initialValue() {
             return new long[1];
         }
     };
 
-    /**
-     */
+    /** */
+    @Shim("org.apache.ignite.transactions.Transaction")
+    public interface Transaction {
+        /** Label. */
+        String label();
+    }
+
+    /** */
     @Pointcut(className = "org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager",
         methodName = "newTx",
         nestingGroup = "ignite",
@@ -55,8 +65,9 @@ public class TransactionAspect {
         public static TraceEntry onBefore(OptionalThreadContext ctx,
             @BindReceiver Object mgr,
             @BindParameterArray Object[] params) {
-            return ctx.startTransaction("Ignite", "ignite-" + Thread.currentThread().getName(),
-                MessageSupplier.create("start tx"), // TODO add label
+            return ctx.startTransaction("Ignite",
+                Thread.currentThread().getName(),
+                MessageSupplier.create(""),
                 timer);
         }
 
@@ -66,7 +77,7 @@ public class TransactionAspect {
          */
         @OnReturn
         public static void onReturn(@BindReturn Object ret, @BindTraveler TraceEntry traceEntry) {
-            ctx.set(traceEntry);
+            traceCtx.set(traceEntry);
         }
 
         /**
@@ -80,13 +91,13 @@ public class TransactionAspect {
         }
     }
 
-    /**
-     */
+    /** */
     @Pointcut(className = "org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl",
         methodName = "commit|rollback",
         methodParameterTypes = {},
         timerName = "finish_tx")
     public static class TxFinishAdvice {
+        /** */
         private static final TimerName timer = Agent.getTimerName(TxFinishAdvice.class);
 
         /**
@@ -109,20 +120,20 @@ public class TransactionAspect {
             traceEntry.endWithError(throwable);
         }
 
-        @OnAfter public static void onAfter() {
-            TraceEntry entry = ctx.get();
+        @OnAfter
+        public static void onAfter() {
+            TraceEntry entry = traceCtx.get();
 
             if (entry != null) {
-                long cntr = ctx2.get()[0];
-                ctx2.get()[0] = cntr + 1;
+                long cntr = samplingCtx.get()[0];
+                samplingCtx.get()[0] = cntr + 1;
 
-                if (cntr % 1_000 == 0)
-                    entry.endWithError("Trace");
+                if (cntr % SAMPLE_RATE == 0)
+                    entry.endWithError(TRACE_LOG);
                 else
                     entry.end();
 
-
-                ctx.set(null);
+                traceCtx.set(null);
             }
         }
     }

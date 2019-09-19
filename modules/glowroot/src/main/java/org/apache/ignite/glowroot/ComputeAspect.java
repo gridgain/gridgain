@@ -18,8 +18,7 @@ import org.glowroot.agent.plugin.api.weaving.Pointcut;
  * Trace closure and task execution.
  */
 public class ComputeAspect {
-    /**
-     */
+    /** */
     @Pointcut(className = "org.apache.ignite.internal.processors.task.GridTaskProcessor",
         methodName = "execute",
         methodParameterTypes = {".."},
@@ -28,24 +27,32 @@ public class ComputeAspect {
         suppressionKey = "task"
     )
     public static class TaskAdvice {
+        /** */
         private static final TimerName timer = Agent.getTimerName(TaskAdvice.class);
 
+        /**
+         * @param ctx Context.
+         * @param val Value.
+         * @param params Params.
+         */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext context, @BindMethodName String val, @BindParameterArray Object[] params) {
+        public static TraceEntry onBefore(ThreadContext ctx, @BindMethodName String val, @BindParameterArray Object[] params) {
             StringBuilder b = new StringBuilder(500);
             for (Object param : params) {
                 b.append(param == null ? "NULL" : param.toString());
                 b.append(" ");
             }
 
-            return context.startTraceEntry(MessageSupplier.create("task {}", b.toString()), timer);
+            return ctx.startTraceEntry(MessageSupplier.create("task {}", b.toString()), timer);
         }
 
+        /** */
         @OnReturn
         public static void onReturn(@BindTraveler TraceEntry traceEntry) {
             traceEntry.end();
         }
 
+        /** */
         @OnThrow
         public static void onThrow(@BindThrowable Throwable throwable,
             @BindTraveler TraceEntry traceEntry) {

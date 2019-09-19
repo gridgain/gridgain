@@ -38,13 +38,21 @@ import org.glowroot.agent.plugin.api.weaving.Shim;
  * Trace cache operations.
  */
 public class CacheAspect {
+    /** */
     @Shim("org.apache.ignite.IgniteCache")
     public interface IgniteCache {
+        /** */
         String getName();
     }
 
-    /**
-     */
+    /** */
+    @Shim("org.apache.ignite.internal.binary.BinaryObjectEx")
+    public interface BinaryObjectEx {
+        /** */
+        int typeId();
+    }
+
+    /** */
     @Pointcut(className = "org.apache.ignite.IgniteCache",
         subTypeRestriction = "org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl",
         methodName = "*",
@@ -72,6 +80,8 @@ public class CacheAspect {
                             return "String(" + ((String)o).length() + ')';
                         else if (o instanceof byte[])
                             return "Byte[](" + ((byte[])o).length + ')';
+                        else if (o instanceof BinaryObjectEx)
+                            return "BinaryObject[type=" + ((BinaryObjectEx)o).typeId(); // TODO details.
 
                         return o.getClass().getSimpleName();
                     }
