@@ -155,6 +155,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
             [SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass", Justification = "Reviewed.")]
             [DllImport("kernel32.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool FlsFree(int dwFlsIndex);
 
             [SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass", Justification = "Reviewed.")]
