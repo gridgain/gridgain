@@ -108,7 +108,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             }
             else if (Os.IsLinux)
             {
-                NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
+                var res = NativeMethodsLinux.pthread_setspecific(callbackId, threadLocalValue);
+                NativeMethodsLinux.CheckResult(res);
             }
             else
             {
