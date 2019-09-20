@@ -112,6 +112,6 @@ public class CacheHolder<K, V> {
      * @return Underlying cache
      */
     public IgniteCache<K, V> cache() {
-        return cache.withExpiryPolicy(expiryPlc);
+        return expiryPlc  == null ? cache : cache.withExpiryPolicy(expiryPlc);
     }
 }
