@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -31,7 +31,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.configuration.WALMode.NONE;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 
@@ -41,12 +40,11 @@ import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS
 public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommonSelfTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", true);
 
         super.beforeTestsStarted();
 
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
         // We need to activate cluster.
         grid(0).cluster().active(true);
     }
@@ -54,8 +52,6 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
-
-        grid(0).cluster().setBaselineTopology(grid(0).cluster().topologyVersion());
     }
 
     /** {@inheritDoc} */
@@ -81,8 +77,6 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /**

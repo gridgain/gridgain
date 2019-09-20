@@ -38,7 +38,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -380,10 +379,10 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void testBaselineAutoAdjustDisableByDefaultBecauseNotNewCluster() throws Exception {
         assumeTrue(isPersistent());
 
-        //It emulate working cluster before auto-adjust feature was available.
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-        try {
+        {
+            //It emulate working cluster before auto-adjust feature was available.
             Ignite ignite0 = startGrids(2);
+            ignite0.cluster().baselineAutoAdjustEnabled(false);
 
             //This activation guarantee that baseline would be set.
             ignite0.cluster().active(true);
@@ -391,9 +390,6 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
             ignite0.cluster().baselineAutoAdjustTimeout(0);
 
             stopAllGrids();
-        }
-        finally {
-            System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
         }
 
         //Auto-activation is expected. Not first activation should be detected.
