@@ -156,7 +156,7 @@ namespace ignite
             template <typename TR>
             TR GetAffinityKey(const K& key)
             {
-                return impl.Get()->GetAffinityKey<K, TR>(key);
+                return impl.Get()->template GetAffinityKey<K, TR>(key);
             }
 
             /**
