@@ -30,7 +30,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.console.dto.AbstractDto;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
@@ -57,10 +56,10 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
     /**
      * @param ignite Ignite.
      * @param cacheName Cache name.
-     * @param f Cache configuration mapper.
+     * @param expirationTimeout Cache expiration time.
      */
-    public Table(Ignite ignite, String cacheName, Function<CacheConfiguration<UUID, T>, CacheConfiguration<UUID, T>> f) {
-        super(ignite, cacheName, f);
+    public Table(Ignite ignite, String cacheName, long expirationTimeout) {
+        super(ignite, cacheName, expirationTimeout);
     }
 
     /**

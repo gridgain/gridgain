@@ -23,7 +23,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.console.dto.AbstractDto;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
@@ -48,7 +47,7 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
      * @param cacheName Cache name.
      */
     public OneToManyIndex(Ignite ignite, String cacheName) {
-        this(ignite, cacheName, Function.identity());
+        this(ignite, cacheName, -1);
     }
 
     /**
@@ -56,14 +55,14 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
      *
      * @param ignite Ignite.
      * @param cacheName Cache name.
-     * @param f Cache configuration mapper.
+     * @param expirationTimeout Cache expiration timeout.
      */
     public OneToManyIndex(
         Ignite ignite,
         String cacheName,
-        Function<CacheConfiguration<K, Set<V>>, CacheConfiguration<K, Set<V>>> f
+        long expirationTimeout
     ) {
-        super(ignite, cacheName, f);
+        super(ignite, cacheName, expirationTimeout);
 
         this.msgGenerator = (key) -> messages.getMessage("err.data-access-violation");
     }
