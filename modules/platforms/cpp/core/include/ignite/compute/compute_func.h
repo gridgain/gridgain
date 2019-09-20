@@ -39,7 +39,7 @@ namespace ignite
         template<typename R>
         class ComputeFunc
         {
-            template<typename F, typename R>
+            template<typename TF, typename TR>
             friend class ignite::impl::compute::ComputeJobHolderImpl;
             friend class ignite::IgniteBinding;
 
