@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import javax.cache.Cache;
-import javax.cache.CacheException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +31,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -119,6 +119,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
+import static org.apache.ignite.internal.IgniteComponentType.QUERY_ENGINE;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
 
 /**
@@ -151,6 +152,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
     /** */
     private final @Nullable GridQueryIndexing idx;
+
+    /** */
+    private final @Nullable QueryEngine qryEngine;
 
     /** Value object context. */
     private final CacheQueryObjectValueContext valCtx;
@@ -211,13 +215,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     public GridQueryProcessor(GridKernalContext ctx) throws IgniteCheckedException {
         super(ctx);
 
+        boolean inBoundIndexingEnabled = false;
+
         if (idxCls != null) {
             idx = U.newInstance(idxCls);
 
             idxCls = null;
         }
         else
-            idx = INDEXING.inClassPath() ? U.<GridQueryIndexing>newInstance(INDEXING.className()) : null;
+            idx = (inBoundIndexingEnabled = INDEXING.inClassPath()) ? U.newInstance(INDEXING.className()) : null;
+
+        // At now experimental engine uses some logic of old one and cannot work separately.
+        qryEngine = inBoundIndexingEnabled ? QUERY_ENGINE.createOptional() : null;
 
         valCtx = new CacheQueryObjectValueContext(ctx);
 
@@ -239,6 +248,14 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
         super.start();
+
+        // Have to start engine first because it registers schema listeners which has
+        // to be notified at the time the indexing module registers schema objects
+        if (qryEngine != null) {
+            ctx.resource().injectGeneric(qryEngine);
+
+            qryEngine.start(ctx);
+        }
 
         if (idx != null) {
             ctx.resource().injectGeneric(idx);
@@ -689,6 +706,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         checkxEnabled();
 
         return idx;
+    }
+
+    /**
+     * @return Query engine.
+     * @throws IgniteException If module is not enabled.
+     */
+    public QueryEngine getQueryEngine() throws IgniteException {
+        if (qryEngine == null)
+            throw new IgniteException("Failed to execute query using experimental engine (consider adding module " +
+                QUERY_ENGINE.module() + " to classpath or moving it from 'optional' to 'libs' folder).");
+
+        return qryEngine;
     }
 
     /**
