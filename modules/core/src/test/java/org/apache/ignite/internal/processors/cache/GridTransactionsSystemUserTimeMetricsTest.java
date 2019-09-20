@@ -325,6 +325,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with user delay on committed transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -346,6 +348,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with user delay on rolled back transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -367,6 +371,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with user delay on failed transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -388,6 +394,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with system delay on committed transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -409,6 +417,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with system delay on rolled back transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -430,6 +440,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
+     * Test user time and system time with system delay on failed transaction.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -450,7 +462,11 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
     }
 
-    /** */
+    /**
+     * Test that changing of JMX parameters spreads on cluster correctly.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testJmxParametersSpreading() throws Exception {
         startGrid(CLIENT_2);
@@ -499,7 +515,12 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         }
     }
 
-    /** */
+    /**
+     * Tests that tx time dumps appear in log correctly and after tx completion. Also checks that LRT dump
+     * now contains information about current system and user time.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testLongTransactionDumpLimit() throws Exception {
         logTxDumpLsnr.reset();
@@ -535,7 +556,11 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertEquals(txCnt, transactionDumpLsnr.value());
     }
 
-    /** */
+    /**
+     * Tests transactions sampling with dumping 100% of transactions in log.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testSamplingCoefficient() throws Exception {
         logTxDumpLsnr.reset();
@@ -557,7 +582,11 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertEquals(txCnt, transactionDumpLsnr.value());
     }
 
-    /** */
+    /**
+     * Tests transactions sampling with dumping 0% of transactions in log.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testNoSamplingCoefficient() throws Exception {
         logTxDumpLsnr.reset();
@@ -572,7 +601,11 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertFalse(logTxDumpLsnr.check());
     }
 
-    /** */
+    /**
+     * Tests transactions sampling with dumping 100% of transactions in log but limited by 2 dump records per second.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testSamplingLimit() throws Exception {
         logTxDumpLsnr.reset();
@@ -608,7 +641,11 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertEquals(txDumpCnt + 1, transactionDumpLsnr.value());
     }
 
-    /** */
+    /**
+     * Tests transactions sampling with dumping 100% of transactions in log and no threshold timeout.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testSamplingNoThreshold() throws Exception {
         logTxDumpLsnr.reset();
@@ -630,7 +667,12 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertEquals(txCnt, transactionDumpLsnr.value());
     }
 
-    /** */
+    /**
+     * Tests transactions sampling with dumping 100% of transactions in log, no threshold timeout but with limit of 5
+     * transactions per second.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testSamplingNoThresholdWithLimit() throws Exception {
         logTxDumpLsnr.reset();
