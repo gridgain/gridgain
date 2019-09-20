@@ -506,10 +506,12 @@ std::vector<int32_t> GetPrimaryKeys(int32_t num, ClusterNode& node, CacheAffinit
 
     for (int32_t i = 0; i < INT_MAX; i++)
         if (affinity.IsPrimary(node, i))
+        {
             if (count++ < num)
                 ret.push_back(i);
             else
                 return ret;
+        }
 
     BOOST_CHECK(false);
 
