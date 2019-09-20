@@ -467,7 +467,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteLocal();
+                job->ExecuteLocal(this);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
@@ -575,7 +575,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteRemote(writer);
+                job->ExecuteRemote(this, writer);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,

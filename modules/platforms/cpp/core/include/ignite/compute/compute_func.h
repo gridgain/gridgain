@@ -39,10 +39,21 @@ namespace ignite
         template<typename R>
         class ComputeFunc
         {
+            template<typename F, typename R>
+            friend class ignite::impl::compute::ComputeJobHolderImpl;
             friend class ignite::IgniteBinding;
 
             typedef R ReturnType;
         public:
+            /**
+             * Constructor.
+             */
+            ComputeFunc() :
+                env(NULL)
+            {
+                // No-op.
+            }
+
             /**
              * Destructor.
              */
@@ -57,6 +68,31 @@ namespace ignite
              * @return Computation result.
              */
             virtual R Call() = 0;
+
+        protected:
+            /*
+             * Get environment pointer.
+             *
+             * @return Env pointer.
+             */
+            ignite::impl::IgniteEnvironment* GetEnv()
+            {
+                return env;
+            }
+
+        private:
+            /*
+             * Set environment pointer.
+             *
+             * @param env Env pointer.
+             */
+            void SetEnv(ignite::impl::IgniteEnvironment* env)
+            {
+                this->env = env;
+            }
+
+            /** Env pointer. */
+            ignite::impl::IgniteEnvironment* env;
         };
     }
 }
