@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -63,7 +63,7 @@ public class JdbcQuery implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
+    @Override public void writeBinary(BinaryAbstractWriterEx writer,
         ClientListenerProtocolVersion ver) {
         writer.writeString(sql);
 
@@ -78,7 +78,7 @@ public class JdbcQuery implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
+    @Override public void readBinary(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) {
         sql = reader.readString();
 

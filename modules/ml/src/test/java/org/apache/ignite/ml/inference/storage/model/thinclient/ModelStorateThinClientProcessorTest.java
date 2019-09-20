@@ -28,8 +28,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryNoopMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryWriterHandles;
 import org.apache.ignite.internal.binary.BinaryWriterSchemaHolder;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -725,7 +725,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     private BinaryRawWriterEx createWriter() {
-        return new BinaryWriterExImpl(
+        return new BinaryAbstractWriterEx(
             bctx, new BinaryHeapOutputStream(1024),
             new BinaryWriterSchemaHolder(),
             new BinaryWriterHandles()
@@ -741,7 +741,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     private BinaryRawReader toReader(byte[] buf) {
-        return new BinaryReaderExImpl(
+        return new BinaryAbstractReaderEx(
             bctx,
             new BinaryHeapInputStream(buf),
             getClass().getClassLoader(),

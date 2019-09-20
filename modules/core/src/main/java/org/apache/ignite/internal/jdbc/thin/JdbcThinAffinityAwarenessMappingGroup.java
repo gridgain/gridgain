@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
 import org.jetbrains.annotations.NotNull;
@@ -110,7 +110,7 @@ public class JdbcThinAffinityAwarenessMappingGroup implements JdbcRawBinarylizab
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver)
+    @Override public void writeBinary(BinaryAbstractWriterEx writer, ClientListenerProtocolVersion ver)
         throws BinaryObjectException {
         writer.writeInt(cacheIds.size());
 
@@ -135,7 +135,7 @@ public class JdbcThinAffinityAwarenessMappingGroup implements JdbcRawBinarylizab
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
+    @Override public void readBinary(BinaryAbstractReaderEx reader, ClientListenerProtocolVersion ver)
         throws BinaryObjectException {
         // No-op.
     }
@@ -148,7 +148,7 @@ public class JdbcThinAffinityAwarenessMappingGroup implements JdbcRawBinarylizab
      * @return Deserialized instance of <code>JdbcThinAffinityAwarenessMappingGroup</code>.
      * @throws BinaryObjectException In case of error.
      */
-    public static JdbcThinAffinityAwarenessMappingGroup readGroup(BinaryReaderExImpl reader,
+    public static JdbcThinAffinityAwarenessMappingGroup readGroup(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         JdbcThinAffinityAwarenessMappingGroup res = new JdbcThinAffinityAwarenessMappingGroup();
 

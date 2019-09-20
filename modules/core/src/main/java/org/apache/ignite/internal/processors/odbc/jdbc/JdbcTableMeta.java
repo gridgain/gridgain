@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.Objects;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -80,7 +80,7 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
+    @Override public void writeBinary(BinaryAbstractWriterEx writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
@@ -90,7 +90,7 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
+    @Override public void readBinary(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();

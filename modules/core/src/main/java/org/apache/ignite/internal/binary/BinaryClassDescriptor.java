@@ -555,7 +555,7 @@ public class BinaryClassDescriptor {
      * @param writer Writer.
      * @throws BinaryObjectException In case of error.
      */
-    void write(Object obj, BinaryWriterExImpl writer) throws BinaryObjectException {
+    void write(Object obj, BinaryAbstractWriterEx writer) throws BinaryObjectException {
         try {
             assert obj != null;
             assert writer != null;
@@ -859,7 +859,7 @@ public class BinaryClassDescriptor {
      * @return Object.
      * @throws BinaryObjectException If failed.
      */
-    Object read(BinaryReaderExImpl reader) throws BinaryObjectException {
+    Object read(BinaryAbstractReaderEx reader) throws BinaryObjectException {
         try {
             assert reader != null;
             assert mode != BinaryWriteMode.OPTIMIZED : "OptimizedMarshaller should not be used here: " + cls.getName();
@@ -985,7 +985,7 @@ public class BinaryClassDescriptor {
      * @param obj Object.
      * @return Whether further write is needed.
      */
-    private boolean preWrite(BinaryWriterExImpl writer, Object obj) {
+    private boolean preWrite(BinaryAbstractWriterEx writer, Object obj) {
         if (writer.tryWriteAsHandle(obj))
             return false;
 
@@ -999,7 +999,7 @@ public class BinaryClassDescriptor {
      *
      * @param writer Writer.
      */
-    private void postWrite(BinaryWriterExImpl writer) {
+    private void postWrite(BinaryAbstractWriterEx writer) {
         writer.postWrite(userType, registered);
     }
 
@@ -1009,7 +1009,7 @@ public class BinaryClassDescriptor {
      * @param writer Writer.
      * @param obj Object.
      */
-    private void postWriteHashCode(BinaryWriterExImpl writer, Object obj) {
+    private void postWriteHashCode(BinaryAbstractWriterEx writer, Object obj) {
         // No need to call "postWriteHashCode" here because we do not care about hash code.
         if (!(obj instanceof CacheObjectImpl))
             writer.postWriteHashCode(registered);

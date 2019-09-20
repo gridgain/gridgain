@@ -21,9 +21,9 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
 import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +38,7 @@ public abstract class SqlListenerUtils {
      * @return Read object.
      * @throws BinaryObjectException On error.
      */
-    @Nullable public static Object readObject(BinaryReaderExImpl reader, boolean binObjAllow)
+    @Nullable public static Object readObject(BinaryAbstractReaderEx reader, boolean binObjAllow)
         throws BinaryObjectException {
         byte type = reader.readByte();
 
@@ -146,7 +146,7 @@ public abstract class SqlListenerUtils {
      * @param binObjAllow Allow to write non plain objects.
      * @throws BinaryObjectException On error.
      */
-    public static void writeObject(BinaryWriterExImpl writer, @Nullable Object obj, boolean binObjAllow)
+    public static void writeObject(BinaryAbstractWriterEx writer, @Nullable Object obj, boolean binObjAllow)
         throws BinaryObjectException {
         if (obj == null) {
             writer.writeByte(GridBinaryMarshaller.NULL);

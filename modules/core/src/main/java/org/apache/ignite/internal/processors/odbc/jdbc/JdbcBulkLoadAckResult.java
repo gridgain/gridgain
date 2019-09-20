@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
@@ -81,7 +81,7 @@ public class JdbcBulkLoadAckResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
+    @Override public void writeBinary(BinaryAbstractWriterEx writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.writeBinary(writer, ver);
 
@@ -91,7 +91,7 @@ public class JdbcBulkLoadAckResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
+    @Override public void readBinary(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.readBinary(reader, ver);
 

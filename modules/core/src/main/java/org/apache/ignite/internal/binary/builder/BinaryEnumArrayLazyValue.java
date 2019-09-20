@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.binary.builder;
 
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -97,7 +97,7 @@ class BinaryEnumArrayLazyValue extends BinaryAbstractLazyValue {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeTo(BinaryWriterExImpl writer, BinaryBuilderSerializer ctx) {
+    @Override public void writeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer ctx) {
         if (val != null) {
             if (clsName != null)
                 ctx.writeArray(writer, GridBinaryMarshaller.ENUM_ARR, (Object[])val, clsName);

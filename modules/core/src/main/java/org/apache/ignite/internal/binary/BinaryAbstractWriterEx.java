@@ -45,7 +45,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Binary writer implementation.
  */
-public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, ObjectOutput {
+public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawWriterEx, ObjectOutput {
     /** Length: integer. */
     private static final int LEN_INT = 4;
 
@@ -92,7 +92,7 @@ public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWrite
      * @param ctx Context.
      * @param tlsCtx TLS context.
      */
-    public BinaryWriterExImpl(BinaryContext ctx, BinaryThreadLocalContext tlsCtx) {
+    public BinaryAbstractWriterEx(BinaryContext ctx, BinaryThreadLocalContext tlsCtx) {
         this(ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
     }
 
@@ -101,7 +101,7 @@ public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWrite
      * @param out Output stream.
      * @param handles Handles.
      */
-    public BinaryWriterExImpl(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
+    public BinaryAbstractWriterEx(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
         BinaryWriterHandles handles) {
         this.ctx = ctx;
         this.out = out;
@@ -441,7 +441,7 @@ public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWrite
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryWriterExImpl writer = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
+            BinaryAbstractWriterEx writer = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1432,7 +1432,7 @@ public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWrite
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryWriterExImpl writer = BinaryUtils.createWriter(version(), ctx, out, schema, null);
+            BinaryAbstractWriterEx writer = BinaryUtils.createWriter(version(), ctx, out, schema, null);
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1853,8 +1853,8 @@ public abstract class BinaryWriterExImpl implements BinaryWriter, BinaryRawWrite
      * @param typeId type
      * @return New writer.
      */
-    public BinaryWriterExImpl newWriter(int typeId) {
-        BinaryWriterExImpl res = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
+    public BinaryAbstractWriterEx newWriter(int typeId) {
+        BinaryAbstractWriterEx res = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
 
         res.failIfUnregistered(failIfUnregistered);
 

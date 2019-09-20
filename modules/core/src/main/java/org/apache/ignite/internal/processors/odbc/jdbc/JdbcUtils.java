@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +33,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param items Query results items.
      */
-    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items) {
+    public static void writeItems(BinaryAbstractWriterEx writer, List<List<Object>> items) {
         writer.writeInt(items.size());
 
         for (List<Object> row : items) {
@@ -50,7 +50,7 @@ public class JdbcUtils {
      * @param reader Binary reader.
      * @return Query results items.
      */
-    public static List<List<Object>> readItems(BinaryReaderExImpl reader) {
+    public static List<List<Object>> readItems(BinaryAbstractReaderEx reader) {
         int rowsSize = reader.readInt();
 
         if (rowsSize > 0) {
@@ -76,7 +76,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param lst List to write.
      */
-    public static void writeStringCollection(BinaryWriterExImpl writer, Collection<String> lst) {
+    public static void writeStringCollection(BinaryAbstractWriterEx writer, Collection<String> lst) {
         if (lst == null)
             writer.writeInt(0);
         else {
@@ -91,7 +91,7 @@ public class JdbcUtils {
      * @param reader Binary reader.
      * @return List of string.
      */
-    public static List<String> readStringList(BinaryReaderExImpl reader) {
+    public static List<String> readStringList(BinaryAbstractReaderEx reader) {
         int size = reader.readInt();
 
         if (size > 0) {
@@ -112,7 +112,7 @@ public class JdbcUtils {
      * @param reader Binary reader.
      * @return read value.
      */
-    @Nullable public static Integer readNullableInteger(BinaryReaderExImpl reader) {
+    @Nullable public static Integer readNullableInteger(BinaryAbstractReaderEx reader) {
         return reader.readBoolean() ? reader.readInt() : null;
     }
 
@@ -122,7 +122,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param val Integer value..
      */
-    public static void writeNullableInteger(BinaryWriterExImpl writer, @Nullable Integer val) {
+    public static void writeNullableInteger(BinaryAbstractWriterEx writer, @Nullable Integer val) {
         writer.writeBoolean(val != null);
 
         if (val != null)
@@ -135,7 +135,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param val Integer value..
      */
-    public static void writeNullableLong(BinaryWriterExImpl writer, @Nullable Long val) {
+    public static void writeNullableLong(BinaryAbstractWriterEx writer, @Nullable Long val) {
         writer.writeBoolean(val != null);
 
         if (val != null)

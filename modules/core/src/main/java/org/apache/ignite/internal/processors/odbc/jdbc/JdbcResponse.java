@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
@@ -117,7 +117,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
+    @Override public void writeBinary(BinaryAbstractWriterEx writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         writer.writeInt(status());
 
@@ -143,7 +143,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
+    @Override public void readBinary(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         status(reader.readInt());
 

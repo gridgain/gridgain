@@ -88,7 +88,7 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
  * Binary reader implementation.
  */
 @SuppressWarnings("unchecked")
-public abstract class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
+public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawReaderEx, BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
     /** Binary context. */
     private final BinaryContext ctx;
 
@@ -130,7 +130,7 @@ public abstract class BinaryReaderExImpl implements BinaryReader, BinaryRawReade
      * @param ldr Class loader.
      * @param hnds Context.
      */
-    public BinaryReaderExImpl(BinaryContext ctx,
+    public BinaryAbstractReaderEx(BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
         @Nullable BinaryReaderHandles hnds) {

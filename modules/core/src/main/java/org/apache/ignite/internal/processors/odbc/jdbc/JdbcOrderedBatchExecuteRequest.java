@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
@@ -61,14 +61,14 @@ public class JdbcOrderedBatchExecuteRequest extends JdbcBatchExecuteRequest
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver) throws BinaryObjectException {
+    @Override public void writeBinary(BinaryAbstractWriterEx writer, ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.writeBinary(writer, ver);
 
         writer.writeLong(order);
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver) throws BinaryObjectException {
+    @Override public void readBinary(BinaryAbstractReaderEx reader, ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.readBinary(reader, ver);
 
         order = reader.readLong();

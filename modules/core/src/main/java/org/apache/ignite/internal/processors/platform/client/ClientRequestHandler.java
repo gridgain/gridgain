@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.platform.client;
 
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
@@ -80,7 +80,7 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeHandshake(BinaryWriterExImpl writer) {
+    @Override public void writeHandshake(BinaryAbstractWriterEx writer) {
         writer.writeBoolean(true);
 
         if (ver.compareTo(VER_1_4_0) >= 0) {

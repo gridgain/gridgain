@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResultMarshaler;
@@ -123,7 +123,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
+    @Override public void writeBinary(BinaryAbstractWriterEx writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.writeBinary(writer, ver);
 
@@ -147,7 +147,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
+    @Override public void readBinary(BinaryAbstractReaderEx reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.readBinary(reader, ver);
 

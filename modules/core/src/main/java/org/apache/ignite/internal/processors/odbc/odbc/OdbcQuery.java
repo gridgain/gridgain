@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.odbc.odbc;
 
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -57,7 +57,7 @@ public class OdbcQuery {
      *
      * @param writer Binary object writer.
      */
-    public void writeBinary(BinaryWriterExImpl writer) {
+    public void writeBinary(BinaryAbstractWriterEx writer) {
         writer.writeString(sql);
 
         if (args == null || args.length == 0)
@@ -75,7 +75,7 @@ public class OdbcQuery {
      *
      * @param reader Binary object reader.
      */
-    public void readBinary(BinaryReaderExImpl reader) {
+    public void readBinary(BinaryAbstractReaderEx reader) {
         sql = reader.readString();
 
         int argsNum = reader.readInt();

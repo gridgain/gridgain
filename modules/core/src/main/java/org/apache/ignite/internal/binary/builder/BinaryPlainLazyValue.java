@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.binary.builder;
 
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 
 /**
  *
@@ -42,7 +42,7 @@ class BinaryPlainLazyValue extends BinaryAbstractLazyValue {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeTo(BinaryWriterExImpl writer, BinaryBuilderSerializer ctx) {
+    @Override public void writeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer ctx) {
         writer.write(reader.array(), valOff, len);
     }
 }

@@ -24,7 +24,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
 import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.IgniteUtils;
 
@@ -50,7 +50,7 @@ class BinaryBuilderSerializer {
      * @param writer Writer.
      * @param val Value.
      */
-    public void writeValue(BinaryWriterExImpl writer, Object val) {
+    public void writeValue(BinaryAbstractWriterEx writer, Object val) {
         writeValue(writer, val, false, false);
     }
 
@@ -60,7 +60,7 @@ class BinaryBuilderSerializer {
      * @param forceCol Whether to force collection type.
      * @param forceMap Whether to force map type.
      */
-    public void writeValue(BinaryWriterExImpl writer, Object val, boolean forceCol, boolean forceMap) {
+    public void writeValue(BinaryAbstractWriterEx writer, Object val, boolean forceCol, boolean forceMap) {
         assert !(forceCol && forceMap);
 
         if (val == null) {
@@ -213,7 +213,7 @@ class BinaryBuilderSerializer {
      * @param arr The array.
      * @param compTypeId Component type ID.
      */
-    public void writeArray(BinaryWriterExImpl writer, byte elementType, Object[] arr, int compTypeId) {
+    public void writeArray(BinaryAbstractWriterEx writer, byte elementType, Object[] arr, int compTypeId) {
         writer.writeByte(elementType);
         writer.writeInt(compTypeId);
         writer.writeInt(arr.length);
@@ -228,7 +228,7 @@ class BinaryBuilderSerializer {
      * @param arr The array.
      * @param clsName Component class name.
      */
-    public void writeArray(BinaryWriterExImpl writer, byte elementType, Object[] arr, String clsName) {
+    public void writeArray(BinaryAbstractWriterEx writer, byte elementType, Object[] arr, String clsName) {
         writer.writeByte(elementType);
         writer.writeInt(GridBinaryMarshaller.UNREGISTERED_TYPE_ID);
         writer.writeString(clsName);

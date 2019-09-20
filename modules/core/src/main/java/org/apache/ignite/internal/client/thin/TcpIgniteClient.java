@@ -40,10 +40,9 @@ import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
 import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -217,7 +216,7 @@ public class TcpIgniteClient implements IgniteClient {
     /** Deserialize string. */
     private String readString(BinaryInputStream in) throws BinaryObjectException {
         try {
-            try (BinaryReaderExImpl r = BinaryUtils.createReader(marsh.context(), in, null, true)) {
+            try (BinaryAbstractReaderEx r = BinaryUtils.createReader(marsh.context(), in, null, true)) {
                 return r.readString();
             }
         }

@@ -189,7 +189,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      * @param forUnmarshal {@code True} if reader is need to unmarshal object.
      * @return Reader.
      */
-    protected BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
+    protected BinaryAbstractReaderEx reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
         return reader(rCtx, null, forUnmarshal);
     }
 
@@ -200,7 +200,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
      * @return Reader.
      */
-    protected BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, @Nullable ClassLoader ldr,
+    protected BinaryAbstractReaderEx reader(@Nullable BinaryReaderHandles rCtx, @Nullable ClassLoader ldr,
         boolean forUnmarshal) {
         if (ldr == null)
             ldr = ctx.configuration().getClassLoader();

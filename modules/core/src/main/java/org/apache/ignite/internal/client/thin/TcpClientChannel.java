@@ -62,10 +62,9 @@ import org.apache.ignite.client.SslMode;
 import org.apache.ignite.client.SslProtocol;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
@@ -394,7 +393,7 @@ class TcpClientChannel implements ClientChannel {
         if (!res.readBoolean()) { // success flag
             ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
 
-            try (BinaryReaderExImpl r = BinaryUtils.createReader(null, res, null, true)) {
+            try (BinaryAbstractReaderEx r = BinaryUtils.createReader(null, res, null, true)) {
                 String err = r.readString();
 
                 int errCode = ClientStatus.FAILED;

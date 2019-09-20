@@ -17,9 +17,9 @@
 package org.apache.ignite.internal.binary.builder;
 
 import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryPositionReadable;
@@ -48,7 +48,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
     private final byte[] arr;
 
     /** */
-    private final BinaryReaderExImpl reader;
+    private final BinaryAbstractReaderEx reader;
 
     /** */
     private final Map<Integer, BinaryObjectBuilderImpl> objMap;
@@ -859,7 +859,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
     /**
      * @return Reader.
      */
-    BinaryReaderExImpl reader() {
+    BinaryAbstractReaderEx reader() {
         return reader;
     }
 
@@ -894,7 +894,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         }
 
         /** {@inheritDoc} */
-        @Override public void writeTo(BinaryWriterExImpl writer, BinaryBuilderSerializer ctx) {
+        @Override public void writeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer ctx) {
             ctx.writeValue(writer, wrappedCollection());
         }
 
