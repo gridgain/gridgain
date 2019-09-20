@@ -5798,7 +5798,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return oldRow;
         }
 
-        /** {@inheritDoc} */
+        /**
+         * @return {@code True} if update was filtered by predicate.
+         */
         protected boolean filtered() {
             return filtered;
         }

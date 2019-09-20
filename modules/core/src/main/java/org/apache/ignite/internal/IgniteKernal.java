@@ -874,7 +874,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
      * @param rebalanceExecSvc Rebalance excutor service.
-     * @param rebalanceStripedExecSvc Striped rebalance excutor service.
      * @param customExecSvcs Custom named executors.
      * @param errHnd Error handler to use for notification about startup problems.
      * @param workerRegistry Worker registry.

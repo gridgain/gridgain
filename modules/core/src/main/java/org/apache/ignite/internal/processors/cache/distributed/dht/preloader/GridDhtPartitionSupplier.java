@@ -261,7 +261,10 @@ class GridDhtPartitionSupplier {
             assert !(sctx != null && !demandMsg.partitions().isEmpty());
 
             // Saturate remote thread pool for first demand request.
-            int rmtThreadPoolSize = demanderNode.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE);
+            Integer rmtThreadPoolSize = demanderNode.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE);
+
+            if (rmtThreadPoolSize == null)
+                rmtThreadPoolSize = 1;
 
             long maxBatchesCnt = grp.preloader().batchesPrefetchCount() * rmtThreadPoolSize;
 
