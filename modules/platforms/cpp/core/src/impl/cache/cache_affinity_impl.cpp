@@ -31,7 +31,7 @@ namespace ignite
             CacheAffinityImpl::CacheAffinityImpl(SP_IgniteEnvironment env, jobject javaRef)
                 : InteropTarget(env, javaRef)
             {
-
+                // No-op.
             }
 
             int32_t CacheAffinityImpl::GetPartitions()
@@ -125,8 +125,8 @@ namespace ignite
                 interop::InteropInputStream inStream(memOut.Get());
                 binary::BinaryReaderImpl reader(&inStream);
 
-                std::vector<ClusterNode> ret;
                 int32_t cnt = reader.ReadInt32();
+                std::vector<ClusterNode> ret;
                 ret.reserve(cnt);
                 for (int32_t i = 0; i < cnt; i++)
                     ret.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
@@ -152,10 +152,9 @@ namespace ignite
                 interop::InteropInputStream inStream(memOut.Get());
                 binary::BinaryReaderImpl reader(&inStream);
 
-                std::vector<int32_t> ret;
-
                 reader.ReadInt8();
                 int32_t cnt = reader.ReadInt32();
+                std::vector<int32_t> ret;
                 ret.reserve(cnt);
                 for (int32_t i = 0; i < cnt; i++)
                     ret.push_back(reader.ReadInt32());

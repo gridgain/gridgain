@@ -488,6 +488,16 @@ namespace ignite
     }
 }
 
+IGNITE_EXPORTED_CALL void IgniteModuleInit1(IgniteBindingContext& context)
+{
+    IgniteBinding binding = context.GetBinding();
+
+    binding.RegisterComputeFunc<Func1>();
+    binding.RegisterComputeFunc<Func2>();
+    binding.RegisterComputeFunc<Func3>();
+    binding.RegisterComputeFunc<FuncAffinityCall>();
+}
+
 template<typename TK>
 std::vector<int32_t> GetPrimaryKeys(int32_t num, ClusterNode& node, CacheAffinity<TK>& affinity)
 {
@@ -506,16 +516,6 @@ std::vector<int32_t> GetPrimaryKeys(int32_t num, ClusterNode& node, CacheAffinit
     return ret;
 }
 
-IGNITE_EXPORTED_CALL void IgniteModuleInit1(IgniteBindingContext& context)
-{
-    IgniteBinding binding = context.GetBinding();
-
-    binding.RegisterComputeFunc<Func1>();
-    binding.RegisterComputeFunc<Func2>();
-    binding.RegisterComputeFunc<Func3>();
-    binding.RegisterComputeFunc<FuncAffinityCall>();
-}
-
 BOOST_FIXTURE_TEST_SUITE(ComputeTestSuiteAffinity, ComputeTestSuiteFixtureAffinity)
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
@@ -523,8 +523,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
     std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-    const int32_t key = 100;
-    const int32_t value = 500;
+    const int32_t key = 100, value = 500;
     cache.Put(key, value);
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
@@ -543,8 +542,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
     std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-    const int32_t key = 100;
-    const int32_t value = 500;
+    const int32_t key = 100, value = 500;
     cache.Put(key, value);
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
@@ -567,8 +565,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
     std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-    const int32_t key = 100;
-    const int32_t value = 500;
+    const int32_t key = 100, value = 500;
     cache.Put(key, value);
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
@@ -591,8 +588,7 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
     std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-    const int32_t key = 100;
-    const int32_t value = 500;
+    const int32_t key = 100, value = 500;
     cache.Put(key, value);
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());

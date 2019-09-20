@@ -123,7 +123,7 @@ namespace ignite
                  *  for the type if it is not primitive. Should not be void. For
                  *  non-returning methods see Compute::Run().
                  * @param func Compute function to call.
-                 * @return Future that can be used to acess computation result
+                 * @return Future that can be used to access computation result
                  *  once it's ready.
                  */
                 template<typename R, typename F>
@@ -164,7 +164,7 @@ namespace ignite
                  *  for the type if it is not primitive. Should not be void. For
                  *  non-returning methods see Compute::Run().
                  * @param func Compute function to call.
-                 * @return Future that can be used to acess computation result
+                 * @return Future that can be used to access computation result
                  *  once it's ready.
                  */
                 template<typename R, typename F>
@@ -183,7 +183,7 @@ namespace ignite
                  * @tparam F Compute function type. Should implement
                  *  ComputeFunc<R> class.
                  * @param func Compute function to call.
-                 * @return Future that can be used to acess computation result
+                 * @return Future that can be used to access computation result
                  *  once it's ready.
                  */
                 template<typename F, bool>
@@ -208,7 +208,7 @@ namespace ignite
                  *
                  * @param operation Operation type.
                  * @param func Function.
-                 * @return Future that can be used to acess computation result
+                 * @return Future that can be used to access computation result
                  *  once it's ready.
                  */
                 template<typename R, typename F, typename J, typename T>
@@ -281,7 +281,7 @@ namespace ignite
                  * @param cacheName Cache name to use for affinity co-location.
                  * @param key Affinity key.
                  * @param func Function.
-                 * @return Future that can be used to acess computation result
+                 * @return Future that can be used to access computation result
                  *  once it's ready.
                  */
                 template<typename R, typename K, typename F, typename J, typename T>

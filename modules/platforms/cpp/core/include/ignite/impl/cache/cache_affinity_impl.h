@@ -62,7 +62,6 @@ namespace ignite
                     PRIMARY_PARTITIONS = 14,
 
                     PARTITIONS = 15,
-
                 };
             };
 
