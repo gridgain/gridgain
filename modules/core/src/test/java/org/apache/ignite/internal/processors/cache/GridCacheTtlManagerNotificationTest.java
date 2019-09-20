@@ -69,6 +69,8 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
 
         cfg.setCacheConfiguration(ccfgs);
 
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
         return cfg;
     }
 

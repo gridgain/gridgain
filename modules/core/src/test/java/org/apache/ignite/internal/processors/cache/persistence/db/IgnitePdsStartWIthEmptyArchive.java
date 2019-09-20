@@ -18,12 +18,16 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.HashMap;
+
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.events.WalSegmentArchivedEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -31,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.aware.Segment
 import org.apache.ignite.internal.processors.cache.persistence.wal.filehandle.FileWriteHandle;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -62,6 +67,22 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
                         .setPersistenceEnabled(true)
                 )
         );
+
+        Map<IgnitePredicate<? extends Event>, int[]> lsnrs = new HashMap<>();
+
+        lsnrs.put((e) -> {
+            WalSegmentArchivedEvent archComplEvt = (WalSegmentArchivedEvent)e;
+
+            log.info("EVT_WAL_SEGMENT_ARCHIVED: " + archComplEvt.getAbsWalSegmentIdx());
+
+            evts.put(archComplEvt.getAbsWalSegmentIdx(), archComplEvt);
+
+            return true;
+        }, new int[] {EVT_WAL_SEGMENT_ARCHIVED});
+
+        cfg.setLocalEventListeners(lsnrs);
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
