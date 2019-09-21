@@ -1969,7 +1969,7 @@ public class IgnitionEx {
                             grid.context().failure().process(new FailureContext(SYSTEM_WORKER_TERMINATION, t));
                     }
                 },
-                true,
+                false,
                 workerRegistry,
                 cfg.getFailureDetectionTimeout());
 
