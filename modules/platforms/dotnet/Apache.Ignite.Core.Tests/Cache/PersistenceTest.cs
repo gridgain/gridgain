@@ -25,7 +25,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Configuration;
-    using Apache.Ignite.Core.Impl.Unmanaged;
     using NUnit.Framework;
     using DataPageEvictionMode = Apache.Ignite.Core.Configuration.DataPageEvictionMode;
 
@@ -225,8 +224,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestBaselineTopology()
         {
-            UnmanagedUtils.SystemSetProperty("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false");
-            //using (EnvVar.Set("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false"))
+            using (JavaSystemProperty.Set("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false"))
             {
                 var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
                 {
