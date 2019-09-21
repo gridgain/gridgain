@@ -194,32 +194,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 args);
         }
 
-        internal static string SystemSetProperty(string name, string value)
-        {
-            var jvm = Jvm.Get();
-            var methodId = jvm.MethodId;
-            var env = jvm.AttachCurrentThread();
-
-            using (var name0 = env.NewStringUtf(name))
-            using (var value0 = env.NewStringUtf(value))
-            {
-                long* args = stackalloc long[4];
-                args[0] = name0 == null ? 0 : name0.Target.ToInt64();
-                args[1] = value0 == null ? 0 : value0.Target.ToInt64();
-
-                var resRef = env.CallStaticObjectMethod(methodId.System, methodId.SystemSetProperty, args);
-
-                if (resRef == null)
-                {
-                    return null;
-                }
-
-                var res = env.JStringToString(resRef.Target);
-                env.DeleteGlobalRef(resRef.Target);
-                return res;
-            }
-        }
-
         #endregion
     }
 }
