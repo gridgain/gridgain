@@ -396,16 +396,16 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             Ignition.Start(TestUtils.GetTestConfiguration());
 
-            const int count = 100000;
+            const int count = 10000;
             var ops = new Task[count];
 
             using (var client = StartClient())
             {
                 var cache = client.GetOrCreateCache<int, int>("foo");
-                Parallel.For(0, count, new ParallelOptions {MaxDegreeOfParallelism = 16},
+                Parallel.For(0, count, new ParallelOptions {MaxDegreeOfParallelism = Environment.ProcessorCount},
                     i =>
                     {
-                        ops[i] = cache.PutAsync(i, i);
+                        ops[i] = cache.PutAllAsync(Enumerable.Range(i*100, 100).ToDictionary(x => x, x => x));
                     });
             }
 
