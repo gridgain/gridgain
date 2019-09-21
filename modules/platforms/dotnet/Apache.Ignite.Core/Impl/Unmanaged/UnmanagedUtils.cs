@@ -208,6 +208,12 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 args[1] = value0 == null ? 0 : value0.Target.ToInt64();
 
                 var resRef = env.CallStaticObjectMethod(methodId.System, methodId.SystemSetProperty, args);
+
+                if (resRef == null)
+                {
+                    return null;
+                }
+
                 var res = env.JStringToString(resRef.Target);
                 env.DeleteGlobalRef(resRef.Target);
                 return res;
