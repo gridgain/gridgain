@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Tests
 
             var oldValue = UnmanagedUtils.SystemSetProperty(name, value);
 
-            return new DisposeAction(() => UnmanagedUtils.SystemSetProperty(name, oldValue));
+            return new DisposeAction(() => UnmanagedUtils.SystemSetProperty(name, oldValue ?? string.Empty));
         }
     }
 }
