@@ -271,6 +271,11 @@ namespace Apache.Ignite.Core.Impl.Client
             Request req;
             if (!_requests.TryRemove(requestId, out req))
             {
+                if (_exception != null)
+                {
+                    return;
+                }
+
                 // Response with unknown id.
                 throw new IgniteClientException("Invalid thin client response id: " + requestId);
             }
