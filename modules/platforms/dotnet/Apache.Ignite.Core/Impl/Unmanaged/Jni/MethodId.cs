@@ -110,6 +110,16 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         public IntPtr PlatformUtilsReallocate { get; private set; }
 
         /// <summary>
+        /// System class.
+        /// </summary>
+        public GlobalRef System { get; private set; }
+
+        /// <summary>
+        /// System.setProperty.
+        /// </summary>
+        public IntPtr SystemSetProperty { get; private set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MethodId"/> class.
         /// </summary>
         public MethodId(Env env)
@@ -151,6 +161,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             PlatformUtilsGetStackTrace = env.GetStaticMethodId(PlatformUtils, "getFullStackTrace",
                 "(Ljava/lang/Throwable;)Ljava/lang/String;");
             PlatformUtilsReallocate = env.GetStaticMethodId(PlatformUtils, "reallocate", "(JI)V");
+
+            System = env.FindClass("java/lang/System");
+            SystemSetProperty = env.GetStaticMethodId(System, "setProperty",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
         }
     }
 }
