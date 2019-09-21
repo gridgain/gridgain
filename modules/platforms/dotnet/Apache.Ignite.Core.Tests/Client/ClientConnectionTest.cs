@@ -396,7 +396,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             Ignition.Start(TestUtils.GetTestConfiguration());
 
-            const int count = 10000;
+            const int count = 100000;
             var ops = new Task[count];
 
             using (var client = StartClient())
