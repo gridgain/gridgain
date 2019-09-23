@@ -64,8 +64,7 @@ public class SecurityActionsController {
             registry.saveSession(ses);
 
             if (log.isDebugEnabled())
-                log.debug("Next sessionId were generated for request: " +
-                        "[sessionId=" + ses.id() + "]");
+                log.debug("Session ID was generated for request: " + ses.id());
 
             fut.complete(ses.id().toString());
         }
@@ -87,7 +86,7 @@ public class SecurityActionsController {
         boolean securityEnabled = ctx.security().enabled();
 
         if (reqCreds.getCredentials() == null)
-            throw new IgniteAuthenticationException("Failed to autheticate, please provide credentials");
+            throw new IgniteAuthenticationException("Authetication failed, credentials not found");
 
         Session ses = Session.random();
         ses.credentials(reqCreds.getCredentials());

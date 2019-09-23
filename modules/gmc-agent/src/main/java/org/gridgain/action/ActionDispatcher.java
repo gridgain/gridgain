@@ -101,12 +101,12 @@ public class ActionDispatcher implements AutoCloseable {
                 Session ses = sesRegistry.getSession(sesId);
 
                 if (ses == null)
-                    throw new IgniteAuthenticationException("Failed to authenticate, the session with provided " +
-                            "sessionId is timed out, please authenticate again");
+                    throw new IgniteAuthenticationException(
+                        "Failed to authenticate, the session with provided sessionId: " + sesId
+                    );
 
                 if (log.isDebugEnabled())
-                    log.debug("Next sessionId were extracted according to request: " +
-                            "[sessionId=" + sesId + ", reqId=" + req.getId() + "]");
+                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + "]");
 
                 if (ses.securityContext() != null) {
                     try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {

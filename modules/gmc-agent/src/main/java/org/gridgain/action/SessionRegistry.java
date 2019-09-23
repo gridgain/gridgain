@@ -19,7 +19,6 @@ package org.gridgain.action;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -29,9 +28,6 @@ import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKEN_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 
 /**
  * Session registry.
@@ -100,12 +96,12 @@ public class SessionRegistry {
      */
     public Session getSession(UUID sesId) throws IgniteCheckedException {
         if (sesId == null)
-            throw new IgniteAuthenticationException("Session id can't be null, please authenticate and provide session id");
+            throw new IgniteAuthenticationException("Invalid session ID: null");
 
         Session ses = sesId2Ses.get(sesId);
 
         if (ses == null)
-            throw new IgniteAuthenticationException("Failed to retrieve session by session id, [sessionId=" + sesId + "]");
+            throw new IgniteAuthenticationException("Session not found for ID: " + sesId);
 
         if (!ses.touch() || ses.isTimedOut(sesTtl.toMillis())) {
             sesId2Ses.remove(ses.id(), ses);
