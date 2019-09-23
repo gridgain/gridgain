@@ -896,7 +896,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
-        StripedExecutor rebalanceExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,

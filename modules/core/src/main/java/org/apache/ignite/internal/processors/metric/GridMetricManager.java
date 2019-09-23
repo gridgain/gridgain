@@ -345,7 +345,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
-        StripedExecutor rebalanceExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         // Executors

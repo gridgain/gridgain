@@ -117,7 +117,7 @@ public class IgniteMBeansManager {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
-        StripedExecutor rebalanceExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         WorkersRegistry workersRegistry
     ) throws IgniteCheckedException {

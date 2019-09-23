@@ -67,6 +67,7 @@ import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
@@ -1038,8 +1039,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 case SCHEMA_POOL:
                 case SERVICE_POOL:
                 {
-                    if (msg.isOrdered())
-                        processOrderedMessage(nodeId, msg, plc, msgC);
+                    if (msg.isOrdered()) {
+                        // Route demand messages to rebalance pool.
+                        processOrderedMessage(nodeId,
+                            msg,
+                            msg.message() instanceof GridDhtPartitionDemandMessage ? GridIoPolicy.REBALANCE_POOL : plc,
+                            msgC);
+                    }
                     else
                         processRegularMessage(nodeId, msg, plc, msgC);
 

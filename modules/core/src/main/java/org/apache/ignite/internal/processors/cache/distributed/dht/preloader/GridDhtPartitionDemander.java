@@ -624,8 +624,11 @@ public class GridDhtPartitionDemander {
 
     /**
      * Enqueues supply message.
+     *
+     * @param supplyMsg Messqage.
+     * @param r Runnable.
      */
-    public void registerSupplyMessage(final UUID nodeId, final GridDhtPartitionSupplyMessage supplyMsg, final Runnable r) {
+    public void registerSupplyMessage(final GridDhtPartitionSupplyMessage supplyMsg, final Runnable r) {
         final RebalanceFuture fut = rebalanceFut;
 
         if (!topologyChanged(fut) && fut.isActual(supplyMsg.rebalanceId())) {

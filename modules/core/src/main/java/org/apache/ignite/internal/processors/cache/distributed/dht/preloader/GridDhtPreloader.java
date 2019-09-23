@@ -361,7 +361,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public void handleSupplyMessage(UUID nodeId, final GridDhtPartitionSupplyMessage s) {
-        demander.registerSupplyMessage(nodeId, s, () -> {
+        demander.registerSupplyMessage(s, () -> {
             if (!enterBusy())
                 return;
 
@@ -376,17 +376,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public void handleDemandMessage(int idx, UUID nodeId, GridDhtPartitionDemandMessage d) {
-        ctx.kernalContext().getRebalanceExecutorService().execute(Math.abs(nodeId.hashCode()), () -> {
-            if (!enterBusy())
-                return;
+        if (!enterBusy())
+            return;
 
-            try {
-                supplier.handleDemandMessage(idx, nodeId, d);
-            }
-            finally {
-                leaveBusy();
-            }
-        });
+        try {
+            supplier.handleDemandMessage(idx, nodeId, d);
+        }
+        finally {
+            leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
