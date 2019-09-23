@@ -379,7 +379,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Task for self-scheduled partition eviction / clearing.
      */
-    private class PartitionEvictionTask implements Runnable {
+    public class PartitionEvictionTask implements Runnable {
         /** Partition to evict. */
         private final GridDhtLocalPartition part;
 
