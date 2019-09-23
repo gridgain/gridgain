@@ -48,6 +48,12 @@ public class ManagementArguments {
     /** */
     private List<String> cipherSuites;
 
+    /** */
+    private long sesTimeout;
+
+    /** */
+    private long sesExpirationTimeout;
+
     /**
      * Creates a new instance of ManagementArguments.
      *
@@ -62,6 +68,8 @@ public class ManagementArguments {
         trustStore = builder.trustStore;
         trustStorePass = builder.trustStorePass;
         cipherSuites = builder.cipherSuites != null ? new ArrayList<>(builder.cipherSuites) : null;
+        sesTimeout = builder.sesTimeout;
+        sesExpirationTimeout = builder.sesExpirationTimeout;
     }
 
     /**
@@ -120,6 +128,20 @@ public class ManagementArguments {
         return trustStorePass;
     }
 
+    /**
+     * @return Session timeout.
+     */
+    public long getSessionTimeout() {
+        return sesTimeout;
+    }
+
+    /**
+     * @return Session expiration timeout.
+     */
+    public long getSessionExpirationTimeout() {
+        return sesExpirationTimeout;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ManagementArguments.class, this);
@@ -150,6 +172,12 @@ public class ManagementArguments {
 
         /** */
         private Set<String> cipherSuites;
+
+        /** */
+        private long sesTimeout;
+
+        /** */
+        private long sesExpirationTimeout;
 
         /**
          * Creates a new instance of builder.
@@ -225,6 +253,24 @@ public class ManagementArguments {
         public Builder setCipherSuites(Set<String> cipherSuites) {
             this.cipherSuites = cipherSuites;
 
+            return this;
+        }
+
+        /**
+         * @param sesTimeout Session timeout.
+         * @return {@code this} for chaining.
+         */
+        public Builder setSessionTimeout(long sesTimeout) {
+            this.sesTimeout = sesTimeout;
+            return this;
+        }
+
+        /**
+         * @param sesExpirationTimeout Session expiration timeout.
+         * @return {@code this} for chaining.
+         */
+        public Builder setSessionExpirationTimeout(long sesExpirationTimeout) {
+            this.sesExpirationTimeout = sesExpirationTimeout;
             return this;
         }
 

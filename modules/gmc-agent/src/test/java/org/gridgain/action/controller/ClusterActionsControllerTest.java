@@ -21,36 +21,33 @@ import org.junit.Test;
 
 import java.util.UUID;
 
-import static org.gridgain.dto.action.ActionStatus.FAILED;
-import static org.gridgain.dto.action.ResponseError.PARSE_ERROR_CODE;
+import static org.gridgain.dto.action.ActionStatus.COMPLETED;
 
 /**
- * Action controller base test.
+ * Cluster actions controller test.
  */
-public class ActionControllerBaseTest extends AbstractActionControllerTest {
+public class ClusterActionsControllerTest extends AbstractActionControllerTest {
     /**
-     * Should send error response with on response with invalid argument.
+     * Should activate cluster.
      */
     @Test
-    public void shouldSendErrorResponseWithInvalidArgument() {
+    public void activateCluster() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
-                .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
-                .setArgument("value");
+                .setAction("ClusterActions.activate");
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.active());
     }
 
     /**
-     * Should send error response with on response with incorrect action.
+     * Should deactivate cluster.
      */
     @Test
-    public void shouldSendErrorResponseWithIncorrectAction() {
+    public void deactivateCluster() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
-                .setAction("InvalidAction.updateAutoAdjustEnabled")
-                .setArgument(true);
+                .setAction("ClusterActions.deactivate");
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.active());
     }
 }

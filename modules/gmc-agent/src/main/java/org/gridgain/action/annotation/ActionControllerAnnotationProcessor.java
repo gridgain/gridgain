@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.gridgain.action;
+package org.gridgain.action.annotation;
 
 import org.apache.ignite.internal.util.typedef.F;
+import org.gridgain.action.ActionMethod;
 import org.reflections.Reflections;
 
 import java.lang.reflect.Method;

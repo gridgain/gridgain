@@ -16,7 +16,7 @@
 
 package org.gridgain.testsuites;
 
-import org.gridgain.action.ActionControllerAnnotationProcessorTest;
+import org.gridgain.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.gridgain.dto.action.RequestDeserializerTest;
 import org.gridgain.service.sender.RetryableSenderTest;
 import org.gridgain.service.MetricsServiceTest;

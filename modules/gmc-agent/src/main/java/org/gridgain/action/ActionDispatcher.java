@@ -16,16 +16,24 @@
 
 package org.gridgain.action;
 
-import java.util.HashMap;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.gridgain.dto.action.Request;
 
-import static org.gridgain.action.ActionControllerAnnotationProcessor.getActions;
+import static org.gridgain.action.annotation.ActionControllerAnnotationProcessor.getActions;
+import static org.gridgain.agent.AgentUtils.completeFutureWithException;
 
 /**
  * Action dispatcher.
@@ -34,8 +42,14 @@ public class ActionDispatcher implements AutoCloseable {
     /** Context. */
     private final GridKernalContext ctx;
 
+    /** Session registry. */
+    private SessionRegistry sesRegistry;
+
+    /** Logger. */
+    private IgniteLogger log;
+
     /** Controllers. */
-    private final Map<String, Object> controllers = new HashMap<>();
+    private final Map<String, Object> controllers = new ConcurrentHashMap<>();
 
     /** Thread pool. */
     private final ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -45,6 +59,9 @@ public class ActionDispatcher implements AutoCloseable {
      */
     public ActionDispatcher(GridKernalContext ctx) {
         this.ctx = ctx;
+
+        log = ctx.log(ActionDispatcher.class);
+        sesRegistry = SessionRegistry.getInstance(ctx);
     }
 
     /**
@@ -61,25 +78,64 @@ public class ActionDispatcher implements AutoCloseable {
         if (mtd == null)
             throw new IgniteException("Failed to find action method");
 
-        return CompletableFuture.supplyAsync(() -> invoke(mtd, req.getArgument()), pool);
+        return CompletableFuture.supplyAsync(() -> handleRequest(mtd, req), pool);
+    }
+
+    /**
+     *  Find appropriate action for request and invoke it.
+     *
+     * @param mtd Method.
+     * @param req Request.
+     */
+    private CompletableFuture<?> handleRequest(ActionMethod mtd, Request req) {
+        try {
+            boolean securityEnabled = ctx.security().enabled();
+            boolean authenticationEnabled = ctx.authentication().enabled();
+
+            if (!controllers.containsKey(mtd.getActionName()))
+                controllers.put(mtd.getActionName(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
+
+            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
+            if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
+                UUID sesId = req.getSessionId();
+                Session ses = sesRegistry.getSession(sesId);
+
+                if (ses == null)
+                    throw new IgniteAuthenticationException(
+                        "Failed to authenticate, the session with provided sessionId: " + sesId
+                    );
+
+                if (log.isDebugEnabled())
+                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + "]");
+
+                if (ses.securityContext() != null) {
+                    try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {
+                        return invoke(mtd.getMethod(), controllers.get(mtd.getActionName()), req.getArgument());
+                    }
+                }
+            }
+
+            return invoke(mtd.getMethod(), controllers.get(mtd.getActionName()), req.getArgument());
+        }
+        catch (InvocationTargetException e) {
+            return completeFutureWithException(e.getTargetException());
+        }
+        catch (Exception e) {
+            return completeFutureWithException(e);
+        }
     }
 
     /**
      * Invoke action method.
      *
      * @param mtd Method.
+     * @param controller Controller.
      * @param arg Argument.
      */
-    private CompletableFuture invoke(ActionMethod mtd, Object arg) {
-        try {
-            if (!controllers.containsKey(mtd.getActionName()))
-                controllers.put(mtd.getActionName(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
-
-            return (CompletableFuture) mtd.getMethod().invoke(controllers.get(mtd.getActionName()), arg);
-        }
-        catch (Exception e) {
-            throw new IgniteException(e);
-        }
+    private CompletableFuture<?> invoke(Method mtd, Object controller, Object arg) throws Exception {
+        return arg == null
+                ? (CompletableFuture) mtd.invoke(controller)
+                : (CompletableFuture) mtd.invoke(controller, arg);
     }
 
     /** {@inheritDoc} */

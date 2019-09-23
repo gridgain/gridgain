@@ -16,10 +16,14 @@
 
 package org.gridgain.service;
 
+import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.gridgain.action.ActionDispatcher;
+import org.gridgain.dto.action.InvalidRequest;
 import org.gridgain.dto.action.Request;
 import org.gridgain.dto.action.Response;
 import org.gridgain.dto.action.ResponseError;
@@ -30,14 +34,15 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.gridgain.dto.action.ActionStatus.*;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
+import static org.gridgain.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.INTERNAL_ERROR_CODE;
+import static org.gridgain.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
  * Action service.
  */
 public class ActionService implements AutoCloseable {
-    /** Internal error code. */
-    private  static final int INTERNAL_ERROR_CODE = -32603;
-
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -69,18 +74,23 @@ public class ActionService implements AutoCloseable {
      */
     public void onActionRequest(Request req) {
         // Deserialization error occurred.
-        if (req.getArgument() instanceof ResponseError) {
-            sendResponse(new Response().setId(req.getId()).setStatus(FAILED).setError((ResponseError) req.getArgument()));
+        if (req instanceof InvalidRequest) {
+            Throwable ex = ((InvalidRequest) req).getCause();
+            sendResponse(
+                new Response()
+                    .setId(req.getId())
+                    .setStatus(FAILED)
+                    .setError(new ResponseError(PARSE_ERROR_CODE, ex.getMessage(), ex.getStackTrace()))
+            );
 
             return;
         }
 
-        sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
-
         try {
-            CompletableFuture<CompletableFuture> fut = dispatcher.dispatch(req);
+            sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
 
-            fut.thenApply(CompletableFuture::join)
+            dispatcher.dispatch(req)
+                    .thenApply(CompletableFuture::join)
                     .thenApply(r -> new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r))
                     .exceptionally(e -> convertToErrorResponse(req.getId(), e))
                     .thenAccept(this::sendResponse);
@@ -98,9 +108,24 @@ public class ActionService implements AutoCloseable {
         log.error(String.format("Failed to execute action, send error response to GMC: [reqId=%s]", id), e);
 
         return new Response()
-                .setStatus(FAILED)
                 .setId(id)
-                .setError(new ResponseError(INTERNAL_ERROR_CODE, e.getMessage(), e.getStackTrace()));
+                .setStatus(FAILED)
+                .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()));
+    }
+
+    /**
+     * @param e Exception.
+     * @return Integer error code.
+     */
+    private int getErrorCode(Throwable e) {
+        Throwable cause = e.getCause();
+
+        if (cause instanceof SecurityException)
+            return AUTHORIZE_ERROR_CODE;
+        else if (cause instanceof IgniteAuthenticationException || cause instanceof IgniteAccessControlException)
+            return AUTHENTICATION_ERROR_CODE;
+
+        return INTERNAL_ERROR_CODE;
     }
 
     /**

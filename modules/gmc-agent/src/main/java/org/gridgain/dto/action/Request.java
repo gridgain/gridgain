@@ -18,7 +18,6 @@ package org.gridgain.dto.action;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.internal.util.typedef.internal.S;
-
 import java.util.UUID;
 
 /**
@@ -37,6 +36,9 @@ public class Request {
 
     /** Timestamp. */
     private long ts;
+
+    /** Session ID. */
+    private UUID sesId;
 
     /**
      * @return Request id.
@@ -98,6 +100,21 @@ public class Request {
      */
     public Request setTimestamp(long ts) {
         this.ts = ts;
+        return this;
+    }
+
+    /**
+     * @return Session ID.
+     */
+    public UUID getSessionId() {
+        return sesId;
+    }
+
+    /**
+     * @param sesId Session id.
+     */
+    public Request setSessionId(UUID sesId) {
+        this.sesId = sesId;
         return this;
     }
 

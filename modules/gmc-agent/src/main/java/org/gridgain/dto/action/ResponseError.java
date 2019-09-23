@@ -22,6 +22,18 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * DTO for response error.
  */
 public class ResponseError {
+    /** Internal error code. */
+    public static final int INTERNAL_ERROR_CODE = -32603;
+
+    /** Authentication error code. */
+    public static final int AUTHENTICATION_ERROR_CODE = -32001;
+
+    /** Authorize error code. */
+    public static final int AUTHORIZE_ERROR_CODE = -32002;
+
+    /** Parse error code. */
+    public static final int PARSE_ERROR_CODE = -32700;
+
     /** Code. */
     private int code;
 

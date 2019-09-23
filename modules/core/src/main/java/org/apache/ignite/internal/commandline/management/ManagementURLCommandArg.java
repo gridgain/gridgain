@@ -34,7 +34,13 @@ public enum ManagementURLCommandArg implements CommandArg {
     TRUSTSTORE("management-truststore"),
 
     /** Server trust store password. */
-    TRUSTSTORE_PASSWORD("management-truststore-password");
+    TRUSTSTORE_PASSWORD("management-truststore-password"),
+
+    /** Session timeout. */
+    SESSION_TIMEOUT("management-session-timeout"),
+
+    /** Session expiration timeout. */
+    SESSION_EXPIRATION_TIMEOUT("management-session-timeout");
 
     /** Option name. */
     private final String name;

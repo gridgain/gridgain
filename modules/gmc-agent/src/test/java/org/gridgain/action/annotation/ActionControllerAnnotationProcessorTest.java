@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.gridgain.action;
+package org.gridgain.action.annotation;
 
+import org.gridgain.action.ActionMethod;
 import org.junit.Test;
 
 import java.util.Map;
