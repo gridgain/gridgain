@@ -700,8 +700,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             if (ex != null)
             {
-                throw new IgniteClientException(
-                    "Client connection is in failed state, examine InnerException for details", ex);
+                throw ex;
             }
         }
 
