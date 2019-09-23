@@ -33,7 +33,6 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             var cache = Ignite.GetOrCreateCache<int, int>("c");
             cache.Put(0, 0);
 
-            GetJavaThreadNames(); // Compute warm-up - starts pub-# thread.
             var threadNamesBefore = GetJavaThreadNames();
 
             TestUtils.RunMultiThreaded(() => cache.Put(1, 1), 10);
@@ -50,6 +49,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         {
             return Ignite.GetCompute()
                 .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
+                .Where(x => !x.StartsWith("pub-#"))
                 .OrderBy(x => x)
                 .ToArray();
         }
