@@ -365,6 +365,9 @@ public abstract class IgniteUtils {
     /** Correct Mbean cache name pattern. */
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
 
+    /** List of network interface nemes to ignore. */
+    private static List<String> IGNORED_INTERFACES = Arrays.asList("docker0");
+
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
 
@@ -2017,10 +2020,14 @@ public abstract class IgniteUtils {
         try {
             InetAddress inetAddr = InetAddress.getByName(addr);
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
-                for (InetAddress itfAddr : asIterable(itf.getInetAddresses()))
-                    if (itfAddr.equals(inetAddr))
-                        return itf.getDisplayName();
+            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                if (!IGNORED_INTERFACES.contains(itf.getName())) {
+                    for (InetAddress itfAddr : asIterable(itf.getInetAddresses())) {
+                        if (itfAddr.equals(inetAddr))
+                            return itf.getDisplayName();
+                    }
+                }
+            }
         }
         catch (UnknownHostException ignore) {
             return null;
@@ -2161,9 +2168,11 @@ public abstract class IgniteUtils {
                 List<InetAddress> locAddrs = new ArrayList<>();
 
                 for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
-                    for (InetAddress addr : asIterable(itf.getInetAddresses())) {
-                        if (!addr.isLinkLocalAddress())
-                            locAddrs.add(addr);
+                    if (!IGNORED_INTERFACES.contains(itf.getName())) {
+                        for (InetAddress addr : asIterable(itf.getInetAddresses())) {
+                            if (!addr.isLinkLocalAddress())
+                                locAddrs.add(addr);
+                        }
                     }
                 }
 
@@ -2246,8 +2255,10 @@ public abstract class IgniteUtils {
         else {
             List<NetworkInterface> itfs = new ArrayList<>();
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
-                itfs.add(itf);
+            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                if (!IGNORED_INTERFACES.contains(itf.getName()))
+                    itfs.add(itf);
+            }
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
                 @Override public int compare(NetworkInterface itf1, NetworkInterface itf2) {
@@ -2352,7 +2363,7 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
-                    if (!itf.isLoopback()) {
+                    if (!IGNORED_INTERFACES.contains(itf.getName()) && !itf.isLoopback()) {
                         Enumeration<InetAddress> addrs = itf.getInetAddresses();
 
                         for (InetAddress addr : asIterable(addrs)) {
@@ -2417,14 +2428,16 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
-                    byte[] hwAddr = itf.getHardwareAddress();
+                    if (!IGNORED_INTERFACES.contains(itf.getName())) {
+                        byte[] hwAddr = itf.getHardwareAddress();
 
-                    // Loopback produces empty MAC.
-                    if (hwAddr != null && hwAddr.length > 0) {
-                        String mac = byteArray2HexString(hwAddr);
+                        // Loopback produces empty MAC.
+                        if (hwAddr != null && hwAddr.length > 0) {
+                            String mac = byteArray2HexString(hwAddr);
 
-                        if (!macs.contains(mac))
-                            macs.add(mac);
+                            if (!macs.contains(mac))
+                                macs.add(mac);
+                        }
                     }
                 }
             }
