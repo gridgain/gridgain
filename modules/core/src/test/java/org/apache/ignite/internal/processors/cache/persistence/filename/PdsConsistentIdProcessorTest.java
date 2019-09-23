@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.filename;
 
+import java.util.regex.Pattern;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -62,9 +63,20 @@ public class PdsConsistentIdProcessorTest extends GridCommonAbstractTest {
      * @throws Exception If exception.
      */
     private void startNode(IgniteConfiguration cfg) throws Exception {
-        String msg = "Consistent ID used for local node is";
+        LogListener lsn;
 
-        LogListener lsn = LogListener.matches(msg).build();
+        if (cfg.getConsistentId() != null) {
+            String msg = "Consistent ID used for local node is [" + cfg.getConsistentId() + "] " +
+                "according to persistence data storage folders";
+
+            lsn = LogListener.matches(msg).build();
+        }
+        else {
+            Pattern pattern = Pattern.compile("Consistent ID used for local node is" +
+                " \\[[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{12}]");
+
+            lsn = LogListener.matches(pattern).build();
+        }
 
         ListeningTestLogger logger = new ListeningTestLogger();
 
@@ -74,6 +86,6 @@ public class PdsConsistentIdProcessorTest extends GridCommonAbstractTest {
 
         startGrid(cfg);
 
-        Assert.assertTrue("Missed message on node startup, log should contains message=[" + msg + "]", lsn.check());
+        Assert.assertTrue("Missed message on node startup", lsn.check());
     }
 }
