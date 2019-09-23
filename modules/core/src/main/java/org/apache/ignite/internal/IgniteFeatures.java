@@ -85,7 +85,12 @@ public enum IgniteFeatures {
     /**
      * A mode when data nodes throttle update rate regarding to DR sender load
      */
-    DR_DATA_NODE_SMART_THROTTLING(19);
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /**
+     * Support of DR-specific visor tasks used by control utility.
+     */
+    DR_CONTROL_UTILITY(20);
 
     /**
      * Unique feature identifier.
