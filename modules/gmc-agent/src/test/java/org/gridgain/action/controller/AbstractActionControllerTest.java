@@ -16,6 +16,7 @@
 
 package org.gridgain.action.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -50,6 +51,9 @@ import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
  * Abstract test for action controllers.
  */
 abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
+    /** Mapper. */
+    protected final ObjectMapper mapper = new ObjectMapper();
+
     /**
      * Start grid.
      */
@@ -59,6 +63,7 @@ abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
         changeGmcUri(ignite);
 
         cluster = ignite.cluster();
+        cluster.active(true);
     }
 
     /**
@@ -130,7 +135,7 @@ abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
     /**
      * @param cond Condition.
      */
-    private void assertWithPoll(Callable<Boolean> cond) {
+    protected void assertWithPoll(Callable<Boolean> cond) {
         with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
     }
 }

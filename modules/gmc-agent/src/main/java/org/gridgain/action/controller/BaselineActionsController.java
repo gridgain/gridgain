@@ -21,7 +21,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 import java.util.concurrent.CompletableFuture;
 
-import static org.gridgain.agent.AgentUtils.authorizeIfNeeded;
+import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
 /**
  * Baseline actions controller.

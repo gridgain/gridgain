@@ -21,6 +21,7 @@ import org.gridgain.action.controller.ActionControllerWithSecurityBaseTest;
 import org.gridgain.action.controller.BaselineActionsControllerTest;
 import org.gridgain.action.controller.ClusterActionsControllerTest;
 import org.gridgain.action.controller.NodeActionsControllerTest;
+import org.gridgain.action.controller.QueryActionsControllerTest;
 import org.gridgain.action.controller.SecurityActionsControllerTest;
 import org.gridgain.agent.AgentSelfTest;
 import org.junit.runner.RunWith;
@@ -37,7 +38,8 @@ import org.junit.runners.Suite;
     ActionControllerBaseTest.class,
     ActionControllerWithSecurityBaseTest.class,
     ClusterActionsControllerTest.class,
-    SecurityActionsControllerTest.class
+    SecurityActionsControllerTest.class,
+    QueryActionsControllerTest.class
 })
 public class AgentSelfTestSuite {
 }

@@ -22,7 +22,7 @@ import org.gridgain.action.annotation.ActionController;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.gridgain.agent.AgentUtils.authorizeIfNeeded;
+import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
 /**
  * Controller for cluster actions.

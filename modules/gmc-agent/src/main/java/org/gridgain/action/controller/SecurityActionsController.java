@@ -23,10 +23,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.gridgain.action.annotation.ActionController;
-import org.gridgain.agent.AgentUtils;
 import org.gridgain.dto.action.AuthenticateCredentials;
 import org.gridgain.action.Session;
 import org.gridgain.action.SessionRegistry;
+import org.gridgain.utils.AgentUtils;
 
 import java.util.concurrent.CompletableFuture;
 

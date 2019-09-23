@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.agent;
+package org.gridgain.utils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
