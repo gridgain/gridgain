@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -328,7 +328,7 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests that multiple client events won't fail transactions due to affinity assignment history expiration.
+     * Checks case when number of client events is greater than affinity history size.
      *
      * @throws Exception If failed.
      */
@@ -337,68 +337,97 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
         System.setProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE, "10");
 
         try {
-            Ignite ig = startGrids(2);
-
-            ig.cluster().active(true);
-
-            startClient = true;
-
-            IgniteEx stableClient = startGrid(2);
-
-            IgniteCache<Integer, Integer> stableClientTxCacheProxy = stableClient.createCache(
-                new CacheConfiguration<Integer, Integer>()
-                    .setName("tx")
-                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                    .setBackups(1)
-                    .setAffinity(new RendezvousAffinityFunction(false, 32)));
-
-            awaitPartitionMapExchange();
-
-            IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
-                @Override public void run() {
-                    for (int i = 0; i < 10; i++) {
-                        try {
-                            startGrid(3);
-
-                            stopGrid(3);
-                        }
-                        catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-            });
-
-            CountDownLatch clientTxLatch = new CountDownLatch(1);
-
-            IgniteInternalFuture loadFut = GridTestUtils.runAsync(new Runnable() {
-                @Override public void run() {
-                    try (Transaction tx = stableClient.transactions().txStart()) {
-                        ThreadLocalRandom r = ThreadLocalRandom.current();
-
-                        stableClientTxCacheProxy.put(r.nextInt(100), r.nextInt());
-
-                        try {
-                            clientTxLatch.await();
-                        }
-                        catch (InterruptedException e) {
-                            throw new IgniteInterruptedException(e);
-                        }
-
-                        tx.commit();
-                    }
-                }
-            });
-
-            fut.get();
-
-            clientTxLatch.countDown();
-
-            loadFut.get();
+            doTestMulipleClientLeaveJoin();
         }
         finally {
             System.clearProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE);
         }
+    }
+
+    /**
+     * Checks case when number of client events is so big that history consists only from client event versions.
+     *
+     * @throws Exception If failed.
+     */
+    /**
+     *
+     */
+    @Test
+    public void testMulipleClientLeaveJoinLinksLimitOverflow() throws Exception {
+        System.setProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE, "2");
+
+        try {
+            doTestMulipleClientLeaveJoin();
+        }
+        finally {
+            System.clearProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE);
+        }
+    }
+
+    /**
+     * Tests that multiple client events won't fail transactions due to affinity assignment history expiration.
+     *
+     * @throws Exception If failed.
+     */
+    public void doTestMulipleClientLeaveJoin() throws Exception {
+        Ignite ig = startGrids(2);
+
+        ig.cluster().active(true);
+
+        startClient = true;
+
+        IgniteEx stableClient = startGrid(2);
+
+        IgniteCache<Integer, Integer> stableClientTxCacheProxy = stableClient.createCache(
+            new CacheConfiguration<Integer, Integer>()
+                .setName("tx")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setBackups(1)
+                .setAffinity(new RendezvousAffinityFunction(false, 32)));
+
+        awaitPartitionMapExchange();
+
+        IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        startGrid(3);
+
+                        stopGrid(3);
+                    }
+                    catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
+
+        CountDownLatch clientTxLatch = new CountDownLatch(1);
+
+        IgniteInternalFuture loadFut = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                try (Transaction tx = stableClient.transactions().txStart()) {
+                    ThreadLocalRandom r = ThreadLocalRandom.current();
+
+                    stableClientTxCacheProxy.put(r.nextInt(100), r.nextInt());
+
+                    try {
+                        clientTxLatch.await();
+                    }
+                    catch (InterruptedException e) {
+                        throw new IgniteInterruptedException(e);
+                    }
+
+                    tx.commit();
+                }
+            }
+        });
+
+        fut.get();
+
+        clientTxLatch.countDown();
+
+        loadFut.get();
     }
 
      /**
