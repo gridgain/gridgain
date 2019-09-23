@@ -35,6 +35,7 @@ import org.apache.ignite.internal.encryption.EncryptedCachePreconfiguredRestartT
 import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
+import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentOnActivationTest;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentOutsideBaselineTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
@@ -74,6 +75,7 @@ public class IgniteBasicWithPersistenceTestSuite extends TestSuite {
         suite.addTest(new JUnit4TestAdapter(FailureHandlingConfigurationTest.class));
         suite.addTest(new JUnit4TestAdapter(SystemWorkersBlockingTest.class));
         suite.addTest(new JUnit4TestAdapter(CheckpointReadLockFailureTest.class));
+        suite.addTest(new JUnit4TestAdapter(PdsConsistentIdProcessor.class));
 
         suite.addTest(new JUnit4TestAdapter(GridCommandHandlerTest.class));
         suite.addTest(new JUnit4TestAdapter(GridCommandHandlerClusterByClassTest.class));
