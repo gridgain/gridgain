@@ -2188,7 +2188,10 @@ public class GridSqlQuerySplitter {
                 if (hasDistinctAggregate)
                     mapAgg = agg.child();
                 else
-                    mapAgg = aggregate(agg.distinct(), agg.type()).resultType(GridSqlType.STRING).addChild(agg.child());
+                    mapAgg = aggregate(agg.distinct(), agg.type())
+                        .setGroupConcatSeparator(agg.getGroupConcatSeparator())
+                        .resultType(GridSqlType.STRING)
+                        .addChild(agg.child());
 
                 rdcAgg = aggregate(false, GROUP_CONCAT)
                     .setGroupConcatSeparator(agg.getGroupConcatSeparator())

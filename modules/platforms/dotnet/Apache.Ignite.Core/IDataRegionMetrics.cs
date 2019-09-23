@@ -100,5 +100,30 @@ namespace Apache.Ignite.Core
         /// Gets memory page size in bytes.
         /// </summary>
         int PageSize { get; }
+
+        /// <summary>
+        /// Gets number of read pages from last restart.
+        /// </summary>
+        long PagesRead { get; }
+
+        /// <summary>
+        /// Gets number of written pages from last restart.
+        /// </summary>
+        long PagesWritten { get; }
+
+        /// <summary>
+        /// Gets number of replaced pages from last restart.
+        /// </summary>
+        long PagesReplaced { get; }
+
+        /// <summary>
+        /// Gets total offheap size in bytes.
+        /// </summary>
+        long OffHeapSize { get; }
+
+        /// <summary>
+        /// Gets total used offheap size in bytes.
+        /// </summary>
+        long OffheapUsedSize { get; }
     }
 }

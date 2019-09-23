@@ -405,7 +405,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             long high = stream.ReadLong();
             int low = stream.ReadInt();
 
-            return new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc);
+            return TimeZone.CurrentTimeZone.ToLocalTime(
+                new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc));
         }
 
         /// <summary>
@@ -1589,8 +1590,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             if (date.Kind != DateTimeKind.Utc)
             {
-                throw new BinaryObjectException(
-                    "DateTime is not UTC. Only UTC DateTime can be used for interop with other platforms.");
+                date = TimeZone.CurrentTimeZone.ToUniversalTime(date);
             }
 
             long diff = date.Ticks - JavaDateTicks;

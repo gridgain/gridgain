@@ -114,16 +114,25 @@ public class PlatformBinaryProcessor extends PlatformAbstractTarget {
 
             case OP_GET_TYPE: {
                 int typeId = reader.readInt();
+                ClassNotFoundException clsNotFoundEx = null;
 
-                try {
-                    String typeName = platformContext().kernalContext().marshallerContext()
-                        .getClassName(MarshallerPlatformIds.DOTNET_ID, typeId);
+                for (byte platformId : new byte[] {MarshallerPlatformIds.DOTNET_ID, MarshallerPlatformIds.JAVA_ID}) {
+                    try {
+                        String typeName = platformContext().kernalContext().marshallerContext()
+                            .getClassName(platformId, typeId);
 
-                    writer.writeString(typeName);
+                        writer.writeString(typeName);
+
+                        clsNotFoundEx = null;
+                        break;
+                    }
+                    catch (ClassNotFoundException e) {
+                        clsNotFoundEx = e;
+                    }
                 }
-                catch (ClassNotFoundException e) {
-                    throw new BinaryObjectException(e);
-                }
+
+                if (clsNotFoundEx != null)
+                    throw new BinaryObjectException(clsNotFoundEx);
 
                 break;
             }

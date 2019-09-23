@@ -37,6 +37,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridClosureCallMode;
@@ -44,6 +46,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -425,6 +428,17 @@ public class GridServiceProxy<T> implements Serializable {
             if (svcCtx == null || svcCtx.service() == null)
                 throw new GridServiceNotFoundException(svcName);
 
+            final String PLATFORM_INVOKE_MTD_NAME = "invokeMethod";
+            boolean isPlatformSvc = svcCtx.service() instanceof PlatformService;
+            boolean isProxied = false;
+
+            if (isPlatformSvc && !PLATFORM_INVOKE_MTD_NAME.equals(mtdName)) {
+                isProxied = true;
+                args = new Object[] {mtdName, false, args};
+                mtdName = "invokeMethod";
+                argTypes = new Class[] {String.class, boolean.class, Object[].class};
+            }
+
             GridServiceMethodReflectKey key = new GridServiceMethodReflectKey(mtdName, argTypes);
 
             Method mtd = svcCtx.method(key);
@@ -432,12 +446,25 @@ public class GridServiceProxy<T> implements Serializable {
             if (mtd == null)
                 throw new GridServiceMethodNotFoundException(svcName, mtdName, argTypes);
 
+            Object res;
+
             try {
-                return mtd.invoke(svcCtx.service(), args);
+                res = mtd.invoke(svcCtx.service(), args);
             }
             catch (InvocationTargetException e) {
                 throw new ServiceProxyException(e.getCause());
             }
+
+            if (isProxied && res instanceof BinaryObject) {
+                try {
+                    res = ((BinaryObject)res).deserialize();
+                }
+                catch (BinaryObjectException e) {
+                    throw new ServiceProxyException(e);
+                }
+            }
+
+            return res;
         }
 
         /** {@inheritDoc} */

@@ -47,6 +47,11 @@ namespace Apache.Ignite.Core.Impl
             CheckpointBufferPages = reader.ReadLong();
             CheckpointBufferSize = reader.ReadLong();
             PageSize = reader.ReadInt();
+            PagesRead = reader.ReadLong();
+            PagesWritten = reader.ReadLong();
+            PagesReplaced = reader.ReadLong();
+            OffHeapSize = reader.ReadLong();
+            OffheapUsedSize = reader.ReadLong();
         }
 
         /** <inheritdoc /> */
@@ -96,5 +101,20 @@ namespace Apache.Ignite.Core.Impl
 
         /** <inheritdoc /> */
         public int PageSize { get; private set; }
+
+        /** <inheritdoc /> */
+        public long PagesRead { get; private set; }
+
+        /** <inheritdoc /> */
+        public long PagesWritten { get; private set; }
+
+        /** <inheritdoc /> */
+        public long PagesReplaced { get; private set; }
+
+        /** <inheritdoc /> */
+        public long OffHeapSize { get; private set; }
+
+        /** <inheritdoc /> */
+        public long OffheapUsedSize { get; private set; }
     }
 }
