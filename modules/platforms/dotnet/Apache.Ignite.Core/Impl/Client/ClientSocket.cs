@@ -280,7 +280,10 @@ namespace Apache.Ignite.Core.Impl.Client
                 throw new IgniteClientException("Invalid thin client response id: " + requestId);
             }
 
-            req.CompletionSource.TrySetResult(stream);
+            if (req != null)
+            {
+                req.CompletionSource.TrySetResult(stream);
+            }
         }
 
         /// <summary>
@@ -663,13 +666,11 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     var req = pair.Value;
 
-                    if (req.Duration > _timeout)
+                    if (req != null && req.Duration > _timeout)
                     {
-                        Console.WriteLine(req.Duration);
-                        req.CompletionSource.TrySetException(new SocketException((int)SocketError.TimedOut));
+                        _requests[pair.Key] = null;
 
-                        // TODO: This causes "Invalid thin client response id".
-                        _requests.TryRemove(pair.Key, out req);
+                        req.CompletionSource.TrySetException(new SocketException((int)SocketError.TimedOut));
                     }
                 }
             }
@@ -717,7 +718,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 foreach (var reqId in _requests.Keys.ToArray())
                 {
                     Request req;
-                    if (_requests.TryRemove(reqId, out req))
+                    if (_requests.TryRemove(reqId, out req) && req != null)
                     {
                         req.CompletionSource.TrySetException(ex);
                     }
