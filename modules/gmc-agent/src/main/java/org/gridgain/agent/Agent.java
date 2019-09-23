@@ -90,13 +90,13 @@ public class Agent extends ManagementConsoleProcessor {
     private MetricsService metricSrvc;
 
     /** Action service. */
-    private ActionService actionSrvc;
+    private ActionService actSrvc;
 
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
 
     /** Execute service. */
-    private ThreadPoolExecutor execSrvc;
+    private ThreadPoolExecutor connectPool;
 
     /** Meta storage. */
     private MetaStorage metaStorage;
@@ -133,9 +133,9 @@ public class Agent extends ManagementConsoleProcessor {
 
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        U.shutdownNow(this.getClass(), execSrvc, log);
+        U.shutdownNow(this.getClass(), connectPool, log);
 
-        U.closeQuiet(actionSrvc);
+        U.closeQuiet(actSrvc);
         U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
@@ -248,7 +248,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
-        U.closeQuiet(actionSrvc);
+        U.closeQuiet(actSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);
@@ -266,9 +266,9 @@ public class Agent extends ManagementConsoleProcessor {
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
-        actionSrvc = new ActionService(ctx, mgr);
+        actSrvc = new ActionService(ctx, mgr);
 
-        execSrvc = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
         submitConnectTask();
     }
@@ -353,7 +353,7 @@ public class Agent extends ManagementConsoleProcessor {
                 }
 
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actionSrvc.onActionRequest((Request) payload);
+                    actSrvc.onActionRequest((Request) payload);
                 }
             });
         }
@@ -371,10 +371,10 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
-     * Submit a reconnection task only if we are no longer trying to reconnect.
+     * Submit a reconnection task only if there no active connect in progress.
      */
     private void submitConnectTask() {
-        if (execSrvc.getActiveCount() == 0)
-            execSrvc.submit(this::connect0);
+        if (connectPool.getActiveCount() == 0)
+            connectPool.submit(this::connect0);
     }
 }
