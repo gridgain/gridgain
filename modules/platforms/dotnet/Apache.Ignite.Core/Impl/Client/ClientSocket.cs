@@ -668,6 +668,7 @@ namespace Apache.Ignite.Core.Impl.Client
                         Console.WriteLine(req.Duration);
                         req.CompletionSource.TrySetException(new SocketException((int)SocketError.TimedOut));
 
+                        // TODO: This causes "Invalid thin client response id".
                         _requests.TryRemove(pair.Key, out req);
                     }
                 }
