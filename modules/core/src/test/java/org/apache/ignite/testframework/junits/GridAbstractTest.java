@@ -75,6 +75,8 @@ import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
@@ -230,6 +232,12 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
     private volatile Method currTestMtd;
 
     /**
+     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
+     * then it must be restored using value of this field.
+     */
+    private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
+
+    /**
      *
      */
     static {
@@ -278,6 +286,30 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
         log = new GridTestLog4jLogger();
 
         this.startGrid = startGrid;
+    }
+
+    /**
+     * Called before execution of all test methods in class.
+     * <p>
+     * Do not annotate with {@link org.junit.BeforeClass} in overriding methods.</p>
+     *
+     * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
+     */
+    @Override protected void beforeTestsStarted() throws Exception {
+        regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
+    }
+
+    /**
+     * Called after execution of all test methods in class or if {@link #beforeTestsStarted()} failed without
+     * execution of any test methods.
+     * <p>
+     * Do not annotate with {@link org.junit.AfterClass} in overriding methods.</p>
+     *
+     * @throws Exception If failed.
+     */
+    @Override protected void afterTestsStopped() throws Exception {
+        //restoring page handler wrapper
+        BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
     }
 
     /**
