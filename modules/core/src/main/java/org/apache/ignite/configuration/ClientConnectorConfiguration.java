@@ -104,6 +104,9 @@ public class ClientConnectorConfiguration {
     /** SSL connection factory. */
     private Factory<SSLContext> sslCtxFactory;
 
+    /** Thin-client specific configuration. */
+    private ThinClientConfiguration thinCliCfg = new ThinClientConfiguration();
+
     /**
      * Creates SQL connector configuration with all default values.
      */
@@ -136,6 +139,7 @@ public class ClientConnectorConfiguration {
         sslClientAuth = cfg.isSslClientAuth();
         useIgniteSslCtxFactory = cfg.isUseIgniteSslContextFactory();
         sslCtxFactory = cfg.getSslContextFactory();
+        thinCliCfg = new ThinClientConfiguration(cfg.getThinClientConfiguration());
     }
 
     /**
@@ -536,6 +540,24 @@ public class ClientConnectorConfiguration {
      */
     public Factory<SSLContext> getSslContextFactory() {
         return sslCtxFactory;
+    }
+
+    /**
+     * Gets thin-client specific configuration.
+     */
+    public ThinClientConfiguration getThinClientConfiguration() {
+        return thinCliCfg;
+    }
+
+    /**
+     * Sets thin-client specific configuration.
+     *
+     * @return {@code this} for chaining.
+     */
+    public ClientConnectorConfiguration setThinClientConfiguration(ThinClientConfiguration thinCliCfg) {
+        this.thinCliCfg = thinCliCfg;
+
+        return this;
     }
 
     /** {@inheritDoc} */
