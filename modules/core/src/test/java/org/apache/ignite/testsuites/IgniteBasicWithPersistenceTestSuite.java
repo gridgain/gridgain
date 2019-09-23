@@ -17,7 +17,6 @@
 package org.apache.ignite.testsuites;
 
 import java.util.Set;
-
 import junit.framework.JUnit4TestAdapter;
 import junit.framework.TestSuite;
 import org.apache.ignite.failure.FailureHandlingConfigurationTest;
@@ -35,13 +34,13 @@ import org.apache.ignite.internal.encryption.EncryptedCachePreconfiguredRestartT
 import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
-import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
+import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentOnActivationTest;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentOutsideBaselineTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
-import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerSslTest;
+import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.runner.RunWith;
@@ -75,7 +74,7 @@ public class IgniteBasicWithPersistenceTestSuite extends TestSuite {
         suite.addTest(new JUnit4TestAdapter(FailureHandlingConfigurationTest.class));
         suite.addTest(new JUnit4TestAdapter(SystemWorkersBlockingTest.class));
         suite.addTest(new JUnit4TestAdapter(CheckpointReadLockFailureTest.class));
-        suite.addTest(new JUnit4TestAdapter(PdsConsistentIdProcessor.class));
+        suite.addTest(new JUnit4TestAdapter(PdsConsistentIdProcessorTest.class));
 
         suite.addTest(new JUnit4TestAdapter(GridCommandHandlerTest.class));
         suite.addTest(new JUnit4TestAdapter(GridCommandHandlerClusterByClassTest.class));
