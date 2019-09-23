@@ -371,10 +371,9 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
-     * Send the connect task to executor service.
+     * Submit a reconnection task only if we are no longer trying to reconnect.
      */
     private void submitConnectTask() {
-        // Submit a reconnection task only if we are no longer trying to reconnect
         if (execSrvc.getActiveCount() == 0)
             execSrvc.submit(this::connect0);
     }
