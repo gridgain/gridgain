@@ -913,8 +913,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             tx.onePhaseCommit(),
             tx.activeCachesDeploymentEnabled());
 
-        res.setReqReceivedTimestamp(req == null ? INVALID_TIMESTAMP : req.getReceiveTimestamp());
-        res.setReqSendTimestamp(req == null ? INVALID_TIMESTAMP :req.getSendTimestamp());
+        copyReqTimestamps(res);
 
         if (prepErr == null) {
             if (tx.needReturnValue() || tx.nearOnOriginatingNode() || tx.hasInterceptor())
@@ -936,6 +935,12 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         res.filterFailedKeys(filterFailedKeys);
 
         return res;
+    }
+
+    /**  */
+    private void copyReqTimestamps(GridNearTxPrepareResponse res) {
+        res.reqReceivedTimestamp(req == null ? INVALID_TIMESTAMP : req.receiveTimestamp());
+        res.reqSendTimestamp(req == null ? INVALID_TIMESTAMP :req.sendTimestamp());
     }
 
     /**

@@ -27,32 +27,42 @@ public interface TimeLoggableResponse extends Message {
      * @return Send timestamp of request that triggered this response
      * in request sender node time.
      */
-    long getReqSentTimestamp();
+    long reqSentTimestamp();
 
     /**
      * Sets request send timestamp in sender node time.
      */
-    void setReqSendTimestamp(long reqSentTimestamp);
+    void reqSendTimestamp(long reqSentTimestamp);
 
     /**
      * @return Received timestamp of request that triggered this response
      * in request receiver node time.
      */
-    long getReqReceivedTimestamp();
+    long reqReceivedTimestamp();
 
     /**
      * Sets request receive timestamp in receiver time.
      */
-    void setReqReceivedTimestamp(long reqReceivedTimestamp);
+    void reqReceivedTimestamp(long reqReceivedTimestamp);
 
     /**
      * @return Response send timestamp which is sum of request send
      * timestamp and request processing time.
      */
-    long getResponseSendTimestamp();
+    long responseSendTimestamp();
 
     /**
      * Sets request send timestamp.
      */
-    void setResponseSendTimestamp(long responseSendTimestamp);
+    void responseSendTimestamp(long responseSendTimestamp);
+
+    /**
+     * Copies request timestamps.
+     *
+     * @param req Request that triggered this response.
+     */
+    default void copyTimestamps(TimeLoggableRequest req) {
+        reqReceivedTimestamp(req.receiveTimestamp());
+        reqSendTimestamp(req.sendTimestamp());
+    }
 }

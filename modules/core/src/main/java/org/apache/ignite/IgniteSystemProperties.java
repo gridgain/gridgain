@@ -1231,21 +1231,14 @@ public final class IgniteSystemProperties {
         "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
 
     /**
-     * Enables logging time between request and response messages.
+     * Enables logging time between request and response messages.<br/>
      * Default: {@code false}
      * {see {@link TcpCommunicationMetricsListener}}
      */
     public static final String IGNITE_ENABLE_MESSAGES_TIME_LOGGING = "IGNITE_ENABLE_MESSAGES_TIME_LOGGING";
 
     /**
-     * Maximum time(in seconds) message data will be stored.
-     * Default: 300
-     * {see {@link TcpCommunicationMetricsListener}}
-     */
-    public static final String IGNITE_MESSAGES_INFO_STORE_TIME = "IGNITE_MESSAGES_INFO_STORE_TIME";
-
-    /**
-     * Bounds for histogram metrics in milliseconds.
+     * Bounds for histogram metrics in milliseconds.<br/>
      * Default: {10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000}
      * {see {@link TcpCommunicationMetricsListener}}
      */

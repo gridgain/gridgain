@@ -419,8 +419,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                 dhtRes.nearEvicted(nearEvicted);
 
-                dhtRes.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                dhtRes.setReqSendTimestamp(req.getSendTimestamp());
+                dhtRes.copyTimestamps(req);
 
                 sendMessageForMissedHandler(cacheMsg,
                     nodeId,
@@ -761,8 +760,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     0,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
@@ -779,8 +777,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.miniId(),
                     req.deployInfo() != null);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -798,8 +795,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.futureId(),
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.onError(req.classError());
 
@@ -831,8 +827,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -851,8 +846,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false
                 );
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -871,8 +865,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.version(),
                     req.deployInfo() != null);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -915,8 +908,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
@@ -941,8 +933,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                 res.error(req.classError());
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, req.policy());
             }
@@ -988,8 +979,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                 res.error(req.classError());
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
@@ -1027,8 +1017,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -1048,8 +1037,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -1069,8 +1057,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.error(req.classError());
 
@@ -1119,8 +1106,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.batchId(),
                     req.classError());
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
 
@@ -1136,8 +1122,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.miniId(),
                     req.version(),
                     req.classError(),
-                    req.getReceiveTimestamp(),
-                    req.getSendTimestamp());
+                    req.receiveTimestamp(),
+                    req.sendTimestamp());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
 
@@ -1153,8 +1139,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.futureId(),
                     false);
 
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 res.onError(req.classError());
 

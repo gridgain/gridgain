@@ -73,10 +73,10 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
     @GridDirectCollection(Message.class)
     private List<Message> vals;
 
-    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    /** @see TimeLoggableRequest#sendTimestamp(). */
     private long sendTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    /** @see TimeLoggableRequest#receiveTimestamp(). */
     @GridDirectTransient
     private long receiveTimestamp = INVALID_TIMESTAMP;
 
@@ -178,22 +178,22 @@ public class GridDhtTxQueryEnlistRequest extends GridCacheIdMessage implements G
     }
 
     /** {@inheritDoc} */
-    @Override public long getSendTimestamp() {
+    @Override public long sendTimestamp() {
         return sendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setSendTimestamp(long sendTimestamp) {
+    @Override public void sendTimestamp(long sendTimestamp) {
         this.sendTimestamp = sendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long getReceiveTimestamp() {
+    @Override public long receiveTimestamp() {
         return receiveTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+    @Override public void receiveTimestamp(long receiveTimestamp) {
         this.receiveTimestamp = receiveTimestamp;
     }
 

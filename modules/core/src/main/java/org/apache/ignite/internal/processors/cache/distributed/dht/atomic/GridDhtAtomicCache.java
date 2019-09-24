@@ -1713,8 +1713,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // For full sync mode response can be sent to node that didn't send request.
         if (req.syncMode != FULL_SYNC) {
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
         }
 
         res.addFailedKeys(req.keys(), e);
@@ -1743,8 +1742,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // For full sync mode response can be sent to node that didn't send request.
         if (req.syncMode != FULL_SYNC) {
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
         }
 
         assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
@@ -3297,8 +3295,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             false);
 
-        res.setReqSendTimestamp(checkReq.getSendTimestamp());
-        res.setReqReceivedTimestamp(checkReq.getReceiveTimestamp());
+        res.copyTimestamps(checkReq);
 
         GridCacheReturn ret = new GridCacheReturn(false, true);
 
@@ -3462,8 +3459,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 dhtRes.nearEvicted(nearEvicted);
 
-                dhtRes.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                dhtRes.setReqSendTimestamp(req.getSendTimestamp());
+                dhtRes.copyTimestamps(req);
             }
         }
 
@@ -3497,15 +3493,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 req.futureId(),
                 ctx.deploymentEnabled());
 
-            dhtRes.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            dhtRes.setReqSendTimestamp(req.getSendTimestamp());
+            dhtRes.copyTimestamps(req);
         }
 
         if (dhtRes != null)
             sendDhtPrimaryResponse(nodeId, req, dhtRes);
         else
-            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId(), req.getSendTimestamp(),
-                                       req.getReceiveTimestamp());
+            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId(), req.sendTimestamp(),
+                                       req.receiveTimestamp());
     }
 
     /**
@@ -3575,8 +3570,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (futIds.size() >= DEFERRED_UPDATE_RESPONSE_BUFFER_SIZE) {
             resMap.remove(primaryId);
 
-            msg.setReqSendTimestamp(reqSendTs);
-            msg.setReqReceivedTimestamp(reqReceiveTs);
+            msg.reqSendTimestamp(reqSendTs);
+            msg.reqReceivedTimestamp(reqReceiveTs);
 
             sendDeferredUpdateResponse(primaryId, msg);
         }

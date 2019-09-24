@@ -623,8 +623,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         if (res != null) {
             try {
                 // Reply back to sender.
-                res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-                res.setReqSendTimestamp(req.getSendTimestamp());
+                res.copyTimestamps(req);
 
                 ctx.io().send(nodeId, res, ctx.ioPolicy());
 
@@ -1357,8 +1356,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             ctx.deploymentEnabled(),
             false);
 
-        res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-        res.setReqSendTimestamp(req.getSendTimestamp());
+        res.copyTimestamps(req);
 
         try {
             ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -1413,8 +1411,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 ctx.deploymentEnabled(),
                 clienRemapVer != null);
 
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
 
             if (err == null) {
                 res.pending(localDhtPendingVersions(entries, mappedVer));
@@ -1528,8 +1525,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 ctx.deploymentEnabled(),
                 false);
 
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
 
             return res;
         }
@@ -2061,8 +2057,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.miniId(),
                 req.version(),
                 ex,
-                req.getReceiveTimestamp(),
-                req.getSendTimestamp());
+                req.receiveTimestamp(),
+                req.sendTimestamp());
 
             try {
                 ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -2095,8 +2091,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
         fut.listen(NearTxResultHandler.instance());
 
-        fut.setReceiveTimestamp(req.getReceiveTimestamp());
-        fut.setSendTimestamp(req.getSendTimestamp());
+        fut.receiveTimestamp(req.receiveTimestamp());
+        fut.sendTimestamp(req.sendTimestamp());
 
         fut.init();
     }
@@ -2333,8 +2329,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.batchId(),
                 null);
 
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
 
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());
@@ -2350,8 +2345,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.batchId(),
                 e);
 
-            res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-            res.setReqSendTimestamp(req.getSendTimestamp());
+            res.copyTimestamps(req);
 
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());

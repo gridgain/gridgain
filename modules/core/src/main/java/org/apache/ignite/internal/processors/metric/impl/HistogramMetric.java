@@ -123,7 +123,7 @@ public class HistogramMetric {
          * @param bounds Bounds of measurements.
          */
         public HistogramHolder(long[] bounds) {
-            assert !isEmpty(bounds) && F.isSorted(bounds);
+            assert !isEmpty(bounds) && F.isSorted(bounds) : "Unexpected bounds: " + bounds;
 
             this.bounds = bounds;
 

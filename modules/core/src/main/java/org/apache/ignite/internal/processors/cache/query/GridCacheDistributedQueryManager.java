@@ -294,8 +294,8 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             req.id(),
             req.includeMetaData(),
             req.allPages(),
-            req.getSendTimestamp(),
-            req.getReceiveTimestamp(),
+            req.sendTimestamp(),
+            req.receiveTimestamp(),
             req.arguments()
         );
     }
@@ -457,8 +457,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(), e,
                     cctx.deploymentEnabled());
 
-                res.setReqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
-                res.setReqSendTimestamp(qryInfo.reqSendTimestamp());
+                copyReqTimestamps(qryInfo, res);
 
                 sendQueryResponse(qryInfo.senderId(),
                     res,
@@ -477,14 +476,24 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             res.data(data);
             res.finished(finished);
 
-            res.setReqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
-            res.setReqSendTimestamp(qryInfo.reqSendTimestamp());
+            copyReqTimestamps(qryInfo, res);
 
             if (!sendQueryResponse(qryInfo.senderId(), res, qryInfo.query().timeout()))
                 return false;
         }
 
         return true;
+    }
+
+    /**
+     * Writes timestamps to response.
+     *
+     * @param qryInfo Query info.
+     * @param res Response message.
+     */
+    private void copyReqTimestamps(GridCacheQueryInfo qryInfo, GridCacheQueryResponse res) {
+        res.reqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
+        res.reqSendTimestamp(qryInfo.reqSendTimestamp());
     }
 
     /** {@inheritDoc} */

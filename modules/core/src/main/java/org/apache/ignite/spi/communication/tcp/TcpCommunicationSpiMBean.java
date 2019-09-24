@@ -18,7 +18,7 @@ package org.apache.ignite.spi.communication.tcp;
 
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.processors.metric.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.mxbean.MXBeanDescription;
 import org.apache.ignite.spi.IgniteSpiManagementMBean;
 
@@ -181,7 +181,7 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
     public Map<UUID, Long> getSentMessagesByNode();
 
     /**
-     * @return Map containing netrowrk time for passing request and response
+     * @return Map containing network time for passing request and response
      * grouped by response class name and node ids.
      */
     @MXBeanDescription("Network time for message grouped by message class name and node.")

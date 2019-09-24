@@ -1150,8 +1150,7 @@ public class CacheGroupContext {
             topVer,
             assignment.assignment());
 
-        res.setReqReceivedTimestamp(req.getReceiveTimestamp());
-        res.setReqSendTimestamp(req.getSendTimestamp());
+        res.copyTimestamps(req);
 
         if (aff.centralizedAffinityFunction()) {
             assert assignment.idealAssignment() != null;

@@ -56,10 +56,10 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage imple
     /** {@code True} if should check only tx on near node. */
     private boolean nearTxCheck;
 
-    /** @see TimeLoggableRequest#getSendTimestamp(). */
+    /** @see TimeLoggableRequest#sendTimestamp(). */
     private long sendTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableRequest#getReceiveTimestamp(). */
+    /** @see TimeLoggableRequest#receiveTimestamp(). */
     @GridDirectTransient
     private long receiveTimestamp = INVALID_TIMESTAMP;
 
@@ -144,22 +144,22 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage imple
     }
 
     /** {@inheritDoc} */
-    @Override public long getSendTimestamp() {
+    @Override public long sendTimestamp() {
         return sendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setSendTimestamp(long sendTimestamp) {
+    @Override public void sendTimestamp(long sendTimestamp) {
         this.sendTimestamp = sendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long getReceiveTimestamp() {
+    @Override public long receiveTimestamp() {
         return receiveTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setReceiveTimestamp(long receiveTimestamp) {
+    @Override public void receiveTimestamp(long receiveTimestamp) {
         this.receiveTimestamp = receiveTimestamp;
     }
 

@@ -69,15 +69,15 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse i
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> preloadEntries;
 
-    /** @see TimeLoggableResponse#getReqSentTimestamp(). */
+    /** @see TimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
     private long reqSendTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#getReqReceivedTimestamp(). */
+    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#getResponseSendTimestamp(). */
+    /** @see TimeLoggableResponse#responseSendTimestamp(). */
     private long responseSendTimestamp = INVALID_TIMESTAMP;
 
 
@@ -244,32 +244,32 @@ public class GridDhtTxPrepareResponse extends GridDistributedTxPrepareResponse i
     }
 
     /** {@inheritDoc} */
-    @Override public void setReqSendTimestamp(long reqSendTimestamp) {
+    @Override public void reqSendTimestamp(long reqSendTimestamp) {
         this.reqSendTimestamp = reqSendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long getReqSentTimestamp() {
+    @Override public long reqSentTimestamp() {
         return reqSendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setReqReceivedTimestamp(long reqReceivedTimestamp) {
+    @Override public void reqReceivedTimestamp(long reqReceivedTimestamp) {
         this.reqReceivedTimestamp = reqReceivedTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long getReqReceivedTimestamp() {
+    @Override public long reqReceivedTimestamp() {
         return reqReceivedTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public void setResponseSendTimestamp(long responseSendTimestamp) {
+    @Override public void responseSendTimestamp(long responseSendTimestamp) {
         this.responseSendTimestamp = responseSendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long getResponseSendTimestamp() {
+    @Override public long responseSendTimestamp() {
         return responseSendTimestamp;
     }
 

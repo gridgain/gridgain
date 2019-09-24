@@ -167,26 +167,26 @@ public final class GridDhtTxEnlistFuture extends GridDhtTxAbstractEnlistFuture<G
     }
 
     /**  */
-    public void setSendTimestamp(long sendTimestamp) {
+    public void sendTimestamp(long sendTimestamp) {
         this.sendTimestamp = sendTimestamp;
     }
 
     /**  */
-    public void setReceiveTimestamp(long receiveTimestamp) {
+    public void receiveTimestamp(long receiveTimestamp) {
         this.receiveTimestamp = receiveTimestamp;
     }
 
     /**
      * @return Request send timestamp.
      */
-    public long getSendTimestamp() {
+    public long sendTimestamp() {
         return sendTimestamp;
     }
 
     /**
      * @return Request receive timestamp.
      */
-    public long getReceiveTimestamp() {
+    public long receiveTimestamp() {
         return receiveTimestamp;
     }
 }

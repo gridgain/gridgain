@@ -23,20 +23,20 @@ public interface TimeLoggableRequest extends Message {
     /**
      * @return Message send timestamp in sender node time.
      */
-    long getSendTimestamp();
+    long sendTimestamp();
 
     /**
      * Sets send timestamp.
      */
-    void setSendTimestamp(long sendTimestamp);
+    void sendTimestamp(long sendTimestamp);
 
     /**
      * @return Message receive timestamp in receiver node time.
      */
-    long getReceiveTimestamp();
+    long receiveTimestamp();
 
     /**
      * Sets receive timestamp.
      */
-    void setReceiveTimestamp(long receiveTimestamp);
+    void receiveTimestamp(long receiveTimestamp);
 }

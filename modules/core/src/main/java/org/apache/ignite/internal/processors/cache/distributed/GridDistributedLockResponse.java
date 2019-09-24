@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Lock response message.
  */
-public class GridDistributedLockResponse extends GridDistributedBaseMessage{
+public class GridDistributedLockResponse extends GridDistributedBaseMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

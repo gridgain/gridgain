@@ -31,7 +31,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.processors.metric.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -41,8 +41,6 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
 /**
@@ -51,11 +49,6 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommonAbstractTest {
     /** Grid count. */
     protected static final int GRID_CNT = 3;
-
-    /**
-     *
-     */
-    abstract void setEnabledParam();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -76,7 +69,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        setEnabledParam();
+        super.beforeTest();
 
         startGrids(GRID_CNT);
     }
@@ -85,14 +78,13 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
-        System.clearProperty(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
-        System.clearProperty(IGNITE_COMM_SPI_TIME_HIST_BOUNDS);
+        super.afterTest();
     }
 
     /**
      *
      */
-    protected void checkOutcomingEventsNum(Class reqClass, Class respClass) throws MalformedObjectNameException {
+    protected void checkOutgoingEventsNum(Class reqClass, Class respClass) throws MalformedObjectNameException {
         checkEventsNum(0, 1, reqClass, respClass);
     }
 
@@ -100,7 +92,8 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      * Compares sent events number with histogram entries number.
      * Fails if these numbers differ.
      */
-    private void checkEventsNum(int sourceIdx,
+    private void checkEventsNum(
+        int sourceIdx,
         int targetIdx,
         Class reqClass,
         Class respClass
