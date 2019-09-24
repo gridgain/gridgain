@@ -79,6 +79,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
         /// <summary>
         /// Removes thread exit callback that has been set with <see cref="SetThreadExitCallback"/>.
+        /// NOTE: callback may be called as a result of this method call on some platforms.
         /// </summary>
         /// <param name="callbackId">Callback id returned from <see cref="SetThreadExitCallback"/>.</param>
         public static void RemoveThreadExitCallback(int callbackId)
