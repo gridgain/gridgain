@@ -40,11 +40,11 @@ public class QueryUtils {
 
         for (GridQueryFieldMetadata col : meta) {
             res.add(
-                    new QueryField()
-                            .setSchemaName(col.schemaName())
-                            .setTypeName(col.typeName())
-                            .setFieldName(col.fieldName())
-                            .setFieldTypeName(col.fieldTypeName())
+                new QueryField()
+                    .setSchemaName(col.schemaName())
+                    .setTypeName(col.typeName())
+                    .setFieldName(col.fieldName())
+                    .setFieldTypeName(col.fieldTypeName())
             );
         }
 
@@ -59,7 +59,7 @@ public class QueryUtils {
         SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
         qry.setPageSize(arg.getPageSize());
-        qry.setLocal(arg.isLocal());
+        qry.setLocal(arg.getTargetNodeId() != null);
         qry.setDistributedJoins(arg.isDistributedJoins());
         qry.setCollocated(arg.isCollocated());
         qry.setEnforceJoinOrder(arg.isEnforceJoinOrder());

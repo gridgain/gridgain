@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import java.util.UUID;
+
 /**
  * DTO for next page query argument.
  */
@@ -28,6 +30,9 @@ public class NextPageQueryArgument {
 
     /** Result batch size. */
     private int pageSize;
+
+    /** Target node ID. */
+    private UUID targetNodeId;
 
     /**
      * @return Query ID.
@@ -74,6 +79,22 @@ public class NextPageQueryArgument {
      */
     public NextPageQueryArgument setPageSize(int pageSize) {
         this.pageSize = pageSize;
+        return this;
+    }
+
+    /**
+     * @return Node ID on which next page query will be executute.
+     */
+    public UUID getTargetNodeId() {
+        return targetNodeId;
+    }
+
+    /**
+     * @param targetNodeId Target node id.
+     * @return This for chaining method calls.
+     */
+    public NextPageQueryArgument setTargetNodeId(UUID targetNodeId) {
+        this.targetNodeId = targetNodeId;
         return this;
     }
 }

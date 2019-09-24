@@ -19,9 +19,9 @@ package org.gridgain.action.query;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Query holder.
@@ -31,13 +31,13 @@ public class QueryHolder implements AutoCloseable {
     private final String qryId;
 
     /** Cursors. */
-    private final Set<CursorHolder> cursors = new HashSet<>();
+    private final Map<String, CursorHolder> cursors = new HashMap<>();
 
     /** Cancel hook. */
     private final GridQueryCancel cancelHook = new GridQueryCancel();
 
     /** Accessed time. */
-    private final AtomicLong accessedTime = new AtomicLong(System.currentTimeMillis());
+    private long accessedTime = System.currentTimeMillis();
 
     /**
      * @param qryId Query ID.
@@ -56,8 +56,8 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @return Query cursors.
      */
-    public Set<CursorHolder> getCursors() {
-        return cursors;
+    public Collection<CursorHolder> getCursors() {
+        return cursors.values();
     }
 
     /**
@@ -70,16 +70,14 @@ public class QueryHolder implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
         cancelHook.cancel();
-        cursors.forEach(U::closeQuiet);
+        cursors.keySet().forEach(this::closeCursor);
     }
 
     /**
      * @param cursorId Cursor ID.
      */
     public CursorHolder getCursor(String cursorId) {
-        return cursors.stream()
-                .filter(c -> c.getCursorId().equals(cursorId)).findFirst()
-                .orElse(null);
+        return cursors.get(cursorId);
     }
 
     /**
@@ -90,7 +88,7 @@ public class QueryHolder implements AutoCloseable {
 
         if (cursor != null) {
             U.closeQuiet(cursor);
-            cursors.remove(cursor);
+            cursors.remove(cursorId);
         }
     }
 
@@ -98,7 +96,7 @@ public class QueryHolder implements AutoCloseable {
      * Update query holder accessed time.
      */
     public void updateAccessTime() {
-        accessedTime.set(System.currentTimeMillis());
+        accessedTime = System.currentTimeMillis();
     }
 
     /**
@@ -106,6 +104,6 @@ public class QueryHolder implements AutoCloseable {
      * @return @{code true} if difference between current time and accessed time more or equals than ttl.
      */
     public boolean isExpired(long ttl) {
-        return (System.currentTimeMillis() - accessedTime.get()) >= ttl;
+        return (System.currentTimeMillis() - accessedTime) >= ttl;
     }
 }

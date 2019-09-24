@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import java.util.UUID;
+
 /**
  * DTO for query argument.
  */
@@ -35,8 +37,8 @@ public class QueryArgument {
     /** Enforce join order flag. */
     private boolean enforceJoinOrder;
 
-    /** Flag whether to execute query locally. */
-    private boolean loc;
+    /** Target node ID. */
+    private UUID targetNodeId;
 
     /** Result batch size. */
     private int pageSize;
@@ -128,18 +130,18 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if query should be execute local.
+     * @return Node ID on which query will be executute local.
      */
-    public boolean isLocal() {
-        return loc;
+    public UUID getTargetNodeId() {
+        return targetNodeId;
     }
 
     /**
-     * @param loc Local.
+     * @param targetNodeId Target node id.
      * @return This for chaining method calls.
      */
-    public QueryArgument setLocal(boolean loc) {
-        this.loc = loc;
+    public QueryArgument setTargetNodeId(UUID targetNodeId) {
+        this.targetNodeId = targetNodeId;
         return this;
     }
 
