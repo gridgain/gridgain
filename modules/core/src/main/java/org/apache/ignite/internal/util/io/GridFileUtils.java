@@ -19,7 +19,6 @@ package org.apache.ignite.internal.util.io;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 
 import static java.nio.file.StandardOpenOption.CREATE;
