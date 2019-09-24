@@ -83,6 +83,30 @@ public class TableSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTtleOfRecord() throws Exception {
+        try (Ignite ignite = startGrid()) {
+            Table<TestObject> objTbl = new Table<>(
+                ignite,
+                "testObjects",
+                1000
+            );
+
+            TestObject obj1 = new TestObject("1");
+
+            objTbl.save(obj1);
+
+            assertTrue("Object with index '1' exist", objTbl.containsKey(obj1.getId()));
+
+            Thread.sleep(1000L);
+            
+            assertFalse("Object with index '1' expire", objTbl.containsKey(obj1.getId()));
+        }
+    }
+
+    /**
      * Test object
      */
     private static class TestObject extends AbstractDto {
