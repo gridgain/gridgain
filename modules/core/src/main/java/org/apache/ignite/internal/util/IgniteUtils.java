@@ -366,7 +366,7 @@ public abstract class IgniteUtils {
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
 
     /** List of network interface nemes to ignore. */
-    private static List<String> IGNORED_INTERFACES = Arrays.asList("docker0");
+    private static List<String> IGNORED_INTERFACE_NAMES = Arrays.asList("docker0");
 
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
@@ -2021,11 +2021,12 @@ public abstract class IgniteUtils {
             InetAddress inetAddr = InetAddress.getByName(addr);
 
             for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
-                if (!IGNORED_INTERFACES.contains(itf.getName())) {
-                    for (InetAddress itfAddr : asIterable(itf.getInetAddresses())) {
-                        if (itfAddr.equals(inetAddr))
-                            return itf.getDisplayName();
-                    }
+                if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                    continue;
+
+                for (InetAddress itfAddr : asIterable(itf.getInetAddresses())) {
+                    if (itfAddr.equals(inetAddr))
+                        return itf.getDisplayName();
                 }
             }
         }
@@ -2168,11 +2169,12 @@ public abstract class IgniteUtils {
                 List<InetAddress> locAddrs = new ArrayList<>();
 
                 for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
-                    if (!IGNORED_INTERFACES.contains(itf.getName())) {
-                        for (InetAddress addr : asIterable(itf.getInetAddresses())) {
-                            if (!addr.isLinkLocalAddress())
-                                locAddrs.add(addr);
-                        }
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                        continue;
+
+                    for (InetAddress addr : asIterable(itf.getInetAddresses())) {
+                        if (!addr.isLinkLocalAddress())
+                            locAddrs.add(addr);
                     }
                 }
 
@@ -2256,8 +2258,10 @@ public abstract class IgniteUtils {
             List<NetworkInterface> itfs = new ArrayList<>();
 
             for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
-                if (!IGNORED_INTERFACES.contains(itf.getName()))
-                    itfs.add(itf);
+                if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                    continue;
+
+                itfs.add(itf);
             }
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
@@ -2363,15 +2367,16 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
-                    if (!IGNORED_INTERFACES.contains(itf.getName()) && !itf.isLoopback()) {
-                        Enumeration<InetAddress> addrs = itf.getInetAddresses();
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()) || itf.isLoopback())
+                        continue;
 
-                        for (InetAddress addr : asIterable(addrs)) {
-                            String hostAddr = addr.getHostAddress();
+                    Enumeration<InetAddress> addrs = itf.getInetAddresses();
 
-                            if (!addr.isLoopbackAddress() && !ips.contains(hostAddr))
-                                ips.add(hostAddr);
-                        }
+                    for (InetAddress addr : asIterable(addrs)) {
+                        String hostAddr = addr.getHostAddress();
+
+                        if (!addr.isLoopbackAddress() && !ips.contains(hostAddr))
+                            ips.add(hostAddr);
                     }
                 }
             }
@@ -2428,16 +2433,17 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
-                    if (!IGNORED_INTERFACES.contains(itf.getName())) {
-                        byte[] hwAddr = itf.getHardwareAddress();
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                        continue;
 
-                        // Loopback produces empty MAC.
-                        if (hwAddr != null && hwAddr.length > 0) {
-                            String mac = byteArray2HexString(hwAddr);
+                    byte[] hwAddr = itf.getHardwareAddress();
 
-                            if (!macs.contains(mac))
-                                macs.add(mac);
-                        }
+                    // Loopback produces empty MAC.
+                    if (hwAddr != null && hwAddr.length > 0) {
+                        String mac = byteArray2HexString(hwAddr);
+
+                        if (!macs.contains(mac))
+                            macs.add(mac);
                     }
                 }
             }
