@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
@@ -847,7 +848,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cache = GetClientCache<int>();
             var cache2 = Client.GetOrCreateCache<int, int>("TestAsyncCompletionOrder");
 
-            var t1 = cache.PutAllAsync(Enumerable.Range(1, 500000).Select(x => new KeyValuePair<int, int>(x, x)));
+            cache.PutAll(Enumerable.Range(1, 500000).Select(x => new KeyValuePair<int, int>(x, x)));
+            var t1 = cache.RemoveAllAsync();
             var t2 = cache2.PutAsync(1, 1);
 
             t2.Wait();
