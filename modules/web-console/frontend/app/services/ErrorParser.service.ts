@@ -75,7 +75,7 @@ export default class {
                     if (causes && causes[0] !== cause)
                         causes.unshift(cause);
 
-                    causeIdx = err.message.indexOf(CAUSE_STR, causeIdx + CAUSE_STR.length);
+                    causeIdx = err.message.indexOf(CAUSE_STR, causeEndLine);
                 }
 
                 return new ErrorParseResult(
