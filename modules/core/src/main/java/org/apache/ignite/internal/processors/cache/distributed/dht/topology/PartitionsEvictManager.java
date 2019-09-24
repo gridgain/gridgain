@@ -83,7 +83,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      *  Is not thread-safe.
      *  All method should be called under mux synchronization.
      */
-    private volatile BucketQueue evictionQueue;
+    volatile BucketQueue evictionQueue;
 
     /** Lock object. */
     private final Object mux = new Object();
@@ -379,7 +379,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Task for self-scheduled partition eviction / clearing.
      */
-    public class PartitionEvictionTask implements Runnable {
+    class PartitionEvictionTask implements Runnable {
         /** Partition to evict. */
         private final GridDhtLocalPartition part;
 
@@ -450,12 +450,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      *
      */
-    private class BucketQueue {
-        /** Queues contains partitions scheduled for eviction. */
-        private final Queue<PartitionEvictionTask>[] buckets;
-
+    class BucketQueue {
         /** */
         private final long[] bucketSizes;
+
+        /** Queues contains partitions scheduled for eviction. */
+        final Queue<PartitionEvictionTask>[] buckets;
 
         /**
          * @param buckets Number of buckets.
