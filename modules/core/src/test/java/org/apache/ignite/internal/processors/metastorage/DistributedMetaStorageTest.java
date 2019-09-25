@@ -328,7 +328,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testOptimizedWriteTwice() throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
-        igniteEx.cluster().baselineAutoAdjustEnabled(false);
         igniteEx.cluster().active(true);
 
         metastorage(0).write("key1", "value1");
@@ -349,7 +348,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testClient() throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
-        igniteEx.cluster().baselineAutoAdjustEnabled(false);
         igniteEx.cluster().active(true);
 
         metastorage(0).write("key0", "value0");
@@ -378,7 +376,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testClientReconnect() throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
-        igniteEx.cluster().baselineAutoAdjustEnabled(false);
         igniteEx.cluster().active(true);
 
         startClient(1);

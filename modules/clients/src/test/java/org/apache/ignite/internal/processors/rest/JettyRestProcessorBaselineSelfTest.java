@@ -25,6 +25,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineCommandResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -147,7 +148,10 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
 
         assertBaseline(content(null, GridRestCommand.BASELINE_CURRENT_STATE), sz, sz);
 
-        startGrid(sz);
+        IgniteEx ignite = startGrid(sz);
+
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         assertBaseline(content(null, GridRestCommand.BASELINE_CURRENT_STATE), sz, sz + 1);
 
         assertBaseline(content(null, GridRestCommand.BASELINE_SET, "topVer",

@@ -1050,6 +1050,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
     public void testSettingBaselineTopologyWithOfflineNodeFromOldTopology() throws Exception {
         Ignite ignite = startGrids(2);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         ignite.cluster().active(true);
 
         stopGrid(1);
