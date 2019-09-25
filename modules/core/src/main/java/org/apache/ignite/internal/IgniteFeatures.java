@@ -95,8 +95,10 @@ public enum IgniteFeatures {
     WC_SNAPSHOT_CHAIN_MODE(22),
 
     /** Support of baseline auto adjustment for Web Console. */
-    WC_BASELINE_AUTO_ADJUSTMENT(23)
-    ;
+    WC_BASELINE_AUTO_ADJUSTMENT(23),
+
+    /** Support of DR-specific visor tasks used by control utility. */
+    DR_CONTROL_UTILITY(25);
 
     /**
      * Unique feature identifier.

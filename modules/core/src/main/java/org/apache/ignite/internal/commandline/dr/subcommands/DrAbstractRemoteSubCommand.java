@@ -33,12 +33,21 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
+import static org.apache.ignite.internal.IgniteFeatures.DR_CONTROL_UTILITY;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+
 /** */
 public abstract class DrAbstractRemoteSubCommand<
     VisorArgsDto extends IgniteDataTransferObject,
     VisorResultDto extends IgniteDataTransferObject,
     DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>
 > implements Command<DrArgs> {
+    /** */
+    protected static boolean drControlUtilitySupported(GridClientNode node) {
+        return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), DR_CONTROL_UTILITY);
+    }
+
     /** */
     private DrArgs args;
 
@@ -78,14 +87,16 @@ public abstract class DrAbstractRemoteSubCommand<
 
         Collection<GridClientNode> nodes = compute.nodes();
 
-        if (F.isEmpty(nodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null);
-
         List<UUID> nodeIds = nodes.stream()
+            .filter(DrAbstractRemoteSubCommand::drControlUtilitySupported)
             .map(GridClientNode::nodeId)
             .collect(Collectors.toList());
 
-        return compute.execute(visorTaskName(), new VisorTaskArgument<>(nodeIds, args.toVisorArgs(), false));
+        if (F.isEmpty(nodeIds))
+            throw new GridClientDisconnectedException("Connectable nodes not found", null);
+
+        return compute.projection(DrAbstractRemoteSubCommand::drControlUtilitySupported)
+            .execute(visorTaskName(), new VisorTaskArgument<>(nodeIds, args.toVisorArgs(), false));
     }
 
     /** {@inheritDoc} */
