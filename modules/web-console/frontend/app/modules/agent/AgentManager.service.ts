@@ -183,7 +183,7 @@ export default class AgentManager {
 
     clusterVersion: string;
 
-    features: AgentTypes.IgniteFeatures[];
+    features: Map<AgentTypes.IgniteFeatures, boolean | null>;
 
     connectionSbj = new BehaviorSubject(new ConnectionState());
 
@@ -905,13 +905,13 @@ export default class AgentManager {
      * @param cluster Cluster.
      * @return all supported features.
      */
-    allFeatures(cluster: AgentTypes.ClusterStats): AgentTypes.IgniteFeatures[] {
+    allFeatures(cluster: AgentTypes.ClusterStats): Map<AgentTypes.IgniteFeatures, boolean | null> {
         return _.reduce(AgentTypes.IgniteFeatures, (acc, featureId) => {
-            if (_.isNumber(featureId) && this.featureSupported(cluster, featureId))
-                acc.push(featureId);
+            if (_.isNumber(featureId))
+                acc.set(featureId, this.featureSupported(cluster, featureId));
 
             return acc;
-        }, []);
+        }, new Map());
     }
 
     /**
@@ -923,14 +923,14 @@ export default class AgentManager {
      */
     featureSupported(cluster: AgentTypes.ClusterStats, feature: AgentTypes.IgniteFeatures): boolean {
         if (_.isNil(cluster.supportedFeatures))
-            return false;
+            return null;
 
         const bytes = this._base64ToArrayBuffer(cluster.supportedFeatures);
 
         const byteIdx = feature >>> 3;
 
         if (byteIdx >= bytes.length)
-            return false;
+            return null;
 
         const bitIdx = feature & 0x7;
 
