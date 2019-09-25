@@ -19,16 +19,10 @@ package org.apache.ignite.internal.processors.query.calcite.rel.logical;
 import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.metadata.RelMdCollation;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
 
 public final class IgniteLogicalProject extends Project implements IgniteRel {
@@ -41,31 +35,7 @@ public final class IgniteLogicalProject extends Project implements IgniteRel {
     super(cluster, traitSet, input, projects, rowType);
   }
 
-  public IgniteLogicalProject(RelInput input) {
-    super(input);
-  }
-
-  public static IgniteLogicalProject create(final RelNode input,
-      final List<? extends RexNode> projects, List<String> fieldNames) {
-    final RelOptCluster cluster = input.getCluster();
-    final RelDataType rowType =
-        RexUtil.createStructType(cluster.getTypeFactory(), projects,
-            fieldNames, SqlValidatorUtil.F_SUGGESTER);
-    return create(input, projects, rowType);
-  }
-
-  public static IgniteLogicalProject create(final RelNode input,
-      final List<? extends RexNode> projects, RelDataType rowType) {
-    final RelOptCluster cluster = input.getCluster();
-    final RelMetadataQuery mq = cluster.getMetadataQuery();
-    final RelTraitSet traitSet =
-        cluster.traitSet().replace(IgniteRel.LOGICAL_CONVENTION)
-            .replaceIfs(RelCollationTraitDef.INSTANCE,
-                () -> RelMdCollation.project(mq, input, projects));
-    return new IgniteLogicalProject(cluster, traitSet, input, projects, rowType);
-  }
-
-  @Override public IgniteLogicalProject copy(RelTraitSet traitSet, RelNode input,
+    @Override public IgniteLogicalProject copy(RelTraitSet traitSet, RelNode input,
       List<RexNode> projects, RelDataType rowType) {
     return new IgniteLogicalProject(getCluster(), traitSet, input, projects, rowType);
   }

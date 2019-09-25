@@ -17,35 +17,30 @@
 package org.apache.ignite.internal.processors.query.calcite.prepare;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
-import org.apache.calcite.adapter.enumerable.EnumerableInterpretable;
-import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.runtime.Bindable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.tools.Planner;
-import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.calcite.CalciteQueryProcessor;
 import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
-import org.apache.ignite.internal.processors.query.calcite.rule.IgniteRules;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerPhase;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerType;
 import org.apache.ignite.internal.processors.query.calcite.util.Commons;
 import org.apache.ignite.internal.processors.query.calcite.util.ListFieldsQueryCursor;
-
-import static org.apache.calcite.adapter.enumerable.EnumerableRel.Prefer.ARRAY;
 
 /**
  *
@@ -62,7 +57,6 @@ public class DistributedExecution implements QueryExecution {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override public FieldsQueryCursor<List<?>> execute() {
         CalciteQueryProcessor proc = Objects.requireNonNull(ctx.unwrap(CalciteQueryProcessor.class));
         Query query = Objects.requireNonNull(ctx.unwrap(Query.class));
@@ -75,18 +69,28 @@ public class DistributedExecution implements QueryExecution {
 
         RelRoot relRoot;
 
-        try (Planner planner = proc.planner(traitDefs, ctx)) {
+        try (IgnitePlanner planner = proc.planner(traitDefs, ctx)) {
+            // Parse
             SqlNode sqlNode = planner.parse(query.sql());
+
+            // Validate
             sqlNode = planner.validate(sqlNode);
+
+            // Convert to Relational operators graph
             relRoot = planner.rel(sqlNode);
+
             RelNode rel = relRoot.rel;
+
+            // Transformation chain
+            rel = planner.transform(PlannerType.HEP, PlannerPhase.SUBQUERY_REWRITE, rel, rel.getTraitSet());
 
             RelTraitSet desired = rel.getTraitSet()
                 .replace(relRoot.collation)
                 .replace(IgniteRel.LOGICAL_CONVENTION)
+                .replace(RelDistributions.ANY)
                 .simplify();
 
-            rel = planner.transform(IgniteRules.IGNITE_LOGICAL_PROGRAM_IDX, desired, rel);
+            rel = planner.transform(PlannerType.VOLCANO, PlannerPhase.LOGICAL, rel, desired);
 
             relRoot = relRoot.withRel(rel).withKind(sqlNode.getKind());
         } catch (SqlParseException | ValidationException e) {
@@ -95,23 +99,14 @@ public class DistributedExecution implements QueryExecution {
             Commons.log(ctx).error(msg, e);
 
             throw new IgniteSQLException(msg, IgniteQueryErrorCode.PARSING, e);
-        } catch (RelConversionException e) {
-            String msg = "Failed to create logical query execution tree.";
+        } catch (Exception e) {
+            String msg = "Failed to create query execution graph.";
 
             Commons.log(ctx).error(msg, e);
 
             throw new IgniteSQLException(msg, IgniteQueryErrorCode.UNKNOWN, e);
         }
 
-        EnumerableRel rel = (EnumerableRel) relRoot.rel;
-
-        LinkedHashMap<String, Object> params = new LinkedHashMap<>();
-
-        params.put("_conformance", proc.config().getParserConfig().conformance());
-
-        Bindable<Object[]> bindable = EnumerableInterpretable.toBindable(params, null, rel, ARRAY);
-
-        return new ListFieldsQueryCursor<>(rel.getRowType(),
-            bindable.bind(new DataContextImpl(query.params(params), ctx)), Arrays::asList);
+        return new ListFieldsQueryCursor<>(relRoot.rel.getRowType(), Linq4j.emptyEnumerable(), Arrays::asList);
     }
 }

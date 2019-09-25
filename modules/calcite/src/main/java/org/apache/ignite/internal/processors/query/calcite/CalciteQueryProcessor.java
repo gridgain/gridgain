@@ -29,7 +29,6 @@ import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Planner;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.GridKernalContext;
@@ -37,10 +36,9 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryContext;
 import org.apache.ignite.internal.processors.query.QueryEngine;
 import org.apache.ignite.internal.processors.query.calcite.prepare.DistributedExecution;
-import org.apache.ignite.internal.processors.query.calcite.prepare.PlannerImpl;
+import org.apache.ignite.internal.processors.query.calcite.prepare.IgnitePlanner;
 import org.apache.ignite.internal.processors.query.calcite.prepare.Query;
 import org.apache.ignite.internal.processors.query.calcite.prepare.QueryExecution;
-import org.apache.ignite.internal.processors.query.calcite.rule.IgniteRules;
 import org.apache.ignite.internal.processors.query.calcite.schema.CalciteSchemaProvider;
 import org.apache.ignite.internal.processors.query.calcite.util.Commons;
 import org.jetbrains.annotations.NotNull;
@@ -77,8 +75,6 @@ public class CalciteQueryProcessor implements QueryEngine {
                                 SqlLibrary.MYSQL))
                 // Context provides a way to store data within the planner session that can be accessed in planner rules.
                 .context(Contexts.of(ctx, log, this))
-                // Create transform sequence.
-                .programs(IgniteRules.program())
                 // Custom cost factory to use during optimization
                 .costFactory(null)
                 .typeSystem(RelDataTypeSystem.DEFAULT)
@@ -110,14 +106,14 @@ public class CalciteQueryProcessor implements QueryEngine {
     }
 
     /** */
-    public Planner planner(RelTraitDef[] traitDefs, Context ctx) {
+    public IgnitePlanner planner(RelTraitDef[] traitDefs, Context ctx) {
         FrameworkConfig cfg = Frameworks.newConfigBuilder(config())
                 .defaultSchema(ctx.unwrap(SchemaPlus.class))
                 .traitDefs(traitDefs)
                 .context(ctx)
                 .build();
 
-        return new PlannerImpl(cfg);
+        return new IgnitePlanner(cfg);
     }
 
     private QueryExecution prepare(Context ctx) {

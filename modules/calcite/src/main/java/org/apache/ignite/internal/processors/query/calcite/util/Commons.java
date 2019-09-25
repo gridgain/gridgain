@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.calcite.util;
 
+import java.util.function.Predicate;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.rel.RelNode;
@@ -38,5 +39,9 @@ public final class Commons {
 
     public static Context convert(QueryContext ctx) {
         return ctx == null ? Contexts.empty() : Contexts.of(ctx.unwrap(Object[].class));
+    }
+
+    public static <T> Predicate<T> any() {
+        return obj -> true;
     }
 }

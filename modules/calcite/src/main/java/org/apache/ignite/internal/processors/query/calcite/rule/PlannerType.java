@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.calcite.rel;
-
-import org.apache.calcite.plan.Convention;
-import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelNode;
+package org.apache.ignite.internal.processors.query.calcite.rule;
 
 /**
  *
  */
-public interface IgniteRel extends RelNode {
-    Convention LOGICAL_CONVENTION = new Convention.Impl("IGNITE_LOGICAL", IgniteRel.class) {
-        /** */
-        @Override public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
-            return true; // Enables trait definition conversion
-        }
-    };
-
-    default void visit(IgniteVisitor visitor) {
-        visitor.visit(this);
-    }
+public enum PlannerType {
+    HEP,
+    VOLCANO;
 }

@@ -20,8 +20,11 @@ import java.util.Iterator;
 import java.util.function.Function;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheMode;
@@ -32,13 +35,14 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.calcite.rel.logical.IgniteLogicalTableScan;
 import org.apache.ignite.internal.processors.query.calcite.util.ScanIterator;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UNDEFINED_CACHE_ID;
 
 /** */
-public class IgniteTable extends AbstractTable implements TableDescriptor {
+public class IgniteTable extends AbstractTable implements TableDescriptor, TranslatableTable {
     private final GridQueryTypeDescriptor typeDescriptor;
     private final GridCacheContextInfo cacheInfo;
     private final GridQueryProperty[] props;
@@ -73,6 +77,11 @@ public class IgniteTable extends AbstractTable implements TableDescriptor {
             return aClass.cast(cacheInfo);
         else
             return super.unwrap(aClass);
+    }
+
+    /** {@inheritDoc} */
+    @Override public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
+        return IgniteLogicalTableScan.create(context.getCluster(), relOptTable);
     }
 
     public Enumerable<Object[]> enumerable() {

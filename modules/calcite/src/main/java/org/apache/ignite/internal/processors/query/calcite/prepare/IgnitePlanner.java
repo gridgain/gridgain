@@ -28,15 +28,24 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
+import org.apache.calcite.rel.RelShuttleImpl;
+import org.apache.calcite.rel.core.TableFunctionScan;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
@@ -54,14 +63,18 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.Program;
+import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerPhase;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerType;
 
 /**
  *
  */
-public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
+public class IgnitePlanner implements Planner, RelOptTable.ViewExpander {
     private final SqlOperatorTable operatorTable;
     private final ImmutableList<Program> programs;
     private final FrameworkConfig frameworkConfig;
@@ -74,6 +87,7 @@ public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
     private final RexExecutor executor;
     private final SchemaPlus defaultSchema;
     private final JavaTypeFactory typeFactory;
+    private final RelMetadataProvider metadataProvider;
 
     private boolean open;
 
@@ -83,7 +97,7 @@ public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
     /**
      * @param config Framework config.
      */
-    public PlannerImpl(FrameworkConfig config) {
+    public IgnitePlanner(FrameworkConfig config) {
         frameworkConfig = config;
         defaultSchema = config.getDefaultSchema();
         operatorTable = config.getOperatorTable();
@@ -95,6 +109,7 @@ public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
         executor = config.getExecutor();
         context = config.getContext();
         connectionConfig = connConfig();
+        metadataProvider = DefaultRelMetadataProvider.INSTANCE; // TODO: right costs
 
         RelDataTypeSystem typeSystem = connectionConfig
             .typeSystem(RelDataTypeSystem.class, RelDataTypeSystem.DEFAULT);
@@ -238,14 +253,57 @@ public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
     }
 
     /** {@inheritDoc} */
-    @Override public RelNode transform(int ruleSetIndex, RelTraitSet requiredOutputTraits, RelNode rel) {
+    @Override public RelNode transform(int programIdx, RelTraitSet targetTraits, RelNode rel) {
         ready();
 
-        rel.getCluster()
-            .setMetadataProvider(new CachingRelMetadataProvider(
-                rel.getCluster().getMetadataProvider(), rel.getCluster().getPlanner()));
-        Program program = programs.get(ruleSetIndex);
-        return program.run(planner, rel, requiredOutputTraits, ImmutableList.of(), ImmutableList.of());
+        RelTraitSet toTraits = targetTraits.simplify();
+
+        rel.accept(new MetaDataProviderModifier(metadataProvider));
+
+        return programs.get(programIdx).run(planner, rel, toTraits, ImmutableList.of(), ImmutableList.of());
+    }
+
+    public RelNode transform(PlannerType plannerType, PlannerPhase plannerPhase, RelNode input, RelTraitSet targetTraits)  {
+        ready();
+
+        RelTraitSet toTraits = targetTraits.simplify();
+        RuleSet rules = plannerPhase.getRules(context);
+
+        input.accept(new MetaDataProviderModifier(metadataProvider));
+
+        RelNode output;
+
+        switch (plannerType) {
+            case HEP:
+                final HepProgramBuilder programBuilder = new HepProgramBuilder();
+
+                for (RelOptRule rule : rules) {
+                    programBuilder.addRuleInstance(rule);
+                }
+
+                final HepPlanner hepPlanner =
+                    new HepPlanner(programBuilder.build(), context, true, null, RelOptCostImpl.FACTORY);
+
+                hepPlanner.setRoot(input);
+
+                if (!input.getTraitSet().equals(targetTraits))
+                    hepPlanner.changeTraits(input, toTraits);
+
+                output = hepPlanner.findBestExp();
+
+                break;
+            case VOLCANO:
+                Program program = Programs.of(rules);
+
+                output = program.run(planner, input, toTraits,
+                    ImmutableList.of(), ImmutableList.of());
+
+                break;
+            default:
+                throw new AssertionError("Unknown planner type: " + plannerType);
+        }
+
+        return output;
     }
 
     /** {@inheritDoc} */
@@ -276,6 +334,42 @@ public class PlannerImpl implements Planner, RelOptTable.ViewExpander {
                 return schema;
             }
             schema = schema.getParentSchema();
+        }
+    }
+
+    /** */
+    private static class MetaDataProviderModifier extends RelShuttleImpl {
+        /** */
+        private final RelMetadataProvider metadataProvider;
+
+        /** */
+        private MetaDataProviderModifier(RelMetadataProvider metadataProvider) {
+            this.metadataProvider = metadataProvider;
+        }
+
+        /** {@inheritDoc} */
+        @Override public RelNode visit(TableScan scan) {
+            scan.getCluster().setMetadataProvider(metadataProvider);
+            return super.visit(scan);
+        }
+
+        /** {@inheritDoc} */
+        @Override public RelNode visit(TableFunctionScan scan) {
+            scan.getCluster().setMetadataProvider(metadataProvider);
+            return super.visit(scan);
+        }
+
+        /** {@inheritDoc} */
+        @Override public RelNode visit(LogicalValues values) {
+            values.getCluster().setMetadataProvider(metadataProvider);
+            return super.visit(values);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected RelNode visitChild(RelNode parent, int i, RelNode child) {
+            child.accept(this);
+            parent.getCluster().setMetadataProvider(metadataProvider);
+            return parent;
         }
     }
 }
