@@ -98,8 +98,8 @@ public enum IgniteFeatures {
     /** Support of baseline auto adjustment for Web Console. */
     WC_BASELINE_AUTO_ADJUSTMENT(23),
 
-    /** Scheduling enabled. */
-    SCHEDULING(24)
+    /** Scheduling disabled. */
+    WC_SCHEDULING_NOT_AVAILABLE(24)
     ;
 
     /**
@@ -206,8 +206,8 @@ public enum IgniteFeatures {
             if (INDEXING == value && !ctx.query().moduleEnabled())
                 continue;
 
-            // Add only when scheduling is enabled.
-            if (SCHEDULING == value && ctx.schedule() instanceof IgniteNoopScheduleProcessor)
+            // Add only when scheduling is disabled.
+            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
                 continue;
 
             final int featureId = value.getFeatureId();

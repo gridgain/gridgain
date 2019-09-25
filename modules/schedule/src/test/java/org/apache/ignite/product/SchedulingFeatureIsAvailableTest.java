@@ -39,6 +39,6 @@ public class SchedulingFeatureIsAvailableTest extends GridCommonAbstractTest {
      */
     @Test
     public void schedulingFeatureIsAvailable() throws Exception {
-        assertTrue(IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.SCHEDULING));
+        assertFalse(IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.WC_SCHEDULING_NOT_AVAILABLE));
     }
 }
