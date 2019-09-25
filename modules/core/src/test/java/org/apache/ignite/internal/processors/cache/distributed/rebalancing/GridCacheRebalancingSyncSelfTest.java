@@ -657,6 +657,6 @@ public class GridCacheRebalancingSyncSelfTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected long getPartitionMapExchangeTimeout() {
-        return super.getPartitionMapExchangeTimeout() * 200;
+        return super.getPartitionMapExchangeTimeout() * 2;
     }
 }

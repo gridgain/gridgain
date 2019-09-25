@@ -860,13 +860,17 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Owns the partition recursively.
+     * @param fut Future.
+     * @param part Partition.
+     * @param nodeId Node id.
+     * @param supplyMsg Supply message.
      */
-    protected void ownPartition(
+    private void ownPartition(
         final RebalanceFuture fut,
         GridDhtLocalPartition part,
         final UUID nodeId,
-        final GridDhtPartitionSupplyMessage supplyMsg) {
+        final GridDhtPartitionSupplyMessage supplyMsg
+    ) {
         if (topologyChanged(fut) || !fut.isActual(supplyMsg.rebalanceId()))
             return;
 
@@ -1270,7 +1274,8 @@ public class GridDhtPartitionDemander {
             CacheGroupContext grp,
             GridDhtPreloaderAssignments assignments,
             IgniteLogger log,
-            long rebalanceId) {
+            long rebalanceId
+        ) {
             assert assignments != null;
 
             exchId = assignments.exchangeId();
