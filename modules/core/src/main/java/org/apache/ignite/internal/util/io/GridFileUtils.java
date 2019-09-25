@@ -19,7 +19,6 @@ package org.apache.ignite.internal.util.io;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
@@ -33,16 +32,12 @@ public class GridFileUtils {
     /**
      * Copy file
      *
-     * @param srcFactory Source factory.
-     * @param src Source.
-     * @param dstFactory Dst factory.
-     * @param dst Dst.
-     * @param maxBytes Max bytes.
+     * @param src Source file.
+     * @param dst Destination file.
+     * @param maxBytes Number of bytes to copy from source to destination.
      */
     public static void copy(
-            FileIOFactory srcFactory,
             File src,
-            FileIOFactory dstFactory,
             File dst,
             long maxBytes
     ) throws IOException {
@@ -52,7 +47,7 @@ public class GridFileUtils {
             try (FileChannel srcChannel = FileChannel.open(src.toPath(), READ)) {
                 long limit = Math.min(srcChannel.size(), maxBytes);
                 long position = 0;
-                long writtenBytes = 0;
+                long writtenBytes;
 
                 while (position < limit) {
                     writtenBytes = srcChannel.transferTo(position, limit, dstChannel);
