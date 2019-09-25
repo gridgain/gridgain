@@ -52,9 +52,14 @@ public class GridFileUtils {
             try (FileChannel srcChannel = FileChannel.open(src.toPath(), READ)) {
                 long limit = Math.min(srcChannel.size(), maxBytes);
                 long position = 0;
+                long writtenBytes = 0;
 
-                while (position < limit)
-                    position += srcChannel.transferTo(position, limit, dstChannel);
+                while (position < limit) {
+                    writtenBytes = srcChannel.transferTo(position, limit, dstChannel);
+
+                    position += writtenBytes;
+                    limit -= writtenBytes;
+                }
 
                 err = false;
             }
