@@ -79,7 +79,7 @@ export enum IgniteFeatures {
 	WC_ROLLING_UPGRADE_STATUS = 21,
 	WC_SNAPSHOT_CHAIN_MODE = 22,
 	WC_BASELINE_AUTO_ADJUSTMENT = 23,
-	SCHEDULING = 24
+	WC_SCHEDULING_NOT_AVAILABLE = 24
 }
 
 export type WebSocketResponse = {
