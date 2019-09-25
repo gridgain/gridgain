@@ -39,7 +39,7 @@ type VersionInfo = {label: string, ignite: string}
 
 export default class IgniteVersion {
     // @ts-ignore
-    webConsole = WEB_CONSOLE_VERSION;
+    webConsole: string = WEB_CONSOLE_VERSION;
     supportedVersions: VersionInfo[];
     currentSbj: BehaviorSubject<VersionInfo>;
     constructor() {
