@@ -684,9 +684,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(checkIdxUsage(res, idxName));
 
         res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (select LANG from " + TEST_TBL_NAME + " where LANG in(?1, ?2)) " +
-            "and (ADDRESS = ?1 or ADDRESS = ?2)")
-            .setArgs(3, 4), true).getAll();
+            " where LANG in (select ADDRESS from " + TEST_TBL_NAME + " where ADDRESS in(?1, ?2)) " +
+            "and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4), true).getAll();
 
         assertTrue(checkIdxUsage(res, idxName));
 
