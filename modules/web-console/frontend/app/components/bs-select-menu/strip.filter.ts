@@ -14,26 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric;
-
-import java.util.function.Consumer;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-
-/**
- * Read only metric registry.
- */
-public interface ReadOnlyMetricRegistry extends Iterable<MetricRegistry> {
-    /**
-     * Adds listener of metrics group creation events.
-     *
-     * @param lsnr Listener.
-     */
-    public void addMetricRegistryCreationListener(Consumer<MetricRegistry> lsnr);
-
-    /**
-     * Adds listener of metrics group remove events.
-     *
-     * @param lsnr Listener.
-     */
-    public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr);
+export default function() {
+    return function(val?: string) {
+        return typeof val === 'string' ? val.replace(/(<\/?\w+>)/igm, '') : '';
+    };
 }
