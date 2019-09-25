@@ -49,12 +49,12 @@ public interface TimeLoggableResponse extends Message {
      * @return Response send timestamp which is sum of request send
      * timestamp and request processing time.
      */
-    long responseSendTimestamp();
+    long respSendTimestamp();
 
     /**
      * Sets request send timestamp.
      */
-    void responseSendTimestamp(long responseSendTimestamp);
+    void respSendTimestamp(long respSendTimestamp);
 
     /**
      * Copies request timestamps.

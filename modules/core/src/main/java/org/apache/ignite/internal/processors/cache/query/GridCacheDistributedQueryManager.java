@@ -459,9 +459,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
 
                 copyReqTimestamps(qryInfo, res);
 
-                sendQueryResponse(qryInfo.senderId(),
-                    res,
-                    qryInfo.query().timeout());
+                sendQueryResponse(qryInfo.senderId(), res, qryInfo.query().timeout());
             }
 
             return true;

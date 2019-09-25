@@ -125,6 +125,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
     /**
      * Writes message send timestamp.
+     *
      * @param msg message.
      */
     public void writeMessageSendTimestamp(Message msg) {
@@ -143,7 +144,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 long reqReceivedTimestamp = tlResp.reqReceivedTimestamp();
 
                 if (reqSentTimestamp != INVALID_TIMESTAMP && reqReceivedTimestamp != INVALID_TIMESTAMP)
-                    tlResp.responseSendTimestamp(reqSentTimestamp + System.nanoTime() - reqReceivedTimestamp);
+                    tlResp.respSendTimestamp(reqSentTimestamp + System.nanoTime() - reqReceivedTimestamp);
             } else if (msg instanceof TimeLoggableRequest) {
                 TimeLoggableRequest cacheMsg = (TimeLoggableRequest)msg;
 
@@ -481,9 +482,10 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                     .toArray();
             }
             catch (Exception e) {
-                if (log != null)
+                if (log != null) {
                     log.error("Wrong custom metric bounds format: " + strBounds + ". Using default: " +
-                              Arrays.toString(DEFAULT_HIST_BOUNDS));
+                        Arrays.toString(DEFAULT_HIST_BOUNDS));
+                }
 
                 return DEFAULT_HIST_BOUNDS;
             }
@@ -520,22 +522,24 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
             TimeLoggableResponse timeLoggableRes = (TimeLoggableResponse)msg;
 
-            if (timeLoggableRes.responseSendTimestamp() == INVALID_TIMESTAMP)
+            if (timeLoggableRes.respSendTimestamp() == INVALID_TIMESTAMP)
                 return;
 
             // No requests were sent to nodeId
-            outMetricsMap.putIfAbsent(nodeId, new ConcurrentHashMap<>());
+            if (!outMetricsMap.containsKey(nodeId))
+                outMetricsMap.putIfAbsent(nodeId, new ConcurrentHashMap<>());
 
             Map<Short, HistogramMetric> nodeMap = outMetricsMap.get(nodeId);
 
             short msgType = timeLoggableRes.directType();
 
             // No message of certain class were sent to nodeId
-            nodeMap.putIfAbsent(msgType, new HistogramMetric(metricBounds()));
+            if (!nodeMap.containsKey(msgType))
+                nodeMap.putIfAbsent(msgType, new HistogramMetric(metricBounds()));
 
             HistogramMetric metric = nodeMap.get(msgType);
 
-            metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.responseSendTimestamp()));
+            metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.respSendTimestamp()));
         }
     }
 

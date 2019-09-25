@@ -1712,9 +1712,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             ctx.deploymentEnabled());
 
         // For full sync mode response can be sent to node that didn't send request.
-        if (req.syncMode != FULL_SYNC) {
+        if (req.syncMode != FULL_SYNC)
             res.copyTimestamps(req);
-        }
 
         res.addFailedKeys(req.keys(), e);
 
@@ -1741,9 +1740,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             ctx.deploymentEnabled());
 
         // For full sync mode response can be sent to node that didn't send request.
-        if (req.syncMode != FULL_SYNC) {
+        if (req.syncMode != FULL_SYNC)
             res.copyTimestamps(req);
-        }
 
         assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
 

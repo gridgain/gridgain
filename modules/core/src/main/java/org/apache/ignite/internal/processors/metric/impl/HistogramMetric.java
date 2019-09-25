@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.metric.impl;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLongArray;
 import org.apache.ignite.internal.util.typedef.F;
 
@@ -123,7 +124,7 @@ public class HistogramMetric {
          * @param bounds Bounds of measurements.
          */
         public HistogramHolder(long[] bounds) {
-            assert !isEmpty(bounds) && F.isSorted(bounds) : "Unexpected bounds: " + bounds;
+            assert !isEmpty(bounds) && F.isSorted(bounds) : "Unexpected bounds: " + Arrays.toString(bounds);
 
             this.bounds = bounds;
 

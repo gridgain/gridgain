@@ -91,7 +91,7 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#responseSendTimestamp(). */
+    /** @see TimeLoggableResponse#respSendTimestamp(). */
     private long responseSendTimestamp = INVALID_TIMESTAMP;
 
     /**
@@ -285,12 +285,12 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
     }
 
     /** {@inheritDoc} */
-    @Override public void responseSendTimestamp(long responseSendTimestamp) {
+    @Override public void respSendTimestamp(long responseSendTimestamp) {
         this.responseSendTimestamp = responseSendTimestamp;
     }
 
     /** {@inheritDoc} */
-    @Override public long responseSendTimestamp() {
+    @Override public long respSendTimestamp() {
         return responseSendTimestamp;
     }
 
