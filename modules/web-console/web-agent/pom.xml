@@ -31,7 +31,7 @@
 
     <artifactId>ignite-web-console-agent</artifactId>
     <packaging>jar</packaging>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>2019.09.00-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>

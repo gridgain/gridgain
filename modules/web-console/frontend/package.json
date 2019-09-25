@@ -1,6 +1,6 @@
 {
   "name": "ignite-web-console",
-  "version": "8.8.0",
+  "version": "2019.09.00",
   "description": "Interactive Web console for configuration, executing SQL queries and monitoring of Apache Ignite Cluster",
   "private": true,
   "main": "index.js",
