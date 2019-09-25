@@ -44,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
 /**
- *
+ * Class containing utility methods for testing messages network time.
  */
 public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommonAbstractTest {
     /** Grid count. */
@@ -81,9 +81,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
         super.afterTest();
     }
 
-    /**
-     *
-     */
+    /** */
     protected void checkOutgoingEventsNum(Class reqClass, Class respClass) throws MalformedObjectNameException {
         checkEventsNum(0, 1, reqClass, respClass);
     }
@@ -182,16 +180,12 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
         return null;
     }
 
-    /**
-     *
-     */
+    /** */
     protected static String metricName(UUID nodeId, Class msgClass) {
         return nodeId + "." + msgClass.getSimpleName();
     }
 
-    /**
-     *
-     */
+    /** */
     protected void populateCache(IgniteCache<Integer, Integer> cache) {
         Map<Integer, Integer> map = new HashMap<>();
 
@@ -225,9 +219,7 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
             super.sendMessage(node, msg, ackC);
         }
 
-        /**
-         *
-         */
+        /** */
         private void recordMessage(ClusterNode node, Message msg) {
             if (!node.isLocal()) {
                 Message msg0 = msg;

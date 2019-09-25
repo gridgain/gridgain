@@ -57,9 +57,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  */
 @WithSystemProperty(key = IGNITE_ENABLE_MESSAGES_TIME_LOGGING, value = "true")
 public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAbstractTest {
-    /**
-     *
-     */
+    /** */
     @Test
     public void testGridDhtTxPrepareRequestTimeLogging() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
@@ -92,9 +90,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         assertTrue("Some timestamps are unexpectedly registered", nodeMap.isEmpty());
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testGridNearAtomicUpdateLogging() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
@@ -123,9 +119,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         assertEquals(msg, metricSum, (long)eventsNum1 + (long)eventsNum2);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testTransactions() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
@@ -143,9 +137,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         checkOutgoingEventsNum(GridNearTxPrepareRequest.class, GridNearTxPrepareResponse.class);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testGridNearTxEnlistRequest() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
