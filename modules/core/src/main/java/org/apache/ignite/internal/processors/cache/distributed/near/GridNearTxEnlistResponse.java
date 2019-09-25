@@ -136,8 +136,14 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param reqReceivedTimestamp Request receive timestamp.
      * @param reqSendTimestamp request send timestamp.
      */
-    public GridNearTxEnlistResponse(int cacheId, IgniteUuid futId, int miniId, GridCacheVersion lockVer,
-        Throwable err, long reqReceivedTimestamp, long reqSendTimestamp)
+    public GridNearTxEnlistResponse(
+        int cacheId,
+        IgniteUuid futId,
+        int miniId,
+        GridCacheVersion lockVer,
+        Throwable err,
+        long reqReceivedTimestamp,
+        long reqSendTimestamp)
     {
         this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSendTimestamp);
 
@@ -154,8 +160,13 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param reqReceivedTimestamp Request receive timestamp.
      * @param reqSendTimestamp Request send timestamp.
      */
-    private GridNearTxEnlistResponse(int cacheId, IgniteUuid futId, int miniId, GridCacheVersion lockVer,
-        long reqReceivedTimestamp, long reqSendTimestamp)
+    private GridNearTxEnlistResponse(
+        int cacheId,
+        IgniteUuid futId,
+        int miniId,
+        GridCacheVersion lockVer,
+        long reqReceivedTimestamp,
+        long reqSendTimestamp)
     {
         this.cacheId = cacheId;
         this.futId = futId;

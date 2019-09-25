@@ -127,7 +127,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL));
 
-            try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+        try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             populateCache(cache0);
 
             tx.commit();
