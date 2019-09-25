@@ -339,6 +339,11 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
         // No-op.
     }
 
+    /** {@inheritDoc} */
+    @Override public ClientListenerProtocolVersion protocolVersion() {
+        return ver;
+    }
+
     /**
      * Make query considering handler configuration.
      * @param schema Schema.

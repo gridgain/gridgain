@@ -430,7 +430,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_CACHE_GROUPS_IO",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES",
                 "IGNITE.NODE_ATTRIBUTES",
-                "IGNITE.TABLES"
+                "IGNITE.TABLES",
+                "IGNITE.CLIENT_CONNECTIONS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -848,7 +849,13 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.TASKS.JOB_ID.null.2147483647",
                 "IGNITE.TASKS.AFFINITY_PARTITION_ID.null.10",
                 "IGNITE.TASKS.TASK_CLASS_NAME.null.2147483647",
-                "IGNITE.TASKS.EXEC_NAME.null.2147483647"
+                "IGNITE.TASKS.EXEC_NAME.null.2147483647",
+                "IGNITE.CLIENT_CONNECTIONS.CONNECTION_ID.null.19",
+                "IGNITE.CLIENT_CONNECTIONS.LOCAL_ADDRESS.null.2147483647",
+                "IGNITE.CLIENT_CONNECTIONS.REMOTE_ADDRESS.null.2147483647",
+                "IGNITE.CLIENT_CONNECTIONS.TYPE.null.2147483647",
+                "IGNITE.CLIENT_CONNECTIONS.USER.null.2147483647",
+                "IGNITE.CLIENT_CONNECTIONS.VERSION.null.2147483647"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
