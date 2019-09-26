@@ -74,6 +74,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
@@ -98,6 +99,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** Wrapper for tree pages operations. Noop by default. Override for test purposes. */
     public static volatile PageHandlerWrapper<Result> pageHndWrapper = (tree, hnd) -> hnd;
+
+    public static volatile IgniteRunnable destroyClosure = null;
 
     /** */
     public static final ThreadLocal<Boolean> suspendFailureDiagnostic = ThreadLocal.withInitial(() -> false);
@@ -2394,6 +2397,24 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
+     * Releases the lock that is held by long tree destroy process for a short period of time and acquires it again,
+     * allowing other processes to acquire it.
+     */
+    protected void temporaryReleaseLock() {
+        // No-op.
+    }
+
+    /**
+     * Maximum time for which tree destroy process is allowed to hold the lock, after this time exceeds,
+     * {@link BPlusTree#temporaryReleaseLock()} is called and hold time is reset.
+     *
+     * @return Time, in milliseconds.
+     */
+    protected long maxLockHoldTime() {
+        return Long.MAX_VALUE;
+    }
+
+    /**
      * Destroys tree. This method is allowed to be invoked only when the tree is out of use (no concurrent operations
      * are trying to read or update the tree after destroy beginning).
      *
@@ -2427,20 +2448,46 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         long pagesCnt = 0;
 
+        long lockHoldStartTime = U.currentTimeMillis();
+
+        long lockMaxTime = maxLockHoldTime();
+
+        long cntr = 0;
+
         long metaPage = acquirePage(metaPageId);
+
         try {
             long metaPageAddr = writeLock(metaPageId, metaPage); // No checks, we must be out of use.
 
             assert metaPageAddr != 0L;
 
+            Iterable<Long> firstPageIds = getFirstPageIds(metaPageAddr);
+
+            bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
+
+            pagesCnt++;
+
             try {
-                for (long pageId : getFirstPageIds(metaPageAddr)) {
+                for (long pageId : firstPageIds) {
                     assert pageId != 0;
 
                     do {
+                        cntr++;
+
+                        if (cntr % 100 == 0) {
+                            if (U.currentTimeMillis() - lockHoldStartTime > lockMaxTime) {
+                                temporaryReleaseLock();
+
+                                lockHoldStartTime = U.currentTimeMillis();
+                            }
+                        }
+
                         final long pId = pageId;
 
                         long page = acquirePage(pId);
+
+                        if (destroyClosure != null)
+                            destroyClosure.run();
 
                         try {
                             long pageAddr = writeLock(pId, page); // No checks, we must be out of use.
@@ -2450,6 +2497,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                                 if (c != null && io.isLeaf())
                                     io.visit(pageAddr, c);
+
 
                                 long fwdPageId = io.getForward(pageAddr);
 
@@ -2474,9 +2522,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     }
                     while (pageId != 0);
                 }
-
-                bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
-                pagesCnt++;
             }
             finally {
                 writeUnlock(metaPageId, metaPage, metaPageAddr, true);

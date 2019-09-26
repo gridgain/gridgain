@@ -806,4 +806,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         return e;
     }
+
+    /** {@inheritDoc} */
+    @Override protected void temporaryReleaseLock() {
+        cctx.kernalContext().cache().context().database().checkpointReadUnlock();
+        cctx.kernalContext().cache().context().database().checkpointReadLock();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long maxLockHoldTime() {
+        return cctx.kernalContext().workersRegistry().getSystemWorkerBlockedTimeout() / 10;
+    }
 }

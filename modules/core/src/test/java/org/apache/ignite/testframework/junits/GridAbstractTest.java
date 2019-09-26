@@ -95,6 +95,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
@@ -245,10 +246,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private volatile Method currTestMtd;
 
     /**
-     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
+     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overridden for test purposes,
      * then it must be restored using value of this field.
      */
     private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
+
+    /**
+     * Destroy closure for {@link BPlusTree}, it can be saved here and overridden for test purposes,
+     * then it must be restored using value of this field.
+     */
+    private transient IgniteRunnable regularDestroyClosure;
 
     /** */
     static {
@@ -328,6 +335,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected void beforeTestsStarted() throws Exception {
         regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
+
+        regularDestroyClosure = BPlusTree.destroyClosure;
     }
 
     /**
@@ -339,8 +348,10 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        //restoring page handler wrapper
+        //restoring page handler wrapper and destroy closure
         BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
+
+        BPlusTree.destroyClosure = regularDestroyClosure;
     }
 
     /**
