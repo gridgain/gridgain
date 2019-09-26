@@ -332,7 +332,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(5);
 
-
         startGrid(1);
 
         startGrid(0);

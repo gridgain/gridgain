@@ -48,10 +48,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE
  */
 public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     /**
-     * Used in tests for updatesCount counter of metastorage and corresponds to keys CLUSTER_ID and CLUSTER_TAG
-     * that were added but should not be counted along with keys defined in tests.
+     * Used in tests for updatesCount counter of metastorage and corresponds to keys CLUSTER_ID, CLUSTER_TAG and other
+     * initial objects that were added but should not be counted along with keys defined in tests.
      */
-    private static final int INITIAL_UPDATES_COUNT = 1;
+    private static final int INITIAL_UPDATES_COUNT = 3;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
