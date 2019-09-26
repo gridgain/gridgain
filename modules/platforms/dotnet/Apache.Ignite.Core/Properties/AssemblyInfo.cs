@@ -32,9 +32,9 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("97db45a8-f922-456a-a819-7b3c6e5e03ba")]
 
-[assembly: AssemblyVersion("9.0.0.38994")]
-[assembly: AssemblyFileVersion("9.0.0.38994")]
-[assembly: AssemblyInformationalVersion("9.0.0")]
+[assembly: AssemblyVersion("2.7.2.40770")]
+[assembly: AssemblyFileVersion("2.7.2.40770")]
+[assembly: AssemblyInformationalVersion("2.7.2.9")]
 
 [assembly: CLSCompliant(true)]
 
