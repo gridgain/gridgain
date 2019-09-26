@@ -47,7 +47,7 @@ namespace ignite
              *
              * @return Collection of addresses this node is known by.
              */
-            std::vector<std::string> GetAddresses();
+            const std::vector<std::string>& GetAddresses();
 
             /**
              * Check if node attribute is set.
@@ -91,7 +91,7 @@ namespace ignite
              *
              * @return Collection of host names this node is known by.
              */
-            std::vector<std::string> GetHostNames();
+            const std::vector<std::string>& GetHostNames();
 
             /**
              * Get globally unique node ID. A new ID is generated every time a node restarts.

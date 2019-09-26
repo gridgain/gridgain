@@ -55,7 +55,7 @@ namespace ignite
                 // No-op.
             }
 
-            std::vector<std::string> ClusterNodeImpl::GetAddresses()
+            const std::vector<std::string>& ClusterNodeImpl::GetAddresses()
             {
                 return *addrs.Get();
             }
@@ -81,7 +81,7 @@ namespace ignite
                 return *consistentId.Get();
             }
 
-            std::vector<std::string> ClusterNodeImpl::GetHostNames()
+            const std::vector<std::string>& ClusterNodeImpl::GetHostNames()
             {
                 return *hosts.Get();
             }

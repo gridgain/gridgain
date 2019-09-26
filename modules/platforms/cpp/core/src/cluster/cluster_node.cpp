@@ -29,7 +29,7 @@ namespace ignite
             // No-op.
         }
 
-        std::vector<std::string> ClusterNode::GetAddresses()
+        const std::vector<std::string>& ClusterNode::GetAddresses()
         {
             return impl.Get()->GetAddresses();
         }
@@ -39,7 +39,7 @@ namespace ignite
             return impl.Get()->GetConsistentId();
         }
 
-        std::vector<std::string> ClusterNode::GetHostNames()
+        const std::vector<std::string>& ClusterNode::GetHostNames()
         {
             return impl.Get()->GetHostNames();
         }

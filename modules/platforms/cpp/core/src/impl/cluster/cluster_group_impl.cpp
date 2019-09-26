@@ -242,9 +242,9 @@ namespace ignite
             public:
                 bool operator()(ClusterNode& node)
                 {
-                    std::vector<std::string> nodeNames = node.GetHostNames();
-                    for (size_t i = 0; i < nodeNames.size(); i++)
-                        if (std::find(names.begin(), names.end(), nodeNames.at(i)) != names.end())
+                    const std::vector<std::string>& hostNames = node.GetHostNames();
+                    for (size_t i = 0; i < hostNames.size(); i++)
+                        if (std::find(names.begin(), names.end(), hostNames.at(i)) != names.end())
                             return true;
 
                     return false;
@@ -573,6 +573,10 @@ namespace ignite
                 return topVer;
             }
 
+            // The empty cluster group could be created using ForNodeId()
+            // method with not exist (Guid(0, 0)) Cluster Node Id.
+            // It is required for ForPredicate() implementation
+            // to avoid situation when two ClusterGroupImpl's uses same jobject.
             SP_ClusterGroupImpl ClusterGroupImpl::GetEmptyClusterGroup()
             {
                 return ForNodeId(Guid(0, 0));
