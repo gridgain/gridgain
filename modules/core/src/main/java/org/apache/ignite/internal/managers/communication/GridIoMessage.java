@@ -111,7 +111,7 @@ public class GridIoMessage implements Message, SpanTransport {
     /**
      * @return Policy.
      */
-    public byte policy() {
+    @Override public byte policy() {
         return plc;
     }
 
