@@ -22,7 +22,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.management.AttributeNotFoundException;
 import javax.management.DynamicMBean;
+import javax.management.MBeanException;
+import javax.management.ReflectionException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -119,10 +122,10 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     /** */
     private static IgniteLogger oldLog;
 
-    /** */
+    /** Flag which is set to true if we need to slow system time. */
     private volatile boolean slowSystem;
 
-    /** */
+    /** Flag which is set to true if we need to simulate transaction failure. */
     private volatile boolean simulateFailure;
 
     /** */
@@ -224,7 +227,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         super.afterTest();
     }
 
-    /** */
+    /**
+     * Applies JMX parameters to client node in runtime. Parameters are spreading through the cluster, so this method
+     * allows to change system/user time tracking without restarting the cluster.
+     *
+     * @param threshold Long transaction time dump threshold.
+     * @param coefficient Transaction time dump samples coefficient.
+     * @param limit Transaction time dump samples per second limit.
+     * @return Transaction MX bean.
+     * @throws Exception If failed.
+     */
     private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit) throws Exception {
         TransactionsMXBean tmMxBean = getMxBean(
             CLIENT,
@@ -245,7 +257,14 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         return tmMxBean;
     }
 
-    /** */
+    /**
+     * Allows to make N asynchronous transactions executing {@link #txCallable} in separate thread pool,
+     * with given delay on user time for each transaction.
+     *
+     * @param client Client.
+     * @param txCount Transactions count.
+     * @param userDelay User delay for each transaction.
+     */
     private void doAsyncTransactions(Ignite client, int txCount, long userDelay) {
         ExecutorService executorService = Executors.newFixedThreadPool(txCount);
 
@@ -271,7 +290,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         executorService.shutdown();
     }
 
-    /** */
+    /**
+     * Allows to run a transaction which executes {@link #txCallable} with given system delay, user delay and
+     * mode.
+     *
+     * @param client Client.
+     * @param systemDelay System delay.
+     * @param userDelay User delay.
+     * @param mode Mode, see {@link TxTestMode}.
+     * @throws Exception If failed.
+     */
     private void doTransaction(Ignite client, boolean systemDelay, boolean userDelay, TxTestMode mode) throws Exception {
         if (systemDelay)
             slowSystem = true;
@@ -295,7 +323,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         simulateFailure = false;
     }
 
-    /** */
+    /**
+     * Allows to run a transaction which executes {@link #txCallable} with given system delay, user delay and
+     * mode, also measures it's start time, completion time, gets MX bean with metrics and gives it in a result.
+     *
+     * @param systemDelay  System delay.
+     * @param userDelay User delay.
+     * @param mode Mode, see {@link TxTestMode}.
+     * @return Result, see {@link ClientTxTestResult}.
+     * @throws Exception If failed.
+     */
     private ClientTxTestResult measureClientTransaction(boolean systemDelay, boolean userDelay, TxTestMode mode) throws Exception {
         logTxDumpLsnr.reset();
         rollbackDumpLsnr.reset();
@@ -317,11 +354,48 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         return res;
     }
 
-    /** */
+    /**
+     * Checks that histogram long array is not null and is not empty.
+     *
+     * @param histogram Array.
+     */
     private void assertNotEmpty(long[] histogram) {
         assertNotNull(histogram);
 
         assertTrue(histogram.length > 0);
+    }
+
+    /**
+     * Checks if metrics have correct values with given delay mode.
+     *
+     * @param res Should contains the result of transaction completion - start time, completion time and MX bean
+     * from which metrics can be received.
+     * @param userDelayMode If true, we are checking metrics after transaction with user delay. Otherwise,
+     * we are checking metrics after transaction with system delay.
+     * @throws MBeanException If getting of metric attribute failed.
+     * @throws AttributeNotFoundException If getting of metric attribute failed.
+     * @throws ReflectionException If getting of metric attribute failed.
+     */
+    private void checkTxDelays(ClientTxTestResult res, boolean userDelayMode)
+        throws MBeanException, AttributeNotFoundException, ReflectionException {
+        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
+        long sysTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
+
+        if (userDelayMode) {
+            assertTrue(userTime >= USER_DELAY);
+            assertTrue(userTime < res.completionTime - res.startTime - sysTime + EPSILON);
+            assertTrue(sysTime >= 0);
+            assertTrue(sysTime < EPSILON);
+        }
+        else {
+            assertTrue(userTime >= 0);
+            assertTrue(userTime < EPSILON);
+            assertTrue(sysTime >= SYSTEM_DELAY);
+            assertTrue(sysTime < res.completionTime - res.startTime - userTime + EPSILON);
+        }
+
+        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
+        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
     }
 
     /**
@@ -335,16 +409,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(logTxDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= USER_DELAY);
-        assertTrue(userTime < res.completionTime - res.startTime - systemTime + EPSILON);
-        assertTrue(systemTime >= 0);
-        assertTrue(systemTime < EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, true);
     }
 
     /**
@@ -358,16 +423,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(rollbackDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= USER_DELAY);
-        assertTrue(userTime < res.completionTime - res.startTime - systemTime + EPSILON);
-        assertTrue(systemTime >= 0);
-        assertTrue(systemTime < EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, true);
     }
 
     /**
@@ -381,16 +437,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(rollbackDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= USER_DELAY);
-        assertTrue(userTime < res.completionTime - res.startTime - systemTime + EPSILON);
-        assertTrue(systemTime >= 0);
-        assertTrue(systemTime < EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, true);
     }
 
     /**
@@ -404,16 +451,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(logTxDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= 0);
-        assertTrue(userTime < EPSILON);
-        assertTrue(systemTime >= SYSTEM_DELAY);
-        assertTrue(systemTime < res.completionTime - res.startTime - userTime + EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, false);
     }
 
     /**
@@ -427,16 +465,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(rollbackDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= 0);
-        assertTrue(userTime < EPSILON);
-        assertTrue(systemTime >= SYSTEM_DELAY);
-        assertTrue(systemTime < res.completionTime - res.startTime - userTime + EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, false);
     }
 
     /**
@@ -450,16 +479,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(rollbackDumpLsnr.check());
 
-        long userTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_USER_TIME);
-        long systemTime = (Long)res.mBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME);
-
-        assertTrue(userTime >= 0);
-        assertTrue(userTime < EPSILON);
-        assertTrue(systemTime >= SYSTEM_DELAY);
-        assertTrue(systemTime < res.completionTime - res.startTime - userTime + EPSILON);
-
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM));
-        assertNotEmpty((long[])res.mBean.getAttribute(METRIC_USER_TIME_HISTOGRAM));
+        checkTxDelays(res, false);
     }
 
     /**
@@ -688,7 +708,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
-     *
+     * Test communication SPI, allowing to simulate system delay on lock and transaction failure on prepare.
      */
     private class TestCommunicationSpi extends TcpCommunicationSpi {
         /** {@inheritDoc} */
@@ -770,16 +790,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     }
 
     /**
-     *
+     * Result of running of a test transaction.
      */
     private static class ClientTxTestResult {
-        /** */
+        /** Start time. */
         final long startTime;
 
-        /** */
+        /** Completion time. */
         final long completionTime;
 
-        /** */
+        /** MX bean to receive metrics. */
         final DynamicMBean mBean;
 
         /** */
