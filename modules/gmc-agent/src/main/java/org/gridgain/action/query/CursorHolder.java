@@ -59,10 +59,12 @@ public class CursorHolder implements AutoCloseable, Iterator {
         U.closeQuiet(cursor);
     }
 
+    /** {@inheritDoc} */
     @Override public boolean hasNext() {
         return iter.hasNext();
     }
 
+    /** {@inheritDoc} */
     @Override public Object next() {
         return iter.next();
     }

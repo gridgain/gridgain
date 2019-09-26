@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * DTO for query field.
  */
@@ -94,5 +96,10 @@ public class QueryField {
     public QueryField setFieldTypeName(String fieldTypeName) {
         this.fieldTypeName = fieldTypeName;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(QueryField.class, this);
     }
 }

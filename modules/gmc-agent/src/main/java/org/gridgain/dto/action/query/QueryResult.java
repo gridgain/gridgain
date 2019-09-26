@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.util.List;
 
 /**
@@ -153,5 +155,10 @@ public class QueryResult {
     public QueryResult setCursorId(String cursorId) {
         this.cursorId = cursorId;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(QueryResult.class, this);
     }
 }

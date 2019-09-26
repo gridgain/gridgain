@@ -89,11 +89,12 @@ public class ActionDispatcher implements AutoCloseable {
      */
     private CompletableFuture<?> handleRequest(ActionMethod mtd, Request req) {
         try {
+            Class<?> ctrlCls = mtd.getControllerClass();
             boolean securityEnabled = ctx.security().enabled();
             boolean authenticationEnabled = ctx.authentication().enabled();
 
-            if (!controllers.containsKey(mtd.getControllerClass()))
-                controllers.put(mtd.getControllerClass(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
+            if (!controllers.containsKey(ctrlCls))
+                controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
 
             boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
             if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
@@ -110,12 +111,12 @@ public class ActionDispatcher implements AutoCloseable {
 
                 if (ses.securityContext() != null) {
                     try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {
-                        return invoke(mtd.getMethod(), controllers.get(mtd.getControllerClass()), req.getArgument());
+                        return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
                     }
                 }
             }
 
-            return invoke(mtd.getMethod(), controllers.get(mtd.getControllerClass()), req.getArgument());
+            return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
         }
         catch (InvocationTargetException e) {
             return completeFutureWithException(e.getTargetException());

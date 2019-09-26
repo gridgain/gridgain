@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.util.UUID;
 
 /**
@@ -191,5 +193,10 @@ public class QueryArgument {
     public QueryArgument setCollocated(boolean collocated) {
         this.collocated = collocated;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(QueryArgument.class, this);
     }
 }

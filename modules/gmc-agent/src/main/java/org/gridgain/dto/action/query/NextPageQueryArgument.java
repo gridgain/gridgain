@@ -16,6 +16,8 @@
 
 package org.gridgain.dto.action.query;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.util.UUID;
 
 /**
@@ -96,5 +98,10 @@ public class NextPageQueryArgument {
     public NextPageQueryArgument setTargetNodeId(UUID targetNodeId) {
         this.targetNodeId = targetNodeId;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(NextPageQueryArgument.class, this);
     }
 }
