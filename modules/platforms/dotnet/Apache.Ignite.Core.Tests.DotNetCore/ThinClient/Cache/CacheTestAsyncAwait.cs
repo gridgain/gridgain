@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Tests.DotNetCore.ThinClient.Cache
             var cache = GetClientCache<int>();
             await cache.PutAsync(1, 1).ConfigureAwait(false);
 
-            // This continues on the async result thread and can cause deadlock.
+            // This causes deadlock if async continuation is executed on response handler thread.
             cache.PutAsync(2, 2).Wait();
             Assert.AreEqual(2, cache.Get(2));
         }
