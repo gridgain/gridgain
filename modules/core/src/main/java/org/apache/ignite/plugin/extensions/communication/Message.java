@@ -70,7 +70,7 @@ public interface Message extends Serializable {
      *
      * @return Processing policy.
      */
-    default public byte policy() {
+    public default byte policy() {
         return GridIoPolicy.UNDEFINED;
     }
 
