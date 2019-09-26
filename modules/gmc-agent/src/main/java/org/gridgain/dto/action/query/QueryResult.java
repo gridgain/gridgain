@@ -27,9 +27,6 @@ public class QueryResult {
     /** Node where query executed. */
     private String resNodeId;
 
-    /** Query ID to store in node local. */
-    private String qryId;
-
     /** Query columns descriptors. */
     private List<QueryField> cols;
 
@@ -58,22 +55,6 @@ public class QueryResult {
      */
     public QueryResult setResultNodeId(String resNodeId) {
         this.resNodeId = resNodeId;
-        return this;
-    }
-
-    /**
-     * @return Query ID.
-     */
-    public String getQueryId() {
-        return qryId;
-    }
-
-    /**
-     * @param qryId Query id.
-     * @return This for chaining method calls.
-     */
-    public QueryResult setQueryId(String qryId) {
-        this.qryId = qryId;
         return this;
     }
 

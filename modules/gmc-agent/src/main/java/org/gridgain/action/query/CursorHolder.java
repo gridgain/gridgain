@@ -47,13 +47,6 @@ public class CursorHolder implements AutoCloseable, Iterator {
         return cursor;
     }
 
-    /**
-     * @return Cursor iterator.
-     */
-    public Iterator getIterator() {
-        return iter;
-    }
-
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
         U.closeQuiet(cursor);

@@ -23,14 +23,12 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.action.annotation.ActionController;
 import org.gridgain.action.query.CursorHolder;
 import org.gridgain.action.query.QueryHolder;
 import org.gridgain.action.query.QueryHolderRegistry;
 import org.gridgain.dto.action.query.NextPageQueryArgument;
 import org.gridgain.dto.action.query.QueryArgument;
-import org.gridgain.dto.action.query.QueryField;
 import org.gridgain.dto.action.query.QueryResult;
 
 import java.time.Duration;
@@ -38,9 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
-import static org.gridgain.utils.QueryUtils.fetchSqlQueryRows;
-import static org.gridgain.utils.QueryUtils.getColumns;
+import static org.gridgain.utils.QueryUtils.fetchResult;
 import static org.gridgain.utils.QueryUtils.prepareQuery;
 
 /**
@@ -91,13 +89,8 @@ public class QueryActionsController {
 
         ctx.closure().runLocalSafe(() -> {
             try {
-                String qryId = arg.getQueryId();
-                if (F.isEmpty(qryId))
-                    throw new IllegalArgumentException("Failed to execute query due to empty query ID");
-
-                String cursorId = arg.getCursorId();
-                if (F.isEmpty(cursorId))
-                    throw new IllegalArgumentException("Failed to execute query due to empty cursor ID");
+                String qryId = requireNonNull(arg.getQueryId(), "Failed to execute query due to empty query ID");
+                String cursorId = requireNonNull(arg.getCursorId(), "Failed to execute query due to empty cursor ID");
 
                 CursorHolder cursorHolder = qryRegistry.findCursor(qryId, cursorId);
                 QueryResult res = fetchResult(cursorHolder, arg.getPageSize());
@@ -133,19 +126,20 @@ public class QueryActionsController {
                     log.debug("Execute query started with subject: " + ctx.security().securityContext().subject());
 
                 SqlFieldsQuery qry = prepareQuery(arg);
-                GridCacheContext cctx = !F.isEmpty(arg.getCacheName())
-                        ? ctx.cache().cache(arg.getCacheName()).context()
-                        : null;
+                GridCacheContext cctx = F.isEmpty(arg.getCacheName())
+                        ? null
+                        : ctx.cache().cache(arg.getCacheName()).context();
 
                 List<QueryResult> results = new ArrayList<>();
                 for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.getCancelHook())) {
                     CursorHolder cursorHolder = new CursorHolder(cur);
                     QueryResult res = fetchResult(cursorHolder, arg.getPageSize());
+                    res.setResultNodeId(ctx.localNodeId().toString());
 
                     if (res.isHasMore())
                         res.setCursorId(qryRegistry.addCursor(qryId, cursorHolder));
 
-                    results.add(res.setQueryId(qryId));
+                    results.add(res);
                 }
 
                 fut.complete(results);
@@ -160,26 +154,5 @@ public class QueryActionsController {
         }, MANAGEMENT_POOL);
 
         return fut;
-    }
-
-    /**
-     * @param curHolder Cursor id.
-     * @param pageSize Page size.
-     * @return Query result.
-     */
-    private QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
-        QueryResult qryRes = new QueryResult();
-        long start = U.currentTimeMillis();
-
-        List<QueryField> cols = getColumns(curHolder.getCursor());
-        List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
-        boolean hasMore = curHolder.hasNext();
-
-        return qryRes
-            .setHasMore(hasMore)
-            .setColumns(cols)
-            .setRows(rows)
-            .setResultNodeId(ctx.localNodeId().toString())
-            .setDuration(U.currentTimeMillis() - start);
     }
 }

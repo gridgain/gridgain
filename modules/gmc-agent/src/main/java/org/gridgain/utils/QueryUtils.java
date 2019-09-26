@@ -21,9 +21,12 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.query.VisorQueryUtils;
+import org.gridgain.action.query.CursorHolder;
 import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryField;
+import org.gridgain.dto.action.query.QueryResult;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +37,26 @@ import java.util.List;
  * SQL query utils.
  */
 public class QueryUtils {
+    /**
+     * @param curHolder Cursor id.
+     * @param pageSize Page size.
+     * @return Query result.
+     */
+    public static QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
+        QueryResult qryRes = new QueryResult();
+        long start = U.currentTimeMillis();
+
+        List<QueryField> cols = getColumns(curHolder.getCursor());
+        List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
+        boolean hasMore = curHolder.hasNext();
+
+        return qryRes
+            .setHasMore(hasMore)
+            .setColumns(cols)
+            .setRows(rows)
+            .setDuration(U.currentTimeMillis() - start);
+    }
+
     /**
      * @param cursor Query cursor.
      * @return List of columns.
