@@ -19,7 +19,6 @@ package org.gridgain.action.query;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,10 +53,10 @@ public class QueryHolder implements AutoCloseable {
     }
 
     /**
-     * @return Query cursors.
+     * @param cursorHolder Cursor holder.
      */
-    public Collection<CursorHolder> getCursors() {
-        return cursors.values();
+    public void addCursor(CursorHolder cursorHolder) {
+        cursors.put(cursorHolder.getCursorId(), cursorHolder);
     }
 
     /**

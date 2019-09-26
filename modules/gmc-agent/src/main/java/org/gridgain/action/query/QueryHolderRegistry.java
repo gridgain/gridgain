@@ -99,7 +99,7 @@ public class QueryHolderRegistry implements AutoCloseable {
         CursorHolder curHolder = new CursorHolder(cursorId, cursor, cursor.iterator());
 
         qryHolders.computeIfPresent(qryId, (k, v) -> {
-            v.getCursors().add(curHolder);
+            v.addCursor(curHolder);
 
             return v;
         });
