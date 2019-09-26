@@ -53,9 +53,10 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Run new task using default scheduler.
         /// </summary>
-        public static Task Run(Action action)
+        public static Task Run(Action action,
+            TaskCreationOptions options = TaskCreationOptions.None)
         {
-            return Task.Factory.StartNew(action, CancellationToken.None, TaskCreationOptions.None, 
+            return Task.Factory.StartNew(action, CancellationToken.None, options,
                 TaskScheduler.Default);
         }
         
@@ -64,7 +65,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         public static Task<TResult> Run<TResult>(Func<TResult> func)
         {
-            return Task.Factory.StartNew(func, CancellationToken.None, TaskCreationOptions.None, 
+            return Task.Factory.StartNew(func, CancellationToken.None, TaskCreationOptions.None,
                 TaskScheduler.Default);
         }
     }

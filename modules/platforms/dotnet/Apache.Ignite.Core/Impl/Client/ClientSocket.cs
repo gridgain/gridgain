@@ -138,7 +138,7 @@ namespace Apache.Ignite.Core.Impl.Client
             }
 
             // Continuously and asynchronously wait for data from server.
-            TaskRunner.Run(WaitForMessages);
+            TaskRunner.Run(WaitForMessages, TaskCreationOptions.LongRunning);
         }
 
         /// <summary>
