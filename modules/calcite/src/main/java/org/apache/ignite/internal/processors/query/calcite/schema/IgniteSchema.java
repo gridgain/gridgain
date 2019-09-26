@@ -23,6 +23,7 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.calcite.util.Commons;
 
 /**
  *
@@ -46,11 +47,40 @@ public class IgniteSchema extends AbstractSchema {
         return Collections.unmodifiableMap(tableMap);
     }
 
-    public void onSqlTypeCreate(GridQueryTypeDescriptor typeDescriptor, GridCacheContextInfo cacheInfo) {
-        tableMap.putIfAbsent(typeDescriptor.tableName(), new IgniteTable(typeDescriptor, cacheInfo));
+    /**
+     * Callback method.
+     *
+     * @param typeDesc Query type descriptor.
+     * @param cacheInfo Cache info.
+     */
+    public void onSqlTypeCreate(GridQueryTypeDescriptor typeDesc, GridCacheContextInfo cacheInfo) {
+        IgniteTable table = new IgniteTable(typeDesc.tableName(), cacheInfo.name(), Commons.rowTypeFunction(typeDesc), null);
+
+        addTable(table.tableName(), table);
     }
 
-    public void onSqlTypeDrop(GridQueryTypeDescriptor typeDescriptor, GridCacheContextInfo cacheInfo) {
-        tableMap.remove(typeDescriptor.tableName());
+    /**
+     * Callback method.
+     *
+     * @param typeDesc Query type descriptor.
+     * @param cacheInfo Cache info.
+     */
+    public void onSqlTypeDrop(GridQueryTypeDescriptor typeDesc, GridCacheContextInfo cacheInfo) {
+        removeTable(typeDesc.tableName());
+    }
+
+    /**
+     * @param name Table name.
+     * @param table Table.
+     */
+    public void addTable(String name, Table table) {
+        tableMap.put(name, table);
+    }
+
+    /**
+     * @param tableName Table name.
+     */
+    public void removeTable(String tableName) {
+        tableMap.remove(tableName);
     }
 }

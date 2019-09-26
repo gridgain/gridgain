@@ -141,8 +141,7 @@ public class ScanIterator<T> extends GridCloseableIteratorAdapter<T> {
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void onClose() throws IgniteCheckedException {
+    @Override protected void onClose() {
         if (curPart != null)
             releaseCurrentPartition();
     }

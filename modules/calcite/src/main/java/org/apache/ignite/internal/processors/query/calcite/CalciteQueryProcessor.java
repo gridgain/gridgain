@@ -39,8 +39,11 @@ import org.apache.ignite.internal.processors.query.calcite.prepare.DistributedEx
 import org.apache.ignite.internal.processors.query.calcite.prepare.IgnitePlanner;
 import org.apache.ignite.internal.processors.query.calcite.prepare.Query;
 import org.apache.ignite.internal.processors.query.calcite.prepare.QueryExecution;
-import org.apache.ignite.internal.processors.query.calcite.schema.CalciteSchemaProvider;
+import org.apache.ignite.internal.processors.query.calcite.schema.CalciteSchemaChangeListener;
+import org.apache.ignite.internal.processors.query.calcite.schema.CalciteSchemaHolder;
 import org.apache.ignite.internal.processors.query.calcite.util.Commons;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,52 +52,64 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CalciteQueryProcessor implements QueryEngine {
     /** */
-    private final CalciteSchemaProvider schemaProvider = new CalciteSchemaProvider();
+    private final CalciteSchemaHolder schemaHolder = new CalciteSchemaHolder();
 
     /** */
-    private GridKernalContext ctx;
-    /** */
-    private FrameworkConfig config;
+    private final FrameworkConfig config;
+
     /** */
     private IgniteLogger log;
 
     /** */
-    @Override public void start(GridKernalContext ctx) {
-        log = ctx.log(CalciteQueryProcessor.class);
+    private GridKernalContext ctx;
 
+    public CalciteQueryProcessor() {
         config = Frameworks.newConfigBuilder()
-                .parserConfig(SqlParser.configBuilder()
-                        // Lexical configuration defines how identifiers are quoted, whether they are converted to upper or lower
-                        // case when they are read, and whether identifiers are matched case-sensitively.
-                        .setLex(Lex.MYSQL)
-                        .build())
-                // Dialects support.
-                .operatorTable(SqlLibraryOperatorTableFactory.INSTANCE
-                        .getOperatorTable(
-                                SqlLibrary.STANDARD,
-                                SqlLibrary.MYSQL))
-                // Context provides a way to store data within the planner session that can be accessed in planner rules.
-                .context(Contexts.of(ctx, log, this))
-                // Custom cost factory to use during optimization
-                .costFactory(null)
-                .typeSystem(RelDataTypeSystem.DEFAULT)
-                .build();
-
-        ctx.internalSubscriptionProcessor()
-            .registerSchemaChangeListener(schemaProvider);
-
-        this.ctx = ctx;
+            .parserConfig(SqlParser.configBuilder()
+                // Lexical configuration defines how identifiers are quoted, whether they are converted to upper or lower
+                // case when they are read, and whether identifiers are matched case-sensitively.
+                .setLex(Lex.MYSQL)
+                .build())
+            // Dialects support.
+            .operatorTable(SqlLibraryOperatorTableFactory.INSTANCE
+                .getOperatorTable(
+                    SqlLibrary.STANDARD,
+                    SqlLibrary.MYSQL))
+            // Context provides a way to store data within the planner session that can be accessed in planner rules.
+            .context(Contexts.of(this))
+            // Custom cost factory to use during optimization
+            .costFactory(null)
+            .typeSystem(RelDataTypeSystem.DEFAULT)
+            .build();
     }
 
+    /**
+     * @param log Logger.
+     */
+    @LoggerResource
+    public void setLogger(IgniteLogger log) {
+        this.log = log;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start(@NotNull GridKernalContext ctx) {
+        this.ctx = ctx;
+
+        GridInternalSubscriptionProcessor prc = ctx.internalSubscriptionProcessor();
+
+        if (prc != null) // Stubbed context doesn't have such processor
+            prc.registerSchemaChangeListener(new CalciteSchemaChangeListener(schemaHolder));
+    }
+
+    /** {@inheritDoc} */
     @Override public void stop() {
     }
 
     @Override public List<FieldsQueryCursor<List<?>>> query(@Nullable QueryContext ctx, String query, Object... params) throws IgniteSQLException {
-        return Collections.singletonList(prepare(context(Commons.convert(ctx), query, params)).execute());
-    }
-
-    public GridKernalContext context() {
-        return ctx;
+        Context context = context(Commons.convert(ctx), query, params);
+        QueryExecution execution = prepare(context);
+        FieldsQueryCursor<List<?>> cur = execution.execute();
+        return Collections.singletonList(cur);
     }
 
     public FrameworkConfig config() {
@@ -103,6 +118,10 @@ public class CalciteQueryProcessor implements QueryEngine {
 
     public IgniteLogger log() {
         return log;
+    }
+
+    public GridKernalContext context() {
+        return ctx;
     }
 
     /** */
@@ -120,10 +139,23 @@ public class CalciteQueryProcessor implements QueryEngine {
         return new DistributedExecution(ctx);
     }
 
-    /** */
-    private Context context(@NotNull Context ctx, String query, Object[] params) {
-        Context parent = config.getContext();
-        SchemaPlus schema = schemaProvider.schema();
-        return Contexts.chain(parent, Contexts.of(schema, new Query(query, params)), ctx);
+    /**
+     * @param ctx External context.
+     * @param query Query string.
+     * @param params Query parameters.
+     * @return Query execution context.
+     */
+    Context context(@NotNull Context ctx, String query, Object[] params) { // Package private visibility for tests.
+        return Contexts.chain(
+            config.getContext(),
+            Contexts.of(schemaHolder.schema(), new Query(query, params)),
+            ctx);
+    }
+
+    /**
+     * @return Schema provider.
+     */
+    CalciteSchemaHolder schemaHolder() { // Package private visibility for tests.
+        return schemaHolder;
     }
 }

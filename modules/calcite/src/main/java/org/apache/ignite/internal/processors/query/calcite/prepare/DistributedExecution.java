@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.query.calcite.CalciteQueryProcessor
 import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
 import org.apache.ignite.internal.processors.query.calcite.rule.PlannerPhase;
 import org.apache.ignite.internal.processors.query.calcite.rule.PlannerType;
-import org.apache.ignite.internal.processors.query.calcite.util.Commons;
 import org.apache.ignite.internal.processors.query.calcite.util.ListFieldsQueryCursor;
 
 /**
@@ -96,16 +95,18 @@ public class DistributedExecution implements QueryExecution {
         } catch (SqlParseException | ValidationException e) {
             String msg = "Failed to parse query.";
 
-            Commons.log(ctx).error(msg, e);
+            proc.log().error(msg, e);
 
             throw new IgniteSQLException(msg, IgniteQueryErrorCode.PARSING, e);
         } catch (Exception e) {
             String msg = "Failed to create query execution graph.";
 
-            Commons.log(ctx).error(msg, e);
+            proc.log().error(msg, e);
 
             throw new IgniteSQLException(msg, IgniteQueryErrorCode.UNKNOWN, e);
         }
+
+        // TODO physical plan.
 
         return new ListFieldsQueryCursor<>(relRoot.rel.getRowType(), Linq4j.emptyEnumerable(), Arrays::asList);
     }

@@ -29,17 +29,26 @@ import org.jetbrains.annotations.Nullable;
 public interface QueryEngine {
     /** No op implementation. */
     class NoOpQueryEngine implements QueryEngine {
-        /** {@inheritDoc} */
-        @Override public List<FieldsQueryCursor<List<?>>> query(@Nullable QueryContext ctx, String query, Object... params) throws IgniteSQLException {
-            return Collections.emptyList();
-        }
-
-        /** {@inheritDoc} */
+        /** {@inheritDoc}
+         * @param ctx*/
         @Override public void start(GridKernalContext ctx) {}
 
         /** {@inheritDoc} */
         @Override public void stop() {}
+
+        /** {@inheritDoc} */
+        @Override public List<FieldsQueryCursor<List<?>>> query(@Nullable QueryContext ctx, String query, Object... params) throws IgniteSQLException {
+            return Collections.emptyList();
+        }
     };
+
+    /**
+     * @param ctx Kernal context.
+     */
+    void start(GridKernalContext ctx);
+
+    /** */
+    void stop();
 
     /**
      * @param ctx Query context, may be null.
@@ -49,11 +58,4 @@ public interface QueryEngine {
      * @throws IgniteSQLException If failed.
      */
     List<FieldsQueryCursor<List<?>>> query(@Nullable QueryContext ctx, String query, Object... params) throws IgniteSQLException;
-
-    /**
-     * @param ctx Kernal context.
-     */
-    void start(GridKernalContext ctx);
-
-    void stop();
 }

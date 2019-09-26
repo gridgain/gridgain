@@ -16,12 +16,16 @@
 
 package org.apache.ignite.internal.processors.query.calcite.util;
 
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
-import org.apache.calcite.rel.RelNode;
-import org.apache.ignite.IgniteLogger;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryContext;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 
 /**
  *
@@ -29,19 +33,26 @@ import org.apache.ignite.internal.processors.query.QueryContext;
 public final class Commons {
     private Commons(){}
 
-    public static IgniteLogger log(RelNode rel) {
-        return log(rel.getCluster().getPlanner().getContext());
-    }
-
-    public static IgniteLogger log(Context ctx) {
-        return ctx.unwrap(IgniteLogger.class);
-    }
-
     public static Context convert(QueryContext ctx) {
         return ctx == null ? Contexts.empty() : Contexts.of(ctx.unwrap(Object[].class));
     }
 
     public static <T> Predicate<T> any() {
         return obj -> true;
+    }
+
+    /** */
+    public static Function<RelDataTypeFactory, RelDataType> rowTypeFunction(GridQueryTypeDescriptor desc) {
+        return (f) -> {
+            RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(f);
+
+            builder.add(QueryUtils.KEY_FIELD_NAME, f.createJavaType(desc.keyClass()));
+            builder.add(QueryUtils.VAL_FIELD_NAME, f.createJavaType(desc.valueClass()));
+
+            for (Map.Entry<String, Class<?>> prop : desc.fields().entrySet()) {
+                builder.add(prop.getKey(), f.createJavaType(prop.getValue()));
+            }
+            return builder.build();
+        };
     }
 }

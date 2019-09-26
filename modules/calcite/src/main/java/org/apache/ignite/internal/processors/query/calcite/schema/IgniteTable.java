@@ -16,103 +16,71 @@
 
 package org.apache.ignite.internal.processors.query.calcite.schema;
 
-import java.util.Iterator;
 import java.util.function.Function;
-import org.apache.calcite.linq4j.Enumerable;
-import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.query.GridQueryProperty;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
 import org.apache.ignite.internal.processors.query.calcite.rel.logical.IgniteLogicalTableScan;
-import org.apache.ignite.internal.processors.query.calcite.util.ScanIterator;
-import org.apache.ignite.internal.util.lang.GridCloseableIterator;
-
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UNDEFINED_CACHE_ID;
+import org.jetbrains.annotations.Nullable;
 
 /** */
-public class IgniteTable extends AbstractTable implements TableDescriptor, TranslatableTable {
-    private final GridQueryTypeDescriptor typeDescriptor;
-    private final GridCacheContextInfo cacheInfo;
-    private final GridQueryProperty[] props;
+public class IgniteTable extends AbstractTable implements TranslatableTable {
+    private final String tableName;
+    private final String cacheName;
+    private final Function<RelDataTypeFactory, RelDataType> rowType;
+    private final Statistic statistic;
 
-    IgniteTable(GridQueryTypeDescriptor typeDescriptor, GridCacheContextInfo cacheInfo) {
-        this.typeDescriptor = typeDescriptor;
-        this.cacheInfo = cacheInfo;
 
-        props = typeDescriptor.properties().values().toArray(new GridQueryProperty[0]);
+    public IgniteTable(String tableName, String cacheName,
+        Function<RelDataTypeFactory, RelDataType> rowType, @Nullable Statistic statistic) {
+        this.tableName = tableName;
+        this.cacheName = cacheName;
+        this.rowType = rowType;
+
+        this.statistic = statistic == null ? Statistics.UNKNOWN : statistic;
     }
 
+    /**
+     * @return Table name;
+     */
+    public String tableName() {
+        return tableName;
+    }
+
+    /**
+     * @return Cache name.
+     */
+    public String cacheName() {
+        return cacheName;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Statistic getStatistic() {
+        return statistic;
+    }
+
+    /** {@inheritDoc} */
     @Override public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
-        for (GridQueryProperty prop : props) {
-            builder.add(prop.name(), typeFactory.createJavaType(prop.type()));
-        }
-        return builder.build();
-    }
-
-    @Override public boolean partitioned() {
-        return cacheInfo.config().getCacheMode() == CacheMode.PARTITIONED;
-    }
-
-    @Override public boolean replicated() {
-        return cacheInfo.config().getCacheMode() == CacheMode.REPLICATED;
-    }
-
-    @Override public <C> C unwrap(Class<C> aClass) {
-        if (aClass.isInstance(typeDescriptor))
-            return aClass.cast(typeDescriptor);
-        else if (aClass.isInstance(cacheInfo))
-            return aClass.cast(cacheInfo);
-        else
-            return super.unwrap(aClass);
+        return rowType.apply(typeFactory);
     }
 
     /** {@inheritDoc} */
     @Override public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
-        return IgniteLogicalTableScan.create(context.getCluster(), relOptTable);
-    }
-
-    public Enumerable<Object[]> enumerable() {
-        return Linq4j.asEnumerable(() -> cacheIterator(this::asArray));
-    }
-
-    /** */
-    private <T> GridCloseableIterator<T> cacheIterator(Function<CacheDataRow,T> converter) {
-        GridCacheContext ctx = cacheInfo.cacheContext();
-
-        int cacheId = cacheInfo.cacheContext().group().sharedGroup() ? cacheInfo.cacheId() : UNDEFINED_CACHE_ID;
-        Iterator<GridDhtLocalPartition> parts = ctx.topology().localPartitions().iterator();
-
-        return new ScanIterator<>(cacheId, parts, converter, this::matchRow);
-    }
-
-    /** */
-    private boolean matchRow(CacheDataRow cacheDataRow) {
-        return typeDescriptor.matchType(cacheDataRow.value());
-    }
-
-    /** */
-    private Object[] asArray(CacheDataRow row) {
-        try {
-            Object[] vals = new Object[props.length];
-            for (int i = 0; i < props.length; i++) {
-                vals[i] = props[i].value(row.key(), row.value());
-            }
-            return vals;
-        } catch (IgniteCheckedException e) {
-            throw new IgniteSQLException("Failed to unwrap cache data row.", e);
-        }
+        RelOptCluster cluster = context.getCluster();
+        RelTraitSet traitSet = cluster.traitSet()
+                .replace(IgniteRel.LOGICAL_CONVENTION)
+                .replaceIf(RelDistributionTraitDef.INSTANCE, () -> getStatistic().getDistribution())
+                .replaceIfs(RelCollationTraitDef.INSTANCE, () -> getStatistic().getCollations());
+        return new IgniteLogicalTableScan(cluster, traitSet, relOptTable);
     }
 }

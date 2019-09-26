@@ -16,16 +16,13 @@
  */
 package org.apache.ignite.internal.processors.query.calcite.rel.logical;
 
-import com.google.common.collect.ImmutableList;
 import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
-import org.apache.ignite.internal.processors.query.calcite.schema.IgniteTable;
 
 public final class IgniteLogicalTableScan extends TableScan implements IgniteRel {
   public IgniteLogicalTableScan(RelOptCluster cluster, RelTraitSet traitSet,
@@ -36,15 +33,5 @@ public final class IgniteLogicalTableScan extends TableScan implements IgniteRel
   @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     assert inputs.isEmpty();
     return this;
-  }
-
-  public static IgniteLogicalTableScan create(RelOptCluster cluster,
-      final RelOptTable relOptTable) {
-    final IgniteTable table = relOptTable.unwrap(IgniteTable.class);
-    final RelTraitSet traitSet =
-        cluster.traitSet()
-            .replace(IgniteRel.LOGICAL_CONVENTION)
-            .replaceIfs(RelCollationTraitDef.INSTANCE, () -> table != null ? table.getStatistic().getCollations() : ImmutableList.of());
-    return new IgniteLogicalTableScan(cluster, traitSet, relOptTable);
   }
 }

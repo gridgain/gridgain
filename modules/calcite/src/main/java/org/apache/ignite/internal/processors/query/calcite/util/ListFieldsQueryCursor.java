@@ -25,40 +25,67 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 /**
  *
  */
 public class ListFieldsQueryCursor<T> implements FieldsQueryCursor<List<?>> {
+    /** */
     private final RelDataType rowType;
+
+    /** */
     private final Enumerable<T> enumerable;
+
+    /** */
     private final Function<T, List<?>> converter;
 
+    /** */
+    private Iterator<T> it;
+
+    /**
+     * @param rowType Row data type description.
+     * @param enumerable Rows source.
+     * @param converter Row converter.
+     */
     public ListFieldsQueryCursor(RelDataType rowType, Enumerable<T> enumerable, Function<T, List<?>> converter) {
         this.rowType = rowType;
         this.enumerable = enumerable;
         this.converter = converter;
     }
 
+    /** {@inheritDoc} */
     @Override public String getFieldName(int idx) {
         return rowType.getFieldList().get(idx).getName();
     }
 
+    /** {@inheritDoc} */
     @Override public int getColumnsCount() {
         return rowType.getFieldCount();
     }
 
+    /** {@inheritDoc} */
     @Override public List<List<?>> getAll() {
         return StreamSupport.stream(enumerable.spliterator(), false)
             .map(converter)
             .collect(Collectors.toList());
     }
 
+    /** {@inheritDoc} */
     @Override public void close() {
+        closeIterator();
     }
 
+    /** {@inheritDoc} */
     @NotNull @Override public Iterator<List<?>> iterator() {
-        return F.iterator(enumerable.iterator(), converter::apply, true);
+        closeIterator();
+
+        return F.iterator(it = enumerable.iterator(), converter::apply, true);
+    }
+
+    private void closeIterator() {
+        if (it instanceof AutoCloseable)
+            U.closeQuiet((AutoCloseable)it);
     }
 }

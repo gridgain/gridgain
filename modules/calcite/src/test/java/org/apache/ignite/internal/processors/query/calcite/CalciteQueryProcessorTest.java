@@ -17,18 +17,35 @@
 package org.apache.ignite.internal.processors.query.calcite;
 
 
-import java.util.Collections;
-import java.util.List;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.query.QueryEngine;
+import org.apache.calcite.plan.Context;
+import org.apache.calcite.plan.Contexts;
+import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.RelTraitDef;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.tools.Frameworks;
+import org.apache.ignite.internal.processors.query.calcite.prepare.IgnitePlanner;
+import org.apache.ignite.internal.processors.query.calcite.prepare.Query;
+import org.apache.ignite.internal.processors.query.calcite.rel.IgniteRel;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerPhase;
+import org.apache.ignite.internal.processors.query.calcite.rule.PlannerType;
+import org.apache.ignite.internal.processors.query.calcite.schema.IgniteSchema;
+import org.apache.ignite.internal.processors.query.calcite.schema.IgniteTable;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
+import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 
 /**
  *
@@ -36,186 +53,126 @@ import org.junit.Test;
 @WithSystemProperty(key = "calcite.debug", value = "true")
 public class CalciteQueryProcessorTest extends GridCommonAbstractTest {
 
-    @Override protected void beforeTestsStarted() throws Exception {
-        Ignite grid = startGridsMultiThreaded(1);
+    private static CalciteQueryProcessor proc;
 
-        QueryEntity projEntity = new QueryEntity();
-        projEntity.setKeyType(Integer.class.getName());
-        projEntity.setKeyFieldName("id");
-        projEntity.setValueType(Project.class.getName());
-        projEntity.addQueryField("ver", Integer.class.getName(), null);
-        projEntity.addQueryField("name", String.class.getName(), null);
-        projEntity.addQueryField("id", Integer.class.getName(), null);
-        projEntity.setTableName("Project");
+    @BeforeClass
+    public static void setupClass() {
+        proc = new CalciteQueryProcessor();
 
-        CacheConfiguration projCfg = cache(projEntity);
+        proc.setLogger(log);
+        proc.start(new GridTestKernalContext(log));
 
-        QueryEntity devEntity = new QueryEntity();
-        devEntity.setKeyType(Integer.class.getName());
-        devEntity.setKeyFieldName("id");
-        devEntity.setValueType(Developer.class.getName());
-        devEntity.addQueryField("name", String.class.getName(), null);
-        devEntity.addQueryField("projectId", Integer.class.getName(), null);
-        devEntity.addQueryField("cityId", Integer.class.getName(), null);
-        devEntity.addQueryField("id", Integer.class.getName(), null);
-        devEntity.setTableName("Developer");
+        IgniteSchema publicSchema = new IgniteSchema("PUBLIC");
 
-        CacheConfiguration devCfg = cache(devEntity);
+        publicSchema.addTable("Developer", new IgniteTable("Developer", "Developer", (f) -> {
+            RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(f);
 
-        QueryEntity countryEntity = new QueryEntity();
-        countryEntity.setKeyType(Integer.class.getName());
-        countryEntity.setKeyFieldName("id");
-        countryEntity.setValueType(Country.class.getName());
-        countryEntity.addQueryField("countryCode", Integer.class.getName(), null);
-        countryEntity.addQueryField("name", String.class.getName(), null);
-        countryEntity.addQueryField("id", Integer.class.getName(), null);
-        countryEntity.setTableName("Country");
+            builder.add(KEY_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add(VAL_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add("id", f.createJavaType(Integer.class));
+            builder.add("name", f.createJavaType(String.class));
+            builder.add("projectId", f.createJavaType(Integer.class));
+            builder.add("cityId", f.createJavaType(Integer.class));
 
-        CacheConfiguration countryCfg = cache(countryEntity);
+            return builder.build();
+        }, null));
 
+        publicSchema.addTable("Project", new IgniteTable("Project", "Project", (f) -> {
+            RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(f);
 
-        QueryEntity cityEntity = new QueryEntity();
-        cityEntity.setKeyType(Integer.class.getName());
-        cityEntity.setKeyFieldName("id");
-        cityEntity.setValueType(City.class.getName());
-        cityEntity.addQueryField("countryId", Integer.class.getName(), null);
-        cityEntity.addQueryField("name", String.class.getName(), null);
-        cityEntity.addQueryField("id", Integer.class.getName(), null);
-        cityEntity.setTableName("City");
+            builder.add(KEY_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add(VAL_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add("id", f.createJavaType(Integer.class));
+            builder.add("name", f.createJavaType(String.class));
+            builder.add("ver", f.createJavaType(Integer.class));
 
-        CacheConfiguration cityCfg = cache(cityEntity);
+            return builder.build();
+        }, null));
 
+        publicSchema.addTable("Country", new IgniteTable("Country", "Country", (f) -> {
+            RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(f);
 
-        IgniteCache projCache = grid.createCache(projCfg);
-        IgniteCache devCache = grid.createCache(devCfg);
-        IgniteCache countryCache = grid.createCache(countryCfg);
-        IgniteCache cityCache = grid.createCache(cityCfg);
+            builder.add(KEY_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add(VAL_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add("id", f.createJavaType(Integer.class));
+            builder.add("name", f.createJavaType(String.class));
+            builder.add("countryCode", f.createJavaType(Integer.class));
 
+            return builder.build();
+        }, null));
 
-        projCache.put(1, new Project(1, "Optiq", 3));
-        projCache.put(2, new Project(2, "Ignite", 3));
-        projCache.put(3, new Project(3, "Calcite", 1));
-        projCache.put(4, new Project(4, "GridGain", 2));
+        publicSchema.addTable("City", new IgniteTable("City", "City", (f) -> {
+            RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(f);
 
-        devCache.put(1, new Developer(1, "Aristotel", 1, 1));
-        devCache.put(2, new Developer(2, "Newton", 2, 2));
-        devCache.put(3, new Developer(3, "dAlamber", 1, 3));
-        devCache.put(4, new Developer(4, "Euler", 3, 2));
-        devCache.put(5, new Developer(5, "Laplas", 2, 4));
-        devCache.put(6, new Developer(6, "Einstein", 4, 2));
+            builder.add(KEY_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add(VAL_FIELD_NAME, f.createJavaType(Integer.class));
+            builder.add("id", f.createJavaType(Integer.class));
+            builder.add("name", f.createJavaType(String.class));
+            builder.add("countryId", f.createJavaType(Integer.class));
 
-        countryCache.put(1, new Country(1, "Russia", 3));
-        countryCache.put(2, new Country(2, "USA", 2));
-        countryCache.put(3, new Country(3, "England", 1));
+            return builder.build();
+        }, null));
 
-        cityCache.put(1, new City(1, "Moscow", 1));
-        cityCache.put(2, new City(2, "Khabarovsk", 1));
-        cityCache.put(3, new City(3, "NewYork", 2));
-        cityCache.put(4, new City(4, "London", 3));
+        SchemaPlus schema = Frameworks.createRootSchema(false);
 
+        schema.add("PUBLIC", publicSchema);
 
-        awaitPartitionMapExchange();
-    }
-
-    private QueryEngine queryProcessor(IgniteEx grid) {
-        return grid.context().query().getQueryEngine();
-    }
-
-    private CacheConfiguration<Object, Object> cache(QueryEntity ent) {
-        return new CacheConfiguration<>(ent.getTableName())
-                .setCacheMode(CacheMode.PARTITIONED)
-                .setBackups(0)
-                .setQueryEntities(Collections.singletonList(ent))
-                .setSqlSchema("PUBLIC");
+        proc.schemaHolder().schema(schema);
     }
 
     @Test
-    public void simpleQuery() throws Exception {
-        List<List<?>> all = queryProcessor(grid(0)).query(null, "SELECT d.id, d.name, d.projectId, p.id0, p.ver0 " +
-                "FROM PUBLIC.Developer d JOIN (" +
-                "SELECT pp.id as id0, pp.ver as ver0 FROM PUBLIC.Project pp" +
-                ") p " +
-                "ON d.projectId = p.id0 " +
-                "WHERE (d.projectId + 1) > ?", 2).get(0).getAll();
+    public void testLogicalPlan() throws Exception {
+        String sql = "SELECT d.id, d.name, d.projectId, p.id0, p.ver0 " +
+            "FROM PUBLIC.Developer d JOIN (" +
+            "SELECT pp.id as id0, pp.ver as ver0 FROM PUBLIC.Project pp" +
+            ") p " +
+            "ON d.projectId = p.id0 " +
+            "WHERE (d.projectId + 1) > ?";
 
-        assertNotNull(all);
-    }
+        Context ctx = proc.context(Contexts.empty(), sql, new Object[]{2});
 
-    private static class Project {
-        int id;
-        String name;
-        int ver;
+        assertNotNull(ctx);
 
-        public Project(int id, String name, int ver) {
-            this.id = id;
-            this.name = name;
-            this.ver = ver;
+        RelTraitDef[] traitDefs = {
+            RelDistributionTraitDef.INSTANCE,
+            ConventionTraitDef.INSTANCE,
+            RelCollationTraitDef.INSTANCE
+        };
+
+        RelRoot relRoot;
+
+        try (IgnitePlanner planner = proc.planner(traitDefs, ctx)){
+            assertNotNull(planner);
+
+            Query query = ctx.unwrap(Query.class);
+
+            assertNotNull(planner);
+
+            // Parse
+            SqlNode sqlNode = planner.parse(query.sql());
+
+            // Validate
+            sqlNode = planner.validate(sqlNode);
+
+            // Convert to Relational operators graph
+            relRoot = planner.rel(sqlNode);
+
+            RelNode rel = relRoot.rel;
+
+            // Transformation chain
+            rel = planner.transform(PlannerType.HEP, PlannerPhase.SUBQUERY_REWRITE, rel, rel.getTraitSet());
+
+            RelTraitSet desired = rel.getTraitSet()
+                .replace(relRoot.collation)
+                .replace(IgniteRel.LOGICAL_CONVENTION)
+                .replace(RelDistributions.ANY)
+                .simplify();
+
+            rel = planner.transform(PlannerType.VOLCANO, PlannerPhase.LOGICAL, rel, desired);
+
+            relRoot = relRoot.withRel(rel).withKind(sqlNode.getKind());
         }
 
-        @Override public String toString() {
-            return "Project{" +
-                    "name='" + name + '\'' +
-                    ", ver=" + ver +
-                    '}';
-        }
-    }
-
-    private static class Developer {
-        int id;
-        String name;
-        int projectId;
-        int cityId;
-
-        public Developer(int id, String name, int projectId, int cityId) {
-            this.id = id;
-            this.name = name;
-            this.projectId = projectId;
-            this.cityId = cityId;
-        }
-
-        @Override public String toString() {
-            return "Developer{" +
-                    "name='" + name + '\'' +
-                    ", projectId=" + projectId +
-                    '}';
-        }
-    }
-
-    private static class Country {
-        int id;
-        String name;
-        int countryCode;
-
-        public Country(int id, String name, int countryCode) {
-            this.id = id;
-            this.name = name;
-            this.countryCode = countryCode;
-        }
-
-        @Override public String toString() {
-            return "Country{" +
-                    "name='" + name + '\'' +
-                    ", countryCode=" + countryCode +
-                    '}';
-        }
-    }
-
-    private static class City {
-        int id;
-        String name;
-        int countryId;
-
-        public City(int id, String name, int countryId) {
-            this.id = id;
-            this.name = name;
-            this.countryId = countryId;
-        }
-
-        @Override public String toString() {
-            return "City{" +
-                    "name='" + name + '\'' +
-                    ", countryId=" + countryId +
-                    '}';
-        }
+        assertNotNull(relRoot);
     }
 }
