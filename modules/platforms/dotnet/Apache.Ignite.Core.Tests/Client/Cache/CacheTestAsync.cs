@@ -30,5 +30,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             return new CacheClientAsyncWrapper<TK, TV>(base.GetClientCache<TK, TV>(cacheName));
         }
+
+        [Test]
+        public void TestAsyncContinuation()
+        {
+            // TODO: How do we make sure that continuation is not on the Client Response Handler thread?
+            var cache = base.GetClientCache<int>();
+            cache.PutAsync(1, 1).ContinueWith(_ =>
+            {
+                cache.PutAsync(2, 2).Wait();
+            });
+        }
     }
 }
