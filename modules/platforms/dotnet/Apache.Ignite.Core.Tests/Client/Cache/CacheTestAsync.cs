@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
+    using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Client.Cache;
     using NUnit.Framework;
@@ -32,15 +34,21 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             return new CacheClientAsyncWrapper<TK, TV>(base.GetClientCache<TK, TV>(cacheName));
         }
 
+        /// <summary>
+        /// Tests that async continuations are executed on a ThreadPool thread, not on response handler thread.
+        /// </summary>
         [Test]
-        public void TestAsyncContinuation()
+        public void TestAsyncContinuationIsExecutedOnThreadPool()
         {
-            // TODO: How do we make sure that continuation is not on the Client Response Handler thread?
             var cache = base.GetClientCache<int>();
-            cache.PutAsync(1, 1).ContinueWith(_ =>
+            var task = cache.PutAsync(1, 1).ContinueWith(_ =>
             {
-                cache.PutAsync(2, 2).Wait();
+                Thread.CurrentThread.Abort();
             }, TaskContinuationOptions.ExecuteSynchronously);
+
+            Assert.Throws<AggregateException>(() => task.Wait());
+
+            Assert.AreEqual(1, cache.GetAsync(1).Result);
         }
     }
 }

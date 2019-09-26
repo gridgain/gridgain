@@ -138,6 +138,7 @@ namespace Apache.Ignite.Core.Impl.Client
             }
 
             // Continuously and asynchronously wait for data from server.
+            // TaskCreationOptions.LongRunning actually means a new thread.
             TaskRunner.Run(WaitForMessages, TaskCreationOptions.LongRunning);
         }
 
