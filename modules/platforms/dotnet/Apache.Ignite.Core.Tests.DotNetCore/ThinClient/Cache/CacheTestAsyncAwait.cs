@@ -25,8 +25,11 @@ namespace Apache.Ignite.Core.Tests.DotNetCore.ThinClient.Cache
     /// </summary>
     public class CacheTestAsyncAwait : ClientTestBase
     {
+        /// <summary>
+        /// Tests that async continuations are executed on a ThreadPool thread, not on response handler thread.
+        /// </summary>
         [Test]
-        public async Task TestAsyncContinuation()
+        public async Task TestAsyncAwaitContinuationIsExecutedOnThreadPool()
         {
             var cache = GetClientCache<int>();
             await cache.PutAsync(1, 1).ConfigureAwait(false);
