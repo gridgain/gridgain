@@ -16,7 +16,9 @@
 
 package org.gridgain.utils;
 
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.query.VisorQueryUtils;
@@ -24,6 +26,7 @@ import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryField;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -32,10 +35,14 @@ import java.util.List;
  */
 public class QueryUtils {
     /**
-     * @param meta Meta.
+     * @param cursor Query cursor.
      * @return List of columns.
      */
-    public static List<QueryField> getColumns(List<GridQueryFieldMetadata> meta) {
+    public static List<QueryField> getColumns(QueryCursor cursor) {
+        List<GridQueryFieldMetadata> meta = ((QueryCursorEx)cursor).fieldsMeta();
+        if (meta == null)
+            return Collections.emptyList();
+
         List<QueryField> res = new ArrayList<>(meta.size());
 
         for (GridQueryFieldMetadata col : meta) {

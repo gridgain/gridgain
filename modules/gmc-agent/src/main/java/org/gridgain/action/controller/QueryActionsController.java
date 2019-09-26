@@ -21,8 +21,6 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
-import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -32,6 +30,7 @@ import org.gridgain.action.query.QueryHolder;
 import org.gridgain.action.query.QueryHolderRegistry;
 import org.gridgain.dto.action.query.NextPageQueryArgument;
 import org.gridgain.dto.action.query.QueryArgument;
+import org.gridgain.dto.action.query.QueryField;
 import org.gridgain.dto.action.query.QueryResult;
 
 import java.time.Duration;
@@ -146,7 +145,7 @@ public class QueryActionsController {
                     if (res.isHasMore())
                         res.setCursorId(qryRegistry.addCursor(qryId, cursorHolder));
 
-                    results.add(res);
+                    results.add(res.setQueryId(qryId));
                 }
 
                 fut.complete(results);
@@ -172,20 +171,15 @@ public class QueryActionsController {
         QueryResult qryRes = new QueryResult();
         long start = U.currentTimeMillis();
 
-        List<GridQueryFieldMetadata> meta = ((QueryCursorEx)curHolder.getCursor()).fieldsMeta();
+        List<QueryField> cols = getColumns(curHolder.getCursor());
+        List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
+        boolean hasMore = curHolder.hasNext();
 
-        if (meta == null)
-            throw new IllegalArgumentException("Failed to fetch query result. No metadata available.");
-        else {
-            List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
-            boolean hasMore = curHolder.hasNext();
-
-            return qryRes
-                .setHasMore(hasMore)
-                .setColumns(getColumns(meta))
-                .setRows(rows)
-                .setResultNodeId(ctx.localNodeId().toString())
-                .setDuration(U.currentTimeMillis() - start);
-        }
+        return qryRes
+            .setHasMore(hasMore)
+            .setColumns(cols)
+            .setRows(rows)
+            .setResultNodeId(ctx.localNodeId().toString())
+            .setDuration(U.currentTimeMillis() - start);
     }
 }
