@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client.Cache;
     using NUnit.Framework;
 
@@ -39,7 +40,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             cache.PutAsync(1, 1).ContinueWith(_ =>
             {
                 cache.PutAsync(2, 2).Wait();
-            });
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 }

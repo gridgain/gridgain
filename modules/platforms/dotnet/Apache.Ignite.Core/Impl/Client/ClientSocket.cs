@@ -195,6 +195,9 @@ namespace Apache.Ignite.Core.Impl.Client
             var task = SendRequestAsync(ref reqMsg);
 
             // Decode.
+            // NOTE: ContWith explicitly uses TaskScheduler.Default,
+            // which runs DecodeResponse (and any user continuations) on a thread pool thread,
+            // so that WaitForMessages thread does not do anything except reading from the socket.
             return task.ContWith(responseTask => DecodeResponse(responseTask.Result, readFunc, errorFunc));
         }
 
