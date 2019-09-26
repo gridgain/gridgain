@@ -53,9 +53,10 @@ public class MovieLensExample {
             try {
                 LearningEnvironmentBuilder envBuilder = LearningEnvironmentBuilder.defaultBuilder().withRNGSeed(1);
                 RecommendationTrainer trainer = new RecommendationTrainer()
-                    .withMaxIterations(1000)
-                    .withBatchSize(50)
-                    .withLearningRate(1)
+                    .withMaxIterations(-1)
+                    .withMinMdlImprovement(10)
+                    .withBatchSize(10)
+                    .withLearningRate(10)
                     .withLearningEnvironmentBuilder(envBuilder)
                     .withTrainerEnvironment(envBuilder.buildForTrainer());
 
@@ -103,7 +104,7 @@ public class MovieLensExample {
      */
     private static IgniteCache<Integer, RatingPoint> loadMovieLensDataset(Ignite ignite, int cnt) throws IOException {
         CacheConfiguration<Integer, RatingPoint> cacheConfiguration = new CacheConfiguration<>();
-        cacheConfiguration.setAffinity(new RendezvousAffinityFunction(false, 10));
+        cacheConfiguration.setAffinity(new RendezvousAffinityFunction(false, 100));
         cacheConfiguration.setName("MOVIELENS");
 
         IgniteCache<Integer, RatingPoint> dataCache = ignite.createCache(cacheConfiguration);

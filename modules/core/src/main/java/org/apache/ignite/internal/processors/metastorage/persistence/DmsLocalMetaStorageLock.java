@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tracing
-{
-    using System.Diagnostics.CodeAnalysis;
+package org.apache.ignite.internal.processors.metastorage.persistence;
 
-    /// <summary>
-    /// Tracing SPI.
-    /// </summary>
-    [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
-    public interface ITracingSpi
-    {
-        // No-op.
-    }
+/** */
+interface DmsLocalMetaStorageLock {
+    /** Lock. */
+    public void lock();
+
+    /** Unlock. */
+    public void unlock();
 }

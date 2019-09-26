@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,12 +14,35 @@
  * limitations under the License.
  */
 
-#pragma warning disable 1587   // invalid XML comment
+package org.apache.ignite.internal.processors.rest.request;
 
-/// <summary>
-/// Metric exporter API.
-/// </summary>
-namespace Apache.Ignite.Core.Metric
-{
-    // No-op.
+/**
+ *
+ */
+public class GridRestReadOnlyChangeModeRequest extends GridRestRequest {
+    /** Request current state. */
+    private boolean reqCurrentMode;
+
+    /** Read only. */
+    private boolean readOnly;
+
+    /** */
+    public void reqCurrentMode() {
+        reqCurrentMode = true;
+    }
+
+    /** */
+    public boolean isReqCurrentMode() {
+        return reqCurrentMode;
+    }
+
+    /** */
+    public void readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+    }
+
+    /** */
+    public boolean readOnly() {
+        return readOnly;
+    }
 }

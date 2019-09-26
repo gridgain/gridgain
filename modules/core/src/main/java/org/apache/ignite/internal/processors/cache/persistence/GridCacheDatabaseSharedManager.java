@@ -153,6 +153,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -609,10 +610,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         boolean hasMvccCache = false;
 
-        for (CacheGroupDescriptor grpDesc : cctx.cache().cacheGroupDescriptors().values()) {
-            hasMvccCache |= grpDesc.config().getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
+        for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
+            hasMvccCache |= grpCtx.config().getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
 
-            String regionName = grpDesc.config().getDataRegionName();
+            String regionName = grpCtx.config().getDataRegionName();
 
             DataRegion region = regionName != null ? dataRegionMap.get(regionName) : dfltDataRegion;
 
@@ -620,17 +621,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 continue;
 
             if (log.isInfoEnabled())
-                log.info("Page memory " + region.config().getName() + " for " + grpDesc + " has invalidated.");
+                log.info("Page memory " + region.config().getName()
+                    + " for " + grpCtx.cacheOrGroupName() + " has invalidated.");
 
-            int partitions = grpDesc.config().getAffinity().partitions();
+            int partitions = grpCtx.config().getAffinity().partitions();
 
             if (region.pageMemory() instanceof PageMemoryEx) {
                 PageMemoryEx memEx = (PageMemoryEx)region.pageMemory();
 
                 for (int partId = 0; partId < partitions; partId++)
-                    memEx.invalidate(grpDesc.groupId(), partId);
+                    memEx.invalidate(grpCtx.groupId(), partId);
 
-                memEx.invalidate(grpDesc.groupId(), PageIdAllocator.INDEX_PARTITION);
+                memEx.invalidate(grpCtx.groupId(), PageIdAllocator.INDEX_PARTITION);
             }
         }
 
@@ -1904,13 +1906,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
-    @Override public void waitForCheckpoint(String reason) throws IgniteCheckedException {
+    @Override public <R> void waitForCheckpoint(String reason, IgniteInClosure<? super IgniteInternalFuture<R>> lsnr)
+        throws IgniteCheckedException {
         Checkpointer cp = checkpointer;
 
         if (cp == null)
             return;
 
-        CheckpointProgressSnapshot progSnapshot = cp.wakeupForCheckpoint(0, reason);
+        CheckpointProgressSnapshot progSnapshot = cp.wakeupForCheckpoint(0, reason, lsnr);
 
         IgniteInternalFuture fut1 = progSnapshot.cpFinishFut;
 
@@ -2095,15 +2098,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             startTimer.finishGlobalStage("Restore logical state");
 
-            // Should flush all data in buffers before read last WAL pointer.
-            // Iterator read records only from files.
-            cctx.wal().flush(null, true);
-
-            // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
-            // can't write header without that condition.
-            WALPointer lastReadPointer = logicalState.lastReadRecordPointer();
-
-            walTail = tailPointer(lastReadPointer.equals(CheckpointStatus.NULL_PTR) ? null : lastReadPointer);
+            walTail = tailPointer(logicalState);
 
             cctx.wal().onDeActivate(kctx);
         }
@@ -2168,26 +2163,33 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /**
      * Calculates tail pointer for WAL at the end of logical recovery.
      *
-     * @param from Start replay WAL from.
+     * @param logicalState State after logical recovery.
      * @return Tail pointer.
      * @throws IgniteCheckedException If failed.
      */
-    private WALPointer tailPointer(WALPointer from) throws IgniteCheckedException {
-        WALIterator it = cctx.wal().replay(from);
+    private WALPointer tailPointer(RestoreLogicalState logicalState) throws IgniteCheckedException {
+        // Should flush all data in buffers before read last WAL pointer.
+        // Iterator read records only from files.
+        WALPointer lastFlushPtr = cctx.wal().flush(null, true);
 
-        try {
-            while (it.hasNextX()) {
-                IgniteBiTuple<WALPointer, WALRecord> rec = it.nextX();
+        // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
+        // can't write header without that condition.
+        WALPointer lastReadPtr = logicalState.lastReadRecordPointer();
 
-                if (rec == null)
-                    break;
-            }
+        if (lastFlushPtr != null && lastReadPtr == null)
+            return lastFlushPtr;
+
+        if (lastFlushPtr == null && lastReadPtr != null)
+            return lastReadPtr;
+
+        if (lastFlushPtr != null && lastReadPtr != null) {
+            FileWALPointer lastFlushPtr0 = (FileWALPointer)lastFlushPtr;
+            FileWALPointer lastReadPtr0 = (FileWALPointer)lastReadPtr;
+
+            return lastReadPtr0.compareTo(lastFlushPtr0) >= 0 ? lastReadPtr : lastFlushPtr0;
         }
-        finally {
-            it.close();
-        }
 
-        return it.lastRead().map(WALPointer::next).orElse(null);
+        return null;
     }
 
     /**
@@ -3789,6 +3791,26 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          *
          */
         private CheckpointProgressSnapshot wakeupForCheckpoint(long delayFromNow, String reason) {
+            return wakeupForCheckpoint(delayFromNow, reason, null);
+        }
+
+        /**
+         *
+         */
+        private <R> CheckpointProgressSnapshot wakeupForCheckpoint(
+            long delayFromNow,
+            String reason,
+            IgniteInClosure<? super IgniteInternalFuture<R>> lsnr
+        ) {
+            if (lsnr != null) {
+                //To be sure lsnr always will be executed in checkpoint thread.
+                synchronized (this) {
+                    CheckpointProgress sched = scheduledCp;
+
+                    sched.cpFinishFut.listen(lsnr);
+                }
+            }
+
             CheckpointProgress sched = scheduledCp;
 
             long nextNanos = System.nanoTime() + U.millisToNanos(delayFromNow);
@@ -4215,7 +4237,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private Checkpoint markCheckpointBegin(CheckpointMetricsTracker tracker) throws IgniteCheckedException {
             long cpTs = updateLastCheckpointTime();
 
-            CheckpointProgress curr = updateCurrentCheckpointProgress();
+            CheckpointProgress curr = scheduledCp;
 
             CheckpointRecord cpRec = new CheckpointRecord(memoryRecoveryRecordPtr);
 
@@ -4248,6 +4270,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             checkpointLock.writeLock().lock();
 
             try {
+                updateCurrentCheckpointProgress();
+
                 assert curCpProgress == curr : "Concurrent checkpoint begin should not be happened";
 
                 tracker.onMarkStart();
@@ -5319,19 +5343,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
 
             //write ports
-            sb.a("[");
-            Iterator<GridPortRecord> it = ctx.ports().records().iterator();
+            final GridPortProcessor ports = ctx.ports();
 
-            while (it.hasNext()) {
-                GridPortRecord rec = it.next();
+            if (ports != null) {
+                sb.a("[");
+                Iterator<GridPortRecord> it = ports.records().iterator();
 
-                sb.a(rec.protocol()).a(":").a(rec.port());
+                while (it.hasNext()) {
+                    GridPortRecord rec = it.next();
 
-                if (it.hasNext())
-                    sb.a(", ");
+                    sb.a(rec.protocol()).a(":").a(rec.port());
+
+                    if (it.hasNext())
+                        sb.a(", ");
+                }
+
+                sb.a("]");
             }
-
-            sb.a("]");
 
             String failMsg;
 

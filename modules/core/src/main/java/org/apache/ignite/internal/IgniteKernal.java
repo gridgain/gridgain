@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal;
 
+import javax.cache.CacheException;
+import javax.management.JMException;
 import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +54,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.cache.CacheException;
-import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -166,8 +166,8 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
@@ -1031,9 +1031,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             cfg.getMarshaller().setContext(ctx.marshallerContext());
 
-            GridInternalSubscriptionProcessor subscriptionProc = new GridInternalSubscriptionProcessor(ctx);
-
-            startProcessor(subscriptionProc);
+            startProcessor(new GridInternalSubscriptionProcessor(ctx));
 
             ClusterProcessor clusterProc = new ClusterProcessor(ctx);
 
@@ -1058,6 +1056,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                         rsrcProc.inject(bean);
                 }
             }
+
+            startProcessor(new TracingProcessor(ctx));
 
             // Lifecycle notification.
             notifyLifecycleBeans(BEFORE_NODE_START);
@@ -4404,6 +4404,24 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             mreg.reset();
         else if (log.isInfoEnabled())
             log.info("\"" + registry + "\" not found.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean readOnlyMode() {
+        return ctx.state().publicApiReadOnlyMode();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readOnlyMode(boolean readOnly) {
+        ctx.state().changeGlobalState(readOnly);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReadOnlyModeDuration() {
+        if (ctx.state().publicApiReadOnlyMode())
+            return U.currentTimeMillis() - ctx.state().readOnlyModeStateChangeTime();
+        else
+            return 0;
     }
 
     /** {@inheritDoc} */

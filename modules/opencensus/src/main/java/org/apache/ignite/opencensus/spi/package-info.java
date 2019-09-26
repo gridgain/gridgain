@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metastorage.persistence;
-
-import java.util.ArrayList;
-import java.util.List;
-
-/** */
-@SuppressWarnings("PublicField")
-class StartupExtras {
-    /** */
-    public List<DistributedMetaStorageHistoryItem> deferredUpdates = new ArrayList<>();
-
-    /** */
-    public DistributedMetaStorageClusterNodeData fullNodeData;
-}
+/**
+ * <!-- Package description. -->
+ * Contains APIs for OpenCensus framework integration (Metrics & Tracing SPIs).
+ */
+package org.apache.ignite.opencensus.spi;
