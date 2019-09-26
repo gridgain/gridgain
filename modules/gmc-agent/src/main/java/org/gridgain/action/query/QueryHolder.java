@@ -35,8 +35,8 @@ public class QueryHolder implements AutoCloseable {
     /** Cancel hook. */
     private final GridQueryCancel cancelHook = new GridQueryCancel();
 
-    /** Accessed time. */
-    private long accessedTime = System.currentTimeMillis();
+    /** Is accessed. */
+    private boolean isAccessed;
 
     /**
      * @param qryId Query ID.
@@ -55,8 +55,8 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @param cursorHolder Cursor holder.
      */
-    public void addCursor(CursorHolder cursorHolder) {
-        cursors.put(cursorHolder.getCursorId(), cursorHolder);
+    public void addCursor(String cursorId, CursorHolder cursorHolder) {
+        cursors.putIfAbsent(cursorId, cursorHolder);
     }
 
     /**
@@ -92,17 +92,17 @@ public class QueryHolder implements AutoCloseable {
     }
 
     /**
-     * Update query holder accessed time.
+     * @return @{code true} if holder was accessed.
      */
-    public void updateAccessTime() {
-        accessedTime = System.currentTimeMillis();
+    public boolean isAccessed() {
+        return isAccessed;
     }
 
     /**
-     * @param ttl Ttl.
-     * @return @{code true} if difference between current time and accessed time more or equals than ttl.
+     * @param accessed Accessed.
      */
-    public boolean isExpired(long ttl) {
-        return (System.currentTimeMillis() - accessedTime) >= ttl;
+    public QueryHolder setAccessed(boolean accessed) {
+        isAccessed = accessed;
+        return this;
     }
 }

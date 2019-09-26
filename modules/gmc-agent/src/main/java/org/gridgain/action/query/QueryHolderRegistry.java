@@ -17,38 +17,30 @@
 package org.gridgain.action.query;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Query holder registry.
  */
-public class QueryHolderRegistry implements AutoCloseable {
-    /** Query holder check interval. */
-    private static final Duration QUERY_HOLDER_CHECK_INTERVAL = Duration.ofSeconds(30);
-
+public class QueryHolderRegistry {
     /** Context. */
     private final GridKernalContext ctx;
 
     /** Query holders. */
     private final ConcurrentMap<String, QueryHolder> qryHolders;
 
-    /** Execute service. */
-    private final ScheduledExecutorService execSrvc;
-
     /** Logger. */
     private final IgniteLogger log;
+
+    /** Holder ttl. */
+    private final Duration holderTtl;
 
     /**
      * @param ctx Context.
@@ -56,24 +48,10 @@ public class QueryHolderRegistry implements AutoCloseable {
      */
     public QueryHolderRegistry(GridKernalContext ctx, Duration holderTtl) {
         this.ctx = ctx;
+        this.holderTtl = holderTtl;
         log = ctx.log(QueryHolderRegistry.class);
 
         qryHolders = ctx.grid().cluster().nodeLocalMap();
-        execSrvc = Executors.newScheduledThreadPool(1);
-
-        execSrvc.scheduleAtFixedRate(() -> {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    for (Map.Entry<String, QueryHolder> e : qryHolders.entrySet()) {
-                        if (e.getValue().isExpired(holderTtl.toMillis()))
-                            cancelQuery(e.getKey());
-                    }
-                }
-            }
-            catch (Exception e) {
-                log.warning("Failed to cleanup the registry.", e);
-            }
-        }, 0, QUERY_HOLDER_CHECK_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -85,26 +63,30 @@ public class QueryHolderRegistry implements AutoCloseable {
         QueryHolder qryHolder = new QueryHolder(qryId);
         qryHolders.put(qryId, qryHolder);
 
+        scheduleToRemove(qryId);
+
         return qryHolder;
     }
 
     /**
      * @param qryId Query ID.
-     * @param cursor Cursor.
+     * @param cursorHolder Cursor.
      *
-     * @return Craeted cursor holder.
+     * @return Saved cursor ID.
      */
-    public CursorHolder addCursor(String qryId, FieldsQueryCursor<List<?>> cursor) {
+    public String addCursor(String qryId, CursorHolder cursorHolder) {
         String cursorId = UUID.randomUUID().toString();
-        CursorHolder curHolder = new CursorHolder(cursorId, cursor, cursor.iterator());
 
         qryHolders.computeIfPresent(qryId, (k, v) -> {
-            v.addCursor(curHolder);
+            v.addCursor(cursorId, cursorHolder);
 
             return v;
         });
 
-        return curHolder;
+        if (log.isDebugEnabled())
+            log.debug("Cursor was addes to query holder [queryId=" + qryId + ", cursorId=" + cursorId + "]");
+
+        return cursorId;
     }
 
     /**
@@ -118,7 +100,7 @@ public class QueryHolderRegistry implements AutoCloseable {
             return null;
 
         QueryHolder qryHolder = qryHolders.get(qryId);
-        qryHolder.updateAccessTime();
+        qryHolder.setAccessed(true);
 
         return qryHolder.getCursor(cursorId);
     }
@@ -133,6 +115,9 @@ public class QueryHolderRegistry implements AutoCloseable {
 
             return v;
         });
+
+        if (log.isDebugEnabled())
+            log.debug("Cursor was closed [queryId=" + qryId + ", cursorId=" + cursorId + "]");
     }
 
     /**
@@ -143,14 +128,39 @@ public class QueryHolderRegistry implements AutoCloseable {
             return;
 
         qryHolders.computeIfPresent(qryId, (k, v) -> {
+            if (log.isDebugEnabled())
+                log.debug("Cancel query by id [queryId=" + qryId + "]");
+
             U.closeQuiet(v);
 
             return null;
         });
     }
 
-    /** {@inheritDoc} */
-    @Override public void close() throws Exception {
-        execSrvc.shutdownNow();
+    /**
+     * @param qryId Query id.
+     */
+    private void scheduleToRemove(String qryId) {
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(holderTtl.toMillis()) {
+            @Override public void onTimeout() {
+                QueryHolder holder = qryHolders.get(qryId);
+
+                if (holder != null) {
+                    if (holder.isAccessed()) {
+                        holder.setAccessed(false);
+
+                        // Holder was accessed, we need to keep it for one more period.
+                        scheduleToRemove(qryId);
+                    }
+                    else {
+                        if (log.isDebugEnabled())
+                            log.debug("Remove expire query holder, [queryId=" + qryId + "]");
+
+                        // Remove stored query holder otherwise.
+                        cancelQuery(qryId);
+                    }
+                }
+            }
+        });
     }
 }

@@ -45,7 +45,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void shouldExecuteQuery() {
         Request req = new Request()
-            .setAction("QueryActions.execute")
+            .setAction("QueryActions.executeSqlQuery")
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()
@@ -74,7 +74,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldGetNextPage() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.execute")
+                .setAction("QueryActions.executeSqlQuery")
                 .setId(UUID.randomUUID())
                 .setArgument(
                     new QueryArgument()
@@ -125,7 +125,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldCancelQueryAndCleanup() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.execute")
+                .setAction("QueryActions.executeSqlQuery")
                 .setId(UUID.randomUUID())
                 .setArgument(
                         new QueryArgument()
@@ -175,7 +175,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         qryText.append(getSelectQuery());
 
         Request req = new Request()
-            .setAction("QueryActions.execute")
+            .setAction("QueryActions.executeSqlQuery")
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()

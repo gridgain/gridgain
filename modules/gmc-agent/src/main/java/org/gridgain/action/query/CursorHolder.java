@@ -16,55 +16,41 @@
 
 package org.gridgain.action.query;
 
-import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * Cursor holder.
  */
-public class CursorHolder implements AutoCloseable {
-    /** Cursor ID. */
-    private final String cursorId;
-
+public class CursorHolder implements AutoCloseable, Iterator {
     /** Cursor. */
-    private final FieldsQueryCursor<List<?>> cursor;
+    private final QueryCursor cursor;
 
     /** Iterator. */
-    private final Iterator<List<?>> iter;
+    private final Iterator iter;
 
     /**
-     * @param cursorId Cursor ID.
      * @param cursor Cursor.
-     * @param iter Iterator.
      */
-    public CursorHolder(String cursorId, FieldsQueryCursor<List<?>> cursor, Iterator<List<?>> iter) {
-        this.cursorId = cursorId;
+    public CursorHolder(QueryCursor cursor) {
         this.cursor = cursor;
-        this.iter = iter;
-    }
 
-    /**
-     * @return Cursor ID.
-     */
-    public String getCursorId() {
-        return cursorId;
+        iter = cursor.iterator();
     }
 
     /**
      * @return Query cursor.
      */
-    public FieldsQueryCursor<List<?>> getCursor() {
+    public QueryCursor getCursor() {
         return cursor;
     }
 
     /**
      * @return Cursor iterator.
      */
-    public Iterator<List<?>> getIterator() {
+    public Iterator getIterator() {
         return iter;
     }
 
@@ -73,21 +59,11 @@ public class CursorHolder implements AutoCloseable {
         U.closeQuiet(cursor);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean equals(Object o) {
-        if (this == o)
-            return true;
-
-        if (o == null || getClass() != o.getClass())
-            return false;
-
-        CursorHolder that = (CursorHolder) o;
-
-        return cursorId.equals(that.cursorId);
+    @Override public boolean hasNext() {
+        return iter.hasNext();
     }
 
-    /** {@inheritDoc} */
-    @Override public int hashCode() {
-        return Objects.hash(cursorId);
+    @Override public Object next() {
+        return iter.next();
     }
 }

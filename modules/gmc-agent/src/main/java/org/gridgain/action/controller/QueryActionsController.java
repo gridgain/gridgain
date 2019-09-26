@@ -36,7 +36,6 @@ import org.gridgain.dto.action.query.QueryResult;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -93,7 +92,21 @@ public class QueryActionsController {
 
         ctx.closure().runLocalSafe(() -> {
             try {
-                fut.complete(fetchResult(arg.getQueryId(), arg.getCursorId(), arg.getPageSize()));
+                String qryId = arg.getQueryId();
+                if (F.isEmpty(qryId))
+                    throw new IllegalArgumentException("Fail to execute query - query id can't be empty.");
+
+                String cursorId = arg.getCursorId();
+                if (F.isEmpty(cursorId))
+                    throw new IllegalArgumentException("Fail to execute query - cursor id can't be empty.");
+
+                CursorHolder cursorHolder = qryRegistry.findCursor(qryId, cursorId);
+                QueryResult res = fetchResult(qryId, cursorHolder, arg.getPageSize());
+
+                if (!cursorHolder.hasNext())
+                    qryRegistry.closeQueryCursor(qryId, cursorId);
+
+                fut.complete(res);
             }
             catch (Throwable e) {
                 fut.completeExceptionally(e);
@@ -107,7 +120,7 @@ public class QueryActionsController {
      * @param arg Argument.
      * @return List of query results.
      */
-    public CompletableFuture<List<QueryResult>> execute(QueryArgument arg) {
+    public CompletableFuture<List<QueryResult>> executeSqlQuery(QueryArgument arg) {
         final CompletableFuture<List<QueryResult>> fut = new CompletableFuture<>();
 
         ctx.closure().runLocalSafe(() -> {
@@ -126,10 +139,8 @@ public class QueryActionsController {
                         : null;
 
                 List<QueryResult> results = new ArrayList<>();
-                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.getCancelHook())) {
-                    CursorHolder curHolder = qryRegistry.addCursor(qryId, cur);
-                    results.add(fetchResult(qryId, curHolder.getCursorId(), arg.getPageSize()));
-                }
+                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.getCancelHook()))
+                    results.add(fetchResult(qryId, new CursorHolder(cur), arg.getPageSize()));
 
                 fut.complete(results);
             }
@@ -147,47 +158,31 @@ public class QueryActionsController {
 
     /**
      * @param qryId Query id.
-     * @param cursorId Cursor id.
+     * @param curHolder Cursor id.
      * @param pageSize Page size.
      * @return Query result.
      */
-    private QueryResult fetchResult(String qryId, String cursorId, int pageSize) {
-        try {
-            if (F.isEmpty(qryId))
-                throw new IllegalArgumentException("Fail to execute query - query id can't be empty.");
+    private QueryResult fetchResult(String qryId, CursorHolder curHolder, int pageSize) {
+        QueryResult qryRes = new QueryResult();
+        long start = U.currentTimeMillis();
 
-            if (F.isEmpty(cursorId))
-                throw new IllegalArgumentException("Fail to execute query - cursor id can't be empty.");
+        List<GridQueryFieldMetadata> meta = ((QueryCursorEx)curHolder.getCursor()).fieldsMeta();
 
-            CursorHolder curHolder = qryRegistry.findCursor(qryId, cursorId);
-            if (curHolder == null)
-                throw new IllegalArgumentException("Fail to execute query - can't find a cursor by id, [cursorId=" + cursorId + "]");
+        if (meta == null)
+            throw new IllegalArgumentException("Fail to execute query. No metadata available.");
+        else {
+            List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
+            boolean hasMore = curHolder.hasNext();
 
-            long start = U.currentTimeMillis();
+            if (hasMore)
+                qryRes.setCursorId(qryRegistry.addCursor(qryId, curHolder));
 
-            List<GridQueryFieldMetadata> meta = ((QueryCursorEx)curHolder.getCursor()).fieldsMeta();
-
-            if (meta == null)
-                throw new IllegalArgumentException("Fail to execute query. No metadata available.");
-            else {
-                Iterator<List<?>> qryIter = curHolder.getIterator();
-                List<Object[]> rows = fetchSqlQueryRows(qryIter, pageSize);
-                boolean hasMore = qryIter.hasNext();
-
-                if (!hasMore)
-                    qryRegistry.closeQueryCursor(qryId, cursorId);
-
-                return new QueryResult()
-                    .setCursorId(cursorId)
-                    .setHasMore(hasMore)
-                    .setColumns(getColumns(meta))
-                    .setRows(rows)
-                    .setResultNodeId(ctx.localNodeId().toString())
-                    .setDuration(U.currentTimeMillis() - start);
-            }
-        }
-        catch (Throwable e) {
-            throw e;
+            return qryRes
+                .setHasMore(hasMore)
+                .setColumns(getColumns(meta))
+                .setRows(rows)
+                .setResultNodeId(ctx.localNodeId().toString())
+                .setDuration(U.currentTimeMillis() - start);
         }
     }
 }

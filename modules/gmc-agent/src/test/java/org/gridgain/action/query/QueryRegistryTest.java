@@ -16,35 +16,29 @@
 
 package org.gridgain.action.query;
 
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.cluster.ClusterNodeLocalMapImpl;
-import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.gridgain.AbstractGridWithAgentTest;
 import org.junit.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /**
  * Query regixtry test.
  */
-public class QueryRegistryTest {
+public class QueryRegistryTest extends AbstractGridWithAgentTest {
     /**
      * Should remove expired holders.
      */
     @Test
-    public void shouldRemoveExpiredHolders() throws InterruptedException {
-        QueryHolderRegistry registry = new QueryHolderRegistry(getMockedContext(), Duration.ofSeconds(1));
+    public void shouldRemoveExpiredHolders() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofSeconds(1));
 
         String qryId = "qry";
         registry.createQueryHolder(qryId);
-        String curId = registry.addCursor(qryId, new QueryCursorImpl<>(new ArrayList<>())).getCursorId();
+        String curId = registry.addCursor(qryId, new CursorHolder(new QueryCursorImpl<>(new ArrayList<>())));
 
         Thread.sleep(3000);
 
@@ -55,35 +49,21 @@ public class QueryRegistryTest {
      * Should not remove holder if they was fetched.
      */
     @Test
-    public void shouldNotRemoveExpiredHoldersIfTheyWasFetched() throws InterruptedException {
-        QueryHolderRegistry registry = new QueryHolderRegistry(getMockedContext(), Duration.ofSeconds(2));
+    public void shouldNotRemoveExpiredHoldersIfTheyWasFetched() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofSeconds(2));
 
         String qryId = "qry";
         registry.createQueryHolder(qryId);
-        String curId = registry.addCursor(qryId, new QueryCursorImpl<>(new ArrayList<>())).getCursorId();
+        String curId = registry.addCursor(qryId, new CursorHolder(new QueryCursorImpl<>(new ArrayList<>())));
 
         for (int i = 0; i < 5; i++) {
             Thread.sleep(1000);
             assertNotNull(registry.findCursor(qryId, curId));
         }
 
-        Thread.sleep(3000);
+        Thread.sleep(6000);
 
         assertNull(registry.findCursor(qryId, curId));
-    }
-
-    /**
-     * @return Mocked context.
-     */
-    private GridKernalContext getMockedContext() {
-        GridKernalContext ctx = mock(GridKernalContext.class);
-        IgniteEx ignite = mock(IgniteEx.class);
-        IgniteClusterEx cluster = mock(IgniteClusterEx.class);
-
-        when(ctx.grid()).thenReturn(ignite);
-        when(ignite.cluster()).thenReturn(cluster);
-        when(cluster.nodeLocalMap()).thenReturn(new ClusterNodeLocalMapImpl<>());
-
-        return ctx;
     }
 }
