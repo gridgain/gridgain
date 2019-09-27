@@ -547,11 +547,12 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <forkCount>1</forkCount>
                             <argLine>-javaagent:${project.build.directory}/libs/dlcheck.jar
                                 <!-- -Ddlcheck.cache.dir=${dlcheck.workdir}/cache-->
                                 <!-- Optional, fails at the point of potential deadlock is detected -->
                                  -Ddlcheck.fail=true
-                                 -Ddlcheck.output=${deadlock.detection.workdir}/alerts
+                                 -Ddlcheck.output=${project.build.directory}/alerts
                             </argLine>
                         </configuration>
                     </plugin>
