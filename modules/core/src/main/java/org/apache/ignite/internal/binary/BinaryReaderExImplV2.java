@@ -26,8 +26,7 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERE
 /**
  * Binary reader implementation (protocol version 2).
  */
-@SuppressWarnings("unchecked")
-public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx implements BinaryReaderEx {
+public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx {
     /** Protocol version. */
     private static final byte PROTO_VER = 2;
 
@@ -91,53 +90,24 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx implements Bina
 
             dataStartOff = start + HDR_LEN_V2;
 
-            if (typeId0 == UNREGISTERED_TYPE_ID) {
-                int off = dataStartOff + dataLen;
-
-                if (BinaryUtils.hasRaw(flags))
-                    off += 4;
-
-                if (BinaryUtils.hasSchema(flags))
-                    off += 8;
-
-                in.position(off);
-
-                if (forUnmarshal) {
-                    // Registers class by type ID, at least locally if the cache is not ready yet.
-                    desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0),
-                        false, false);
-
-                    typeId = desc.typeId();
-                }
-                else
-                    typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-            }
-            else
-                typeId = typeId0;
+            typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
 
             if (BinaryUtils.hasSchema(flags)) {
-                int off = dataStartOff + dataLen;
-
-                if (BinaryUtils.hasRaw(flags))
-                    off += 4;
+                int off = schemaIdOffset();
 
                 schemaId = in.readIntPositioned(off);
 
                 footerStartOff = in.readIntPositioned(off + 4) + start;
             }
             else {
-                footerStartOff = start + totalLen;
+                footerStartOff = objectEndOffset();
                 schemaId = 0;
             }
 
-            if (BinaryUtils.hasRaw(flags)) {
-                if (BinaryUtils.hasSchema(flags))
-                    rawOff = in.readIntPositioned(dataStartOff + dataLen) + start;
-                else
-                    rawOff = dataStartOff;
-            }
+            if (BinaryUtils.hasRaw(flags))
+                rawOff = BinaryUtils.hasSchema(flags) ? in.readIntPositioned(metaStartOffset()) + start : dataStartOff;
             else
-                rawOff = start + totalLen;
+                rawOff = objectEndOffset();
         }
         else {
             typeId = 0;
@@ -151,6 +121,54 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx implements Bina
         }
 
         streamPosition(start);
+    }
+
+    /** */
+    private int objectEndOffset() {
+        return start + totalLen;
+    }
+
+    /** */
+    private int metaStartOffset() {
+        return dataStartOff + dataLen;
+    }
+
+    /** */
+    private int schemaIdOffset() {
+        int off = metaStartOffset();
+
+        if (BinaryUtils.hasRaw(flags))
+            off += 4;
+
+        return off;
+    }
+
+    /** */
+    private int classNameOffset() {
+        int off = schemaIdOffset();
+
+        if (BinaryUtils.hasSchema(flags))
+            off += 8;
+
+        return off;
+    }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param forUnmarshal For unmarshal.
+     */
+    private int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
+        in.position(classNameOffset());
+
+        if (!forUnmarshal)
+            return ctx.typeId(BinaryUtils.doReadClassName(in));
+
+        // Registers class by type ID, at least locally if the cache is not ready yet.
+        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), false, false);
+
+        return desc.typeId();
     }
 
     /** {@inheritDoc} */

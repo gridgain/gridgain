@@ -63,6 +63,7 @@ import org.apache.ignite.client.SslProtocol;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -290,7 +291,7 @@ class TcpClientChannel implements ClientChannel {
         else {
             resIn = new BinaryHeapInputStream(read(resSize - hdrSize));
 
-            String err = BinaryUtils.createReader(null, resIn, null, true).readString();
+            String err = BinaryAbstractReaderEx.createReader(null, resIn, null, true).readString();
 
             switch (status) {
                 case ClientStatus.SECURITY_VIOLATION:
@@ -344,7 +345,7 @@ class TcpClientChannel implements ClientChannel {
     /** Serialize String for thin client protocol. */
     private static byte[] marshalString(String s) {
         try (BinaryOutputStream out = new BinaryHeapOutputStream(s == null ? 1 : s.length() + 20);
-             BinaryRawWriterEx writer = BinaryUtils.createWriter(null, out, null, null)
+             BinaryRawWriterEx writer = BinaryAbstractWriterEx.createWriter(null, out, null, null)
         ) {
             writer.writeString(s);
 
@@ -393,7 +394,7 @@ class TcpClientChannel implements ClientChannel {
         if (!res.readBoolean()) { // success flag
             ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
 
-            try (BinaryAbstractReaderEx r = BinaryUtils.createReader(null, res, null, true)) {
+            try (BinaryAbstractReaderEx r = BinaryAbstractReaderEx.createReader(null, res, null, true)) {
                 String err = r.readString();
 
                 int errCode = ClientStatus.FAILED;

@@ -178,7 +178,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
     /** {@inheritDoc} */
     @Override public BinaryObject build() {
-        try (BinaryAbstractWriterEx writer = BinaryUtils.createWriter(ctx)) {
+        try (BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(ctx)) {
             Thread curThread = Thread.currentThread();
 
             if (curThread instanceof IgniteThread)

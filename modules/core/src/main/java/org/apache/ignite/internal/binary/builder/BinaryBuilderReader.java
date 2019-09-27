@@ -66,7 +66,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         arr = objImpl.array();
         pos = objImpl.start();
 
-        reader = BinaryUtils.createReader(ctx,
+        reader = BinaryAbstractReaderEx.createReader(ctx,
             BinaryHeapInputStream.create(arr, pos),
             ctx.configuration().getClassLoader(),
             false);
@@ -85,7 +85,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         this.arr = other.arr;
         this.pos = start;
 
-        reader = BinaryUtils.createReader(ctx,
+        reader = BinaryAbstractReaderEx.createReader(ctx,
             BinaryHeapInputStream.create(arr, start),
             null,
             other.reader.handles(),

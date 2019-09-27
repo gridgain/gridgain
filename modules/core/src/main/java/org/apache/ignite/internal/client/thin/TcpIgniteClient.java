@@ -36,6 +36,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.MarshallerPlatformIds;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadataHandler;
@@ -208,7 +209,7 @@ public class TcpIgniteClient implements IgniteClient {
 
     /** Serialize string. */
     private void writeString(String s, BinaryOutputStream out) {
-        try (BinaryRawWriterEx w = BinaryUtils.createWriter(marsh.context(), out, null, null)) {
+        try (BinaryRawWriterEx w = BinaryAbstractWriterEx.createWriter(marsh.context(), out, null, null)) {
             w.writeString(s);
         }
     }
@@ -216,7 +217,7 @@ public class TcpIgniteClient implements IgniteClient {
     /** Deserialize string. */
     private String readString(BinaryInputStream in) throws BinaryObjectException {
         try {
-            try (BinaryAbstractReaderEx r = BinaryUtils.createReader(marsh.context(), in, null, true)) {
+            try (BinaryAbstractReaderEx r = BinaryAbstractReaderEx.createReader(marsh.context(), in, null, true)) {
                 return r.readString();
             }
         }

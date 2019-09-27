@@ -264,7 +264,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     private void onHandshake(GridNioSession ses, byte[] msg) {
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        BinaryAbstractReaderEx reader = BinaryUtils.createReader(null, stream, null, true);
+        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(null, stream, null, true);
 
         byte cmd = reader.readByte();
 
@@ -282,7 +282,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(verMajor, verMinor, verMaintenance);
 
-        BinaryAbstractWriterEx writer = BinaryUtils.createWriter(null, new BinaryHeapOutputStream(8), null, null);
+        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(8), null, null);
 
         byte clientType = reader.readByte();
 

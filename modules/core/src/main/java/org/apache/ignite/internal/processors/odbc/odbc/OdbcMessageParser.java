@@ -83,7 +83,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        BinaryAbstractReaderEx reader = BinaryUtils.createReader(marsh.context(), stream, ctx.config().getClassLoader(), true);
+        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(marsh.context(), stream, ctx.config().getClassLoader(), true);
 
         byte cmd = reader.readByte();
 
@@ -250,7 +250,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         OdbcResponse msg = (OdbcResponse)msg0;
 
         // Creating new binary writer
-        BinaryAbstractWriterEx writer = BinaryUtils.createWriter(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
+        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
             BinaryThreadLocalContext.get().schemaHolder(), null);
 
         // Writing status.

@@ -40,7 +40,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
      *
      * @param registered Whether type is registered.
      */
-    public void preWrite(boolean registered) {
+    @Override public void preWrite(boolean registered) {
         out.position(out.position() + GridBinaryMarshaller.HDR_LEN_V2);
     }
 
@@ -50,7 +50,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
      * @param userType User type flag.
      * @param registered Whether type is registered.
      */
-    public void postWrite(boolean userType, boolean registered) {
+    @Override public void postWrite(boolean userType, boolean registered) {
         short flags;
         boolean useCompactFooter;
 
@@ -85,7 +85,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
         if (rawOffPos != 0)
             flags |= BinaryUtils.FLAG_HAS_RAW;
 
-        if (BinaryUtils.hasMetaSection(typeId, flags) || !registered) {
+        if (hasMetaSection(typeId, flags) || !registered) {
             if (BinaryUtils.hasRaw(flags))
                 out.writeInt(rawOffPos - start);
 
@@ -142,5 +142,10 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
     /** {@inheritDoc} */
     @Override public byte version() {
         return PROTO_VER;
+    }
+
+    /** */
+    private static boolean hasMetaSection(int typeId, short flags) {
+        return typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID || BinaryUtils.hasSchema(flags);
     }
 }

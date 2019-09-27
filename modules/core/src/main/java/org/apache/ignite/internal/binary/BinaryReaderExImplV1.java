@@ -26,7 +26,6 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERE
 /**
  * Binary reader implementation (protocol version 1).
  */
-@SuppressWarnings("unchecked")
 public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements BinaryReaderEx {
     /** Protocol version. */
     private static final byte PROTO_VER = 1;
@@ -88,48 +87,19 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
 
             totalLen = in.readInt();
             schemaId = in.readInt();
-            int offset = in.readInt();
+            int schemaOrRawOff = in.readInt();
 
-            if (BinaryUtils.hasSchema(flags)) {
-                footerStartOff = start + offset;
+            footerStartOff = BinaryUtils.hasSchema(flags) ? start + schemaOrRawOff : objectEndOffset();
 
-                if (BinaryUtils.hasRaw(flags))
-                    rawOff = start + in.readIntPositioned(start + totalLen - 4);
-                else
-                    rawOff = start + totalLen;
-            }
-            else {
-                // No schema.
-                footerStartOff = start + totalLen;
+            if (BinaryUtils.hasRaw(flags))
+                rawOff = start + (BinaryUtils.hasSchema(flags) ? in.readIntPositioned(rawOffsetPos()) : schemaOrRawOff);
+            else
+                rawOff = objectEndOffset();
 
-                if (BinaryUtils.hasRaw(flags))
-                    rawOff = start + offset;
-                else
-                    rawOff = start + totalLen;
-            }
+            typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
 
-            // Finally, we have to resolve real type ID.
-            if (typeId0 == UNREGISTERED_TYPE_ID) {
-                int off = in.position();
-
-                if (forUnmarshal) {
-                    // Registers class by type ID, at least locally if the cache is not ready yet.
-                    desc = ctx.descriptorForClass(BinaryUtils.doReadClass(in, ctx, ldr, typeId0), false, false);
-
-                    typeId = desc.typeId();
-                }
-                else
-                    typeId = ctx.typeId(BinaryUtils.doReadClassName(in));
-
-                int clsNameLen = in.position() - off;
-
-                dataStartOff = start + HDR_LEN_V1 + clsNameLen;
-            }
-            else {
-                typeId = typeId0;
-
-                dataStartOff = start + HDR_LEN_V1;
-            }
+            dataStartOff = start + HDR_LEN_V1 + (typeId0 == UNREGISTERED_TYPE_ID
+                ? className(ctx).length() + 5 /* 1 for value type + 4 for string length */ : 0);
 
             dataLen = footerStartOff - dataStartOff;
         }
@@ -145,6 +115,39 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
         }
 
         streamPosition(start);
+    }
+
+    /** */
+    private int objectEndOffset() {
+        return start + totalLen;
+    }
+
+    /** */
+    private int rawOffsetPos() {
+        return objectEndOffset() - 4;
+    }
+
+    /** */
+    private String className(BinaryContext ctx) {
+        return ctx.metadata(typeId).typeName();
+    }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param forUnmarshal For unmarshal.
+     */
+    private int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
+        in.position(start + HDR_LEN_V1);
+
+        if (!forUnmarshal)
+            return ctx.typeId(BinaryUtils.doReadClassName(in));
+
+        // Registers class by type ID, at least locally if the cache is not ready yet.
+        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), false, false);
+
+        return desc.typeId();
     }
 
     /** {@inheritDoc} */

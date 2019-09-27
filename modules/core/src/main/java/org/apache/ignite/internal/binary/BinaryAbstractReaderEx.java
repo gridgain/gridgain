@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryCollectionFactory;
 import org.apache.ignite.binary.BinaryInvalidTypeException;
 import org.apache.ignite.binary.BinaryMapFactory;
@@ -140,6 +141,80 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         this.ldr = ldr;
         this.hnds = hnds;
         this.start = in.position();
+    }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param forUnmarshal For unmarshal.
+     */
+    public static BinaryAbstractReaderEx createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        boolean forUnmarshal) {
+        return createReader(ctx, in, ldr, null, forUnmarshal);
+    }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param hnds Hnds.
+     * @param forUnmarshal For unmarshal.
+     */
+    public static BinaryAbstractReaderEx createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        @Nullable BinaryReaderHandles hnds,
+        boolean forUnmarshal) {
+        return createReader(ctx, in, ldr, hnds, false, forUnmarshal);
+    }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param hnds Hnds.
+     * @param skipHdrCheck Skip header check.
+     * @param forUnmarshal For unmarshal.
+     */
+    public static BinaryAbstractReaderEx createReader(
+        BinaryContext ctx,
+        BinaryInputStream in,
+        ClassLoader ldr,
+        @Nullable BinaryReaderHandles hnds,
+        boolean skipHdrCheck,
+        boolean forUnmarshal) {
+
+        if (skipHdrCheck)
+            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+
+        int pos = in.position();
+
+        if (in.readByte() != GridBinaryMarshaller.OBJ) {
+            in.position(pos);
+
+            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+        }
+
+        byte ver = in.readByte();
+
+        in.position(pos);
+
+        BinaryUtils.checkProtocolVersion(ver);
+
+        switch (ver) {
+            case 1:
+                return new BinaryReaderExImplV1(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+            case 2:
+                return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+            default:
+                throw new IgniteException("Unknown protocol version: " + ver);
+
+        }
     }
 
     /**
@@ -1820,7 +1895,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         if (!findFieldById(fieldId))
             return null;
 
-        return BinaryUtils.createReader(ctx, in, ldr, hnds, false, true).deserialize();
+        return createReader(ctx, in, ldr, hnds, false, true).deserialize();
     }
 
     private boolean userType() {

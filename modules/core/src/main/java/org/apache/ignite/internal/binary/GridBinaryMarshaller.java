@@ -250,7 +250,7 @@ public class GridBinaryMarshaller {
         if (obj == null)
             return new byte[] { NULL };
 
-        try (BinaryAbstractWriterEx writer = BinaryUtils.createWriter(ctx)) {
+        try (BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(ctx)) {
             writer.failIfUnregistered(failIfUnregistered);
 
             writer.marshal(obj);
@@ -309,7 +309,7 @@ public class GridBinaryMarshaller {
         BinaryContext oldCtx = pushContext(ctx);
 
         try {
-            return (T)BinaryUtils.createReader(ctx, BinaryHeapInputStream.create(arr, 0), ldr, true).deserialize();
+            return (T)BinaryAbstractReaderEx.createReader(ctx, BinaryHeapInputStream.create(arr, 0), ldr, true).deserialize();
         }
         finally {
             popContext(oldCtx);
@@ -353,7 +353,7 @@ public class GridBinaryMarshaller {
     public BinaryAbstractReaderEx reader(BinaryInputStream stream) {
         assert stream != null;
 
-        return BinaryUtils.createReader(ctx, stream, null, true);
+        return BinaryAbstractReaderEx.createReader(ctx, stream, null, true);
     }
 
     /**
@@ -373,7 +373,7 @@ public class GridBinaryMarshaller {
      * @return Writer.
      */
     public BinaryAbstractWriterEx writer(BinaryOutputStream out) {
-        return BinaryUtils.createWriter(ctx, out, BinaryThreadLocalContext.get().schemaHolder(), null);
+        return BinaryAbstractWriterEx.createWriter(ctx, out, BinaryThreadLocalContext.get().schemaHolder(), null);
     }
 
     /**

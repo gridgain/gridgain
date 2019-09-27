@@ -46,6 +46,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
@@ -151,7 +152,7 @@ final class ClientUtils {
 
     /** Deserialize binary type metadata from stream. */
     BinaryMetadata binaryMetadata(BinaryInputStream in) throws IOException {
-        try (BinaryAbstractReaderEx reader = BinaryUtils.createReader(marsh.context(), in, null, true)) {
+        try (BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(marsh.context(), in, null, true)) {
             int typeId = reader.readInt();
             String typeName = reader.readString();
             String affKeyFieldName = reader.readString();
@@ -188,7 +189,7 @@ final class ClientUtils {
 
     /** Serialize binary type metadata to stream. */
     void binaryMetadata(BinaryMetadata meta, BinaryOutputStream out) {
-        try (BinaryRawWriterEx w = BinaryUtils.createWriter(marsh.context(), out, null, null)) {
+        try (BinaryRawWriterEx w = BinaryAbstractWriterEx.createWriter(marsh.context(), out, null, null)) {
             w.writeInt(meta.typeId());
             w.writeString(meta.typeName());
             w.writeString(meta.affinityKeyFieldName());
@@ -233,7 +234,7 @@ final class ClientUtils {
 
     /** Serialize configuration to stream. */
     void cacheConfiguration(ClientCacheConfiguration cfg, BinaryOutputStream out, ProtocolVersion ver) {
-        try (BinaryRawWriterEx writer = BinaryUtils.createWriter(marsh.context(), out, null, null)) {
+        try (BinaryRawWriterEx writer = BinaryAbstractWriterEx.createWriter(marsh.context(), out, null, null)) {
             int origPos = out.position();
 
             writer.writeInt(0); // configuration length is to be assigned in the end
@@ -349,7 +350,7 @@ final class ClientUtils {
     /** Deserialize configuration from stream. */
     ClientCacheConfiguration cacheConfiguration(BinaryInputStream in, ProtocolVersion ver)
         throws IOException {
-        try (BinaryAbstractReaderEx reader = BinaryUtils.createReader(marsh.context(), in, null, true)) {
+        try (BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(marsh.context(), in, null, true)) {
             reader.readInt(); // Do not need length to read data. The protocol defines fixed configuration layout.
 
             return new ClientCacheConfiguration().setName("TBD") // cache name is to be assigned later

@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.binary.BinaryWriter;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.CUR_PROTO_VER;
 
 /**
  * Binary writer implementation.
@@ -109,6 +111,37 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         this.handles = handles;
 
         start = out.position();
+    }
+
+    public static BinaryAbstractWriterEx createWriter(BinaryContext ctx) {
+        BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
+
+        return createWriter(CUR_PROTO_VER, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+    }
+
+    public static BinaryAbstractWriterEx createWriter(BinaryContext ctx, BinaryOutputStream out,
+        BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
+        return createWriter(CUR_PROTO_VER, ctx, out, schema, handles);
+    }
+
+    public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx) {
+        BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
+
+        return createWriter(ver, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+    }
+
+    public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx, BinaryOutputStream out,
+        BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
+        BinaryUtils.checkProtocolVersion(ver);
+
+        switch (ver) {
+            case 1:
+                return new BinaryWriterExImplV1(ctx, out, schema, handles);
+            case 2:
+                return new BinaryWriterExImplV2(ctx, out, schema, handles);
+            default:
+                throw new IgniteException("Unknown protocol version: " + ver);
+        }
     }
 
     public abstract byte version();
@@ -441,7 +474,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryAbstractWriterEx writer = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
+            BinaryAbstractWriterEx writer = createWriter(version(), ctx, out, schema, handles());
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1432,7 +1465,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryAbstractWriterEx writer = BinaryUtils.createWriter(version(), ctx, out, schema, null);
+            BinaryAbstractWriterEx writer = createWriter(version(), ctx, out, schema, null);
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1854,7 +1887,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @return New writer.
      */
     public BinaryAbstractWriterEx newWriter(int typeId) {
-        BinaryAbstractWriterEx res = BinaryUtils.createWriter(version(), ctx, out, schema, handles());
+        BinaryAbstractWriterEx res = createWriter(version(), ctx, out, schema, handles());
 
         res.failIfUnregistered(failIfUnregistered);
 

@@ -209,7 +209,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
 
         stream.position(start);
 
-        return BinaryUtils.createReader(ctx,
+        return BinaryAbstractReaderEx.createReader(ctx,
             stream,
             ldr,
             rCtx,

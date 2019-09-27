@@ -58,7 +58,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     protected BinaryAbstractReaderEx createReader(byte[] msg) {
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        return BinaryUtils.createReader(null, stream, ctx.config().getClassLoader(), true);
+        return BinaryAbstractReaderEx.createReader(null, stream, ctx.config().getClassLoader(), true);
     }
 
     /**
@@ -66,7 +66,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
      * @return Writer.
      */
     protected BinaryAbstractWriterEx createWriter(int cap) {
-        return BinaryUtils.createWriter(null, new BinaryHeapOutputStream(cap), null, null);
+        return BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(cap), null, null);
     }
 
     /** {@inheritDoc} */
