@@ -38,6 +38,11 @@
             <id>ignite-binaries-test-repo</id>
             <url>file://${basedir}/src/test/binaries/repo</url>
         </repository>
+
+        <repository>
+            <id>mvn-central</id>
+            <url>https://dl.bintray.com/devexperts/Maven/</url>
+        </repository>
     </repositories>
 
     <properties>
@@ -498,10 +503,6 @@
 
         <profile>
             <id>deadlock-detection</id>
-
-            <properties>
-                <deadlock.detection.workdir>${project.build.directory}/deadlock-detection</deadlock.detection.workdir>
-            </properties>
 
             <dependencies>
                 <dependency>
