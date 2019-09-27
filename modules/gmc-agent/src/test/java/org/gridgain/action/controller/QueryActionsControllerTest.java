@@ -219,7 +219,6 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 new ScanQueryArgument()
                     .setCacheName("test_cache")
                     .setQueryId("qry")
-                    .setFilter("key_1")
                     .setPageSize(1)
             );
 
@@ -232,7 +231,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 String id = ctx.read("$.rows[0][1]");
                 String val = ctx.read("$.rows[0][3]");
 
-                return arr.size() == 1 && !hasMore && "key_1".equals(id) && "value_1".equals(val);
+                return arr.size() == 1 && hasMore && "key_2".equals(id) && "value_2".equals(val);
             }
 
             return false;

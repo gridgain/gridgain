@@ -23,21 +23,13 @@ import java.util.UUID;
 /**
  * DTO fro scan query argument.
  */
+// TODO GG-24423: Add SqlPredicate for filtering entries.
 public class ScanQueryArgument {
     /** Query ID. */
     private String qryId;
 
     /** Cache name for query. */
     private String cacheName;
-
-    /** Filter text. */
-    private String filter;
-
-    /** Filter is regular expression */
-    private boolean regEx;
-
-    /** Case sensitive filtration */
-    private boolean caseSensitive;
 
     /** Result batch size. */
     private int pageSize;
@@ -74,54 +66,6 @@ public class ScanQueryArgument {
      */
     public ScanQueryArgument setCacheName(String cacheName) {
         this.cacheName = cacheName;
-        return this;
-    }
-
-    /**
-     * @return Filter string.
-     */
-    public String getFilter() {
-        return filter;
-    }
-
-    /**
-     * @param filter Filter.
-     * @return This for chaining method calls.
-     */
-    public ScanQueryArgument setFilter(String filter) {
-        this.filter = filter;
-        return this;
-    }
-
-    /**
-     * @return @{code true} if filter string is regEx pattern.
-     */
-    public boolean isRegEx() {
-        return regEx;
-    }
-
-    /**
-     * @param regEx RegEx pattern.
-     * @return This for chaining method calls.
-     */
-    public ScanQueryArgument setRegEx(boolean regEx) {
-        this.regEx = regEx;
-        return this;
-    }
-
-    /**
-     * @return @{code true} if filter is case sensitive.
-     */
-    public boolean isCaseSensitive() {
-        return caseSensitive;
-    }
-
-    /**
-     * @param caseSensitive Case sensitive.
-     * @return This for chaining method calls.
-     */
-    public ScanQueryArgument setCaseSensitive(boolean caseSensitive) {
-        this.caseSensitive = caseSensitive;
         return this;
     }
 

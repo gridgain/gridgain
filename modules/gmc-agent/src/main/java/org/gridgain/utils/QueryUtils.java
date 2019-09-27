@@ -30,7 +30,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.gridgain.action.query.CursorHolder;
-import org.gridgain.action.query.QueryHolder;
 import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryField;
 import org.gridgain.dto.action.query.QueryResult;
@@ -60,18 +59,23 @@ public class QueryUtils {
      * @param pageSize Page size.
      * @return Query result.
      */
-    public static QueryResult fetchResult(QueryHolder qryHolder, CursorHolder curHolder, int pageSize) {
+    public static QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
+        return curHolder.isScanCursor()
+            ? fetchScanQueryResult(curHolder, pageSize)
+            : fetchSqlQueryResult(curHolder, pageSize);
+    }
+
+    /**
+     * @param curHolder Cursor id.
+     * @param pageSize Page size.
+     * @return Query result.
+     */
+    public static QueryResult fetchSqlQueryResult(CursorHolder curHolder, int pageSize) {
         QueryResult qryRes = new QueryResult();
         long start = U.currentTimeMillis();
 
-        List<Object[]> rows = qryHolder.isScanQuery()
-                ? fetchScanQueryRows(curHolder, pageSize)
-                : fetchSqlQueryRows(curHolder, pageSize);
-
-        List<QueryField> cols = qryHolder.isScanQuery()
-                ? SCAN_COL_NAMES
-                : getColumns(curHolder.getCursor());
-
+        List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
+        List<QueryField> cols = getColumns(curHolder.getCursor());
         boolean hasMore = curHolder.hasNext();
 
         return qryRes
@@ -79,6 +83,25 @@ public class QueryUtils {
             .setColumns(cols)
             .setRows(rows)
             .setDuration(U.currentTimeMillis() - start);
+    }
+
+    /**
+     * @param curHolder Cursor id.
+     * @param pageSize Page size.
+     * @return Query result.
+     */
+    public static QueryResult fetchScanQueryResult(CursorHolder curHolder, int pageSize) {
+        QueryResult qryRes = new QueryResult();
+        long start = U.currentTimeMillis();
+
+        List<Object[]> rows = fetchScanQueryRows(curHolder, pageSize);
+        boolean hasMore = curHolder.hasNext();
+
+        return qryRes
+                .setHasMore(hasMore)
+                .setColumns(SCAN_COL_NAMES)
+                .setRows(rows)
+                .setDuration(U.currentTimeMillis() - start);
     }
 
     /**
@@ -295,6 +318,7 @@ public class QueryUtils {
     }
 
     /**
+     * TODO GG-24424: Change on JSON string.
      * Convert Binary object to string.
      *
      * @param obj Binary object.

@@ -38,11 +38,11 @@ public class QueryRegistryTest extends AbstractGridWithAgentTest {
 
         String qryId = "qry";
         registry.createQueryHolder(qryId);
-        registry.addCursor(qryId, new CursorHolder(new QueryCursorImpl<>(new ArrayList<>())));
+        String cursorId = registry.addCursor(qryId, new CursorHolder(new QueryCursorImpl<>(new ArrayList<>())));
 
         Thread.sleep(3000);
 
-        assertNull(registry.findQuery(qryId));
+        assertNull(registry.findCursor(qryId, cursorId));
     }
 
     /**
@@ -59,11 +59,11 @@ public class QueryRegistryTest extends AbstractGridWithAgentTest {
 
         for (int i = 0; i < 5; i++) {
             Thread.sleep(1000);
-            assertNotNull(registry.findQuery(qryId).getCursor(curId));
+            assertNotNull(registry.findCursor(qryId, curId));
         }
 
         Thread.sleep(6000);
 
-        assertNull(registry.findQuery(qryId));
+        assertNull(registry.findCursor(qryId, curId));
     }
 }
