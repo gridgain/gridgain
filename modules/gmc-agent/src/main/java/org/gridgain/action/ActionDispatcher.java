@@ -33,7 +33,7 @@ import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.gridgain.dto.action.Request;
 
 import static org.gridgain.action.annotation.ActionControllerAnnotationProcessor.getActions;
-import static org.gridgain.agent.AgentUtils.completeFutureWithException;
+import static org.gridgain.utils.AgentUtils.completeFutureWithException;
 
 /**
  * Action dispatcher.
@@ -49,7 +49,7 @@ public class ActionDispatcher implements AutoCloseable {
     private IgniteLogger log;
 
     /** Controllers. */
-    private final Map<String, Object> controllers = new ConcurrentHashMap<>();
+    private final Map<Class, Object> controllers = new ConcurrentHashMap<>();
 
     /** Thread pool. */
     private final ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -89,11 +89,12 @@ public class ActionDispatcher implements AutoCloseable {
      */
     private CompletableFuture<?> handleRequest(ActionMethod mtd, Request req) {
         try {
+            Class<?> ctrlCls = mtd.getControllerClass();
             boolean securityEnabled = ctx.security().enabled();
             boolean authenticationEnabled = ctx.authentication().enabled();
 
-            if (!controllers.containsKey(mtd.getActionName()))
-                controllers.put(mtd.getActionName(), mtd.getControllerClass().getConstructor(GridKernalContext.class).newInstance(ctx));
+            if (!controllers.containsKey(ctrlCls))
+                controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
 
             boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
             if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
@@ -110,12 +111,12 @@ public class ActionDispatcher implements AutoCloseable {
 
                 if (ses.securityContext() != null) {
                     try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {
-                        return invoke(mtd.getMethod(), controllers.get(mtd.getActionName()), req.getArgument());
+                        return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
                     }
                 }
             }
 
-            return invoke(mtd.getMethod(), controllers.get(mtd.getActionName()), req.getArgument());
+            return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
         }
         catch (InvocationTargetException e) {
             return completeFutureWithException(e.getTargetException());

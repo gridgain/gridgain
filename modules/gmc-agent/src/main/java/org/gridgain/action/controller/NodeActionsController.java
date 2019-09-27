@@ -23,7 +23,7 @@ import org.apache.ignite.internal.visor.node.VisorNodePingTask;
 import org.apache.ignite.internal.visor.node.VisorNodePingTaskArg;
 import org.apache.ignite.internal.visor.node.VisorNodePingTaskResult;
 import org.gridgain.action.annotation.ActionController;
-import org.gridgain.agent.AgentUtils;
+import org.gridgain.utils.AgentUtils;
 
 import java.util.concurrent.CompletableFuture;
 

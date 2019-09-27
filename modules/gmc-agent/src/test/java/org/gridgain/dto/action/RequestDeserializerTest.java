@@ -38,7 +38,7 @@ public class RequestDeserializerTest {
         Request req = new Request().setAction("InvalidAction").setArgument(false).setId(UUID.randomUUID());
         Request deserializedReq = mapper.readValue(mapper.writeValueAsString(req), Request.class);
 
-        assertTrue(deserializedReq.getArgument() instanceof ResponseError);
+        assertTrue(deserializedReq instanceof InvalidRequest);
     }
 
     /**
@@ -60,6 +60,6 @@ public class RequestDeserializerTest {
         Request req = new Request().setAction("ActionControllerForTests.numberAction").setArgument("number").setId(UUID.randomUUID());
         Request deserializedReq = mapper.readValue(mapper.writeValueAsString(req), Request.class);
 
-        assertTrue(deserializedReq.getArgument() instanceof ResponseError);
+        assertTrue(deserializedReq instanceof InvalidRequest);
     }
 }

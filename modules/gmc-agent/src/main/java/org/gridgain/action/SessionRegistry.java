@@ -22,12 +22,13 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.gridgain.agent.AgentUtils;
 
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import static org.gridgain.utils.AgentUtils.authenticate;
 
 /**
  * Session registry.
@@ -113,7 +114,7 @@ public class SessionRegistry {
         }
 
         if (ses.isSessionExpired(sesTokTtl.toMillis())) {
-            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
+            ses.securityContext(authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
             sesId2Ses.put(ses.id(), ses);
         }

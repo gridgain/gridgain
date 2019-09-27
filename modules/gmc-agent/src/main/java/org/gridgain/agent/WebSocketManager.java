@@ -57,7 +57,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
-import static org.gridgain.agent.AgentUtils.EMPTY;
+import static org.gridgain.utils.AgentUtils.EMPTY;
 
 /**
  * Web socket manager.

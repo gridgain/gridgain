@@ -55,8 +55,8 @@ import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.gridgain.agent.AgentUtils.monitoringUri;
-import static org.gridgain.agent.AgentUtils.toWsUri;
+import static org.gridgain.utils.AgentUtils.monitoringUri;
+import static org.gridgain.utils.AgentUtils.toWsUri;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
