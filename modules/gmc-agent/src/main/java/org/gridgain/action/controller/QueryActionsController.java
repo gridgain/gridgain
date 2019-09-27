@@ -100,6 +100,7 @@ public class QueryActionsController {
                 QueryHolder qryHolder = qryRegistry.findQuery(qryId);
                 CursorHolder cursorHolder = qryHolder.getCursor(cursorId);
                 QueryResult res = fetchResult(qryHolder, cursorHolder, arg.getPageSize());
+                res.setResultNodeId(ctx.localNodeId().toString());
 
                 if (!res.isHasMore())
                     qryRegistry.closeQueryCursor(qryId, cursorId);
