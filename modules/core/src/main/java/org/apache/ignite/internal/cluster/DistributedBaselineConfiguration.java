@@ -16,18 +16,22 @@
 
 package org.apache.ignite.internal.cluster;
 
+import java.io.Serializable;
 import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
@@ -88,26 +92,32 @@ public class DistributedBaselineConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    if (baselineAutoAdjustEnabled.get() == null) {
-                        try {
-                            baselineAutoAdjustEnabled.propagateAsync(null, dfltEnabled);
-                        }
-                        catch (IgniteCheckedException e) {
-                            log.error("Cannot update baseline auto-adjust enabled flag", e);
-                        }
-                    }
-
-                    if (baselineAutoAdjustTimeout.get() == null) {
-                        try {
-                            baselineAutoAdjustTimeout.propagateAsync(null, dfltTimeout);
-                        }
-                        catch (IgniteCheckedException e) {
-                            log.error("Cannot update baseline auto-adjust timeout", e);
-                        }
-                    }
+                    setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
+                    setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
                 }
             }
         );
+    }
+
+    /**
+     * @param property Property which value should be set.
+     * @param value Default value.
+     * @param log Logger.
+     * @param <T> Property type.
+     */
+    private <T extends Serializable> void setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
+        if (property.get() == null) {
+            try {
+                property.propagateAsync(null, value)
+                    .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
+                        if (future.error() != null)
+                            log.error("Cannot set default value of '" + property.getName() + '\'', future.error());
+                    });
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Cannot initiate setting default value of '" + property.getName() + '\'', e);
+            }
+        }
     }
 
     /**

@@ -63,8 +63,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void before() throws Exception {
         stopAllGrids();
 
-        if (isPersistent())
-            cleanPersistenceDir();
+        cleanPersistenceDir();
 
         autoAdjustTimeout = 5000;
     }
@@ -76,8 +75,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void after() throws Exception {
         stopAllGrids();
 
-        if (isPersistent())
-            cleanPersistenceDir();
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */

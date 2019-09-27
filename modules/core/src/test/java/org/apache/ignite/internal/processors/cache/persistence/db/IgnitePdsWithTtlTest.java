@@ -241,6 +241,9 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     public void testStartStopAfterRebalanceWithTtlExpirable() throws Exception {
         try {
             IgniteEx srv = startGrid(0);
+
+            srv.cluster().baselineAutoAdjustEnabled(false);
+
             startGrid(1);
             srv.cluster().active(true);
 
