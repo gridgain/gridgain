@@ -509,20 +509,12 @@
                     <artifactId>dlcheck</artifactId>
                     <version>0.5.1</version>
                     <type>pom</type>
-                    <!--<scope>test</scope>-->
+                    <scope>test</scope>
                 </dependency>
             </dependencies>
 
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </plugin>
-
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-dependency-plugin</artifactId>
@@ -560,7 +552,6 @@
                                  -Ddlcheck.fail=true
                                  -Ddlcheck.output=${deadlock.detection.workdir}/alerts
                             </argLine>
-                            <skipAfterFailureCount>0</skipAfterFailureCount>
                         </configuration>
                     </plugin>
                 </plugins>
