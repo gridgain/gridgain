@@ -35,10 +35,16 @@
 
     <repositories>
         <repository>
-            <id>ignite-binaries-test-repo</id>
-            <url>file://${basedir}/src/test/binaries/repo</url>
+            <id>mvn-central</id>
+            <url>https://dl.bintray.com/devexperts/Maven/</url>
+        </repository>
+
+        <repository>
+            <id>mvn-central</id>
+            <url>https://dl.bintray.com/devexperts/Maven/</url>
         </repository>
     </repositories>
+
 
     <properties>
         <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
@@ -499,10 +505,6 @@
         <profile>
             <id>deadlock-detection</id>
 
-            <properties>
-                <deadlock.detection.workdir>${project.build.directory}/deadlock-detection</deadlock.detection.workdir>
-            </properties>
-
             <dependencies>
                 <dependency>
                     <groupId>com.devexperts.dlcheck</groupId>
@@ -512,6 +514,10 @@
                     <!--<scope>test</scope>-->
                 </dependency>
             </dependencies>
+
+            <properties>
+                <deadlock.detection.workdir>${project.build.directory}/deadlock-detection</deadlock.detection.workdir>
+            </properties>
 
             <build>
                 <plugins>
@@ -554,12 +560,8 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <argLine>-javaagent:${project.build.directory}/libs/dlcheck.jar
-                                <!-- -Ddlcheck.cache.dir=${dlcheck.workdir}/cache-->
-                                <!-- Optional, fails at the point of potential deadlock is detected -->
-                                 -Ddlcheck.fail=true
-                                 -Ddlcheck.output=${deadlock.detection.workdir}/alerts
-                            </argLine>
+                            <argLine>-javaagent:/home/alapin/workspace/gridgain/modules/core/target/libs/dlcheck.jar -Ddlcheck.fail=true -Ddlcheck.output=/home/alapin/alerts</argLine>
+                            <!--</argLine>-->
                             <skipAfterFailureCount>0</skipAfterFailureCount>
                         </configuration>
                     </plugin>
