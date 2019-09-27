@@ -18,6 +18,8 @@ package org.apache.ignite.internal.binary;
 
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
+
 /**
  * Binary writer implementation.
  */
@@ -41,7 +43,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
      * @param registered Whether type is registered.
      */
     @Override public void preWrite(boolean registered) {
-        out.position(out.position() + GridBinaryMarshaller.HDR_LEN_V2);
+        out.position(out.position() + HDR_LEN_V2);
     }
 
     /**
@@ -51,101 +53,99 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
      * @param registered Whether type is registered.
      */
     @Override public void postWrite(boolean userType, boolean registered) {
-        short flags;
-        boolean useCompactFooter;
+        int dataLen = out.position() - start - HDR_LEN_V2;
 
-        int dataLen = out.position() - start - GridBinaryMarshaller.HDR_LEN_V2;
+        short flags = initFlags(userType);
 
-        if (userType) {
-            if (ctx.isCompactFooter()) {
-                flags = BinaryUtils.FLAG_USR_TYP | BinaryUtils.FLAG_COMPACT_FOOTER;
-                useCompactFooter = true;
-            }
-            else {
-                flags = BinaryUtils.FLAG_USR_TYP;
-                useCompactFooter = false;
-            }
-        }
-        else {
-            flags = 0;
-            useCompactFooter = false;
-        }
+        if (!BinaryUtils.hasSchema(flags) && registered)
+            writeMeta(flags, registered, dataLen);
 
-        int finalSchemaId;
-
-        if (fieldCnt != 0) {
-            finalSchemaId = schemaId;
-
-            // Write the schema.
-            flags |= BinaryUtils.FLAG_HAS_SCHEMA;
-        }
-        else
-            finalSchemaId = 0;
-
-        if (rawOffPos != 0)
-            flags |= BinaryUtils.FLAG_HAS_RAW;
-
-        if (hasMetaSection(typeId, flags) || !registered) {
-            if (BinaryUtils.hasRaw(flags))
-                out.writeInt(rawOffPos - start);
-
-            int footerOffPos = 0;
-
-            if (BinaryUtils.hasSchema(flags)) {
-                out.writeInt(finalSchemaId);
-
-                footerOffPos = out.position();
-
-                out.position(footerOffPos + 4);
-            }
-
-            if (!registered)
-                doWriteString(clsName);
-
-            if (BinaryUtils.hasSchema(flags)) {
-                int footerOff = out.position() - start;
-
-                out.position(footerOffPos);
-
-                out.writeInt(footerOff);
-
-                out.position(start + footerOff);
-            }
-        }
-
-        if (BinaryUtils.hasSchema(flags)) {
-            int offByteCnt = schema.write(out, fieldCnt, useCompactFooter);
-
-            if (offByteCnt == BinaryUtils.OFFSET_1)
-                flags |= BinaryUtils.FLAG_OFFSET_ONE_BYTE;
-            else if (offByteCnt == BinaryUtils.OFFSET_2)
-                flags |= BinaryUtils.FLAG_OFFSET_TWO_BYTES;
-        }
+        if (BinaryUtils.hasSchema(flags))
+            flags |= writeShema(userType);
 
         int retPos = out.position();
 
         out.unsafePosition(start);
 
+        writeHeader(registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID, flags, dataLen, retPos - start);
+
+        out.unsafePosition(retPos);
+    }
+
+    /** */
+    private void writeHeader(int typeId, short flags, int dataLen, int totalLen) {
         out.unsafeWriteByte(GridBinaryMarshaller.OBJ);
         out.unsafeWriteByte(PROTO_VER);
         out.unsafeWriteShort(flags);
-        out.unsafeWriteInt(registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID);
+        out.unsafeWriteInt(typeId);
 
         out.unsafePosition(start + GridBinaryMarshaller.TOTAL_LEN_POS); // skip hash code
 
-        out.unsafeWriteInt(retPos - start);
+        out.unsafeWriteInt(totalLen);
         out.unsafeWriteInt(dataLen);
+    }
 
-        out.unsafePosition(retPos);
+    /** */
+    private short writeShema(boolean userType) {
+        int offByteCnt = schema.write(out, fieldCnt, useCompactFooter(userType));
+
+        switch (offByteCnt) {
+            case BinaryUtils.OFFSET_1:
+                return BinaryUtils.FLAG_OFFSET_ONE_BYTE;
+
+            case BinaryUtils.OFFSET_2:
+                return BinaryUtils.FLAG_OFFSET_TWO_BYTES;
+
+            default:
+                return 0;
+        }
+    }
+
+    /** */
+    private boolean useCompactFooter(boolean userType) {
+        return userType && ctx.isCompactFooter();
+    }
+
+    /** */
+    private short initFlags(boolean userType) {
+        short flags = userType ? BinaryUtils.FLAG_USR_TYP : 0;
+
+        if (useCompactFooter(userType))
+            flags |= BinaryUtils.FLAG_COMPACT_FOOTER;
+
+        if (fieldCnt != 0)
+            flags |= BinaryUtils.FLAG_HAS_SCHEMA;
+
+        if (rawOffPos != 0)
+            flags |= BinaryUtils.FLAG_HAS_RAW;
+
+        return flags;
+    }
+
+    /** */
+    private void writeMeta(short flags, boolean registered, int dataLen) {
+        if (BinaryUtils.hasRaw(flags))
+            out.writeInt(rawOffPos - start);
+
+        if (BinaryUtils.hasSchema(flags)) {
+            out.writeInt(fieldCnt != 0 ? schemaId : 0);
+
+            out.writeInt(footerOffset(dataLen, registered, flags));
+        }
+
+        if (!registered)
+            doWriteString(clsName);
+    }
+
+    /** */
+    private int footerOffset(int dataLen, boolean registered, short flags) {
+        return HDR_LEN_V2 + dataLen // meta section rigth after data
+            + (BinaryUtils.hasRaw(flags) ? 4 : 0) // count raw offset
+            + (!registered ? clsName.length() + 5 : 0); // count class name
     }
 
     /** {@inheritDoc} */
     @Override public byte version() {
         return PROTO_VER;
-    }
-
-    /** */
-    private static boolean hasMetaSection(int typeId, short flags) {
-        return typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID || BinaryUtils.hasSchema(flags);
     }
 }
