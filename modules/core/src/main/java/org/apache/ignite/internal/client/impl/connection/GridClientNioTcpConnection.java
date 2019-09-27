@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
 import org.apache.ignite.internal.client.GridClientCacheFlag;
@@ -59,7 +60,7 @@ import org.apache.ignite.internal.client.marshaller.optimized.GridClientZipOptim
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
-import org.apache.ignite.internal.processors.rest.client.message.GridClientReadOnlyModeRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
@@ -820,23 +821,6 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     }
 
     /** {@inheritDoc} */
-    @Override public GridClientFuture<?> changeReadOnlyState(
-        boolean readOnly,
-        UUID destNodeId
-    ) throws GridClientClosedException, GridClientConnectionResetException {
-        return readOnly ?
-            makeRequest(GridClientReadOnlyModeRequest.enableReadOnly(), destNodeId) :
-            makeRequest(GridClientReadOnlyModeRequest.disableReadOnly(), destNodeId);
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridClientFuture<Boolean> readOnlyState(
-        UUID destNodeId
-    ) throws GridClientClosedException, GridClientConnectionResetException {
-        return makeRequest(GridClientReadOnlyModeRequest.currentReadOnlyMode(), destNodeId);
-    }
-
-    /** {@inheritDoc} */
     @Override public GridClientFuture<Boolean> currentState(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException {
         GridClientStateRequest msg = new GridClientStateRequest();
@@ -844,6 +828,21 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         msg.requestCurrentState();
 
         return makeRequest(msg, destNodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<?> changeState(
+        ClusterState state,
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<ClusterState> state(
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        return makeRequest(GridClientClusterStateRequest.currentState(), destNodeId);
     }
 
     /** {@inheritDoc} */

@@ -48,6 +48,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.failure.FailureContext;
@@ -3716,11 +3717,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
 
                 if (!cctx.kernalContext().state().clusterState().localBaselineAutoAdjustment()) {
-                    boolean active = !stateChangeErr && req.activate();
+                    ClusterState state = stateChangeErr ? ClusterState.INACTIVE : req.state();
 
                     ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
                         req.requestId(),
-                        active,
+                        state,
                         !stateChangeErr
                     );
 

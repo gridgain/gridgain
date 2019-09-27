@@ -41,6 +41,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
@@ -320,11 +321,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public boolean readOnly() {
+    @Override public ClusterState state() {
         guard();
 
         try {
-            return ctx.state().publicApiReadOnlyMode();
+            return ctx.state().publicApiState(true);
         }
         finally {
             unguard();
@@ -332,13 +333,13 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void readOnly(boolean readOnly) throws IgniteException {
+    @Override public void state(ClusterState newState) throws IgniteException {
         guard();
 
         try {
-            verifyReadOnlyModeSupport();
+            verifyClusterStateSupports(newState);
 
-            ctx.state().changeGlobalState(readOnly).get();
+            ctx.state().changeGlobalState(newState, baselineNodes(), false).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -349,9 +350,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** */
-    private void verifyReadOnlyModeSupport() {
-        if (!allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
-            throw new IgniteException("Not all nodes in cluster supports cluster read-only mode");
+    private void verifyClusterStateSupports(ClusterState state) {
+        if (state == ClusterState.READ_ONLY) {
+            if (!allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
+                throw new IgniteException("Not all nodes in cluster supports cluster read-only mode");
+        }
     }
 
     /** */

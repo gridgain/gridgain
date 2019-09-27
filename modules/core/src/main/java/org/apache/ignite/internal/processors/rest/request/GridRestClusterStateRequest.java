@@ -16,15 +16,17 @@
 
 package org.apache.ignite.internal.processors.rest.request;
 
+import org.apache.ignite.cluster.ClusterState;
+
 /**
  *
  */
-public class GridRestReadOnlyChangeModeRequest extends GridRestRequest {
+public class GridRestClusterStateRequest extends GridRestRequest {
     /** Request current state. */
     private boolean reqCurrentMode;
 
-    /** Read only. */
-    private boolean readOnly;
+    /** New state. */
+    private ClusterState state;
 
     /** */
     public void reqCurrentMode() {
@@ -37,12 +39,12 @@ public class GridRestReadOnlyChangeModeRequest extends GridRestRequest {
     }
 
     /** */
-    public void readOnly(boolean readOnly) {
-        this.readOnly = readOnly;
+    public ClusterState state() {
+        return state;
     }
 
     /** */
-    public boolean readOnly() {
-        return readOnly;
+    public void state(ClusterState state) {
+        this.state = state;
     }
 }

@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.management.JMException;
+import org.apache.ignite.cluster.ClusterState;
 
 /**
  * This interface defines JMX view on kernal.
@@ -505,25 +506,23 @@ public interface IgniteMXBean {
     @MXBeanParametersDescriptions("Metrics registry.")
     public void resetMetrics(String registry);
 
+    /**
+     * Checks cluster state. See {@link ClusterState}.
+     *
+     * @return Current cluster state.
+     */
+    @MXBeanDescription("Checks cluster state.")
+    public ClusterState clusterState();
 
     /**
-     * Gets cluster read-only mode status.
+     * Changes current cluster state. See {@link ClusterState}.
      *
-     * @return {@code True} if cluster active and read-only mode enabled, and {@code False} otherwise.
+     * @param state New cluster state.
      */
-    @MXBeanDescription("Cluster read-only mode status.")
-    boolean readOnlyMode();
-
-    /**
-     * Enable or disable cluster read-only mode. If {@code readOnly} flag is {@code True} read-only mode will be
-     * enabled. If {@code readOnly} flag is {@code False} read-only mode will be disabled.
-     *
-     * @param readOnly enable/disable cluster read-only mode flag.
-     */
-    @MXBeanDescription("Enable or disable cluster read-only mode.")
-    @MXBeanParametersNames("readOnly")
-    @MXBeanParametersDescriptions("True - enable read-only mode, false - disable read-only mode.")
-    void readOnlyMode(boolean readOnly);
+    @MXBeanDescription("Changes current cluster state.")
+    @MXBeanParametersNames("state")
+    @MXBeanParametersDescriptions("New cluster state.")
+    public void clusterState(ClusterState state);
 
     /**
      * Gets duration of read-only mode enabled on cluster.

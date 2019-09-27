@@ -55,7 +55,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestLogRequest;
-import org.apache.ignite.internal.processors.rest.request.GridRestReadOnlyChangeModeRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
@@ -79,7 +79,6 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_P
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REMOVE_ALL;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVE;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_NAME;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_READ_ONLY_MODE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_READ_ONLY_ENABLE;
@@ -770,7 +769,7 @@ public class GridJettyRestHandler extends AbstractHandler {
             case CLUSTER_CURRENT_READ_ONLY_MODE:
             case CLUSTER_READ_ONLY_DISABLE:
             case CLUSTER_READ_ONLY_ENABLE: {
-                GridRestReadOnlyChangeModeRequest restReq0 = new GridRestReadOnlyChangeModeRequest();
+                GridRestClusterStateRequest restReq0 = new GridRestClusterStateRequest();
 
                 if (cmd == CLUSTER_CURRENT_READ_ONLY_MODE)
                     restReq0.reqCurrentMode();

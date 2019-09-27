@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cluster;
 
 import java.util.UUID;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -41,22 +42,28 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     /** New cluster state. */
     private final boolean clusterActive;
 
+    /** New cluster state. */
+    private final ClusterState state;
+
     /** State change error. */
     private Boolean transitionRes;
 
     /**
      * @param reqId State change request ID.
-     * @param clusterActive New cluster state.
+     * @param state New cluster state.
      */
     public ChangeGlobalStateFinishMessage(
         UUID reqId,
-        boolean clusterActive,
-        Boolean transitionRes) {
+        ClusterState state,
+        Boolean transitionRes
+    ) {
         assert reqId != null;
+        assert state != null;
 
         this.reqId = reqId;
-        this.clusterActive = clusterActive;
+        this.state = state;
         this.transitionRes = transitionRes;
+        this.clusterActive = ClusterState.active(state);
     }
 
     /**
@@ -68,7 +75,9 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
 
     /**
      * @return New cluster state.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean clusterActive() {
         return clusterActive;
     }
@@ -78,6 +87,18 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
      */
     public boolean success() {
         return transitionRes == null ? clusterActive : transitionRes;
+    }
+
+    /**
+     * @return New cluster state.
+     */
+    public ClusterState state() {
+        if (state != null)
+            return state;
+        else {
+            // Backward compatibility.
+            return clusterActive ? ClusterState.ACTIVE : ClusterState.INACTIVE;
+        }
     }
 
     /** {@inheritDoc} */

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.UUID;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.BaselineTopologyHistoryItem;
@@ -45,10 +46,12 @@ public class StateChangeRequest {
      * @param msg Message.
      * @param topVer State change topology versoin.
      */
-    public StateChangeRequest(ChangeGlobalStateMessage msg,
+    public StateChangeRequest(
+        ChangeGlobalStateMessage msg,
         BaselineTopologyHistoryItem bltHistItem,
         boolean activeChanged,
-        AffinityTopologyVersion topVer) {
+        AffinityTopologyVersion topVer
+    ) {
         this.msg = msg;
         prevBltHistItem = bltHistItem;
         this.activeChanged = activeChanged;
@@ -78,16 +81,18 @@ public class StateChangeRequest {
 
     /**
      * @return New state.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean activate() {
         return msg.activate();
     }
 
     /**
-     * @return Read-only mode flag.
+     * @return New cluster state.
      */
-    public boolean readOnly() {
-        return msg.readOnly();
+    public ClusterState state() {
+        return msg.state();
     }
 
     /**
