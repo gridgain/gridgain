@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -71,6 +73,72 @@ public class BinaryMetadataRegistrationInsideEntryProcessorTest extends GridComm
     @After
     public void stopAllGridsAfterTest() {
         stopAllGrids();
+    }
+
+    @Test
+    public void testA() throws Throwable {
+        final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
+
+        final Object mux1 = new Object();
+        final Object mux2 = new Object();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Thread th1 = new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    synchronized (mux1) {
+                        synchronized (mux2) {
+                            System.out.println("Th1. both mutex are acquired.");
+
+                            latch.countDown();
+                        }
+                    }
+                }
+                catch (Exception e) {
+                    err.compareAndSet(null, e);
+                }
+            }
+        });
+
+        Thread th2 = new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    try {
+                        latch.await();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    synchronized (mux2) {
+                        synchronized (mux1) {
+                            System.out.println("Th2. both mutex are acquired.");
+                        }
+                    }
+                }
+                catch (Exception e) {
+                    System.out.println(">>>>> 1: " + e);
+                    err.compareAndSet(null, e);
+                }
+                catch (Throwable t) {
+                    System.out.println(">>>>> 1: " + t);
+                    err.compareAndSet(null, t);
+                }
+            }
+        });
+
+        th2.start();
+
+        Thread.sleep(5000);
+
+        th1.start();
+
+        th1.join();
+        th2.join();
+
+        if (err.get() != null)
+            throw err.get();
     }
 
     /**

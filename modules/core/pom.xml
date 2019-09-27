@@ -495,5 +495,77 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <id>deadlock-detection</id>
+
+            <properties>
+                <deadlock.detection.workdir>${project.build.directory}/deadlock-detection</deadlock.detection.workdir>
+            </properties>
+
+            <dependencies>
+                <dependency>
+                    <groupId>com.devexperts.dlcheck</groupId>
+                    <artifactId>dlcheck</artifactId>
+                    <version>0.5.1</version>
+                    <type>pom</type>
+                    <!--<scope>test</scope>-->
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>2.8</version>
+                        <executions>
+                            <execution>
+                                <id>copy-sample-agent</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>com.devexperts.dlcheck</groupId>
+                                            <artifactId>agent</artifactId>
+                                            <version>0.5.1</version>
+                                            <outputDirectory>${project.build.directory}/libs</outputDirectory>
+                                            <!-- Do not use another name! -->
+                                            <destFileName>dlcheck.jar</destFileName>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>-javaagent:${project.build.directory}/libs/dlcheck.jar
+                                <!-- -Ddlcheck.cache.dir=${dlcheck.workdir}/cache-->
+                                <!-- Optional, fails at the point of potential deadlock is detected -->
+                                 -Ddlcheck.fail=true
+                                 -Ddlcheck.output=${deadlock.detection.workdir}/alerts
+                            </argLine>
+                            <skipAfterFailureCount>0</skipAfterFailureCount>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+
+        </profile>
     </profiles>
 </project>
