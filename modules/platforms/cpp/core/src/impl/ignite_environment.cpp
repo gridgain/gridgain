@@ -119,34 +119,6 @@ namespace ignite
             }
         };
 
-        /*
-         * Stores pointer to internal Ignite node.
-         */
-        class IgniteNodeHolder
-        {
-        public:
-            IgniteNodeHolder(IgniteEnvironment* env) :
-                node(new IgniteImpl(SharedPointer<IgniteEnvironment>(env, IgniteNodeHolder::EmptyDeleter)))
-            {
-                // No-op.
-            }
-
-            Ignite* GetIgnite()
-            {
-                return &node;
-            }
-
-        private:
-            static void EmptyDeleter(IgniteEnvironment*)
-            {
-                // No-op.
-            }
-
-            /** Node. */
-            Ignite node;
-        };
-
-
         /**
          * InLongOutLong callback.
          * 
@@ -347,7 +319,7 @@ namespace ignite
             binding(),
             moduleMgr(),
             nodes(new ClusterNodesHolder()),
-            igniteNodeHolder(NULL)
+            ignite(NULL)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -360,7 +332,7 @@ namespace ignite
         {
             delete[] name;
 
-            delete igniteNodeHolder;
+            delete ignite;
             delete metaUpdater;
             delete metaMgr;
             delete cfg;
@@ -405,7 +377,7 @@ namespace ignite
             common::dynamic::Module currentModule = common::dynamic::GetCurrent();
             moduleMgr.Get()->RegisterModule(currentModule);
 
-            igniteNodeHolder = new IgniteNodeHolder(this);
+            ignite = new Ignite(new IgniteImpl(SharedPointer<IgniteEnvironment>(this, SharedPointerEmptyDeleter)));
         }
 
         const char* IgniteEnvironment::InstanceName() const
@@ -535,7 +507,7 @@ namespace ignite
 
         ignite::Ignite* IgniteEnvironment::GetIgnite()
         {
-            return igniteNodeHolder->GetIgnite();
+            return ignite;
         }
 
         void IgniteEnvironment::ComputeTaskReduce(int64_t taskHandle)

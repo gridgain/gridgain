@@ -41,7 +41,6 @@ namespace ignite
         namespace cluster {
             class ClusterNodeImpl;
         }
-        class IgniteNodeHolder;
 
         /**
          * Defines environment in which Ignite operates.
@@ -345,8 +344,8 @@ namespace ignite
             /** Cluster nodes. */
             common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
 
-            /** Ignite node holder pointer. */
-            IgniteNodeHolder* igniteNodeHolder;
+            /** Ignite node. */
+            ignite::Ignite* ignite;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };
