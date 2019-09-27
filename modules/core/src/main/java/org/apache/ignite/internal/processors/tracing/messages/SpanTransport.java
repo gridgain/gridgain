@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-#pragma warning disable 1587   // invalid XML comment
+package org.apache.ignite.internal.processors.tracing.messages;
 
-/// <summary>
-/// Tracig API.
-/// </summary>
-namespace Apache.Ignite.Core.Tracing
-{
-    // No-op.
+/**
+ * This interface indicates class which able to transfer span.
+ */
+public interface SpanTransport {
+    /**
+     * Stored span for transferring.
+     *
+     * @param span Binary view of span.
+     */
+    void span(byte[] span);
+
+    /**
+     * @return Binary view of span.
+     */
+    byte[] span();
 }

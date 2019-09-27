@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Metric
-{
-    using System.Diagnostics.CodeAnalysis;
+package org.apache.ignite.internal.processors.metastorage.persistence;
 
-    /// <summary>
-    /// MetricExporter SPI.
-    /// </summary>
-    [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
-    public interface IMetricExporterSpi
-    {
-        // No-op.
-    }
+/** */
+enum DmsWorkerStatus {
+    /** */
+    CONTINUE,
+
+    /** */
+    CANCEL,
+
+    /** */
+    HALT;
 }

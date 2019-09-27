@@ -173,6 +173,64 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
         assertTrue(ignite.cluster().active());
+        assertFalse(ignite.cluster().readOnly());
+    }
+
+    /**
+     * Test enabling/disabling read-only mode works via control.sh
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReadOnlyEnableDisable() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertFalse(ignite.cluster().readOnly());
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--read-only-on"));
+
+        assertTrue(ignite.cluster().readOnly());
+
+        assertContains(log, testOut.toString(), "Cluster read-only mode enabled");
+
+        assertEquals(EXIT_CODE_OK, execute("--read-only-off"));
+
+        assertFalse(ignite.cluster().readOnly());
+
+        assertContains(log, testOut.toString(), "Cluster read-only mode disabled");
+    }
+
+    /**
+     * Verifies that update-tag action obeys its specification: doesn't allow updating tag on inactive cluster,
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClusterChangeTag() throws Exception {
+        final String newTag = "new_tag";
+
+        IgniteEx cl = startGrid(0);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
+
+        //because cluster is inactive
+        assertContains(log, testOut.toString(),"Error has occurred during tag update:");
+
+        cl.cluster().active(true);
+
+        //because new tag should be non-empty string
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-tag", ""));
+
+        assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
+
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> newTag.equals(cl.cluster().tag()), 10_000);
+        assertTrue("Tag has not been updated in 10 seconds", tagUpdated);
     }
 
     /**
@@ -202,15 +260,61 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testState() throws Exception {
+        final String newTag = "new_tag";
+
         Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         assertFalse(ignite.cluster().active());
 
+        injectTestSystemOut();
+
         assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        String out = testOut.toString();
+
+        UUID clId = ignite.cluster().id();
+        String clTag = ignite.cluster().tag();
+
+        assertContains(log, out, "Cluster is inactive");
+        assertContains(log, out, "Cluster  ID: " + clId);
+        assertContains(log, out, "Cluster tag: " + clTag);
 
         ignite.cluster().active(true);
 
+        assertTrue(ignite.cluster().active());
+
         assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        assertContains(log, testOut.toString(), "Cluster is active");
+
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
+            try {
+                ignite.cluster().tag(newTag);
+            }
+            catch (IgniteCheckedException e) {
+                return false;
+            }
+
+            return true;
+        }, 10_000);
+
+        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
+
+        assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+
+        ignite.cluster().readOnly(true);
+
+        awaitPartitionMapExchange();
+
+        assertTrue(ignite.cluster().readOnly());
+
+        assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        assertContains(log, testOut.toString(), "Cluster is active (read-only)");
     }
 
     /**
@@ -894,7 +998,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                                         .filter(s -> s.contains("Arguments:"))
                                         .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
 
-        assertTrue(testOutStr, testOutStr.contains("Node not found for consistent ID:"));
+        assertContains(log, testOutStr, "Node not found for consistent ID:");
         assertFalse(testOutStr, isInstanse1Found);
     }
 
