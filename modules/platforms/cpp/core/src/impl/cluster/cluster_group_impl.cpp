@@ -573,12 +573,13 @@ namespace ignite
                 return topVer;
             }
 
-            // The empty cluster group could be created using ForNodeId()
-            // method with not exist (Guid(0, 0)) Cluster Node Id.
-            // It is required for ForPredicate() implementation
-            // to avoid situation when two ClusterGroupImpl's uses same jobject.
             SP_ClusterGroupImpl ClusterGroupImpl::GetEmptyClusterGroup()
             {
+                // The empty cluster group could be created using ForNodeId()
+                // method with not exist (Guid(0, 0)) Cluster Node Id.
+                // It is required for ForPredicate() implementation
+                // to avoid situation when two ClusterGroupImpl's uses same jobject.
+
                 return ForNodeId(Guid(0, 0));
             }
 
