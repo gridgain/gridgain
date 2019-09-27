@@ -70,6 +70,18 @@ public class QueryHolderRegistry {
 
     /**
      * @param qryId Query ID.
+     *
+     * @return Created query holder.
+     */
+    public QueryHolder createScanQueryHolder(String qryId) {
+        QueryHolder qryHolder = new QueryHolder(qryId, true);
+        qryHolders.put(qryId, qryHolder);
+
+        return qryHolder;
+    }
+
+    /**
+     * @param qryId Query ID.
      * @param cursorHolder Cursor.
      *
      * @return Saved cursor ID.
@@ -91,18 +103,16 @@ public class QueryHolderRegistry {
 
     /**
      * @param qryId Query ID.
-     * @param cursorId Cursor ID.
-     *
-     * @return Cursor holder by query ID and cursor ID.
+     * @return Query holder by ID.
      */
-    public CursorHolder findCursor(String qryId, String cursorId) {
+    public QueryHolder findQuery(String qryId) {
         if (!qryHolders.containsKey(qryId))
             return null;
 
         QueryHolder qryHolder = qryHolders.get(qryId);
         qryHolder.setAccessed(true);
 
-        return qryHolder.getCursor(cursorId);
+        return qryHolder;
     }
 
     /**

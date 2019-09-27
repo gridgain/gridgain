@@ -16,20 +16,25 @@
 
 package org.gridgain.action.controller;
 
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.action.annotation.ActionController;
 import org.gridgain.action.query.CursorHolder;
 import org.gridgain.action.query.QueryHolder;
 import org.gridgain.action.query.QueryHolderRegistry;
+import org.gridgain.action.query.ScanQueryRegexFilter;
 import org.gridgain.dto.action.query.NextPageQueryArgument;
 import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryResult;
+import org.gridgain.dto.action.query.ScanQueryArgument;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -92,8 +97,9 @@ public class QueryActionsController {
                 String qryId = requireNonNull(arg.getQueryId(), "Failed to execute query due to empty query ID");
                 String cursorId = requireNonNull(arg.getCursorId(), "Failed to execute query due to empty cursor ID");
 
-                CursorHolder cursorHolder = qryRegistry.findCursor(qryId, cursorId);
-                QueryResult res = fetchResult(cursorHolder, arg.getPageSize());
+                QueryHolder qryHolder = qryRegistry.findQuery(qryId);
+                CursorHolder cursorHolder = qryHolder.getCursor(cursorId);
+                QueryResult res = fetchResult(qryHolder, cursorHolder, arg.getPageSize());
 
                 if (!res.isHasMore())
                     qryRegistry.closeQueryCursor(qryId, cursorId);
@@ -133,7 +139,7 @@ public class QueryActionsController {
                 List<QueryResult> results = new ArrayList<>();
                 for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.getCancelHook())) {
                     CursorHolder cursorHolder = new CursorHolder(cur);
-                    QueryResult res = fetchResult(cursorHolder, arg.getPageSize());
+                    QueryResult res = fetchResult(qryHolder, cursorHolder, arg.getPageSize());
                     res.setResultNodeId(ctx.localNodeId().toString());
 
                     if (res.isHasMore())
@@ -152,6 +158,51 @@ public class QueryActionsController {
                 fut.completeExceptionally(e);
             }
         }, MANAGEMENT_POOL);
+
+        return fut;
+    }
+
+    /**
+     * @param arg Argument.
+     * @return List of query results.
+     */
+    public CompletableFuture<QueryResult> executeScanQuery(ScanQueryArgument arg) {
+        final CompletableFuture<QueryResult> fut = new CompletableFuture<>();
+
+        ctx.closure().runLocalSafe(() -> {
+            String qryId = arg.getQueryId();
+            qryRegistry.cancelQuery(qryId);
+            QueryHolder qryHolder = qryRegistry.createScanQueryHolder(qryId);
+
+            try {
+                IgniteCache<Object, Object> c = ctx.grid().cache(arg.getCacheName());
+                String filterText = arg.getFilter();
+                IgniteBiPredicate<Object, Object> filter = null;
+
+                if (!F.isEmpty(filterText))
+                    filter = new ScanQueryRegexFilter(arg.isCaseSensitive(), arg.isRegEx(), filterText);
+
+                ScanQuery<Object, Object> qry = new ScanQuery<>(filter)
+                        .setPageSize(arg.getPageSize())
+                        .setLocal(arg.getTargetNodeId() != null);
+
+                CursorHolder cursorHolder = new CursorHolder(c.withKeepBinary().query(qry));
+                QueryResult res = fetchResult(qryHolder, cursorHolder, arg.getPageSize());
+                res.setResultNodeId(ctx.localNodeId().toString());
+
+                if (res.isHasMore())
+                    res.setCursorId(qryRegistry.addCursor(qryId, cursorHolder));
+
+                fut.complete(res);
+            }
+            catch (Throwable e) {
+                log.warning("Fail to execute scan query.", e);
+
+                qryRegistry.cancelQuery(qryId);
+
+                fut.completeExceptionally(e);
+            }
+        });
 
         return fut;
     }

@@ -1,0 +1,57 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.gridgain.action.query;
+
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.visor.query.VisorQueryUtils;
+import org.apache.ignite.lang.IgniteBiPredicate;
+
+import java.util.regex.Pattern;
+
+/**
+ * Filter scan results by specified substring in string presentation of key or value.
+ */
+public class ScanQueryRegexFilter implements IgniteBiPredicate<Object, Object> {
+    /** Regex pattern to search data. */
+    private final Pattern ptrn;
+
+    /**
+     * Create filter instance.
+     *
+     * @param caseSensitive Case sensitive flag.
+     * @param regex Regex search flag.
+     * @param ptrn String to search in string presentation of key or value.
+     */
+    public ScanQueryRegexFilter(boolean caseSensitive, boolean regex, String ptrn) {
+        int flags = caseSensitive ? 0 : Pattern.CASE_INSENSITIVE;
+
+        this.ptrn = Pattern.compile(regex ? ptrn : ".*?" + Pattern.quote(ptrn) + ".*?", flags);
+    }
+    /**
+     * Check that key or value contains specified string.
+     *
+     * @param key Key object.
+     * @param val Value object.
+     * @return {@code true} when string presentation of key or value contain specified string.
+     */
+    @Override public boolean apply(Object key, Object val) {
+        String k = key instanceof BinaryObject ? VisorQueryUtils.binaryToString((BinaryObject)key) : key.toString();
+        String v = val instanceof BinaryObject ? VisorQueryUtils.binaryToString((BinaryObject)val) : val.toString();
+
+        return ptrn.matcher(k).find() || ptrn.matcher(v).find();
+    }
+}

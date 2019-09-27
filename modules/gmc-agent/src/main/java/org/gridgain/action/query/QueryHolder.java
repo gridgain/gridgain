@@ -29,6 +29,9 @@ public class QueryHolder implements AutoCloseable {
     /** Query ID. */
     private final String qryId;
 
+    /** Is scan query. */
+    private final boolean isScanQry;
+
     /** Cursors. */
     private final Map<String, CursorHolder> cursors = new HashMap<>();
 
@@ -42,7 +45,15 @@ public class QueryHolder implements AutoCloseable {
      * @param qryId Query ID.
      */
     public QueryHolder(String qryId) {
+        this(qryId, false);
+    }
+
+    /**
+     * @param qryId Query ID.
+     */
+    public QueryHolder(String qryId, boolean isScanQry) {
         this.qryId = qryId;
+        this.isScanQry = isScanQry;
     }
 
     /**
@@ -50,6 +61,13 @@ public class QueryHolder implements AutoCloseable {
      */
     public String getQueryId() {
         return qryId;
+    }
+
+    /**
+     * @return @{code true} if this query is ScanQuery.
+     */
+    public boolean isScanQuery() {
+        return isScanQry;
     }
 
     /**
