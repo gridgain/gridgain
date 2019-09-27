@@ -22,6 +22,7 @@
 #include <ignite/impl/compute/compute_task_holder.h>
 #include <ignite/impl/cluster/cluster_node_impl.h>
 
+#include <ignite/ignite.h>
 #include <ignite/binary/binary.h>
 #include <ignite/cache/query/continuous/continuous_query.h>
 #include <ignite/ignite_binding_context.h>
@@ -117,6 +118,34 @@ namespace ignite
                 return NULL;
             }
         };
+
+        /*
+         * Stores pointer to internal Ignite node.
+         */
+        class IgniteNodeHolder
+        {
+        public:
+            IgniteNodeHolder(IgniteEnvironment* env) :
+                node(new IgniteImpl(SharedPointer<IgniteEnvironment>(env, IgniteNodeHolder::EmptyDeleter)))
+            {
+                // No-op.
+            }
+
+            Ignite* GetIgnite()
+            {
+                return &node;
+            }
+
+        private:
+            static void EmptyDeleter(IgniteEnvironment*)
+            {
+                // No-op.
+            }
+
+            /** Node. */
+            Ignite node;
+        };
+
 
         /**
          * InLongOutLong callback.
@@ -317,7 +346,8 @@ namespace ignite
             metaUpdater(0),
             binding(),
             moduleMgr(),
-            nodes(new ClusterNodesHolder())
+            nodes(new ClusterNodesHolder()),
+            igniteNodeHolder(NULL)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -330,6 +360,7 @@ namespace ignite
         {
             delete[] name;
 
+            delete igniteNodeHolder;
             delete metaUpdater;
             delete metaMgr;
             delete cfg;
@@ -373,6 +404,8 @@ namespace ignite
 
             common::dynamic::Module currentModule = common::dynamic::GetCurrent();
             moduleMgr.Get()->RegisterModule(currentModule);
+
+            igniteNodeHolder = new IgniteNodeHolder(this);
         }
 
         const char* IgniteEnvironment::InstanceName() const
@@ -498,6 +531,11 @@ namespace ignite
 
             IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
                 "Job is not registred for handle", "jobHandle", jobHandle);
+        }
+
+        ignite::Ignite* IgniteEnvironment::GetIgnite()
+        {
+            return igniteNodeHolder->GetIgnite();
         }
 
         void IgniteEnvironment::ComputeTaskReduce(int64_t taskHandle)

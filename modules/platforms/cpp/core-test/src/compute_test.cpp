@@ -311,9 +311,8 @@ struct FuncAffinityCall : ComputeFunc<int32_t>
 
     virtual int32_t Call()
     {
-        SharedPointer<IgniteEnvironment> penv(GetEnv(), EmptyDeleter);
-        Ignite node(new IgniteImpl(penv));
-        Cache<int32_t, int32_t> cache = node.GetCache<int32_t, int32_t>(cacheName.c_str());
+        Ignite* node = GetIgnite();
+        Cache<int32_t, int32_t> cache = node->GetCache<int32_t, int32_t>(cacheName.c_str());
 
         return cache.LocalPeek(cacheKey, CachePeekMode::ALL);
     }
@@ -346,9 +345,8 @@ struct FuncAffinityRun : ComputeFunc<void>
 
     virtual void Call()
     {
-        SharedPointer<IgniteEnvironment> penv(GetEnv(), EmptyDeleter);
-        Ignite node(new IgniteImpl(penv));
-        Cache<int32_t, int32_t> cache = node.GetCache<int32_t, int32_t>(cacheName.c_str());
+        Ignite* node = GetIgnite();
+        Cache<int32_t, int32_t> cache = node->GetCache<int32_t, int32_t>(cacheName.c_str());
 
         res = cache.LocalPeek(cacheKey, CachePeekMode::ALL);
     }

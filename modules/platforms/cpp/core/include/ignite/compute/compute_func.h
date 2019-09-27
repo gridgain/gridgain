@@ -24,6 +24,7 @@
 
 namespace ignite
 {
+    class Ignite;
     class IgniteBinding;
 
     namespace compute
@@ -49,7 +50,7 @@ namespace ignite
              * Constructor.
              */
             ComputeFunc() :
-                env(NULL)
+                ignite(NULL)
             {
                 // No-op.
             }
@@ -71,28 +72,28 @@ namespace ignite
 
         protected:
             /*
-             * Get environment pointer.
+             * Get ignite node pointer.
              *
-             * @return Env pointer.
+             * @return Ignite node pointer.
              */
-            ignite::impl::IgniteEnvironment* GetEnv()
+            ignite::Ignite* GetIgnite()
             {
-                return env;
+                return ignite;
             }
 
         private:
             /*
-             * Set environment pointer.
+             * Set ignite node pointer.
              *
-             * @param env Env pointer.
+             * @param ignite Ignite node pointer.
              */
-            void SetEnv(ignite::impl::IgniteEnvironment* env)
+            void SetIgnite(ignite::Ignite* ignite)
             {
-                this->env = env;
+                this->ignite = ignite;
             }
 
-            /** Env pointer. */
-            ignite::impl::IgniteEnvironment* env;
+            /** Ignite node pointer. */
+            ignite::Ignite* ignite;
         };
     }
 }

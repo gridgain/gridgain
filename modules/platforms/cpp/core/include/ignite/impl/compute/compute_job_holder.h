@@ -100,7 +100,7 @@ namespace ignite
                 {
                     try
                     {
-                        job.SetEnv(env);
+                        job.SetIgnite(env->GetIgnite());
                         res.SetResult(job.Call());
                     }
                     catch (const IgniteError& err)
@@ -173,7 +173,7 @@ namespace ignite
                 {
                     try
                     {
-                        job.SetEnv(env);
+                        job.SetIgnite(env->GetIgnite());
                         job.Call();
                         res.SetResult();
                     }
