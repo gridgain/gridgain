@@ -27,4 +27,4 @@ RUN mkdir -p /var/cache/nginx && \
 
 USER 10001
 
-EXPOSE 80
+EXPOSE 8080
