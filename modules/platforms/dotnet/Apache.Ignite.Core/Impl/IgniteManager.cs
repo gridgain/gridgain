@@ -118,8 +118,11 @@ namespace Apache.Ignite.Core.Impl
                 return jvm;
             }
 
-            var cp = Classpath.CreateClasspath(cfg, log: log);
+            var igniteHome = IgniteHome.Resolve(cfg.IgniteHome, log);
+            var cp = Classpath.CreateClasspath(classPath: cfg.JvmClasspath, igniteHome: igniteHome, log: log);
 
+            // TODO: Set java.util.logging.config.file as well if not set already
+            // If IGNITE_HOME is resolved, it is in config dir, otherwise near the current assembly.
             var jvmOpts = GetMergedJvmOptions(cfg);
 
             jvmOpts.Add(cp);

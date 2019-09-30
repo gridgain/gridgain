@@ -34,11 +34,11 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Calculate Ignite home.
         /// </summary>
-        /// <param name="cfg">Configuration.</param>
+        /// <param name="igniteHome">Optional known home.</param>
         /// <param name="log">The log.</param>
-        public static string Resolve(IgniteConfiguration cfg, ILogger log = null)
+        public static string Resolve(string igniteHome = null, ILogger log = null)
         {
-            var home = cfg == null ? null : cfg.IgniteHome;
+            var home = igniteHome;
 
             if (string.IsNullOrWhiteSpace(home))
             {
