@@ -84,7 +84,7 @@ public class TestDistibutedConfigurationPlugin implements PluginProvider {
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart() throws IgniteCheckedException {
+    @Override public void onIgniteStart(boolean active) throws IgniteCheckedException {
         // No-op
     }
 

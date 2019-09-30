@@ -123,7 +123,7 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart() {
+    @Override public void onIgniteStart(boolean active) {
         if (ignite == null || log == null)
             throw new RuntimeException("Plugin provider has not been initialized");
 

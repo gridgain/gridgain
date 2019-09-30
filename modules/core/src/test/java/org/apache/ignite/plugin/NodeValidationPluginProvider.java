@@ -102,7 +102,7 @@ public class NodeValidationPluginProvider implements PluginProvider, IgnitePlugi
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart() throws IgniteCheckedException {
+    @Override public void onIgniteStart(boolean active) throws IgniteCheckedException {
         //no-op
     }
 

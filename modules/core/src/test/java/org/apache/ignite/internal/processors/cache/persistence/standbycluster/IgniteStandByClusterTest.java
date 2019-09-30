@@ -465,7 +465,7 @@ public class IgniteStandByClusterTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void onIgniteStart() throws IgniteCheckedException {
+        @Override public void onIgniteStart(boolean active) throws IgniteCheckedException {
 
         }
 

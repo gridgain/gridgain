@@ -48,6 +48,9 @@ public class DiscoveryDataClusterState implements Serializable {
     /** Flag indicating if the cluster in read-only mode. */
     private final boolean readOnly;
 
+    /** Last cluster activation time. */
+    private final long activationTime;
+
     /** Read-only mode change time. Correctly work's only for enabling read-only mode. */
     private final long readOnlyChangeTime;
 
@@ -158,6 +161,11 @@ public class DiscoveryDataClusterState implements Serializable {
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
+
+        if (prevState != null)
+            activationTime = active && !prevState.active ? U.currentTimeMillis() : prevState.activationTime;
+        else
+            activationTime = active ? U.currentTimeMillis() : 0;
     }
 
     /**
@@ -212,6 +220,13 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     public boolean active() {
         return active;
+    }
+
+    /**
+     * @return Cluster activation time.
+     */
+    public long activationTime() {
+        return activationTime;
     }
 
     /**
