@@ -27,10 +27,13 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplier;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -46,18 +49,21 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
     /** */
     private static final int REBALANCE_POOL_SIZE = 4;
 
+    /** */
+    private static final int PARTS_CNT = 32;
+
     /** IP finder. */
     private static final TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
 
     /** */
     private boolean persistenceEnabled;
 
+    /** */
+    private boolean delayDemandMsg = false;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        cfg.setFailureDetectionTimeout(10000000L);
-        cfg.setClientFailureDetectionTimeout(10000000L);
 
         cfg.setActiveOnStart(false);
 
@@ -66,10 +72,21 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
         cfg.setRebalanceThreadPoolSize(REBALANCE_POOL_SIZE);
 
+        TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
+
+        if (delayDemandMsg) {
+            spi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionDemandMessage &&
+                ((GridDhtPartitionDemandMessage)msg).groupId() == CU.cacheId(DEFAULT_CACHE_NAME));
+
+            delayDemandMsg = false;
+        }
+
+        cfg.setCommunicationSpi(spi);
+
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
             .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setBackups(1)
-            .setAffinity(new RendezvousAffinityFunction(false, 32)).setBackups(1));
+            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)).setBackups(1));
 
         long sz = 100 * 1024 * 1024;
 
@@ -148,7 +165,8 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
             ex.cluster().active(true);
 
             if (persistenceEnabled) {
-                ex.cache(DEFAULT_CACHE_NAME).put(-1, -1);
+                for (int p = 0; p < PARTS_CNT; p++)
+                    ex.cache(DEFAULT_CACHE_NAME).put(p, p);
 
                 forceCheckpoint();
             }
@@ -166,24 +184,30 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
             });
 
             if (singlePart)
-                loadDataToPartition(0, ex.name(), DEFAULT_CACHE_NAME, 100_000, 0, 3);
+                loadDataToPartition(0, ex.name(), DEFAULT_CACHE_NAME, 100_000, PARTS_CNT, 3);
             else {
                 try (IgniteDataStreamer<Object, Object> streamer = ex.dataStreamer(DEFAULT_CACHE_NAME)) {
                     for (int k = 0; k < 100_000; k++)
-                        streamer.addData(k, k);
+                        streamer.addData(k + PARTS_CNT, k + PARTS_CNT);
                 }
             }
 
             ConcurrentSkipListSet<String> demanderThreads = new ConcurrentSkipListSet<>();
 
+            delayDemandMsg = true;
+
             IgniteEx g2 = startGrid(1);
 
-//            GridDhtPreloader preloader1 = (GridDhtPreloader)g2.cachex(DEFAULT_CACHE_NAME).context().group().preloader();
-//            mockDemander(preloader1, new GridAbsClosure() {
-//                @Override public void apply() {
-//                    demanderThreads.add(Thread.currentThread().getName());
-//                }
-//            });
+            TestRecordingCommunicationSpi.spi(g2).waitForBlocked();
+
+            GridDhtPreloader preloader1 = (GridDhtPreloader)g2.cachex(DEFAULT_CACHE_NAME).context().group().preloader();
+            mockDemander(preloader1, new GridAbsClosure() {
+                @Override public void apply() {
+                    demanderThreads.add(Thread.currentThread().getName());
+                }
+            });
+
+            TestRecordingCommunicationSpi.spi(g2).stopBlock();
 
             awaitPartitionMapExchange();
 
@@ -204,7 +228,7 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
     /**
      * @param preloader Preloader.
-     * @param clo Clo.
+     * @param clo Closure to call before demand message processing.
      */
     private void mockSupplier(GridDhtPreloader preloader, GridAbsClosure clo) {
         GridDhtPartitionSupplier supplier = preloader.supplier();
@@ -224,7 +248,7 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
     /**
      * @param preloader Preloader.
-     * @param clo Closure to call before supply/demand message processing.
+     * @param clo Closure to call before supply message processing.
      */
     private void mockDemander(GridDhtPreloader preloader, GridAbsClosure clo) {
         GridDhtPartitionDemander demander = preloader.demander();
