@@ -2,6 +2,6 @@
     <ItemGroup>
         <None Include="$(MSBuildThisFileDirectory)output\**"
               CopyToOutputDirectory="PreserveNewest"
-              Link="libs\%(RecursiveDir)\%(Filename)%(Extension)" />
+              Link="%(RecursiveDir)\%(Filename)%(Extension)" />
     </ItemGroup>
 </Project>
