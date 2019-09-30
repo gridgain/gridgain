@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -62,6 +63,21 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
     /** */
     private boolean delayDemandMsg = false;
 
+    /** */
+    private static final String CACHE1 = "cache1";
+
+    /** */
+    private static final String CACHE2 = "cache2";
+
+    /** */
+    private static final String CACHE3 = "cache3";
+
+    /** */
+    private static final String CACHE4 = "cache4";
+
+    /** */
+    public static final int CACHES_CNT = 4;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -79,17 +95,29 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
         if (delayDemandMsg) {
             spi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionDemandMessage &&
-                ((GridDhtPartitionDemandMessage)msg).groupId() == CU.cacheId(DEFAULT_CACHE_NAME));
+                blockCacheId(((GridDhtPartitionDemandMessage)msg).groupId()));
 
             delayDemandMsg = false;
         }
 
         cfg.setCommunicationSpi(spi);
 
-        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
-            .setRebalanceMode(CacheRebalanceMode.ASYNC)
-            .setBackups(1)
-            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
+        cfg.setCacheConfiguration(new CacheConfiguration(CACHE1)
+                .setRebalanceMode(CacheRebalanceMode.ASYNC)
+                .setBackups(1)
+                .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)),
+            new CacheConfiguration(CACHE2)
+                .setRebalanceMode(CacheRebalanceMode.ASYNC)
+                .setBackups(2)
+                .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)),
+            new CacheConfiguration(CACHE3)
+                .setRebalanceMode(CacheRebalanceMode.ASYNC)
+                .setBackups(3)
+                .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)),
+            new CacheConfiguration(CACHE4)
+                .setCacheMode(CacheMode.REPLICATED)
+                .setRebalanceMode(CacheRebalanceMode.ASYNC)
+                .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
 
         long sz = 100 * 1024 * 1024;
 
@@ -167,37 +195,48 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
             IgniteEx ex = startGrids(1);
             ex.cluster().active(true);
 
-            List<Integer> parts = movingKeysAfterJoin(ex, DEFAULT_CACHE_NAME, 1);
+            List<Integer> parts = movingKeysAfterJoin(ex, CACHE1, 1);
 
             startGrid(1);
             resetBaselineTopology();
             awaitPartitionMapExchange();
 
+            // Non-empty partitions required for historical rebalance to start.
             if (persistenceEnabled) {
-                for (int p = 0; p < PARTS_CNT; p++)
-                    ex.cache(DEFAULT_CACHE_NAME).put(p, p);
+                for (int p = 0; p < PARTS_CNT; p++) {
+                    ex.cache(CACHE1).put(p, p);
+                    ex.cache(CACHE2).put(p, p);
+                    ex.cache(CACHE3).put(p, p);
+                    ex.cache(CACHE4).put(p, p);
+                }
 
                 forceCheckpoint();
             }
 
             stopGrid(1);
 
-            GridDhtPreloader preloader0 = (GridDhtPreloader)ex.cachex(DEFAULT_CACHE_NAME).context().group().preloader();
-
             ConcurrentSkipListSet<String> supplierThreads = new ConcurrentSkipListSet<>();
 
-            mockSupplier(preloader0, new GridAbsClosure() {
-                @Override public void apply() {
-                    supplierThreads.add(Thread.currentThread().getName());
-                }
-            });
+            for (int i = 1; i <= CACHES_CNT; i++) {
+                GridDhtPreloader preloader = (GridDhtPreloader)ex.cachex(cacheName(i)).context().group().preloader();
 
-            if (singlePart)
-                loadDataToPartition(parts.get(0), ex.name(), DEFAULT_CACHE_NAME, 100_000, PARTS_CNT, 3);
+                mockSupplier(preloader, new GridAbsClosure() {
+                    @Override public void apply() {
+                        supplierThreads.add(Thread.currentThread().getName());
+                    }
+                });
+            }
+
+            if (singlePart) {
+                for (int i = 1; i <= CACHES_CNT; i++)
+                    loadDataToPartition(parts.get(0), ex.name(), cacheName(i), 20_000, PARTS_CNT, 3);
+            }
             else {
-                try (IgniteDataStreamer<Object, Object> streamer = ex.dataStreamer(DEFAULT_CACHE_NAME)) {
-                    for (int k = 0; k < 100_000; k++)
-                        streamer.addData(k + PARTS_CNT, k + PARTS_CNT);
+                for (int i = 1; i <= CACHES_CNT; i++) {
+                    try (IgniteDataStreamer<Object, Object> streamer = ex.dataStreamer(cacheName(i))) {
+                        for (int k = 0; k < 20_000; k++)
+                            streamer.addData(k + PARTS_CNT, k + PARTS_CNT);
+                    }
                 }
             }
 
@@ -205,30 +244,34 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
             delayDemandMsg = true;
 
-            IgniteEx g2 = startGrid(1);
+            IgniteEx joining = startGrid(1);
 
-            TestRecordingCommunicationSpi.spi(g2).waitForBlocked();
+            TestRecordingCommunicationSpi.spi(joining).waitForBlocked();
 
-            GridDhtPreloader preloader1 = (GridDhtPreloader)g2.cachex(DEFAULT_CACHE_NAME).context().group().preloader();
-            mockDemander(preloader1, new GridAbsClosure() {
-                @Override public void apply() {
-                    demanderThreads.add(Thread.currentThread().getName());
-                }
-            });
+            for (int i = 1; i <= CACHES_CNT; i++) {
+                GridDhtPreloader preloader = (GridDhtPreloader)joining.cachex(cacheName(i)).context().group().preloader();
 
-            TestRecordingCommunicationSpi.spi(g2).stopBlock();
+                mockDemander(preloader, new GridAbsClosure() {
+                    @Override public void apply() {
+                        demanderThreads.add(Thread.currentThread().getName());
+                    }
+                });
+            }
+
+            TestRecordingCommunicationSpi.spi(joining).stopBlock();
 
             // Test if rebalance was finished (all partitions are owned).
             awaitPartitionMapExchange();
 
             // Tests partition consistency.
-            assertPartitionsSame(idleVerify(ex, DEFAULT_CACHE_NAME));
+            for (int i = 1; i <= CACHES_CNT; i++)
+                assertPartitionsSame(idleVerify(ex, cacheName(i)));
 
             // Test if rebalancing were done using expected thread pool.
             assertEquals(REBALANCE_POOL_SIZE, supplierThreads.size());
             assertEquals(REBALANCE_POOL_SIZE, demanderThreads.size());
             assertTrue(supplierThreads.stream().allMatch(s -> s.contains(ex.configuration().getIgniteInstanceName())));
-            assertTrue(demanderThreads.stream().allMatch(s -> s.contains(g2.configuration().getIgniteInstanceName())));
+            assertTrue(demanderThreads.stream().allMatch(s -> s.contains(joining.configuration().getIgniteInstanceName())));
         }
         finally {
             System.clearProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
@@ -276,4 +319,25 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
         preloader.demander(mockedDemander);
     }
+
+    /**
+     * @param idx Index.
+     */
+    private String cacheName(int idx) {
+        return "cache" + idx;
+    }
+
+    /**
+     * @param cacheId Group id.
+     * @return {@code True} if message must be blocked.
+     */
+    private boolean blockCacheId(int cacheId) {
+        for (int i = 0; i < CACHES_CNT; i++) {
+            if (cacheId == CU.cacheId(cacheName(i)))
+                return true;
+        }
+
+        return false;
+    }
+
 }
