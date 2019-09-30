@@ -1,12 +1,12 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,41 +14,29 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Client.Cache
+namespace Apache.Ignite.Core.Tests.DotNetCore.ThinClient.Cache
 {
-    using System;
-    using System.Threading;
     using System.Threading.Tasks;
-    using Apache.Ignite.Core.Client.Cache;
+    using Apache.Ignite.Core.Tests.Client;
     using NUnit.Framework;
 
     /// <summary>
-    /// Async cache test.
+    /// Tests cache operations with async/await.
     /// </summary>
-    [TestFixture]
-    public sealed class CacheTestAsync : CacheTest
+    public class CacheTestAsyncAwait : ClientTestBase
     {
-        /** <inheritdoc /> */
-        protected override ICacheClient<TK, TV> GetClientCache<TK, TV>(string cacheName = CacheName)
-        {
-            return new CacheClientAsyncWrapper<TK, TV>(base.GetClientCache<TK, TV>(cacheName));
-        }
-
         /// <summary>
         /// Tests that async continuations are executed on a ThreadPool thread, not on response handler thread.
         /// </summary>
         [Test]
-        public void TestAsyncContinuationIsExecutedOnThreadPool()
+        public async Task TestAsyncAwaitContinuationIsExecutedOnThreadPool()
         {
-            var cache = base.GetClientCache<int>();
-            var task = cache.PutAsync(1, 1).ContinueWith(_ =>
-            {
-                Thread.CurrentThread.Abort();
-            }, TaskContinuationOptions.ExecuteSynchronously);
+            var cache = GetClientCache<int>();
+            await cache.PutAsync(1, 1).ConfigureAwait(false);
 
-            Assert.Throws<AggregateException>(() => task.Wait());
-
-            Assert.AreEqual(1, cache.GetAsync(1).Result);
+            // This causes deadlock if async continuation is executed on response handler thread.
+            cache.PutAsync(2, 2).Wait();
+            Assert.AreEqual(2, cache.Get(2));
         }
     }
 }

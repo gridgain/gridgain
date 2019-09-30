@@ -101,7 +101,13 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheTestAsync.cs" Link="ThinClient\Cache\CacheTestAsync.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheClientAsyncWrapper.cs" Link="ThinClient\Cache\CacheClientAsyncWrapper.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheTestKeepBinary.cs" Link="ThinClient\Cache\CacheTestKeepBinary.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheTestNoMeta.cs">
+      <Link>ThinClient\Cache\CacheTestNoMeta.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheTestSsl.cs" Link="ThinClient\Cache\CacheTestSsl.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\ClientCacheConfigurationTest.cs">
+      <Link>ThinClient\Cache\ClientCacheConfigurationTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CreateCacheTest.cs" Link="ThinClient\Cache\CreateCacheTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\EmptyObject.cs" Link="ThinClient\Cache\EmptyObject.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\Person.cs" Link="ThinClient\Cache\Person.cs" />
