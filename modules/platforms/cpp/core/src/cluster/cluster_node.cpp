@@ -23,13 +23,13 @@ namespace ignite
 {
     namespace cluster
     {
-        ClusterNode::ClusterNode(SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl) :
+        ClusterNode::ClusterNode(SharedPointer<ClusterNodeImpl> impl) :
             impl(impl)
         {
             // No-op.
         }
 
-        std::vector<std::string> ClusterNode::GetAddresses()
+        const std::vector<std::string>& ClusterNode::GetAddresses()
         {
             return impl.Get()->GetAddresses();
         }
@@ -39,7 +39,7 @@ namespace ignite
             return impl.Get()->GetConsistentId();
         }
 
-        std::vector<std::string> ClusterNode::GetHostNames()
+        const std::vector<std::string>& ClusterNode::GetHostNames()
         {
             return impl.Get()->GetHostNames();
         }
@@ -74,7 +74,7 @@ namespace ignite
             return impl.Get()->IsLocal();
         }
 
-        long ClusterNode::GetOrder()
+        int64_t ClusterNode::GetOrder()
         {
             return impl.Get()->GetOrder();
         }
