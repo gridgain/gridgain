@@ -4,6 +4,7 @@
               CopyToOutputDirectory="PreserveNewest"
               LinkBase="libs\" />
         <None Include="$(MSBuildThisFileDirectory)java.util.logging.properties"
-              CopyToOutputDirectory="PreserveNewest" />
+              CopyToOutputDirectory="PreserveNewest"
+              LinkBase="config\" />
     </ItemGroup>
 </Project>
