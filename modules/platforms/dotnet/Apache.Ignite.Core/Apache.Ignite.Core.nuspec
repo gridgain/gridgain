@@ -57,8 +57,8 @@ More info: https://docs.gridgain.com/
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe.config" target="lib\net40" />
 
         <!-- Jar files and targets file to copy them to build output -->
-        <file src="..\bin\libs\*.jar" target="Build\libs" />
-        <file src="Apache.Ignite.targets" target="Build" />
+        <file src="..\bin\libs\*.jar" target="build\libs" />
+        <file src="GridGain.Ignite.targets" target="build" />
     
         <!-- LINQPad samples -->
         <file src="NuGet\LINQPad\*.*" target="linqpad-samples" />
