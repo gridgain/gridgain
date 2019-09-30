@@ -53,6 +53,8 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
+
+        grid(0).cluster().setBaselineTopology(grid(0).cluster().topologyVersion());
     }
 
     /** {@inheritDoc} */
