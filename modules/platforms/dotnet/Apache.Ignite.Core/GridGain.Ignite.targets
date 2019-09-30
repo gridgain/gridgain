@@ -1,9 +1,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
- <ItemGroup>
-  <None Include="$(MSBuildThisFileDirectory)libs\**">
-     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
- </ItemGroup>
- 
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)libs\**" 
+              CopyToOutputDirectory="PreserveNewest"
+              LinkBase="libs\" />
+    </ItemGroup> 
 </Project>
