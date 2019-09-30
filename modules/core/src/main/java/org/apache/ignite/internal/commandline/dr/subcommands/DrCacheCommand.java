@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +36,6 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
@@ -186,32 +184,22 @@ public class DrCacheCommand extends
             .map(GridClientNode::nodeId)
             .collect(Collectors.toList());
 
-        if (arg.remoteDataCenterId == 0 && arg.action != null && arg.action != Action.FULL_STATE_TRANSFER) {
+        if (arg.remoteDataCenterId == 0 && arg.action != null) {
             Map<String, UUID> cacheNameToNodeMap = new HashMap<>();
 
             for (GridClientNode node : nodes) {
-                List<String> cacheNames = new ArrayList<>();
-
-                Object sndHub = node.attribute("plugins.gg.replication.snd.hub");
-                if (sndHub != null)
-                    cacheNames.addAll(U.field(sndHub, "cacheNames"));
-
-                Collection<String> replicationCaches = node.attribute("plugins.gg.replication.caches");
-                if (replicationCaches != null)
-                    cacheNames.addAll(replicationCaches);
-
-                for (String cacheName : cacheNames) {
+                for (String cacheName : node.caches().keySet()) {
                     if (cacheNamePattern.matcher(cacheName).matches())
                         cacheNameToNodeMap.putIfAbsent(cacheName, node.nodeId());
                 }
             }
 
-            arg.setCacheNamesMap(cacheNameToNodeMap);
+            arg.cacheNamesMap = cacheNameToNodeMap;
         }
-        else if (arg.remoteDataCenterId != 0 || arg.action == Action.FULL_STATE_TRANSFER) {
+        else if (arg.remoteDataCenterId != 0) {
             for (GridClientNode node : nodes) {
                 if (node.attribute("plugins.gg.replication.snd.hub") != null) {
-                    arg.setActionCoordinator(node.nodeId());
+                    arg.actionCoordinator = node.nodeId();
 
                     break;
                 }
@@ -407,13 +395,8 @@ public class DrCacheCommand extends
         }
 
         /** */
-        public void setCacheNamesMap(Map<String, UUID> cacheNamesMap) {
-            this.cacheNamesMap = cacheNamesMap;
-        }
-
-        /** */
-        public void setActionCoordinator(UUID actionCoordinator) {
-            this.actionCoordinator = actionCoordinator;
+        public UUID getActionCoordinator() {
+            return actionCoordinator;
         }
 
         /** {@inheritDoc} */
