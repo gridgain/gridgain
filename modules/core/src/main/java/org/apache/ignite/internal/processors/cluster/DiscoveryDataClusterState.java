@@ -98,9 +98,10 @@ public class DiscoveryDataClusterState implements Serializable {
     static DiscoveryDataClusterState createState(
         boolean active,
         boolean readOnly,
-        @Nullable BaselineTopology baselineTopology
+        @Nullable BaselineTopology baselineTopology,
+        long activationTime
     ) {
-        return new DiscoveryDataClusterState(null, active, readOnly, baselineTopology, null, null, null);
+        return new DiscoveryDataClusterState(null, active, readOnly, baselineTopology, null, null, activationTime, null);
     }
 
     /**
@@ -108,6 +109,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param readOnly New read-only mode.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      * @return State instance.
      */
@@ -118,6 +120,7 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         UUID transitionReqId,
         AffinityTopologyVersion transitionTopVer,
+        long activationTime,
         Set<UUID> transitionNodes
     ) {
         assert transitionReqId != null;
@@ -132,7 +135,7 @@ public class DiscoveryDataClusterState implements Serializable {
             baselineTopology,
             transitionReqId,
             transitionTopVer,
-            transitionNodes
+            activationTime, transitionNodes
         );
     }
 
@@ -142,6 +145,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param readOnly New read-only mode.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      */
     private DiscoveryDataClusterState(
@@ -151,21 +155,17 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
-        @Nullable Set<UUID> transitionNodes
+        long activationTime, @Nullable Set<UUID> transitionNodes
     ) {
         this.prevState = prevState;
         this.active = active;
         this.readOnly = readOnly;
+        this.activationTime = activationTime;
         this.readOnlyChangeTime = U.currentTimeMillis();
         this.baselineTopology = baselineTopology;
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
-
-        if (prevState != null)
-            activationTime = active && !prevState.active ? U.currentTimeMillis() : prevState.activationTime;
-        else
-            activationTime = active ? U.currentTimeMillis() : 0;
     }
 
     /**
@@ -336,9 +336,10 @@ public class DiscoveryDataClusterState implements Serializable {
                 baselineTopology,
                 null,
                 null,
+                activationTime,
                 null
             ) :
-            prevState != null ? prevState : createState(false, false, null);
+            prevState != null ? prevState : createState(false, false, null, 0);
     }
 
     /** {@inheritDoc} */
