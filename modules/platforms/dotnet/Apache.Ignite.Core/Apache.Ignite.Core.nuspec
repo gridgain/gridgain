@@ -61,8 +61,8 @@ More info: https://docs.gridgain.com/
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe.config" target="lib\net40" />
 
         <!-- Jar files and targets file to copy them to build output -->
-        <file src="..\bin\libs\*.jar" target="build\libs" />
-        <file src="..\..\..\..\config\java.util.logging.properties" target="build" /> <!-- TODO: This still does not work - gives a warning! Debug Java resolver. -->
+        <file src="..\bin\libs\*.jar" target="build\output\libs" />
+        <file src="..\..\..\..\config\java.util.logging.properties" target="build\output" /> <!-- TODO: This still does not work - gives a warning! Debug Java resolver. -->
         <file src="GridGain.Ignite.targets" target="build" />
     
         <!-- LINQPad samples -->

@@ -1,10 +1,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)libs\**" 
+        <None Include="$(MSBuildThisFileDirectory)output\**"
               CopyToOutputDirectory="PreserveNewest"
-              LinkBase="libs\" />
-        <None Include="$(MSBuildThisFileDirectory)java.util.logging.properties"
-              CopyToOutputDirectory="PreserveNewest"
-              LinkBase="config\" />
+              Link="libs\%(RecursiveDir)\%(Filename)%(Extension)" />
     </ItemGroup>
 </Project>
