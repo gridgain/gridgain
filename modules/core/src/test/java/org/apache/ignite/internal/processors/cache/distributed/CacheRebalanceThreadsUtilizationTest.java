@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
@@ -65,6 +66,8 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        cfg.setConsistentId(gridName);
+
         cfg.setActiveOnStart(false);
 
         TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi)cfg.getDiscoverySpi();
@@ -86,7 +89,7 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
             .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setBackups(1)
-            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)).setBackups(1));
+            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
 
         long sz = 100 * 1024 * 1024;
 
@@ -161,8 +164,14 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
         try {
             this.persistenceEnabled = persistenceEnabled;
 
-            IgniteEx ex = startGrids(2);
+            IgniteEx ex = startGrids(1);
             ex.cluster().active(true);
+
+            List<Integer> parts = movingKeysAfterJoin(ex, DEFAULT_CACHE_NAME, 1);
+
+            startGrid(1);
+            resetBaselineTopology();
+            awaitPartitionMapExchange();
 
             if (persistenceEnabled) {
                 for (int p = 0; p < PARTS_CNT; p++)
@@ -184,7 +193,7 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
             });
 
             if (singlePart)
-                loadDataToPartition(0, ex.name(), DEFAULT_CACHE_NAME, 100_000, PARTS_CNT, 3);
+                loadDataToPartition(parts.get(0), ex.name(), DEFAULT_CACHE_NAME, 100_000, PARTS_CNT, 3);
             else {
                 try (IgniteDataStreamer<Object, Object> streamer = ex.dataStreamer(DEFAULT_CACHE_NAME)) {
                     for (int k = 0; k < 100_000; k++)
@@ -209,13 +218,15 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
             TestRecordingCommunicationSpi.spi(g2).stopBlock();
 
+            // Test if rebalance was finished (all partitions are owned).
             awaitPartitionMapExchange();
 
+            // Tests partition consistency.
             assertPartitionsSame(idleVerify(ex, DEFAULT_CACHE_NAME));
 
+            // Test if rebalancing were done using expected thread pool.
             assertEquals(REBALANCE_POOL_SIZE, supplierThreads.size());
             assertEquals(REBALANCE_POOL_SIZE, demanderThreads.size());
-
             assertTrue(supplierThreads.stream().allMatch(s -> s.contains(ex.configuration().getIgniteInstanceName())));
             assertTrue(demanderThreads.stream().allMatch(s -> s.contains(g2.configuration().getIgniteInstanceName())));
         }
