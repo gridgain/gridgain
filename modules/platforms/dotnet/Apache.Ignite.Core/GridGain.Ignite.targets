@@ -3,5 +3,7 @@
         <None Include="$(MSBuildThisFileDirectory)libs\**" 
               CopyToOutputDirectory="PreserveNewest"
               LinkBase="libs\" />
-    </ItemGroup> 
+        <None Include="$(MSBuildThisFileDirectory)java.util.logging.properties"
+              CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>

@@ -52,12 +52,17 @@ More info: https://docs.gridgain.com/
         <file src="bin\$configuration$\Apache.Ignite.Core.dll" target="lib\net40" />
         <file src="bin\$configuration$\Apache.Ignite.Core.xml" target="lib\net40" />
 
+        <!-- Binaries for .NET Core - TODO - will it work with .NET Standard? -->
+        <file src="bin\$configuration$\Apache.Ignite.Core.dll" target="lib\netcoreapp2.0" />
+        <file src="bin\$configuration$\Apache.Ignite.Core.xml" target="lib\netcoreapp2.0" />
+
         <!-- Include Apache.Ignite.exe -->
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe" target="lib\net40" />
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe.config" target="lib\net40" />
 
         <!-- Jar files and targets file to copy them to build output -->
         <file src="..\bin\libs\*.jar" target="build\libs" />
+        <file src="..\..\..\..\config\java.util.logging.properties" target="build" />
         <file src="GridGain.Ignite.targets" target="build" />
     
         <!-- LINQPad samples -->
