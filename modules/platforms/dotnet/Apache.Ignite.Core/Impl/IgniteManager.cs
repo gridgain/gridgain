@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using Apache.Ignite.Core.Impl.Common;
@@ -41,6 +42,9 @@ namespace Apache.Ignite.Core.Impl
 
         /** Java Command line argument: file.encoding. Case sensitive. */
         private const string CmdJvmFileEncoding = "-Dfile.encoding=";
+
+        /** Java Command line argument: java.util.logging.config.file. Case sensitive. */
+        private const string CmdJvmUtilLoggingConfigFile = "-Djava.util.logging.config.file=";
 
         /** Monitor for DLL load synchronization. */
         private static readonly object SyncRoot = new object();
@@ -121,9 +125,7 @@ namespace Apache.Ignite.Core.Impl
             var igniteHome = IgniteHome.Resolve(cfg.IgniteHome, log);
             var cp = Classpath.CreateClasspath(classPath: cfg.JvmClasspath, igniteHome: igniteHome, log: log);
 
-            // TODO: Set java.util.logging.config.file as well if not set already
-            // If IGNITE_HOME is resolved, it is in config dir, otherwise near the current assembly.
-            var jvmOpts = GetMergedJvmOptions(cfg);
+            var jvmOpts = GetMergedJvmOptions(cfg, igniteHome);
 
             jvmOpts.Add(cp);
 
@@ -133,7 +135,7 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Gets JvmOptions collection merged with individual properties (Min/Max mem, etc) according to priority.
         /// </summary>
-        private static IList<string> GetMergedJvmOptions(IgniteConfiguration cfg)
+        private static IList<string> GetMergedJvmOptions(IgniteConfiguration cfg, string igniteHome)
         {
             var jvmOpts = cfg.JvmOptions == null ? new List<string>() : cfg.JvmOptions.ToList();
 
@@ -148,6 +150,10 @@ namespace Apache.Ignite.Core.Impl
 
             if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmFileEncoding, StringComparison.Ordinal)))
                 jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}UTF-8", CmdJvmFileEncoding));
+
+            if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmUtilLoggingConfigFile, StringComparison.Ordinal)))
+                jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}{1}", CmdJvmUtilLoggingConfigFile,
+                    Path.Combine(igniteHome, "config", "java.util.logging.properties")));
 
             return jvmOpts;
         }
