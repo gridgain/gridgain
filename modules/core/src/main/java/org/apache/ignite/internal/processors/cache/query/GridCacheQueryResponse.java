@@ -91,8 +91,8 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor for {@link Externalizable}
@@ -285,13 +285,13 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
     /**
@@ -365,7 +365,7 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
                 writer.incrementState();
 
             case 10:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -435,7 +435,7 @@ public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCa
                 reader.incrementState();
 
             case 10:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;

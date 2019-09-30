@@ -144,7 +144,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 long reqReceivedTimestamp = tlResp.reqReceivedTimestamp();
 
                 if (reqSentTimestamp != INVALID_TIMESTAMP && reqReceivedTimestamp != INVALID_TIMESTAMP)
-                    tlResp.respSendTimestamp(reqSentTimestamp + System.nanoTime() - reqReceivedTimestamp);
+                    tlResp.reqTimeData(reqSentTimestamp + System.nanoTime() - reqReceivedTimestamp);
             } else if (msg instanceof TimeLoggableRequest) {
                 TimeLoggableRequest cacheMsg = (TimeLoggableRequest)msg;
 
@@ -522,14 +522,14 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
             TimeLoggableResponse timeLoggableRes = (TimeLoggableResponse)msg;
 
-            if (timeLoggableRes.respSendTimestamp() == INVALID_TIMESTAMP)
+            if (timeLoggableRes.reqTimeData() == INVALID_TIMESTAMP)
                 return;
 
             Map<Short, HistogramMetric> nodeMap = outMetricsMap.computeIfAbsent(nodeId, (k) -> new ConcurrentHashMap<>());
 
             HistogramMetric metric = nodeMap.computeIfAbsent(timeLoggableRes.directType(), k -> new HistogramMetric(metricBounds()));
 
-            metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.respSendTimestamp()));
+            metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.reqTimeData()));
         }
     }
 

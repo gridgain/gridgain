@@ -72,8 +72,8 @@ public class GridDhtLockResponse extends GridDistributedLockResponse implements 
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor (required by {@link Externalizable}).
@@ -225,13 +225,13 @@ public class GridDhtLockResponse extends GridDistributedLockResponse implements 
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
 
@@ -275,7 +275,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse implements 
                 writer.incrementState();
 
             case 15:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -329,7 +329,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse implements 
                 reader.incrementState();
 
             case 15:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;

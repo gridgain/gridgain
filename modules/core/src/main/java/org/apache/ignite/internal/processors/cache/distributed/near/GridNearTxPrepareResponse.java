@@ -105,8 +105,8 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -375,13 +375,13 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
 
@@ -449,7 +449,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
                 writer.incrementState();
 
             case 19:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -547,7 +547,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
                 reader.incrementState();
 
             case 19:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;

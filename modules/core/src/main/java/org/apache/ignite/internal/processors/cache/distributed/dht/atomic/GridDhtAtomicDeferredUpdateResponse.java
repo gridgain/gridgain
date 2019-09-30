@@ -58,8 +58,8 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required by {@link Externalizable}
@@ -136,13 +136,13 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
     /** {@inheritDoc} */
@@ -167,7 +167,7 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
                 writer.incrementState();
 
             case 5:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -197,7 +197,7 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
                 reader.incrementState();
 
             case 5:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;

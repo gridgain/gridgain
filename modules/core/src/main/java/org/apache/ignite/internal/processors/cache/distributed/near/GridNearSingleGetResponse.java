@@ -74,8 +74,8 @@ public class GridNearSingleGetResponse extends GridCacheIdMessage implements Gri
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required for {@link Message}.
@@ -186,13 +186,13 @@ public class GridNearSingleGetResponse extends GridCacheIdMessage implements Gri
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
     /** {@inheritDoc} */
@@ -267,13 +267,13 @@ public class GridNearSingleGetResponse extends GridCacheIdMessage implements Gri
                 writer.incrementState();
 
             case 7:
-                if (!writer.writeMessage("res", res))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
 
             case 8:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeMessage("res", res))
                     return false;
 
                 writer.incrementState();
@@ -325,7 +325,7 @@ public class GridNearSingleGetResponse extends GridCacheIdMessage implements Gri
                 reader.incrementState();
 
             case 7:
-                res = reader.readMessage("res");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;
@@ -333,7 +333,7 @@ public class GridNearSingleGetResponse extends GridCacheIdMessage implements Gri
                 reader.incrementState();
 
             case 8:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                res = reader.readMessage("res");
 
                 if (!reader.isLastRead())
                     return false;

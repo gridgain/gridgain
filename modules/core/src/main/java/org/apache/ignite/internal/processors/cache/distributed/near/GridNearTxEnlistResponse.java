@@ -82,8 +82,8 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Default constructor.
@@ -258,13 +258,13 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
     /** {@inheritDoc} */
@@ -330,13 +330,13 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
                 writer.incrementState();
 
             case 11:
-                if (!writer.writeMessage("res", res))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
 
             case 12:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeMessage("res", res))
                     return false;
 
                 writer.incrementState();
@@ -414,7 +414,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
                 reader.incrementState();
 
             case 11:
-                res = reader.readMessage("res");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;
@@ -422,7 +422,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
                 reader.incrementState();
 
             case 12:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                res = reader.readMessage("res");
 
                 if (!reader.isLastRead())
                     return false;

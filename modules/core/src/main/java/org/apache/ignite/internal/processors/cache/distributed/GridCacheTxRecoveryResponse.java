@@ -58,8 +58,8 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#respSendTimestamp(). */
-    private long responseSendTimestamp = INVALID_TIMESTAMP;
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required by {@link Externalizable}
@@ -146,13 +146,13 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
     }
 
     /** {@inheritDoc} */
-    @Override public void respSendTimestamp(long responseSendTimestamp) {
-        this.responseSendTimestamp = responseSendTimestamp;
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
     }
 
     /** {@inheritDoc} */
-    @Override public long respSendTimestamp() {
-        return responseSendTimestamp;
+    @Override public long reqTimeData() {
+        return reqTimeData;
     }
 
     /** {@inheritDoc} */
@@ -183,7 +183,7 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
                 writer.incrementState();
 
             case 10:
-                if (!writer.writeLong("responseSendTimestamp", responseSendTimestamp))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -227,7 +227,7 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
                 reader.incrementState();
 
             case 10:
-                responseSendTimestamp = reader.readLong("responseSendTimestamp");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;

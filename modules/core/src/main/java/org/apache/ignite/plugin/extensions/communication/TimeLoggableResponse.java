@@ -16,8 +16,26 @@
 
 package org.apache.ignite.plugin.extensions.communication;
 
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
+
 /**
- * Common interface for responses.
+ * Common interface for responses that support network time logging.<br>
+ *
+ * This is how message network time calculated:<br>
+ * <ol>
+ *     <li>Send timestamp is written to request when request is sent.
+ *          See {@link TimeLoggableRequest#sendTimestamp(long)}<li/>
+ *     <li>When request is received on target node it's receive timestamp is written.
+ *          See {@link TimeLoggableRequest#receiveTimestamp(long)}.
+ *          Later this timestamp is passed to response message which is triggered by received request.
+ *          See {@link #reqReceivedTimestamp(long)}<li/>
+ *     <li>When response is send back from target node sum of request send timestamp and message process time
+ *          is written to response. See {@link #reqTimeData(long)}<li/>
+ *     <li>When response is received on initial node timestamp from step 3 is deducted from current time.
+ *          See {@link #reqTimeData()}. This leaves time that messages spend in network.<li/>
+ * <ol/>
+ *
+ * @see TcpCommunicationMetricsListener
  */
 public interface TimeLoggableResponse extends Message {
     /** */
@@ -25,7 +43,8 @@ public interface TimeLoggableResponse extends Message {
 
     /**
      * @return Send timestamp of request that triggered this response
-     * in request sender node time.
+     * in request sender node time. {@code INVALID_TIMESTAMP} if request wasn't
+     * {@code TimeLoggableRequest} or it's send timestamp wasn't logged.
      */
     long reqSentTimestamp();
 
@@ -36,7 +55,8 @@ public interface TimeLoggableResponse extends Message {
 
     /**
      * @return Received timestamp of request that triggered this response
-     * in request receiver node time.
+     * in request receiver node time. {@code INVALID_TIMESTAMP} if request wasn't
+     * {@code TimeLoggableRequest} or it's timestamp wasn't logged.
      */
     long reqReceivedTimestamp();
 
@@ -46,15 +66,16 @@ public interface TimeLoggableResponse extends Message {
     void reqReceivedTimestamp(long reqReceivedTimestamp);
 
     /**
-     * @return Response send timestamp which is sum of request send
-     * timestamp and request processing time.
+     * @return Request time data which is sum of request send
+     * timestamp and request processing time. This value is usable only on
+     * request sender node in construction {@code System.nanoTime() - reqTimeData()}
      */
-    long respSendTimestamp();
+    long reqTimeData();
 
     /**
-     * Sets request send timestamp.
+     * Sets request time data.
      */
-    void respSendTimestamp(long respSendTimestamp);
+    void reqTimeData(long respSendTimestamp);
 
     /**
      * Copies request timestamps.
