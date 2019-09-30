@@ -183,6 +183,9 @@ public class BinaryContext {
     /** Object schemas. */
     private volatile Map<Integer, BinarySchemaRegistry> schemas;
 
+    /** Protocol version. */
+    private byte protoVer;
+
     /**
      * @param metaHnd Meta data handler.
      * @param igniteCfg Ignite configuration.
@@ -347,6 +350,14 @@ public class BinaryContext {
         );
 
         compactFooter = binaryCfg.isCompactFooter();
+        protoVer = binaryCfg.getProtocolVersion();
+    }
+
+    /**
+     * @return Protocol version.
+     */
+    public byte protocolVersion() {
+        return protoVer;
     }
 
     /**

@@ -27,6 +27,7 @@ import org.apache.ignite.internal.binary.BinaryFieldsOffheapSelfTest;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsHeapSelfTest;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsOffheapSelfTest;
 import org.apache.ignite.internal.binary.BinaryMarshallerSelfTest;
+import org.apache.ignite.internal.binary.BinaryMarshallerSelfTestV1;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderAdditionalSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderDefaultMappersSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderSimpleNameLowerCaseMappersSelfTest;
@@ -86,6 +87,7 @@ import org.junit.runners.Suite;
 
     BinaryTreeSelfTest.class,
     BinaryMarshallerSelfTest.class,
+    BinaryMarshallerSelfTestV1.class,
     BinaryObjectExceptionSelfTest.class,
 
     BinarySerialiedFieldComparatorSelfTest.class,

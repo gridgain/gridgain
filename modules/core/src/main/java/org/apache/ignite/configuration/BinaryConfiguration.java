@@ -23,6 +23,7 @@ import org.apache.ignite.binary.BinaryIdMapper;
 import org.apache.ignite.binary.BinaryNameMapper;
 import org.apache.ignite.binary.BinarySerializer;
 import org.apache.ignite.binary.BinaryTypeConfiguration;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -35,6 +36,9 @@ public class BinaryConfiguration implements Serializable {
 
     /** Default compact footer flag setting. */
     public static final boolean DFLT_COMPACT_FOOTER = true;
+
+    /** Default protocol version. */
+    public static final byte DFLT_PROTO_VER = GridBinaryMarshaller.CUR_PROTO_VER;
 
     /** ID mapper. */
     private BinaryIdMapper idMapper;
@@ -50,6 +54,9 @@ public class BinaryConfiguration implements Serializable {
 
     /** Compact footer flag. */
     private boolean compactFooter = DFLT_COMPACT_FOOTER;
+
+    /** Protocol version. */
+    private byte protoVer = GridBinaryMarshaller.CUR_PROTO_VER;
 
     /**
      * Sets class names of binary objects explicitly.
@@ -177,6 +184,28 @@ public class BinaryConfiguration implements Serializable {
      */
     public BinaryConfiguration setCompactFooter(boolean compactFooter) {
         this.compactFooter = compactFooter;
+
+        return this;
+    }
+
+    /**
+     * Get version of the binary protocol that will be used for marshalling objects.
+     * By default {@link #DFLT_PROTO_VER} is used.
+     *
+     * @return Current protocol version.
+     */
+    public byte getProtocolVersion() {
+        return protoVer;
+    }
+
+    /**
+     * Set binary protocol version.
+     *
+     * @param protoVer Protocol version. Should be in range 1..{@link #DFLT_PROTO_VER}
+     * @return {@code this} for chaining.
+     */
+    public BinaryConfiguration setProtocolVersion(byte protoVer) {
+        this.protoVer = protoVer;
 
         return this;
     }

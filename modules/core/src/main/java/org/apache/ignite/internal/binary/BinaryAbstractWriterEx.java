@@ -42,7 +42,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.internal.binary.GridBinaryMarshaller.CUR_PROTO_VER;
 
 /**
  * Binary writer implementation.
@@ -113,23 +112,52 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         start = out.position();
     }
 
+    /**
+     * Create writer with default protocol version.
+     *
+     * @param ctx Context.
+     * @return Binary writer.
+     */
     public static BinaryAbstractWriterEx createWriter(BinaryContext ctx) {
         BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
 
-        return createWriter(CUR_PROTO_VER, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+        return createWriter(ctx.protocolVersion(), ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
     }
 
+    /**
+     * Create writer with default protocol version.
+     *
+     * @param ctx Context.
+     * @param out Out.
+     * @param schema Schema.
+     * @param handles Handles.
+     */
     public static BinaryAbstractWriterEx createWriter(BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
-        return createWriter(CUR_PROTO_VER, ctx, out, schema, handles);
+        return createWriter(ctx.protocolVersion(), ctx, out, schema, handles);
     }
 
+    /**
+     * Create writer with provided protocol version.
+     *
+     * @param ver Version.
+     * @param ctx Context.
+     */
     public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx) {
         BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
 
         return createWriter(ver, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
     }
 
+    /**
+     * Create writer with provided protocol version.
+     *
+     * @param ver Version.
+     * @param ctx Context.
+     * @param out Out.
+     * @param schema Schema.
+     * @param handles Handles.
+     */
     public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
         BinaryUtils.checkProtocolVersion(ver);
@@ -144,6 +172,9 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         }
     }
 
+    /**
+     * @return Protocol version of current writer.
+     */
     public abstract byte version();
 
     /**
@@ -1902,5 +1933,45 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      */
     public BinaryContext context() {
         return ctx;
+    }
+
+    /** */
+    protected short initFlags(boolean userType) {
+        short flags = userType ? BinaryUtils.FLAG_USR_TYP : 0;
+
+        if (useCompactFooter(userType))
+            flags |= BinaryUtils.FLAG_COMPACT_FOOTER;
+
+        if (fieldCnt != 0)
+            flags |= BinaryUtils.FLAG_HAS_SCHEMA;
+
+        if (rawOffPos != 0)
+            flags |= BinaryUtils.FLAG_HAS_RAW;
+
+        return flags;
+    }
+
+
+    /** */
+    protected boolean useCompactFooter(boolean userType) {
+        return userType && ctx.isCompactFooter();
+    }
+
+    /** */
+    protected short writeSchema(boolean userType) {
+        assert fieldCnt > 0 : "fieldCnt > 0";
+
+        int offByteCnt = schema.write(out, fieldCnt, useCompactFooter(userType));
+
+        switch (offByteCnt) {
+            case BinaryUtils.OFFSET_1:
+                return BinaryUtils.FLAG_OFFSET_ONE_BYTE;
+
+            case BinaryUtils.OFFSET_2:
+                return BinaryUtils.FLAG_OFFSET_TWO_BYTES;
+
+            default:
+                return 0;
+        }
     }
 }

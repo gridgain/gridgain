@@ -111,6 +111,18 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testProtocolVersion() throws Exception {
+        BinaryMarshaller marsh = binaryMarshaller(Collections.singletonList(new BinaryTypeConfiguration(SimpleObject.class.getName())));
+
+        BinaryObjectExImpl binObj = marshal(simpleObject(), marsh);
+
+        Assert.assertEquals(binObj.version(), protocolVersion());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testNull() throws Exception {
         assertNull(marshalUnmarshal(null));
     }
@@ -3820,6 +3832,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         bCfg.setIdMapper(mapper);
         bCfg.setSerializer(serializer);
         bCfg.setCompactFooter(compactFooter());
+        bCfg.setProtocolVersion(protocolVersion());
 
         bCfg.setTypeConfigurations(cfgs);
 
@@ -5709,5 +5722,12 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
                 return a;
             }
         }
+    }
+
+    /**
+     * @return Binary protocol version.
+     */
+    protected byte protocolVersion() {
+        return GridBinaryMarshaller.CUR_PROTO_VER;
     }
 }

@@ -35,11 +35,7 @@ public class BinaryWriterExImplV1 extends BinaryAbstractWriterEx {
         super(ctx, out, schema, handles);
     }
 
-    /**
-     * Perform pre-write. Reserves space for header and writes class name if needed.
-     *
-     * @param registered Whether type is registered.
-     */
+    /** {@inheritDoc} */
     @Override public void preWrite(boolean registered) {
         out.position(out.position() + GridBinaryMarshaller.HDR_LEN_V1);
 
@@ -47,84 +43,48 @@ public class BinaryWriterExImplV1 extends BinaryAbstractWriterEx {
             doWriteString(clsName);
     }
 
-    /**
-     * Perform post-write. Fills object header.
-     *
-     * @param userType User type flag.
-     * @param registered Whether type is registered.
-     */
+    /** {@inheritDoc} */
     @Override public void postWrite(boolean userType, boolean registered) {
-        short flags;
-        boolean useCompactFooter;
+        short flags = initFlags(userType);
 
-        if (userType) {
-            if (ctx.isCompactFooter()) {
-                flags = BinaryUtils.FLAG_USR_TYP | BinaryUtils.FLAG_COMPACT_FOOTER;
-                useCompactFooter = true;
-            }
-            else {
-                flags = BinaryUtils.FLAG_USR_TYP;
-                useCompactFooter = false;
-            }
-        }
-        else {
-            flags = 0;
-            useCompactFooter = false;
-        }
+        int effectiveSchemaId = 0;
+        int schemaOrRawOff = 0;
 
-        int finalSchemaId;
-        int offset;
+        if (BinaryUtils.hasSchema(flags)) {
+            schemaOrRawOff = out.position() - start;
+            effectiveSchemaId = schemaId;
 
-        if (fieldCnt != 0) {
-            finalSchemaId = schemaId;
-            offset = out.position() - start;
+            flags |= writeSchema(userType);
 
-            // Write the schema.
-            flags |= BinaryUtils.FLAG_HAS_SCHEMA;
-
-            int offsetByteCnt = schema.write(out, fieldCnt, useCompactFooter);
-
-            if (offsetByteCnt == BinaryUtils.OFFSET_1)
-                flags |= BinaryUtils.FLAG_OFFSET_ONE_BYTE;
-            else if (offsetByteCnt == BinaryUtils.OFFSET_2)
-                flags |= BinaryUtils.FLAG_OFFSET_TWO_BYTES;
-
-            // Write raw offset if needed.
-            if (rawOffPos != 0) {
-                flags |= BinaryUtils.FLAG_HAS_RAW;
-
+            if (BinaryUtils.hasRaw(flags))
                 out.writeInt(rawOffPos - start);
-            }
         }
-        else {
-            if (rawOffPos != 0) {
-                finalSchemaId = 0;
-                offset = rawOffPos - start;
+        else if (BinaryUtils.hasRaw(flags))
+            schemaOrRawOff = rawOffPos - start;
 
-                // If there is no schema, we are free to write raw offset to schema offset.
-                flags |= BinaryUtils.FLAG_HAS_RAW;
-            }
-            else {
-                finalSchemaId = 0;
-                offset = 0;
-            }
-        }
-
-        // Actual write.
         int retPos = out.position();
+        int effectiveTypeId = registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
+        int totalLen = retPos - start;
 
         out.unsafePosition(start);
 
+        writeHeader(effectiveTypeId, flags, effectiveSchemaId, schemaOrRawOff, totalLen);
+
+        out.unsafePosition(retPos);
+    }
+
+    /** */
+    private void writeHeader(int typeId, short flags, int schemaId, int schemaOrRawOff, int totalLen) {
         out.unsafeWriteByte(GridBinaryMarshaller.OBJ);
         out.unsafeWriteByte(PROTO_VER);
         out.unsafeWriteShort(flags);
-        out.unsafeWriteInt(registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID);
-        out.unsafePosition(start + GridBinaryMarshaller.TOTAL_LEN_POS);
-        out.unsafeWriteInt(retPos - start);
-        out.unsafeWriteInt(finalSchemaId);
-        out.unsafeWriteInt(offset);
+        out.unsafeWriteInt(typeId);
 
-        out.unsafePosition(retPos);
+        out.unsafePosition(start + GridBinaryMarshaller.TOTAL_LEN_POS); // skip hashcode
+
+        out.unsafeWriteInt(totalLen);
+        out.unsafeWriteInt(schemaId);
+        out.unsafeWriteInt(schemaOrRawOff);
     }
 
     /** {@inheritDoc} */

@@ -225,6 +225,15 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
         return reader(null, false).dataLength();
     }
 
+    /**
+     * Protocol version of current binary object.
+     *
+     * @return Binary protocol version.
+     */
+    public byte version() {
+        return reader(null, false).version();
+    }
+
     /** {@inheritDoc} */
     @Override public BinaryObjectBuilder toBuilder() throws BinaryObjectException {
         return BinaryObjectBuilderImpl.wrap(this);

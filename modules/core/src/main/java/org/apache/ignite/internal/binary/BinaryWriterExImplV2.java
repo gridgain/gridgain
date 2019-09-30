@@ -37,21 +37,14 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
         super(ctx, out, schema, handles);
     }
 
-    /**
-     * Perform pre-write. Reserves space for header and writes class name if needed.
-     *
-     * @param registered Whether type is registered.
-     */
+
+    /** {@inheritDoc} */
     @Override public void preWrite(boolean registered) {
         out.position(out.position() + HDR_LEN_V2);
     }
 
-    /**
-     * Perform post-write. Fills object header.
-     *
-     * @param userType User type flag.
-     * @param registered Whether type is registered.
-     */
+
+    /** {@inheritDoc} */
     @Override public void postWrite(boolean userType, boolean registered) {
         int dataLen = out.position() - start - HDR_LEN_V2;
 
@@ -61,13 +54,15 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
             writeMeta(flags, registered, dataLen);
 
         if (BinaryUtils.hasSchema(flags))
-            flags |= writeShema(userType);
+            flags |= writeSchema(userType);
 
         int retPos = out.position();
+        int effectiveTypeId = registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
+        int totalLen = retPos - start;
 
         out.unsafePosition(start);
 
-        writeHeader(registered ? typeId : GridBinaryMarshaller.UNREGISTERED_TYPE_ID, flags, dataLen, retPos - start);
+        writeHeader(effectiveTypeId, flags, dataLen, totalLen);
 
         out.unsafePosition(retPos);
     }
@@ -83,43 +78,6 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
 
         out.unsafeWriteInt(totalLen);
         out.unsafeWriteInt(dataLen);
-    }
-
-    /** */
-    private short writeShema(boolean userType) {
-        int offByteCnt = schema.write(out, fieldCnt, useCompactFooter(userType));
-
-        switch (offByteCnt) {
-            case BinaryUtils.OFFSET_1:
-                return BinaryUtils.FLAG_OFFSET_ONE_BYTE;
-
-            case BinaryUtils.OFFSET_2:
-                return BinaryUtils.FLAG_OFFSET_TWO_BYTES;
-
-            default:
-                return 0;
-        }
-    }
-
-    /** */
-    private boolean useCompactFooter(boolean userType) {
-        return userType && ctx.isCompactFooter();
-    }
-
-    /** */
-    private short initFlags(boolean userType) {
-        short flags = userType ? BinaryUtils.FLAG_USR_TYP : 0;
-
-        if (useCompactFooter(userType))
-            flags |= BinaryUtils.FLAG_COMPACT_FOOTER;
-
-        if (fieldCnt != 0)
-            flags |= BinaryUtils.FLAG_HAS_SCHEMA;
-
-        if (rawOffPos != 0)
-            flags |= BinaryUtils.FLAG_HAS_RAW;
-
-        return flags;
     }
 
     /** */
