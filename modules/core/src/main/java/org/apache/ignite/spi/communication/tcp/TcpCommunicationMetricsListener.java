@@ -525,19 +525,9 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             if (timeLoggableRes.respSendTimestamp() == INVALID_TIMESTAMP)
                 return;
 
-            // No requests were sent to nodeId
-            if (!outMetricsMap.containsKey(nodeId))
-                outMetricsMap.putIfAbsent(nodeId, new ConcurrentHashMap<>());
+            Map<Short, HistogramMetric> nodeMap = outMetricsMap.computeIfAbsent(nodeId, (k) -> new ConcurrentHashMap<>());
 
-            Map<Short, HistogramMetric> nodeMap = outMetricsMap.get(nodeId);
-
-            short msgType = timeLoggableRes.directType();
-
-            // No message of certain class were sent to nodeId
-            if (!nodeMap.containsKey(msgType))
-                nodeMap.putIfAbsent(msgType, new HistogramMetric(metricBounds()));
-
-            HistogramMetric metric = nodeMap.get(msgType);
+            HistogramMetric metric = nodeMap.computeIfAbsent(timeLoggableRes.directType(), k -> new HistogramMetric(metricBounds()));
 
             metric.value(U.nanosToMillis(System.nanoTime() - timeLoggableRes.respSendTimestamp()));
         }
