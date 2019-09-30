@@ -157,7 +157,7 @@ public class DistributedBaselineConfiguration {
      */
     public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled)
         throws IgniteCheckedException {
-        return this.baselineAutoAdjustEnabled.propagateAsync(baselineAutoAdjustEnabled);
+        return this.baselineAutoAdjustEnabled.propagateAsync(!baselineAutoAdjustEnabled, baselineAutoAdjustEnabled);
     }
 
     /**
