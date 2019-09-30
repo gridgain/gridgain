@@ -25,6 +25,8 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERE
 
 /**
  * Binary reader implementation (protocol version 1).
+ *
+ * @see BinaryWriterExImplV1
  */
 public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements BinaryReaderEx {
     /** Protocol version. */

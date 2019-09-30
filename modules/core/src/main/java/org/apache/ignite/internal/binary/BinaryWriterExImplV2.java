@@ -16,12 +16,40 @@
 
 package org.apache.ignite.internal.binary;
 
+import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
 
 /**
- * Binary writer implementation.
+ * Binary writer implementation for protocol version 2. <p/>
+ *
+ * Layout for version 2 consists of 5 part:
+ *
+ * <pre>
+ *      [header][schema data section][raw data section][meta data section][schema description]
+ * </pre>
+ *
+ * where:
+ *
+ * <ul>
+ *      <li>header -- mandatory part with length of 20 bytes.<br>
+ *          [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][data length: 4],
+ *      data length is equals sum of length both schema data section and raw data section</li>
+ *
+ *      <li>schema data section -- optional part of variable length. Contains values written with object schema.
+ *      Presents if there are fields written to object.</li>
+ *
+ *      <li>raw data section -- optional part of variable length. Contains bytes of arbitrary format.
+ *      Presents if there are raw bytes written by {@link BinaryRawWriter}</li>
+ *
+ *      <li>meta data section -- optional part of variable length. Presents if type is unregistered ({@code typeId == 0})
+ *      or there is schema section. Has following format:<br>
+ *          [raw offset: 4][schema id: 4][schema description offset: 4][class name: var len]<br/>
+ *      , each part is optional.</li>
+ *
+ *      <li>schema description -- optional part of variable length. Presents if schema data is present {@link BinaryRawWriter}</li>
+ * </ul>
  */
 public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
     /** Protocol version. */
