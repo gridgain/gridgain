@@ -413,7 +413,7 @@ public class VisorGatewayTask implements ComputeTask<Object[], Object> {
                     }
                 }
                 catch (Exception e) {
-                    throw new IgniteException("Failed to construct job argument [taskName=" + taskName + "]", e);
+                    throw new IgniteException("Failed to construct job argument [taskName=" + taskName + ", taskArgName=" + argClsName + "]", e);
                 }
             }
 
