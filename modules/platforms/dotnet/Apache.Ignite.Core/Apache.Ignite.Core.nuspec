@@ -48,15 +48,10 @@ More info: https://docs.gridgain.com/
         <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache linqpad-samples</tags>
     </metadata>
     <files>
-        <!-- Install script should be in tools -->
-        <file src="NuGet\Install.ps1" target="tools" />
-        <file src="NuGet\Uninstall.ps1" target="tools" />
-        <file src="NuGet\PostBuild.ps1" target="tools" />
-
-		<!-- Binaries -->
+        <!-- Binaries -->
         <file src="bin\$configuration$\Apache.Ignite.Core.dll" target="lib\net40" />
-		<file src="bin\$configuration$\Apache.Ignite.Core.xml" target="lib\net40" />
-		
+        <file src="bin\$configuration$\Apache.Ignite.Core.xml" target="lib\net40" />
+
         <!-- Include Apache.Ignite.exe -->
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe" target="lib\net40" />
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe.config" target="lib\net40" />
