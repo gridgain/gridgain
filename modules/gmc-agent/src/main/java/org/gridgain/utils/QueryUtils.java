@@ -17,19 +17,30 @@
 package org.gridgain.utils;
 
 import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
+import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.query.VisorQueryUtils;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.gridgain.action.query.CursorHolder;
 import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryField;
 import org.gridgain.dto.action.query.QueryResult;
 
+import javax.cache.Cache;
+import java.math.BigDecimal;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -37,17 +48,34 @@ import java.util.List;
  * SQL query utils.
  */
 public class QueryUtils {
+    /** Columns for SCAN queries. */
+    public static final List<QueryField> SCAN_COL_NAMES = Arrays.asList(
+        new QueryField().setFieldName("Key Class"), new QueryField().setFieldName("Key"),
+        new QueryField().setFieldName("Value Class"), new QueryField().setFieldName("Value")
+    );
+
     /**
      * @param curHolder Cursor id.
      * @param pageSize Page size.
      * @return Query result.
      */
     public static QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
+        return curHolder.isScanCursor()
+            ? fetchScanQueryResult(curHolder, pageSize)
+            : fetchSqlQueryResult(curHolder, pageSize);
+    }
+
+    /**
+     * @param curHolder Cursor id.
+     * @param pageSize Page size.
+     * @return Query result.
+     */
+    public static QueryResult fetchSqlQueryResult(CursorHolder curHolder, int pageSize) {
         QueryResult qryRes = new QueryResult();
         long start = U.currentTimeMillis();
 
-        List<QueryField> cols = getColumns(curHolder.getCursor());
         List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
+        List<QueryField> cols = getColumns(curHolder.getCursor());
         boolean hasMore = curHolder.hasNext();
 
         return qryRes
@@ -55,6 +83,25 @@ public class QueryUtils {
             .setColumns(cols)
             .setRows(rows)
             .setDuration(U.currentTimeMillis() - start);
+    }
+
+    /**
+     * @param curHolder Cursor id.
+     * @param pageSize Page size.
+     * @return Query result.
+     */
+    public static QueryResult fetchScanQueryResult(CursorHolder curHolder, int pageSize) {
+        QueryResult qryRes = new QueryResult();
+        long start = U.currentTimeMillis();
+
+        List<Object[]> rows = fetchScanQueryRows(curHolder, pageSize);
+        boolean hasMore = curHolder.hasNext();
+
+        return qryRes
+                .setHasMore(hasMore)
+                .setColumns(SCAN_COL_NAMES)
+                .setRows(rows)
+                .setDuration(U.currentTimeMillis() - start);
     }
 
     /**
@@ -123,7 +170,7 @@ public class QueryUtils {
             Object[] row = new Object[sz];
 
             for (int i = 0; i < sz; i++)
-                row[i] = VisorQueryUtils.convertValue(next.get(i));
+                row[i] = convertValue(next.get(i));
 
             rows.add(row);
 
@@ -131,5 +178,197 @@ public class QueryUtils {
         }
 
         return rows;
+    }
+    /**
+     * Convert object that can be passed to client.
+     *
+     * @param original Source object.
+     * @return Converted value.
+     */
+    public static Object convertValue(Object original) {
+        if (original == null)
+            return null;
+        else if (isKnownType(original))
+            return original;
+        else if (original instanceof BinaryObject)
+            return binaryToString((BinaryObject)original);
+        else
+            return original.getClass().isArray() ? "binary" : original.toString();
+    }
+
+    /**
+     * Checks is given object is one of known types.
+     *
+     * @param obj Object instance to check.
+     * @return {@code true} if it is one of known types.
+     */
+    private static boolean isKnownType(Object obj) {
+        return obj instanceof String ||
+                obj instanceof Boolean ||
+                obj instanceof Byte ||
+                obj instanceof Integer ||
+                obj instanceof Long ||
+                obj instanceof Short ||
+                obj instanceof Date ||
+                obj instanceof Double ||
+                obj instanceof Float ||
+                obj instanceof BigDecimal ||
+                obj instanceof URL;
+    }
+
+    /**
+     * Fetch rows from SCAN query future.
+     *
+     * @param itr Result set iterator.
+     * @param pageSize Number of rows to fetch.
+     * @return Fetched rows.
+     */
+    public static List<Object[]> fetchScanQueryRows(Iterator itr, int pageSize) {
+        List<Object[]> rows = new ArrayList<>();
+
+        int cnt = 0;
+
+        Iterator<Cache.Entry<Object, Object>> scanItr = (Iterator<Cache.Entry<Object, Object>>)itr;
+
+        while (scanItr.hasNext() && cnt < pageSize) {
+            Cache.Entry<Object, Object> next = scanItr.next();
+
+            Object k = next.getKey();
+            Object v = next.getValue();
+
+            rows.add(new Object[] {typeOf(k), valueOf(k), typeOf(v), valueOf(v)});
+
+            cnt++;
+        }
+
+        return rows;
+    }
+
+    /**
+     * @param o Source object.
+     * @return String representation of object class.
+     */
+    private static String typeOf(Object o) {
+        if (o != null) {
+            Class<?> clazz = o.getClass();
+
+            return clazz.isArray() ? IgniteUtils.compact(clazz.getComponentType().getName()) + "[]"
+                    : IgniteUtils.compact(o.getClass().getName());
+        }
+        else
+            return "n/a";
+    }
+
+    /**
+     * @param o Object.
+     * @return String representation of value.
+     */
+    private static String valueOf(Object o) {
+        if (o == null)
+            return "null";
+
+        if (o instanceof byte[])
+            return "size=" + ((byte[])o).length;
+
+        if (o instanceof Byte[])
+            return "size=" + ((Byte[])o).length;
+
+        if (o instanceof Object[])
+            return "size=" + ((Object[])o).length + ", values=[" + mkString((Object[])o, 120) + "]";
+
+        if (o instanceof BinaryObject)
+            return binaryToString((BinaryObject)o);
+
+        return o.toString();
+    }
+
+    /**
+     * @param arr Object array.
+     * @param maxSz Maximum string size.
+     * @return Fixed size string.
+     */
+    private static String mkString(Object[] arr, int maxSz) {
+        String sep = ", ";
+
+        StringBuilder sb = new StringBuilder();
+
+        boolean first = true;
+
+        for (Object v : arr) {
+            if (first)
+                first = false;
+            else
+                sb.append(sep);
+
+            sb.append(v);
+
+            if (sb.length() > maxSz)
+                break;
+        }
+
+        if (sb.length() >= maxSz) {
+            String end = "...";
+
+            sb.setLength(maxSz - end.length());
+
+            sb.append(end);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * TODO GG-24424: Change on JSON string.
+     * Convert Binary object to string.
+     *
+     * @param obj Binary object.
+     * @return String representation of Binary object.
+     */
+    public static String binaryToString(BinaryObject obj) {
+        int hash = obj.hashCode();
+
+        if (obj instanceof BinaryObjectEx) {
+            BinaryObjectEx objEx = (BinaryObjectEx)obj;
+
+            BinaryType meta;
+
+            try {
+                meta = ((BinaryObjectEx)obj).rawType();
+            }
+            catch (BinaryObjectException ignore) {
+                meta = null;
+            }
+
+            if (meta != null) {
+                if (meta.isEnum()) {
+                    try {
+                        return obj.deserialize().toString();
+                    }
+                    catch (BinaryObjectException ignore) {
+                        // NO-op.
+                    }
+                }
+
+                SB buf = new SB(meta.typeName());
+
+                if (meta.fieldNames() != null) {
+                    buf.a(" [hash=").a(hash);
+
+                    for (String name : meta.fieldNames()) {
+                        Object val = objEx.field(name);
+
+                        buf.a(", ").a(name).a('=').a(val);
+                    }
+
+                    buf.a(']');
+
+                    return buf.toString();
+                }
+            }
+        }
+
+        return S.toString(obj.getClass().getSimpleName(),
+                "hash", hash, false,
+                "typeId", obj.type().typeId(), true);
     }
 }

@@ -91,8 +91,6 @@ public class QueryHolderRegistry {
 
     /**
      * @param qryId Query ID.
-     * @param cursorId Cursor ID.
-     *
      * @return Cursor holder by query ID and cursor ID.
      */
     public CursorHolder findCursor(String qryId, String cursorId) {

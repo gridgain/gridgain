@@ -20,11 +20,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.gridgain.dto.action.Request;
 import org.gridgain.dto.action.Response;
 import org.gridgain.dto.action.query.NextPageQueryArgument;
 import org.gridgain.dto.action.query.QueryArgument;
+import org.gridgain.dto.action.query.ScanQueryArgument;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -199,6 +201,41 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     return res != null && res.getStatus() == FAILED;
                 }
         );
+    }
+
+    /**
+     * Should execute scan query.
+     */
+    @Test
+    public void shouldExecuteScanQurey() {
+        IgniteCache<Object, Object> cache = cluster.ignite().createCache("test_cache");
+        cache.put("key_1", "value_1");
+        cache.put("key_2", "value_2");
+
+        Request req = new Request()
+            .setAction("QueryActions.executeScanQuery")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new ScanQueryArgument()
+                    .setCacheName("test_cache")
+                    .setQueryId("qry")
+                    .setPageSize(1)
+            );
+
+        executeAction(req, (r) -> {
+            if (r.getStatus() == COMPLETED) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray arr = ctx.read("$.rows[*]");
+                boolean hasMore = ctx.read("$.hasMore");
+                String id = ctx.read("$.rows[0][1]");
+                String val = ctx.read("$.rows[0][3]");
+
+                return arr.size() == 1 && hasMore && "key_2".equals(id) && "value_2".equals(val);
+            }
+
+            return false;
+        });
     }
 
     /**

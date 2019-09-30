@@ -31,13 +31,40 @@ public class CursorHolder implements AutoCloseable, Iterator {
     /** Iterator. */
     private final Iterator iter;
 
+    /** Is scan cursor. */
+    private boolean isScanCursor;
+
     /**
      * @param cursor Cursor.
      */
     public CursorHolder(QueryCursor cursor) {
+        this(cursor, false);
+    }
+
+    /**
+     * @param cursor Cursor.
+     */
+    public CursorHolder(QueryCursor cursor, boolean isScanCursor) {
         this.cursor = cursor;
+        this.isScanCursor = isScanCursor;
 
         iter = cursor.iterator();
+    }
+
+    /**
+     * @return @{code true} if this cursor from scan query.
+     */
+    public boolean isScanCursor() {
+        return isScanCursor;
+    }
+
+    /**
+     * @param scanCursor Scan cursor.
+     * @return This for chaining methods.
+     */
+    public CursorHolder setScanCursor(boolean scanCursor) {
+        isScanCursor = scanCursor;
+        return this;
     }
 
     /**
