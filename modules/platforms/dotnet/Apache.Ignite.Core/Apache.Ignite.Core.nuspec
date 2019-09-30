@@ -65,7 +65,8 @@ More info: https://docs.gridgain.com/
             Library files (jars) should not be included in project, so that NuGet package restore works properly.
             We keep jars in NuGet dir and copy them over in PostBuild event.
         -->
-        <file src="..\bin\libs\*.jar" target="libs" />
+        <file src="..\bin\libs\*.jar" target="Build" />
+        <file src="Apache.Ignite.targets" target="Build" />
     
         <!-- LINQPad samples -->
         <file src="NuGet\LINQPad\*.*" target="linqpad-samples" />
