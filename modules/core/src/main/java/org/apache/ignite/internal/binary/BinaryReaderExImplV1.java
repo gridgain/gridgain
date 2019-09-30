@@ -21,6 +21,7 @@ import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V1;
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
 
 /**
@@ -101,7 +102,7 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
             typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
 
             dataStartOff = start + HDR_LEN_V1 + (typeId0 == UNREGISTERED_TYPE_ID
-                ? className(ctx).length() + 5 /* 1 for value type + 4 for string length */ : 0);
+                ? className().length() + 5 /* 1 for value type + 4 for string length */ : 0);
 
             dataLen = footerStartOff - dataStartOff;
         }
@@ -126,30 +127,12 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
 
     /** */
     private int rawOffsetPos() {
-        return objectEndOffset() - 4;
+        return BinaryUtils.hasSchema(flags) ? objectEndOffset() - 4 : start + SCHEMA_OR_RAW_OFF_POS;
     }
 
-    /** */
-    private String className(BinaryContext ctx) {
-        return ctx.metadata(typeId).typeName();
-    }
-
-    /**
-     * @param ctx Context.
-     * @param in In.
-     * @param ldr Loader.
-     * @param forUnmarshal For unmarshal.
-     */
-    private int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
-        in.position(start + HDR_LEN_V1);
-
-        if (!forUnmarshal)
-            return ctx.typeId(BinaryUtils.doReadClassName(in));
-
-        // Registers class by type ID, at least locally if the cache is not ready yet.
-        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), false, false);
-
-        return desc.typeId();
+    /** {@inheritDoc} */
+    @Override protected int classNameOffset() {
+        return start + HDR_LEN_V1;
     }
 
     /** {@inheritDoc} */

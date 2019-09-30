@@ -33,9 +33,11 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
  * where:
  *
  * <ul>
- *      <li>header -- mandatory part with length of 20 bytes.<br>
- *          [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][data length: 4],
- *      data length is equals sum of length both schema data section and raw data section</li>
+ *      <li>header -- mandatory part with length of 20 bytes:<br>
+ *      <pre>
+ *      [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][data length: 4]
+ *      </pre>
+ *      , data length is equals sum of length both schema and raw data sections</li>
  *
  *      <li>schema data section -- optional part of variable length. Contains values written with object schema.
  *      Presents if there are fields written to object.</li>
@@ -45,7 +47,9 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
  *
  *      <li>meta data section -- optional part of variable length. Presents if type is unregistered ({@code typeId == 0})
  *      or there is schema section. Has following format:<br>
- *          [raw offset: 4][schema id: 4][schema description offset: 4][class name: var len]<br/>
+ *      <pre>
+ *      [raw offset: 4][schema id: 4][schema description offset: 4][class name: var len]
+ *      </pre>
  *      , each part is optional.</li>
  *
  *      <li>schema description -- optional part of variable length. Presents if schema data is present {@link BinaryRawWriter}</li>
@@ -78,7 +82,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
 
         short flags = initFlags(userType);
 
-        if (!BinaryUtils.hasSchema(flags) && registered)
+        if (BinaryUtils.hasSchema(flags) || !registered)
             writeMeta(flags, registered, dataLen);
 
         if (BinaryUtils.hasSchema(flags))
@@ -114,8 +118,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
             out.writeInt(rawOffPos - start);
 
         if (BinaryUtils.hasSchema(flags)) {
-            out.writeInt(fieldCnt != 0 ? schemaId : 0);
-
+            out.writeInt(schemaId);
             out.writeInt(footerOffset(dataLen, registered, flags));
         }
 
@@ -127,6 +130,7 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
     private int footerOffset(int dataLen, boolean registered, short flags) {
         return HDR_LEN_V2 + dataLen // meta section rigth after data
             + (BinaryUtils.hasRaw(flags) ? 4 : 0) // count raw offset
+            + (BinaryUtils.hasSchema(flags) ? 8 : 0) // count schema id + footer offset
             + (!registered ? clsName.length() + 5 : 0); // count class name
     }
 

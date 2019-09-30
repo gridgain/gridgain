@@ -31,9 +31,11 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
  * where:
  *
  * <ul>
- *      <li>header -- mandatory part with length of 24 bytes.<br>
- *          [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][schema id: 4][raw offset or schema position: 4],<br>
- *      if there is raw data and there is no schema data then last 4 bytes will be offset of raw data,
+ *      <li>header -- mandatory part with length of 24 bytes:<br>
+ *      <pre>
+ *      [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][schema id: 4][raw offset or schema position: 4]
+ *      </pre>
+ *      , if there is raw data and there is no schema data then last 4 bytes will be offset of raw data,
  *      otherwise it will be offset of schema description</li>
  *
  *      <li>class name -- optional part of variable length. Containts {@link Class#getName()} of written object.

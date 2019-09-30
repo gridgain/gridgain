@@ -82,6 +82,7 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIME;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIMESTAMP;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIMESTAMP_ARR;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TIME_ARR;
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
 
@@ -91,7 +92,7 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
 @SuppressWarnings("unchecked")
 public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawReaderEx, BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
     /** Binary context. */
-    private final BinaryContext ctx;
+    protected final BinaryContext ctx;
 
     /** Input stream. */
     protected final BinaryInputStream in;
@@ -215,6 +216,11 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                 throw new IgniteException("Unknown protocol version: " + ver);
 
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String className() {
+        return ctx.metadata(typeId()).typeName();
     }
 
     /**
@@ -2117,7 +2123,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
     }
 
     /**
-     *
+     * @return Schema of the binary object.
      */
     private BinarySchema schema() {
         if (schema == null)
@@ -2126,10 +2132,16 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         return schema;
     }
 
+    /**
+     * @return {@code true} if current object has schema data.
+     */
     private boolean hasSchema() {
         return BinaryUtils.hasSchema(flags());
     }
 
+    /**
+     * @return length of fiend offset.
+     */
     private int fieldOffLen() {
         if (hasSchema())
             return BinaryUtils.fieldOffsetLength(flags());
@@ -2137,12 +2149,38 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         return 0;
     }
 
+    /**
+     * @return length of fiend id.
+     */
     private int fieldIdLen() {
         if (hasSchema())
             return BinaryUtils.fieldIdLength(flags());
 
         return 0;
     }
+
+    /**
+     * @param ctx Context.
+     * @param in In.
+     * @param ldr Loader.
+     * @param forUnmarshal For unmarshal.
+     */
+    protected int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
+        in.position(classNameOffset());
+
+        if (!forUnmarshal)
+            return ctx.typeId(BinaryUtils.doReadClassName(in));
+
+        // Registers class by type ID, at least locally if the cache is not ready yet.
+        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), true, false);
+
+        return desc.typeId();
+    }
+
+    /**
+     * @return Offset of the name of the class for unregistred type.
+     */
+    protected abstract int classNameOffset();
 
     /**
      * Set position for the given user field order.

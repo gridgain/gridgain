@@ -56,7 +56,7 @@ public class BinaryConfiguration implements Serializable {
     private boolean compactFooter = DFLT_COMPACT_FOOTER;
 
     /** Protocol version. */
-    private byte protoVer = GridBinaryMarshaller.CUR_PROTO_VER;
+    private byte protoVer = DFLT_PROTO_VER;
 
     /**
      * Sets class names of binary objects explicitly.

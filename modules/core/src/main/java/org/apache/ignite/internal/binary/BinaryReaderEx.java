@@ -22,25 +22,87 @@ import org.apache.ignite.binary.BinaryRawReader;
  * Extended reader interface.
  */
 public interface BinaryReaderEx extends BinaryRawReader {
+    /**
+     * Returns protocol version of current object.
+     *
+     * @return Protocol version.
+     */
     public byte version();
 
+    /**
+     * Returns total length of data including schema and raw sections.
+     *
+     * @return Length of the data.
+     */
     public int length();
 
+    /**
+     * Returns offset of the very first data section beginning.
+     *
+     * @return Position in stream.
+     */
     public int dataStartOffset();
 
+    /**
+     * Returns offset of the raw data section.
+     *
+     * @return Position in stream.
+     */
     public int rawOffset();
 
+    /**
+     * Returns length of raw data section.
+     *
+     * @return Count of bytes.
+     */
     public int rawLength();
 
+    /**
+     * Returns length of schema data section.
+     *
+     * @return Count of bytes.
+     */
     public int dataLength();
 
+    /**
+     * Returns offset of the schema descripion section.
+     *
+     * @return Position in stream.
+     */
     public int footerStartOffset();
 
+    /**
+     * Returns length of schema description section.
+     *
+     * @return Count of bytes.
+     */
     public int footerLength();
 
+    /**
+     * Returns current object's schema id.
+     *
+     * @return Id of schema.
+     */
     public int schemaId();
 
+    /**
+     * Returns current object's type id.
+     *
+     * @return Id og type.
+     */
     public int typeId();
 
+    /**
+     * Returns current object's flags.
+     *
+     * @return Flags.
+     */
     public short flags();
+
+    /**
+     * Returns current object's class name.
+     *
+     * @return Class name.
+     */
+    public String className();
 }

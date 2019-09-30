@@ -27,6 +27,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
@@ -36,7 +37,6 @@ import org.apache.ignite.internal.binary.BinaryObjectOffheapImpl;
 import org.apache.ignite.internal.binary.BinarySchema;
 import org.apache.ignite.internal.binary.BinarySchemaRegistry;
 import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -134,46 +134,16 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         this.reader = reader;
         this.start = start;
-        this.flags = reader.reader().flags();
 
-        this.ver = reader.reader().version();
+        flags = reader.reader().flags();
+        ver = reader.reader().version();
 
         BinaryUtils.checkProtocolVersion(ver);
 
-        this.typeId = reader.reader().typeId();
-        this.ctx = reader.binaryContext();
-        this.dataOff = reader.reader().dataStartOffset();
-        // TODO: read class name
-        this.clsNameToWrite = null;
-
-//        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID) {
-//            int mark = reader.position();
-//
-//            reader.position(start + GridBinaryMarshaller.HDR_LEN_V1);
-//
-//            clsNameToWrite = reader.readString();
-//
-//            Class cls;
-//
-//            try {
-//                cls = U.forName(clsNameToWrite, ctx.configuration().getClassLoader());
-//            }
-//            catch (ClassNotFoundException e) {
-//                throw new BinaryInvalidTypeException("Failed to load the class: " + clsNameToWrite, e);
-//            }
-//
-//            this.typeId = ctx.descriptorForClass(cls, false, false).typeId();
-//
-//            registeredType = false;
-//
-//            dataOff = reader.position() - mark;
-//
-//            reader.position(mark);
-//        }
-//        else {
-//            this.typeId = typeId;
-//            dataOff = GridBinaryMarshaller.HDR_LEN_V1;
-//        }
+        typeId = reader.reader().typeId();
+        ctx = reader.binaryContext();
+        dataOff = reader.reader().dataStartOffset();
+        clsNameToWrite = reader.reader().className();
     }
 
     /** {@inheritDoc} */

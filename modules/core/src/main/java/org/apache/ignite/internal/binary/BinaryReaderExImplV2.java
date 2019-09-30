@@ -145,32 +145,14 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx {
         return off;
     }
 
-    /** */
-    private int classNameOffset() {
+    /** {@inheritDoc} */
+    @Override protected int classNameOffset() {
         int off = schemaIdOffset();
 
         if (BinaryUtils.hasSchema(flags))
             off += 8;
 
         return off;
-    }
-
-    /**
-     * @param ctx Context.
-     * @param in In.
-     * @param ldr Loader.
-     * @param forUnmarshal For unmarshal.
-     */
-    private int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
-        in.position(classNameOffset());
-
-        if (!forUnmarshal)
-            return ctx.typeId(BinaryUtils.doReadClassName(in));
-
-        // Registers class by type ID, at least locally if the cache is not ready yet.
-        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), false, false);
-
-        return desc.typeId();
     }
 
     /** {@inheritDoc} */
