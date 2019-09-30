@@ -55,12 +55,9 @@ More info: https://docs.gridgain.com/
         <!-- Include Apache.Ignite.exe -->
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe" target="lib\net40" />
         <file src="..\Apache.Ignite\bin\$configuration$\Apache.Ignite.exe.config" target="lib\net40" />
-        
-        <!-- 
-            Library files (jars) should not be included in project, so that NuGet package restore works properly.
-            We keep jars in NuGet dir and copy them over in PostBuild event.
-        -->
-        <file src="..\bin\libs\*.jar" target="Build" />
+
+        <!-- Jar files and targets file to copy them to build output -->
+        <file src="..\bin\libs\*.jar" target="Build\libs" />
         <file src="Apache.Ignite.targets" target="Build" />
     
         <!-- LINQPad samples -->
