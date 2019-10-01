@@ -194,7 +194,7 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testChangeTypeIdOfBinaryFieldCaseNotFoundExpectedTypeIdReverse() throws Exception {
+    public void testChangeTypeIdOfBinaryFieldCaseNotFoundActualTypeId() throws Exception {
         BinaryMarshaller marsh = createMarshaller();
 
         TimeValue timeVal = new TimeValue(11111L);
