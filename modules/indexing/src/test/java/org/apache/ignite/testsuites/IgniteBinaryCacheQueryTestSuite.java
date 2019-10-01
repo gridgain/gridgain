@@ -172,6 +172,7 @@ import org.apache.ignite.internal.processors.client.ClientConnectorConfiguration
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineBinObjFieldsQuerySelfTest;
 import org.apache.ignite.internal.processors.query.IgniteCachelessQueriesSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteQueryDedicatedPoolTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlCollectionFieldTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultValueTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDistributedJoinSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlEntryCacheModeAgnosticTest;
@@ -465,6 +466,7 @@ public class IgniteBinaryCacheQueryTestSuite extends TestSuite {
         suite.addTest(new JUnit4TestAdapter(IgniteCacheDistributedPartitionQueryNodeRestartsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteCacheDistributedPartitionQueryConfigurationSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteSqlKeyValueFieldsTest.class));
+        suite.addTest(new JUnit4TestAdapter(IgniteSqlCollectionFieldTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteSqlRoutingTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteSqlNotNullConstraintTest.class));
         suite.addTest(new JUnit4TestAdapter(LongIndexNameTest.class));
