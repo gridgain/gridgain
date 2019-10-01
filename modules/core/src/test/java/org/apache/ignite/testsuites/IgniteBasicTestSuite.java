@@ -68,6 +68,8 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestor
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.DropCacheContextDuringEvictionTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictionTaskFailureHandlerTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
@@ -186,6 +188,8 @@ public class IgniteBasicTestSuite {
         GridTestUtils.addTestIfNeeded(suite, IgniteDaemonNodeMarshallerCacheTest.class, ignoredTests);
         suite.addTest(new JUnit4TestAdapter(IgniteMarshallerCacheConcurrentReadWriteTest.class));
         suite.addTest(new JUnit4TestAdapter(GridNodeMetricsLogSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(DropCacheContextDuringEvictionTest.class));
+        suite.addTest(new JUnit4TestAdapter(PartitionsEvictionTaskFailureHandlerTest.class));
         suite.addTest(new JUnit4TestAdapter(GridLocalIgniteSerializationTest.class));
         suite.addTest(new JUnit4TestAdapter(GridMBeansTest.class));
         suite.addTest(new JUnit4TestAdapter(TransactionsMXBeanImplTest.class));

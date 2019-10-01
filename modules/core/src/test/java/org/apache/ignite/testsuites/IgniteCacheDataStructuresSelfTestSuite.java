@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Ign
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedLockSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedSemaphoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheAtomicReplicatedNodeRestartSelfTest;
+import org.apache.ignite.internal.processors.datastructures.GridCacheReplicatedQueueRemoveSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.AllTests;
 
@@ -120,6 +121,7 @@ public class IgniteCacheDataStructuresSelfTestSuite {
         suite.addTest(new JUnit4TestAdapter(IgniteReplicatedSemaphoreSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteReplicatedLockSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteCacheAtomicReplicatedNodeRestartSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(GridCacheReplicatedQueueRemoveSelfTest.class));
 
         suite.addTest(new JUnit4TestAdapter(GridCachePartitionedSequenceApiSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(GridCachePartitionedSequenceMultiNodeSelfTest.class));

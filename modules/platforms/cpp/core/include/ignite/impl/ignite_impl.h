@@ -21,32 +21,19 @@
 #include <ignite/common/utils.h>
 #include <ignite/common/concurrent.h>
 #include <ignite/common/lazy.h>
+#include <ignite/cluster/cluster_group.h>
 
 #include <ignite/impl/ignite_environment.h>
 #include <ignite/impl/cache/cache_impl.h>
 #include <ignite/impl/transactions/transactions_impl.h>
 #include <ignite/impl/cluster/cluster_group_impl.h>
+#include <ignite/impl/cluster/ignite_cluster_impl.h>
 #include <ignite/impl/compute/compute_impl.h>
 
 namespace ignite
 {
     namespace impl
     {
-        /*
-        * PlatformProcessor op codes.
-        */
-        struct ProcessorOp
-        {
-            enum Type
-            {
-                GET_CACHE = 1,
-                CREATE_CACHE = 2,
-                GET_OR_CREATE_CACHE = 3,
-                GET_TRANSACTIONS = 9,
-                GET_CLUSTER_GROUP = 10,
-            };
-        };
-
         /**
          * Ignite implementation.
          */
@@ -54,6 +41,7 @@ namespace ignite
         {
             typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
             typedef common::concurrent::SharedPointer<transactions::TransactionsImpl> SP_TransactionsImpl;
+            typedef common::concurrent::SharedPointer<cluster::IgniteClusterImpl> SP_IgniteClusterImpl;
             typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
             typedef common::concurrent::SharedPointer<IgniteBindingImpl> SP_IgniteBindingImpl;
         public:
@@ -91,10 +79,7 @@ namespace ignite
              * @param name Cache name.
              * @param err Error.
              */
-            cache::CacheImpl* GetCache(const char* name, IgniteError& err)
-            {
-                return GetOrCreateCache(name, err, ProcessorOp::GET_CACHE);
-            }
+            cache::CacheImpl* GetCache(const char* name, IgniteError& err);
 
             /**
              * Get or create cache.
@@ -102,10 +87,7 @@ namespace ignite
              * @param name Cache name.
              * @param err Error.
              */
-            cache::CacheImpl* GetOrCreateCache(const char* name, IgniteError& err)
-            {
-                return GetOrCreateCache(name, err, ProcessorOp::GET_OR_CREATE_CACHE);
-            }
+            cache::CacheImpl* GetOrCreateCache(const char* name, IgniteError& err);
 
             /**
              * Create cache.
@@ -113,10 +95,7 @@ namespace ignite
              * @param name Cache name.
              * @param err Error.
              */
-            cache::CacheImpl* CreateCache(const char* name, IgniteError& err)
-            {
-                return GetOrCreateCache(name, err, ProcessorOp::CREATE_CACHE);
-            }
+            cache::CacheImpl* CreateCache(const char* name, IgniteError& err);
 
             /**
              * Get ignite binding.
@@ -170,11 +149,28 @@ namespace ignite
             }
 
             /**
-             * Get compute.
+             * Get cluster.
+             *
+             * @return IgniteClusterImpl instance.
+             */
+            SP_IgniteClusterImpl GetCluster();
+
+            /**
+             * Gets compute instance over all cluster nodes started in server mode.
              *
              * @return ComputeImpl instance.
              */
             SP_ComputeImpl GetCompute();
+
+            /**
+             * Gets compute instance over the specified cluster group. All operations
+             * on the returned compute instance will only include nodes from
+             * this cluster group.
+             *
+             * @param grp Specified cluster group instance.
+             * @return ComputeImpl instance.
+             */
+            SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
 
             /**
              * Check if the Ignite grid is active.
@@ -196,6 +192,44 @@ namespace ignite
             {
                 prjImpl.Get().Get()->SetActive(active);
             }
+
+            /**
+             * Disable write-ahead logging for specified cache.
+             *
+             * @param cacheName Cache name.
+             */
+            void DisableWal(std::string cacheName);
+
+            /**
+             * Enable write-ahead logging for specified cache.
+             *
+             * @param cacheName Cache name.
+             */
+            void EnableWal(std::string cacheName);
+
+            /**
+             * Check if write - ahead logging is enabled for specified cache.
+             *
+             * @param cacheName Cache name.
+             *
+             * @return True if enabled.
+             */
+            bool IsWalEnabled(std::string cacheName);
+
+            /**
+             * Set baseline topology constructed from the cluster topology of the given version.
+             * The method succeeds only if the cluster topology has not changed.
+             *
+             * @param topVer Topology version.
+             */
+            void SetBaselineTopologyVersion(long topVer);
+
+            /**
+             * Set transaction timeout on partition map exchange.
+             *
+             * @param timeout Timeout in milliseconds.
+             */
+            void SetTxTimeoutOnPartitionMapExchange(long timeout);
 
         private:
             /**
