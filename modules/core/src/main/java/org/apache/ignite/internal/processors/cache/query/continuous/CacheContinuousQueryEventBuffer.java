@@ -309,6 +309,9 @@ public class CacheContinuousQueryEventBuffer {
         private int lastProc = -1;
 
         /** */
+        private int lastCleaned = -1;
+
+        /** */
         private CacheContinuousQueryEntry[] entries;
 
         /** */
@@ -339,11 +342,17 @@ public class CacheContinuousQueryEventBuffer {
             if (entries == null)
                 return;
 
-            for (int i = 0; i < entries.length; i++) {
+            int next = lastCleaned + 1;
+
+            for (int i = next; i < entries.length; i++) {
                 CacheContinuousQueryEntry e = entries[i];
 
-                if (e != null && e.updateCounter() <= updateCntr)
+                if (e != null && e.updateCounter() <= updateCntr) {
                     entries[i] = null;
+
+                    lastCleaned = i;
+                } else
+                    break;
             }
         }
 

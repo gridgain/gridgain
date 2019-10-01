@@ -24,7 +24,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.continuous.GridContinuousProcessor;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -47,6 +46,9 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
     private final static String REMOTE_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
 
     /** */
+    private final static String LOCAL_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$LocalRoutineInfo";
+
+    /** */
     private final static String BATCH_CLASS_NAME = "org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryEventBuffer$Batch";
 
     /** {@inheritDoc} */
@@ -59,7 +61,7 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSingleNode() throws Exception {
-        testNodes(1, 0);
+        testNodes(1, 0, true);
     }
 
     /**
@@ -67,7 +69,7 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMultipleNodes() throws Exception {
-        testNodes(2, 0);
+        testNodes(2, 0, true);
     }
 
     /**
@@ -75,11 +77,19 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMultipleNodesWithBackups() throws Exception {
-        testNodes(2, 1);
+        testNodes(2, 1, true);
+    }
+
+    /**
+     * @throws Exception If fail.
+     */
+    @Test
+    public void testMultipleNodesWithBackupsWithoutClient() throws Exception {
+        testNodes(2, 1, false);
     }
 
     /** */
-    private void testNodes(int srvCnt, int backupsCnt) throws Exception {
+    private void testNodes(int srvCnt, int backupsCnt, boolean useClient) throws Exception {
         System.setProperty("IGNITE_CONTINUOUS_QUERY_ACK_THRESHOLD", Integer.toString(ACK_THRESHOLD));
 
         IgniteEx[] srvs = new IgniteEx[srvCnt];
@@ -87,15 +97,15 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
         for (int i = 0; i < srvCnt; i++)
             srvs[i] = startGrid("srv" + i);
 
-        IgniteConfiguration clientCfg = optimize(getConfiguration("client").setClientMode(true));
-
-        Ignite client = startGrid(clientCfg);
+        Ignite queryNode = useClient
+            ? startGrid(optimize(getConfiguration("client").setClientMode(true)))
+            : srvs[0];
 
         CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<Integer, String>("testCache")
             .setBackups(backupsCnt)
             .setAffinity(new RendezvousAffinityFunction(32, null));
 
-        IgniteCache<Integer, String> cache = client.getOrCreateCache(cacheCfg);
+        IgniteCache<Integer, String> cache = queryNode.getOrCreateCache(cacheCfg);
 
         ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
 
@@ -118,9 +128,19 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
 
         ConcurrentMap<UUID, Object> rmtInfos = GridTestUtils.getFieldValue(contProc, GridContinuousProcessor.class, "rmtInfos");
 
-        Object rmtRoutineInfo = rmtInfos.values().toArray()[0];
+        CacheContinuousQueryHandler hnd;
 
-        CacheContinuousQueryHandler hnd = GridTestUtils.getFieldValue(rmtRoutineInfo, Class.forName(REMOTE_ROUTINE_INFO_CLASS_NAME), "hnd");
+        if (rmtInfos.values().size() == 0) {
+            ConcurrentMap<UUID, Object> locInfos = GridTestUtils.getFieldValue(contProc, GridContinuousProcessor.class, "locInfos");
+
+            Object localRoutineInfo = locInfos.values().toArray()[0];
+
+            hnd = GridTestUtils.getFieldValue(localRoutineInfo, Class.forName(LOCAL_ROUTINE_INFO_CLASS_NAME), "hnd");
+        } else {
+            Object rmtRoutineInfo = rmtInfos.values().toArray()[0];
+
+            hnd = GridTestUtils.getFieldValue(rmtRoutineInfo, Class.forName(REMOTE_ROUTINE_INFO_CLASS_NAME), "hnd");
+        }
 
         ConcurrentMap<Integer, CacheContinuousQueryEventBuffer> entryBufs = GridTestUtils.getFieldValue(hnd, CacheContinuousQueryHandler.class, "entryBufs");
 
