@@ -20,11 +20,7 @@ const findCell = Selector((table, rowIndex, columnLabel) => {
     const _findRowElement = (table, containerSelector) => {
         const columnIndex = [].constructor.from(
             table.querySelectorAll(`${containerSelector} .ui-grid-header-cell:not(.ui-grid-header-span)`),
-            (e) => {
-                console.log(containerSelector + ' ' + e.textContent);
-
-                return e.textContent;
-            }
+            (e) => e.textContent
         ).findIndex((t) => t.includes(columnLabel));
 
         if (columnIndex < 0)
