@@ -193,6 +193,40 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
         assertThrows(log, () -> timeBinField.value(timeValBinObj), BinaryObjectException.class, expMsg);
     }
 
+    @Test
+    public void testChangeTypeIdOfBinaryFieldCaseNotFoundExpectedTypeIdReverse() throws Exception {
+        BinaryMarshaller marsh = createMarshaller();
+
+        TimeValue timeVal = new TimeValue(11111L);
+
+        BinaryObjectImpl timeValBinObj = toBinary(timeVal, marsh);
+
+        BinaryFieldEx timeBinField = (BinaryFieldEx)timeValBinObj.type().field("time");
+
+        int newTypeId = timeValBinObj.typeId() + 1;
+
+        Field startField = U.findField(timeValBinObj.getClass(), "start");
+        int start = (int)startField.get(timeValBinObj);
+
+        Field arrField = U.findField(timeValBinObj.getClass(), "arr");
+        byte[] arr = (byte[])arrField.get(timeValBinObj);
+        arr[start + 4] = 42;
+
+        String expMsg = exceptionMessageOfDifferentTypeIdBinaryField(
+                newTypeId,
+                timeVal.getClass().getName(),
+                timeValBinObj.typeId(),
+                null,
+                U.field(timeBinField, "fieldId"),
+                timeBinField.name(),
+                null
+        );
+
+        assertThrows(log, () -> timeBinField.value(timeValBinObj), BinaryObjectException.class, expMsg);
+    }
+
+
+
     /**
      * @throws Exception If failed.
      */
