@@ -22,11 +22,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javax.management.DynamicMBean;
 import javax.management.MBeanAttributeInfo;
@@ -40,7 +43,9 @@ import javax.management.openmbean.TabularDataSupport;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteJdbcThinDriver;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -59,6 +64,7 @@ import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static java.util.Arrays.stream;
@@ -67,6 +73,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 import static org.apache.ignite.internal.processors.cache.ClusterCachesInfo.CACHES_VIEW;
 import static org.apache.ignite.internal.processors.cache.ClusterCachesInfo.CACHE_GRPS_VIEW;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD;
@@ -79,6 +86,12 @@ import static org.apache.ignite.internal.processors.task.GridTaskProcessor.TASKS
 import static org.apache.ignite.spi.metric.jmx.MetricRegistryMBean.searchHistogram;
 import static org.apache.ignite.spi.systemview.jmx.SystemViewMBean.VIEWS;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
+import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 
 /** */
 @WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "true")
@@ -467,6 +480,109 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
         assertEquals(0L, mbn.getAttribute(nameWithUnderscore + '_' + 10 + '_' + 100));
         assertNotNull(mbn.getAttribute(simpleName + '_' + 100 + "_inf"));
         assertEquals(0L, mbn.getAttribute(simpleName + '_' + 100 + "_inf"));
+    }
+
+    /** */
+    @Test
+    public void testTransactions() throws Exception {
+        IgniteCache<Integer, Integer> cache = ignite.createCache(new CacheConfiguration<Integer, Integer>("c")
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
+
+        assertEquals(0, systemView(TXS_MON_LIST).size());
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        try {
+            AtomicInteger cntr = new AtomicInteger();
+
+            GridTestUtils.runMultiThreadedAsync(() -> {
+                try (Transaction tx = ignite.transactions().withLabel("test").txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                    cache.put(cntr.incrementAndGet(), cntr.incrementAndGet());
+                    cache.put(cntr.incrementAndGet(), cntr.incrementAndGet());
+
+                    latch.await();
+                }
+                catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }, 5, "xxx");
+
+            boolean res = waitForCondition(() -> systemView(TXS_MON_LIST).size() == 5, 10_000L);
+
+            assertTrue(res);
+
+            CompositeData txv = systemView(TXS_MON_LIST).get(new Object[] {0});
+
+            assertEquals(ignite.localNode().id().toString(), txv.get("localNodeId"));
+            assertEquals(REPEATABLE_READ.name(), txv.get("isolation"));
+            assertEquals(PESSIMISTIC.name(), txv.get("concurrency"));
+            assertEquals(ACTIVE.name(), txv.get("state"));
+            assertNotNull(txv.get("xid"));
+            assertFalse((boolean)txv.get("system"));
+            assertFalse((boolean)txv.get("implicit"));
+            assertFalse((boolean)txv.get("implicitSingle"));
+            assertTrue((boolean)txv.get("near"));
+            assertFalse((boolean)txv.get("dht"));
+            assertTrue((boolean)txv.get("colocated"));
+            assertTrue((boolean)txv.get("local"));
+            assertEquals("test", txv.get("label"));
+            assertFalse((boolean)txv.get("onePhaseCommit"));
+            assertFalse((boolean)txv.get("internal"));
+            assertEquals(0L, txv.get("timeout"));
+            assertTrue(((long)txv.get("startTime")) <= System.currentTimeMillis());
+
+            //Only pessimistic transactions are supported when MVCC is enabled.
+            if(Objects.equals(System.getProperty(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS), "true"))
+                return;
+
+            GridTestUtils.runMultiThreadedAsync(() -> {
+                try (Transaction tx = ignite.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                    cache.put(cntr.incrementAndGet(), cntr.incrementAndGet());
+                    cache.put(cntr.incrementAndGet(), cntr.incrementAndGet());
+
+                    latch.await();
+                }
+                catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }, 5, "xxx");
+
+            res = waitForCondition(() -> systemView(TXS_MON_LIST).size() == 10, 10_000L);
+
+            assertTrue(res);
+
+            for (int i=0; i<9; i++) {
+                txv = systemView(TXS_MON_LIST).get(new Object[] {i});
+
+                if (PESSIMISTIC.name().equals(txv.get("concurrency")))
+                    continue;
+
+                assertEquals(ignite.localNode().id().toString(), txv.get("localNodeId"));
+                assertEquals(SERIALIZABLE.name(), txv.get("isolation"));
+                assertEquals(OPTIMISTIC.name(), txv.get("concurrency"));
+                assertEquals(ACTIVE.name(), txv.get("state"));
+                assertNotNull(txv.get("xid"));
+                assertFalse((boolean)txv.get("system"));
+                assertFalse((boolean)txv.get("implicit"));
+                assertFalse((boolean)txv.get("implicitSingle"));
+                assertTrue((boolean)txv.get("near"));
+                assertFalse((boolean)txv.get("dht"));
+                assertTrue((boolean)txv.get("colocated"));
+                assertTrue((boolean)txv.get("local"));
+                assertNull(txv.get("label"));
+                assertFalse((boolean)txv.get("onePhaseCommit"));
+                assertFalse((boolean)txv.get("internal"));
+                assertEquals(0L, txv.get("timeout"));
+                assertTrue(((long)txv.get("startTime")) <= System.currentTimeMillis());
+            }
+        }
+        finally {
+            latch.countDown();
+        }
+
+        boolean res = waitForCondition(() -> systemView(TXS_MON_LIST).isEmpty(), 10_000L);
+
+        assertTrue(res);
     }
 
     /** */
