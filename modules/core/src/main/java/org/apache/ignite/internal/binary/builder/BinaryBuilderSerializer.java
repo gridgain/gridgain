@@ -98,7 +98,7 @@ class BinaryBuilderSerializer {
             if (posInResArr == null) {
                 objToPos.put(obj, writer.out().position());
 
-                obj.serializeTo(writer.newWriter(obj.typeId()), this);
+                obj.serializeTo(writer.newWriter(obj.typeId(), obj.clsName()), this);
             }
             else {
                 int handle = writer.out().position() - posInResArr;

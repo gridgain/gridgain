@@ -36,6 +36,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.binary.BinaryReader;
+import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -220,7 +221,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
 
     /** {@inheritDoc} */
     @Override public String className() {
-        return ctx.metadata(typeId()).typeName();
+        return clsName;
     }
 
     /**
@@ -2159,6 +2160,8 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         return 0;
     }
 
+    private String clsName;
+
     /**
      * @param ctx Context.
      * @param in In.
@@ -2168,11 +2171,18 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
     protected int readTypeId(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
         in.position(classNameOffset());
 
-        if (!forUnmarshal)
-            return ctx.typeId(BinaryUtils.doReadClassName(in));
+        if (!forUnmarshal) {
+            clsName = BinaryUtils.doReadClassName(in);
+
+            return ctx.typeId(clsName);
+        }
 
         // Registers class by type ID, at least locally if the cache is not ready yet.
-        desc = ctx.registerClass(BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID), true, false);
+        Class<?> cls = BinaryUtils.doReadClass(in, ctx, ldr, UNREGISTERED_TYPE_ID);
+
+        desc = ctx.registerClass(cls, true, false);
+
+        clsName = cls.getName();
 
         return desc.typeId();
     }

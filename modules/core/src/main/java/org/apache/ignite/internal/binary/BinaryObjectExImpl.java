@@ -114,7 +114,26 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      *
      * @return Comparator.
      */
-    public abstract BinarySerializedFieldComparator createFieldComparator();
+    public BinarySerializedFieldComparator createFieldComparator() {
+        BinaryReaderEx reader = reader(null, false);
+
+        short flags = reader.flags();
+
+        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
+        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
+
+        int orderBase = reader.footerStartOffset() + fieldIdLen;
+        int orderMultiplier = fieldIdLen + fieldOffLen;
+
+        return createFieldComparator(orderBase, orderMultiplier, fieldOffLen);
+    }
+
+    /**
+     * @param orderBase Order base.
+     * @param orderMult Order mult.
+     * @param fieldOffLen Field offset length.
+     */
+    protected abstract BinarySerializedFieldComparator createFieldComparator(int orderBase, int orderMult, int fieldOffLen);
 
     /**
      * Writes field value defined by the given field offset to the given byte buffer.
@@ -214,6 +233,37 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             ldr,
             rCtx,
             forUnmarshal);
+    }
+
+    /**
+     * Gets field value offset.
+     *
+     * @param order Order of the field.
+     */
+    protected int fieldPos(int order) {
+        BinaryReaderEx reader = reader(null, false);
+
+        short flags = reader.flags();
+
+        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
+        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
+
+        int schemaOff = reader.footerStartOffset();
+
+        int fieldOffPos = schemaOff + order * (fieldIdLen + fieldOffLen) + fieldIdLen;
+
+        int fieldPos;
+
+        if (fieldOffLen == BinaryUtils.OFFSET_1)
+            fieldPos = start + ((int)readByte(fieldOffPos) & 0xFF);
+
+        else if (fieldOffLen == BinaryUtils.OFFSET_2)
+            fieldPos = start + ((int)readShort(fieldOffPos) & 0xFFFF);
+
+        else
+            fieldPos = start + readInt(fieldOffPos);
+
+        return fieldPos;
     }
 
     /**

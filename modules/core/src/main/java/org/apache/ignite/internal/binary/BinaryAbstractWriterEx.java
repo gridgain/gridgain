@@ -91,18 +91,10 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
 
     /**
      * @param ctx Context.
-     * @param tlsCtx TLS context.
-     */
-    public BinaryAbstractWriterEx(BinaryContext ctx, BinaryThreadLocalContext tlsCtx) {
-        this(ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
-    }
-
-    /**
-     * @param ctx Context.
      * @param out Output stream.
      * @param handles Handles.
      */
-    public BinaryAbstractWriterEx(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
+    protected BinaryAbstractWriterEx(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
         BinaryWriterHandles handles) {
         this.ctx = ctx;
         this.out = out;
@@ -198,6 +190,9 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         this.typeId = typeId;
     }
 
+    /**
+     * @param clsName Class name.
+     */
     public void className(String clsName) {
         this.clsName = clsName;
     }
@@ -1917,7 +1912,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param typeId type
      * @return New writer.
      */
-    public BinaryAbstractWriterEx newWriter(int typeId) {
+    public BinaryAbstractWriterEx newWriter(int typeId, String clsName) {
         BinaryAbstractWriterEx res = createWriter(version(), ctx, out, schema, handles());
 
         res.failIfUnregistered(failIfUnregistered);

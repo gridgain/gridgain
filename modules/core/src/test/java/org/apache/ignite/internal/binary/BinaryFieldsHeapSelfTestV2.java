@@ -17,13 +17,11 @@
 package org.apache.ignite.internal.binary;
 
 /**
- * Binary marshaller tests.
+ * Field tests for heap-based binaries.
  */
-public class BinaryMarshallerSelfTestV1 extends BinaryMarshallerSelfTest {
-    /**
-     * @return Binary protocol version.
-     */
+public class BinaryFieldsHeapSelfTestV2 extends BinaryFieldsHeapSelfTest {
+    /** {@inheritDoc} */
     @Override protected byte protocolVersion() {
-        return 1;
+        return 2;
     }
 }

@@ -831,21 +831,21 @@ public class BinaryContext {
     }
 
     /**
-     * @param typeName Type name.
+     * @param clsName Type name.
      * @return Type ID.
      */
-    public int typeId(String typeName) {
-        Integer id = predefinedTypeNames.get(SIMPLE_NAME_LOWER_CASE_MAPPER.typeName(typeName));
+    public int typeId(String clsName) {
+        Integer id = predefinedTypeNames.get(SIMPLE_NAME_LOWER_CASE_MAPPER.typeName(clsName));
 
         if (id != null)
             return id;
 
-        if (marshCtx.isSystemType(typeName))
-            return typeName.hashCode();
+        if (marshCtx.isSystemType(clsName))
+            return clsName.hashCode();
 
-        BinaryInternalMapper mapper = userTypeMapper(typeName);
+        BinaryInternalMapper mapper = userTypeMapper(clsName);
 
-        return mapper.typeId(typeName);
+        return mapper.typeId(clsName);
     }
 
     /**

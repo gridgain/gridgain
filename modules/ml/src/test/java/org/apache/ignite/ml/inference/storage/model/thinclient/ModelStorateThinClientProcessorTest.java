@@ -725,7 +725,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     private BinaryRawWriterEx createWriter() {
-        return new BinaryAbstractWriterEx(
+        return BinaryAbstractWriterEx.createWriter(
             bctx, new BinaryHeapOutputStream(1024),
             new BinaryWriterSchemaHolder(),
             new BinaryWriterHandles()
@@ -741,7 +741,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     private BinaryRawReader toReader(byte[] buf) {
-        return new BinaryAbstractReaderEx(
+        return BinaryAbstractReaderEx.createReader(
             bctx,
             new BinaryHeapInputStream(buf),
             getClass().getClassLoader(),

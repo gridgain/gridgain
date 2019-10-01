@@ -1537,7 +1537,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             bCfg.setNameMapper(new BinaryBasicNameMapper(true));
         }
 
-        if (igniteInstanceName != null && igniteInstanceName.matches(".*\\d")) {
+        if (igniteInstanceName != null && igniteInstanceName.matches(".*-\\d")) {
             String idStr = UUID.randomUUID().toString();
 
             if (igniteInstanceName.startsWith(getTestIgniteInstanceName())) {
@@ -1617,7 +1617,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Indexed Ignite instance name.
      */
     public String getTestIgniteInstanceName(int idx) {
-        return getTestIgniteInstanceName() + idx;
+        return getTestIgniteInstanceName() + "-" + idx;
     }
 
     /**
@@ -1635,7 +1635,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Test Ignite instance index.
      */
     public int getTestIgniteInstanceIndex(String testIgniteInstanceName) {
-        return Integer.parseInt(testIgniteInstanceName.substring(getTestIgniteInstanceName().length()));
+        return Integer.parseInt(testIgniteInstanceName.substring(getTestIgniteInstanceName().length() + 1));
     }
 
     /**

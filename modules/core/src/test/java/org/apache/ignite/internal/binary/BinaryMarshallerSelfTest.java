@@ -5728,6 +5728,6 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      * @return Binary protocol version.
      */
     protected byte protocolVersion() {
-        return GridBinaryMarshaller.CUR_PROTO_VER;
+        return 1;
     }
 }

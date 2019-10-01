@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.binary;
 
 import java.util.Arrays;
+import java.util.Collections;
 import org.apache.ignite.binary.BinaryField;
 import org.apache.ignite.binary.BinaryTypeConfiguration;
 import org.apache.ignite.configuration.BinaryConfiguration;
@@ -55,9 +56,10 @@ public abstract class BinaryFooterOffsetsAbstractSelfTest extends GridCommonAbst
 
         BinaryConfiguration bCfg = new BinaryConfiguration();
 
-        bCfg.setTypeConfigurations(Arrays.asList(new BinaryTypeConfiguration(TestObject.class.getName())));
+        bCfg.setTypeConfigurations(Collections.singletonList(new BinaryTypeConfiguration(TestObject.class.getName())));
 
         bCfg.setCompactFooter(compactFooter());
+        bCfg.setProtocolVersion(protocolVersion());
 
         iCfg.setBinaryConfiguration(bCfg);
 
@@ -71,6 +73,13 @@ public abstract class BinaryFooterOffsetsAbstractSelfTest extends GridCommonAbst
      */
     protected boolean compactFooter() {
         return true;
+    }
+
+    /**
+     * @return Binary protocol version.
+     */
+    protected byte protocolVersion() {
+        return 1;
     }
 
     /**

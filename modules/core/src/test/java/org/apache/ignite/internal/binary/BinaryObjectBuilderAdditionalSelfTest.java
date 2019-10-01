@@ -1495,8 +1495,7 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
         CacheObjectBinaryProcessorImpl processor = (CacheObjectBinaryProcessorImpl)(
             (IgniteBinaryImpl)binaries()).processor();
 
-        return new BinaryObjectBuilderImpl(processor.binaryContext(), processor.typeId(typeName),
-            processor.binaryContext().userTypeName(typeName));
+        return new BinaryObjectBuilderImpl(processor.binaryContext(), typeName);
     }
 
     /**

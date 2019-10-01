@@ -64,7 +64,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     private String typeName;
 
     /** May be null. */
-    private String clsNameToWrite;
+    private String clsName;
 
     /** */
     private boolean registeredType = true;
@@ -81,9 +81,6 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     /** Flags. */
     private final short flags;
 
-    /** Total header length */
-    private final int dataOff;
-
     /** Context of BinaryObject reading process. Or {@code null} if object is not created from BinaryObject. */
     private final BinaryBuilderReader reader;
 
@@ -95,25 +92,15 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      * @param ctx Binary context.
      */
     public BinaryObjectBuilderImpl(BinaryContext ctx, String clsName) {
-        this(ctx, ctx.typeId(clsName), ctx.userTypeName(clsName));
-    }
-
-    /**
-     * @param typeName Type name.
-     * @param ctx Context.
-     * @param typeId Type id.
-     */
-    public BinaryObjectBuilderImpl(BinaryContext ctx, int typeId, String typeName) {
-        this.typeId = typeId;
-        this.typeName = typeName;
         this.ctx = ctx;
+        this.clsName = clsName;
 
+        typeId = ctx.typeId(clsName);
+        typeName = ctx.userTypeName(clsName);
         start = -1;
         flags = -1;
         ver = GridBinaryMarshaller.CUR_PROTO_VER;
         reader = null;
-        dataOff = GridBinaryMarshaller.HDR_LEN_V2;
-
         readCache = Collections.emptyMap();
     }
 
@@ -142,20 +129,26 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
         typeId = reader.reader().typeId();
         ctx = reader.binaryContext();
-        dataOff = reader.reader().dataStartOffset();
-        clsNameToWrite = reader.reader().className();
+        clsName = reader.reader().className();
     }
 
     /** {@inheritDoc} */
     @Override public BinaryObject build() {
-        try (BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(ctx)) {
+        return build(GridBinaryMarshaller.CUR_PROTO_VER);
+    }
+
+    /**
+     * @param ver Version.
+     */
+    public BinaryObject build(byte ver) {
+        try (BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(ver, ctx)) {
             Thread curThread = Thread.currentThread();
 
             if (curThread instanceof IgniteThread)
                 writer.failIfUnregistered(((IgniteThread)curThread).isForbiddenToRequestBinaryMetadata());
 
             writer.typeId(typeId);
-            writer.className(clsNameToWrite);
+            writer.className(clsName);
 
             BinaryBuilderSerializer serializationCtx = new BinaryBuilderSerializer();
 
@@ -218,7 +211,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 int dataEnd = BinaryUtils.hasRaw(flags) ? reader.reader().rawOffset() : footerPos;
 
                 // Position reader on data.
-                reader.position(dataOff);
+                reader.position(reader.reader().dataStartOffset());
 
                 int idx = 0;
 
@@ -605,5 +598,12 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      */
     public void affinityFieldName(String affFieldName) {
         this.affFieldName = affFieldName;
+    }
+
+    /**
+     * @return Object class name.
+     */
+    public String clsName() {
+        return clsName;
     }
 }

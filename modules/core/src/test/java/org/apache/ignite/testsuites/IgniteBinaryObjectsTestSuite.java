@@ -23,17 +23,23 @@ import org.apache.ignite.internal.binary.BinaryConfigurationConsistencySelfTest;
 import org.apache.ignite.internal.binary.BinaryConfigurationCustomSerializerSelfTest;
 import org.apache.ignite.internal.binary.BinaryEnumsSelfTest;
 import org.apache.ignite.internal.binary.BinaryFieldsHeapSelfTest;
+import org.apache.ignite.internal.binary.BinaryFieldsHeapSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryFieldsOffheapSelfTest;
+import org.apache.ignite.internal.binary.BinaryFieldsOffheapSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsHeapSelfTest;
+import org.apache.ignite.internal.binary.BinaryFooterOffsetsHeapSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsOffheapSelfTest;
+import org.apache.ignite.internal.binary.BinaryFooterOffsetsOffheapSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryMarshallerSelfTest;
-import org.apache.ignite.internal.binary.BinaryMarshallerSelfTestV1;
+import org.apache.ignite.internal.binary.BinaryMarshallerSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderAdditionalSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderDefaultMappersSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderSimpleNameLowerCaseMappersSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectExceptionSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectToStringSelfTest;
+import org.apache.ignite.internal.binary.BinaryObjectToStringSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryObjectTypeCompatibilityTest;
+import org.apache.ignite.internal.binary.BinaryObjectTypeCompatibilityTestV2;
 import org.apache.ignite.internal.binary.BinarySerialiedFieldComparatorSelfTest;
 import org.apache.ignite.internal.binary.BinarySimpleNameTestPropertySelfTest;
 import org.apache.ignite.internal.binary.BinaryTreeSelfTest;
@@ -43,10 +49,15 @@ import org.apache.ignite.internal.binary.GridBinaryWildcardsSelfTest;
 import org.apache.ignite.internal.binary.GridDefaultBinaryMappersBinaryMetaDataSelfTest;
 import org.apache.ignite.internal.binary.GridSimpleLowerCaseBinaryMappersBinaryMetaDataSelfTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryFieldsHeapNonCompactSelfTest;
+import org.apache.ignite.internal.binary.noncompact.BinaryFieldsHeapNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryFieldsOffheapNonCompactSelfTest;
+import org.apache.ignite.internal.binary.noncompact.BinaryFieldsOffheapNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsHeapNonCompactSelfTest;
+import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsHeapNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsOffheapNonCompactSelfTest;
+import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsOffheapNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryMarshallerNonCompactSelfTest;
+import org.apache.ignite.internal.binary.noncompact.BinaryMarshallerNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryObjectBuilderAdditionalNonCompactSelfTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryObjectBuilderNonCompactDefaultMappersSelfTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryObjectBuilderNonCompactSimpleNameLowerCaseMappersSelfTest;
@@ -87,7 +98,7 @@ import org.junit.runners.Suite;
 
     BinaryTreeSelfTest.class,
     BinaryMarshallerSelfTest.class,
-    BinaryMarshallerSelfTestV1.class,
+    BinaryMarshallerSelfTestV2.class,
     BinaryObjectExceptionSelfTest.class,
 
     BinarySerialiedFieldComparatorSelfTest.class,
@@ -101,26 +112,37 @@ import org.junit.runners.Suite;
     BinaryObjectBuilderAdditionalSelfTest.class,
     //BinaryFieldExtractionSelfTest.class,
     BinaryFieldsHeapSelfTest.class,
+    BinaryFieldsHeapSelfTestV2.class,
     BinaryFieldsOffheapSelfTest.class,
+    BinaryFieldsOffheapSelfTestV2.class,
     BinaryFooterOffsetsHeapSelfTest.class,
+    BinaryFooterOffsetsHeapSelfTestV2.class,
     BinaryFooterOffsetsOffheapSelfTest.class,
+    BinaryFooterOffsetsOffheapSelfTestV2.class,
     BinaryEnumsSelfTest.class,
     GridDefaultBinaryMappersBinaryMetaDataSelfTest.class,
     GridSimpleLowerCaseBinaryMappersBinaryMetaDataSelfTest.class,
     GridBinaryAffinityKeySelfTest.class,
     GridBinaryWildcardsSelfTest.class,
     BinaryObjectToStringSelfTest.class,
+    BinaryObjectToStringSelfTestV2.class,
     BinaryObjectTypeCompatibilityTest.class,
+    BinaryObjectTypeCompatibilityTestV2.class,
 
     // Tests for objects with non-compact footers.
     BinaryMarshallerNonCompactSelfTest.class,
+    BinaryMarshallerNonCompactSelfTestV2.class,
     BinaryObjectBuilderNonCompactDefaultMappersSelfTest.class,
     BinaryObjectBuilderNonCompactSimpleNameLowerCaseMappersSelfTest.class,
     BinaryObjectBuilderAdditionalNonCompactSelfTest.class,
     BinaryFieldsHeapNonCompactSelfTest.class,
+    BinaryFieldsHeapNonCompactSelfTestV2.class,
     BinaryFieldsOffheapNonCompactSelfTest.class,
+    BinaryFieldsOffheapNonCompactSelfTestV2.class,
     BinaryFooterOffsetsHeapNonCompactSelfTest.class,
+    BinaryFooterOffsetsHeapNonCompactSelfTestV2.class,
     BinaryFooterOffsetsOffheapNonCompactSelfTest.class,
+    BinaryFooterOffsetsOffheapNonCompactSelfTestV2.class,
 
     GridCacheBinaryObjectsLocalSelfTest.class,
     //GridCacheBinaryObjectsLocalOnheapSelfTest.class,

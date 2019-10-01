@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -34,8 +35,16 @@ public class BinaryObjectToStringSelfTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setMarshaller(new BinaryMarshaller());
+        cfg.setBinaryConfiguration(new BinaryConfiguration().setProtocolVersion(protocolVersion()));
 
         return cfg;
+    }
+
+    /**
+     * @return Binary protocol vesrsion.
+     */
+    protected byte protocolVersion() {
+        return 1;
     }
 
     /** {@inheritDoc} */

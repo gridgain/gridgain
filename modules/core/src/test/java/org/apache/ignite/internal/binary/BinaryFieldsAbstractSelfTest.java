@@ -56,6 +56,7 @@ public abstract class BinaryFieldsAbstractSelfTest extends GridCommonAbstractTes
         BinaryConfiguration bCfg = new BinaryConfiguration();
 
         bCfg.setCompactFooter(compactFooter());
+        bCfg.setProtocolVersion(protocolVersion());
 
         bCfg.setTypeConfigurations(Arrays.asList(
             new BinaryTypeConfiguration(TestObject.class.getName()),
@@ -79,6 +80,13 @@ public abstract class BinaryFieldsAbstractSelfTest extends GridCommonAbstractTes
      */
     protected boolean compactFooter() {
         return true;
+    }
+
+    /**
+     * @return Binary protocol version.
+     */
+    protected byte protocolVersion() {
+        return 1;
     }
 
     /**
@@ -651,7 +659,7 @@ public abstract class BinaryFieldsAbstractSelfTest extends GridCommonAbstractTes
             fByte = 1;
             fBool = true;
             fShort = 2;
-            fChar = 3;
+            fChar = 'a';
             fInt = 4;
             fLong = 5;
             fFloat = 6.6f;
@@ -660,7 +668,7 @@ public abstract class BinaryFieldsAbstractSelfTest extends GridCommonAbstractTes
             fByteArr = new byte[] { 1, 2 };
             fBoolArr = new boolean[] { true, false };
             fShortArr = new short[] { 2, 3 };
-            fCharArr = new char[] { 3, 4 };
+            fCharArr = new char[] { 'a', 'b' };
             fIntArr = new int[] { 4, 5 };
             fLongArr = new long[] { 5, 6 };
             fFloatArr = new float[] { 6.6f, 7.7f };

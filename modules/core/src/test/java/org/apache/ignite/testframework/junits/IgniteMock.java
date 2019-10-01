@@ -320,8 +320,8 @@ public class IgniteMock implements Ignite {
         if (ctx == null) {
             /** {@inheritDoc} */
             ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), configuration(), new NullLogger()) {
-                @Override public int typeId(String typeName) {
-                    return typeName.hashCode();
+                @Override public int typeId(String clsName) {
+                    return clsName.hashCode();
                 }
             };
 

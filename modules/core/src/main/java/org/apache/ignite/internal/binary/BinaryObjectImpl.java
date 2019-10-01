@@ -284,18 +284,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public BinarySerializedFieldComparator createFieldComparator() {
-        int schemaOff = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
-
-        short flags = BinaryPrimitives.readShort(arr, start + GridBinaryMarshaller.FLAGS_POS);
-
-        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
-        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
-
-        int orderBase = start + schemaOff + fieldIdLen;
-        int orderMultiplier = fieldIdLen + fieldOffLen;
-
-        return new BinarySerializedFieldComparator(this, arr, 0L, start, orderBase, orderMultiplier, fieldOffLen);
+    @Override protected BinarySerializedFieldComparator createFieldComparator(int orderBase, int orderMult, int fieldOffLen) {
+        return new BinarySerializedFieldComparator(this, arr, 0L, start, orderBase, orderMult, fieldOffLen);
     }
 
     /** {@inheritDoc} */
@@ -316,31 +306,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     /** {@inheritDoc} */
     @Override protected BinaryInputStream inputStream() {
         return BinaryHeapInputStream.create(arr, start);
-    }
-
-    private int fieldPos(int order) {
-        BinaryReaderEx reader = reader(null, false);
-
-        short flags = reader.flags();
-        int schemaOff = reader.footerStartOffset();
-
-        int fieldIdLen = BinaryUtils.isCompactFooter(flags) ? 0 : BinaryUtils.FIELD_ID_LEN;
-        int fieldOffLen = BinaryUtils.fieldOffsetLength(flags);
-
-        int fieldOffPos = start + schemaOff + order * (fieldIdLen + fieldOffLen) + fieldIdLen;
-
-        int fieldPos;
-
-        if (fieldOffLen == BinaryUtils.OFFSET_1)
-            fieldPos = start + ((int)BinaryPrimitives.readByte(arr, fieldOffPos) & 0xFF);
-
-        else if (fieldOffLen == BinaryUtils.OFFSET_2)
-            fieldPos = start + ((int)BinaryPrimitives.readShort(arr, fieldOffPos) & 0xFFFF);
-
-        else
-            fieldPos = start + BinaryPrimitives.readInt(arr, fieldOffPos);
-
-        return fieldPos;
     }
 
     /** {@inheritDoc} */
