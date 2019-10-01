@@ -116,7 +116,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
     public static BinaryAbstractWriterEx createWriter(BinaryContext ctx) {
         BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
 
-        return createWriter(ctx.protocolVersion(), ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
+        return createWriter(ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
     }
 
     /**
@@ -129,7 +129,8 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      */
     public static BinaryAbstractWriterEx createWriter(BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
-        return createWriter(ctx.protocolVersion(), ctx, out, schema, handles);
+        return createWriter(ctx != null ? ctx.protocolVersion() : GridBinaryMarshaller.CUR_PROTO_VER,
+            ctx, out, schema, handles);
     }
 
     /**
