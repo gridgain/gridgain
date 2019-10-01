@@ -16,11 +16,12 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
@@ -33,9 +34,12 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.IgniteFeatures.DR_CONTROL_UTILITY;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 
 /** */
 public abstract class DrAbstractRemoteSubCommand<
@@ -50,6 +54,9 @@ public abstract class DrAbstractRemoteSubCommand<
 
     /** */
     private DrArgs args;
+
+    /** */
+    private final List<GridClientNode> nodesWithoutDrTasks = new ArrayList<>();
 
     /** {@inheritDoc} */
     @Override public final void printUsage(Logger log) {
@@ -87,16 +94,37 @@ public abstract class DrAbstractRemoteSubCommand<
 
         Collection<GridClientNode> nodes = compute.nodes();
 
+        nodes.stream()
+            .filter(node -> !drControlUtilitySupported(node))
+            .collect(toCollection(() -> nodesWithoutDrTasks));
+
         List<UUID> nodeIds = nodes.stream()
             .filter(DrAbstractRemoteSubCommand::drControlUtilitySupported)
             .map(GridClientNode::nodeId)
-            .collect(Collectors.toList());
+            .collect(toList());
 
         if (F.isEmpty(nodeIds))
             throw new GridClientDisconnectedException("Connectable nodes not found", null);
 
         return compute.projection(DrAbstractRemoteSubCommand::drControlUtilitySupported)
             .execute(visorTaskName(), new VisorTaskArgument<>(nodeIds, args.toVisorArgs(), false));
+    }
+
+    /** */
+    protected void printUnrecognizedNodesMessage(Logger log, boolean verbose) {
+        if (!nodesWithoutDrTasks.isEmpty()) {
+            log.warning("Unrecognized nodes found that have no DR API for control utility: " + nodesWithoutDrTasks.size());
+
+            if (verbose) {
+                for (GridClientNode node : nodesWithoutDrTasks) {
+                    boolean clientNode = node.attribute(IgniteNodeAttributes.ATTR_CLIENT_MODE);
+
+                    log.warning(String.format(INDENT + "nodeId=%s, Mode=%s", node.nodeId(), clientNode ? "Client" : "Server"));
+                }
+            }
+            else
+                log.warning("Please use \"--dr topology\" command to see full list.");
+        }
     }
 
     /** {@inheritDoc} */

@@ -227,6 +227,8 @@ public class DrCacheCommand extends
 
     /** {@inheritDoc} */
     @Override protected void printResult(VisorDrCacheTaskResult res, Logger log) {
+        printUnrecognizedNodesMessage(log, false);
+
         log.info("Data Center ID: " + res.getDataCenterId());
 
         log.info(DELIM);
