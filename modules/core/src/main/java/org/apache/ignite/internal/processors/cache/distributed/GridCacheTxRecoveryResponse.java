@@ -28,12 +28,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * Transactions recovery check response.
  */
-public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage implements IgniteTxStateAware, TimeLoggableResponse {
+public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage implements IgniteTxStateAware, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -50,11 +51,11 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
     @GridDirectTransient
     private IgniteTxState txState;
 
-    /** @see TimeLoggableResponse#reqSentTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
-    private long reqSendTimestamp = INVALID_TIMESTAMP;
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
@@ -126,13 +127,13 @@ public class GridCacheTxRecoveryResponse extends GridDistributedBaseMessage impl
     }
 
     /** {@inheritDoc} */
-    @Override public void reqSendTimestamp(long reqSendTimestamp) {
-        this.reqSendTimestamp = reqSendTimestamp;
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
     }
 
     /** {@inheritDoc} */
     @Override public long reqSentTimestamp() {
-        return reqSendTimestamp;
+        return reqSentTimestamp;
     }
 
     /** {@inheritDoc} */

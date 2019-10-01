@@ -34,7 +34,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Future processing transaction enlisting and locking of entries produces by cache API operations.

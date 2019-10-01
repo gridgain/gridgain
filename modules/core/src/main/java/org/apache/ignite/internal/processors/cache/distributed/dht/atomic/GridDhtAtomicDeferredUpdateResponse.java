@@ -29,13 +29,14 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Deferred dht atomic update response.
  */
-public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse {
+public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage implements GridCacheDeployable, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -50,11 +51,11 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
     @GridToStringExclude
     private GridTimeoutObject timeoutSnd;
 
-    /** @see TimeLoggableResponse#reqSentTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
-    private long reqSendTimestamp = INVALID_TIMESTAMP;
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
@@ -116,13 +117,13 @@ public class GridDhtAtomicDeferredUpdateResponse extends GridCacheIdMessage impl
     }
 
     /** {@inheritDoc} */
-    @Override public void reqSendTimestamp(long reqSendTimestamp) {
-        this.reqSendTimestamp = reqSendTimestamp;
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
     }
 
     /** {@inheritDoc} */
     @Override public long reqSentTimestamp() {
-        return reqSendTimestamp;
+        return reqSentTimestamp;
     }
 
     /** {@inheritDoc} */

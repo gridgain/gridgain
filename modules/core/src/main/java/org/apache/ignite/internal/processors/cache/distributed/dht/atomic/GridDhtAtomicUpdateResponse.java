@@ -34,12 +34,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * DHT atomic cache backup update response.
  */
-public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse {
+public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements GridCacheDeployable, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -60,11 +61,11 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
     /** */
     private int partId;
 
-    /** @see TimeLoggableResponse#reqSentTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
-    private long reqSendTimestamp = INVALID_TIMESTAMP;
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
@@ -177,13 +178,13 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
     }
 
     /** {@inheritDoc} */
-    @Override public void reqSendTimestamp(long reqSendTimestamp) {
-        this.reqSendTimestamp = reqSendTimestamp;
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
     }
 
     /** {@inheritDoc} */
     @Override public long reqSentTimestamp() {
-        return reqSendTimestamp;
+        return reqSentTimestamp;
     }
 
     /** {@inheritDoc} */

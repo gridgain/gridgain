@@ -35,13 +35,14 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A response to {@link GridNearTxEnlistRequest}.
  */
-public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, TimeLoggableResponse {
+public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -74,11 +75,11 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
     @GridDirectCollection(UUID.class)
     private Collection<UUID> newDhtNodes;
 
-    /** @see TimeLoggableResponse#reqSentTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
-    private long reqSendTimestamp = INVALID_TIMESTAMP;
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
@@ -104,7 +105,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param dhtFutId Dht future id.
      * @param newDhtNodes New DHT nodes involved into transaction.
      * @param reqReceivedTimestamp Request receive timestamp.
-     * @param reqSendTimestamp request send timestamp.
+     * @param reqSentTimestamp Request send timestamp.
      */
     public GridNearTxEnlistResponse(int cacheId,
         IgniteUuid futId,
@@ -115,9 +116,9 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         IgniteUuid dhtFutId,
         Set<UUID> newDhtNodes,
         long reqReceivedTimestamp,
-        long reqSendTimestamp)
+        long reqSentTimestamp)
     {
-        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSendTimestamp);
+        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSentTimestamp);
 
         this.res = res;
         this.dhtVer = dhtVer;
@@ -134,7 +135,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param lockVer Lock version.
      * @param err Error.
      * @param reqReceivedTimestamp Request receive timestamp.
-     * @param reqSendTimestamp request send timestamp.
+     * @param reqSentTimestamp Request send timestamp.
      */
     public GridNearTxEnlistResponse(
         int cacheId,
@@ -143,9 +144,9 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         GridCacheVersion lockVer,
         Throwable err,
         long reqReceivedTimestamp,
-        long reqSendTimestamp)
+        long reqSentTimestamp)
     {
-        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSendTimestamp);
+        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSentTimestamp);
 
         this.err = err;
     }
@@ -158,7 +159,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param miniId Mini id.
      * @param lockVer Lock version.
      * @param reqReceivedTimestamp Request receive timestamp.
-     * @param reqSendTimestamp Request send timestamp.
+     * @param reqSentTimestamp Request send timestamp.
      */
     private GridNearTxEnlistResponse(
         int cacheId,
@@ -166,7 +167,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         int miniId,
         GridCacheVersion lockVer,
         long reqReceivedTimestamp,
-        long reqSendTimestamp)
+        long reqSentTimestamp)
     {
         this.cacheId = cacheId;
         this.futId = futId;
@@ -174,7 +175,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         this.lockVer = lockVer;
 
         reqReceivedTimestamp(reqReceivedTimestamp);
-        reqSendTimestamp(reqSendTimestamp);
+        reqSentTimestamp(reqSentTimestamp);
     }
 
     /**
@@ -238,13 +239,13 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
 
 
     /** {@inheritDoc} */
-    @Override public void reqSendTimestamp(long reqSendTimestamp) {
-        this.reqSendTimestamp = reqSendTimestamp;
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
     }
 
     /** {@inheritDoc} */
     @Override public long reqSentTimestamp() {
-        return reqSendTimestamp;
+        return reqSentTimestamp;
     }
 
     /** {@inheritDoc} */

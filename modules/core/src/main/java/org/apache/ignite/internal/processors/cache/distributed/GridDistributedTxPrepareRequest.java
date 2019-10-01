@@ -52,7 +52,7 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Transaction prepare request for optimistic and eventually consistent

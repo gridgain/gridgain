@@ -38,12 +38,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * Force keys response. Contains absent keys.
  */
-public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse {
+public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -70,11 +71,11 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> infos;
 
-    /** @see TimeLoggableResponse#reqSentTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
     @GridDirectTransient
-    private long reqSendTimestamp = INVALID_TIMESTAMP;
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
 
-    /** @see TimeLoggableResponse#reqReceivedTimestamp(). */
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
     @GridDirectTransient
     private long reqReceivedTimestamp = INVALID_TIMESTAMP;
 
@@ -210,13 +211,13 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
     }
 
     /** {@inheritDoc} */
-    @Override public void reqSendTimestamp(long reqSendTimestamp) {
-        this.reqSendTimestamp = reqSendTimestamp;
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
     }
 
     /** {@inheritDoc} */
     @Override public long reqSentTimestamp() {
-        return reqSendTimestamp;
+        return reqSentTimestamp;
     }
 
     /** {@inheritDoc} */

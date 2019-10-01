@@ -33,12 +33,13 @@ import org.apache.ignite.internal.util.nio.GridNioMetricsListener;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
-import static org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse.INVALID_TIMESTAMP;
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Statistics for {@link org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi}.
@@ -137,8 +138,8 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         if (msg instanceof GridIoMessage) {
             msg = ((GridIoMessage) msg).message();
 
-            if (msg instanceof TimeLoggableResponse) {
-                TimeLoggableResponse tlResp = (TimeLoggableResponse)msg;
+            if (msg instanceof ProcessingTimeLoggableResponse) {
+                ProcessingTimeLoggableResponse tlResp = (ProcessingTimeLoggableResponse)msg;
 
                 long reqSentTimestamp = tlResp.reqSentTimestamp();
                 long reqReceivedTimestamp = tlResp.reqReceivedTimestamp();

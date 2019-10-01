@@ -490,8 +490,8 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
      * @param res Response message.
      */
     private void copyReqTimestamps(GridCacheQueryInfo qryInfo, GridCacheQueryResponse res) {
-        res.reqReceivedTimestamp(qryInfo.reqReceiveTimestamp());
-        res.reqSendTimestamp(qryInfo.reqSendTimestamp());
+        res.reqReceivedTimestamp(qryInfo.reqReceivedTimestamp());
+        res.reqSentTimestamp(qryInfo.reqSentTimestamp());
     }
 
     /** {@inheritDoc} */

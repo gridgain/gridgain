@@ -3569,7 +3569,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (futIds.size() >= DEFERRED_UPDATE_RESPONSE_BUFFER_SIZE) {
             resMap.remove(primaryId);
 
-            msg.reqSendTimestamp(reqSendTs);
+            msg.reqSentTimestamp(reqSendTs);
             msg.reqReceivedTimestamp(reqReceiveTs);
 
             sendDeferredUpdateResponse(primaryId, msg);
