@@ -1865,11 +1865,15 @@ public class BinaryUtils {
                     po = new BinaryObjectImpl(ctx, in.readByteArray(len), 0);
                 }
                 else {
-                    if (in.offheapPointer() == 0)
+                    if (in.offheapPointer() == 0) {
                         po = new BinaryObjectImpl(ctx, in.array(), start);
-                    else
+
+                        ((BinaryObjectImpl)po).detachAllowed(true);
+                    } else
                         po = new BinaryObjectOffheapImpl(ctx, in.offheapPointer(), start,
                             in.remaining() + in.position());
+
+
 
                     in.position(start + po.length());
                 }
