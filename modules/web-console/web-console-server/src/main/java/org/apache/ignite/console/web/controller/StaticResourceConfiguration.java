@@ -68,8 +68,13 @@ public class StaticResourceConfiguration extends WebMvcConfigurerAdapter {
             registry.addResourceHandler("/**")
                 .addResourceLocations(frontendFolder.toExternalForm());
         }
-        else
-            log.info("Failed to find frontend resources locally: " + new File("frontend").getAbsolutePath());
+        else {
+            registry.addResourceHandler("/**")
+                .addResourceLocations("file:frontend/");
+
+            log.info("If you are running Web Console on-premise, please ensure that " +
+                "folder with frontend resources is present in " + new File("frontend").getAbsolutePath());
+        }
     }
 
     /**
