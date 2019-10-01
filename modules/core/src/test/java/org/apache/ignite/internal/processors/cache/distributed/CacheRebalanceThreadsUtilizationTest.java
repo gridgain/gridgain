@@ -332,7 +332,7 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
      * @return {@code True} if message must be blocked.
      */
     private boolean blockCacheId(int cacheId) {
-        for (int i = 0; i < CACHES_CNT; i++) {
+        for (int i = 1; i <= CACHES_CNT; i++) {
             if (cacheId == CU.cacheId(cacheName(i)))
                 return true;
         }
