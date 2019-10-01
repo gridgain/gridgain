@@ -80,6 +80,9 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
     /** Schema ID. */
     protected int schemaId = BinaryUtils.schemaInitialId();
 
+    /** Update time. */
+    protected long updateTime = -1;
+
     /** Handles. */
     private BinaryWriterHandles handles;
 
@@ -382,6 +385,11 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      */
     @Override public void write(byte[] val, int off, int len) {
         out.write(val, off, len);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void updateTime(long updateTime) {
+        this.updateTime = updateTime;
     }
 
     /**

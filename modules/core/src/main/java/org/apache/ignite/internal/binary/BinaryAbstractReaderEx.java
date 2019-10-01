@@ -36,7 +36,6 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.binary.BinaryReader;
-import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -124,6 +123,12 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
 
     /** Whether stream is in raw mode. */
     private boolean raw;
+
+    /** Class name. */
+    private String clsName;
+
+    /** Update time. */
+    protected long updateTime = -1;
 
     /**
      * Constructor.
@@ -305,6 +310,11 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         }
 
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long updateTime() {
+        return updateTime;
     }
 
     /**
@@ -2159,8 +2169,6 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
 
         return 0;
     }
-
-    private String clsName;
 
     /**
      * @param ctx Context.

@@ -39,6 +39,7 @@ import org.apache.ignite.internal.binary.BinarySchemaRegistry;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThread;
@@ -65,6 +66,8 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
     /** May be null. */
     private String clsName;
+
+    private long updateTime;
 
     /** */
     private boolean registeredType = true;
@@ -102,6 +105,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         ver = GridBinaryMarshaller.CUR_PROTO_VER;
         reader = null;
         readCache = Collections.emptyMap();
+        updateTime = -1;
     }
 
     /**
@@ -130,6 +134,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         typeId = reader.reader().typeId();
         ctx = reader.binaryContext();
         clsName = reader.reader().className();
+        updateTime = reader.reader().updateTime();
     }
 
     /** {@inheritDoc} */
@@ -208,10 +213,13 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 int footerPos = reader.reader().footerStartOffset();
                 int footerEnd = footerPos + reader.reader().footerLength();
 
-                int dataEnd = BinaryUtils.hasRaw(flags) ? reader.reader().rawOffset() : footerPos;
+                int dataStart = reader.reader().dataStartOffset();
+                int dataEnd = BinaryUtils.hasRaw(flags)
+                    ? reader.reader().rawOffset()
+                    : dataStart + reader.reader().dataLength();
 
                 // Position reader on data.
-                reader.position(reader.reader().dataStartOffset());
+                reader.position(dataStart);
 
                 int idx = 0;
 
@@ -299,6 +307,8 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 // Shift reader to the end of the object.
                 reader.position(start + reader.reader().length());
             }
+
+            writer.updateTime(updateTime);
 
             writer.postWrite(true, registeredType);
 
@@ -556,6 +566,27 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      */
     @Override public BinaryObjectBuilderImpl removeField(String name) {
         assignedValues().put(name, REMOVED_FIELD_MARKER);
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getUpdateTime() {
+        return updateTime;
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryObjectBuilder setUpdateTime(long updateTime) {
+        A.ensure(updateTime >= 0, "'updateTime' should be not negative");
+
+        this.updateTime = updateTime;
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryObjectBuilder removeUpdateTime() {
+        updateTime = -1;
 
         return this;
     }

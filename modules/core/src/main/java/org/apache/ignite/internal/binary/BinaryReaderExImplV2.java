@@ -110,6 +110,12 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx {
                 rawOff = BinaryUtils.hasSchema(flags) ? in.readIntPositioned(metaStartOffset()) + start : dataStartOff;
             else
                 rawOff = objectEndOffset();
+
+            if (BinaryUtils.hasUpdateTime(flags)) {
+                in.position(updateTimeOffset());
+
+                updateTime = in.readLong();
+            }
         }
         else {
             typeId = 0;
@@ -143,6 +149,11 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx {
             off += 4;
 
         return off;
+    }
+
+    /** */
+    private int updateTimeOffset() {
+        return footerStartOff - 8;
     }
 
     /** {@inheritDoc} */

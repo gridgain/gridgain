@@ -105,4 +105,11 @@ public interface BinaryReaderEx extends BinaryRawReader {
      * @return Class name.
      */
     public String className();
+
+    /**
+     * Returns current object's update time.
+     *
+     * @return Update time.
+     */
+    public long updateTime();
 }

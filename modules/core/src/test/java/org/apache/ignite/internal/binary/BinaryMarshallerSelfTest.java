@@ -3750,7 +3750,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      * @param marsh Marshaller.
      * @return Binary object.
      */
-    private <T> BinaryObjectImpl marshal(T obj, BinaryMarshaller marsh) throws IgniteCheckedException {
+    protected <T> BinaryObjectImpl marshal(T obj, BinaryMarshaller marsh) throws IgniteCheckedException {
         byte[] bytes = marsh.marshal(obj);
 
         return new BinaryObjectImpl(U.<GridBinaryMarshaller>field(marsh, "impl").context(),
@@ -3884,7 +3884,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     /**
      * @return Simple object.
      */
-    private static SimpleObject simpleObject() {
+    protected static SimpleObject simpleObject() {
         SimpleObject inner = new SimpleObject();
 
         inner.b = 1;
@@ -4176,7 +4176,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private static class SimpleObject {
+    protected static class SimpleObject {
         /** */
         private byte b;
 

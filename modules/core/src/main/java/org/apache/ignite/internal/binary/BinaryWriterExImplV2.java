@@ -48,7 +48,7 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
  *      <li>meta data section -- optional part of variable length. Presents if type is unregistered ({@code typeId == 0})
  *      or there is schema section. Has following format:<br>
  *      <pre>
- *      [raw offset: 4][schema id: 4][schema description offset: 4][class name: var len]
+ *      [raw offset: 4][schema id: 4][schema description offset: 4][class name: var len][update time: 8]
  *      </pre>
  *      , each part is optional.</li>
  *
@@ -99,6 +99,16 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
         out.unsafePosition(retPos);
     }
 
+    /** {@inheritDoc} */
+    @Override protected short initFlags(boolean userType) {
+        short flags = super.initFlags(userType);
+
+        if (updateTime >= 0)
+            flags |= BinaryUtils.FLAG_HAS_UPDATE_TIME;
+
+        return flags;
+    }
+
     /** */
     private void writeHeader(int typeId, short flags, int dataLen, int totalLen) {
         out.unsafeWriteByte(GridBinaryMarshaller.OBJ);
@@ -124,6 +134,9 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
 
         if (!registered)
             doWriteString(clsName);
+
+        if (BinaryUtils.hasUpdateTime(flags))
+            out.writeLong(updateTime);
     }
 
     /** */
@@ -131,7 +144,8 @@ public class BinaryWriterExImplV2 extends BinaryAbstractWriterEx {
         return HDR_LEN_V2 + dataLen // meta section rigth after data
             + (BinaryUtils.hasRaw(flags) ? 4 : 0) // count raw offset
             + (BinaryUtils.hasSchema(flags) ? 8 : 0) // count schema id + footer offset
-            + (!registered ? clsName.length() + 5 : 0); // count class name
+            + (!registered ? clsName.length() + 5 : 0) // count class name
+            + (BinaryUtils.hasUpdateTime(flags) ? 8 : 0); // count update time
     }
 
     /** {@inheritDoc} */

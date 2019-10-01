@@ -123,6 +123,9 @@ public class BinaryUtils {
     @SuppressWarnings("unused")
     public static final short FLAG_CUSTOM_DOTNET_TYPE = 0x0040;
 
+    /** Flag has update time. */
+    public static final short FLAG_HAS_UPDATE_TIME = 0x0080;
+
     /** Offset which fits into 1 byte. */
     public static final int OFFSET_1 = 1;
 
@@ -294,7 +297,7 @@ public class BinaryUtils {
     }
 
     /**
-     * Check if raw-only flag is set.
+     * Check if schema flag is set.
      *
      * @param flags Flags.
      * @return {@code True} if set.
@@ -311,6 +314,16 @@ public class BinaryUtils {
      */
     public static boolean hasRaw(short flags) {
         return isFlagSet(flags, FLAG_HAS_RAW);
+    }
+
+    /**
+     * Check if update time flag is set.
+     *
+     * @param flags Flags.
+     * @return {@code True} if set.
+     */
+    public static boolean hasUpdateTime(short flags) {
+        return isFlagSet(flags, FLAG_HAS_UPDATE_TIME);
     }
 
     /**

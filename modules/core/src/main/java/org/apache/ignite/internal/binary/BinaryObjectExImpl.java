@@ -193,6 +193,13 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     }
 
     /**
+     * @return Update time.
+     */
+    public long updateTime() {
+        return reader(null, false).updateTime();
+    }
+
+    /**
      * Get offset of data begin.
      *
      * @return Field value.

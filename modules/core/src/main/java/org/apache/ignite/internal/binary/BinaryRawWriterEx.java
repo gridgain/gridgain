@@ -56,4 +56,11 @@ public interface BinaryRawWriterEx extends BinaryRawWriter, AutoCloseable {
      * @throws org.apache.ignite.binary.BinaryObjectException If failed.
      */
     public void writeInt(int pos, int val) throws BinaryObjectException;
+
+    /**
+     * Sets update time. If writer has protocol version equals 1 then does nothing.
+     *
+     * @param updateTime Update time. If {@code <0} then actual value will be cleared.
+     */
+    public void updateTime(long updateTime);
 }
