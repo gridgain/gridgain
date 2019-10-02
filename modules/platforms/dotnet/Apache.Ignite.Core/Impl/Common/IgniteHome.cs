@@ -72,16 +72,14 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </returns>
         private static string Resolve(ILogger log)
         {
+            var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
             var probeDirs = new[]
             {
-                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-                Directory.GetCurrentDirectory()
+                asmDir,
+                Directory.GetCurrentDirectory(),
+                Path.Combine(asmDir, "..", "..", "build", "output") // NuGet home.
             };
-
-            if (log != null)
-                log.Debug("Attempting to resolve IgniteHome in the assembly directory " +
-                          "'{0}' and current directory '{1}'...", probeDirs[0], probeDirs[1]);
-
 
             foreach (var probeDir in probeDirs.Where(x => !string.IsNullOrEmpty(x)))
             {

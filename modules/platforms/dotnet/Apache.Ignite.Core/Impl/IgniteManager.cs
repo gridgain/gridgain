@@ -142,18 +142,29 @@ namespace Apache.Ignite.Core.Impl
             // JvmInitialMemoryMB / JvmMaxMemoryMB have lower priority than CMD_JVM_OPT
             if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmMinMemJava, StringComparison.OrdinalIgnoreCase)) &&
                 cfg.JvmInitialMemoryMb != IgniteConfiguration.DefaultJvmInitMem)
-                jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}{1}m", CmdJvmMinMemJava, cfg.JvmInitialMemoryMb));
+            {
+                jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}{1}m", CmdJvmMinMemJava,
+                    cfg.JvmInitialMemoryMb));
+            }
 
             if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmMaxMemJava, StringComparison.OrdinalIgnoreCase)) &&
                 cfg.JvmMaxMemoryMb != IgniteConfiguration.DefaultJvmMaxMem)
-                jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}{1}m", CmdJvmMaxMemJava, cfg.JvmMaxMemoryMb));
+            {
+                jvmOpts.Add(
+                    string.Format(CultureInfo.InvariantCulture, "{0}{1}m", CmdJvmMaxMemJava, cfg.JvmMaxMemoryMb));
+            }
 
             if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmFileEncoding, StringComparison.Ordinal)))
+            {
                 jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}UTF-8", CmdJvmFileEncoding));
+            }
 
-            if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmUtilLoggingConfigFile, StringComparison.Ordinal)))
+            if (!jvmOpts.Any(opt => opt.StartsWith(CmdJvmUtilLoggingConfigFile, StringComparison.Ordinal)) &&
+                !string.IsNullOrWhiteSpace(igniteHome))
+            {
                 jvmOpts.Add(string.Format(CultureInfo.InvariantCulture, "{0}{1}", CmdJvmUtilLoggingConfigFile,
                     Path.Combine(igniteHome, "config", "java.util.logging.properties")));
+            }
 
             return jvmOpts;
         }
