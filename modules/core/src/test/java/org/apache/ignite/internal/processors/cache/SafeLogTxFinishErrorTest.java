@@ -119,15 +119,31 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
             GridNearTxLocal activeTx = (GridNearTxLocal)activeTxs.iterator().next();
 
             AtomicBoolean containsFailedCompletingTxInLog = new AtomicBoolean();
+
+            /*
+             * When GridNearTxLocal#toString() is called, return string
+             * contains substring "duration", which is calculated as
+             * current time minus start time of the transaction.
+             * For test, we need so that when call GridNearTxLocal#toString(),
+             * we get the same string with the same substring "duration".
+             */
             AtomicLong curTimeMillis = new AtomicLong();
 
             log.registerListener(logStr -> {
+                /*
+                 * Restore the current time to correctly call 
+                 * GridNearTxLocal#toString().
+                 */
                 setFieldValue(IgniteUtils.class,"curTimeMillis", curTimeMillis.get());
 
                 if (logStr.equals(toFailedCompletingTxMsg(false, activeTx.toString())))
                     containsFailedCompletingTxInLog.set(true);
             });
 
+            /*
+             * Remembering current time before calling
+             * GridNearTxLocal#toString().
+             */
             curTimeMillis.set(getFieldValue(IgniteUtils.class, "curTimeMillis"));
 
             activeTx.logTxFinishErrorSafe(log, false, new RuntimeException("Test"));
