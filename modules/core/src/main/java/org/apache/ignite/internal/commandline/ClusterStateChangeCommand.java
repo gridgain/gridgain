@@ -49,7 +49,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
         params.put(INACTIVE.toString(), "Deactivate cluster");
         params.put(READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString());
 
-        Command.usage(log, "Deactivate cluster:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(log, "Change cluster state:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */

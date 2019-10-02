@@ -82,12 +82,13 @@ public interface Command<T> {
         @Nullable Map<String, String> paramsDesc,
         String... args
     ) {
+        logger.info("");
         logger.info(INDENT + desc);
         logger.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, cmd, CommandLogger.join(" ", args)));
-        logger.info("");
 
         if (!F.isEmpty(paramsDesc)) {
             logger.info("");
+
             logger.info(DOUBLE_INDENT + "Parameters:");
 
             usageParams(paramsDesc, DOUBLE_INDENT + INDENT, logger);

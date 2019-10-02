@@ -53,9 +53,9 @@ public class CacheCommands implements Command<CacheSubcommands> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
+        logger.info("");
         logger.info(INDENT + "View caches information in a cluster. For more details type:");
         logger.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, CACHE, HELP));
-        logger.info("");
     }
 
     /** {@inheritDoc} */
