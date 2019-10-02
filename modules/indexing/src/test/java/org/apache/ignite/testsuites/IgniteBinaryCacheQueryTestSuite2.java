@@ -54,7 +54,6 @@ import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQuery
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistributedJoinSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexSelfTest;
-import org.apache.ignite.internal.processors.query.IgniteSqlAddColumnTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateTest;
 import org.apache.ignite.internal.processors.query.LocalQueryLazyTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryTest;
@@ -176,8 +175,6 @@ import org.junit.runners.Suite;
     SqlPartOfComplexPkLookupTest.class,
 
     SqlDataTypesCoverageTests.class,
-
-    IgniteSqlAddColumnTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }
