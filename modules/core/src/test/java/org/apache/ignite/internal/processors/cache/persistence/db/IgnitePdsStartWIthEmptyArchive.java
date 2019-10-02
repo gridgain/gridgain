@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -48,6 +50,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWr
  *
  */
 public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
+    /** Mapping of WAL segment idx to WalSegmentArchivedEvent. */
+    private final Map<Long, WalSegmentArchivedEvent> evts = new ConcurrentHashMap<>();
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -70,6 +75,8 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
 
         Map<IgnitePredicate<? extends Event>, int[]> lsnrs = new HashMap<>();
 
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
         lsnrs.put((e) -> {
             WalSegmentArchivedEvent archComplEvt = (WalSegmentArchivedEvent)e;
 
@@ -81,8 +88,6 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
         }, new int[] {EVT_WAL_SEGMENT_ARCHIVED});
 
         cfg.setLocalEventListeners(lsnrs);
-
-        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
