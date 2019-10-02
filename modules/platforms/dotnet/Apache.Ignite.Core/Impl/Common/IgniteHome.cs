@@ -103,7 +103,14 @@ namespace Apache.Ignite.Core.Impl.Common
                 yield return Path.GetDirectoryName(entryAsm.Location);
             }
 
-            yield return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var executingAsmPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            yield return executingAsmPath;
+
+            if (!string.IsNullOrWhiteSpace(executingAsmPath))
+            {
+                // NuGet home - for LINQPad.
+                yield return Path.Combine(executingAsmPath, "..", "..", "build", "output");
+            }
 
             yield return Directory.GetCurrentDirectory();
         }
