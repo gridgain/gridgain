@@ -123,7 +123,7 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
      * Checking the throw exception during the operation "dynamicCloseCache".
      */
     @Test
-    public void testDynamicCacheClose() throws Exception {
+    public void testDynamicCacheClose() {
         GridCacheProcessor cacheProcessor = NODE.context().cache();
 
         String cacheName = DEFAULT_CACHE_NAME;
