@@ -104,10 +104,11 @@ namespace Apache.Ignite.Core.Impl.Common
             }
 
             var executingAsmPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            yield return executingAsmPath;
 
             if (!string.IsNullOrWhiteSpace(executingAsmPath))
             {
+                yield return executingAsmPath;
+
                 // NuGet home - for LINQPad.
                 yield return Path.Combine(executingAsmPath, "..", "..", "build", "output");
             }
