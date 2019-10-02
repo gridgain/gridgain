@@ -17,8 +17,12 @@
 package org.apache.ignite.internal.binary;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.CUR_PROTO_VER;
 
 /**
  * Binary marshaller tests for protocol version 2.
@@ -40,29 +44,39 @@ public class BinaryMarshallerSelfTestV2 extends BinaryMarshallerSelfTest {
 
         BinaryObjectExImpl binObj = marshal(so, marsh);
 
-        BinaryObjectExImpl binWithTs = (BinaryObjectExImpl)binObj.toBuilder().setUpdateTime(100L).build();
+        BinaryObjectExImpl binWithTs = buildLatest(binObj.toBuilder().setUpdateTime(100L));
 
         Assert.assertEquals(-1L, binObj.updateTime());
         Assert.assertEquals(100L, binWithTs.updateTime());
         Assert.assertEquals(binObj, binWithTs);
         Assert.assertEquals(so, marsh.unmarshal(binWithTs.array(), null));
 
-        BinaryObjectExImpl binWithTsCp = (BinaryObjectExImpl)binWithTs.toBuilder().build();
+        BinaryObjectExImpl binWithTsCp = buildLatest(binWithTs.toBuilder());
 
         Assert.assertEquals(100L, binWithTsCp.updateTime());
         Assert.assertEquals(binObj, binWithTsCp);
         Assert.assertEquals(so, marsh.unmarshal(binWithTsCp.array(), null));
 
-        BinaryObjectExImpl binWithTsUpd = (BinaryObjectExImpl)binWithTs.toBuilder().setUpdateTime(200L).build();
+        BinaryObjectExImpl binWithTsUpd = buildLatest(binWithTs.toBuilder().setUpdateTime(200L));
 
         Assert.assertEquals(200L, binWithTsUpd.updateTime());
         Assert.assertEquals(binObj, binWithTsUpd);
         Assert.assertEquals(so, marsh.unmarshal(binWithTsUpd.array(), null));
 
-        BinaryObjectExImpl binWithoutTs = (BinaryObjectExImpl)binWithTsUpd.toBuilder().removeUpdateTime().build();
+        BinaryObjectExImpl binWithoutTs = buildLatest(binWithTsUpd.toBuilder().removeUpdateTime());
 
         Assert.assertEquals(-1L, binWithoutTs.updateTime());
         Assert.assertEquals(binObj, binWithoutTs);
         Assert.assertEquals(so, marsh.unmarshal(binWithoutTs.array(), null));
+    }
+
+    /**
+     * Build object of {@link GridBinaryMarshaller#CUR_PROTO_VER} version from provided builder.
+     *
+     * @param bldr Bilder to build.
+     * @return Binary object with protocol version {@link GridBinaryMarshaller#CUR_PROTO_VER}.
+     */
+    private BinaryObjectExImpl buildLatest(BinaryObjectBuilder bldr) {
+        return (BinaryObjectExImpl)((BinaryObjectBuilderImpl)bldr).build(CUR_PROTO_VER);
     }
 }

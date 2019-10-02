@@ -197,8 +197,11 @@ public class GridBinaryMarshaller {
     /** */
     public static final int UNREGISTERED_TYPE_ID = 0;
 
-    /** Protocol version. */
+    /** Current available protocol version. */
     public static final byte CUR_PROTO_VER = 2;
+
+    /** Default protocol version. */
+    public static final byte DFLT_PROTO_VER = 1;
 
     /** Protocol version position. */
     public static final int PROTO_VER_POS = 1;

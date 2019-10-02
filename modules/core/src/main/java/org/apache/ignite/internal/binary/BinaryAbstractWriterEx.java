@@ -129,7 +129,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      */
     public static BinaryAbstractWriterEx createWriter(BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
-        return createWriter(ctx != null ? ctx.protocolVersion() : GridBinaryMarshaller.CUR_PROTO_VER,
+        return createWriter(ctx != null ? ctx.protocolVersion() : GridBinaryMarshaller.DFLT_PROTO_VER,
             ctx, out, schema, handles);
     }
 

@@ -38,7 +38,7 @@ public class BinaryConfiguration implements Serializable {
     public static final boolean DFLT_COMPACT_FOOTER = true;
 
     /** Default protocol version. */
-    public static final byte DFLT_PROTO_VER = GridBinaryMarshaller.CUR_PROTO_VER;
+    public static final byte DFLT_PROTO_VER = GridBinaryMarshaller.DFLT_PROTO_VER;
 
     /** ID mapper. */
     private BinaryIdMapper idMapper;

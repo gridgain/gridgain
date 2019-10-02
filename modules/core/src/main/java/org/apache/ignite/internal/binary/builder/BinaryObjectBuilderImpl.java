@@ -45,6 +45,8 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.DFLT_PROTO_VER;
+
 /**
  *
  */
@@ -67,6 +69,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     /** May be null. */
     private String clsName;
 
+    /** Update time. */
     private long updateTime;
 
     /** */
@@ -102,7 +105,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         typeName = ctx.userTypeName(clsName);
         start = -1;
         flags = -1;
-        ver = GridBinaryMarshaller.CUR_PROTO_VER;
+        ver = ctx != null ? ctx.protocolVersion() : DFLT_PROTO_VER;
         reader = null;
         readCache = Collections.emptyMap();
         updateTime = -1;
@@ -139,7 +142,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
     /** {@inheritDoc} */
     @Override public BinaryObject build() {
-        return build(GridBinaryMarshaller.CUR_PROTO_VER);
+        return build(DFLT_PROTO_VER);
     }
 
     /**
