@@ -37,7 +37,8 @@ namespace Apache.Ignite.Core.Tests
         /// <returns></returns>
         public static string CreateTestClasspath()
         {
-            return Classpath.CreateClasspath(forceTestClasspath: true);
+            var home = IgniteHome.Resolve();
+            return Classpath.CreateClasspath(null, home, forceTestClasspath: true);
         }
 
         /// <summary>
