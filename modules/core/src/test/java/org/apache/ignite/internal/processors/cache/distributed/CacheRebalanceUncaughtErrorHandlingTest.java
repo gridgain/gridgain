@@ -10,7 +10,7 @@ import org.junit.Test;
 
 /**
  */
-public class CacheRebalanceUncheckedErrorHandlingTest extends GridCommonAbstractTest {
+public class CacheRebalanceUncaughtErrorHandlingTest extends GridCommonAbstractTest {
 //    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
 //        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 //    }
