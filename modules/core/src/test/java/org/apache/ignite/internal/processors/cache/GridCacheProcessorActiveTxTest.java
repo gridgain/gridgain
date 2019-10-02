@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.List;
-import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -124,16 +123,16 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
      * Checking the throw exception during the operation "dynamicCloseCache".
      */
     @Test
-    public void testDynamicCacheClose() {
+    public void testDynamicCacheClose() throws Exception {
         GridCacheProcessor cacheProcessor = NODE.context().cache();
 
         String cacheName = DEFAULT_CACHE_NAME;
 
-        cacheProcessor.addjCacheProxy(cacheName, new IgniteCacheProxyImpl<>());
+        NODE.getOrCreateCache(new CacheConfiguration<>(cacheName));
 
-        opInActiveTx(() -> cacheProcessor.dynamicCloseCache(DEFAULT_CACHE_NAME), cacheName, "dynamicCloseCache");
+        opInActiveTx(() -> cacheProcessor.dynamicCloseCache(cacheName), cacheName, "dynamicCloseCache");
 
-        ((Map)getFieldValue(cacheProcessor, "jCacheProxies")).clear();
+        NODE.destroyCache(cacheName);
     }
 
     /**
@@ -181,5 +180,7 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
                 format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, operation)
             );
         }
+
+        runnableX.run();
     }
 }
