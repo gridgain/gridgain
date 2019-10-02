@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -26,12 +27,18 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
+import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.internal.util.IgniteUtils.compact;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 
 /**
  * Tests verifying that {@link IgniteTxAdapter#logTxFinishErrorSafe}
@@ -112,15 +119,29 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
             GridNearTxLocal activeTx = (GridNearTxLocal)activeTxs.iterator().next();
 
             AtomicBoolean containsFailedCompletingTxInLog = new AtomicBoolean();
+            AtomicLong curTimeMillis = new AtomicLong();
 
             log.registerListener(logStr -> {
-                if (logStr.startsWith("Failed completing the transaction"))
+                setFieldValue(IgniteUtils.class,"curTimeMillis", curTimeMillis.get());
+
+                if (logStr.equals(toFailedCompletingTxMsg(false, activeTx.toString())))
                     containsFailedCompletingTxInLog.set(true);
             });
+
+            curTimeMillis.set(getFieldValue(IgniteUtils.class, "curTimeMillis"));
 
             activeTx.logTxFinishErrorSafe(log, false, new RuntimeException("Test"));
 
             assertTrue(containsFailedCompletingTxInLog.get());
         }
+    }
+
+    /**
+     * Generates a transaction completion failure message.
+     */
+    private String toFailedCompletingTxMsg(boolean commit, String tx) {
+        assert nonNull(tx);
+
+        return compact(format("Failed completing the transaction: [commit=%s, tx=%s]", commit, tx));
     }
 }
