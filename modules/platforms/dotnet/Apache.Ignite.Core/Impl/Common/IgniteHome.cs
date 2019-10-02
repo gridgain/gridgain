@@ -97,14 +97,15 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         private static IEnumerable<string> GetProbeDirectories()
         {
-            yield return Directory.GetCurrentDirectory();
-            yield return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
             var entryAsm = Assembly.GetEntryAssembly();
             if (entryAsm != null)
             {
                 yield return Path.GetDirectoryName(entryAsm.Location);
             }
+
+            yield return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            yield return Directory.GetCurrentDirectory();
         }
 
         /// <summary>
