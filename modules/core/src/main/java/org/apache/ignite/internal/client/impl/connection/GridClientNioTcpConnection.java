@@ -40,6 +40,7 @@ import javax.net.ssl.SSLContext;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
 import org.apache.ignite.internal.client.GridClientCacheFlag;
@@ -85,6 +86,8 @@ import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.client.GridClientCacheFlag.KEEP_BINARIES;
 import static org.apache.ignite.internal.client.GridClientCacheFlag.encodeCacheFlags;
 import static org.apache.ignite.internal.client.impl.connection.GridClientConnectionCloseReason.CONN_IDLE;
@@ -821,6 +824,23 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     }
 
     /** {@inheritDoc} */
+    @Override public GridClientFuture<?> changeState(
+        ClusterState state,
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        assert state != null;
+
+        if (nodeSupports(destNodeId, CLUSTER_READ_ONLY_MODE))
+            return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
+        else {
+            // Backward compatibility.
+            assert state == ClusterState.ACTIVE || state == ClusterState.INACTIVE : state;
+
+            return changeState(state == ClusterState.ACTIVE, destNodeId);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public GridClientFuture<Boolean> currentState(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException {
         GridClientStateRequest msg = new GridClientStateRequest();
@@ -831,18 +851,48 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     }
 
     /** {@inheritDoc} */
-    @Override public GridClientFuture<?> changeState(
-        ClusterState state,
-        UUID destNodeId
-    ) throws GridClientClosedException, GridClientConnectionResetException {
-        return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
-    }
-
-    /** {@inheritDoc} */
     @Override public GridClientFuture<ClusterState> state(
         UUID destNodeId
     ) throws GridClientClosedException, GridClientConnectionResetException {
-        return makeRequest(GridClientClusterStateRequest.currentState(), destNodeId);
+        if (nodeSupports(destNodeId, CLUSTER_READ_ONLY_MODE))
+            return makeRequest(GridClientClusterStateRequest.currentState(), destNodeId);
+        else {
+            // Backward compatibility
+            GridClientFutureAdapter<ClusterState> resFut = new GridClientFutureAdapter<>();
+
+            currentState(destNodeId).listen(fut -> {
+                try {
+                    resFut.onDone(fut.get() ? ClusterState.ACTIVE : ClusterState.INACTIVE);
+                }
+                catch (GridClientException e) {
+                    resFut.onDone(e);
+                }
+            });
+
+            return resFut;
+        }
+    }
+
+    /**
+     * Checks that cluster node with {@code nodeId} is supports {@code feature} or not.
+     *
+     * @param nodeId Id of node of cluster
+     * @param feature Feature
+     * @return {@code True} if node supports feature and {@code false} otherwise.
+     * @throws GridClientConnectionResetException clusterNode If something goes wrong.
+     */
+    private boolean nodeSupports(
+        UUID nodeId,
+        IgniteFeatures feature
+    ) throws GridClientConnectionResetException {
+        try {
+            GridClientNode clusterNode = node(nodeId, true, false, nodeId).get();
+
+            return IgniteFeatures.nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
+        }
+        catch (GridClientException e) {
+            throw new GridClientConnectionResetException("Can't get node with id " + nodeId, e);
+        }
     }
 
     /** {@inheritDoc} */

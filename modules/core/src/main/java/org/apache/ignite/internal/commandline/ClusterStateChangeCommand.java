@@ -1,0 +1,121 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.commandline;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientConfiguration;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
+import static org.apache.ignite.internal.commandline.CommandLogger.or;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
+
+/**
+ * Command to change cluster state.
+ */
+public class ClusterStateChangeCommand implements Command<ClusterState> {
+    /** New cluster state */
+    private ClusterState state;
+
+    /** Cluster name. */
+    private String clusterName;
+
+    /** {@inheritDoc} */
+    @Override public void printUsage(Logger log) {
+        Map<String, String> params = new LinkedHashMap<>();
+
+        params.put(ACTIVE.toString(), "Activate cluster.");
+        params.put(INACTIVE.toString(), "Deactivate cluster");
+        params.put(READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString());
+
+        Command.usage(log, "Deactivate cluster:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg)) {
+            clusterName = client.state().clusterName();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will " + stateName() + " a cluster \"" + clusterName + "\".";
+    }
+
+    /** {@inheritDoc} */
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg)) {
+            client.state().state(state);
+
+            log.info("Cluster state changed to " + state);
+
+            return null;
+        }
+        catch (Throwable e) {
+            log.info("Failed to change cluster state to " +  state);
+
+            throw e;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void parseArguments(CommandArgIterator argIter) {
+        String s = argIter.nextArg("New cluster state not found.");
+
+        try {
+            state = ClusterState.valueOf(s.toUpperCase());
+        }
+        catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Can't parse new cluster state. State: " + s, e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClusterState arg() {
+        return state;
+    }
+
+    /** */
+    private String stateName() {
+        switch (state) {
+            case ACTIVE:
+                return "activate";
+
+            case INACTIVE:
+                return "deactivate";
+
+            case READ_ONLY:
+                return "enable read-only mode on";
+
+            default:
+                throw new IllegalArgumentException("" + state);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return SET_STATE.toCommandName();
+    }
+}

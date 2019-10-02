@@ -16,9 +16,6 @@
 
 package org.apache.ignite.util;
 
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -41,6 +38,9 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -102,6 +102,9 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
@@ -171,12 +174,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testActivate() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
-        assertTrue(ignite.cluster().active());
-        assertFalse(ignite.cluster().readOnly());
+        assertEquals(ACTIVE, ignite.cluster().state());
     }
 
     /**
@@ -188,21 +190,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testReadOnlyEnableDisable() throws Exception {
         Ignite ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
-        assertFalse(ignite.cluster().readOnly());
+        assertEquals(ACTIVE, ignite.cluster().state());
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--read-only-on"));
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "READ-ONLY"));
 
-        assertTrue(ignite.cluster().readOnly());
+        assertEquals(READ_ONLY, ignite.cluster().state());
 
         assertContains(log, testOut.toString(), "Cluster read-only mode enabled");
 
-        assertEquals(EXIT_CODE_OK, execute("--read-only-off"));
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
 
-        assertFalse(ignite.cluster().readOnly());
+        assertEquals(ACTIVE, ignite.cluster().state());
 
         assertContains(log, testOut.toString(), "Cluster read-only mode disabled");
     }
@@ -383,11 +385,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
 
-        ignite.cluster().readOnly(true);
+        ignite.cluster().state(READ_ONLY);
 
         awaitPartitionMapExchange();
 
-        assertTrue(ignite.cluster().readOnly());
+        assertEquals(READ_ONLY, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 

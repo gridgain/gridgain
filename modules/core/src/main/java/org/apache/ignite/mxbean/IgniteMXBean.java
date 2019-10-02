@@ -523,13 +523,4 @@ public interface IgniteMXBean {
     @MXBeanParametersNames("state")
     @MXBeanParametersDescriptions("New cluster state.")
     public void clusterState(ClusterState state);
-
-    /**
-     * Gets duration of read-only mode enabled on cluster.
-     *
-     * @return {@code 0} if cluster read-only mode disabled, and time in milliseconds since enabling cluster read-only
-     * mode.
-     */
-    @MXBeanDescription("Duration of read-only mode enabled on cluster.")
-    long getReadOnlyModeDuration();
 }
