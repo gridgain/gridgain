@@ -33,7 +33,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
- * Tests that verify the performance of GridCacheProcessor operations
+ * Tests that verify the execution of GridCacheProcessor operations
  * in active transactions.
  */
 public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
@@ -56,10 +56,17 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
+    @Override protected void afterTest() throws Exception {
+        NODE.destroyCaches(NODE.cacheNames());
 
+        super.afterTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
+
+        super.afterTestsStopped();
     }
 
     /**
@@ -67,9 +74,11 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDynamicSingleCacheStart() {
+        String cacheName = DEFAULT_CACHE_NAME;
+
         opInActiveTx(
-            () -> NODE.context().cache().dynamicStartCache(null, DEFAULT_CACHE_NAME, null, false, false, true),
-            DEFAULT_CACHE_NAME,
+            () -> NODE.createCache(new CacheConfiguration<>(cacheName)),
+            cacheName,
             "dynamicStartCache"
         );
     }
@@ -82,11 +91,10 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
     public void testDynamicStartMultipleCaches() {
         List<String> cacheNames = cacheNames();
 
-        List<CacheConfiguration> cacheCfgs =
-            cacheNames().stream().map(CacheConfiguration::new).collect(toList());
+        List<CacheConfiguration> cacheCfgs = cacheConfigurations(cacheNames);
 
         opInActiveTx(
-            () -> NODE.context().cache().dynamicStartCaches(cacheCfgs, false, true, false),
+            () -> NODE.createCaches(cacheCfgs),
             cacheNames.toString(),
             "dynamicStartCachesByStoredConf"
         );
@@ -97,9 +105,13 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDynamicCacheDestroy() {
+        String cacheName = DEFAULT_CACHE_NAME;
+
+        NODE.createCache(new CacheConfiguration<>(cacheName));
+
         opInActiveTx(
-            () -> NODE.context().cache().dynamicDestroyCache(DEFAULT_CACHE_NAME, false, true, false, null),
-            DEFAULT_CACHE_NAME,
+            () -> NODE.destroyCache(cacheName),
+            cacheName,
             "dynamicDestroyCache"
         );
     }
@@ -112,8 +124,12 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
     public void testDynamicDestroyMultipleCaches() {
         List<String> cacheNames = cacheNames();
 
+        List<CacheConfiguration> cacheCfgs = cacheConfigurations(cacheNames);
+
+        NODE.createCaches(cacheCfgs);
+
         opInActiveTx(
-            () -> NODE.context().cache().dynamicDestroyCaches(cacheNames, true),
+            () -> NODE.destroyCaches(cacheNames),
             cacheNames.toString(),
             "dynamicDestroyCaches"
         );
@@ -156,6 +172,18 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
      */
     private List<String> cacheNames() {
         return range(0, 2).mapToObj(i -> DEFAULT_CACHE_NAME + i).collect(toList());
+    }
+
+    /**
+     * Creating cache configurations in which only cache name is set.
+     *
+     * @param cacheNames The names of caches.
+     * @return Cache configurations.
+     */
+    private List<CacheConfiguration> cacheConfigurations(List<String> cacheNames) {
+        assert nonNull(cacheNames);
+
+        return cacheNames.stream().map(CacheConfiguration::new).collect(toList());
     }
 
     /**
