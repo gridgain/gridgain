@@ -92,14 +92,20 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
             schemaId = in.readInt();
             int schemaOrRawOff = in.readInt();
 
-            footerStartOff = BinaryUtils.hasSchema(flags) ? start + schemaOrRawOff : objectEndOffset();
+            typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
+
+            if (BinaryUtils.hasSchema(flags)) {
+                footerStartOff = start + schemaOrRawOff;
+
+                schema(getOrCreateSchema());
+            }
+            else
+                footerStartOff = objectEndOffset();
 
             if (BinaryUtils.hasRaw(flags))
                 rawOff = start + (BinaryUtils.hasSchema(flags) ? in.readIntPositioned(rawOffsetPos()) : schemaOrRawOff);
             else
                 rawOff = objectEndOffset();
-
-            typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
 
             dataStartOff = start + HDR_LEN_V1 + (typeId0 == UNREGISTERED_TYPE_ID
                 ? className().length() + 5 /* 1 for value type + 4 for string length */ : 0);

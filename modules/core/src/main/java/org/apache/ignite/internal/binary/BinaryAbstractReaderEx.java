@@ -1951,8 +1951,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                 BinaryMetadata meta = type != null ? type.metadata() : null;
 
                 if (type == null || meta == null)
-                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: " +
-                        typeId());
+                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: " + typeId());
 
                 Collection<BinarySchema> existingSchemas = meta.schemas();
 
@@ -2034,7 +2033,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
             if (matching) {
                 int expOrder = matchingOrder++;
 
-                BinarySchema.Confirmation confirm = schema().confirmOrder(expOrder, name);
+                BinarySchema.Confirmation confirm = schema.confirmOrder(expOrder, name);
 
                 switch (confirm) {
                     case CONFIRMED:
@@ -2049,7 +2048,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                         // Rejected, no more speculations are possible. Fallback to the slowest scenario.
                         matching = false;
 
-                        order = schema().order(fieldId(name));
+                        order = schema.order(fieldId(name));
 
                         break;
 
@@ -2058,11 +2057,11 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                         assert confirm == BinarySchema.Confirmation.CLARIFY;
 
                         int id = fieldId(name);
-                        int realId = schema().fieldId(expOrder);
+                        int realId = schema.fieldId(expOrder);
 
                         if (id == realId) {
                             // IDs matched, cache field name inside schema.
-                            schema().clarifyFieldName(expOrder, name);
+                            schema.clarifyFieldName(expOrder, name);
 
                             if (expOrder == 0)
                                 streamPosition(dataStartOffset());
@@ -2073,14 +2072,14 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                             // No match, stop further speculations.
                             matching = false;
 
-                            order = schema().order(id);
+                            order = schema.order(id);
                         }
 
                         break;
                 }
             }
             else
-                order = schema().order(fieldId(name));
+                order = schema.order(fieldId(name));
 
             return trySetUserFieldPosition(order);
         }
@@ -2109,7 +2108,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                 // Trying to get field order speculatively.
                 int expOrder = matchingOrder++;
 
-                int realId = schema().fieldId(expOrder);
+                int realId = schema.fieldId(expOrder);
 
                 if (realId == id) {
                     if (expOrder == 0)
@@ -2121,26 +2120,16 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
                     // Mismatch detected, no need for further speculations.
                     matching = false;
 
-                    order = schema().order(id);
+                    order = schema.order(id);
                 }
             }
             else
-                order = schema().order(id);
+                order = schema.order(id);
 
             return trySetUserFieldPosition(order);
         }
         else
             return trySetSystemFieldPosition(id);
-    }
-
-    /**
-     * @return Schema of the binary object.
-     */
-    private BinarySchema schema() {
-        if (schema == null)
-            schema = BinaryUtils.hasSchema(flags()) ? getOrCreateSchema() : null;
-
-        return schema;
     }
 
     /**
@@ -2259,6 +2248,10 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
      */
     protected void streamPosition(int pos) {
         in.position(pos);
+    }
+
+    protected void schema(BinarySchema schema) {
+        this.schema = schema;
     }
 
     /**

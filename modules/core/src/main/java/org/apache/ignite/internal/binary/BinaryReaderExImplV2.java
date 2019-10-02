@@ -100,6 +100,8 @@ public class BinaryReaderExImplV2 extends BinaryAbstractReaderEx {
                 schemaId = in.readIntPositioned(off);
 
                 footerStartOff = in.readIntPositioned(off + 4) + start;
+
+                schema(getOrCreateSchema());
             }
             else {
                 footerStartOff = objectEndOffset();
