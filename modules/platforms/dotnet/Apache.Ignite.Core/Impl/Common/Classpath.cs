@@ -62,10 +62,8 @@ namespace Apache.Ignite.Core.Impl.Common
                     cpStr.Append(ClasspathSeparator);
             }
 
-            var ggHome = IgniteHome.Resolve(igniteHome, log);
-
-            if (!string.IsNullOrWhiteSpace(ggHome))
-                AppendHomeClasspath(ggHome, forceTestClasspath, cpStr);
+            if (!string.IsNullOrWhiteSpace(igniteHome))
+                AppendHomeClasspath(igniteHome, forceTestClasspath, cpStr);
 
             if (log != null)
             {
