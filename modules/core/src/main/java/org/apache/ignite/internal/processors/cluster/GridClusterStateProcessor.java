@@ -641,7 +641,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 globalState = DiscoveryDataClusterState.createTransitionState(
                     msg.state(),
                     prevState,
-                    activate(prevState.state(), msg.state()) ? msg.baselineTopology() : prevState.baselineTopology(),
+                    activate(prevState.state(), msg.state()) || msg.forceChangeBaselineTopology() ? msg.baselineTopology() : prevState.baselineTopology(),
                     msg.requestId(),
                     topVer,
                     nodeIds
