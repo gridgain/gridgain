@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Common
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.IO;
     using System.Reflection;
@@ -72,16 +73,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </returns>
         private static string Resolve(ILogger log)
         {
-            var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            var probeDirs = new[]
-            {
-                asmDir,
-                Directory.GetCurrentDirectory(),
-                Path.Combine(asmDir, "..", "..", "build", "output") // NuGet home.
-            };
-
-            foreach (var probeDir in probeDirs.Where(x => !string.IsNullOrEmpty(x)))
+            foreach (var probeDir in GetProbeDirectories().Where(x => !string.IsNullOrEmpty(x)))
             {
                 if (log != null)
                     log.Debug("Probing IgniteHome in '{0}'...", probeDir);
@@ -98,6 +90,21 @@ namespace Apache.Ignite.Core.Impl.Common
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets directories to probe for Ignite Home.
+        /// </summary>
+        private static IEnumerable<string> GetProbeDirectories()
+        {
+            yield return Directory.GetCurrentDirectory();
+            yield return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            var entryAsm = Assembly.GetEntryAssembly();
+            if (entryAsm != null)
+            {
+                yield return Path.GetDirectoryName(entryAsm.Location);
+            }
         }
 
         /// <summary>
