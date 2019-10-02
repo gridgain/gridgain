@@ -230,7 +230,7 @@ public class MultipleDataStreamersOnClientTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void onIgniteStart(boolean active) throws IgniteCheckedException {
+        @Override public void onIgniteStart() throws IgniteCheckedException {
         }
 
         /** {@inheritDoc} */

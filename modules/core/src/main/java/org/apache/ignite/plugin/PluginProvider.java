@@ -101,10 +101,9 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * Callback that notifies that Ignite has successfully started,
      * including all internal components.
      *
-     * @param active {@code True} if grid is active, {@code False} otherwise.
      * @throws IgniteCheckedException Thrown in case of any errors.
      */
-    public void onIgniteStart(boolean active) throws IgniteCheckedException;
+    public void onIgniteStart() throws IgniteCheckedException;
 
     /**
      * Callback to notify that Ignite is about to stop.

@@ -108,7 +108,7 @@ public class TestSecurityProcessorProvider implements PluginProvider {
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart(boolean active) {
+    @Override public void onIgniteStart() {
         // No-op.
     }
 

@@ -63,7 +63,7 @@ public class PlatformTestPluginProvider implements PluginProvider<PlatformTestPl
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart(boolean active) throws IgniteCheckedException {
+    @Override public void onIgniteStart() throws IgniteCheckedException {
         // No-op.
     }
 

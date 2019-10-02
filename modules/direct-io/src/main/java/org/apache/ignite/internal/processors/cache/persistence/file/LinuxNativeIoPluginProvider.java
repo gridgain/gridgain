@@ -120,7 +120,7 @@ public class LinuxNativeIoPluginProvider implements PluginProvider {
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart(boolean active) {
+    @Override public void onIgniteStart() {
         // No-op.
     }
 

@@ -143,7 +143,7 @@ public class PageMemoryTrackerPluginProvider implements PluginProvider<PageMemor
     }
 
     /** {@inheritDoc} */
-    @Override public void onIgniteStart(boolean active) {
+    @Override public void onIgniteStart() {
         // No-op
     }
 
