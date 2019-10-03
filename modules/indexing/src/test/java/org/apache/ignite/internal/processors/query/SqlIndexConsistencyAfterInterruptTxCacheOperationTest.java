@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.transactions;
+package org.apache.ignite.internal.processors.query;
 
-import org.apache.ignite.testframework.junits.WithSystemProperty;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import org.apache.ignite.cache.CacheAtomicityMode;
 
 /**
- * Test partitions consistency in various scenarios when all rebalance is historical.
+ *
  */
-@WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPartitionCounterStateConsistencyTest {
+public class SqlIndexConsistencyAfterInterruptTxCacheOperationTest
+    extends SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest {
+    /**
+     */
+    protected CacheAtomicityMode atomicity() {
+        return CacheAtomicityMode.TRANSACTIONAL;
+    }
 }
+
+
+
