@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Tests
             var dllFolder = Path.Combine(_tempFolder, "foo");
             var jarFolder = Path.Combine(dllFolder, "libs");
 
-            TestDeployment(dllFolder, jarFolder, true);
+            TestDeployment(dllFolder, jarFolder, false);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Apache.Ignite.Core.Tests
             DeployTo(dllFolder, jarFolder);
 
             var classpath = buildClasspath
-                ? string.Join(";", Directory.GetFiles(jarFolder).Select(Path.GetFileName))
+                ? string.Join(";", Directory.GetFiles(jarFolder))
                 : null;
 
             // Copy config
