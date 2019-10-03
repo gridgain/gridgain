@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -47,7 +48,7 @@ import org.mockito.Mockito;
 /**
  */
 @WithSystemProperty(key = "IGNITE_BASELINE_AUTO_ADJUST_ENABLED", value = "false")
-public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest {
+public class CacheRebalanceThreadPoolTest extends GridCommonAbstractTest {
     /** */
     private static final int REBALANCE_POOL_SIZE = 4;
 
@@ -81,6 +82,8 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         cfg.setConsistentId(gridName);
 
@@ -150,42 +153,60 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
     /** */
     @Test
     public void testResourceUtilization_Volatile_ManyPartitions() throws Exception {
-        doTestResourceUtilization(false, false, false);
+        doTestResourceUtilization(false, false, false, 20_000, false, false);
     }
 
     /** */
     @Test
     public void testResourceUtilization_Volatile_SinglePartition() throws Exception {
-        doTestResourceUtilization(false, false, true);
+        doTestResourceUtilization(false, false, true, 20_000, false, false);
     }
 
     /** */
     @Test
     public void testResourceUtilization_Persistent_ManyPartitions() throws Exception {
-        doTestResourceUtilization(true, false, false);
+        doTestResourceUtilization(true, false, false, 20_000, false, false);
     }
 
     /** */
     @Test
     public void testResourceUtilization_Persistent_SinglePartition() throws Exception {
-        doTestResourceUtilization(true, false, true);
+        doTestResourceUtilization(true, false, true, 20_000, false, false);
     }
 
     /** */
     @Test
     public void testResourceUtilization_Historical_ManyPartitions() throws Exception {
-        doTestResourceUtilization(true, true, false);
+        doTestResourceUtilization(true, true, false, 20_000, false, false);
     }
 
     /** */
     @Test
     public void testResourceUtilization_Historical_SinglePartition() throws Exception {
-        doTestResourceUtilization(true, true, true);
+        doTestResourceUtilization(true, true, true, 20_000, false, false);
+    }
+
+    /** */
+    @Test
+    public void testUncaughtExceptionHandlingOnSupplier() throws Exception {
+        doTestResourceUtilization(true, true, true, 100, true, false);
+    }
+
+    /** */
+    @Test
+    public void testUncaughtExceptionHandlingOnDemander() throws Exception {
+        doTestResourceUtilization(true, true, true, 100, false, true);
     }
 
     /**
      */
-    private void doTestResourceUtilization(boolean persistenceEnabled, boolean historical, boolean singlePart) throws Exception {
+    private void doTestResourceUtilization(boolean persistenceEnabled,
+        boolean historical,
+        boolean singlePart,
+        int keys,
+        boolean failSupplier,
+        boolean failDemander
+    ) throws Exception {
         if (historical)
             System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
 
@@ -222,6 +243,9 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
                 mockSupplier(preloader, new GridAbsClosure() {
                     @Override public void apply() {
+                        if (failSupplier)
+                            throw new Error();
+
                         supplierThreads.add(Thread.currentThread().getName());
                     }
                 });
@@ -229,12 +253,12 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
             if (singlePart) {
                 for (int i = 1; i <= CACHES_CNT; i++)
-                    loadDataToPartition(parts.get(0), ex.name(), cacheName(i), 20_000, PARTS_CNT, 3);
+                    loadDataToPartition(parts.get(0), ex.name(), cacheName(i), keys, PARTS_CNT, 3);
             }
             else {
                 for (int i = 1; i <= CACHES_CNT; i++) {
                     try (IgniteDataStreamer<Object, Object> streamer = ex.dataStreamer(cacheName(i))) {
-                        for (int k = 0; k < 20_000; k++)
+                        for (int k = 0; k < keys; k++)
                             streamer.addData(k + PARTS_CNT, k + PARTS_CNT);
                     }
                 }
@@ -253,6 +277,9 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
                 mockDemander(preloader, new GridAbsClosure() {
                     @Override public void apply() {
+                        if (failDemander)
+                            throw new Error();
+
                         demanderThreads.add(Thread.currentThread().getName());
                     }
                 });
@@ -260,7 +287,14 @@ public class CacheRebalanceThreadsUtilizationTest extends GridCommonAbstractTest
 
             TestRecordingCommunicationSpi.spi(joining).stopBlock();
 
-            // Test if rebalance was finished (all partitions are owned).
+            if (failSupplier || failDemander) {
+                // Wait until node is stopped by failure handler.
+                waitForTopology(1);
+
+                return;
+            }
+
+            // Test if rebalance was finished (all partitions are owned or other node failed).
             awaitPartitionMapExchange();
 
             // Tests partition consistency.

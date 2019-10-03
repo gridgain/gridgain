@@ -24,6 +24,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
@@ -43,6 +45,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
@@ -360,13 +363,25 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void handleSupplyMessage(UUID nodeId, final GridDhtPartitionSupplyMessage s) {
-        demander.registerSupplyMessage(s, () -> {
+    @Override public void handleSupplyMessage(UUID nodeId, final GridDhtPartitionSupplyMessage msg) {
+        demander.registerSupplyMessage(msg, () -> {
             if (!enterBusy())
                 return;
 
             try {
-                demander.handleSupplyMessage(nodeId, s);
+                demander.handleSupplyMessage(nodeId, msg);
+            }
+            catch (Throwable t) {
+                try {
+                    U.error(log, "Failed processing message [senderId=" + nodeId + ", msg=" + msg + ']', t);
+                }
+                catch (Throwable e0) {
+                    U.error(log, "Failed processing message [senderId=" + nodeId + ", msg=(failed to log message)", t);
+
+                    U.error(log, "Failed to log message due to an error: ", e0);
+                }
+
+                ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, t));
             }
             finally {
                 leaveBusy();
