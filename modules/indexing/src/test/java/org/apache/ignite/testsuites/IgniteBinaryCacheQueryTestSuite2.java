@@ -47,7 +47,14 @@ import org.apache.ignite.internal.processors.cache.index.DynamicIndexReplicatedT
 import org.apache.ignite.internal.processors.cache.query.ScanQueryOffheapExpiryPolicySelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBaselineCacheQueryNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
-import org.apache.ignite.internal.processors.query.*;
+import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQueryTest;
+import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistributedJoinSelfTest;
+import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest;
+import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexSelfTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateTest;
+import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest;
+import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptTxCacheOperationTest;
+import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.DisappearedCacheCauseRetryMessageSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.DisappearedCacheWasNotFoundMessageSelfTest;
@@ -68,6 +75,9 @@ public class IgniteBinaryCacheQueryTestSuite2 extends TestSuite {
         TestSuite suite = new IgniteTestSuite("Ignite Cache Queries Test Suite 2");
 
         // Dynamic index create/drop tests.
+        suite.addTest(new JUnit4TestAdapter(SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest.class));
+        suite.addTest(new JUnit4TestAdapter(SqlIndexConsistencyAfterInterruptTxCacheOperationTest.class));
+        suite.addTest(new JUnit4TestAdapter(SqlTwoCachesInGroupWithSameEntryTest.class));
         suite.addTest(new JUnit4TestAdapter(DynamicIndexPartitionedAtomicConcurrentSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(DynamicIndexPartitionedTransactionalConcurrentSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(DynamicIndexReplicatedAtomicConcurrentSelfTest.class));
