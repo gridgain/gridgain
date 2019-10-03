@@ -131,6 +131,8 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
 
         cfg.setCacheConfiguration(cacheCfg, cacheBackup1Cfg, cacheBackup2Cfg);
 
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
         return cfg;
     }
 
