@@ -64,12 +64,7 @@ javaMajorVersion() {
     if [ ${version} -eq 1 ]; then
         # Version seems starts from 1, we need second number.
         javaVersion "$1"
-        backIFS=$IFS
-
-        IFS=. ver=(${version##*-})
-        version=${ver[1]}
-
-        IFS=$backIFS
+        version=$(awk -F[\"\.] '{print $2}' <<< ${version})
     fi
 }
 
@@ -117,8 +112,24 @@ checkJava() {
 # ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
 #
 if [ -z "$JVM_OPTS" ] ; then
-    JVM_OPTS="-Xms1g -Xmx1g -server -XX:MaxMetaspaceSize=256m"
+    JVM_OPTS="-Xms1g -Xmx2g -server -XX:MaxMetaspaceSize=256m"
 fi
+
+#
+# Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
+#
+JVM_OPTS="$JVM_OPTS -XX:+UseG1GC"
+
+#
+# Uncomment if you get StackOverflowError.
+# On 64 bit systems this value can be larger, e.g. -Xss16m
+#
+# JVM_OPTS="${JVM_OPTS} -Xss4m"
+
+#
+# Uncomment to set preference for IPv4 stack.
+#
+# JVM_OPTS="${JVM_OPTS} -Djava.net.preferIPv4Stack=true"
 
 #
 # Set 'file.encoding' to UTF-8 default if not specified otherwise
