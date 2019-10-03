@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinUtils;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
@@ -158,7 +158,7 @@ public class JdbcColumnMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryAbstractWriterEx writer,
+    @Override public void writeBinary(BinaryAbstractWriter writer,
         ClientListenerProtocolVersion ver) {
         writer.writeString(schemaName);
         writer.writeString(tblName);
@@ -170,7 +170,7 @@ public class JdbcColumnMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryAbstractReaderEx reader,
+    @Override public void readBinary(BinaryAbstractReader reader,
         ClientListenerProtocolVersion ver) {
         schemaName = reader.readString();
         tblName = reader.readString();

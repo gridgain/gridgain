@@ -19,8 +19,8 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
@@ -97,7 +97,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryAbstractWriterEx writer,
+    @Override public void writeBinary(BinaryAbstractWriter writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         writer.writeByte(type);
 
@@ -106,7 +106,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryAbstractReaderEx reader,
+    @Override public void readBinary(BinaryAbstractReader reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
 
         if (ver.compareTo(VER_2_8_0) >= 0)
@@ -131,7 +131,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
      * @return Request object.
      * @throws BinaryObjectException On error.
      */
-    public static JdbcRequest readRequest(BinaryAbstractReaderEx reader,
+    public static JdbcRequest readRequest(BinaryAbstractReader reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         int reqType = reader.readByte();
 

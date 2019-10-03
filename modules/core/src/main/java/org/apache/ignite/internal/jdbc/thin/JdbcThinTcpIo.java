@@ -28,8 +28,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -228,7 +228,7 @@ public class JdbcThinTcpIo {
      * @throws SQLException On connection reject.
      */
     private HandshakeResult handshake(ClientListenerProtocolVersion ver) throws IOException, SQLException {
-        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
+        BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(null, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
             null, null);
 
         writer.writeByte((byte)ClientListenerRequest.HANDSHAKE);
@@ -268,7 +268,7 @@ public class JdbcThinTcpIo {
 
         send(writer.array());
 
-        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(null, new BinaryHeapInputStream(read()),
+        BinaryAbstractReader reader = BinaryAbstractReader.createReader(null, new BinaryHeapInputStream(read()),
             null, null, false);
 
         boolean accepted = reader.readBoolean();
@@ -338,7 +338,7 @@ public class JdbcThinTcpIo {
      * @throws SQLException On connection reject.
      */
     private HandshakeResult handshake_2_1_0() throws IOException, SQLException {
-        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
+        BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(null, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
             null, null);
 
         writer.writeByte((byte)ClientListenerRequest.HANDSHAKE);
@@ -357,7 +357,7 @@ public class JdbcThinTcpIo {
 
         send(writer.array());
 
-        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(null, new BinaryHeapInputStream(read()),
+        BinaryAbstractReader reader = BinaryAbstractReader.createReader(null, new BinaryHeapInputStream(read()),
             null, null, false);
 
         boolean accepted = reader.readBoolean();
@@ -447,7 +447,7 @@ public class JdbcThinTcpIo {
      * @throws IOException In case of IO error.
      */
     JdbcResponse readResponse() throws IOException {
-        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(null, new BinaryHeapInputStream(read()), null,
+        BinaryAbstractReader reader = BinaryAbstractReader.createReader(null, new BinaryHeapInputStream(read()), null,
             null, false);
 
         JdbcResponse res = new JdbcResponse();
@@ -493,7 +493,7 @@ public class JdbcThinTcpIo {
     private void sendRequestRaw(JdbcRequest req) throws IOException {
         int cap = guessCapacity(req);
 
-        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(cap),
+        BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(null, new BinaryHeapOutputStream(cap),
             null, null);
 
         req.writeBinary(writer, srvProtoVer);

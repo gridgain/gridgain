@@ -393,7 +393,7 @@ public class BinaryUtils {
      * @param writer W
      * @param val Value.
      */
-    public static void writePlainObject(BinaryAbstractWriterEx writer, Object val) {
+    public static void writePlainObject(BinaryAbstractWriter writer, Object val) {
         Byte flag = PLAIN_CLASS_TO_FLAG.get(val.getClass());
 
         if (flag == null)
@@ -1713,7 +1713,7 @@ public class BinaryUtils {
      */
     @Nullable public static Object doReadObject(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles) throws BinaryObjectException {
-        return BinaryAbstractReaderEx.createReader(ctx, in, ldr, handles.handles(), true).deserialize();
+        return BinaryAbstractReader.createReader(ctx, in, ldr, handles.handles(), true).deserialize();
     }
 
     /**

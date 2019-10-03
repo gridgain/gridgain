@@ -20,7 +20,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryUtils;
 
@@ -131,7 +131,7 @@ class BinaryLazyArrayList extends AbstractList<Object> implements BinaryBuilderS
     }
 
     /** {@inheritDoc} */
-    @Override public void writeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer ctx) {
+    @Override public void writeTo(BinaryAbstractWriter writer, BinaryBuilderSerializer ctx) {
         if (delegate == null) {
             int size = reader.readIntPositioned(off + 1);
 

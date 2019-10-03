@@ -17,9 +17,9 @@
 package org.apache.ignite.internal.binary.builder;
 
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryPositionReadable;
@@ -48,7 +48,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
     private final byte[] arr;
 
     /** */
-    private final BinaryAbstractReaderEx reader;
+    private final BinaryAbstractReader reader;
 
     /** */
     private final Map<Integer, BinaryObjectBuilderImpl> objMap;
@@ -66,7 +66,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         arr = objImpl.array();
         pos = objImpl.start();
 
-        reader = BinaryAbstractReaderEx.createReader(ctx,
+        reader = BinaryAbstractReader.createReader(ctx,
             BinaryHeapInputStream.create(arr, pos),
             ctx.configuration().getClassLoader(),
             false);
@@ -85,7 +85,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         this.arr = other.arr;
         this.pos = start;
 
-        reader = BinaryAbstractReaderEx.createReader(ctx,
+        reader = BinaryAbstractReader.createReader(ctx,
             BinaryHeapInputStream.create(arr, start),
             null,
             other.reader.handles(),
@@ -859,7 +859,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
     /**
      * @return Reader.
      */
-    BinaryAbstractReaderEx reader() {
+    BinaryAbstractReader reader() {
         return reader;
     }
 
@@ -894,7 +894,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         }
 
         /** {@inheritDoc} */
-        @Override public void writeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer ctx) {
+        @Override public void writeTo(BinaryAbstractWriter writer, BinaryBuilderSerializer ctx) {
             ctx.writeValue(writer, wrappedCollection());
         }
 

@@ -21,8 +21,8 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.util.typedef.F;
@@ -123,7 +123,7 @@ public class JdbcIndexMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryAbstractWriterEx writer,
+    @Override public void writeBinary(BinaryAbstractWriter writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
@@ -143,7 +143,7 @@ public class JdbcIndexMeta implements JdbcRawBinarylizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryAbstractReaderEx reader,
+    @Override public void readBinary(BinaryAbstractReader reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();

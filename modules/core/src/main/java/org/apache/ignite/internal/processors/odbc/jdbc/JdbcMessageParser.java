@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
@@ -54,25 +54,25 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
      * @param msg Message.
      * @return Reader.
      */
-    protected BinaryAbstractReaderEx createReader(byte[] msg) {
+    protected BinaryAbstractReader createReader(byte[] msg) {
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        return BinaryAbstractReaderEx.createReader(null, stream, ctx.config().getClassLoader(), true);
+        return BinaryAbstractReader.createReader(null, stream, ctx.config().getClassLoader(), true);
     }
 
     /**
      * @param cap Capacisty
      * @return Writer.
      */
-    protected BinaryAbstractWriterEx createWriter(int cap) {
-        return BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(cap), null, null);
+    protected BinaryAbstractWriter createWriter(int cap) {
+        return BinaryAbstractWriter.createWriter(null, new BinaryHeapOutputStream(cap), null, null);
     }
 
     /** {@inheritDoc} */
     @Override public ClientListenerRequest decode(byte[] msg) {
         assert msg != null;
 
-        BinaryAbstractReaderEx reader = createReader(msg);
+        BinaryAbstractReader reader = createReader(msg);
 
         return JdbcRequest.readRequest(reader, ver);
     }
@@ -85,7 +85,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         JdbcResponse res = (JdbcResponse)msg;
 
-        BinaryAbstractWriterEx writer = createWriter(INIT_CAP);
+        BinaryAbstractWriter writer = createWriter(INIT_CAP);
 
         res.writeBinary(writer, ver);
 

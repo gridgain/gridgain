@@ -39,7 +39,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
@@ -170,7 +170,7 @@ public class PlatformContextImpl implements PlatformContext {
 
     /** {@inheritDoc} */
     @Override public BinaryRawReaderEx reader(PlatformInputStream in) {
-        return BinaryAbstractReaderEx.createReader(marsh.context(),
+        return BinaryAbstractReader.createReader(marsh.context(),
             in,
             ctx.config().getClassLoader(),
             null,

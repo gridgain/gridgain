@@ -36,24 +36,24 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
  *      [value type: 1][proto version: 1][flags: 2][type id: 4][hash code: 4][total length: 4][schema id: 4][raw offset or schema position: 4]
  *      </pre>
  *      , if there is raw data and there is no schema data then last 4 bytes will be offset of raw data,
- *      otherwise it will be offset of schema description</li>
+ *      otherwise it will be offset of schema description;</li>
  *
  *      <li>class name -- optional part of variable length. Containts {@link Class#getName()} of written object.
- *      Presents only if current type is unregistered ({@code typeId == 0})</li>
+ *      Presents only if current type is unregistered ({@code typeId == 0});</li>
  *
  *      <li>schema data section -- optional part of variable length. Contains values written with object schema.
- *      Presents if there are fields written to object.</li>
+ *      Presents if there are fields written to object;</li>
  *
  *      <li>raw data section -- optional part of variable length. Contains bytes of arbitrary format.
- *      Presents if there are raw bytes written by {@link BinaryRawWriter}</li>
+ *      Presents if there are raw bytes written by {@link BinaryRawWriter};</li>
  *
- *      <li>schema description -- optional part of variable length. Presents if schema data is present {@link BinaryRawWriter}</li>
+ *      <li>schema description -- optional part of variable length. Presents if schema data is present;</li>
  *
  *      <li>raw data offset -- optional part with length of 4 bytes. Contains offset to raw data section.
- *      Presents if schema data is present and there are raw bytes written by {@link BinaryRawWriter}</li>
+ *      Presents if schema data is present and there are raw bytes written by {@link BinaryRawWriter}.</li>
  * </ul>
  */
-public class BinaryWriterExImplV1 extends BinaryAbstractWriterEx {
+public class BinaryExWriterImplV1 extends BinaryAbstractWriter {
     /** Protocol version. */
     private static final byte PROTO_VER = 1;
 
@@ -62,7 +62,7 @@ public class BinaryWriterExImplV1 extends BinaryAbstractWriterEx {
      * @param out Output stream.
      * @param handles Handles.
      */
-    public BinaryWriterExImplV1(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
+    public BinaryExWriterImplV1(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
         BinaryWriterHandles handles) {
         super(ctx, out, schema, handles);
     }

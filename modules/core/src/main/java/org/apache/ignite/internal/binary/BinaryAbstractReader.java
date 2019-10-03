@@ -90,7 +90,8 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
  * Binary reader implementation.
  */
 @SuppressWarnings("unchecked")
-public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawReaderEx, BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
+public abstract class BinaryAbstractReader implements BinaryReader, BinaryRawReaderEx,
+    BinaryReaderEx, BinaryReaderHandlesHolder, ObjectInput {
     /** Binary context. */
     protected final BinaryContext ctx;
 
@@ -138,7 +139,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
      * @param ldr Class loader.
      * @param hnds Context.
      */
-    public BinaryAbstractReaderEx(BinaryContext ctx,
+    public BinaryAbstractReader(BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
         @Nullable BinaryReaderHandles hnds) {
@@ -156,7 +157,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
      * @param ldr Loader.
      * @param forUnmarshal For unmarshal.
      */
-    public static BinaryAbstractReaderEx createReader(
+    public static BinaryAbstractReader createReader(
         BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
@@ -171,7 +172,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
      * @param hnds Hnds.
      * @param forUnmarshal For unmarshal.
      */
-    public static BinaryAbstractReaderEx createReader(
+    public static BinaryAbstractReader createReader(
         BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
@@ -188,7 +189,7 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
      * @param skipHdrCheck Skip header check.
      * @param forUnmarshal For unmarshal.
      */
-    public static BinaryAbstractReaderEx createReader(
+    public static BinaryAbstractReader createReader(
         BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
@@ -197,14 +198,14 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         boolean forUnmarshal) {
 
         if (skipHdrCheck)
-            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+            return new BinaryExReaderImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
 
         int pos = in.position();
 
         if (in.readByte() != GridBinaryMarshaller.OBJ) {
             in.position(pos);
 
-            return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+            return new BinaryExReaderImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
         }
 
         byte ver = in.readByte();
@@ -215,9 +216,9 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
 
         switch (ver) {
             case 1:
-                return new BinaryReaderExImplV1(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+                return new BinaryExReaderImplV1(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
             case 2:
-                return new BinaryReaderExImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+                return new BinaryExReaderImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
             default:
                 throw new IgniteException("Unknown protocol version: " + ver);
 
@@ -1915,6 +1916,9 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
         return createReader(ctx, in, ldr, hnds, false, true).deserialize();
     }
 
+    /**
+     * @return {@code true} if flag {@link BinaryUtils#FLAG_USR_TYP} is set.
+     */
     private boolean userType() {
         return BinaryUtils.isUserType(flags());
     }
@@ -1926,14 +1930,14 @@ public abstract class BinaryAbstractReaderEx implements BinaryReader, BinaryRawR
     private int fieldId(String name) {
         assert name != null;
 
-        return mapper().fieldId(typeId(), name);
+        return mapper.fieldId(typeId(), name);
     }
 
-    private BinaryInternalMapper mapper() {
-        if (mapper == null)
-            mapper = userType() ? ctx.userTypeMapper(typeId()) : BinaryContext.defaultMapper();
-
-        return mapper;
+    /**
+     * @param mapper Mapper.
+     */
+    protected void mapper(BinaryInternalMapper mapper) {
+        this.mapper = mapper;
     }
 
     /**

@@ -21,8 +21,8 @@ import java.util.Collection;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -82,7 +82,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(marsh.context(), stream, ctx.config().getClassLoader(), true);
+        BinaryAbstractReader reader = BinaryAbstractReader.createReader(marsh.context(), stream, ctx.config().getClassLoader(), true);
 
         byte cmd = reader.readByte();
 
@@ -231,7 +231,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
      * @param paramNum Number of parameters in a row
      * @return Parameters array.
      */
-    @NotNull private static Object[] readParameterRow(BinaryAbstractReaderEx reader, int paramNum) {
+    @NotNull private static Object[] readParameterRow(BinaryAbstractReader reader, int paramNum) {
         Object[] params = new Object[paramNum];
 
         for (int i = 0; i < paramNum; ++i)
@@ -249,7 +249,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         OdbcResponse msg = (OdbcResponse)msg0;
 
         // Creating new binary writer
-        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
+        BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
             BinaryThreadLocalContext.get().schemaHolder(), null);
 
         // Writing status.
@@ -425,7 +425,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
      * @param writer Writer to use.
      * @param affectedRows Affected rows.
      */
-    private void writeAffectedRows(BinaryAbstractWriterEx writer, long[] affectedRows) {
+    private void writeAffectedRows(BinaryAbstractWriter writer, long[] affectedRows) {
         if (ver.compareTo(OdbcConnectionContext.VER_2_3_2) < 0) {
             long summ = 0;
 

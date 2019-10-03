@@ -201,7 +201,7 @@ public class BinaryConfiguration implements Serializable {
     /**
      * Set binary protocol version.
      *
-     * @param protoVer Protocol version. Should be in range 1..{@link #DFLT_PROTO_VER}
+     * @param protoVer Protocol version.
      * @return {@code this} for chaining.
      */
     public BinaryConfiguration setProtocolVersion(byte protoVer) {

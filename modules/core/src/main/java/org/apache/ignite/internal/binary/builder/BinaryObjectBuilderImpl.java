@@ -27,7 +27,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
@@ -149,7 +149,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      * @param ver Version.
      */
     public BinaryObject build(byte ver) {
-        try (BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(ver, ctx)) {
+        try (BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(ver, ctx)) {
             Thread curThread = Thread.currentThread();
 
             if (curThread instanceof IgniteThread)
@@ -174,7 +174,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
      * @param writer Writer.
      * @param serializer Serializer.
      */
-    void serializeTo(BinaryAbstractWriterEx writer, BinaryBuilderSerializer serializer) {
+    void serializeTo(BinaryAbstractWriter writer, BinaryBuilderSerializer serializer) {
         try {
             writer.preWrite(registeredType);
 

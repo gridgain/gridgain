@@ -46,7 +46,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Binary writer implementation.
  */
-public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawWriterEx, ObjectOutput {
+public abstract class BinaryAbstractWriter implements BinaryWriter, BinaryRawWriterEx, ObjectOutput {
     /** Length: integer. */
     private static final int LEN_INT = 4;
 
@@ -97,7 +97,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param out Output stream.
      * @param handles Handles.
      */
-    protected BinaryAbstractWriterEx(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
+    protected BinaryAbstractWriter(BinaryContext ctx, BinaryOutputStream out, BinaryWriterSchemaHolder schema,
         BinaryWriterHandles handles) {
         this.ctx = ctx;
         this.out = out;
@@ -113,7 +113,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param ctx Context.
      * @return Binary writer.
      */
-    public static BinaryAbstractWriterEx createWriter(BinaryContext ctx) {
+    public static BinaryAbstractWriter createWriter(BinaryContext ctx) {
         BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
 
         return createWriter(ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
@@ -127,7 +127,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param schema Schema.
      * @param handles Handles.
      */
-    public static BinaryAbstractWriterEx createWriter(BinaryContext ctx, BinaryOutputStream out,
+    public static BinaryAbstractWriter createWriter(BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
         return createWriter(ctx != null ? ctx.protocolVersion() : GridBinaryMarshaller.DFLT_PROTO_VER,
             ctx, out, schema, handles);
@@ -139,7 +139,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param ver Version.
      * @param ctx Context.
      */
-    public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx) {
+    public static BinaryAbstractWriter createWriter(byte ver, BinaryContext ctx) {
         BinaryThreadLocalContext tlsCtx = BinaryThreadLocalContext.get();
 
         return createWriter(ver, ctx, new BinaryHeapOutputStream(INIT_CAP, tlsCtx.chunk()), tlsCtx.schemaHolder(), null);
@@ -154,15 +154,15 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param schema Schema.
      * @param handles Handles.
      */
-    public static BinaryAbstractWriterEx createWriter(byte ver, BinaryContext ctx, BinaryOutputStream out,
+    public static BinaryAbstractWriter createWriter(byte ver, BinaryContext ctx, BinaryOutputStream out,
         BinaryWriterSchemaHolder schema, BinaryWriterHandles handles) {
         BinaryUtils.checkProtocolVersion(ver);
 
         switch (ver) {
             case 1:
-                return new BinaryWriterExImplV1(ctx, out, schema, handles);
+                return new BinaryExWriterImplV1(ctx, out, schema, handles);
             case 2:
-                return new BinaryWriterExImplV2(ctx, out, schema, handles);
+                return new BinaryExWriterImplV2(ctx, out, schema, handles);
             default:
                 throw new IgniteException("Unknown protocol version: " + ver);
         }
@@ -509,7 +509,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryAbstractWriterEx writer = createWriter(version(), ctx, out, schema, handles());
+            BinaryAbstractWriter writer = createWriter(version(), ctx, out, schema, handles());
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1500,7 +1500,7 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
         if (obj == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
-            BinaryAbstractWriterEx writer = createWriter(version(), ctx, out, schema, null);
+            BinaryAbstractWriter writer = createWriter(version(), ctx, out, schema, null);
 
             writer.failIfUnregistered(failIfUnregistered);
 
@@ -1921,8 +1921,8 @@ public abstract class BinaryAbstractWriterEx implements BinaryWriter, BinaryRawW
      * @param typeId type
      * @return New writer.
      */
-    public BinaryAbstractWriterEx newWriter(int typeId, String clsName) {
-        BinaryAbstractWriterEx res = createWriter(version(), ctx, out, schema, handles());
+    public BinaryAbstractWriter newWriter(int typeId, String clsName) {
+        BinaryAbstractWriter res = createWriter(version(), ctx, out, schema, handles());
 
         res.failIfUnregistered(failIfUnregistered);
 

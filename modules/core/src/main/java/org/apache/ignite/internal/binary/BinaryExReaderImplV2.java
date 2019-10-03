@@ -20,18 +20,17 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V1;
-import static org.apache.ignite.internal.binary.GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS;
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.HDR_LEN_V2;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
 
 /**
- * Binary reader implementation (protocol version 1).
+ * Binary reader implementation (protocol version 2).
  *
- * @see BinaryWriterExImplV1
+ * @see BinaryExWriterImplV2
  */
-public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements BinaryReaderEx {
+public class BinaryExReaderImplV2 extends BinaryAbstractReader {
     /** Protocol version. */
-    private static final byte PROTO_VER = 1;
+    private static final byte PROTO_VER = 2;
 
     /** Type ID. */
     private final int typeId;
@@ -67,7 +66,7 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
      * @param skipHdrCheck Whether to skip header check.
      * @param forUnmarshal {@code True} if reader is need to unmarshal object.
      */
-    public BinaryReaderExImplV1(BinaryContext ctx,
+    public BinaryExReaderImplV2(BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
         @Nullable BinaryReaderHandles hnds,
@@ -86,31 +85,39 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
             flags = in.readShort();
             int typeId0 = in.readInt();
 
-            in.readInt(); // Skip hash code.
+            in.readInt(); // skip hash code
 
             totalLen = in.readInt();
-            schemaId = in.readInt();
-            int schemaOrRawOff = in.readInt();
+            dataLen = in.readInt();
+
+            dataStartOff = start + HDR_LEN_V2;
 
             typeId = typeId0 == UNREGISTERED_TYPE_ID ? readTypeId(ctx, in, ldr, forUnmarshal) : typeId0;
 
             if (BinaryUtils.hasSchema(flags)) {
-                footerStartOff = start + schemaOrRawOff;
+                int off = schemaIdOffset();
+
+                schemaId = in.readIntPositioned(off);
+
+                footerStartOff = in.readIntPositioned(off + 4) + start;
 
                 schema(getOrCreateSchema());
             }
-            else
+            else {
                 footerStartOff = objectEndOffset();
+                schemaId = 0;
+            }
 
             if (BinaryUtils.hasRaw(flags))
-                rawOff = start + (BinaryUtils.hasSchema(flags) ? in.readIntPositioned(rawOffsetPos()) : schemaOrRawOff);
+                rawOff = BinaryUtils.hasSchema(flags) ? in.readIntPositioned(metaStartOffset()) + start : dataStartOff;
             else
                 rawOff = objectEndOffset();
 
-            dataStartOff = start + HDR_LEN_V1 + (typeId0 == UNREGISTERED_TYPE_ID
-                ? className().length() + 5 /* 1 for value type + 4 for string length */ : 0);
+            if (BinaryUtils.hasUpdateTime(flags)) {
+                in.position(updateTimeOffset());
 
-            dataLen = footerStartOff - dataStartOff;
+                updateTime = in.readLong();
+            }
         }
         else {
             typeId = 0;
@@ -123,6 +130,8 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
             rawOff = 0;
         }
 
+        mapper(BinaryUtils.isUserType(flags) ? ctx.userTypeMapper(typeId) : BinaryContext.defaultMapper());
+
         streamPosition(start);
     }
 
@@ -132,13 +141,33 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
     }
 
     /** */
-    private int rawOffsetPos() {
-        return BinaryUtils.hasSchema(flags) ? objectEndOffset() - 4 : start + SCHEMA_OR_RAW_OFF_POS;
+    private int metaStartOffset() {
+        return dataStartOff + dataLen;
+    }
+
+    /** */
+    private int schemaIdOffset() {
+        int off = metaStartOffset();
+
+        if (BinaryUtils.hasRaw(flags))
+            off += 4;
+
+        return off;
+    }
+
+    /** */
+    private int updateTimeOffset() {
+        return footerStartOff - 8;
     }
 
     /** {@inheritDoc} */
     @Override protected int classNameOffset() {
-        return start + HDR_LEN_V1;
+        int off = schemaIdOffset();
+
+        if (BinaryUtils.hasSchema(flags))
+            off += 8;
+
+        return off;
     }
 
     /** {@inheritDoc} */
@@ -188,7 +217,7 @@ public class BinaryReaderExImplV1 extends BinaryAbstractReaderEx implements Bina
 
     /** {@inheritDoc} */
     @Override public int rawLength() {
-        return start + HDR_LEN_V1 + dataLen - rawOff;
+        return start + HDR_LEN_V2 + dataLen - rawOff;
     }
 
     /** {@inheritDoc} */

@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
 /**
@@ -33,7 +33,7 @@ public interface JdbcRawBinarylizable {
      * @param ver ver Protocol version.
      * @throws BinaryObjectException In case of error.
      */
-    public void writeBinary(BinaryAbstractWriterEx writer, ClientListenerProtocolVersion ver) throws BinaryObjectException;
+    public void writeBinary(BinaryAbstractWriter writer, ClientListenerProtocolVersion ver) throws BinaryObjectException;
 
     /**
      * Reads fields from provided reader.
@@ -42,6 +42,6 @@ public interface JdbcRawBinarylizable {
      * @param ver Protocol version.
      * @throws BinaryObjectException In case of error.
      */
-    public void readBinary(BinaryAbstractReaderEx reader,
+    public void readBinary(BinaryAbstractReader reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException;
 }

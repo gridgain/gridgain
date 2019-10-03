@@ -22,8 +22,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.binary.BinaryAbstractReaderEx;
-import org.apache.ignite.internal.binary.BinaryAbstractWriterEx;
+import org.apache.ignite.internal.binary.BinaryAbstractReader;
+import org.apache.ignite.internal.binary.BinaryAbstractWriter;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
@@ -263,7 +263,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     private void onHandshake(GridNioSession ses, byte[] msg) {
         BinaryInputStream stream = new BinaryHeapInputStream(msg);
 
-        BinaryAbstractReaderEx reader = BinaryAbstractReaderEx.createReader(null, stream, null, true);
+        BinaryAbstractReader reader = BinaryAbstractReader.createReader(null, stream, null, true);
 
         byte cmd = reader.readByte();
 
@@ -281,7 +281,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(verMajor, verMinor, verMaintenance);
 
-        BinaryAbstractWriterEx writer = BinaryAbstractWriterEx.createWriter(null, new BinaryHeapOutputStream(8), null, null);
+        BinaryAbstractWriter writer = BinaryAbstractWriter.createWriter(null, new BinaryHeapOutputStream(8), null, null);
 
         byte clientType = reader.readByte();
 
