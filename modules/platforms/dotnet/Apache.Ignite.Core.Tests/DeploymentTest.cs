@@ -40,34 +40,10 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestCustomDeployment()
         {
-            // Create temp folder
-            var folder = _tempFolder;
-            DeployTo(folder);
+            var dllFolder = Path.Combine(_tempFolder, "dlls");
+            var jarFolder = Path.Combine(_tempFolder, "jars");
 
-            // Build classpath
-            var classpath = string.Join(";", Directory.GetFiles(folder).Select(Path.GetFileName));
-
-            // Copy config
-            var springPath = Path.GetFullPath("config\\compute\\compute-grid2.xml");
-            var springFile = Path.GetFileName(springPath);
-            File.Copy(springPath, Path.Combine(folder, springFile));
-
-            // Start a node and make sure it works properly
-            var exePath = Path.Combine(folder, "Apache.Ignite.exe");
-
-            var proc = IgniteProcess.Start(exePath, string.Empty, args: new[]
-            {
-                "-springConfigUrl=" + springFile,
-                "-jvmClasspath=" + classpath,
-                "-assembly=" + Path.GetFileName(GetType().Assembly.Location),
-                "-J-ea",
-                "-J-Xms512m",
-                "-J-Xmx512m"
-            });
-
-            Assert.IsNotNull(proc);
-
-            VerifyNodeStarted(exePath);
+            TestDeployment(dllFolder, jarFolder, true);
         }
 
         /// <summary>
@@ -77,8 +53,10 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestLibsDirectoryInAppPathDeployment()
         {
-            // TODO
-            // TODO: Test that publish actually works
+            var dllFolder = Path.Combine(_tempFolder, "foo");
+            var jarFolder = Path.Combine(dllFolder, "libs");
+
+            TestDeployment(dllFolder, jarFolder, true);
         }
 
         /// <summary>
@@ -151,12 +129,56 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Tests deployment to custom folders.
+        /// </summary>
+        private void TestDeployment(string dllFolder, string jarFolder, bool buildClasspath)
+        {
+            DeployTo(dllFolder, jarFolder);
+
+            var classpath = buildClasspath
+                ? string.Join(";", Directory.GetFiles(jarFolder).Select(Path.GetFileName))
+                : null;
+
+            // Copy config
+            var springPath = Path.GetFullPath("config\\compute\\compute-grid2.xml");
+            var springFile = Path.GetFileName(springPath);
+            File.Copy(springPath, Path.Combine(dllFolder, springFile));
+
+            // Start a node and make sure it works properly
+            var exePath = Path.Combine(dllFolder, "Apache.Ignite.exe");
+
+            var proc = IgniteProcess.Start(exePath, string.Empty, args: new[]
+            {
+                "-springConfigUrl=" + springFile,
+                "-jvmClasspath=" + classpath,
+                "-assembly=" + Path.GetFileName(GetType().Assembly.Location),
+                "-J-ea",
+                "-J-Xms512m",
+                "-J-Xmx512m"
+            });
+
+            Assert.IsNotNull(proc);
+
+            VerifyNodeStarted(exePath);
+        }
+
+        /// <summary>
         /// Deploys binaries to specified folder
         /// </summary>
-        private void DeployTo(string folder)
+        private void DeployTo(string folder, string jarFolder = null)
         {
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            if (!string.IsNullOrWhiteSpace(jarFolder) && !Directory.Exists(jarFolder))
+            {
+                Directory.CreateDirectory(jarFolder);
+            }
+
             // Copy jars.
-            var home = IgniteHome.Resolve(null);
+            var home = IgniteHome.Resolve();
 
             var jarNames = new[] {@"\ignite-core-", @"\cache-api-1.0.0.jar", @"\modules\spring\"};
 
@@ -170,7 +192,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 var fileName = Path.GetFileName(jar);
                 Assert.IsNotNull(fileName);
-                File.Copy(jar, Path.Combine(folder, fileName), true);
+                File.Copy(jar, Path.Combine(jarFolder ?? folder, fileName), true);
             }
 
             // Copy .NET binaries
