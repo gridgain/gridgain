@@ -1052,7 +1052,7 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
     @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     @SuppressWarnings({"unchecked", "ThrowableNotThrown"})
     public void testSettingBaselineTopologyWithOfflineNodeFromOldTopology() throws Exception {
-        Ignite ignite = startGrids(2);
+        IgniteEx ignite = startGrids(2);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 

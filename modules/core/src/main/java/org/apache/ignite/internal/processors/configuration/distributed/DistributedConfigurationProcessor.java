@@ -43,7 +43,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
     private static final String DIST_CONF_PREFIX = "distrConf-";
 
     /** Properties storage. */
-    private final Map<String, DistributedProperty> props = new ConcurrentHashMap<>();
+    private final Map<String, DistributedChangeableProperty> props = new ConcurrentHashMap<>();
 
     /** Global metastorage. */
     private volatile DistributedMetaStorage distributedMetastorage;
@@ -73,7 +73,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
                 distributedMetastorage.listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
-                        DistributedProperty prop = props.get(toPropertyKey(key));
+                        DistributedChangeableProperty prop = props.get(toPropertyKey(key));
 
                         if (prop != null)
                             prop.localUpdate(newVal);
@@ -137,7 +137,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public <T extends DistributedProperty> void registerProperties(T... props) {
+    @Override public <T extends DistributedChangeableProperty> void registerProperties(T... props) {
         Arrays.stream(props)
             .forEach(this::registerProperty);
     }
@@ -146,12 +146,9 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      * Register property to processor and attach it if it possible.
      *
      * @param prop Property to attach to processor.
-     * @param <T> Type of property value.
      */
-    @Override public <T extends DistributedProperty> T registerProperty(T prop) {
+    @Override public void registerProperty(DistributedChangeableProperty prop) {
         doAllAllowableActions(prop);
-
-        return prop;
     }
 
     /**
@@ -159,7 +156,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param <T> Type of property value.
      */
-    public <T extends DistributedProperty> T getProperty(String name) {
+    public <T extends SimpleDistributedProperty> T getProperty(String name) {
         return (T)props.get(name);
     }
 
@@ -170,7 +167,11 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      * @return Attached new property.
      */
     @Override public DistributedLongProperty registerLong(String name) {
-        return registerProperty(new DistributedLongProperty(name));
+        DistributedLongProperty prop = new DistributedLongProperty(name);
+
+        registerProperty(prop);
+
+        return prop;
     }
 
     /**
@@ -180,7 +181,11 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      * @return Attached new property.
      */
     @Override public DistributedBooleanProperty registerBoolean(String name) {
-        return registerProperty(new DistributedBooleanProperty(name));
+        DistributedBooleanProperty prop = new DistributedBooleanProperty(name);
+
+        registerProperty(prop);
+
+        return prop;
     }
 
     /**
@@ -188,7 +193,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be executed on.
      */
-    private void doAllAllowableActions(DistributedProperty prop) {
+    private void doAllAllowableActions(DistributedChangeableProperty prop) {
         for (AllowableAction action : AllowableAction.values()) {
             doAction(action, prop);
 
@@ -203,7 +208,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      * @param act Action to execute.
      * @param prop Property which action should be execute on.
      */
-    private void doAction(AllowableAction act, DistributedProperty prop) {
+    private void doAction(AllowableAction act, DistributedChangeableProperty prop) {
         switch (act) {
             case REGISTER:
                 doRegister(prop);
@@ -224,7 +229,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doRegister(DistributedProperty prop) {
+    private void doRegister(DistributedChangeableProperty prop) {
         if (props.containsKey(prop.getName()))
             throw new IllegalArgumentException("Property already exists : " + prop.getName());
 
@@ -240,7 +245,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doActualize(DistributedProperty prop) {
+    private void doActualize(DistributedChangeableProperty prop) {
         Serializable readVal = null;
         try {
             readVal = distributedMetastorage.read(toMetaStorageKey(prop.getName()));
@@ -259,7 +264,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doClusterWideUpdate(DistributedProperty prop) {
+    private void doClusterWideUpdate(DistributedChangeableProperty prop) {
         prop.onReadyForUpdate(new PropertyUpdateClosure() {
             @Override public GridFutureAdapter<?> update(String key, Serializable newValue)
                 throws IgniteCheckedException {

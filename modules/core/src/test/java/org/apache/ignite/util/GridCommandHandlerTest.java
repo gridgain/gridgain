@@ -90,6 +90,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -99,6 +100,7 @@ import org.junit.Test;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -137,7 +139,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         initDiagnosticDir();
 
-        cleanDiagnosticDir();
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -533,7 +535,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineAdd() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -559,7 +561,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineRemove() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -619,7 +621,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineSet() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -643,7 +645,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineSetWithOfflineNode() throws Exception {
-        Ignite ignite0 = startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
@@ -672,7 +674,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineVersion() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -695,6 +697,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    })
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -732,6 +738,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    })
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -763,6 +773,20 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
             baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
         );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineAutoAdjustmentAutoFeatueDisabled() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
     }
 
     /**

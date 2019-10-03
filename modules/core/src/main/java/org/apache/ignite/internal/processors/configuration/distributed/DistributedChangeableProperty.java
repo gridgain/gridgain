@@ -13,24 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.configuration.distributed;
 
-/**
- * Implementation of {@link DistributedProperty} for {@link Boolean}.
- */
-public class DistributedBooleanProperty extends SimpleDistributedProperty<Boolean> {
+import java.io.Serializable;
+import org.jetbrains.annotations.NotNull;
 
-    /** {@inheritDoc} */
-    DistributedBooleanProperty(String name) {
-        super(name);
-    }
+/**
+ * Inner interface to maintenance of distributed property.
+ */
+public interface DistributedChangeableProperty<T extends Serializable> extends DistributedProperty<T> {
+    /**
+     * This property have been attached to processor.
+     */
+    void onAttached();
 
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * On this property ready to be update on cluster wide.
+     *
+     * @param updater Consumer for update value across cluster.
      */
-    public static DistributedBooleanProperty detachedBooleanProperty(String name) {
-        return new DistributedBooleanProperty(name);
-    }
+    void onReadyForUpdate(@NotNull PropertyUpdateClosure updater);
+
+    /**
+     * Update only local value without updating remote cluster.
+     *
+     * @param newVal New value.
+     */
+    void localUpdate(Serializable newVal);
 }

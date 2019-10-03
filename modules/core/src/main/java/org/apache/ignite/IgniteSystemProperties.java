@@ -1359,6 +1359,11 @@ public final class IgniteSystemProperties {
         "IGNITE_CLUSTER_ID_AND_TAG_FEATURE";
 
     /**
+     * Flag to enable baseline auto-adjust feature.
+     */
+    public static final String IGNITE_BASELINE_AUTO_ADJUST_FEATURE = "IGNITE_BASELINE_AUTO_ADJUST_FEATURE";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

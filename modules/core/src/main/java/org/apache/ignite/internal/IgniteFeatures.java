@@ -25,6 +25,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
@@ -105,7 +106,10 @@ public enum IgniteFeatures {
     WC_SCHEDULING_NOT_AVAILABLE(24),
 
     /** Support of DR-specific visor tasks used by control utility. */
-    DR_CONTROL_UTILITY(25);
+    DR_CONTROL_UTILITY(25),
+
+    /** Baseline auto-adjust. */
+    BASELINE_AUTO_ADJUST(26);
 
     /**
      * Unique feature identifier.
@@ -221,6 +225,10 @@ public enum IgniteFeatures {
 
             boolean clusterIdAndTagEnabled = getBoolean(IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false);
             if (CLUSTER_ID_AND_TAG == value && !clusterIdAndTagEnabled)
+                continue;
+
+            boolean autoAdjustEnabled = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_FEATURE, false);
+            if (BASELINE_AUTO_ADJUST == value && !autoAdjustEnabled)
                 continue;
 
             final int featureId = value.getFeatureId();

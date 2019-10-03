@@ -50,7 +50,7 @@ public class IgniteDiscoveryCacheReuseSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDiscoCacheReuseOnNodeJoin() throws Exception {
-        Ignite ignite1 = startGridsMultiThreaded(2);
+        IgniteEx ignite1 = (IgniteEx)startGridsMultiThreaded(2);
 
         ignite1.cluster().baselineAutoAdjustEnabled(false);
         // The final topology version after 2 node joins and one CacheAffinityChange message.
