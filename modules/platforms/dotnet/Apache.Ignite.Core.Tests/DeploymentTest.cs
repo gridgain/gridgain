@@ -71,6 +71,26 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Tests that the most common scenario of `libs` directory being next to all application files works.
+        /// This happens by default on build or publish.
+        /// </summary>
+        [Test]
+        public void TestLibsDirectoryInAppPathDeployment()
+        {
+            // TODO
+            // TODO: Test that publish actually works
+        }
+
+        /// <summary>
+        /// Tests that NuGet-based deployment where libs folder is inside `build/output` works.
+        /// </summary>
+        [Test]
+        public void TestNuGetDeployment()
+        {
+            // TODO
+        }
+
+        /// <summary>
         /// Tests missing JARs.
         /// </summary>
         [Test]
