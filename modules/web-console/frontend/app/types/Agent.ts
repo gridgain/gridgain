@@ -24,10 +24,10 @@ export type ClusterStats = {
 	gridgain: boolean,
 	ultimate: boolean,
 	supportedFeatures: string,
-	nodes: [{
-		address: string,
-		client: boolean
-	}]
+	nodes: {[nodeId: string]: {
+        address: string,
+        client: boolean
+    }}
 }
 
 export type AgentsStatResponse = {
