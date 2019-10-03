@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
@@ -46,6 +47,9 @@ import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS
 public class RestExecutor implements AutoCloseable {
     /** */
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(RestExecutor.class));
+
+    /** */
+    private static final long REQUEST_TIMEOUT = MINUTES.toMillis(3L);
 
     /** */
     private final HttpClient httpClient;
@@ -115,7 +119,7 @@ public class RestExecutor implements AutoCloseable {
             .send(lsnr);
 
         try {
-            Response res = lsnr.get(60L, TimeUnit.SECONDS);
+            Response res = lsnr.get(REQUEST_TIMEOUT, TimeUnit.MILLISECONDS);
 
             return parseResponse(res, lsnr.getInputStream());
         }
