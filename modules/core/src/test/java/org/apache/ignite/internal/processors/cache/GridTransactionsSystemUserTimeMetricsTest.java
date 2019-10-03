@@ -22,6 +22,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -33,8 +35,11 @@ import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.mxbean.TransactionMetricsMxBean;
 import org.apache.ignite.mxbean.TransactionsMXBean;
@@ -57,6 +62,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_D
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TIME_BUCKETS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJson;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -95,6 +102,12 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     /** */
     private static final String ROLLBACK_TIME_DUMP_REGEX =
         ".*?Long transaction time dump .*?cacheOperationsTime=[0-9]{1,4}.*?rollbackTime=[0-9]{1,4}.*";
+
+    /** */
+    private static final String HISTOGRAM_REGEX = histogramRegex();
+
+    /** */
+    private static final Pattern HISTOGRAM_VALUE_COUNT_PATTERN = Pattern.compile("\"value\":(?<count>[0-9]{1})");
 
     /** */
     private LogListener logTxDumpLsnr = new MessageOrderLogListener(TRANSACTION_TIME_DUMP_REGEX);
@@ -354,10 +367,38 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      *
      * @param histogramJson Histogram json.
      */
-    private void assertNotEmpty(String histogramJson) {
+    private void checkHistogram(String histogramJson, int txCnt) {
         assertNotNull(histogramJson);
 
-        assertTrue(histogramJson.length() > 0);
+        assertTrue(histogramJson, histogramJson.matches(HISTOGRAM_REGEX));
+        assertTrue(histogramJson, histogramJson.contains("\"values\":[{\"fromInclusive\":0,\"toInclusive\":1,\""));
+
+        Matcher m = HISTOGRAM_VALUE_COUNT_PATTERN.matcher(histogramJson);
+
+        int cnt = 0;
+
+        while (m.find()) {
+            String c = m.group("count");
+
+            cnt += Integer.valueOf(c);
+        }
+
+        assertEquals("Must be " + txCnt + " transaction(s), actually were: " + cnt + ". Histogram: " + histogramJson, txCnt, cnt);
+    }
+
+    /**
+     * Creates histogram regex to check transaction histograms.
+     * @return Regex.
+     */
+    private static String histogramRegex() {
+        String regex = toJson(new HistogramMetric(METRIC_TIME_BUCKETS))
+            .replace("{", "\\{")
+            .replace("}", "\\}")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+            .replace("\"value\":0", "\"value\":[0-9]{1}");
+
+        return regex;
     }
 
     /**
@@ -385,8 +426,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
             assertTrue(sysTime < res.completionTime - res.startTime - userTime + EPSILON);
         }
 
-        assertNotEmpty(res.mBean.getNodeSystemTimeHistogram());
-        assertNotEmpty(res.mBean.getNodeUserTimeHistogram());
+        checkHistogram(res.mBean.getNodeSystemTimeHistogram(), 2);
+        checkHistogram(res.mBean.getNodeUserTimeHistogram(), 2);
     }
 
     /**
