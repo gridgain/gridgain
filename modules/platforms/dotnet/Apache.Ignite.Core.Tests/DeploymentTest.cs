@@ -66,7 +66,10 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestNuGetDeployment()
         {
-            // TODO
+            var dllFolder = Path.Combine(_tempFolder, Path.Combine("lib", "net40"));
+            var jarFolder = Path.Combine(_tempFolder, Path.Combine("build", "output", "libs"));
+
+            TestDeployment(dllFolder, jarFolder, true);
         }
 
         /// <summary>
