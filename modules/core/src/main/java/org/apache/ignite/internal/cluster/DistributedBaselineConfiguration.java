@@ -80,7 +80,7 @@ public class DistributedBaselineConfiguration {
         boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
-        dfltEnabled = true;//getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
+        dfltEnabled = !persistenceEnabled;//getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
 
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
