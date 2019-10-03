@@ -34,12 +34,16 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_MISSED;
 
 /**
@@ -55,6 +59,15 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     /** New nodes count. */
     public static final int NEW_NODES = 3;
 
+    /** Cache with randezvous affinity. */
+    public static final String RANDEZVOUSE_CACHE = DEFAULT_CACHE_NAME + "_randezvous_aff";
+
+    /** Cache with custom affinity. */
+    public static final String CUSTOM_CACHE = DEFAULT_CACHE_NAME + "_specific_aff";
+
+    /** Persistent enabled. */
+    public boolean persistentEnabled;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -62,70 +75,137 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                    .setPersistenceEnabled(true)))
+                    .setPersistenceEnabled(persistentEnabled)))
             .setCacheConfiguration(
-                new CacheConfiguration(DEFAULT_CACHE_NAME)
+                new CacheConfiguration(RANDEZVOUSE_CACHE)
+                    .setBackups(BACKUPS),
+                new CacheConfiguration(CUSTOM_CACHE)
                     .setBackups(BACKUPS)
                     .setAffinity(new TestAffinity(4)));
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+        System.clearProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testSupplingOldBackup() throws Exception {
-        try {
-            IgniteEx ignite0 = startGrids(NODES_CNT);
+    public void testPersistentFullRebalance() throws Exception {
+        supplingFromOldBackup(true);
+    }
 
-            ignite0.cluster().active(true);
-            ignite0.cluster().baselineAutoAdjustEnabled(false);
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryFullRebalance() throws Exception {
+        supplingFromOldBackup(false);
+    }
 
-            TestRecordingCommunicationSpi testCommunicationSpi0 = (TestRecordingCommunicationSpi)ignite0
-                .configuration().getCommunicationSpi();
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPersistentHistoricalRebalance() throws Exception {
+        System.setProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
 
-            loadData(ignite0, DEFAULT_CACHE_NAME);
+        supplingFromOldBackup(true);
+    }
 
-            awaitPartitionMapExchange();
+    /**
+     * @throws Exception If failed.
+     */
+    public void supplingFromOldBackup(boolean persistentEnabled) throws Exception {
+        this.persistentEnabled = persistentEnabled;
 
-            TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1");
-            TestRecordingCommunicationSpi testCommunicationSpi2 = startNodeWithBlockingRebalance("new_2");
-            TestRecordingCommunicationSpi testCommunicationSpi3 = startNodeWithBlockingRebalance("new_3");
+        IgniteEx ignite0 = startGrids(NODES_CNT);
 
-            ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
+        ignite0.cluster().active(true);
 
-            testCommunicationSpi1.waitForBlocked();
-            testCommunicationSpi2.waitForBlocked();
-            testCommunicationSpi3.waitForBlocked();
+        TestRecordingCommunicationSpi testCommunicationSpi0 = (TestRecordingCommunicationSpi)ignite0
+            .configuration().getCommunicationSpi();
 
-            AtomicBoolean hasMissed = new AtomicBoolean();
+        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, CUSTOM_CACHE);
 
-            ignite0.events().localListen(event -> {
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
+        awaitPartitionMapExchange();
+
+        TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1");
+        TestRecordingCommunicationSpi testCommunicationSpi2 = startNodeWithBlockingRebalance("new_2");
+        TestRecordingCommunicationSpi testCommunicationSpi3 = startNodeWithBlockingRebalance("new_3");
+
+        ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
+
+        testCommunicationSpi1.waitForBlocked();
+        testCommunicationSpi2.waitForBlocked();
+        testCommunicationSpi3.waitForBlocked();
+
+        checkState(GridDhtPartitionState.RENTING, RANDEZVOUSE_CACHE);
+        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+
+        AtomicBoolean hasMissed = new AtomicBoolean();
+
+        for (Ignite ign : G.allGrids()) {
+            ign.events().localListen(event -> {
                 info("Partition missing event: " + event);
 
                 hasMissed.compareAndSet(false, true);
 
                 return false;
             }, EVT_CACHE_REBALANCE_PART_MISSED);
-
-            testCommunicationSpi0.record(GridDhtPartitionsFullMessage.class);
-
-            testCommunicationSpi1.stopBlock();
-            testCommunicationSpi2.stopBlock();
-
-            testCommunicationSpi0.waitForRecorded();
-
-            testCommunicationSpi3.stopBlock();
-
-            awaitPartitionMapExchange();
-
-            assertFalse(hasMissed.get());
         }
-        finally {
-            stopAllGrids();
+
+        testCommunicationSpi0.record(GridDhtPartitionsFullMessage.class);
+
+        testCommunicationSpi1.stopBlock();
+        testCommunicationSpi2.stopBlock();
+
+        testCommunicationSpi0.waitForRecorded();
+
+        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+
+        testCommunicationSpi3.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        checkState(GridDhtPartitionState.MOVING, RANDEZVOUSE_CACHE);
+        checkState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
+
+        assertFalse(hasMissed.get());
+    }
+
+    /**
+     * Check partiiton state on all nodes by all caches.
+     */
+    private void checkState(GridDhtPartitionState state, String cacheName) {
+        for (Ignite ign : G.allGrids()) {
+            checkPartitionState((IgniteEx)ign, state, cacheName);
+        }
+    }
+
+    /**
+     * Checks a sate of partition on specific node.
+     *
+     * @param igniteEx Ignite.
+     * @param state Partiton state.
+     * @param cacheName Cache name.
+     */
+    private void checkPartitionState(IgniteEx igniteEx, GridDhtPartitionState state, String cacheName) {
+        for (GridDhtLocalPartition p : igniteEx.cachex(cacheName).context().topology().currentLocalPartitions()) {
+            assertTrue("Cache " + cacheName + " partiotn " + p.id() + " in " + state + " state on " + igniteEx.name(),
+                p.state() != state);
         }
     }
 
@@ -143,12 +223,13 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
             if (msg instanceof GridDhtPartitionDemandMessage) {
                 GridDhtPartitionDemandMessage demandMessage = (GridDhtPartitionDemandMessage)msg;
 
-                if (CU.cacheId(DEFAULT_CACHE_NAME) != demandMessage.groupId())
+                if (CU.cacheId(RANDEZVOUSE_CACHE) != demandMessage.groupId()
+                    && CU.cacheId(CUSTOM_CACHE) != demandMessage.groupId())
                     return false;
 
                 info("Message was caught: " + msg.getClass().getSimpleName()
                     + " to: " + node.consistentId()
-                    + " by chache: " + DEFAULT_CACHE_NAME);
+                    + " by cache id: " + demandMessage.groupId());
 
                 return true;
             }
@@ -156,7 +237,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
             return false;
         });
 
-        Ignite ignite1 = startGrid(cfg);
+        startGrid(cfg);
+
         return communicationSpi;
     }
 
