@@ -30,6 +30,7 @@ import org.apache.ignite.internal.binary.BinaryFooterOffsetsHeapSelfTest;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsHeapSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsOffheapSelfTest;
 import org.apache.ignite.internal.binary.BinaryFooterOffsetsOffheapSelfTestV2;
+import org.apache.ignite.internal.binary.BinaryMarshallerMixedVersionTest;
 import org.apache.ignite.internal.binary.BinaryMarshallerSelfTest;
 import org.apache.ignite.internal.binary.BinaryMarshallerSelfTestV2;
 import org.apache.ignite.internal.binary.BinaryObjectBuilderAdditionalSelfTest;
@@ -56,6 +57,7 @@ import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsHeapNonCo
 import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsHeapNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsOffheapNonCompactSelfTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryFooterOffsetsOffheapNonCompactSelfTestV2;
+import org.apache.ignite.internal.binary.noncompact.BinaryMarshallerMixedNonCompactTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryMarshallerNonCompactSelfTest;
 import org.apache.ignite.internal.binary.noncompact.BinaryMarshallerNonCompactSelfTestV2;
 import org.apache.ignite.internal.binary.noncompact.BinaryObjectBuilderAdditionalNonCompactSelfTest;
@@ -99,6 +101,7 @@ import org.junit.runners.Suite;
     BinaryTreeSelfTest.class,
     BinaryMarshallerSelfTest.class,
     BinaryMarshallerSelfTestV2.class,
+    BinaryMarshallerMixedVersionTest.class,
     BinaryObjectExceptionSelfTest.class,
 
     BinarySerialiedFieldComparatorSelfTest.class,
@@ -143,6 +146,7 @@ import org.junit.runners.Suite;
     BinaryFooterOffsetsHeapNonCompactSelfTestV2.class,
     BinaryFooterOffsetsOffheapNonCompactSelfTest.class,
     BinaryFooterOffsetsOffheapNonCompactSelfTestV2.class,
+    BinaryMarshallerMixedNonCompactTest.class,
 
     GridCacheBinaryObjectsLocalSelfTest.class,
     //GridCacheBinaryObjectsLocalOnheapSelfTest.class,

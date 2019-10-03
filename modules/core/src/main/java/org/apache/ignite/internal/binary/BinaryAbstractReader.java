@@ -202,13 +202,8 @@ public abstract class BinaryAbstractReader implements BinaryReader, BinaryRawRea
 
         int pos = in.position();
 
-        if (in.readByte() != GridBinaryMarshaller.OBJ) {
-            in.position(pos);
-
-            return new BinaryExReaderImplV2(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
-        }
-
-        byte ver = in.readByte();
+        byte ver = in.readByte() == GridBinaryMarshaller.OBJ ? in.readByte()
+            : ctx != null ? ctx.protocolVersion() : GridBinaryMarshaller.DFLT_PROTO_VER;
 
         in.position(pos);
 

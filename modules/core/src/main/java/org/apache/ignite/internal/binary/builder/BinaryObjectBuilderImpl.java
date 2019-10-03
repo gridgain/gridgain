@@ -138,6 +138,8 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         ctx = reader.binaryContext();
         clsName = reader.reader().className();
         updateTime = reader.reader().updateTime();
+
+        registeredType = clsName == null;
     }
 
     /** {@inheritDoc} */
@@ -298,13 +300,13 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
             if (reader != null) {
                 // Write raw data if any.
-                int rawOff = reader.reader().rawOffset();
-                int footerStart = reader.reader().footerStartOffset();
+                int rawStartPos = reader.reader().rawOffset();
+                int rawEndPos = reader.reader().dataStartOffset() + reader.reader().dataLength();
 
-                if (rawOff < footerStart) {
+                if (rawStartPos < rawEndPos) {
                     writer.rawWriter();
 
-                    writer.write(reader.array(), rawOff, footerStart - rawOff);
+                    writer.write(reader.array(), rawStartPos, rawEndPos - rawStartPos);
                 }
 
                 // Shift reader to the end of the object.

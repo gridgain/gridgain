@@ -4171,7 +4171,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /**
      */
-    private enum TestEnum {
+    enum TestEnum {
         A, B, C, D, E
     }
 
@@ -5090,20 +5090,20 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /**
      */
-    private static class Value {
+    static class Value {
         /** */
         private int val;
 
         /**
          */
-        private Value() {
+        Value() {
             // No-op.
         }
 
         /**
          * @param val Value.
          */
-        private Value(int val) {
+        Value(int val) {
             this.val = val;
         }
 
@@ -5128,18 +5128,18 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /**
      */
-    private static class DateClass1 {
+    static class DateClass1 {
         /** */
-        private Date date;
+        Date date;
 
         /** */
-        private Timestamp ts;
+        Timestamp ts;
 
         /** */
-        private Time time;
+        Time time;
 
         /** */
-        private Time[] timeArr;
+        Time[] timeArr;
     }
 
     /**
@@ -5420,7 +5420,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     /**
      * Wrapper object.
      */
-    private static class Wrapper {
+    static class Wrapper {
 
         /** Value. */
         private final Object value;
@@ -5435,6 +5435,24 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
          */
         public Object getValue() {
             return value;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            Wrapper wrapper = (Wrapper)o;
+
+            return Objects.equals(value, wrapper.value);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(value);
         }
     }
 
@@ -5534,7 +5552,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private static class ObjectWithRaw implements Binarylizable {
+    static class ObjectWithRaw implements Binarylizable {
         /** */
         private int val;
 
@@ -5569,10 +5587,29 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
             rawVal = reader.rawReader().readInt();
         }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            ObjectWithRaw raw = (ObjectWithRaw)o;
+
+            return val == raw.val &&
+                rawVal == raw.rawVal;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(val, rawVal);
+        }
     }
 
     /** */
-    private static class ObjectRaw implements Binarylizable {
+    static class ObjectRaw implements Binarylizable {
         /** */
         private int val0;
 
@@ -5606,6 +5643,25 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
             val0 = rawReader.readInt();
             val1 = rawReader.readInt();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            ObjectRaw raw = (ObjectRaw)o;
+
+            return val0 == raw.val0 &&
+                val1 == raw.val1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(val0, val1);
         }
     }
 
