@@ -174,7 +174,7 @@ import org.junit.runners.Suite;
 
     SqlPartOfComplexPkLookupTest.class,
 
-    SqlDataTypesCoverageTests.class,
+    SqlDataTypesCoverageTests.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }

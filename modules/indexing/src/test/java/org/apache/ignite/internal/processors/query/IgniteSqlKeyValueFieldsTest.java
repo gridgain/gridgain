@@ -371,17 +371,17 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
      */
     @Test
     public void testReturnColumnTypeByAlterTableDropAddColumn() {
-        returnSqlColumnType("int", 1, asList("int"), new LinkedList<>(asList("a")));
+        checkRecreateSqlColumn("int", 1, asList("int"), new LinkedList<>(asList("a")));
 
-        returnSqlColumnType("varchar", 1, asList("varchar"), new LinkedList<>(asList("b,a")));
+        checkRecreateSqlColumn("varchar", 1, asList("varchar"), new LinkedList<>(asList("b,a")));
 
-        returnSqlColumnType("date", new java.sql.Date(0), asList("date"), new LinkedList<>(asList("b")));
+        checkRecreateSqlColumn("date", new java.sql.Date(0), asList("date"), new LinkedList<>(asList("b")));
 
-        returnSqlColumnType("tinyint", 1, asList("tinyint"), new LinkedList<>(asList("a,b")));
+        checkRecreateSqlColumn("tinyint", 1, asList("tinyint"), new LinkedList<>(asList("a,b")));
 
-        returnSqlColumnType("long", 1L, asList("long"), new LinkedList<>(asList("a")));
+        checkRecreateSqlColumn("long", 1L, asList("long"), new LinkedList<>(asList("a")));
 
-        returnSqlColumnType("datetime", new Timestamp(0), asList("datetime"), new LinkedList<>(asList("a")));
+        checkRecreateSqlColumn("datetime", new Timestamp(0), asList("datetime"), new LinkedList<>(asList("a")));
     }
 
     /**
@@ -452,7 +452,7 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
      * @param aColTypes Column types for changing "a" column.
      * @param idxCols Columns (single or comma-separated) to create indexes.
      */
-    private void returnSqlColumnType (
+    private void checkRecreateSqlColumn(
         String aColType,
         Object aInsertVal,
         List<String> aColTypes,
