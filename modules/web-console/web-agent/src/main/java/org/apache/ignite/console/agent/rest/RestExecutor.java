@@ -50,7 +50,7 @@ public class RestExecutor implements AutoCloseable {
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(RestExecutor.class));
 
     /** */
-    private final long restTimeout = IgniteSystemProperties.getLong("IGNITE_NODE_REST_TIMEOUT", MINUTES.toMillis(3L));
+    private final long restTimeout = IgniteSystemProperties.getLong("WEB_AGENT_NODE_REST_TIMEOUT", MINUTES.toMillis(3L));
 
     /** */
     private final HttpClient httpClient;
