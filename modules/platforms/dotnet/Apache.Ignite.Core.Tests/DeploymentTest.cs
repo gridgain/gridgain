@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Compute;
@@ -135,10 +136,6 @@ namespace Apache.Ignite.Core.Tests
         {
             DeployTo(dllFolder, jarFolder);
 
-            var classpath = buildClasspath
-                ? string.Join(";", Directory.GetFiles(jarFolder))
-                : null;
-
             // Copy config
             var springPath = Path.GetFullPath("config\\compute\\compute-grid2.xml");
             var springFile = Path.GetFileName(springPath);
@@ -147,15 +144,21 @@ namespace Apache.Ignite.Core.Tests
             // Start a node and make sure it works properly
             var exePath = Path.Combine(dllFolder, "Apache.Ignite.exe");
 
-            var proc = IgniteProcess.Start(exePath, string.Empty, args: new[]
+            var args = new List<string>
             {
                 "-springConfigUrl=" + springFile,
-                "-jvmClasspath=" + classpath,
                 "-assembly=" + Path.GetFileName(GetType().Assembly.Location),
                 "-J-ea",
                 "-J-Xms512m",
                 "-J-Xmx512m"
-            });
+            };
+
+            if (buildClasspath)
+            {
+                args.Add("-jvmClasspath=" + string.Join(";", Directory.GetFiles(jarFolder)));
+            }
+
+            var proc = IgniteProcess.Start(exePath, string.Empty, args: args.ToArray());
 
             Assert.IsNotNull(proc);
 
