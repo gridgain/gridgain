@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
@@ -49,7 +50,7 @@ public class RestExecutor implements AutoCloseable {
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(RestExecutor.class));
 
     /** */
-    private static final long REQUEST_TIMEOUT = MINUTES.toMillis(3L);
+    private final long restTimeout = IgniteSystemProperties.getLong("IGNITE_NODE_REST_TIMEOUT", MINUTES.toMillis(3L));
 
     /** */
     private final HttpClient httpClient;
@@ -119,7 +120,7 @@ public class RestExecutor implements AutoCloseable {
             .send(lsnr);
 
         try {
-            Response res = lsnr.get(REQUEST_TIMEOUT, TimeUnit.MILLISECONDS);
+            Response res = lsnr.get(restTimeout, TimeUnit.MILLISECONDS);
 
             return parseResponse(res, lsnr.getInputStream());
         }

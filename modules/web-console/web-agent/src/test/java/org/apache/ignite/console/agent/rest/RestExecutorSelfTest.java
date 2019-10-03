@@ -458,19 +458,22 @@ public class RestExecutorSelfTest {
 
             ExecutorService executor = Executors.newFixedThreadPool(2);
 
-            Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(50) from \"CarCache\".Car"));
+            Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
             Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
 
             assertFalse(fut1.isDone());
-            assertFalse(fut2.get(1000, TimeUnit.SECONDS));
+            assertFalse(fut2.isDone());
+            assertFalse(fut2.get(1L, TimeUnit.SECONDS));
 
             assertFalse(fut1.isDone());
-            assertFalse(fut1.get(5000, TimeUnit.SECONDS));
+            assertTrue(fut2.isDone());
+            assertFalse(fut1.get(4L, TimeUnit.SECONDS));
         }
     }
 
     /**
-     * @param exec Execute.
+     * @param exec Rest executor.
+     * @param qry Query text.
      */
     private boolean executeQuery(RestExecutor exec, String qry) throws Exception {
         try {
