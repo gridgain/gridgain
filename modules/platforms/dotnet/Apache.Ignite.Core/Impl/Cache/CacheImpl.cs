@@ -103,7 +103,11 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            _nearCache = enableNear ? new ConcurrentDictionary<TK, TV>() : null;
+            if (enableNear)
+            {
+                // TODO: Set up change notifier.
+                _nearCache = new ConcurrentDictionary<TK, TV>();
+            }
         }
 
         /** <inheritDoc /> */
@@ -118,6 +122,19 @@ namespace Apache.Ignite.Core.Impl.Cache
         private bool IsNear
         {
             get { return _nearCache != null; }
+        }
+
+        /// <summary>
+        /// Returns a value indicating whether near caching can be used.
+        /// </summary>
+        private bool CanUseNear
+        {
+            get
+            {
+                // Near caching within transaction is not supported for now.
+                // Commit/rollback logic requires additional implementation.
+                return IsNear && (_txManager == null || !_txManager.IsInTx());
+            }
         }
 
         /// <summary>
@@ -439,7 +456,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (IsNear)
+            if (CanUseNear)
             {
                 TV val;
                 if (_nearCache.TryGetValue(key, out val))
@@ -520,9 +537,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
-            if (IsNear)
+            if (CanUseNear)
             {
-                // TODO: Evict old.
+                // TODO: Eviction according to limits.
                 _nearCache[key] = val;
             }
 
