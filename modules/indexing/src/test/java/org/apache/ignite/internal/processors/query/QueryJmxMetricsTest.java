@@ -16,64 +16,28 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 /**
  * Tests for local query execution in lazy mode.
  */
 public class QueryJmxMetricsTest extends AbstractIndexingCommonTest {
-    /** Keys count. */
-    private static final int KEY_CNT = 10;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setMetricExporterSpi(new JmxMetricExporterSpi());
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         startGrid();
-
-        IgniteCache<Long, Long> c = grid().createCache(new CacheConfiguration<Long, Long>()
-            .setName("test")
-            .setSqlSchema("TEST")
-            .setQueryEntities(Collections.singleton(new QueryEntity(Long.class, Long.class)
-                .setTableName("test")
-                .addQueryField("id", Long.class.getName(), null)
-                .addQueryField("val", Long.class.getName(), null)
-                .setKeyFieldName("id")
-                .setValueFieldName("val")
-            ))
-            .setAffinity(new RendezvousAffinityFunction(false, 10)));
-
-        for (long i = 0; i < KEY_CNT; ++i)
-            c.put(i, i);
-
-        sql("SELECT * FROM test").getAll();
     }
 
     /** {@inheritDoc} */
@@ -84,25 +48,25 @@ public class QueryJmxMetricsTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     *
      */
     @Test
-    public void testJmxConnect() throws Exception {
+    public void testJmxAllMBeanInfo() throws Exception {
         Set<ObjectName> names = grid().configuration().getMBeanServer().queryNames(new ObjectName("*:*"), null);
 
-        for (ObjectName name : names)
-            grid().configuration().getMBeanServer().getMBeanInfo(name);
+        boolean errors = false;
 
+        for (ObjectName name : names) {
+            try {
+                grid().configuration().getMBeanServer().getMBeanInfo(name);
+            }
+            catch (Exception e) {
+                log.error("Error on: " + name.getCanonicalName(), e);
 
-    }
+                errors = true;
+            }
+        }
 
-    /**
-     * @param sql SQL query.
-     * @param args Query parameters.
-     * @return Results cursor.
-     */
-    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid().context().query().querySqlFields(new SqlFieldsQuery(sql)
-            .setSchema("TEST")
-            .setArgs(args), false);
+        assertFalse("There are errors at the MBeanInfo creation, see log above", errors);
     }
 }

@@ -20,6 +20,7 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongGauge;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 
 /**
@@ -58,14 +59,14 @@ public class SqlStatisticsHolderMemoryQuotas {
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
 
-        quotaMaxMem = new LongGauge("maxMem",
+        quotaMaxMem = new LongGauge(MetricUtils.metricName(SQL_QUOTAS_REG_NAME, "maxMem"),
             "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
                 "Negative value if sql memory quotas are disabled. " +
                 "Individual queries have additional per query quotas.",
             this.memMgr::maxMemory
         );
 
-        quotaFreeMem = new LongGauge("freeMem",
+        quotaFreeMem = new LongGauge(MetricUtils.metricName(SQL_QUOTAS_REG_NAME, "freeMem"),
             "How much memory in bytes currently left available for the queries on this node. " +
                 "Negative value if sql memory quotas are disabled.",
             () -> this.memMgr.maxMemory() - this.memMgr.memoryReserved()
