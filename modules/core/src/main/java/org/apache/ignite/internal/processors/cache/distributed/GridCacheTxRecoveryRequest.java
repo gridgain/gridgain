@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -26,11 +27,14 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
+
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Message sent to check that transactions related to transaction were prepared on remote node.
  */
-public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
+public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage implements TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -51,6 +55,13 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
 
     /** {@code True} if should check only tx on near node. */
     private boolean nearTxCheck;
+
+    /** @see TimeLoggableRequest#sendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#receiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required by {@link Externalizable}
@@ -133,6 +144,26 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
     }
 
     /** {@inheritDoc} */
+    @Override public long sendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long receiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void receiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -172,12 +203,18 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
                 writer.incrementState();
 
             case 12:
-                if (!writer.writeBoolean("sys", sys))
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
                     return false;
 
                 writer.incrementState();
 
             case 13:
+                if (!writer.writeBoolean("sys", sys))
+                    return false;
+
+                writer.incrementState();
+
+            case 14:
                 if (!writer.writeInt("txNum", txNum))
                     return false;
 
@@ -232,7 +269,7 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
                 reader.incrementState();
 
             case 12:
-                sys = reader.readBoolean("sys");
+                sendTimestamp = reader.readLong("sendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
@@ -240,6 +277,14 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
                 reader.incrementState();
 
             case 13:
+                sys = reader.readBoolean("sys");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 14:
                 txNum = reader.readInt("txNum");
 
                 if (!reader.isLastRead())
@@ -259,7 +304,7 @@ public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 14;
+        return 15;
     }
 
     /** {@inheritDoc} */

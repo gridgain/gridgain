@@ -39,12 +39,14 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Get response.
  */
-public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable,
+public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable, ProcessingTimeLoggableResponse,
     GridCacheVersionable {
     /** */
     private static final long serialVersionUID = 0L;
@@ -77,6 +79,17 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
 
     /** Serialized error. */
     private byte[] errBytes;
+
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
+
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -212,6 +225,37 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
         return addDepInfo;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqSentTimestamp() {
+        return reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqTimeData() {
+        return reqTimeData;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -258,12 +302,18 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 writer.incrementState();
 
             case 9:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
 
             case 10:
+                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                    return false;
+
+                writer.incrementState();
+
+            case 11:
                 if (!writer.writeMessage("ver", ver))
                     return false;
 
@@ -326,7 +376,7 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 reader.incrementState();
 
             case 9:
-                topVer = reader.readAffinityTopologyVersion("topVer");
+                reqTimeData = reader.readLong("reqTimeData");
 
                 if (!reader.isLastRead())
                     return false;
@@ -334,6 +384,14 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
                 reader.incrementState();
 
             case 10:
+                topVer = reader.readAffinityTopologyVersion("topVer");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 11:
                 ver = reader.readMessage("ver");
 
                 if (!reader.isLastRead())
@@ -353,7 +411,7 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 12;
     }
 
     /** {@inheritDoc} */

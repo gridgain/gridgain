@@ -33,6 +33,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -1228,6 +1229,20 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT =
         "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
+
+    /**
+     * Enables logging time between request and response messages.<br/>
+     * Default: {@code false}
+     * {see {@link TcpCommunicationMetricsListener}}
+     */
+    public static final String IGNITE_ENABLE_MESSAGES_TIME_LOGGING = "IGNITE_ENABLE_MESSAGES_TIME_LOGGING";
+
+    /**
+     * Bounds for histogram metrics in milliseconds.<br/>
+     * Default: {10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000}
+     * {see {@link TcpCommunicationMetricsListener}}
+     */
+    public static final String IGNITE_COMM_SPI_TIME_HIST_BOUNDS = "IGNITE_COMM_SPI_TIME_HIST_BOUNDS";
 
     /**
      * Enforces singleton.

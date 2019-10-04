@@ -38,11 +38,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * Force keys response. Contains absent keys.
  */
-public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable {
+public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -68,6 +70,17 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
     @GridToStringInclude
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> infos;
+
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
+
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
 
     /**
      * Required by {@link Externalizable}.
@@ -198,6 +211,36 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
     }
 
     /** {@inheritDoc} */
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqSentTimestamp() {
+        return reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqTimeData() {
+        return reqTimeData;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -238,6 +281,12 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
             case 8:
                 if (!writer.writeCollection("missedKeys", missedKeys, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 9:
+                if (!writer.writeLong("reqTimeData", reqTimeData))
                     return false;
 
                 writer.incrementState();
@@ -298,6 +347,14 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
                 reader.incrementState();
 
+            case 9:
+                reqTimeData = reader.readLong("reqTimeData");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridDhtForceKeysResponse.class);
@@ -310,7 +367,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 9;
+        return 10;
     }
 
     /** {@inheritDoc} */

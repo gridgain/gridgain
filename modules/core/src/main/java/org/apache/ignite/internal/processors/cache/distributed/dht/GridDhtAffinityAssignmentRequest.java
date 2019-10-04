@@ -17,16 +17,20 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.nio.ByteBuffer;
+import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
+
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Affinity assignment request.
  */
-public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
+public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage implements TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -41,6 +45,13 @@ public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
 
     /** Topology version being queried. */
     private AffinityTopologyVersion topVer;
+
+    /** @see TimeLoggableRequest#sendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#receiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Empty constructor.
@@ -102,13 +113,33 @@ public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
     }
 
     /** {@inheritDoc} */
+    @Override public long sendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long receiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void receiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public short directType() {
         return 28;
     }
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 7;
+        return 8;
     }
 
     /** {@inheritDoc} */
@@ -139,6 +170,12 @@ public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
                 writer.incrementState();
 
             case 6:
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
+                    return false;
+
+                writer.incrementState();
+
+            case 7:
                 if (!writer.writeAffinityTopologyVersion("topVer", topVer))
                     return false;
 
@@ -177,6 +214,14 @@ public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
                 reader.incrementState();
 
             case 6:
+                sendTimestamp = reader.readLong("sendTimestamp");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 7:
                 topVer = reader.readAffinityTopologyVersion("topVer");
 
                 if (!reader.isLastRead())
