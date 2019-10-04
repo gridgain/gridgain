@@ -69,6 +69,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
+        /** Near cache configuration, null when not enabled. */
+        private readonly NearCacheConfiguration _nearCacheConfiguration;
+
         // TODO: Init capacity from settings
         // TODO: Eviction
         // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
@@ -85,10 +88,10 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="flagNoRetries">No-retries mode flag.</param>
         /// <param name="flagPartitionRecover">Partition recover mode flag.</param>
         /// <param name="flagAllowAtomicOpsInTx">Allow atomic operations in transactions flag.</param>
-        /// <param name="enableNear">Enables near cache.</param>
+        /// <param name="nearCacheConfiguration">Near cache configuration. When null, near caching is disabled.</param>
         public CacheImpl(IPlatformTargetInternal target,
             bool flagSkipStore, bool flagKeepBinary, bool flagNoRetries, bool flagPartitionRecover,
-            bool flagAllowAtomicOpsInTx, bool enableNear) : base(target)
+            bool flagAllowAtomicOpsInTx, NearCacheConfiguration nearCacheConfiguration) : base(target)
         {
             _ignite = target.Marshaller.Ignite;
             _flagSkipStore = flagSkipStore;
@@ -103,9 +106,10 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            if (enableNear)
+            if (nearCacheConfiguration != null)
             {
                 // TODO: Set up change notifier.
+                _nearCacheConfiguration = nearCacheConfiguration;
                 _nearCache = new ConcurrentDictionary<TK, TV>();
             }
         }
@@ -221,7 +225,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagNoRetries: true,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /// <summary>
@@ -253,7 +257,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _flagNoRetries,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -271,7 +275,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _flagSkipStore,
                 _flagPartitionRecover,
                 flagAllowAtomicOpsInTx: true,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -288,7 +292,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _flagNoRetries,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -1283,7 +1287,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagNoRetries: true,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -1301,7 +1305,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _flagNoRetries,
                 flagPartitionRecover: true,
                 _flagAllowAtomicOpsInTx,
-                IsNear);
+                _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */

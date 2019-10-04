@@ -522,12 +522,12 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="nativeCache">Native cache.</param>
         /// <param name="keepBinary">Keep binary flag.</param>
-        /// <param name="enableNear">Enables near cache.</param>
+        /// <param name="nearCacheConfiguration">Enables near cache.</param>
         /// <returns>
         /// New instance of cache wrapping specified native cache.
         /// </returns>
         public static ICache<TK, TV> GetCache<TK, TV>(IPlatformTargetInternal nativeCache, bool keepBinary = false,
-            bool enableNear = false)
+            NearCacheConfiguration nearCacheConfiguration = null)
         {
             return new CacheImpl<TK, TV>(
                 target: nativeCache,
@@ -536,7 +536,7 @@ namespace Apache.Ignite.Core.Impl
                 flagNoRetries: false,
                 flagPartitionRecover: false,
                 flagAllowAtomicOpsInTx: false,
-                enableNear: enableNear);
+                nearCacheConfiguration);
         }
 
         /** <inheritdoc /> */
