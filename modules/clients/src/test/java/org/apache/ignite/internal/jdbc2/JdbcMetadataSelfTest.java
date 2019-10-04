@@ -337,7 +337,10 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "TABLES",
             "TASKS",
             "CLIENT_CONNECTIONS",
-            "TRANSACTIONS"
+            "TRANSACTIONS",
+            "VIEWS",
+            "TABLE_COLUMNS",
+            "VIEW_COLUMNS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))

@@ -425,7 +425,10 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.NODE_ATTRIBUTES",
                 "IGNITE.TABLES",
                 "IGNITE.CLIENT_CONNECTIONS",
-                "IGNITE.TRANSACTIONS"
+                "IGNITE.TRANSACTIONS",
+                "IGNITE.VIEWS",
+                "IGNITE.TABLE_COLUMNS",
+                "IGNITE.VIEW_COLUMNS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -874,7 +877,31 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.TRANSACTIONS.OTHER_NODE_ID.null.16",
                 "IGNITE.TRANSACTIONS.TOP_VER.null.2147483647",
                 "IGNITE.TRANSACTIONS.KEYS_COUNT.null.10",
-                "IGNITE.TRANSACTIONS.CACHE_IDS.null.2147483647"
+                "IGNITE.TRANSACTIONS.CACHE_IDS.null.2147483647",
+                "IGNITE.SCHEMAS.NAME.null.2147483647",
+                "IGNITE.SCHEMAS.PREDEFINED.null.1",
+                "IGNITE.VIEWS.NAME.null.2147483647",
+                "IGNITE.VIEWS.DESCRIPTION.null.2147483647",
+                "IGNITE.VIEWS.SCHEMA.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.AFFINITY_COLUMN.null.1",
+                "IGNITE.TABLE_COLUMNS.COLUMN_NAME.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.SCALE.null.10",
+                "IGNITE.TABLE_COLUMNS.PK.null.1",
+                "IGNITE.TABLE_COLUMNS.TYPE.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.DEFAULT_VALUE.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.SCHEMA_NAME.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.TABLE_NAME.null.2147483647",
+                "IGNITE.TABLE_COLUMNS.NULLABLE.null.1",
+                "IGNITE.TABLE_COLUMNS.PRECISION.null.10",
+                "IGNITE.TABLE_COLUMNS.AUTO_INCREMENT.null.1",
+                "IGNITE.VIEW_COLUMNS.NULLABLE.null.1",
+                "IGNITE.VIEW_COLUMNS.SCHEMA_NAME.null.2147483647",
+                "IGNITE.VIEW_COLUMNS.COLUMN_NAME.null.2147483647",
+                "IGNITE.VIEW_COLUMNS.TYPE.null.2147483647",
+                "IGNITE.VIEW_COLUMNS.PRECISION.null.19",
+                "IGNITE.VIEW_COLUMNS.DEFAULT_VALUE.null.2147483647",
+                "IGNITE.VIEW_COLUMNS.SCALE.null.10",
+                "IGNITE.VIEW_COLUMNS.VIEW_NAME.null.2147483647"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
