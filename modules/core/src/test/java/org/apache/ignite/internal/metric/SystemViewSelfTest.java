@@ -75,7 +75,7 @@ import static org.apache.ignite.internal.processors.cache.ClusterCachesInfo.CACH
 import static org.apache.ignite.internal.processors.cache.ClusterCachesInfo.CACHE_GRPS_VIEW;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
-import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLI_CONN_SYS_VIEW;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLI_CONN_VIEW;
 import static org.apache.ignite.internal.processors.service.IgniteServiceProcessor.SVCS_VIEW;
 import static org.apache.ignite.internal.processors.task.GridTaskProcessor.TASKS_VIEW;
 import static org.apache.ignite.internal.util.lang.GridFunc.alwaysTrue;
@@ -429,7 +429,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
 
             int port = g0.configuration().getClientConnectorConfiguration().getPort();
 
-            SystemView<ClientConnectionView> conns = g0.context().systemView().view(CLI_CONN_SYS_VIEW);
+            SystemView<ClientConnectionView> conns = g0.context().systemView().view(CLI_CONN_VIEW);
 
             try (IgniteClient cli = Ignition.startClient(new ClientConfiguration().setAddresses(host + ":" + port))) {
                 assertEquals(1, conns.size());
@@ -471,7 +471,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testTransactions() throws Exception {
-        try(IgniteEx g = startGrid(0)) {
+        try (IgniteEx g = startGrid(0)) {
             IgniteCache<Integer, Integer> cache1 = g.createCache(new CacheConfiguration<Integer, Integer>("c1")
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
@@ -488,7 +488,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 AtomicInteger cntr = new AtomicInteger();
 
                 GridTestUtils.runMultiThreadedAsync(() -> {
-                    try(Transaction tx = g.transactions().withLabel("test").txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                    try (Transaction tx = g.transactions().withLabel("test").txStart(PESSIMISTIC, REPEATABLE_READ)) {
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
 
@@ -524,12 +524,12 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 assertTrue(txv.startTime() <= System.currentTimeMillis());
                 assertEquals(String.valueOf(cacheId(cache1.getName())), txv.cacheIds());
 
-                //Only pessimistic transactions are supported when MVCC is enabled.
-                if(Objects.equals(System.getProperty(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS), "true"))
+                // Only pessimistic transactions are supported when MVCC is enabled.
+                if (Objects.equals(System.getProperty(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS), "true"))
                     return;
 
                 GridTestUtils.runMultiThreadedAsync(() -> {
-                    try(Transaction tx = g.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                    try (Transaction tx = g.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache2.put(cntr.incrementAndGet(), cntr.incrementAndGet());
