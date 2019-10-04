@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupMetricsMBeanTest;
 import org.apache.ignite.internal.processors.cache.CacheMetricsManageTest;
 import org.apache.ignite.internal.processors.cache.GridTransactionsSystemUserTimeMetricsTest;
 import org.apache.ignite.internal.processors.cache.IgniteDynamicCacheStartFailWithPersistenceTest;
+import org.apache.ignite.internal.processors.cache.SafeLogTxFinishErrorTest;
 import org.apache.ignite.internal.processors.cache.WalModeChangeAdvancedSelfTest;
 import org.apache.ignite.internal.processors.cache.WalModeChangeCoordinatorNotAffinityNodeSelfTest;
 import org.apache.ignite.internal.processors.cache.WalModeChangeSelfTest;
@@ -115,6 +116,8 @@ public class IgniteCacheTestSuite7 {
         GridTestUtils.addTestIfNeeded(suite, GridTransactionsSystemUserTimeMetricsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TxCrossCacheMapOnInvalidTopologyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, SafeLogTxFinishErrorTest.class, ignoredTests);
 
         return suite;
     }
