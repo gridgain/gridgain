@@ -281,6 +281,7 @@ namespace Apache.Ignite.Core
 
         // TODO: Separate NearCache method for .NET Near Cache? Or replace Java-based one? Or combine them?
         // Replacing looks like the most adequate scenario - users do not care about implementation.
+        // TODO: Overload without configuration
 
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.

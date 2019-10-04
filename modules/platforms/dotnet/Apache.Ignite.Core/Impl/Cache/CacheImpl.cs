@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 {
     using System;
     using System.Collections;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
@@ -68,6 +69,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
+        // TODO: Init capacity from settings
+        // TODO: Eviction
+        // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
+        /** Near cache. */
+        private readonly ConcurrentDictionary<TK, TV> _nearCache;
+
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -77,9 +85,10 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="flagNoRetries">No-retries mode flag.</param>
         /// <param name="flagPartitionRecover">Partition recover mode flag.</param>
         /// <param name="flagAllowAtomicOpsInTx">Allow atomic operations in transactions flag.</param>
+        /// <param name="enableNear">Enables near cache.</param>
         public CacheImpl(IPlatformTargetInternal target,
             bool flagSkipStore, bool flagKeepBinary, bool flagNoRetries, bool flagPartitionRecover,
-            bool flagAllowAtomicOpsInTx) : base(target)
+            bool flagAllowAtomicOpsInTx, bool enableNear) : base(target)
         {
             _ignite = target.Marshaller.Ignite;
             _flagSkipStore = flagSkipStore;
@@ -93,12 +102,22 @@ namespace Apache.Ignite.Core.Impl.Cache
                 : null;
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
+
+            _nearCache = enableNear ? new ConcurrentDictionary<TK, TV>() : null;
         }
 
         /** <inheritDoc /> */
         public IIgnite Ignite
         {
             get { return _ignite.GetIgnite(); }
+        }
+
+        /// <summary>
+        /// Returns a value indicating whether this instance is near-enabled.
+        /// </summary>
+        private bool IsNear
+        {
+            get { return _nearCache != null; }
         }
 
         /// <summary>
@@ -176,8 +195,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (_flagSkipStore)
                 return this;
 
-            return new CacheImpl<TK, TV>(DoOutOpObject((int) CacheOp.WithSkipStore),
-                true, _flagKeepBinary, true, _flagPartitionRecover, _flagAllowAtomicOpsInTx);
+            var target = DoOutOpObject((int) CacheOp.WithSkipStore);
+
+            return new CacheImpl<TK, TV>(
+                target,
+                flagSkipStore: true,
+                _flagKeepBinary,
+                flagNoRetries: true,
+                _flagPartitionRecover,
+                _flagAllowAtomicOpsInTx,
+                IsNear);
         }
 
         /// <summary>
@@ -200,8 +227,16 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return result;
             }
 
-            return new CacheImpl<TK1, TV1>(DoOutOpObject((int) CacheOp.WithKeepBinary),
-                _flagSkipStore, true, _flagNoRetries, _flagPartitionRecover, _flagAllowAtomicOpsInTx);
+            var target = DoOutOpObject((int) CacheOp.WithKeepBinary);
+
+            return new CacheImpl<TK1, TV1>(
+                target,
+                _flagSkipStore,
+                flagKeepBinary: true,
+                _flagNoRetries,
+                _flagPartitionRecover,
+                _flagAllowAtomicOpsInTx,
+                IsNear);
         }
 
         /** <inheritDoc /> */
@@ -210,8 +245,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (_flagAllowAtomicOpsInTx)
                 return this;
 
-            return new CacheImpl<TK, TV>(DoOutOpObject((int)CacheOp.WithSkipStore),
-                true, _flagKeepBinary, _flagSkipStore, _flagPartitionRecover, true);
+            var target = DoOutOpObject((int)CacheOp.WithSkipStore);
+
+            return new CacheImpl<TK, TV>(
+                target,
+                flagSkipStore: true,
+                _flagKeepBinary,
+                _flagSkipStore,
+                _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: true,
+                IsNear);
         }
 
         /** <inheritDoc /> */
@@ -221,8 +264,14 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var cache0 = DoOutOpObject((int)CacheOp.WithExpiryPolicy, w => ExpiryPolicySerializer.WritePolicy(w, plc));
 
-            return new CacheImpl<TK, TV>(cache0, _flagSkipStore, _flagKeepBinary, 
-                _flagNoRetries, _flagPartitionRecover, _flagAllowAtomicOpsInTx);
+            return new CacheImpl<TK, TV>(
+                cache0,
+                _flagSkipStore,
+                _flagKeepBinary,
+                _flagNoRetries,
+                _flagPartitionRecover,
+                _flagAllowAtomicOpsInTx,
+                IsNear);
         }
 
         /** <inheritDoc /> */
@@ -1193,8 +1242,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (_flagNoRetries)
                 return this;
 
-            return new CacheImpl<TK, TV>(DoOutOpObject((int) CacheOp.WithNoRetries),
-                _flagSkipStore, _flagKeepBinary, true, _flagPartitionRecover, _flagAllowAtomicOpsInTx);
+            var target = DoOutOpObject((int) CacheOp.WithNoRetries);
+
+            return new CacheImpl<TK, TV>(
+                target,
+                _flagSkipStore,
+                _flagKeepBinary,
+                flagNoRetries: true,
+                _flagPartitionRecover,
+                _flagAllowAtomicOpsInTx,
+                IsNear);
         }
 
         /** <inheritDoc /> */
@@ -1203,8 +1260,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (_flagPartitionRecover)
                 return this;
 
-            return new CacheImpl<TK, TV>(DoOutOpObject((int) CacheOp.WithPartitionRecover),
-                _flagSkipStore, _flagKeepBinary, _flagNoRetries, true, _flagAllowAtomicOpsInTx);
+            var target = DoOutOpObject((int) CacheOp.WithPartitionRecover);
+
+            return new CacheImpl<TK, TV>(
+                target,
+                _flagSkipStore,
+                _flagKeepBinary,
+                _flagNoRetries,
+                flagPartitionRecover: true,
+                _flagAllowAtomicOpsInTx,
+                IsNear);
         }
 
         /** <inheritDoc /> */
