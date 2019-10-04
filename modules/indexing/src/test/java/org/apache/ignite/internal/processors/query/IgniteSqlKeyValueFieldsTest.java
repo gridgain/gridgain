@@ -342,6 +342,7 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
      */
     @Test
     public void testChangeColumnTypeByAlterTableDropAddColumn() {
+        // test1
         changeSqlColumnType(
             "int",
             1,
@@ -349,6 +350,7 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
             new LinkedList<>(asList("a", "b,a", "a", "a,b", "a"))
         );
 
+        // test2
         changeSqlColumnType(
             "varchar",
             "1",
@@ -356,11 +358,20 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
             new LinkedList<>(asList("a", "b,a", "a", "a,b", "a"))
         );
 
+        // test3
         changeSqlColumnType(
-            "varchar",
+            "date",
             new Timestamp(0),
-            asList("date"),
-            new LinkedList<>(asList("a"))
+            asList("int", "long", "tinyint", "datetime", "varchar"),
+            new LinkedList<>(asList("a", "b,a", "a,b", "a", "a"))
+        );
+
+        // test4
+        changeSqlColumnType(
+            "datetime",
+            new Timestamp(0),
+            asList("int", "long", "tinyint", "date", "varchar"),
+            new LinkedList<>(asList("a", "b,a", "a,b", "a", "a"))
         );
     }
 
