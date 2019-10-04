@@ -386,7 +386,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public TV Get(TK key)
+        public virtual TV Get(TK key)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
@@ -455,7 +455,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritdoc /> */
-        public void Put(TK key, TV val)
+        public virtual void Put(TK key, TV val)
         {
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
