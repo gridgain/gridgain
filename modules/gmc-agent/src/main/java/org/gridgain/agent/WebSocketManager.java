@@ -142,10 +142,12 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
+     * TODO: Remove synchronized and make the send method non-blocking https://ggsystems.atlassian.net/browse/GG-24630.
+     *
      * @param dest Destination.
      * @param payload Payload.
      */
-    public boolean send(String dest, byte[] payload) {
+    public synchronized boolean send(String dest, byte[] payload) {
         boolean connected = ses != null && ses.isConnected();
 
         // TODO: workaround of spring-messaging bug with send byte array data.
@@ -161,10 +163,12 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
+     * TODO: Remove synchronized and make the send method non-blocking https://ggsystems.atlassian.net/browse/GG-24630.
+     *
      * @param dest Destination.
      * @param payload Payload.
      */
-    public boolean send(String dest, Object payload) {
+    public synchronized boolean send(String dest, Object payload) {
         boolean connected = ses != null && ses.isConnected();
 
         if (connected)
