@@ -178,6 +178,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     /** {@code True} when mappings are ready for processing. */
     private boolean mappingsReady;
 
+    /** */
+    private boolean trackable = true;
+
     /**
      * @param cctx Registry.
      * @param keys Keys to lock.
@@ -262,12 +265,12 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
     /** {@inheritDoc} */
     @Override public boolean trackable() {
-        return true;
+        return trackable;
     }
 
     /** {@inheritDoc} */
     @Override public void markNotTrackable() {
-        throw new UnsupportedOperationException();
+        trackable = false;
     }
 
     /**

@@ -17,13 +17,17 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
@@ -40,26 +44,28 @@ import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryCustomEventMessage;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
+import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for delayed client join.
- * When client node joins to cluster it sends SingleMessage to coordinator.
- * During this time topology on server nodes can be changed,
- * because client exchange doesn't require acknowledgement for SingleMessage on coordinator.
- * Delay is simulated by blocking sending this SingleMessage and resume sending after topology is changed.
+ * Tests for client nodes with slow discovery.
  */
-public class ClientDelayedJoinTest extends GridCommonAbstractTest {
+public class ClientSlowDiscoveryTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
 
     /** Cache configuration. */
     private final CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setReadFromBackup(false)
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 64));
@@ -107,7 +113,12 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Test check that client join works well if cache configured on it stopped on server nodes
+     * but discovery event about cache stop is not delivered to client node immediately.
+     * When client node joins to cluster it sends SingleMessage to coordinator.
+     * During this time topology on server nodes can be changed,
+     * because client exchange doesn't require acknowledgement for SingleMessage on coordinator.
+     * Delay is simulated by blocking sending this SingleMessage and resume sending after topology is changed.
      */
     @Test
     public void testClientJoinAndCacheStop() throws Exception {
@@ -201,6 +212,147 @@ public class ClientDelayedJoinTest extends GridCommonAbstractTest {
         }, 5_000); // Reasonable timeout.
 
         Assert.assertNull("Cache should be destroyed on client node", client.cache(CACHE_NAME));
+    }
+
+    /**
+     * Test check that transaction remap works correcrtly if transaction is mapped on some topology version,
+     * topology changed on server nodes, but discovery event about another cache stop
+     * is not delivered to client node immediately.
+     */
+    @Test
+    public void testTransactionRemap() throws Exception {
+        startGrid(0);
+
+        clientMode = true;
+
+        NodeJoinInterceptingDiscoverySpi clientDiscoSpi = new NodeJoinInterceptingDiscoverySpi();
+
+        CountDownLatch clientDiscoSpiBlock = new CountDownLatch(1);
+
+        // Delay node join of second client.
+        clientDiscoSpi.interceptor = msg -> {
+            if (msg.nodeId().toString().endsWith("2"))
+                U.awaitQuiet(clientDiscoSpiBlock);
+        };
+
+        discoverySpiSupplier = () -> clientDiscoSpi;
+
+        IgniteEx clnt = startGrid(1);
+
+        clnt.cache(CACHE_NAME).put(1, 100);
+
+        discoverySpiSupplier = TcpDiscoverySpi::new;
+
+        startGrid(2);
+
+        IgniteInternalFuture<?> txFut = GridTestUtils.runAsync(() -> {
+            try (Transaction tx = clnt.transactions().txStart(
+                TransactionConcurrency.PESSIMISTIC,
+                TransactionIsolation.REPEATABLE_READ)
+            ) {
+                // This operation remaps transaction to new version.
+                clnt.cache(CACHE_NAME).put(1, 1);
+
+                // Need to use the same key to avoid enlisting new entry with topology version await.
+                clnt.cache(CACHE_NAME).remove(1);
+
+                tx.commit();
+            }
+        });
+
+        try {
+            txFut.get(1, TimeUnit.SECONDS);
+        }
+        catch (IgniteFutureTimeoutCheckedException te) {
+            // Expected.
+        }
+        finally {
+            clientDiscoSpiBlock.countDown();
+        }
+
+        // After resume second client join, transaction should succesfully await new affinity and commit.
+        txFut.get();
+
+        // Check transaction commit.
+        Assert.assertNull("Transaction is not committed.", clnt.cache(CACHE_NAME).get(1));
+    }
+
+    /**
+     * Test check transaction timeout if client waits for a topology version, but discovery event about topology change
+     * is not delivered to client node immediately.
+     */
+    @Test
+    public void testTransactionRemapWithTimeout() throws Exception {
+        startGrid(0);
+
+        clientMode = true;
+
+        NodeJoinInterceptingDiscoverySpi clientDiscoSpi = new NodeJoinInterceptingDiscoverySpi();
+
+        CountDownLatch clientDiscoSpiBlock = new CountDownLatch(1);
+
+        // Delay node join of second client.
+        clientDiscoSpi.interceptor = msg -> {
+            if (msg.nodeId().toString().endsWith("2"))
+                U.awaitQuiet(clientDiscoSpiBlock);
+        };
+
+        discoverySpiSupplier = () -> clientDiscoSpi;
+
+        IgniteEx clnt = startGrid(1);
+
+        clnt.cache(CACHE_NAME).put(1, 100);
+
+        discoverySpiSupplier = TcpDiscoverySpi::new;
+
+        startGrid(2);
+
+        IgniteInternalFuture<?> txFut = GridTestUtils.runAsync(() -> {
+            try (Transaction tx = clnt.transactions().txStart(
+                TransactionConcurrency.PESSIMISTIC,
+                TransactionIsolation.REPEATABLE_READ,
+                2_000, // 2 seconds.
+                1_000_000)
+            ) {
+                // This operation remaps transaction to new version.
+                clnt.cache(CACHE_NAME).put(1, 1);
+
+                // Need to use the same key to avoid enlisting new entry with topology version await.
+                clnt.cache(CACHE_NAME).remove(1);
+
+                tx.commit();
+            }
+        });
+
+        try {
+            txFut.get(4, TimeUnit.SECONDS);
+        }
+        catch (IgniteFutureTimeoutCheckedException te) {
+            // Expected.
+        }
+        finally {
+            clientDiscoSpiBlock.countDown();
+        }
+
+        // After resume second client join, transaction should be timed out.
+        GridTestUtils.assertThrowsWithCause((Callable<Object>) txFut::get, TransactionTimeoutException.class);
+
+        // Check that transaction is not commited.
+        Assert.assertNotNull("Transaction committed.", clnt.cache(CACHE_NAME).get(1));
+    }
+
+    /**
+     *
+     */
+    static class NodeJoinInterceptingDiscoverySpi extends TcpDiscoverySpi {
+        /** Interceptor. */
+        private volatile IgniteInClosure<TcpDiscoveryNodeAddFinishedMessage> interceptor;
+
+        /** {@inheritDoc} */
+        @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
+            if (msg instanceof TcpDiscoveryNodeAddFinishedMessage && interceptor != null)
+                interceptor.apply((TcpDiscoveryNodeAddFinishedMessage) msg);
+        }
     }
 
     /**
