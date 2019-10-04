@@ -106,6 +106,12 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /** <inheritDoc /> */
+        public ICache<TK, TV> WithNearCache()
+        {
+            return _cache.WithNearCache().WrapAsync();
+        }
+
+        /** <inheritDoc /> */
         public void LoadCache(ICacheEntryFilter<TK, TV> p, params object[] args)
         {
             _cache.LoadCacheAsync(p, args).WaitResult();

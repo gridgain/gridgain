@@ -278,6 +278,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _nearCacheConfiguration);
         }
 
+        /** <inheritdoc /> */
+        public ICache<TK, TV> WithNearCache()
+        {
+            // TODO: Revert other changes; make old APIs deprecated.
+            throw new NotImplementedException();
+        }
+
         /** <inheritDoc /> */
         public ICache<TK, TV> WithExpiryPolicy(IExpiryPolicy plc)
         {
