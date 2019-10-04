@@ -135,7 +135,8 @@ public class DiscoveryDataClusterState implements Serializable {
             baselineTopology,
             transitionReqId,
             transitionTopVer,
-            activationTime, transitionNodes
+            activationTime,
+            transitionNodes
         );
     }
 
@@ -155,7 +156,8 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
-        long activationTime, @Nullable Set<UUID> transitionNodes
+        long activationTime,
+        @Nullable Set<UUID> transitionNodes
     ) {
         this.prevState = prevState;
         this.active = active;
