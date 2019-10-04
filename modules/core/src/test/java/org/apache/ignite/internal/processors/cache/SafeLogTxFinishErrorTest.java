@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -27,16 +26,13 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
-import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalAdapter;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
-import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.internal.util.IgniteUtils.compact;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 
@@ -46,10 +42,10 @@ import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
  */
 public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
     /** Logger for listen log messages. */
-    private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
+    private final ListeningTestLogger log = new ListeningTestLogger(false, GridCommonAbstractTest.log);
 
     /** Flag to remove the FailureHandler when creating configuration for node. */
-    private boolean removeFailureHandler;
+    private boolean rmvFailureHnd;
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -68,43 +64,57 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
                 .setAtomicityMode(TRANSACTIONAL)
         );
 
-        if (removeFailureHandler)
+        if (rmvFailureHnd)
             cfg.setFailureHandler(null);
 
         return cfg;
     }
 
     /**
-     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is performed
+     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is executable
      * without errors with FailureHandler.
      *
      * @throws Exception If any error occurs.
      */
     @Test
     public void testSafeLogTxFinishErrorWithFailureHandler() throws Exception {
-        checkSafeLogTxFinishError();
+        checkSafeLogTxFinishError(false);
     }
 
     /**
-     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is performed
+     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is executable
      * without errors without FailureHandler.
      *
      * @throws Exception If any error occurs.
      */
     @Test
     public void testSafeLogTxFinishErrorWithoutFailureHandler()throws Exception {
-        removeFailureHandler = true;
+        rmvFailureHnd = true;
 
-        checkSafeLogTxFinishError();
+        checkSafeLogTxFinishError(false);
     }
 
     /**
-     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is performed
-     * without errors.
+     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is executable
+     * without errors with FailureHandler. Provided that txState field
+     * is deleted in transaction, which leads to NPE when
+     * {@link GridNearTxLocal#toString()} is called.
      *
      * @throws Exception If any error occurs.
      */
-    private void checkSafeLogTxFinishError() throws Exception {
+    @Test
+    public void testSafeLogTxFinishErrorWithFailureHandlerAndRemoveTxState() throws Exception {
+        checkSafeLogTxFinishError(true);
+    }
+
+    /**
+     * Checking that {@link IgniteTxAdapter#logTxFinishErrorSafe} is executed
+     * without errors.
+     *
+     * @param rmvTxState Remove txState field in transaction.
+     * @throws Exception If any error occurs.
+     */
+    private void checkSafeLogTxFinishError(boolean rmvTxState) throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
         try (Transaction transaction = igniteEx.transactions().txStart()) {
@@ -120,44 +130,31 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
 
             AtomicBoolean containsFailedCompletingTxInLog = new AtomicBoolean();
 
-            /*
-             * When GridNearTxLocal#toString() is called, return string
-             * contains substring "duration", which is calculated as
-             * current time minus start time of the transaction.
-             * For test, we need so that when call GridNearTxLocal#toString(),
-             * we get the same string with the same substring "duration".
-             */
-            AtomicLong curTimeMillis = new AtomicLong();
+            Object txState = null;
+
+            if (rmvTxState) {
+                txState = getFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState");
+                setFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState", null);
+            }
+
+            boolean commit = false;
+
+            String errPrefix = "Failed completing the transaction: [commit=" + commit;
+
+            String xidVer = ' ' + (rmvTxState ? "xidVersion" : "xidVer") + '=' + activeTx.xidVersion();
 
             log.registerListener(logStr -> {
-                /*
-                 * Restore the current time to correctly call 
-                 * GridNearTxLocal#toString().
-                 */
-                setFieldValue(IgniteUtils.class,"curTimeMillis", curTimeMillis.get());
-
-                if (logStr.equals(toFailedCompletingTxMsg(false, activeTx.toString())))
+                if (logStr.startsWith(errPrefix) && logStr.contains(xidVer))
                     containsFailedCompletingTxInLog.set(true);
             });
 
-            /*
-             * Remembering current time before calling
-             * GridNearTxLocal#toString().
-             */
-            curTimeMillis.set(getFieldValue(IgniteUtils.class, "curTimeMillis"));
-
-            activeTx.logTxFinishErrorSafe(log, false, new RuntimeException("Test"));
+            activeTx.logTxFinishErrorSafe(log, commit, new RuntimeException("Test"));
 
             assertTrue(containsFailedCompletingTxInLog.get());
+
+            //That there was no NPE when closing a transaction.
+            if (rmvTxState)
+                setFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState", txState);
         }
-    }
-
-    /**
-     * Generates a transaction completion failure message.
-     */
-    private String toFailedCompletingTxMsg(boolean commit, String tx) {
-        assert nonNull(tx);
-
-        return compact(format("Failed completing the transaction: [commit=%s, tx=%s]", commit, tx));
     }
 }
