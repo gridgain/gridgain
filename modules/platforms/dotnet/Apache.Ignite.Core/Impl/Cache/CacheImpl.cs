@@ -1635,5 +1635,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return _ignite.HandleRegistry.Allocate(obj);
         }
+
+        /** <inheritdoc /> */
+        public void Dispose()
+        {
+            // TODO: Should we call IgniteCache.close() from here?
+            throw new NotImplementedException();
+        }
     }
 }
