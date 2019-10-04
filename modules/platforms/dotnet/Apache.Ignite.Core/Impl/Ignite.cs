@@ -453,6 +453,8 @@ namespace Apache.Ignite.Core.Impl
         public ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration,
             NearCacheConfiguration nearConfiguration)
         {
+            // CacheConfiguration.NearCacheConfiguration is for all server nodes
+            // nearConfiguration is for current client node.
             return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, Op.GetOrCreateCacheFromConfig);
         }
 
@@ -506,7 +508,7 @@ namespace Apache.Ignite.Core.Impl
                 }
             });
 
-            return GetCache<TK, TV>(cacheTarget);
+            return GetCache<TK, TV>(cacheTarget, nearCacheConfiguration: nearConfiguration);
         }
 
         /** <inheritdoc /> */
@@ -709,13 +711,18 @@ namespace Apache.Ignite.Core.Impl
         /** <inheritdoc /> */
         public ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.CreateNearCache);
+            IgniteArgumentCheck.NotNull(configuration, "configuration");
+
+            var target = DoOutOpObject((int) Op.GetCache, w => w.WriteString(name));
+
+            return GetCache<TK, TV>(target, nearCacheConfiguration: configuration);
         }
 
         /** <inheritdoc /> */
         public ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.GetOrCreateNearCache);
+            // TODO: What's the difference between Create and GetOrCreate, why would we need it?
+            return CreateNearCache<TK, TV>(name, configuration);
         }
 
         /** <inheritdoc /> */
