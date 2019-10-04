@@ -435,9 +435,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public virtual TV Get(TK key)
+        public TV Get(TK key)
         {
             IgniteArgumentCheck.NotNull(key, "key");
+
+            if (IsNear)
+            {
+                TV val;
+                if (_nearCache.TryGetValue(key, out val))
+                {
+                    return val;
+                }
+            }
 
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
@@ -504,12 +513,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritdoc /> */
-        public virtual void Put(TK key, TV val)
+        public void Put(TK key, TV val)
         {
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
             StartTxIfNeeded();
+
+            if (IsNear)
+            {
+                // TODO: Evict old.
+                _nearCache[key] = val;
+            }
 
             DoOutOp(CacheOp.Put, key, val);
         }
