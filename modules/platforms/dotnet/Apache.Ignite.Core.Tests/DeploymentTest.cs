@@ -66,8 +66,8 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestNuGetDeployment()
         {
-            var dllFolder = Path.Combine(_tempFolder, Path.Combine("lib", "net40"));
-            var jarFolder = Path.Combine(_tempFolder, Path.Combine("build", "output", "libs"));
+            var dllFolder = Path.Combine(_tempFolder, "lib", "net40");
+            var jarFolder = Path.Combine(_tempFolder, "build", "output", "libs");
 
             TestDeployment(dllFolder, jarFolder, true);
         }
@@ -78,25 +78,20 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestMissingJarsCauseProperException()
         {
-            // Create temp folder
-            var folder = _tempFolder;
-            DeployTo(folder);
+            var dllFolder = Path.Combine(_tempFolder, "foo");
+            var jarFolder = Path.Combine(_tempFolder, "bar", "libs");
+            var homeFolder = Directory.GetParent(jarFolder).FullName;
 
-            // Build classpath
-            var classpath = string.Join(";",
-                Directory.GetFiles(folder).Where(x => !x.Contains("ignite-core-")).Select(Path.GetFileName));
+            DeployTo(dllFolder, jarFolder);
+
+            // Remove some jars.
+            Directory.GetFiles(jarFolder, "cache-api-1.0.0.jar").ToList().ForEach(File.Delete);
 
             // Start a node and check the exception.
-            var exePath = Path.Combine(folder, "Apache.Ignite.exe");
+            var exePath = Path.Combine(dllFolder, "Apache.Ignite.exe");
             var reader = new ListDataReader();
 
-            var proc = IgniteProcess.Start(exePath, string.Empty, args: new[]
-            {
-                "-jvmClasspath=" + classpath,
-                "-J-ea",
-                "-J-Xms512m",
-                "-J-Xmx512m"
-            }, outReader: reader);
+            var proc = IgniteProcess.Start(exePath, homeFolder, reader);
 
             // Wait for process to fail.
             Assert.IsNotNull(proc);
@@ -107,7 +102,7 @@ namespace Apache.Ignite.Core.Tests
             // Check error message.
             Assert.AreEqual("ERROR: Apache.Ignite.Core.Common.IgniteException: Java class is not found " +
                             "(did you set IGNITE_HOME environment variable?): " +
-                            "org/apache/ignite/internal/processors/platform/PlatformIgnition",
+                            "org/apache/ignite/internal/processors/platform/utils/PlatformUtils",
                 reader.GetOutput().First());
         }
 
