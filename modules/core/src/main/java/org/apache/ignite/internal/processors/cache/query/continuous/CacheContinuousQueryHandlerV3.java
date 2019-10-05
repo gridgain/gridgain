@@ -101,7 +101,7 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() {
+    @Override public IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() {
         if (rmtTrans == null && rmtTransFactory != null)
             rmtTrans = rmtTransFactory.create();
 
@@ -109,7 +109,7 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override protected EventListener<?> localTransformedEventListener() {
+    @Override public EventListener<?> localTransformedEventListener() {
         return locTransLsnr;
     }
 

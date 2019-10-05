@@ -27,7 +27,15 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
@@ -428,7 +436,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.TRANSACTIONS",
                 "IGNITE.VIEWS",
                 "IGNITE.TABLE_COLUMNS",
-                "IGNITE.VIEW_COLUMNS"
+                "IGNITE.VIEW_COLUMNS",
+                "IGNITE.QUERY_CONTINUOUS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -900,7 +909,26 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.VIEW_COLUMNS.PRECISION.null.19",
                 "IGNITE.VIEW_COLUMNS.DEFAULT_VALUE.null.2147483647",
                 "IGNITE.VIEW_COLUMNS.SCALE.null.10",
-                "IGNITE.VIEW_COLUMNS.VIEW_NAME.null.2147483647"
+                "IGNITE.VIEW_COLUMNS.VIEW_NAME.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.NOTIFY_EXISTING.null.1",
+                "IGNITE.QUERY_CONTINUOUS.OLD_VALUE_REQUIRED.null.1",
+                "IGNITE.QUERY_CONTINUOUS.KEEP_BINARY.null.1",
+                "IGNITE.QUERY_CONTINUOUS.IS_MESSAGING.null.1",
+                "IGNITE.QUERY_CONTINUOUS.AUTO_UNSUBSCRIBE.null.1",
+                "IGNITE.QUERY_CONTINUOUS.LAST_SEND_TIME.null.19",
+                "IGNITE.QUERY_CONTINUOUS.LOCAL_TRANSFORMED_LISTENER.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.TOPIC.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.BUFFER_SIZE.null.10",
+                "IGNITE.QUERY_CONTINUOUS.REMOTE_TRANSFORMER.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.DELAYED_REGISTER.null.1",
+                "IGNITE.QUERY_CONTINUOUS.IS_QUERY.null.1",
+                "IGNITE.QUERY_CONTINUOUS.NODE_ID.null.16",
+                "IGNITE.QUERY_CONTINUOUS.INTERVAL.null.19",
+                "IGNITE.QUERY_CONTINUOUS.IS_EVENTS.null.1",
+                "IGNITE.QUERY_CONTINUOUS.ROUTINE_ID.null.16",
+                "IGNITE.QUERY_CONTINUOUS.REMOTE_FILTER.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.CACHE_NAME.null.2147483647",
+                "IGNITE.QUERY_CONTINUOUS.LOCAL_LISTENER.null.2147483647"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
