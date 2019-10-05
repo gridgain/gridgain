@@ -315,7 +315,6 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * @throws Exception If failed.
      */
@@ -339,7 +338,8 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "TRANSACTIONS",
             "VIEWS",
             "TABLE_COLUMNS",
-            "VIEW_COLUMNS"
+            "VIEW_COLUMNS",
+            "QUERY_CONTINUOUS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
@@ -367,7 +367,6 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             assertEquals(expViews, actViews);
         }
     }
-
 
     /**
      * @throws Exception If failed.
