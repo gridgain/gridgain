@@ -220,12 +220,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                true,
-                _flagKeepBinary,
-                true,
-                _flagPartitionRecover,
-                _flagAllowAtomicOpsInTx,
-                _nearCacheConfiguration);
+                flagSkipStore: true,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /// <summary>
@@ -252,12 +252,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK1, TV1>(
                 target,
-                _flagSkipStore,
-                true,
-                _flagNoRetries,
-                _flagPartitionRecover,
-                _flagAllowAtomicOpsInTx,
-                _nearCacheConfiguration);
+                flagSkipStore: _flagSkipStore,
+                flagKeepBinary: true,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -270,19 +270,32 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                true,
-                _flagKeepBinary,
-                _flagSkipStore,
-                _flagPartitionRecover,
-                true,
-                _nearCacheConfiguration);
+                flagSkipStore: true,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: true,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /** <inheritdoc /> */
         public ICache<TK, TV> WithNearCache()
         {
-            // TODO: Revert other changes; make old APIs deprecated.
-            throw new NotImplementedException();
+            // TODO: Overload with configuration.
+            // TODO: Deprecate old methods? Or keep while the feature is in preview?
+            if (_nearCacheConfiguration != null)
+            {
+                return this;
+            }
+
+            return new CacheImpl<TK, TV>(
+                Target,
+                flagSkipStore: _flagSkipStore,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: new NearCacheConfiguration());
         }
 
         /** <inheritDoc /> */
@@ -294,12 +307,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 cache0,
-                _flagSkipStore,
-                _flagKeepBinary,
-                _flagNoRetries,
-                _flagPartitionRecover,
-                _flagAllowAtomicOpsInTx,
-                _nearCacheConfiguration);
+                flagSkipStore: _flagSkipStore,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -1289,12 +1302,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                _flagSkipStore,
-                _flagKeepBinary,
-                true,
-                _flagPartitionRecover,
-                _flagAllowAtomicOpsInTx,
-                _nearCacheConfiguration);
+                flagSkipStore: _flagSkipStore,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: true,
+                flagPartitionRecover: _flagPartitionRecover,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
@@ -1307,12 +1320,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                _flagSkipStore,
-                _flagKeepBinary,
-                _flagNoRetries,
-                true,
-                _flagAllowAtomicOpsInTx,
-                _nearCacheConfiguration);
+                flagSkipStore: _flagSkipStore,
+                flagKeepBinary: _flagKeepBinary,
+                flagNoRetries: _flagNoRetries,
+                flagPartitionRecover: true,
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
+                nearCacheConfiguration: _nearCacheConfiguration);
         }
 
         /** <inheritDoc /> */
