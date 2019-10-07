@@ -48,5 +48,19 @@ namespace Apache.Ignite.Core.Tests
                 }
             }
         }
+
+        /// <summary>
+        /// Copies directory recursively.
+        /// </summary>
+        /// <param name="source">Source path.</param>
+        /// <param name="target">Target path.</param>
+        public static void CopyDirectory(string source, string target)
+        {
+            foreach (var dir in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+                Directory.CreateDirectory(dir.Replace(source, target));
+
+            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+                File.Copy(file, file.Replace(source, target), true);
+        }
     }
 }

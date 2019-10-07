@@ -132,6 +132,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Apache.Ignite.Core.Tests\PathUtils.cs">
+      <Link>PathUtils.cs</Link>
+    </Compile>
     <Compile Include="Log4NetTest.cs" />
     <Compile Include="NLogTest.cs" />
     <Compile Include="AspNetTest.cs" />
