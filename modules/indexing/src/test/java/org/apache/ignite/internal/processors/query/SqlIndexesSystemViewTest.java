@@ -30,6 +30,9 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.TextQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -45,6 +48,12 @@ import org.junit.Test;
 // t0d0 not activated grid
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     private Ignite driver;
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
+    }
 
     @Override protected void beforeTest() throws Exception {
         // t0d0 baseline
@@ -138,7 +147,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
     @Test
     public void testDdlTableIndexes2() throws Exception {
-        execSql(driver, "CREATE TABLE Person(id1 INT, id2 INT, name VARCHAR, PRIMARY KEY (id1, id2))");
+        execSql(driver, "CREATE TABLE Person(id1 INT, id2 INT, name VARCHAR, age INT, PRIMARY KEY (id1, id2))");
 
         List<Object> expInitial = Arrays.asList(
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
@@ -148,11 +157,11 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
 
-        execSql(driver, "CREATE INDEX CompIdx ON Person(name, id2)");
+        execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
         // t0d0 check index columns
         List<Object> expWithSecondary = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"ID2\" ASC, \"ID1\" ASC, \"ID1\" ASC, \"ID2\" ASC", false, false, 10),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID1\" ASC, \"ID2\" ASC", false, false, 10),
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID1\" ASC, \"ID2\" ASC", true, true, 10),
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true, null)
