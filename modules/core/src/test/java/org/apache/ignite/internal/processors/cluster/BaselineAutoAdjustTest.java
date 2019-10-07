@@ -111,6 +111,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void testBaselineAutoAdjustAfterNodeLeft() throws Exception {
         Ignite ignite0 = startGrids(2);
 
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
         ignite0.cluster().active(true);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
@@ -139,6 +141,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     public void testBaselineAutoAdjustSinceSecondNodeLeft() throws Exception {
         Ignite ignite0 = startGrids(3);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         ignite0.cluster().active(true);
 
@@ -174,6 +178,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     public void testBaselineAutoAdjustSinceCoordinatorLeft() throws Exception {
         Ignite ignite0 = startGrids(3);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         ignite0.cluster().active(true);
 
@@ -211,6 +217,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     public void testBaselineAutoAdjustAfterNodeJoin() throws Exception {
         IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         ignite0.cluster().active(true);
 
@@ -287,6 +295,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void testBaselineAutoAdjustThrowExceptionWhenBaselineChangedManually() throws Exception {
         Ignite ignite0 = startGrids(2);
 
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
         ignite0.cluster().active(true);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
@@ -310,6 +320,8 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         autoAdjustTimeout = 3000;
 
         Ignite ignite0 = startGrids(3);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         ignite0.cluster().active(true);
 
@@ -349,6 +361,9 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     public void testBaselineAutoAdjustIgnoreClientNodes() throws Exception {
         IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
         startGrid(1);
 
         ignite0.cluster().active(true);
@@ -451,11 +466,15 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void shouldJoinSuccessBecauseCoordinatorIsPersistent() throws Exception {
         IgniteEx ignite0 = startGrid(persistentRegionConfiguration(0));
 
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
         ignite0.cluster().active(true);
 
         startGrid(inMemoryConfiguration(1));
 
         startGrid(persistentRegionConfiguration(2));
+
+        assertEquals(3, ignite0.cluster().nodes().size());
     }
 
     /**
