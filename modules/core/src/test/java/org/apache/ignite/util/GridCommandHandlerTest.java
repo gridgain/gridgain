@@ -50,6 +50,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.GridJobExecuteResponse;
@@ -394,6 +395,52 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertContains(log, testOut.toString(), "Cluster is active (read-only)");
+    }
+
+    /**
+     * Test --set-state command works correct.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSetState() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        assertEquals(INACTIVE, ignite.cluster().state());
+
+        // INACTIVE -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE");
+
+        // INACTIVE -> READ_ONLY.
+        setState(ignite, READ_ONLY, "READ_ONLY");
+
+        // READ_ONLY -> READ_ONLY.
+        setState(ignite, READ_ONLY, "READ_ONLY");
+
+        // READ_ONLY -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE");
+
+        // ACTIVE -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE");
+
+        // ACTIVE -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE");
+
+        // INACTIVE -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE");
+
+        // ACTIVE -> READ_ONLY.
+        setState(ignite, READ_ONLY, "READ_ONLY");
+
+        // READ_ONLY -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE");
+    }
+
+    /** */
+    private void setState(Ignite ignite, ClusterState state, String strState) {
+        assertEquals(EXIT_CODE_OK, execute("--set-state", strState));
+
+        assertEquals(state, ignite.cluster().state());
     }
 
     /**
