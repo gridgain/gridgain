@@ -47,7 +47,6 @@ namespace ignite
                 isClient = reader.ReadBool();
 
                 ReadConsistentId(reader);
-                ReadProductVersion(reader);
             }
 
             ClusterNodeImpl::~ClusterNodeImpl()
@@ -111,11 +110,6 @@ namespace ignite
                 return order;
             }
 
-            const IgniteProductVersion& ClusterNodeImpl::GetVersion()
-            {
-                return *ver.Get();
-            }
-
             void ClusterNodeImpl::ReadAddresses(BinaryReaderImpl& reader)
             {
                 std::back_insert_iterator<std::vector<std::string> > iter(*addrs.Get());
@@ -155,24 +149,6 @@ namespace ignite
                 std::stringstream ss;
                 ss << reader.ReadGuid();
                 *consistentId.Get() = ss.str();
-            }
-
-            void ClusterNodeImpl::ReadProductVersion(BinaryReaderImpl& reader)
-            {
-                int8_t major = reader.ReadInt8();
-                int8_t minor = reader.ReadInt8();
-                int8_t maintenance = reader.ReadInt8();
-
-                std::string stage;
-                reader.ReadString(stage);
-
-                int64_t releaseDate = reader.ReadInt64();
-
-                std::vector<int8_t> revHash(IgniteProductVersion::SHA1_LENGTH);
-                reader.ReadInt8Array(&revHash[0], IgniteProductVersion::SHA1_LENGTH);
-
-                ver = SharedPointer<IgniteProductVersion>(new IgniteProductVersion(major, minor,
-                    maintenance, stage, releaseDate, revHash));
             }
         }
     }

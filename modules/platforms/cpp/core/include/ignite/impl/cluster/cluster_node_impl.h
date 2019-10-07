@@ -20,7 +20,6 @@
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 #include <ignite/guid.h>
-#include "ignite/ignite_product_version.h"
 
 #include <ignite/impl/interop/interop_target.h>
 
@@ -151,13 +150,6 @@ namespace ignite
                  */
                 long GetOrder();
 
-                /**
-                 * Get node version.
-                 *
-                 * @return Prodcut version.
-                 */
-                const IgniteProductVersion& GetVersion();
-
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterNodeImpl);
 
@@ -189,13 +181,6 @@ namespace ignite
                  */
                 void ReadConsistentId(binary::BinaryReaderImpl& reader);
 
-                /**
-                 * Read Cluster Node product version.
-                 *
-                 * @param reader Binary Reader.
-                 */
-                void ReadProductVersion(binary::BinaryReaderImpl& reader);
-
                 /** Cluster Node mem */
                 common::concurrent::SharedPointer<interop::InteropMemory> mem;
 
@@ -225,9 +210,6 @@ namespace ignite
 
                 /** Consistent ID */
                 common::concurrent::SharedPointer<std::string> consistentId;
-
-                /** Product version. */
-                common::concurrent::SharedPointer<IgniteProductVersion> ver;
             };
         }
     }
