@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
+    using System;
     using System.Collections.Generic;
 
     /// <summary>
@@ -26,7 +27,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     internal class NearCacheManager
     {
         /** */
-        private readonly Dictionary<string, NearCache> _nearCaches;
+        private readonly Dictionary<string, WeakReference> _nearCaches;
 
         /// <summary>
         /// Initializes a new instance of <see cref="NearCacheManager"/> class.
@@ -34,7 +35,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         public NearCacheManager()
         {
             // TODO: How do we remove near caches when underlying cache is destroyed? String name is not enough.
-            _nearCaches = new Dictionary<string, NearCache>();
+            _nearCaches = new Dictionary<string, WeakReference>();
         }
     }
 }
