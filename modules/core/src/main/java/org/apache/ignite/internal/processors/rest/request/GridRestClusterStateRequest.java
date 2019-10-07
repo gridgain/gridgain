@@ -43,8 +43,16 @@ public class GridRestClusterStateRequest extends GridRestRequest {
         return state;
     }
 
-    /** */
+    /**
+     * Sets new cluster state to request.
+     *
+     * @param state New cluster state.
+     * @throws NullPointerException If {@code state} is null.
+     */
     public void state(ClusterState state) {
+        if (state == null)
+            throw new NullPointerException("State can't be null.");
+
         this.state = state;
     }
 }
