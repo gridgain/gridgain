@@ -119,7 +119,7 @@ public class StaticResourceConfiguration extends WebMvcConfigurerAdapter {
         if (faviconUrl != null)
             reqHnd.setLocations(Collections.singletonList(applicationCtx.getResource(faviconUrl.toExternalForm())));
         else if (frontendFolder != null)
-            log.warn("Failed to find favicon locally: " + new File("frontend/favicon.ico").getAbsolutePath());
+            log.warn("Favicon not found locally: " + new File("frontend/favicon.ico").getAbsolutePath());
 
         return reqHnd;
     }
