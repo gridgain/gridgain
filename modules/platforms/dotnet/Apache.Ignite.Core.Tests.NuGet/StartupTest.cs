@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Tests.NuGet
     using System.IO;
     using System.Linq;
     using System.Threading;
-    using System.Xml.XPath;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
 
