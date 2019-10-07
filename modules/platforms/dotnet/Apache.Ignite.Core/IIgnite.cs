@@ -279,10 +279,6 @@ namespace Apache.Ignite.Core
         /// <returns>Near cache instance.</returns>
         ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration);
 
-        // TODO: Separate NearCache method for .NET Near Cache? Or replace Java-based one? Or combine them?
-        // Replacing looks like the most adequate scenario - users do not care about implementation.
-        // TODO: Overload without configuration
-
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.
         /// </summary>

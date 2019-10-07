@@ -453,8 +453,6 @@ namespace Apache.Ignite.Core.Impl
         public ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration,
             NearCacheConfiguration nearConfiguration)
         {
-            // CacheConfiguration.NearCacheConfiguration is for all server nodes
-            // nearConfiguration is for current client node.
             return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, Op.GetOrCreateCacheFromConfig);
         }
 
@@ -508,7 +506,7 @@ namespace Apache.Ignite.Core.Impl
                 }
             });
 
-            return GetCache<TK, TV>(cacheTarget, nearCacheConfiguration: nearConfiguration);
+            return GetCache<TK, TV>(cacheTarget);
         }
 
         /** <inheritdoc /> */
@@ -524,21 +522,12 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="nativeCache">Native cache.</param>
         /// <param name="keepBinary">Keep binary flag.</param>
-        /// <param name="nearCacheConfiguration">Enables near cache.</param>
         /// <returns>
         /// New instance of cache wrapping specified native cache.
         /// </returns>
-        public static ICache<TK, TV> GetCache<TK, TV>(IPlatformTargetInternal nativeCache, bool keepBinary = false,
-            NearCacheConfiguration nearCacheConfiguration = null)
+        public static ICache<TK, TV> GetCache<TK, TV>(IPlatformTargetInternal nativeCache, bool keepBinary = false)
         {
-            return new CacheImpl<TK, TV>(
-                nativeCache,
-                false,
-                keepBinary,
-                false,
-                false,
-                false,
-                nearCacheConfiguration);
+            return new CacheImpl<TK, TV>(nativeCache, false, keepBinary, false, false, false, null);
         }
 
         /** <inheritdoc /> */
@@ -711,18 +700,13 @@ namespace Apache.Ignite.Core.Impl
         /** <inheritdoc /> */
         public ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            IgniteArgumentCheck.NotNull(configuration, "configuration");
-
-            var target = DoOutOpObject((int) Op.GetCache, w => w.WriteString(name));
-
-            return GetCache<TK, TV>(target, nearCacheConfiguration: configuration);
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.CreateNearCache);
         }
 
         /** <inheritdoc /> */
         public ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            // TODO: What's the difference between Create and GetOrCreate, why would we need it?
-            return CreateNearCache<TK, TV>(name, configuration);
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.GetOrCreateNearCache);
         }
 
         /** <inheritdoc /> */
