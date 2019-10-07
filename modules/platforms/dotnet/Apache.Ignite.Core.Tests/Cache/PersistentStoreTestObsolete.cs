@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     public class PersistentStoreTestObsolete
     {
         /** Temp dir for WAL. */
-        private readonly string _tempDir = TestUtils.GetTempDirectoryName();
+        private readonly string _tempDir = PathUtils.GetTempDirectoryName();
 
         /// <summary>
         /// Tears down the test.

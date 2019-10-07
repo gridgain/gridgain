@@ -42,30 +42,6 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// Gets the name of the temporary directory.
-        /// </summary>
-        public static string GetTempDirectoryName()
-        {
-            var baseDir = Path.Combine(Path.GetTempPath(), "ignite_test_");
-
-            while (true)
-            {
-                try
-                {
-                    return Directory.CreateDirectory(baseDir + Path.GetRandomFileName()).FullName;
-                }
-                catch (IOException)
-                {
-                    // Expected
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // Expected
-                }
-            }
-        }
-
-        /// <summary>
         /// Kill Ignite processes.
         /// </summary>
         public static void KillProcesses()

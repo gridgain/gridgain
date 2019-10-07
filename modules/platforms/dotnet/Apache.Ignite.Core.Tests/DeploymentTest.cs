@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Tests
         [SetUp]
         public void SetUp()
         {
-            _tempFolder = TestUtils.GetTempDirectoryName();
+            _tempFolder = PathUtils.GetTempDirectoryName();
         }
 
         /// <summary>

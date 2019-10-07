@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Tests.Deployment
     /// </summary>
     public class PeerAssemblyLoadingVersioningTest
     {
-        private static readonly string TempDir = TestUtils.GetTempDirectoryName();
+        private static readonly string TempDir = PathUtils.GetTempDirectoryName();
 
         /// <summary>
         /// Sets up the test.

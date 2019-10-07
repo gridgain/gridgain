@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     public class PartitionPreloadTest
     {
         /** Temp dir for PDS. */
-        private static readonly string TempDir = TestUtils.GetTempDirectoryName();
+        private static readonly string TempDir = PathUtils.GetTempDirectoryName();
 
         /** */
         private const string MemoryRegionName = "mem-region";
