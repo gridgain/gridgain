@@ -95,7 +95,7 @@ public class MetricExporter extends GridProcessorAdapter {
 
         String tag = cluster.tag();
 
-        String consistentId = (String)ctx.discovery().localNode().consistentId();
+        String consistentId = ctx.discovery().localNode().consistentId().toString();
 
         assert consistentId != null : "ConsistentId is null.";
 

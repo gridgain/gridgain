@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
+import org.apache.ignite.internal.commandline.management.ManagementCommands;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -58,7 +59,10 @@ public enum CommandList {
     READ_ONLY_ENABLE("--read-only-on", new ClusterReadOnlyModeEnableCommand()),
 
     /** */
-    READ_ONLY_DISABLE("--read-only-off", new ClusterReadOnlyModeDisableCommand());
+    READ_ONLY_DISABLE("--read-only-off", new ClusterReadOnlyModeDisableCommand()),
+
+    /** */
+    MANAGEMENT("--management", new ManagementCommands());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

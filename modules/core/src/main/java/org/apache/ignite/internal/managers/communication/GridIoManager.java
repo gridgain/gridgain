@@ -1938,8 +1938,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         Message msg,
         byte plc
     ) throws IgniteCheckedException {
-        assert F.find(nodes, null, F.localNode(locNodeId)) == null :
-            "Internal Ignite code should never call the method with local node in a node list.";
+// TODO GG-21721 temporary allow this method on local node.
+//        assert F.find(nodes, null, F.localNode(locNodeId)) == null :
+//            "Internal Ignite code should never call the method with local node in a node list.";
 
         IgniteCheckedException err = null;
 

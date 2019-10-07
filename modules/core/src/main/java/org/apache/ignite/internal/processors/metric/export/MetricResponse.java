@@ -411,4 +411,8 @@ public class MetricResponse implements Message {
     @Override public void onAckReceived() {
         // No-op.
     }
+
+    public byte[] body() {
+        return body;
+    }
 }
