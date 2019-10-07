@@ -20,15 +20,19 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.TextQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -37,6 +41,8 @@ import org.junit.Test;
 // t0d0 driver node?
 // t0d0 inline size?
 // t0d0 asc/desc
+// t0d0 static configuration
+// t0d0 not activated grid
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     private Ignite driver;
 
@@ -65,19 +71,6 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testInactiveGrid() throws Exception {
-        execSql(driver, "CREATE TABLE Person(id INT PRIMARY KEY, name VARCHAR)");
-
-        driver.cluster().active(false);
-
-        for (Ignite ign : G.allGrids()) {
-            GridTestUtils.assertThrowsWithCause(
-                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
-                IgniteException.class);
-        }
-    }
-
-    @Test
     public void testDdlTableIndexes() throws Exception {
         execSql(driver, "CREATE TABLE Person(id INT PRIMARY KEY, name VARCHAR, age INT)");
 
@@ -86,6 +79,18 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true, 5),
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
+
+        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+
+        driver.cluster().active(false);
+
+        for (Ignite ign : G.allGrids()) {
+            GridTestUtils.assertThrowsWithCause(
+                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                IgniteException.class);
+        }
+
+        driver.cluster().active(true);
 
         checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
 
@@ -110,6 +115,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         checkIndexes(idxs -> assertEqualsCollections(expWithSecondary, idxs));
 
+        // t0d0 case when remove index fails
         execSql(driver, "DROP INDEX NameIdx");
 
         checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
@@ -200,6 +206,32 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
             assertTrue(idxs.isEmpty());
         });
+    }
+
+    @Test
+    public void testTextIndex() throws Exception {
+        IgniteCache<Object, Object> cache = driver.createCache(new CacheConfiguration<>("cache")
+            .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, String.class))));
+
+        cache.put(1, "john");
+        cache.put(2, "jack");
+
+        List<T2<Integer, String>> res = cache.query(new TextQuery<Integer, String>("String", "john")).getAll().stream()
+            .map(e -> new T2<>(e.getKey(), e.getValue()))
+            .collect(Collectors.toList());
+
+        // Check that TEXT query actually works
+        assertEqualsCollections(Collections.singleton(new T2<>(1, "john")), res);
+
+        List<Object> expIdxs = Arrays.asList(
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "STRING__VAL_IDX", "BTREE", "\"_VAL\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+        );
+
+        // It is expected that TEXT index is not present in the list
+        checkIndexes(idxs -> assertEqualsCollections(expIdxs, idxs));
     }
 
     private void checkIndexes(Consumer<List<List<?>>> checker) {
