@@ -17,7 +17,7 @@
 import {isPersistenceEnabled} from './configuration-checker.js'
 import {assert} from 'chai';
 
-suite.only('Test of configuration checker', () => {
+suite('Test of configuration checker', () => {
     test('Check persistence in configuration', () => {
         const NO_PERSISTENCE_CFG = {
             dataStorageConfiguration: {
