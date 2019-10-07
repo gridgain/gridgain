@@ -109,6 +109,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (nearCacheConfiguration != null)
             {
                 // TODO: Set up change notifier.
+                // TODO: Use _ignite.NearCacheManager.GetNearCache(Name)
                 _nearCacheConfiguration = nearCacheConfiguration;
                 _nearCache = new ConcurrentDictionary<TK, TV>();
             }

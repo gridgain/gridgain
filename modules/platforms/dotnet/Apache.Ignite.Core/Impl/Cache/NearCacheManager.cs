@@ -35,6 +35,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         public NearCacheManager()
         {
             // TODO: How do we remove near caches when underlying cache is destroyed? String name is not enough.
+            // TODO: Use similar WeakReference mechanism as DataStreamer does
             _nearCaches = new Dictionary<string, WeakReference>();
         }
     }
