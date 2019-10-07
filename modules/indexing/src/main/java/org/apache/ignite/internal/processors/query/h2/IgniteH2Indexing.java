@@ -2100,7 +2100,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
 
-        memoryManager = new QueryMemoryManager(ctx, 0); //TODO: GG-18629: Get global_memory_quota value from configuration.
+        memoryManager = new QueryMemoryManager(ctx, 0);
 
         mapQryExec = new GridMapQueryExecutor();
         rdcQryExec = new GridReduceQueryExecutor();

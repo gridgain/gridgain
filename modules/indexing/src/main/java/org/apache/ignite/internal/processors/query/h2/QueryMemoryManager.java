@@ -25,6 +25,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -90,11 +91,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        if (globalQuota == 0) {
-            globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
-                (long)(Runtime.getRuntime().maxMemory() * 0.6d));
-        }
-
         long dfltMemLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT, 0);
 
         if (dfltMemLimit == 0)
@@ -145,11 +141,15 @@ public class QueryMemoryManager extends H2MemoryTracker {
     public QueryMemoryTracker createQueryMemoryTracker(long maxQueryMemory) {
         assert maxQueryMemory >= 0;
 
+        if (dfltSqlQryMemoryLimit < 0) {
+            if (maxQueryMemory > 0)
+                LT.warn(log, "SQL memory management is disabled on node.");
+
+            return null;
+        }
+
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
-
-        if (dfltSqlQryMemoryLimit < 0)
-            return null;
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {
             U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
