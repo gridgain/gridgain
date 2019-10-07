@@ -858,6 +858,166 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test setup:
+     * 1) In-memory cache with NodeFilter.
+     * 2) Part of cluster nodes is included into Baseline topology, part is not.
+     * 3) Some nodes from both parts pass NodeFilter.
+     * 4) Some nodes from both parts don't pass NodeFilter.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryCacheWithNodeFilter() throws Exception {
+        IgniteEx ig00 = startGrid("passFilterNode00");
+        IgniteEx missFilterNode00 = startGrid("missFilterNode00");
+
+        ig00.cluster().active(true);
+
+        IgniteEx passFilterNode01 = startGrid("passFilterNode01");
+        IgniteEx missFilterNode01 = startGrid("missFilterNode01");
+
+        assertEquals(2, ig00.cluster().currentBaselineTopology().size());
+
+        String cName = CACHE_NAME + 2;
+
+        ig00.createCache(new CacheConfiguration<>(cName)
+            .setDataRegionName("memory")
+            .setNodeFilter((node) -> node.consistentId().toString().contains("passFilter"))
+        );
+
+        assertTrue(partsNumOnNode(ig00, cName, ig00.localNode()) > 0);
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode00.localNode()));
+        assertEquals(0, partsNumOnNode(ig00, cName, passFilterNode01.localNode()));
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode01.localNode()));
+    }
+
+    /**
+     * Test setup:
+     * 1) In-memory cache with NodeFilter.
+     * 2) All nodes in BaselineTopology are online and pass the filter.
+     * 3) New node (out of BLT, doesn't pass the filter) joins cluster.
+     * 4) New node (out of BLT, passes the filter) joins cluster.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryCacheWithNodeFilterJoinNode0() throws Exception {
+        IgniteEx ig00 = startGrid("passFilterNode00");
+
+        ig00.cluster().active(true);
+
+        String cName = CACHE_NAME + 2;
+
+        ig00.createCache(new CacheConfiguration<>(cName)
+            .setDataRegionName("memory")
+            .setNodeFilter((node) -> node.consistentId().toString().contains("passFilter"))
+        );
+
+        IgniteEx missFilterNode00 = startGrid("missFilterNode00");
+
+        awaitPartitionMapExchange();
+
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode00.localNode()));
+
+        IgniteEx passFilterNode01 = startGrid("passFilterNode01");
+
+        awaitPartitionMapExchange();
+
+        assertEquals(0, partsNumOnNode(ig00, cName, passFilterNode01.localNode()));
+    }
+
+    /**
+     * Test setup:
+     * 1) In-memory cache with NodeFilter.
+     * 2) Part of nodes is in BLT, part of nodes is out of BLT.
+     * 3) Offline BLT node not passing the filter returns to the cluster.
+     * 4) Offline BLT node passing the filter returns to the cluster.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryCacheWithNodeFilterJoinNode1() throws Exception {
+        IgniteEx ig00 = startGrid("passFilterNode00");
+        startGrid("passFilterNode01");
+        startGrid("missFilterNode00");
+
+        ig00.cluster().active(true);
+
+        stopGrid("passFilterNode01");
+        stopGrid("missFilterNode00");
+
+        IgniteEx passFilterNode02 = startGrid("passFilterNode02");
+        IgniteEx missFilterNode01 = startGrid("missFilterNode01");
+
+        assertEquals(3, ig00.cluster().currentBaselineTopology().size());
+
+        String cName = CACHE_NAME + 2;
+
+        ig00.createCache(new CacheConfiguration<>(cName)
+            .setDataRegionName("memory")
+            .setNodeFilter((node) -> node.consistentId().toString().contains("passFilter"))
+        );
+
+        IgniteEx passFilterNode01 = startGrid("passFilterNode01");
+        IgniteEx missFilterNode00 = startGrid("missFilterNode00");
+
+        awaitPartitionMapExchange();
+
+        assertTrue(partsNumOnNode(ig00, cName, ig00.localNode()) > 0);
+        assertTrue(partsNumOnNode(ig00, cName, passFilterNode01.localNode()) > 0);
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode00.localNode()));
+        assertEquals(0, partsNumOnNode(ig00, cName, passFilterNode02.localNode()));
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode01.localNode()));
+    }
+
+    /**
+     * Test setup:
+     * 1) In-memory cache with NodeFilter.
+     * 2) Part of nodes is in BLT, part of nodes is out of BLT.
+     * 3) Node out of BLT passing the filter leaves the cluster.
+     * 4) Node from BLT passing the filter leaves the cluster.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryCacheWithNodeFilterStopNode() throws Exception {
+        IgniteEx ig00 = startGrid("passFilterNode00");
+        startGrid("passFilterNode01");
+
+        ig00.cluster().active(true);
+
+        IgniteEx passFilterNode02 = startGrid("passFilterNode02");
+        IgniteEx missFilterNode00 = startGrid("missFilterNode00");
+
+        assertEquals(2, ig00.cluster().currentBaselineTopology().size());
+
+        String cName = CACHE_NAME + 2;
+
+        ig00.createCache(new CacheConfiguration<>(cName)
+            .setDataRegionName("memory")
+            .setNodeFilter((node) -> node.consistentId().toString().contains("passFilter"))
+        );
+
+        awaitPartitionMapExchange();
+
+        stopGrid("passFilterNode01");
+
+        assertTrue(partsNumOnNode(ig00, cName, ig00.localNode()) > 0);
+        assertEquals(0, partsNumOnNode(ig00, cName, passFilterNode02.localNode()));
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode00.localNode()));
+
+        stopGrid("passFilterNOde02");
+
+        assertTrue(partsNumOnNode(ig00, cName, ig00.localNode()) > 0);
+        assertEquals(0, partsNumOnNode(ig00, cName, missFilterNode00.localNode()));
+    }
+
+    /** */
+    private int partsNumOnNode(Ignite ig, String cacheName, ClusterNode node) {
+        return ig.affinity(cacheName).allPartitions(node).length;
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
