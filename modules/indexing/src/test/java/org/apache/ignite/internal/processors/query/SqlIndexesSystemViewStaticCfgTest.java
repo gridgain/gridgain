@@ -1,0 +1,165 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.processors.query;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Test;
+
+public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
+    private Ignite driver;
+
+    private CacheConfiguration<Object, Object>[] ccfg;
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setCacheConfiguration(ccfg)
+            .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
+    }
+
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    @Test
+    public void testNotActivatedGrid() throws Exception {
+        ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
+            new CacheConfiguration<>("cache")
+                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
+                .setIndexes(Collections.singleton(new QueryIndex("i")))))
+        };
+
+        startNodes(false);
+
+        for (Ignite ign : G.allGrids()) {
+            GridTestUtils.assertThrowsWithCause(
+                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                IgniteException.class);
+        }
+    }
+
+    @Test
+    public void testStaticCacheCfg() throws Exception {
+        ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
+            new CacheConfiguration<>("cache")
+                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
+                .setIndexes(Collections.singleton(new QueryIndex("i")))))
+        };
+
+        startNodes();
+
+        List<Object> expCache = Arrays.asList(
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+        );
+
+        checkIndexes(idxs -> assertEqualsCollections(expCache, idxs));
+
+        driver.destroyCache("cache");
+
+        checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+    }
+
+    @Test
+    public void testStaticCacheInGroupCfg() throws Exception {
+        ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
+            new CacheConfiguration<>("cache1")
+                .setGroupName("group")
+                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, SqlIndexesSystemViewTest.TestValue.class)
+                .setIndexes(Collections.singleton(new QueryIndex("i"))))),
+            new CacheConfiguration<>("cache2")
+                .setGroupName("group")
+        };
+
+        startNodes();
+
+        List<Object> expGrp = Arrays.asList(
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+        );
+
+        checkIndexes(idxs -> assertEqualsCollections(expGrp, idxs));
+
+        driver.destroyCache("cache1");
+
+        // t0d0 investigate why some indexes can still be visible
+        checkIndexes(idxs -> {
+            if (!idxs.isEmpty())
+                System.err.println(idxs);
+
+            assertTrue(idxs.isEmpty());
+        });
+    }
+
+    private void startNodes() throws Exception {
+        startNodes(true);
+    }
+
+    private void startNodes(boolean activate) throws Exception {
+        // t0d0 baseline
+        // t0d0 disable by system property
+        startGrids(2);
+
+        G.setClientMode(true);
+        startGrid(3);
+
+        driver = grid(0);
+
+        if (activate)
+            driver.cluster().active(true);
+    }
+
+    private void checkIndexes(Consumer<List<List<?>>> checker) {
+        for (Ignite ign : G.allGrids()) {
+            List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
+
+            checker.accept(indexes);
+        }
+    }
+
+    private static List<List<?>> execSql(Ignite ign, String sql) {
+        return ((IgniteEx)ign).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
+    }
+
+    public static class TestValue {
+        @QuerySqlField
+        int i;
+    }
+}
