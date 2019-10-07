@@ -79,9 +79,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyRollbackOnlyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -127,9 +124,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_NOT_EMPTY_VER;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.DIAGNOSTIC_METRICS;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.TRANSACTION_METRICS;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -148,22 +142,6 @@ import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
 public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeoutObject, AutoCloseable, MvccCoordinatorChangeAware {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Metric name for total system time on node. */
-    public static final String METRIC_TOTAL_SYSTEM_TIME = "totalNodeSystemTime";
-
-    /** Metric name system time histogram on node. */
-    public static final String METRIC_SYSTEM_TIME_HISTOGRAM = "nodeSystemTimeHistogram";
-
-    /** Metric name for total user time on node. */
-    public static final String METRIC_TOTAL_USER_TIME = "totalNodeUserTime";
-
-    /** Metric name user time histogram on node. */
-    public static final String METRIC_USER_TIME_HISTOGRAM = "nodeUserTimeHistogram";
-
-    /** Histogram buckets for metrics of system and user time. */
-    public static final long[] METRIC_TIME_BUCKETS =
-        new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000, 5000, 10000, 25000, 60000};
 
     /** */
     private static final ThreadLocal<SimpleDateFormat> TIME_FORMAT =
@@ -3839,17 +3817,17 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         if (state == COMMITTED || state == ROLLED_BACK) {
             leaveSystemSection();
 
-            //if commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once
+            // If commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once.
             if (!commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
                 return res;
 
             long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
 
-            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+            // In some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision.
             long userTimeMillis = Math.max(totalTimeMillis - systemTimeMillis, 0);
 
-            writeTxMetrics(systemTimeMillis, userTimeMillis);
+            cctx.txMetrics().onNearTxComplete(systemTimeMillis, userTimeMillis);
 
             boolean willBeSkipped = txDumpsThrottling == null || txDumpsThrottling.skipCurrent();
 
@@ -3938,7 +3916,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public IgniteInternalFuture<?> prepareNearTxLocal() {
         enterSystemSection();
 
-        //we assume that prepare start time should be set only once for the transaction
+        // We assume that prepare start time should be set only once for the transaction.
         prepareStartTime.compareAndSet(0, System.nanoTime());
 
         GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)prepFut;
@@ -4039,7 +4017,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
-                    //these values should not be changed after set once
+                    // These values should not be changed after set once.
                     prepareTime.compareAndSet(0, System.nanoTime() - prepareStartTime.get());
 
                     commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
@@ -4107,6 +4085,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             log.debug("Rolling back near tx: " + this);
 
         enterSystemSection();
+
+        // This value should not be changed after set once.
+        commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
 
         if (!onTimeout && trackTimeout)
             removeTimeoutHandler();
@@ -4682,18 +4663,21 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /**
      * @param topVer New topology version.
+     * @param reset {@code True} if need to reset tx state.
      */
-    public void onRemap(AffinityTopologyVersion topVer) {
+    public void onRemap(AffinityTopologyVersion topVer, boolean reset) {
         assert cctx.kernalContext().clientNode();
 
-        mapped = false;
-        nearLocallyMapped = false;
-        colocatedLocallyMapped = false;
-        txNodes = null;
-        onePhaseCommit = false;
-        nearMap.clear();
-        dhtMap.clear();
-        mappings.clear();
+        if (reset) {
+            mapped = false;
+            nearLocallyMapped = false;
+            colocatedLocallyMapped = false;
+            txNodes = null;
+            onePhaseCommit = false;
+            nearMap.clear();
+            dhtMap.clear();
+            mappings.clear();
+        }
 
         synchronized (this) {
             this.topVer = topVer;
@@ -5074,8 +5058,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * Enters the section when system time for this transaction is counted.
      */
     public void enterSystemSection() {
-        //setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
-        //and sould do nothing.
+        // Setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
+        // and should do nothing.
         systemStartTime.compareAndSet(0, System.nanoTime());
     }
 
@@ -5087,36 +5071,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         if (systemStartTime0 > 0)
             systemTime.addAndGet(System.nanoTime() - systemStartTime0);
-    }
-
-    /**
-     * Writes system and user time metrics.
-     *
-     * @param systemTime System time.
-     * @param userTime User time.
-     */
-    private void writeTxMetrics(long systemTime, long userTime) {
-        MetricRegistry txMetricRegistry = cctx.kernalContext().metric()
-            .registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
-
-        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, systemTime);
-        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_USER_TIME, METRIC_USER_TIME_HISTOGRAM, userTime);
-    }
-
-    /** */
-    private void writeTxMetrics(MetricRegistry registry, String monotonicMetricName, String histoMetricName, long val) {
-        if (registry == null || val <= 0)
-            return;
-
-        LongAdderMetric monotonic = registry.findMetric(monotonicMetricName);
-
-        if (monotonic != null)
-            monotonic.add(val);
-
-        HistogramMetric histo = registry.findMetric(histoMetricName);
-
-        if (histo != null)
-            histo.value(val);
     }
 
     /**

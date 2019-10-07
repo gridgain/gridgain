@@ -224,8 +224,6 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestBaselineTopology()
         {
-            Environment.SetEnvironmentVariable("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", "false");
-
             var cfg1 = new IgniteConfiguration(GetPersistentConfiguration())
             {
                 ConsistentId = "node1"
@@ -244,6 +242,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 var cluster = ignite.GetCluster();
                 Assert.AreEqual(3, cluster.TopologyVersion);
+                cluster.SetBaselineAutoAdjustEnabledFlag(false);
 
                 // Can not set baseline while inactive.
                 var ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
@@ -254,7 +253,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 // Can not set baseline with offline node.
                 ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
                 Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
-                  ex.Message);
+                    ex.Message);
 
                 cluster.SetBaselineTopology(1);
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
@@ -263,7 +262,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 cluster.SetBaselineTopology(cluster.GetBaselineTopology());
 
                 var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
+                CollectionAssert.AreEquivalent(new[] {"node1"}, res.Select(x => x.ConsistentId));
 
                 cluster.SetBaselineTopology(cluster.GetTopology(1));
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
@@ -271,7 +270,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 // Can not set baseline with offline node.
                 ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
                 Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
-                  ex.Message);
+                    ex.Message);
             }
 
             // Check auto activation on cluster restart.
@@ -282,10 +281,8 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Assert.IsTrue(cluster.IsActive());
 
                 var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
+                CollectionAssert.AreEquivalent(new[] {"node1"}, res.Select(x => x.ConsistentId));
             }
-
-            Environment.SetEnvironmentVariable("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", null);
         }
 
         /// <summary>
