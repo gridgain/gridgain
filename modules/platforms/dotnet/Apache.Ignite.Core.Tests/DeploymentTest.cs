@@ -21,7 +21,6 @@ namespace Apache.Ignite.Core.Tests
     using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Compute;
-    using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Resource;
     using Apache.Ignite.Core.Tests.Process;
@@ -112,7 +111,7 @@ namespace Apache.Ignite.Core.Tests
         [SetUp]
         public void SetUp()
         {
-            _tempFolder = IgniteUtils.GetTempDirectoryName();
+            _tempFolder = TestUtils.GetTempDirectoryName();
         }
 
         /// <summary>

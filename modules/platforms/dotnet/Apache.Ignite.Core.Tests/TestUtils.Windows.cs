@@ -19,9 +19,9 @@ namespace Apache.Ignite.Core.Tests
     using System;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Failure;
-    using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Tests.Process;
     using NUnit.Framework;
@@ -46,7 +46,23 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public static string GetTempDirectoryName()
         {
-            return IgniteUtils.GetTempDirectoryName();
+            var baseDir = Path.Combine(Path.GetTempPath(), "ignite_test_");
+
+            while (true)
+            {
+                try
+                {
+                    return Directory.CreateDirectory(baseDir + Path.GetRandomFileName()).FullName;
+                }
+                catch (IOException)
+                {
+                    // Expected
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Expected
+                }
+            }
         }
 
         /// <summary>
