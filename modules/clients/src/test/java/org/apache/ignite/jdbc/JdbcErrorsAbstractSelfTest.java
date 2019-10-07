@@ -35,6 +35,7 @@ import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.cache.CacheInterceptorAdapter;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteCallable;
@@ -755,7 +756,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }
         }
 
-        grid(0).cluster().readOnly(true);
+        grid(0).cluster().state(ClusterState.READ_ONLY);
 
         try {
             checkErrorState((conn) -> {
@@ -765,7 +766,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }, "90097", "Failed to execute DML statement. Cluster in read-only mode");
         }
         finally {
-            grid(0).cluster().readOnly(false);
+            grid(0).cluster().state(ClusterState.ACTIVE);
         }
     }
 
@@ -782,7 +783,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }
         }
 
-        grid(0).cluster().readOnly(true);
+        grid(0).cluster().state(ClusterState.READ_ONLY);
 
         try {
             checkErrorState((conn) -> {
@@ -793,7 +794,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }, "90097", null);
         }
         finally {
-            grid(0).cluster().readOnly(false);
+            grid(0).cluster().state(ClusterState.ACTIVE);
         }
     }
 
