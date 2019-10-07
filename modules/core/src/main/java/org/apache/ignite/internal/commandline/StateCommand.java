@@ -23,7 +23,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT;
 import static org.apache.ignite.internal.commandline.CommandList.STATE;
 
 /**
@@ -31,8 +31,8 @@ import static org.apache.ignite.internal.commandline.CommandList.STATE;
  */
 public class StateCommand implements Command<Void> {
     /** */
-    private final boolean clusterIdAndTagDisabled = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED, true
+    private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
     );
 
     /** {@inheritDoc} */
@@ -50,7 +50,7 @@ public class StateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            if (!clusterIdAndTagDisabled) {
+            if (clusterIdAndTagSupport) {
                 UUID id = state.id();
                 String tag = state.tag();
 

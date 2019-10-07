@@ -81,7 +81,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -166,8 +166,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * Flag indicates that the feature is disabled.
      * No values should be stored in metastorage nor passed in joining node discovery data.
      */
-    private final boolean clusterIdAndTagDisabled = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED, true
+    private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
     );
 
     /**
@@ -408,7 +408,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return;
 
         if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
@@ -427,7 +427,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return;
 
         assert ctx.clientNode();
@@ -441,7 +441,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return null;
 
         assert ctx.clientNode();
@@ -613,7 +613,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return;
 
         if (!compatibilityMode)
@@ -642,7 +642,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 notifyEnabled.set(lstFlag);
         }
 
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return;
 
         ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
@@ -719,7 +719,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
         }
 
-        if (clusterIdAndTagDisabled)
+        if (!clusterIdAndTagSupport)
             return;
 
         IgniteClusterMXBeanImpl mxBeanImpl = new IgniteClusterMXBeanImpl(cluster);

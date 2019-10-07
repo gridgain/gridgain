@@ -1342,8 +1342,8 @@ public final class IgniteSystemProperties {
     /**
      * Disables Cluster ID and Tag feature. Default value is <code>true</code>.
      */
-    public static final String IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED =
-        "IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED";
+    public static final String IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT =
+        "IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT";
 
     /**
      * Enforces singleton.

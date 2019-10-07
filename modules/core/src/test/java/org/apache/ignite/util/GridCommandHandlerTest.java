@@ -341,8 +341,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState() throws Exception {
         final String newTag = "new_tag";
 
-        boolean clusterIdAndTagDisabled = IgniteSystemProperties.getBoolean(
-            IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED, true
+        boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
+            IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
         );
 
         Ignite ignite = startGrids(1);
@@ -361,7 +361,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
         assertContains(log, out, "Cluster is inactive");
-        if (!clusterIdAndTagDisabled) {
+        if (clusterIdAndTagSupport) {
             assertContains(log, out, "Cluster  ID: " + clId);
             assertContains(log, out, "Cluster tag: " + clTag);
         }
@@ -374,7 +374,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "Cluster is active");
 
-        if (!clusterIdAndTagDisabled) {
+        if (clusterIdAndTagSupport) {
             boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
                 try {
                     ((IgniteClusterEx)ignite.cluster()).tag(newTag);
