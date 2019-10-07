@@ -73,7 +73,7 @@ public class CacheGroupMetricsImpl {
     public CacheGroupMetricsImpl(CacheGroupContext ctx) {
         this.ctx = ctx;
 
-        MetricRegistry mreg = new MetricRegistry(CACHE_GROUP_METRICS_PREFIX, metricGroupName());
+        MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
 
         mreg.register("Caches", this::getCaches, List.class, null);
 
@@ -147,8 +147,6 @@ public class CacheGroupMetricsImpl {
         }
         else
             grpPageAllocationTracker = new LongAdderMetric("NO_OP", null);
-
-        ctx.shared().kernalContext().metric().add(mreg);
     }
 
     /** */

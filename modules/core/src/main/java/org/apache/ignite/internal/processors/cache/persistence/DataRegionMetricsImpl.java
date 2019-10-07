@@ -131,11 +131,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
         subInts = memPlcCfg.getMetricsSubIntervalCount();
 
-        MetricRegistry mreg = new MetricRegistry(
-                DATAREGION_METRICS_PREFIX,
-                metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()),
-                log
-        );
+        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()));
 
         allocRate = mreg.hitRateMetric("AllocationRate",
             "Allocation rate (pages per second) averaged across rateTimeInternal.",
@@ -210,8 +206,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         mreg.register("UsedCheckpointBufferSize",
             this::getUsedCheckpointBufferSize,
             "Gets used checkpoint buffer size in bytes");
-
-        mmgr.add(mreg);
     }
 
     /** {@inheritDoc} */
@@ -469,14 +463,12 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
                 id -> {
                     String name = metricName(CACHE_GROUP_METRICS_PREFIX, grpName);
 
-                    MetricRegistry mreg = new MetricRegistry(name, name);
+                    MetricRegistry mreg = mmgr.registry(name);
 
                     LongAdderMetric m = mreg.longAdderMetric(
                             "TotalAllocatedPages",
                             totalAllocatedPages::add,
                             "Cache group total allocated pages.");
-
-                    mmgr.add(mreg);
 
                     return m;
                 }

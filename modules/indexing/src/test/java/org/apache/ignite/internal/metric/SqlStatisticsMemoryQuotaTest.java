@@ -289,7 +289,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @param metricName short name of the metric from the "sql memory" metric registry.
      */
     private long longMetricValue(int gridIdx, String metricName) {
-        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().get(SqlStatisticsHolderMemoryQuotas.SQL_QUOTAS_REG_NAME);
+        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlStatisticsHolderMemoryQuotas.SQL_QUOTAS_REG_NAME);
 
         Metric metric = sqlMemReg.findMetric(metricName);
 

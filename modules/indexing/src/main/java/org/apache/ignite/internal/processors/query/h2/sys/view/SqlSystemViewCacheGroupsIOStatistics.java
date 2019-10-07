@@ -61,7 +61,7 @@ public class SqlSystemViewCacheGroupsIOStatistics extends SqlAbstractLocalSystem
         if (nameCond.isEquality()) {
             String cacheGrpName = nameCond.valueForEquality().getString();
 
-            MetricRegistry mreg = ctx.metric().get(metricName(CACHE_GROUP.metricGroupName(), cacheGrpName));
+            MetricRegistry mreg = ctx.metric().registry(metricName(CACHE_GROUP.metricGroupName(), cacheGrpName));
 
             IntMetric grpId = mreg.findMetric("grpId");
             ObjectMetric<String> grpName = mreg.findMetric("name");
@@ -86,7 +86,7 @@ public class SqlSystemViewCacheGroupsIOStatistics extends SqlAbstractLocalSystem
                 grpCtx -> toRow(ses,
                     grpCtx.groupId(),
                     grpCtx.cacheOrGroupName(),
-                    mmgr.get(metricName(CACHE_GROUP.metricGroupName(), grpCtx.cacheOrGroupName()))),
+                    mmgr.registry(metricName(CACHE_GROUP.metricGroupName(), grpCtx.cacheOrGroupName()))),
                 true,
                 grpCtx -> !grpCtx.systemCache());
         }

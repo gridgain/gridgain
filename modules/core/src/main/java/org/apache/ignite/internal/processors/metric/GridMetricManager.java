@@ -23,7 +23,11 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -50,12 +54,11 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.COMM_METRICS;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.OUTBOUND_MSG_QUEUE_CNT;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_BYTES_CNT;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
+import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_SYSTEM_TIME_HISTOGRAM;
+import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TIME_BUCKETS;
+import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TOTAL_SYSTEM_TIME;
+import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TOTAL_USER_TIME;
+import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_USER_TIME_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -110,9 +113,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Group for a thread pools. */
     public static final String THREAD_POOLS = "threadPools";
-
-    /** Metric registry type for striped tread pools. */
-    public static final String STRIPED_THREAD_POOLS = "stripedThreadPools";
 
     /** Metrics update frequency. */
     private static final long METRICS_UPDATE_FREQ = 3000;
@@ -181,11 +181,13 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     private static final Collection<GarbageCollectorMXBean> gc = ManagementFactory.getGarbageCollectorMXBeans();
 
     /** Registered metrics registries. */
-    //TODO: Replace synchronizedMap by copy on write collection
-    private final Map<String, MetricRegistry> registries = Collections.synchronizedMap(new TreeMap<>());
+    private final ConcurrentHashMap<String, MetricRegistry> registries = new ConcurrentHashMap<>();
 
     /** Metric registry creation listeners. */
     private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
+
+    /** Metric registry remove listeners. */
+    private final List<Consumer<MetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
 
     /** Metrics update worker. */
     private GridTimeoutProcessor.CancelableTask metricsUpdateTask;
@@ -216,13 +218,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         heap.update(mem.getHeapMemoryUsage());
         nonHeap.update(mem.getNonHeapMemoryUsage());
 
-        MetricRegistry sysreg = get(SYS_METRICS);
-
-        if (sysreg == null) {
-            sysreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, log);
-
-            add(sysreg);
-        }
+        MetricRegistry sysreg = registry(SYS_METRICS);
 
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
@@ -236,9 +232,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
 
-        add(sysreg);
-
-        MetricRegistry pmeReg = new MetricRegistry(PME_METRICS, PME_METRICS);
+        MetricRegistry pmeReg = registry(PME_METRICS);
 
         long[] pmeBounds = new long[] {500, 1000, 5000, 30000};
 
@@ -248,23 +242,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
             "Histogram of cache operations blocked PME durations in milliseconds.");
 
-        add(pmeReg);
-
-        MetricRegistry ioMetric = new MetricRegistry(COMM_METRICS, COMM_METRICS);
-
-        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, () -> ctx.config().getCommunicationSpi().getOutboundMessagesQueueSize(),
-                "Outbound messages queue size.");
-
-        ioMetric.register(SENT_MSG_CNT, () -> ctx.config().getCommunicationSpi().getSentMessagesCount(), "Sent messages count.");
-
-        ioMetric.register(SENT_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getSentBytesCount(), "Sent bytes count.");
-
-        ioMetric.register(RCVD_MSGS_CNT, () -> ctx.config().getCommunicationSpi().getReceivedMessagesCount(),
-                "Received messages count.");
-
-        ioMetric.register(RCVD_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getReceivedBytesCount(), "Received bytes count.");
-
-        add(ioMetric);
+        registerTransactionMetrics();
     }
 
     /** {@inheritDoc} */
@@ -288,32 +266,20 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         U.closeQuiet(metricsUpdateTask);
     }
 
-/*
-    */
-/**
+    /**
      * Gets or creates metric registry.
      *
      * @param name Group name.
      * @return Group of metrics.
-     *//*
-
-    //TODO: can be invoked twice in some cases (e.g. during start cache with near configuration). Must be fixed.
-
+     */
     public MetricRegistry registry(String name) {
-        return registries.get(name);
-    }
-*/
+        return registries.computeIfAbsent(name, n -> {
+            MetricRegistry mreg = new MetricRegistry(name, name, log);
 
+            notifyListeners(mreg, metricRegCreationLsnrs);
 
-    public void add(MetricRegistry reg) {
-        MetricRegistry old = registries.put(reg.name(), reg);
-
-        //TODO: can be invoked twice in some cases (e.g. during start cache with near configuration). Must be fixed.
-        //assert old == null;
-    }
-
-    public MetricRegistry get(String name) {
-        return registries.get(name);
+            return mreg;
+        });
     }
 
     public Map<String, MetricRegistry> registries() {
@@ -330,13 +296,21 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         metricRegCreationLsnrs.add(lsnr);
     }
 
+    /** {@inheritDoc} */
+    @Override public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr) {
+        metricRegRemoveLsnrs.add(lsnr);
+    }
+
     /**
-     * Removes group.
+     * Removes metric registry.
      *
-     * @param grpName Group name.
+     * @param regName Metric registry name.
      */
-    public void remove(String grpName) {
-        registries.remove(grpName);
+    public void remove(String regName) {
+        MetricRegistry mreg = registries.remove(regName);
+
+        if (mreg != null)
+            notifyListeners(mreg, metricRegRemoveLsnrs);
     }
 
     /**
@@ -372,6 +346,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      */
     public void registerThreadPools(
@@ -389,6 +364,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         // Executors
@@ -403,6 +379,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
         monitorExecutor("GridQueryExecutor", qryExecSvc);
         monitorExecutor("GridSchemaExecutor", schemaExecSvc);
+        monitorExecutor("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             monitorExecutor("GridIndexingExecutor", idxExecSvc);
@@ -428,7 +405,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param execSvc Executor to register a bean for.
      */
     private void monitorExecutor(String name, ExecutorService execSvc) {
-        MetricRegistry mreg = new MetricRegistry(THREAD_POOLS, metricName(THREAD_POOLS, name), log);
+        MetricRegistry mreg = registry(metricName(THREAD_POOLS, name));
 
         if (execSvc instanceof ThreadPoolExecutor) {
             ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
@@ -472,8 +449,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             mreg.objectMetric("RejectedExecutionHandlerClass", String.class, REJ_HND_DESC).value("");
             mreg.objectMetric("ThreadFactoryClass", String.class, THRD_FACTORY_DESC).value("");
         }
-
-        add(mreg);
     }
 
     /**
@@ -482,9 +457,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param svc Executor.
      */
     private void monitorStripedPool(StripedExecutor svc) {
-        String name = metricName(THREAD_POOLS, "StripedExecutor");
-
-        MetricRegistry mreg = new MetricRegistry(STRIPED_THREAD_POOLS, name, log);
+        MetricRegistry mreg = registry(metricName(THREAD_POOLS, "StripedExecutor"));
 
         mreg.register("DetectStarvation",
             svc::detectStarvation,
@@ -528,8 +501,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             svc::stripesQueueSizes,
             int[].class,
             "Size of queue per stripe.");
-
-        add(mreg);
     }
 
     /**
@@ -579,6 +550,25 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         catch (RuntimeException ignored) {
             return -1;
         }
+    }
+
+    /** */
+    private void registerTransactionMetrics() {
+        MetricRegistry reg = registry(TX_METRICS);
+
+        reg.longAdderMetric(METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
+        reg.longAdderMetric(METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
+
+        reg.histogram(
+            METRIC_SYSTEM_TIME_HISTOGRAM,
+            METRIC_TIME_BUCKETS,
+            "Transactions system times on node represented as histogram."
+        );
+        reg.histogram(
+            METRIC_USER_TIME_HISTOGRAM,
+            METRIC_TIME_BUCKETS,
+            "Transactions user times on node represented as histogram."
+        );
     }
 
     /** */
@@ -681,24 +671,12 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
          * @param metricNamePrefix Metric name prefix.
          */
         public MemoryUsageMetrics(String group, String metricNamePrefix) {
-            //MetricRegistry mreg = registry(group);
-
-            //MetricRegistry mreg = new MetricRegistry(SYS_METRICS, group, log);
-
-            MetricRegistry mreg = get(group);
-
-            if (mreg == null) {
-                mreg = new MetricRegistry(SYS_METRICS, group);
-
-                add(mreg);
-            }
+            MetricRegistry mreg = registry(group);
 
             init = mreg.longMetric(metricName(metricNamePrefix, "init"), null);
             used = mreg.longMetric(metricName(metricNamePrefix, "used"), null);
             committed = mreg.longMetric(metricName(metricNamePrefix, "committed"), null);
             max = mreg.longMetric(metricName(metricNamePrefix, "max"), null);
-
-            // add(mreg);
         }
 
         /** Updates metric to the provided values. */

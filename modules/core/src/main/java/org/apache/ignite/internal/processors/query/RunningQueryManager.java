@@ -88,7 +88,7 @@ public class RunningQueryManager {
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
-        MetricRegistry userMetrics = new MetricRegistry(SQL_USER_QUERIES_REG_NAME, SQL_USER_QUERIES_REG_NAME);
+        MetricRegistry userMetrics = ctx.metric().registry(SQL_USER_QUERIES_REG_NAME);
 
         successQrsCnt = userMetrics.longAdderMetric("success",
             "Number of successfully executed user queries that have been started on this node.");
@@ -101,8 +101,6 @@ public class RunningQueryManager {
 
         oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
             "out of memory protection. This metric number included in the general 'failed' metric.");
-
-        ctx.metric().add(userMetrics);
     }
 
     /**

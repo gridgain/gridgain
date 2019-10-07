@@ -75,7 +75,7 @@ public class GridJobMetricsSelfTest extends GridCommonAbstractTest {
             .setCollisionSpi(collisioinSpi);
 
         try (IgniteEx g = startGrid(cfg)) {
-            MetricRegistry mreg = g.context().metric().get(JOBS_METRICS);
+            MetricRegistry mreg = g.context().metric().registry(JOBS_METRICS);
 
             LongMetric started = mreg.findMetric(STARTED);
             LongMetric active = mreg.findMetric(ACTIVE);
@@ -163,7 +163,7 @@ public class GridJobMetricsSelfTest extends GridCommonAbstractTest {
         latch = new CountDownLatch(1);
 
         try(IgniteEx g = startGrid(0)) {
-            MetricRegistry mreg = g.context().metric().get(JOBS_METRICS);
+            MetricRegistry mreg = g.context().metric().registry(JOBS_METRICS);
 
             LongMetric started = mreg.findMetric(STARTED);
             LongMetric active = mreg.findMetric(ACTIVE);

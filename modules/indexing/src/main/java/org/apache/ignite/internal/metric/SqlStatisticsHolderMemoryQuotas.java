@@ -53,7 +53,7 @@ public class SqlStatisticsHolderMemoryQuotas {
     public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr, IgniteLogger log) {
         this.memMgr = memMgr;
 
-        MetricRegistry quotasMetrics = new MetricRegistry(SQL_QUOTAS_REG_NAME, SQL_QUOTAS_REG_NAME, log);
+        MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
         
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
@@ -74,8 +74,6 @@ public class SqlStatisticsHolderMemoryQuotas {
 
         quotasMetrics.register(quotaMaxMem);
         quotasMetrics.register(quotaFreeMem);
-
-        metricMgr.add(quotasMetrics);
     }
 
     /**

@@ -301,17 +301,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
         jobExecLsnr = new JobExecutionListener();
         discoLsnr = new JobDiscoveryListener();
 
-        cpuLoadMetric = (DoubleMetric)ctx.metric().get(SYS_METRICS).findMetric(CPU_LOAD);
+        cpuLoadMetric = (DoubleMetric)ctx.metric().registry(SYS_METRICS).findMetric(CPU_LOAD);
 
         //MetricRegistry mreg = new MetricRegistry(JOBS_METRICS, JOBS_METRICS, log);
 
-        MetricRegistry mreg = ctx.metric().get(SYS_METRICS);
-
-        if (mreg == null) {
-            mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, log);
-
-            ctx.metric().add(mreg);
-        }
+        MetricRegistry mreg = ctx.metric().registry(SYS_METRICS);
 
         startedJobsMetric = mreg.longMetric(STARTED, "Number of started jobs.");
 
@@ -329,8 +323,6 @@ public class GridJobProcessor extends GridProcessorAdapter {
         totalExecutionTimeMetric = mreg.longMetric(EXECUTION_TIME, "Total execution time of jobs.");
 
         totalWaitTimeMetric = mreg.longMetric(WAITING_TIME, "Total time jobs spent on waiting queue.");
-
-        //ctx.metric().add(mreg);
     }
 
     /** {@inheritDoc} */

@@ -81,11 +81,7 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         this.cacheName = cacheName;
         this.idxName = idxName;
 
-        MetricRegistry mreg = new MetricRegistry(
-                type.metricGroupName(),
-                metricName(type.metricGroupName(), cacheName, idxName),
-                log
-        );
+        MetricRegistry mreg = mmgr.registry(metricName(type.metricGroupName(), cacheName, idxName));
 
         mreg.longMetric("startTime", null).value(U.currentTimeMillis());
         mreg.objectMetric("name", String.class, null).value(cacheName);
@@ -95,8 +91,6 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         logicalReadInnerCtr = mreg.longAdderMetric(LOGICAL_READS_INNER, null);
         physicalReadLeafCtr = mreg.longAdderMetric(PHYSICAL_READS_LEAF, null);
         physicalReadInnerCtr = mreg.longAdderMetric(PHYSICAL_READS_INNER, null);
-
-        mmgr.add(mreg);
     }
 
     /** {@inheritDoc} */

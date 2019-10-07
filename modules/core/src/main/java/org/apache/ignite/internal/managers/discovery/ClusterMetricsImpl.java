@@ -204,13 +204,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
         //MetricRegistry mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, ctx.log(getClass()));
 
-        MetricRegistry mreg = ctx.metric().get(SYS_METRICS);
-
-        if (mreg == null) {
-            mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, ctx.log(getClass()));
-
-            ctx.metric().add(mreg);
-        }
+        MetricRegistry mreg = ctx.metric().registry(SYS_METRICS);
 
         gcCpuLoad = mreg.findMetric(GC_CPU_LOAD);
         cpuLoad = mreg.findMetric(CPU_LOAD);
@@ -234,13 +228,13 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         nonHeapCommitted = mreg.findMetric(metricName("memory", "nonheap", "committed"));
         nonHeapMax = mreg.findMetric(metricName("memory", "nonheap", "max"));
 
-        MetricRegistry pmeReg = ctx.metric().get(PME_METRICS);
+        MetricRegistry pmeReg = ctx.metric().registry(PME_METRICS);
 
         pmeDuration = pmeReg.findMetric(PME_DURATION);
 
-        lastDataVer = ctx.metric().get(SYS_METRICS).findMetric(LAST_DATA_VER);
+        lastDataVer = ctx.metric().registry(SYS_METRICS).findMetric(LAST_DATA_VER);
 
-        MetricRegistry ioReg = ctx.metric().get(COMM_METRICS);
+        MetricRegistry ioReg = ctx.metric().registry(COMM_METRICS);
 
         sentMsgsCnt = ioReg.findMetric(SENT_MSG_CNT);
         sentBytesCnt = ioReg.findMetric(SENT_BYTES_CNT);

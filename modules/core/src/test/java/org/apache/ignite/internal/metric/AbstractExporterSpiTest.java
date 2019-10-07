@@ -62,11 +62,9 @@ public abstract class AbstractExporterSpiTest extends GridCommonAbstractTest {
     protected void createAdditionalMetrics(IgniteEx ignite) {
         GridMetricManager mmgr = ignite.context().metric();
 
-        MetricRegistry mreg = new MetricRegistry(FILTERED_PREFIX, FILTERED_PREFIX);
+        MetricRegistry mreg = mmgr.registry(FILTERED_PREFIX);
 
         mreg.longMetric("test", "").add(2);
-
-        mmgr.add(mreg);
 
         mreg = new MetricRegistry("other.prefix", "other.prefix");
 
@@ -74,12 +72,8 @@ public abstract class AbstractExporterSpiTest extends GridCommonAbstractTest {
 
         mreg.longMetric("test2", "").add(43);
 
-        mmgr.add(mreg);
-
         mreg = new MetricRegistry("other.prefix2", "other.prefix2");
 
         mreg.longMetric("test3", "").add(44);
-
-        mmgr.add(mreg);
     }
 }
