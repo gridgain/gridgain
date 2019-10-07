@@ -532,12 +532,12 @@ namespace Apache.Ignite.Core.Impl
             NearCacheConfiguration nearCacheConfiguration = null)
         {
             return new CacheImpl<TK, TV>(
-                target: nativeCache,
-                flagSkipStore: false,
-                flagKeepBinary: keepBinary,
-                flagNoRetries: false,
-                flagPartitionRecover: false,
-                flagAllowAtomicOpsInTx: false,
+                nativeCache,
+                false,
+                keepBinary,
+                false,
+                false,
+                false,
                 nearCacheConfiguration);
         }
 

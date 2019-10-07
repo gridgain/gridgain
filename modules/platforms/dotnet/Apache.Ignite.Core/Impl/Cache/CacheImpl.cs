@@ -220,9 +220,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                flagSkipStore: true,
+                true,
                 _flagKeepBinary,
-                flagNoRetries: true,
+                true,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
                 _nearCacheConfiguration);
@@ -253,7 +253,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             return new CacheImpl<TK1, TV1>(
                 target,
                 _flagSkipStore,
-                flagKeepBinary: true,
+                true,
                 _flagNoRetries,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
@@ -270,11 +270,11 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new CacheImpl<TK, TV>(
                 target,
-                flagSkipStore: true,
+                true,
                 _flagKeepBinary,
                 _flagSkipStore,
                 _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: true,
+                true,
                 _nearCacheConfiguration);
         }
 
@@ -1291,7 +1291,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 target,
                 _flagSkipStore,
                 _flagKeepBinary,
-                flagNoRetries: true,
+                true,
                 _flagPartitionRecover,
                 _flagAllowAtomicOpsInTx,
                 _nearCacheConfiguration);
@@ -1310,7 +1310,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _flagSkipStore,
                 _flagKeepBinary,
                 _flagNoRetries,
-                flagPartitionRecover: true,
+                true,
                 _flagAllowAtomicOpsInTx,
                 _nearCacheConfiguration);
         }
