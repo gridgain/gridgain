@@ -47,6 +47,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -340,6 +341,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState() throws Exception {
         final String newTag = "new_tag";
 
+        boolean clusterIdAndTagDisabled = IgniteSystemProperties.getBoolean(
+            IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_DISABLED, true
+        );
+
         Ignite ignite = startGrids(1);
 
         injectTestSystemOut();
@@ -356,8 +361,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
         assertContains(log, out, "Cluster is inactive");
-        assertContains(log, out, "Cluster  ID: " + clId);
-        assertContains(log, out, "Cluster tag: " + clTag);
+        if (!clusterIdAndTagDisabled) {
+            assertContains(log, out, "Cluster  ID: " + clId);
+            assertContains(log, out, "Cluster tag: " + clTag);
+        }
 
         ignite.cluster().active(true);
 
@@ -367,22 +374,24 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "Cluster is active");
 
-        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
-            try {
-                ((IgniteClusterEx)ignite.cluster()).tag(newTag);
-            }
-            catch (IgniteCheckedException e) {
-                return false;
-            }
+        if (!clusterIdAndTagDisabled) {
+            boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
+                try {
+                    ((IgniteClusterEx)ignite.cluster()).tag(newTag);
+                }
+                catch (IgniteCheckedException e) {
+                    return false;
+                }
 
-            return true;
-        }, 10_000);
+                return true;
+            }, 10_000);
 
-        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
+            assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
 
-        assertEquals(EXIT_CODE_OK, execute("--state"));
+            assertEquals(EXIT_CODE_OK, execute("--state"));
 
-        assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+            assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+        }
 
         ignite.cluster().readOnly(true);
 
