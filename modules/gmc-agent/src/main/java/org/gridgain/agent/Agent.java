@@ -30,9 +30,9 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.processors.gmc.ManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -99,7 +99,7 @@ public class Agent extends ManagementConsoleProcessor {
     private ThreadPoolExecutor connectPool;
 
     /** Meta storage. */
-    private MetaStorage metaStorage;
+    private DistributedMetaStorage metaStorage;
 
     /** Active server uri. */
     private String curSrvUri;
@@ -118,7 +118,7 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void onKernalStart(boolean active) {
         spanExporter = new GmcSpanExporter(ctx);
         nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
-        metaStorage = ctx.cache().context().database().metaStorage();
+        metaStorage = ctx.distributedMetastorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
 

@@ -24,6 +24,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -283,7 +284,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     }
 
     public Map<String, MetricRegistry> registries() {
-        return registries;
+        return new HashMap<>(registries);
     }
 
     /** {@inheritDoc} */
