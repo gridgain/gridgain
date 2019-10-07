@@ -77,11 +77,6 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
         return cfg;
     }
 
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-    }
-
     /**
      * @param nodes Collection of grid nodes.
      * @return Collection of node consistent IDs for given collection of grid nodes.

@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
  */
 public class DistributedConfigurationProcessor extends GridProcessorAdapter implements DistributedPropertyDispatcher {
     /** Prefix of key for distributed meta storage. */
-    private static final String DIST_CONF_PREFIX = "distrConf";
+    private static final String DIST_CONF_PREFIX = "distrConf-";
 
     /** Properties storage. */
     private final Map<String, DistributedProperty> props = new ConcurrentHashMap<>();

@@ -44,16 +44,6 @@ public class ClusterBaselineNodesMetricsSelfTest extends GridCommonAbstractTest 
         stopAllGrids();
     }
 
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-    }
-
     /**
      * @throws Exception If failed.
      */
