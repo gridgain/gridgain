@@ -639,7 +639,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     msg.activate() ? msg.baselineTopology() : prevState.baselineTopology(),
                     msg.requestId(),
                     topVer,
-                    !state.active() && msg.activate() != state.active() ? msg.timestamp() : prevState.activationTime(),
+                    !state.active() && msg.activate() ? msg.timestamp() : prevState.activationTime(),
                     nodeIds
                 );
 
