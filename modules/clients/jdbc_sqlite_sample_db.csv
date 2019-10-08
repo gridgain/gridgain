@@ -1,0 +1,45 @@
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	IST	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	calendarized	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	calendarized	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	IST	calendarized	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	legacy	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	legacy	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	IST	legacy	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	IST	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	modern	1568033832597		1568639349597		1568034549909	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	modern	1568033818802		1568614149802		1568009349909	
+jdbc:sqlite:sample.db	local	jdbc	Europe/Moscow	remote	jdbc	IST	modern	1568033832752		1568605149752		1568000349909	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	IST	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	calendarized	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	calendarized	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	IST	calendarized	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	legacy	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	legacy	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	IST	legacy	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	IST	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	modern	1568033832597		1568639349597		1568034549909	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	modern	1568033818802		1568614149802		1568009349909	
+jdbc:sqlite:sample.db	remote	jdbc	EST5EDT	remote	jdbc	IST	modern	1568033832752		1568605149752		1568000349909	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	EST5EDT	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	IST	local	jdbc	Europe/Moscow	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	IST	JSR310	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	EST5EDT	calendarized	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	local	jdbc	Europe/Moscow	calendarized	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	IST	calendarized	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	EST5EDT	legacy	1568001600000		50949000		1568034549090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	local	jdbc	Europe/Moscow	legacy	1567976400000		22149000		1568009349090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	IST	legacy	1567967400000		13149000		1568000349090	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	EST5EDT	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	IST	local	jdbc	Europe/Moscow	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	IST	literal	2019-09-09		09:09:09		2019-09-09 09:09:09.090900000	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	EST5EDT	modern	1568033832597		1568639349597		1568034549909	
+jdbc:sqlite:sample.db	remote	jdbc	IST	local	jdbc	Europe/Moscow	modern	1568033818802		1568614149802		1568009349909	
+jdbc:sqlite:sample.db	remote	jdbc	IST	remote	jdbc	IST	modern	1568033832752		1568605149752		1568000349909	

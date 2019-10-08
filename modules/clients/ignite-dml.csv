@@ -1,0 +1,637 @@
+correct	remote	native	IST	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	remote	jdbc	calendarized	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	remote	native	IST	local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	native	IST	thick local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	remote	jdbc	calendarized	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	calendarized	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+correct	remote	native	IST	remote	binary	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	remote	native	IST	remote	native	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	remote	native	IST	local	binary	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	native	IST	local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	local	native	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	native	IST	local->remote	jdbc	legacy	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	IST	thick local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	IST	remote	binary	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	IST	remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	IST	remote	native	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	IST	remote	jdbc	literal	EST5EDT	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	IST	remote	native	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.09	
+INVALID	remote	native	IST	local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	IST	local	native	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	native	IST	local->remote	jdbc	literal	Europe/Moscow	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	remote	native	IST	thick local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	IST	remote	jdbc	literal	IST	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	IST	remote	native	literal	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	IST	thick remote	jdbc	literal	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	remote	native	IST	remote	binary	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	remote	native	IST	remote	jdbc	modern	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	IST	remote	native	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	IST	thick remote	jdbc	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	native	IST	local	binary	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	IST	local	jdbc	modern	Europe/Moscow	2019-09-08		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	IST	local	native	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	IST	local->remote	jdbc	modern	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	IST	thick local	jdbc	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	native	IST	remote	binary	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	remote	native	IST	remote	jdbc	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	remote	native	IST	remote	native	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	native	IST	thick remote	jdbc	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+correct	remote	native	EST5EDT	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	remote	jdbc	calendarized	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	remote	native	EST5EDT	local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	native	EST5EDT	thick local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	remote	jdbc	calendarized	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	calendarized	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+correct	remote	native	EST5EDT	remote	binary	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	remote	native	EST5EDT	remote	native	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	remote	native	EST5EDT	local	binary	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	native	EST5EDT	local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	local	native	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	native	EST5EDT	local->remote	jdbc	legacy	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	native	EST5EDT	thick local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	native	EST5EDT	remote	binary	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	EST5EDT	remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	EST5EDT	remote	native	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	EST5EDT	remote	jdbc	literal	EST5EDT	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	EST5EDT	remote	native	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.09	
+INVALID	remote	native	EST5EDT	local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	EST5EDT	local	native	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	native	EST5EDT	local->remote	jdbc	literal	Europe/Moscow	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	remote	native	EST5EDT	thick local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	EST5EDT	remote	jdbc	literal	IST	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	native	EST5EDT	remote	native	literal	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	literal	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	remote	native	EST5EDT	remote	binary	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	remote	native	EST5EDT	remote	jdbc	modern	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	EST5EDT	remote	native	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	EST5EDT	thick remote	jdbc	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	native	EST5EDT	local	binary	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	EST5EDT	local	jdbc	modern	Europe/Moscow	2019-09-08		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	EST5EDT	local	native	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	native	EST5EDT	local->remote	jdbc	modern	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	native	EST5EDT	thick local	jdbc	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	native	EST5EDT	remote	binary	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	remote	native	EST5EDT	remote	jdbc	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	remote	native	EST5EDT	remote	native	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	native	EST5EDT	thick remote	jdbc	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	jdbc	IST	remote	native	EST5EDT	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	local	native	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	remote	native	IST	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	IST	JSR310	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	remote	jdbc	EST5EDT	calendarized	2019-09-08	Sun Sep 08 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	Mon Sep 09 02:30:00 IST 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	remote	jdbc	IST	local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.0909	2019-09-09 04:39:09.0909
+INVALID	remote	jdbc	IST	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 02:30:00 IST 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	IST	remote	binary	EST5EDT	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	remote	jdbc	IST	remote	native	EST5EDT	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	remote	jdbc	IST	local	binary	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.0909	2019-09-09 04:39:09.0909
+INVALID	remote	jdbc	IST	local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	local	native	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.0909	2019-09-09 04:39:09.0909
+INVALID	remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	remote	jdbc	IST	remote	binary	IST	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	IST	remote	jdbc	IST	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	IST	remote	native	IST	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	IST	legacy	2019-09-08	Sun Sep 08 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	IST	remote	jdbc	EST5EDT	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.09	2019-09-09 04:39:09.09
+INVALID	remote	jdbc	IST	remote	native	EST5EDT	literal	2019-09-09	Mon Sep 09 02:30:00 IST 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	EST5EDT	literal	2019-09-09	Mon Sep 09 02:30:00 IST 2019	19:39:09	19:39:09	2019-09-09 18:39:09.09	2019-09-09 18:39:09.09
+INVALID	remote	jdbc	IST	local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.09	2019-09-09 04:39:09.09
+INVALID	remote	jdbc	IST	local	native	Europe/Moscow	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.0909	2019-09-09 04:39:09.0909
+INVALID	remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	remote	jdbc	IST	thick local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.09	2019-09-09 04:39:09.09
+INVALID	remote	jdbc	IST	remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	03:39:09	03:39:09	2019-09-09 04:39:09.09	2019-09-09 04:39:09.09
+INVALID	remote	jdbc	IST	remote	native	IST	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	IST	thick remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 02:30:00 IST 2019	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	remote	jdbc	IST	remote	binary	EST5EDT	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	18:39:09	18:39:09	2019-09-09 18:39:09.909	2019-09-09 18:39:09.909
+INVALID	remote	jdbc	IST	remote	jdbc	EST5EDT	modern	2019-09-08	Sun Sep 08 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	remote	jdbc	IST	remote	native	EST5EDT	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	remote	jdbc	IST	thick remote	jdbc	EST5EDT	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	remote	jdbc	IST	local	binary	Europe/Moscow	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	04:39:09	04:39:09	2019-09-09 04:39:09.909	2019-09-09 04:39:09.909
+INVALID	remote	jdbc	IST	local	jdbc	Europe/Moscow	modern	2019-09-08	Sun Sep 08 02:30:00 IST 2019	04:39:09	04:39:09	2019-09-09 04:39:09.909	2019-09-09 04:39:09.909
+INVALID	remote	jdbc	IST	local	native	Europe/Moscow	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	04:39:09	04:39:09	2019-09-09 04:39:09.909	2019-09-09 04:39:09.909
+INVALID	remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	modern	2019-09-08	Sun Sep 08 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	remote	jdbc	IST	thick local	jdbc	Europe/Moscow	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+correct	remote	jdbc	IST	remote	binary	IST	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	remote	jdbc	IST	remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	remote	jdbc	IST	remote	native	IST	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	IST	thick remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 02:30:00 IST 2019	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	remote	native	EST5EDT	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local	native	Europe/Moscow	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	native	IST	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	IST	JSR310	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	calendarized	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	calendarized	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	calendarized	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.0909	2019-09-08 19:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	calendarized	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	IST	calendarized	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	IST	calendarized	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	14:39:09	14:39:09	2019-09-08 16:39:09.0909	2019-09-08 16:39:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	binary	EST5EDT	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	native	EST5EDT	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local	binary	Europe/Moscow	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.0909	2019-09-08 19:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local	native	Europe/Moscow	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.0909	2019-09-08 19:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	binary	IST	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	IST	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	native	IST	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	14:39:09	14:39:09	2019-09-08 16:39:09.0909	2019-09-08 16:39:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	IST	legacy	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.09	2019-09-08 19:09:09.09
+INVALID	remote	jdbc	EST5EDT	remote	native	EST5EDT	literal	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	literal	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	09:09:09	09:09:09	2019-09-09 09:09:09.09	2019-09-09 09:09:09.09
+INVALID	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.09	2019-09-08 19:09:09.09
+INVALID	remote	jdbc	EST5EDT	local	native	Europe/Moscow	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.0909	2019-09-08 19:09:09.0909
+INVALID	remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	14:39:09	14:39:09	2019-09-08 16:39:09.09	2019-09-08 16:39:09.09
+INVALID	remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.09	2019-09-08 19:09:09.09
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	IST	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	17:09:09	17:09:09	2019-09-08 19:09:09.09	2019-09-08 19:09:09.09
+INVALID	remote	jdbc	EST5EDT	remote	native	IST	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	IST	literal	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	14:39:09	14:39:09	2019-09-08 16:39:09.09	2019-09-08 16:39:09.09
+INVALID	remote	jdbc	EST5EDT	remote	binary	EST5EDT	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	08:09:09	08:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	modern	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	remote	native	EST5EDT	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	local	binary	Europe/Moscow	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	18:09:09	18:09:09	2019-09-08 19:09:09.909	2019-09-08 19:09:09.909
+INVALID	remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	modern	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	18:09:09	18:09:09	2019-09-08 19:09:09.909	2019-09-08 19:09:09.909
+INVALID	remote	jdbc	EST5EDT	local	native	Europe/Moscow	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	18:09:09	18:09:09	2019-09-08 19:09:09.909	2019-09-08 19:09:09.909
+INVALID	remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	modern	2019-09-07	Sat Sep 07 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	01:09:09	01:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	remote	jdbc	EST5EDT	remote	binary	IST	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.909	2019-09-08 23:39:09.909
+INVALID	remote	jdbc	EST5EDT	remote	jdbc	IST	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	22:39:09	22:39:09	2019-09-08 23:39:09.909	2019-09-08 23:39:09.909
+INVALID	remote	jdbc	EST5EDT	remote	native	IST	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	15:39:09	15:39:09	2019-09-08 16:39:09.909	2019-09-08 16:39:09.909
+INVALID	remote	jdbc	EST5EDT	thick remote	jdbc	IST	modern	2019-09-08	Sun Sep 08 17:00:00 EDT 2019	15:39:09	15:39:09	2019-09-08 16:39:09.909	2019-09-08 16:39:09.909
+correct	thick remote	jdbc	IST	remote	native	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	local	native	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	remote	native	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	thick remote	jdbc	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	remote	jdbc	EST5EDT	calendarized	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick remote	jdbc	IST	local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick remote	jdbc	IST	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	IST	remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick remote	jdbc	IST	thick remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	thick remote	jdbc	IST	remote	binary	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	IST	remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick remote	jdbc	IST	remote	native	EST5EDT	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	thick remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	IST	local	binary	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	IST	local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick remote	jdbc	IST	local	native	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick remote	jdbc	IST	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick remote	jdbc	IST	remote	binary	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	remote	jdbc	IST	legacy	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	remote	native	IST	legacy	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+correct	thick remote	jdbc	IST	thick remote	jdbc	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	IST	remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.09	2019-09-09 11:39:09.09
+INVALID	thick remote	jdbc	IST	remote	native	EST5EDT	literal	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	IST	thick remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.09	2019-09-09 16:09:09.09
+INVALID	thick remote	jdbc	IST	local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	IST	local	native	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick remote	jdbc	IST	thick local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	IST	remote	jdbc	IST	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	IST	remote	native	IST	literal	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick remote	jdbc	IST	thick remote	jdbc	IST	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick remote	jdbc	IST	remote	binary	EST5EDT	modern	2019-09-09	2019-09-09	16:09:09	16:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	thick remote	jdbc	IST	remote	jdbc	EST5EDT	modern	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	IST	remote	native	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	IST	thick remote	jdbc	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick remote	jdbc	IST	local	binary	Europe/Moscow	modern	2019-09-09	2019-09-09	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick remote	jdbc	IST	local	jdbc	Europe/Moscow	modern	2019-09-08	2019-09-08	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick remote	jdbc	IST	local	native	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	thick remote	jdbc	IST	local->remote	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+correct	thick remote	jdbc	IST	thick local	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick remote	jdbc	IST	remote	binary	IST	modern	2019-09-09	2019-09-09	06:39:09	06:39:09	2019-09-09 06:39:09.909	2019-09-09 06:39:09.909
+correct	thick remote	jdbc	IST	remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	IST	remote	native	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	IST	thick remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	EST5EDT	remote	native	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	local	native	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	remote	native	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	calendarized	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick remote	jdbc	EST5EDT	remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	thick remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	binary	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick remote	jdbc	EST5EDT	remote	native	EST5EDT	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local	binary	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local	native	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick remote	jdbc	EST5EDT	remote	binary	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	IST	legacy	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	native	IST	legacy	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.09	2019-09-09 11:39:09.09
+INVALID	thick remote	jdbc	EST5EDT	remote	native	EST5EDT	literal	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.09	2019-09-09 16:09:09.09
+INVALID	thick remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	EST5EDT	local	native	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	IST	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick remote	jdbc	EST5EDT	remote	native	IST	literal	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick remote	jdbc	EST5EDT	thick remote	jdbc	IST	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick remote	jdbc	EST5EDT	remote	binary	EST5EDT	modern	2019-09-09	2019-09-09	16:09:09	16:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	thick remote	jdbc	EST5EDT	remote	jdbc	EST5EDT	modern	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	EST5EDT	remote	native	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick remote	jdbc	EST5EDT	local	binary	Europe/Moscow	modern	2019-09-09	2019-09-09	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick remote	jdbc	EST5EDT	local	jdbc	Europe/Moscow	modern	2019-09-08	2019-09-08	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick remote	jdbc	EST5EDT	local	native	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	thick remote	jdbc	EST5EDT	local->remote	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+correct	thick remote	jdbc	EST5EDT	thick local	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick remote	jdbc	EST5EDT	remote	binary	IST	modern	2019-09-09	2019-09-09	06:39:09	06:39:09	2019-09-09 06:39:09.909	2019-09-09 06:39:09.909
+correct	thick remote	jdbc	EST5EDT	remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	EST5EDT	remote	native	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick remote	jdbc	EST5EDT	thick remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	remote	binary	EST5EDT	local->remote	jdbc	literal	Europe/Moscow	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+correct	remote	binary	EST5EDT	remote	native	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	binary	EST5EDT	thick remote	jdbc	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	binary	EST5EDT	local	native	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	thick local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	binary	EST5EDT	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	literal	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	remote	binary	EST5EDT	remote	jdbc	calendarized	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	EST5EDT	local	binary	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	EST5EDT	local	jdbc	modern	Europe/Moscow	2019-09-08		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	modern	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	binary	EST5EDT	remote	native	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	EST5EDT	local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	binary	EST5EDT	remote	jdbc	literal	IST	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	calendarized	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	local	native	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	remote	native	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	local	binary	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	binary	EST5EDT	local	jdbc	calendarized	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	remote	binary	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	binary	EST5EDT	remote	native	literal	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	legacy	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	binary	EST5EDT	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	binary	EST5EDT	thick remote	jdbc	literal	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	remote	binary	EST5EDT	thick local	jdbc	calendarized	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	calendarized	IST	2019-09-07		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	thick local	jdbc	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	remote	binary	EST5EDT	remote	binary	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	binary	EST5EDT	local->remote	jdbc	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	binary	EST5EDT	remote	binary	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	binary	EST5EDT	remote	native	literal	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	EST5EDT	thick local	jdbc	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+correct	remote	binary	EST5EDT	thick remote	jdbc	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	modern	IST	2019-09-08		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	literal	EST5EDT	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	remote	binary	EST5EDT	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	EST5EDT	remote	native	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	EST5EDT	local	jdbc	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	local	native	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	binary	EST5EDT	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	remote	binary	EST5EDT	local->remote	jdbc	modern	Europe/Moscow	2019-09-08		02:09:09		2019-09-09 02:09:09.909	
+INVALID	remote	binary	EST5EDT	remote	binary	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	EST5EDT	thick remote	jdbc	modern	IST	2019-09-09		23:39:09		2019-09-08 23:39:09.909	
+INVALID	remote	binary	EST5EDT	remote	jdbc	legacy	IST	2019-09-07		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	remote	binary	IST	local->remote	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	remote	binary	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	remote	native	literal	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	IST	thick local	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	thick remote	jdbc	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+correct	remote	binary	IST	remote	jdbc	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	binary	IST	remote	jdbc	literal	EST5EDT	2019-09-09		11:39:09		2019-09-09 11:39:09.09	
+INVALID	remote	binary	IST	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	remote	binary	IST	remote	native	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	binary	IST	thick remote	jdbc	legacy	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	IST	local	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	local	native	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+INVALID	remote	binary	IST	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	local->remote	jdbc	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+correct	remote	binary	IST	remote	binary	legacy	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	remote	binary	IST	thick remote	jdbc	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	remote	binary	IST	remote	jdbc	legacy	IST	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	local	jdbc	calendarized	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+correct	remote	binary	IST	remote	binary	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	remote	binary	IST	remote	native	literal	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	remote	jdbc	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	thick remote	jdbc	literal	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.09	
+INVALID	remote	binary	IST	thick local	jdbc	calendarized	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	remote	jdbc	calendarized	IST	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	thick local	jdbc	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+INVALID	remote	binary	IST	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	IST	remote	binary	modern	EST5EDT	2019-09-09		18:39:09		2019-09-09 18:39:09.909	
+correct	remote	binary	IST	local->remote	jdbc	literal	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	remote	binary	IST	remote	native	modern	EST5EDT	2019-09-09		18:39:09		2019-09-09 18:39:09.909	
+INVALID	remote	binary	IST	thick remote	jdbc	modern	EST5EDT	2019-09-09		18:39:09		2019-09-09 18:39:09.909	
+INVALID	remote	binary	IST	local	native	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	thick local	jdbc	literal	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.09	
+INVALID	remote	binary	IST	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	remote	binary	IST	thick remote	jdbc	literal	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	remote	binary	IST	remote	jdbc	calendarized	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	local	binary	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	remote	binary	IST	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	remote	binary	IST	local	jdbc	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+INVALID	remote	binary	IST	remote	jdbc	modern	EST5EDT	2019-09-09		18:39:09		2019-09-09 18:39:09.909	
+INVALID	remote	binary	IST	remote	native	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	remote	binary	IST	local	jdbc	literal	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.09	
+INVALID	remote	binary	IST	remote	jdbc	literal	IST	2019-09-09		11:39:09		2019-09-09 11:39:09.09	
+correct	remote	binary	IST	thick remote	jdbc	calendarized	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	local	native	literal	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+correct	remote	binary	IST	remote	native	legacy	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	remote	binary	IST	local	binary	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+correct	local	native	Europe/Moscow	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	native	Europe/Moscow	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	native	Europe/Moscow	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	native	Europe/Moscow	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	native	Europe/Moscow	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	native	Europe/Moscow	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	calendarized	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	local	native	Europe/Moscow	local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+correct	local	native	Europe/Moscow	thick local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	calendarized	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	local	native	Europe/Moscow	thick remote	jdbc	calendarized	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+INVALID	local	native	Europe/Moscow	remote	binary	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	local	native	Europe/Moscow	remote	native	legacy	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	thick remote	jdbc	legacy	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	local	native	Europe/Moscow	local	binary	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	local	native	Europe/Moscow	local	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	local	native	Europe/Moscow	local	native	legacy	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	local	native	Europe/Moscow	local->remote	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+INVALID	local	native	Europe/Moscow	thick local	jdbc	legacy	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.0909	
+correct	local	native	Europe/Moscow	remote	binary	legacy	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	legacy	IST	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	remote	native	legacy	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.0909	
+correct	local	native	Europe/Moscow	thick remote	jdbc	legacy	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	literal	EST5EDT	2019-09-09		11:39:09		2019-09-09 11:39:09.09	
+INVALID	local	native	Europe/Moscow	remote	native	literal	EST5EDT	2019-09-09		19:39:09		2019-09-09 18:39:09.0909	
+INVALID	local	native	Europe/Moscow	thick remote	jdbc	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.09	
+INVALID	local	native	Europe/Moscow	local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	local	native	Europe/Moscow	local	native	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.0909	
+INVALID	local	native	Europe/Moscow	local->remote	jdbc	literal	Europe/Moscow	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	local	native	Europe/Moscow	thick local	jdbc	literal	Europe/Moscow	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	local	native	Europe/Moscow	remote	jdbc	literal	IST	2019-09-08		01:09:09		2019-09-09 02:09:09.09	
+INVALID	local	native	Europe/Moscow	remote	native	literal	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	local	native	Europe/Moscow	thick remote	jdbc	literal	IST	2019-09-08		22:39:09		2019-09-08 23:39:09.09	
+INVALID	local	native	Europe/Moscow	remote	binary	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	local	native	Europe/Moscow	remote	jdbc	modern	EST5EDT	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+correct	local	native	Europe/Moscow	remote	native	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	local	native	Europe/Moscow	thick remote	jdbc	modern	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	native	Europe/Moscow	local	binary	modern	Europe/Moscow	2019-09-09		02:09:09		2019-09-09 02:09:09.909	
+INVALID	local	native	Europe/Moscow	local	jdbc	modern	Europe/Moscow	2019-09-08		02:09:09		2019-09-09 02:09:09.909	
+INVALID	local	native	Europe/Moscow	local	native	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+INVALID	local	native	Europe/Moscow	local->remote	jdbc	modern	Europe/Moscow	2019-09-09		11:39:09		2019-09-09 11:39:09.909	
+correct	local	native	Europe/Moscow	thick local	jdbc	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	native	Europe/Moscow	remote	binary	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+correct	local	native	Europe/Moscow	remote	jdbc	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	local	native	Europe/Moscow	remote	native	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	local	native	Europe/Moscow	thick remote	jdbc	modern	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+correct	local	jdbc	Europe/Moscow	remote	native	EST5EDT	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	local	native	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	remote	native	IST	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	IST	JSR310	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	calendarized	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	local	jdbc	Europe/Moscow	remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	thick remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	binary	EST5EDT	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	local	jdbc	Europe/Moscow	remote	native	EST5EDT	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	local	binary	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	local	native	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	local	jdbc	Europe/Moscow	remote	binary	IST	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	IST	legacy	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	native	IST	legacy	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	IST	legacy	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	literal	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.09	2019-09-09 11:39:09.09
+INVALID	local	jdbc	Europe/Moscow	remote	native	EST5EDT	literal	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	literal	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.09	2019-09-09 16:09:09.09
+INVALID	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	local	jdbc	Europe/Moscow	local	native	Europe/Moscow	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	local	jdbc	Europe/Moscow	remote	native	IST	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	local	jdbc	Europe/Moscow	thick remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	local	jdbc	Europe/Moscow	remote	binary	EST5EDT	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	16:09:09	16:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	modern	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	local	jdbc	Europe/Moscow	remote	native	EST5EDT	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	local	jdbc	Europe/Moscow	local	binary	Europe/Moscow	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	modern	2019-09-08	Sun Sep 08 00:00:00 MSK 2019	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	local	jdbc	Europe/Moscow	local	native	Europe/Moscow	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+correct	local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	local	jdbc	Europe/Moscow	remote	binary	IST	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.909	2019-09-09 06:39:09.909
+correct	local	jdbc	Europe/Moscow	remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	local	jdbc	Europe/Moscow	remote	native	IST	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	local	jdbc	Europe/Moscow	thick remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 00:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	EST5EDT	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	native	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	IST	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	IST	JSR310	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	calendarized	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 23:09:09.0909	2019-09-09 23:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	14:39:09	14:39:09	2019-09-09 13:39:09.0909	2019-09-09 13:39:09.0909
+correct	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	IST	calendarized	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	binary	EST5EDT	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	03:39:09	03:39:09	2019-09-10 01:39:09.0909	2019-09-10 01:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 23:09:09.0909	2019-09-09 23:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	EST5EDT	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	03:39:09	03:39:09	2019-09-10 01:39:09.0909	2019-09-10 01:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	binary	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	native	Europe/Moscow	legacy	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	binary	IST	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	IST	legacy	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	IST	legacy	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	IST	legacy	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	literal	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.09	2019-09-09 18:39:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	EST5EDT	literal	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	03:39:09	03:39:09	2019-09-10 01:39:09.0909	2019-09-10 01:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	literal	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	01:09:09	01:09:09	2019-09-09 23:09:09.09	2019-09-09 23:09:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.09	2019-09-09 09:09:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	local	native	Europe/Moscow	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.09	2019-09-09 06:39:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.09	2019-09-09 09:09:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	09:09:09	09:09:09	2019-09-09 09:09:09.09	2019-09-09 09:09:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	IST	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	14:39:09	14:39:09	2019-09-09 13:39:09.0909	2019-09-09 13:39:09.0909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	IST	literal	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	06:39:09	06:39:09	2019-09-09 06:39:09.09	2019-09-09 06:39:09.09
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	binary	EST5EDT	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	00:09:09	00:09:09	2019-09-09 23:09:09.909	2019-09-09 23:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	modern	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	EST5EDT	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	binary	Europe/Moscow	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	10:09:09	10:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	modern	2019-09-08	Sun Sep 08 07:00:00 MSK 2019	10:09:09	10:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	local	native	Europe/Moscow	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.909	2019-09-09 18:39:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	19:39:09	19:39:09	2019-09-09 18:39:09.909	2019-09-09 18:39:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	binary	IST	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	14:39:09	14:39:09	2019-09-09 13:39:09.909	2019-09-09 13:39:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	remote	native	IST	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	local<-remote	jdbc	Europe/Moscow	thick remote	jdbc	IST	modern	2019-09-09	Mon Sep 09 07:00:00 MSK 2019	17:09:09	17:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+correct	thick local	jdbc	Europe/Moscow	remote	native	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	local	native	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	remote	native	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	IST	JSR310	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	calendarized	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	calendarized	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	calendarized	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	thick remote	jdbc	IST	calendarized	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	binary	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.0909	2019-09-09 16:09:09.0909
+correct	thick local	jdbc	Europe/Moscow	remote	native	EST5EDT	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	legacy	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local	binary	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local	native	Europe/Moscow	legacy	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	legacy	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.0909	2019-09-09 11:39:09.0909
+correct	thick local	jdbc	Europe/Moscow	remote	binary	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	IST	legacy	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	native	IST	legacy	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.0909	2019-09-08 23:39:09.0909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	IST	legacy	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.0909	2019-09-09 09:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.09	2019-09-09 11:39:09.09
+INVALID	thick local	jdbc	Europe/Moscow	remote	native	EST5EDT	literal	2019-09-09	2019-09-09	19:39:09	19:39:09	2019-09-09 18:39:09.0909	2019-09-09 18:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	literal	2019-09-09	2019-09-09	17:09:09	17:09:09	2019-09-09 16:09:09.09	2019-09-09 16:09:09.09
+INVALID	thick local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick local	jdbc	Europe/Moscow	local	native	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.0909	2019-09-09 02:09:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	IST	literal	2019-09-08	2019-09-08	01:09:09	01:09:09	2019-09-09 02:09:09.09	2019-09-09 02:09:09.09
+INVALID	thick local	jdbc	Europe/Moscow	remote	native	IST	literal	2019-09-08	2019-09-08	06:39:09	06:39:09	2019-09-09 06:39:09.0909	2019-09-09 06:39:09.0909
+INVALID	thick local	jdbc	Europe/Moscow	thick remote	jdbc	IST	literal	2019-09-08	2019-09-08	22:39:09	22:39:09	2019-09-08 23:39:09.09	2019-09-08 23:39:09.09
+INVALID	thick local	jdbc	Europe/Moscow	remote	binary	EST5EDT	modern	2019-09-09	2019-09-09	16:09:09	16:09:09	2019-09-09 16:09:09.909	2019-09-09 16:09:09.909
+INVALID	thick local	jdbc	Europe/Moscow	remote	jdbc	EST5EDT	modern	2019-09-08	2019-09-08	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick local	jdbc	Europe/Moscow	remote	native	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	EST5EDT	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick local	jdbc	Europe/Moscow	local	binary	Europe/Moscow	modern	2019-09-09	2019-09-09	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick local	jdbc	Europe/Moscow	local	jdbc	Europe/Moscow	modern	2019-09-08	2019-09-08	02:09:09	02:09:09	2019-09-09 02:09:09.909	2019-09-09 02:09:09.909
+INVALID	thick local	jdbc	Europe/Moscow	local	native	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+INVALID	thick local	jdbc	Europe/Moscow	local->remote	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	11:39:09	11:39:09	2019-09-09 11:39:09.909	2019-09-09 11:39:09.909
+correct	thick local	jdbc	Europe/Moscow	thick local	jdbc	Europe/Moscow	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+INVALID	thick local	jdbc	Europe/Moscow	remote	binary	IST	modern	2019-09-09	2019-09-09	06:39:09	06:39:09	2019-09-09 06:39:09.909	2019-09-09 06:39:09.909
+correct	thick local	jdbc	Europe/Moscow	remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick local	jdbc	Europe/Moscow	remote	native	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	thick local	jdbc	Europe/Moscow	thick remote	jdbc	IST	modern	2019-09-09	2019-09-09	09:09:09	09:09:09	2019-09-09 09:09:09.909	2019-09-09 09:09:09.909
+correct	local	binary	Europe/Moscow	local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	binary	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	local	binary	Europe/Moscow	remote	native	literal	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	calendarized	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.09	
+correct	local	binary	Europe/Moscow	thick local	jdbc	calendarized	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	calendarized	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+correct	local	binary	Europe/Moscow	thick local	jdbc	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	local	binary	Europe/Moscow	remote	binary	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	local	binary	Europe/Moscow	local->remote	jdbc	literal	Europe/Moscow	2019-09-08		06:39:09		2019-09-09 06:39:09.09	
+INVALID	local	binary	Europe/Moscow	remote	native	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+correct	local	binary	Europe/Moscow	local	native	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	binary	Europe/Moscow	thick local	jdbc	literal	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	local	binary	Europe/Moscow	remote	native	JSR310	IST	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	literal	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.09	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	calendarized	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	local	binary	Europe/Moscow	local	binary	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	thick local	jdbc	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	local	binary	Europe/Moscow	local	jdbc	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	modern	EST5EDT	2019-09-09		16:09:09		2019-09-09 16:09:09.909	
+INVALID	local	binary	Europe/Moscow	remote	native	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+correct	local	binary	Europe/Moscow	local	jdbc	literal	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+correct	local	binary	Europe/Moscow	remote	jdbc	literal	IST	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	calendarized	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+correct	local	binary	Europe/Moscow	local	native	literal	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	native	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+correct	local	binary	Europe/Moscow	local	binary	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	binary	Europe/Moscow	local->remote	jdbc	legacy	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	binary	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	native	literal	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	local	binary	Europe/Moscow	thick local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	legacy	EST5EDT	2019-09-09		17:09:09		2019-09-09 16:09:09.0909	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+correct	local	binary	Europe/Moscow	remote	jdbc	literal	EST5EDT	2019-09-09		09:09:09		2019-09-09 09:09:09.09	
+INVALID	local	binary	Europe/Moscow	remote	native	JSR310	EST5EDT	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+INVALID	local	binary	Europe/Moscow	remote	native	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	local	binary	Europe/Moscow	local	native	JSR310	Europe/Moscow	2019-09-09		09:09:09		2019-09-09T09:09:09.090900	
+correct	local	binary	Europe/Moscow	local	jdbc	legacy	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.0909	
+correct	local	binary	Europe/Moscow	local	native	modern	Europe/Moscow	2019-09-09		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	binary	Europe/Moscow	local->remote	jdbc	calendarized	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.0909	
+INVALID	local	binary	Europe/Moscow	local->remote	jdbc	modern	Europe/Moscow	2019-09-08		09:09:09		2019-09-09 09:09:09.909	
+INVALID	local	binary	Europe/Moscow	remote	binary	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
+INVALID	local	binary	Europe/Moscow	thick remote	jdbc	modern	IST	2019-09-09		06:39:09		2019-09-09 06:39:09.909	
+INVALID	local	binary	Europe/Moscow	remote	jdbc	legacy	IST	2019-09-08		06:39:09		2019-09-09 06:39:09.0909	
