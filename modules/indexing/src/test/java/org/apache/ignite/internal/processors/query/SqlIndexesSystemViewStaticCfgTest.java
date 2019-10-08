@@ -36,25 +36,37 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+/** */
+// t0d0 disable by system property
 public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
+    /** */
     private Ignite driver;
 
+    /** */
+    private boolean client;
+
+    /** */
     private CacheConfiguration<Object, Object>[] ccfg;
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setClientMode(client)
             .setCacheConfiguration(ccfg)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
     }
 
+    /** */
     @Test
+    @SuppressWarnings("ThrowableNotThrown")
     public void testNotActivatedGrid() throws Exception {
         ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
             new CacheConfiguration<>("cache")
@@ -62,7 +74,13 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
                 .setIndexes(Collections.singleton(new QueryIndex("i")))))
         };
 
-        startNodes(false);
+        // start server
+        startGrid(0);
+
+        // start client
+        client = true;
+
+        startGrid(2);
 
         for (Ignite ign : G.allGrids()) {
             GridTestUtils.assertThrowsWithCause(
@@ -71,6 +89,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     @Test
     public void testStaticCacheCfg() throws Exception {
         ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
@@ -95,12 +114,13 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
     }
 
+    /** */
     @Test
     public void testStaticCacheInGroupCfg() throws Exception {
         ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
             new CacheConfiguration<>("cache1")
                 .setGroupName("group")
-                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, SqlIndexesSystemViewTest.TestValue.class)
+                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
                 .setIndexes(Collections.singleton(new QueryIndex("i"))))),
             new CacheConfiguration<>("cache2")
                 .setGroupName("group")
@@ -128,24 +148,24 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     private void startNodes() throws Exception {
-        startNodes(true);
-    }
+        // baseline node
+        driver = startGrid(0);
 
-    private void startNodes(boolean activate) throws Exception {
-        // t0d0 baseline
-        // t0d0 disable by system property
-        startGrids(2);
+        driver.cluster().active(true);
+        driver.cluster().baselineAutoAdjustEnabled(false);
+        driver.cluster().setBaselineTopology(Collections.singleton(grid(0).localNode()));
 
+        // node out of baseline
+        startGrid(1);
+
+        // client node
         G.setClientMode(true);
         startGrid(3);
-
-        driver = grid(0);
-
-        if (activate)
-            driver.cluster().active(true);
     }
 
+    /** */
     private void checkIndexes(Consumer<List<List<?>>> checker) {
         for (Ignite ign : G.allGrids()) {
             List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
@@ -154,11 +174,14 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     private static List<List<?>> execSql(Ignite ign, String sql) {
         return ((IgniteEx)ign).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 
+    /** */
     public static class TestValue {
+        /** */
         @QuerySqlField
         int i;
     }
