@@ -112,6 +112,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -338,12 +339,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testState() throws Exception {
         final String newTag = "new_tag";
-
-        boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-            IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
-        );
 
         Ignite ignite = startGrids(1);
 
@@ -361,10 +360,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
         assertContains(log, out, "Cluster is inactive");
-        if (clusterIdAndTagSupport) {
-            assertContains(log, out, "Cluster  ID: " + clId);
-            assertContains(log, out, "Cluster tag: " + clTag);
-        }
+        assertContains(log, out, "Cluster  ID: " + clId);
+        assertContains(log, out, "Cluster tag: " + clTag);
 
         ignite.cluster().active(true);
 
@@ -374,24 +371,22 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "Cluster is active");
 
-        if (clusterIdAndTagSupport) {
-            boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
-                try {
-                    ((IgniteClusterEx)ignite.cluster()).tag(newTag);
-                }
-                catch (IgniteCheckedException e) {
-                    return false;
-                }
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
+            try {
+                ((IgniteClusterEx)ignite.cluster()).tag(newTag);
+            }
+            catch (IgniteCheckedException e) {
+                return false;
+            }
 
-                return true;
-            }, 10_000);
+            return true;
+        }, 10_000);
 
-            assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
+        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
 
-            assertEquals(EXIT_CODE_OK, execute("--state"));
+        assertEquals(EXIT_CODE_OK, execute("--state"));
 
-            assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
-        }
+        assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
 
         ignite.cluster().readOnly(true);
 
@@ -402,6 +397,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertContains(log, testOut.toString(), "Cluster is active (read-only)");
+    }
+
+    /**
+     * Verifies that info about Cluster ID and tag is not printed to command output when the feature is disabled.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testState1() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
+
+        assertFalse(ignite.cluster().active());
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster is inactive");
+        assertNotContains(log, out, "Cluster  ID: ");
+        assertNotContains(log, out, "Cluster tag: ");
     }
 
     /**

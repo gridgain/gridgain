@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -31,8 +30,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -98,7 +97,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testInMemoryClusterId() throws Exception {
         Ignite ig0 = startGrid(0);
 
@@ -130,7 +130,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testInMemoryClusterIdWithClientReconnect() throws Exception {
         IgniteClusterEx cluster0 = startGrid(0).cluster();
 
@@ -169,7 +170,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testPersistentClusterId() throws Exception {
         isPersistenceEnabled = true;
 
@@ -197,7 +199,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testInMemoryClusterTag() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
@@ -254,7 +257,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testChangeTagExceptions() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
@@ -294,7 +298,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testPersistentClusterTag() throws Exception {
         isPersistenceEnabled = true;
 
@@ -346,7 +351,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testTagChangedEvent() throws Exception {
         IgniteEx ig = startGrid(0);
 
@@ -388,7 +394,8 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("Ignored as long as feature is disabled")
+    @WithSystemProperty(key="IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT", value="true")
+    @WithSystemProperty(key="IGNITE_DISTRIBUTED_META_STORAGE_FEATURE", value="true")
     public void testTagChangedEventMultinodeWithRemoteFilter() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
