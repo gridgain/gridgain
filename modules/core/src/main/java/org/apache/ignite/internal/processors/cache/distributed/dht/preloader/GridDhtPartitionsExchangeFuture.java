@@ -129,6 +129,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static org.apache.ignite.cluster.ClusterState.active;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -1143,7 +1144,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             exchangeLocE = state.transitionError();
 
         if (req.activeChanged()) {
-            if (req.activate()) {
+            if (active(req.state())) {
                 if (log.isInfoEnabled()) {
                     log.info("Start activation process [nodeId=" + cctx.localNodeId() +
                         ", client=" + kctx.clientNode() +
@@ -1247,7 +1248,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
             }
         }
-        else if (req.activate()) {
+        else if (active(req.state())) {
             cctx.exchange().exchangerBlockingSectionBegin();
 
             // TODO: BLT changes on inactive cluster can't be handled easily because persistent storage hasn't been initialized yet.
