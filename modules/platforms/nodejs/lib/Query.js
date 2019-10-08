@@ -16,6 +16,7 @@
 
 'use strict';
 
+const Util = require('util');
 const Cursor = require('./Cursor').Cursor;
 const SqlFieldsCursor = require('./Cursor').SqlFieldsCursor;
 const ArgumentChecker = require('./internal/ArgumentChecker');
@@ -24,8 +25,10 @@ const BinaryUtils = require('./internal/BinaryUtils');
 
 const PAGE_SIZE_DEFAULT = 1024;
 
+const DeprecateSetLocal = Util.deprecate(() => {}, "Query.setLocal is deprecated. It will be removed in later versions.");
+
 /**
- * Base class representing an Ignite SQL or Scan query.
+ * Base class representing a GridGain SQL or Scan query.
  *
  * The class has no public constructor. Only subclasses may be instantiated.
  *
@@ -39,8 +42,11 @@ class Query {
      * @param {boolean} local - local query flag: true or false.
      *
      * @return {Query} - the same instance of the Query.
+     *
+     * @deprecated Will be removed in later versions.
      */
     setLocal(local) {
+        DeprecateSetLocal();
         this._local = local;
         return this;
     }
@@ -142,8 +148,8 @@ class SqlQuery extends Query {
      * Set query arguments.
      *
      * Type of any argument may be specified using setArgTypes() method.
-     * If type of an argument is not specified then during operations the Ignite client
-     * will try to make automatic mapping between JavaScript types and Ignite object types -
+     * If type of an argument is not specified then during operations the GridGain client
+     * will try to make automatic mapping between JavaScript types and GridGain object types -
      * according to the mapping table defined in the description of the {@link ObjectType} class.
      *
      * @param {...*} args - Query arguments.
@@ -159,8 +165,8 @@ class SqlQuery extends Query {
      * Specifies types of query arguments.
      *
      * Query arguments itself are set using setArgs() method.
-     * By default, a type of every argument is not specified that means during operations the Ignite client
-     * will try to make automatic mapping between JavaScript types and Ignite object types -
+     * By default, a type of every argument is not specified that means during operations the GridGain client
+     * will try to make automatic mapping between JavaScript types and GridGain object types -
      * according to the mapping table defined in the description of the {@link ObjectType} class.
      *
      * @param {...ObjectType.PRIMITIVE_TYPE | CompositeType} argTypes - types of Query arguments.

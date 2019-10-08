@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
@@ -40,9 +41,12 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -360,8 +364,15 @@ public class VisorQueryUtils {
         final VisorQueryTaskArg arg,
         final GridQueryCancel cancel
     ) {
+        SecurityContext initCtx = ignite.context().security().securityContext();
+
         ignite.context().closure().runLocalSafe(() -> {
-            try {
+            IgniteLogger log = ignite.log();
+
+            try(OperationSecurityContext ctx = ignite.context().security().withContext(initCtx)) {
+                if (log.isDebugEnabled())
+                    log.debug("Operation started with subject: " + ignite.context().security().securityContext().subject());
+
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
                 qry.setPageSize(arg.getPageSize());
@@ -378,7 +389,13 @@ public class VisorQueryUtils {
 
                 if (!F.isEmpty(cacheName)) {
                     qry.setSchema(cacheName);
-                    cctx = ignite.context().cache().cache(cacheName).context();
+
+                    IgniteInternalCache<Object, Object> cache = ignite.cachex(cacheName);
+
+                    if (cache == null)
+                        throw new IgniteException("Failed to find a cache with the specified name to use as the default schema.");
+
+                    cctx = cache.context();
                 }
 
                 long start = U.currentTimeMillis();
@@ -427,6 +444,8 @@ public class VisorQueryUtils {
                 }
             }
             catch (Throwable e) {
+                log.warning("Fail to execute query.", e);
+
                 holder.setError(e);
             }
         }, MANAGEMENT_POOL);

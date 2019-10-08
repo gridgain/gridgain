@@ -25,7 +25,6 @@ import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -78,11 +77,6 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
 
             Collection<? extends BaselineNode> srvrs = cluster.forServers().nodes();
 
-            VisorBaselineAutoAdjustSettings autoAdjustSettings = new VisorBaselineAutoAdjustSettings(
-                cluster.isBaselineAutoAdjustEnabled(),
-                cluster.baselineAutoAdjustTimeout()
-            );
-
             BaselineAutoAdjustStatus adjustStatus = cluster.baselineAutoAdjustStatus();
 
             return new VisorBaselineTaskResult(
@@ -90,7 +84,8 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 cluster.topologyVersion(),
                 F.isEmpty(baseline) ? null : baseline,
                 srvrs,
-                autoAdjustSettings,
+                cluster.isBaselineAutoAdjustEnabled(),
+                cluster.baselineAutoAdjustTimeout(),
                 adjustStatus.getTimeUntilAutoAdjust(),
                 adjustStatus.getTaskState() == BaselineAutoAdjustStatus.TaskState.IN_PROGRESS
             );
@@ -143,17 +138,20 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          * @return New baseline.
          */
         private VisorBaselineTaskResult set(List<String> consistentIds) {
+            Map<String, BaselineNode> baseline = currentBaseLine();
             Map<String, BaselineNode> srvrs = currentServers();
 
             Collection<BaselineNode> baselineTop = new ArrayList<>();
 
             for (String consistentId : consistentIds) {
-                BaselineNode node = srvrs.get(consistentId);
+                if (srvrs.containsKey(consistentId))
+                    baselineTop.add(srvrs.get(consistentId));
 
-                if (node != null)
-                    baselineTop.add(node);
+                else if (baseline.containsKey(consistentId))
+                    baselineTop.add(baseline.get(consistentId));
+
                 else
-                    baselineTop.add(new DetachedClusterNode(consistentId, null));
+                    throw new VisorIllegalStateException("Check arguments. Node not found for consistent ID: " + consistentId);
             }
 
             return set0(baselineTop);
@@ -231,12 +229,12 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          * @param settings Baseline autoAdjustment settings.
          * @return New baseline.
          */
-        private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineAutoAdjustSettings settings) {
-            if (settings.getSoftTimeout() != null)
-                ignite.cluster().baselineAutoAdjustTimeout(settings.getSoftTimeout());
+        private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineTaskArg settings) {
+            if (settings.isAutoAdjustEnabled() != null)
+                ignite.cluster().baselineAutoAdjustEnabled(settings.isAutoAdjustEnabled());
 
-            if (settings.getEnabled() != null)
-                ignite.cluster().baselineAutoAdjustEnabled(settings.getEnabled());
+            if (settings.getAutoAdjustAwaitingTime() != null)
+                ignite.cluster().baselineAutoAdjustTimeout(settings.getAutoAdjustAwaitingTime());
 
             return collect();
         }
@@ -257,7 +255,7 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                     return version(arg.getTopologyVersion());
 
                 case AUTOADJUST:
-                    return updateAutoAdjustmentSettings(arg.getAutoAdjustSettings());
+                    return updateAutoAdjustmentSettings(arg);
 
                 default:
                     return collect();

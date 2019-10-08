@@ -18,13 +18,13 @@
 namespace Apache\Ignite\Exception;
 
 /**
- * Ignite client is not connected.
+ * GridGain client is not connected.
  */
 class NoConnectionException extends ClientException
 {
     /**
      * Constructs a NoConnectionException with the specified detail message.
-     * 
+     *
      * @param string $message the detail message.
      */
     public function __construct(string $message = null)

@@ -30,14 +30,14 @@ use Apache\Ignite\Internal\Utils\ArgumentChecker;
 use Apache\Ignite\Internal\Utils\Logger;
 
 /**
- * Class representing a complex Ignite object in the binary form.
+ * Class representing a complex GridGain object in the binary form.
  *
  * It corresponds to ObjectType::COMPLEX_OBJECT,
  * has mandatory type Id, which corresponds to a name of the complex type,
  * and includes optional fields.
  *
  * An instance of the BinaryObject can be obtained/created by the following ways:
- *   - returned by the client when a complex object is received from Ignite cache
+ *   - returned by the client when a complex object is received from GridGain cache
  * and is not deserialized to another PHP object.
  *   - created using the public constructor. Fields may be added to such an instance using setField() method.
  *   - created from a PHP object using static fromObject() method.
@@ -59,7 +59,7 @@ class BinaryObject
     const FLAG_OFFSET_TWO_BYTES = 0x0010;
     // compact footer, no field IDs
     const FLAG_COMPACT_FOOTER = 0x0020;
-    
+
     private $typeName;
     private $fields;
     private $typeBuilder;
@@ -105,15 +105,15 @@ class BinaryObject
      *
      * If complexObjectType parameter is specified, then the type Id is taken from it.
      * Otherwise, the type Id is generated from the name of the PHP class which instance is specified.
-     * 
+     *
      * @param object $object instance of PHP class which adds and initializes the fields
      *     of the BinaryObject instance.
      * @param ComplexObjectType $complexObjectType instance of complex type definition
      *   which specifies non-standard mapping of the fields of the BinaryObject instance
-     *   to/from the Ignite types.
-     * 
+     *   to/from the GridGain types.
+     *
      * @return BinaryObject new BinaryObject instance.
-     * 
+     *
      * @throws ClientException if error.
      */
     public static function fromObject(object $object, ComplexObjectType $complexObjectType = null): BinaryObject
@@ -139,25 +139,25 @@ class BinaryObject
         }
         return $result;
     }
-    
+
     /**
      * Sets new value of the specified field.
      * Adds the specified field, if it did not exist before.
      *
-     * Optionally, specifies an Ignite type of the field.
-     * If the type is not specified then the Ignite client
-     * tries to make automatic mapping between PHP types and Ignite object types -
+     * Optionally, specifies a GridGain type of the field.
+     * If the type is not specified then the GridGain client
+     * tries to make automatic mapping between PHP types and GridGain object types -
      * according to the mapping table defined in the description of the ObjectType class.
-     * 
+     *
      * @param string $fieldName name of the field.
      * @param mixed $fieldValue new value of the field.
-     * @param int|ObjectType|null $fieldType Ignite type of the field:
+     * @param int|ObjectType|null $fieldType GridGain type of the field:
      *   - either a type code of primitive (simple) type (@ref PrimitiveTypeCodes)
      *   - or an instance of class representing non-primitive (composite) type
      *   - or null (or not specified) that means the type is not specified
-     * 
+     *
      * @return BinaryObject the same instance of BinaryObject.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function setField(string $fieldName, $fieldValue, $fieldType = null): BinaryObject
@@ -174,11 +174,11 @@ class BinaryObject
     /**
      * Removes the specified field.
      * Does nothing if the field does not exist.
-     * 
+     *
      * @param string $fieldName name of the field.
-     * 
+     *
      * @return BinaryObject the same instance of BinaryObject.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function removeField(string $fieldName): BinaryObject
@@ -192,14 +192,14 @@ class BinaryObject
         $this->typeBuilder->removeField($fieldName);
         return $this;
     }
-    
+
     /**
      * Checks if the specified field exists in this BinaryObject instance.
-     * 
+     *
      * @param string $fieldName name of the field.
-     * 
+     *
      * @return bool true if exists, false otherwise.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function hasField(string $fieldName): bool
@@ -212,22 +212,22 @@ class BinaryObject
     /**
      * Returns a value of the specified field.
      *
-     * Optionally, specifies Ignite type of the field.
-     * If the type is not specified then the Ignite client
-     * tries to make automatic mapping between PHP types and Ignite object types -
+     * Optionally, specifies GridGain type of the field.
+     * If the type is not specified then the GridGain client
+     * tries to make automatic mapping between PHP types and GridGain object types -
      * according to the mapping table defined in the description of the ObjectType class.
      *
      * If field with the specified name doesn't exist, throws Exception::ClientException.
      * Use hasField() method to ensure the field exists.
-     * 
+     *
      * @param string $fieldName name of the field.
-     * @param int|ObjectType|null $fieldType Ignite type of the field:
+     * @param int|ObjectType|null $fieldType GridGain type of the field:
      *   - either a type code of primitive (simple) type (@ref PrimitiveTypeCodes)
      *   - or an instance of class representing non-primitive (composite) type
      *   - or null (or not specified) that means the type is not specified
-     * 
+     *
      * @return mixed value of the field.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function getField(string $fieldName, $fieldType = null)
@@ -240,14 +240,14 @@ class BinaryObject
         }
         throw new ClientException(sprintf('Field %s does not exist', $fieldName));
     }
-    
+
     /**
      * Deserializes this BinaryObject instance into PHP object which corresponds to the specified complex object type.
-     * 
+     *
      * @param ComplexObjectType $complexObjectType instance of class representing complex object type.
-     * 
+     *
      * @return object instance of the PHP object which corresponds to the specified complex object type.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function toObject(ComplexObjectType $complexObjectType): object
@@ -271,22 +271,22 @@ class BinaryObject
         }
         return $result;
     }
-    
+
     /**
      * Returns type name of this BinaryObject instance.
-     * 
+     *
      * @return string type name.
      */
     public function getTypeName(): string
     {
         return $this->typeBuilder->getTypeName();
     }
-    
+
     /**
      * Returns names of all fields in this BinaryObject instance.
-     * 
+     *
      * @return array names of all fields.
-     * 
+     *
      * @throws ClientException if error.
      */
     public function getFieldNames(): array

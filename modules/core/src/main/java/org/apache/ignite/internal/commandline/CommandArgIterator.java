@@ -115,6 +115,25 @@ public class CommandArgIterator {
     }
 
     /**
+     * @return Numeric value.
+     */
+    public byte nextByteArg(String argName) {
+        String str = nextArg("Expecting " + argName);
+
+        try {
+            byte val = Byte.parseByte(str);
+
+            if (val < 0)
+                throw new IllegalArgumentException("Invalid value for " + argName + ": " + val);
+
+            return val;
+        }
+        catch (NumberFormatException ignored) {
+            throw new IllegalArgumentException("Invalid value for " + argName + ": " + str);
+        }
+    }
+
+    /**
      * @param argName Name of argument.
      */
     public Set<String> nextStringSet(String argName) {
@@ -148,7 +167,7 @@ public class CommandArgIterator {
     /**
      * Check if raw arg is command or option.
      *
-     * @return {@code true} If raw arg is command, overwise {@code false}.
+     * @return {@code true} If raw arg is command, otherwise {@code false}.
      */
     public static boolean isCommandOrOption(String raw) {
         return raw != null && raw.contains("--");

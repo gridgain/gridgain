@@ -19,6 +19,8 @@ package org.apache.ignite.testframework.junits;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -42,6 +44,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
+import javax.management.DynamicMBean;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -58,7 +65,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
@@ -73,6 +79,8 @@ import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
@@ -191,6 +199,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         }
     };
 
+    /** Allows easy repeating for test. */
+    @Rule public transient RepeatRule repeatRule = new RepeatRule();
+
     /**
      * Supports obtaining test name for JUnit4 framework in a way that makes it available for methods invoked
      * from {@code runTest(Statement)}.
@@ -232,6 +243,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** Lazily initialized current test method. */
     private volatile Method currTestMtd;
+
+    /**
+     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
+     * then it must be restored using value of this field.
+     */
+    private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
 
     /** */
     static {
@@ -310,7 +327,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
      */
     protected void beforeTestsStarted() throws Exception {
-        // No-op.
+        regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
     }
 
     /**
@@ -322,7 +339,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        // No-op.
+        //restoring page handler wrapper
+        BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
     }
 
     /**
@@ -1723,8 +1741,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
         cfg.setEventStorageSpi(new MemoryEventStorageSpi());
 
-        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
-
         cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
 
         return cfg;
@@ -2303,6 +2319,14 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void waitForTopology(final int expSize) throws Exception {
+        waitForTopology(expSize, 30_000);
+    }
+
+    /**
+     * @param expSize Expected nodes number.
+     * @throws Exception If failed.
+     */
+    protected void waitForTopology(final int expSize, int timeout) throws Exception {
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 List<Ignite> nodes = G.allGrids();
@@ -2340,7 +2364,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
                 return true;
             }
-        }, 30_000));
+        }, timeout));
     }
 
     /**
@@ -2574,7 +2598,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         @Override public Statement apply(Statement base, Description desc) {
             return new Statement() {
                 @Override public void evaluate() throws Throwable {
-                    GridAbstractTest fixtureInstance = (GridAbstractTest)desc.getTestClass().newInstance();
+                    Constructor<?> testConstructor = desc.getTestClass().getDeclaredConstructor();
+
+                    testConstructor.setAccessible(true);
+
+                    GridAbstractTest fixtureInstance = (GridAbstractTest)testConstructor.newInstance();
 
                     fixtureInstance.evaluateInsideFixture(base);
                 }
@@ -2614,5 +2642,30 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
                 throw t;
             }
         }
+    }
+
+
+    /**
+     * Returns metric set.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param grp Name of the group.
+     * @param metrics Metrics.
+     * @return MX bean.
+     * @throws Exception If failed.
+     */
+    public DynamicMBean metricSet(
+        String igniteInstanceName,
+        String grp,
+        String metrics
+    ) throws MalformedObjectNameException {
+        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, metrics);
+
+        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
+
+        if (!mbeanSrv.isRegistered(mbeanName))
+            throw new IgniteException("MBean not registered.");
+
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, DynamicMBean.class, false);
     }
 }

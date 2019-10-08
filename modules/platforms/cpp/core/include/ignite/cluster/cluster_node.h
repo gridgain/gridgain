@@ -43,11 +43,109 @@ namespace ignite
             ClusterNode(common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl);
 
             /**
-             * Gets globally unique node ID. A new ID is generated every time a node restarts.
+             * Get collection of addresses this node is known by.
+             *
+             * @return Collection of addresses this node is known by.
+             */
+            const std::vector<std::string>& GetAddresses() const;
+
+            /**
+             * Check if node attribute is set.
+             *
+             * @param name Node attribute name.
+             * @return True if set.
+             */
+            bool IsAttributeSet(std::string name) const;
+
+            /**
+             * Get a node attribute.
+             *
+             * @param name Node attribute name.
+             * @return Node attribute.
+             *
+             * @throw IgniteError in case of attribute name does not exist
+             * or if template type is not compatible with attribute.
+             */
+            template<typename T>
+            T GetAttribute(std::string name) const
+            {
+                return impl.Get()->GetAttribute<T>(name);
+            }
+
+            /**
+             * Get collection of all Cluster Node attributes names.
+             *
+             * @return Node attributes names collection.
+             */
+            std::vector<std::string> GetAttributes() const;
+
+            /**
+             * Get Cluster Node consistent ID.
+             *
+             * @return Cluster Node consistent ID.
+             */
+            std::string GetConsistentId() const;
+
+            /**
+             * Get collection of host names this node is known by.
+             *
+             * @return Collection of host names this node is known by.
+             */
+            const std::vector<std::string>& GetHostNames() const;
+
+            /**
+             * Get globally unique node ID. A new ID is generated every time a node restarts
              *
              * @return Node Guid.
              */
-            Guid GetId();
+            Guid GetId() const;
+
+            /**
+             * Check if cluster node started in client mode.
+             *
+             * @return True if in client mode and false otherwise.
+             */
+            bool IsClient() const;
+
+            /**
+             * Check whether or not this node is a daemon.
+             *
+             * @return True if is daemon and false otherwise.
+             */
+            bool IsDaemon() const;
+
+            /**
+             * Check whether or not this node is a local node.
+             *
+             * @return True if is local and false otherwise.
+             */
+            bool IsLocal() const;
+
+            /**
+             * Node order within grid topology.
+             *
+             * @return Node order.
+             */
+            int64_t GetOrder() const;
+
+            /**
+             * Get node version.
+             *
+             * @return Prodcut version.
+             */
+            const IgniteProductVersion& GetVersion() const;
+
+            /**
+             * Define "less" operator to allow Cluster Node usage as STL container key.
+             *
+             * @param lnode Left cluster node.
+             * @param rnode Right cluster node.
+             * @return True if less.
+             */
+            friend IGNITE_IMPORT_EXPORT bool operator<(const ClusterNode& lnode, const ClusterNode& rnode)
+            {
+                return lnode.GetId() < rnode.GetId();
+            }
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;

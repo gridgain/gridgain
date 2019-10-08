@@ -21,6 +21,7 @@ import java.util.HashSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
@@ -33,12 +34,20 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 
 /**
  * Node validation.
  */
 public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter implements DiscoveryNodeValidationProcessor {
+    /** Default value for rolling upgrade status. */
+    private static final RollingUpgradeStatus DEFAULT_ROLLING_UPGRADE_STATUS = new IgniteRollingUpgradeStatus(
+        false,
+        false,
+        IgniteProductVersion.fromString(IgniteVersionUtils.VER_STR),
+        null,
+        new HashSet<>(Arrays.asList(IgniteFeatures.values())));
+
     /**
      * @param ctx Kernal context.
      */
@@ -71,7 +80,7 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
                 if (log.isDebugEnabled())
                     log.debug(errMsg);
 
-                return new IgniteNodeValidationResult(node.id(), errMsg, errMsg);
+                return new IgniteNodeValidationResult(node.id(), errMsg);
             }
         }
 
@@ -86,21 +95,25 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
             FAIL,
             new UnsupportedOperationException("Local node does not support Rolling Upgrade "
                 + "[locNodeId=" + locNode.id() + ", locNodeAddrs=" + U.addressesAsString(locNode)
-                + ", locBuildVer=" + locNode.attribute(ATTR_BUILD_VER) + ']'));
+                + ", locBuildVer=" + locNode.attribute(ATTR_BUILD_VER) + ']'),
+            getStatus());
     }
 
     /** {@inheritDoc} */
-    @Override public void enableForcedMode() {
-        throw new UnsupportedOperationException("Forced mode of Rolling Upgrade is not supported.");
+    @Override public RollingUpgradeModeChangeResult enableForcedMode() {
+        ClusterNode locNode = ctx.discovery().localNode();
+
+        return new RollingUpgradeModeChangeResult(
+            FAIL,
+            new UnsupportedOperationException("Local node does not support forced mode of Rolling Upgrade "
+                + "[locNodeId=" + locNode.id() + ", locNodeAddrs=" + U.addressesAsString(locNode)
+                + ", locBuildVer=" + locNode.attribute(ATTR_BUILD_VER)
+            ),
+            getStatus());
     }
 
     /** {@inheritDoc} */
     @Override public RollingUpgradeStatus getStatus() {
-        return new IgniteRollingUpgradeStatus(
-            false,
-            false,
-            IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
-            null,
-            new HashSet<>(Arrays.asList(IgniteFeatures.values())));
+        return DEFAULT_ROLLING_UPGRADE_STATUS;
     }
 }

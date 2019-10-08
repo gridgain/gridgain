@@ -23,7 +23,7 @@ use Apache\Ignite\Cache\CacheInterface;
 use Apache\Ignite\Exception\ClientException;
 use Apache\Ignite\Type\ObjectType;
 
-// This example demonstrates how to establish a secure connection to an Ignite node and use username/password authentication,
+// This example demonstrates how to establish a secure connection to a GridGain node and use username/password authentication,
 // as well as basic Key-Value Queries operations for primitive types:
 // - connects to a node using TLS and providing username/password
 // - creates a cache, if it doesn't exist
@@ -50,12 +50,12 @@ class AuthTlsExample
                 'local_cert' => AuthTlsExample::TLS_CLIENT_CERT_FILE_NAME,
                 'cafile' => AuthTlsExample::TLS_CA_FILE_NAME
             ];
-            
+
             $config = (new ClientConfiguration(AuthTlsExample::ENDPOINT))->
                 setUserName(AuthTlsExample::USER_NAME)->
                 setPassword(AuthTlsExample::PASSWORD)->
                 setTLSOptions($tlsOptions);
-                    
+
             $client->connect($config);
 
             echo("Client connected successfully (with TLS and authentication enabled)" . PHP_EOL);

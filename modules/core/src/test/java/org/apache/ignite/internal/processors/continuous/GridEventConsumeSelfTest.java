@@ -36,6 +36,7 @@ import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -94,6 +95,8 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
@@ -236,97 +239,6 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
         }
         finally {
             grid(0).events().stopRemoteListen(consumeId);
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testApiAsyncOld() throws Exception {
-        IgniteEvents evtAsync = grid(0).events().withAsync();
-
-        try {
-            evtAsync.stopRemoteListen(null);
-            evtAsync.future().get();
-        }
-        catch (NullPointerException ignored) {
-            // No-op.
-        }
-
-        evtAsync.stopRemoteListen(UUID.randomUUID());
-        evtAsync.future().get();
-
-        UUID consumeId = null;
-
-        try {
-            evtAsync.remoteListen(
-                new P2<UUID, DiscoveryEvent>() {
-                    @Override public boolean apply(UUID uuid, DiscoveryEvent evt) {
-                        return false;
-                    }
-                },
-                new P1<DiscoveryEvent>() {
-                    @Override public boolean apply(DiscoveryEvent e) {
-                        return false;
-                    }
-                },
-                EVTS_DISCOVERY
-            );
-
-            consumeId = (UUID)evtAsync.future().get();
-
-            assertNotNull(consumeId);
-        }
-        finally {
-            evtAsync.stopRemoteListen(consumeId);
-            evtAsync.future().get();
-        }
-
-        try {
-            evtAsync.remoteListen(
-                new P2<UUID, DiscoveryEvent>() {
-                    @Override public boolean apply(UUID uuid, DiscoveryEvent evt) {
-                        return false;
-                    }
-                },
-                new P1<DiscoveryEvent>() {
-                    @Override public boolean apply(DiscoveryEvent e) {
-                        return false;
-                    }
-                }
-            );
-
-            consumeId = (UUID)evtAsync.future().get();
-
-            assertNotNull(consumeId);
-        }
-        finally {
-            evtAsync.stopRemoteListen(consumeId);
-            evtAsync.future().get();
-        }
-
-        try {
-            evtAsync.remoteListen(
-                new P2<UUID, Event>() {
-                    @Override public boolean apply(UUID uuid, Event evt) {
-                        return false;
-                    }
-                },
-                new P1<Event>() {
-                    @Override public boolean apply(Event e) {
-                        return false;
-                    }
-                }
-            );
-
-            consumeId = (UUID)evtAsync.future().get();
-
-            assertNotNull(consumeId);
-        }
-        finally {
-            evtAsync.stopRemoteListen(consumeId);
-            evtAsync.future().get();
         }
     }
 

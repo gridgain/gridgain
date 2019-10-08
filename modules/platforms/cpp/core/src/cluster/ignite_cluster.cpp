@@ -17,13 +17,14 @@
 #include "ignite/cluster/ignite_cluster.h"
 
 using namespace ignite::common::concurrent;
+using namespace ignite::cluster;
 using namespace ignite::impl::cluster;
 
 namespace ignite
 {
     namespace cluster
     {
-        IgniteCluster::IgniteCluster(SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl) :
+        IgniteCluster::IgniteCluster(SharedPointer<IgniteClusterImpl> impl) :
             impl(impl)
         {
             // No-op.
@@ -39,9 +40,49 @@ namespace ignite
             impl.Get()->SetActive(active);
         }
 
-        cluster::ClusterGroup IgniteCluster::AsClusterGroup()
+        void IgniteCluster::DisableWal(std::string cacheName)
         {
-            return cluster::ClusterGroup(impl.Get()->AsClusterGroup());
+            impl.Get()->DisableWal(cacheName);
+        }
+
+        void IgniteCluster::EnableWal(std::string cacheName)
+        {
+            impl.Get()->EnableWal(cacheName);
+        }
+
+        bool IgniteCluster::IsWalEnabled(std::string cacheName)
+        {
+            return impl.Get()->IsWalEnabled(cacheName);
+        }
+
+        void IgniteCluster::SetBaselineTopologyVersion(int64_t topVer)
+        {
+            impl.Get()->SetBaselineTopologyVersion(topVer);
+        }
+
+        void IgniteCluster::SetTxTimeoutOnPartitionMapExchange(int64_t timeout)
+        {
+            impl.Get()->SetTxTimeoutOnPartitionMapExchange(timeout);
+        }
+
+        bool IgniteCluster::PingNode(Guid nid)
+        {
+            return impl.Get()->PingNode(nid);
+        }
+
+        std::vector<ClusterNode> IgniteCluster::GetTopology(int64_t version)
+        {
+            return impl.Get()->GetTopology(version);
+        }
+
+        int64_t IgniteCluster::GetTopologyVersion()
+        {
+            return impl.Get()->GetTopologyVersion();
+        }
+
+        ClusterGroup IgniteCluster::AsClusterGroup()
+        {
+            return ClusterGroup(impl.Get()->AsClusterGroup());
         }
     }
 }

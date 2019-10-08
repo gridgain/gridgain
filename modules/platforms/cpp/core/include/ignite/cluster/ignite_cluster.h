@@ -61,11 +61,72 @@ namespace ignite
             void SetActive(bool active);
 
             /**
-             * Gets cluster group consisting of all cluster nodes.
+             * Disable write-ahead logging for specified cache.
+             *
+             * @param cacheName Cache name.
+             */
+            void DisableWal(std::string cacheName);
+
+            /**
+             * Enable write-ahead logging for specified cache.
+             *
+             * @param cacheName Cache name.
+             */
+            void EnableWal(std::string cacheName);
+
+            /**
+             * Check if write - ahead logging is enabled for specified cache.
+             *
+             * @param cacheName Cache name.
+             *
+             * @return True if enabled.
+             */
+            bool IsWalEnabled(std::string cacheName);
+
+            /**
+             * Set baseline topology constructed from the cluster topology of the given version.
+             * The method succeeds only if the cluster topology has not changed.
+             *
+             * @param topVer Topology version.
+             */
+            void SetBaselineTopologyVersion(int64_t topVer);
+
+            /**
+             * Set transaction timeout on partition map exchange.
+             *
+             * @param timeout Timeout in milliseconds.
+             */
+            void SetTxTimeoutOnPartitionMapExchange(int64_t timeout);
+
+            /**
+             * Ping node.
+             *
+             * @param nid Cluster node ID.
+             * @return True in case of success.
+             */
+            bool PingNode(Guid nid);
+
+            /**
+             * Get a topology by version.
+             *
+             * @param version Topology version.
+             * @return Nodes collection for the requested topology version.
+             */
+            std::vector<ClusterNode> GetTopology(int64_t version);
+
+            /**
+             * Get current topology version.
+             *
+             * @return Current topology version.
+             */
+            int64_t GetTopologyVersion();
+
+            /**
+             * Get cluster group consisting of all cluster nodes.
              *
              * @return ClusterGroup instance.
              */
-            cluster::ClusterGroup AsClusterGroup();
+            ClusterGroup AsClusterGroup();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl;

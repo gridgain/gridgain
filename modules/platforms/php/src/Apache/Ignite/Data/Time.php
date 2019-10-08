@@ -17,8 +17,8 @@
 
 namespace Apache\Ignite\Data;
 
-/** 
- * Class representing Ignite Time type
+/**
+ * Class representing GridGain Time type
  * (number of milliseconds elapsed since midnight, i.e. 00:00:00 UTC).
  */
 class Time
@@ -27,17 +27,17 @@ class Time
 
     /**
      * Public constructor.
-     * 
+     *
      * @param int $millis number of milliseconds elapsed since midnight, i.e. 00:00:00 UTC.
      */
     public function __construct(int $millis)
     {
         $this->millis = $millis;
     }
-    
+
     /**
      * Returns the time value as number of milliseconds elapsed since midnight, i.e. 00:00:00 UTC.
-     * 
+     *
      * @return int number of milliseconds elapsed since midnight, i.e. 00:00:00 UTC.
      */
     public function getMillis(): int
@@ -47,7 +47,7 @@ class Time
 
     /**
      * Returns the time value as number of seconds elapsed since midnight, i.e. 00:00:00 UTC.
-     * 
+     *
      * @return int number of seconds elapsed since midnight, i.e. 00:00:00 UTC.
      */
     public function getSeconds(): int

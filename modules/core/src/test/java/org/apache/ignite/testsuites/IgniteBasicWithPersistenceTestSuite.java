@@ -22,6 +22,7 @@ import org.apache.ignite.failure.SystemWorkersBlockingTest;
 import org.apache.ignite.failure.SystemWorkersTerminationTest;
 import org.apache.ignite.internal.ClusterBaselineNodesMetricsSelfTest;
 import org.apache.ignite.internal.GridNodeMetricsLogPdsSelfTest;
+import org.apache.ignite.internal.cluster.IgniteClusterIdTagTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheBigEntryTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheCreateTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheDestroyTest;
@@ -31,9 +32,11 @@ import org.apache.ignite.internal.encryption.EncryptedCachePreconfiguredRestartT
 import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
+import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
-import org.apache.ignite.util.GridCommandHandlerSslTest;
+import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
 import org.apache.ignite.util.GridCommandHandlerTest;
+import org.apache.ignite.util.GridCommandHandlerSslTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -50,8 +53,10 @@ import org.junit.runners.Suite;
     FailureHandlingConfigurationTest.class,
     SystemWorkersBlockingTest.class,
     CheckpointReadLockFailureTest.class,
+    PdsConsistentIdProcessorTest.class,
 
     GridCommandHandlerTest.class,
+    GridCommandHandlerClusterByClassTest.class,
     GridCommandHandlerSslTest.class,
     GridInternalTaskUnusedWalSegmentsTest.class,
 
@@ -65,7 +70,9 @@ import org.junit.runners.Suite;
     EncryptedCacheRestartTest.class,
     EncryptedCachePreconfiguredRestartTest.class,
 
-    SingleNodePersistenceSslTest.class
+    SingleNodePersistenceSslTest.class,
+
+    IgniteClusterIdTagTest.class
 })
 public class IgniteBasicWithPersistenceTestSuite {
 }

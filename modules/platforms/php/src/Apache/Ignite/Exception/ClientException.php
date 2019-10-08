@@ -18,13 +18,13 @@
 namespace Apache\Ignite\Exception;
 
 /**
- * Ignite client general exception.
+ * GridGain client general exception.
  */
 class ClientException extends \Exception
 {
     /**
      * Constructs a ClientException with the specified detail message.
-     * 
+     *
      * @param string $message the detail message.
      */
     public function __construct(string $message)

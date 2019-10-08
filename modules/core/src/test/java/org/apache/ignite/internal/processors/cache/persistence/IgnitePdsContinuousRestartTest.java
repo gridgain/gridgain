@@ -31,18 +31,24 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.TransactionRollbackException;
+import org.junit.Assume;
 import org.junit.Test;
 
 /**
@@ -75,6 +81,13 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     protected IgnitePdsContinuousRestartTest(boolean cancel) {
         this.cancel = cancel;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-11937", MvccFeatureChecker.forcedMvcc());
+
+        super.beforeTest();
     }
 
     /** {@inheritDoc} */
@@ -125,7 +138,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_500_1_1() throws Exception {
-        checkRebalancingDuringLoad(1000, 500, 1, 1);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 1, 1);
     }
 
     /**
@@ -133,7 +146,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_500_1_1() throws Exception {
-        checkRebalancingDuringLoad(8000, 500, 1, 1);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 1, 1);
     }
 
     /**
@@ -141,7 +154,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_20000_1_1() throws Exception {
-        checkRebalancingDuringLoad(1000, 20000, 1, 1);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 1, 1);
     }
 
     /**
@@ -149,7 +162,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_8000_1_1() throws Exception {
-        checkRebalancingDuringLoad(8000, 8000, 1, 1);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 1, 1);
     }
 
     /**
@@ -157,7 +170,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_500_8_1() throws Exception {
-        checkRebalancingDuringLoad(1000, 500, 8, 1);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 8, 1);
     }
 
     /**
@@ -165,7 +178,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_500_8_1() throws Exception {
-        checkRebalancingDuringLoad(8000, 500, 8, 1);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 8, 1);
     }
 
     /**
@@ -173,7 +186,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_20000_8_1() throws Exception {
-        checkRebalancingDuringLoad(1000, 20000, 8, 1);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 8, 1);
     }
 
     /**
@@ -181,7 +194,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_8000_8_1() throws Exception {
-        checkRebalancingDuringLoad(8000, 8000, 8, 1);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 8, 1);
     }
 
     /**
@@ -189,7 +202,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_500_8_16() throws Exception {
-        checkRebalancingDuringLoad(1000, 500, 8, 16);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 8, 16);
     }
 
     /**
@@ -197,7 +210,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_500_8_16() throws Exception {
-        checkRebalancingDuringLoad(8000, 500, 8, 16);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 8, 16);
     }
 
     /**
@@ -205,7 +218,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_1000_20000_8_16() throws Exception {
-        checkRebalancingDuringLoad(1000, 20000, 8, 16);
+        checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 8, 16);
     }
 
     /**
@@ -213,7 +226,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingDuringLoad_8000_8000_8_16() throws Exception {
-        checkRebalancingDuringLoad(8000, 8000, 8, 16);
+        checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 8, 16);
     }
 
     /**
@@ -280,6 +293,12 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
                             break;
                         }
                         catch (Exception e) {
+                            if (X.hasCause(e,
+                                TransactionRollbackException.class,
+                                ClusterTopologyException.class,
+                                NodeStoppingException.class))
+                                continue; // Expected types.
+
                             MvccFeatureChecker.assertMvccWriteConflict(e);
                         }
                     }
@@ -289,7 +308,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
             }
         }, threads, "updater");
 
-        long end = System.currentTimeMillis() + 90_000;
+        long end = System.currentTimeMillis() + SF.apply(90000);
 
         Random rnd = ThreadLocalRandom.current();
 

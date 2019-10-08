@@ -82,6 +82,9 @@ public final class IgniteQueryErrorCode {
     /** Query canceled. */
     public static final int QUERY_CANCELED = 3014;
 
+    /** Query out of memory. */
+    public static final int QUERY_OUT_OF_MEMORY = 3015;
+
     /* 4xxx - cache related runtime errors */
 
     /** Attempt to INSERT a key that is already in cache. */
@@ -114,6 +117,9 @@ public final class IgniteQueryErrorCode {
     /** Attempt to INSERT, UPDATE or MERGE value which scale exceed maximum DECIMAL column scale. */
     public static final int KEY_SCALE_OUT_OF_RANGE = 4010;
 
+    /** Attempt to INSERT, UPDATE or DELETE value on read-only cluster. */
+    public static final int CLUSTER_READ_ONLY_MODE_ENABLED = 4011;
+
     /* 5xxx - transactions related runtime errors. */
 
     /** Transaction is already open. */
@@ -144,7 +150,7 @@ public final class IgniteQueryErrorCode {
      * @return {@link SQLException} with given details.
      */
     public static SQLException createJdbcSqlException(String msg, int code) {
-        return new SQLException(msg, codeToSqlState(code));
+        return new SQLException(msg, codeToSqlState(code), code);
     }
 
     /**
@@ -197,6 +203,12 @@ public final class IgniteQueryErrorCode {
 
             case QUERY_CANCELED:
                 return SqlStateCode.QUERY_CANCELLED;
+
+            case QUERY_OUT_OF_MEMORY:
+                return SqlStateCode.MEMORY_ALLOCATION_ERROR;
+
+            case CLUSTER_READ_ONLY_MODE_ENABLED:
+                return SqlStateCode.CLUSTER_READ_ONLY_MODE_ENABLED;
 
             default:
                 return SqlStateCode.INTERNAL_ERROR;

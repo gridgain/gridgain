@@ -45,6 +45,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -78,7 +79,6 @@ import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.STOP;
 
@@ -223,6 +223,9 @@ public class IgniteConfiguration {
     /** Default failure detection timeout in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_FAILURE_DETECTION_TIMEOUT = new Long(10_000);
+
+    /** Default system worker blocked timeout in millis. */
+    public static final Long DFLT_SYS_WORKER_BLOCKED_TIMEOUT = 2 * 60 * 1000L;
 
     /** Default failure detection timeout for client nodes in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
@@ -396,6 +399,9 @@ public class IgniteConfiguration {
     /** Metric exporter SPI. */
     private MetricExporterSpi[] metricExporterSpi;
 
+    /** Tracing SPI. */
+    private TracingSpi tracingSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -449,7 +455,7 @@ public class IgniteConfiguration {
     private Long failureDetectionTimeout = DFLT_FAILURE_DETECTION_TIMEOUT;
 
     /** Timeout for blocked system workers detection. */
-    private Long sysWorkerBlockedTimeout;
+    private Long sysWorkerBlockedTimeout = DFLT_SYS_WORKER_BLOCKED_TIMEOUT;
 
     /** Failure detection timeout for client nodes. */
     private Long clientFailureDetectionTimeout = DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT;
@@ -576,6 +582,7 @@ public class IgniteConfiguration {
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
         metricExporterSpi = cfg.getMetricExporterSpi();
+        tracingSpi = cfg.getTracingSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -766,7 +773,7 @@ public class IgniteConfiguration {
      * Also, it allows to get (check state, stop) node by name via {@link Ignition} methods.
      *
      *
-     * @param nodeName Node name to set. Can be {@code null}. which is default.
+     * @param nodeName Node name to set. Can be {@code null}, which is default.
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setIgniteInstanceName(String nodeName) {
@@ -2310,6 +2317,27 @@ public class IgniteConfiguration {
     }
 
     /**
+     * Gets fully configured instance of {@link TracingSpi}.
+     *
+     * @param tracingSpi Fully configured instance of {@link TracingSpi}.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setTracingSpi(TracingSpi tracingSpi) {
+        this.tracingSpi = tracingSpi;
+
+        return this;
+    }
+
+    /**
+     * Gets fully configured tracing SPI implementation.
+     *
+     * @return Tracing SPI implementation.
+     */
+    public TracingSpi getTracingSpi() {
+        return tracingSpi;
+    }
+
+    /**
      * Gets address resolver for addresses mapping determination.
      *
      * @return Address resolver.
@@ -3164,10 +3192,11 @@ public class IgniteConfiguration {
     /**
      * Sets client connector configuration.
      *
-     * @param cliConnCfg Client connector configuration.
+     * @param cliConnCfg Client connector configuration. If {@code null}, will clear
+     *      previously set connector configuration.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setClientConnectorConfiguration(@Nullable ClientConnectorConfiguration cliConnCfg) {
+    public IgniteConfiguration setClientConnectorConfiguration(ClientConnectorConfiguration cliConnCfg) {
         this.cliConnCfg = cliConnCfg;
 
         return this;
@@ -3199,7 +3228,7 @@ public class IgniteConfiguration {
      *
      * @return Client connector configuration.
      */
-    @Nullable public ClientConnectorConfiguration getClientConnectorConfiguration() {
+    public ClientConnectorConfiguration getClientConnectorConfiguration() {
         return cliConnCfg;
     }
 

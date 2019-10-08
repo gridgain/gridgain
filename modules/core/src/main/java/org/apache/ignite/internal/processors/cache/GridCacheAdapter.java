@@ -100,8 +100,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheRawVersioned
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
-import org.apache.ignite.internal.processors.dr.IgniteDrDataStreamerCacheUpdater;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
@@ -129,6 +128,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
@@ -323,7 +323,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         log = ctx.logger(getClass());
         txLockMsgLog = ctx.shared().txLockMessageLogger();
 
-        metrics = new CacheMetricsImpl(ctx, isNear() ? "near" : null);
+        metrics = new CacheMetricsImpl(ctx, isNear());
 
         locMxBean = new CacheLocalMetricsMXBeanImpl(this);
         clusterMxBean = new CacheClusterMetricsMXBeanImpl(this);
@@ -621,11 +621,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // no matter what references these futures are holding.
         lastFut = null;
 
-        MetricRegistry mreg = ctx.kernalContext().metric().registry();
-
-        mreg.withPrefix(metrics.metricsPrefix())
-            .getMetrics()
-            .forEach(m -> mreg.remove(m.name()));
+        ctx.kernalContext().metric().remove(MetricUtils.cacheMetricsRegistryName(ctx.name(), isNear()));
     }
 
     /**
@@ -3185,50 +3181,23 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         final ExpiryPolicy plc = plc0 != null ? plc0 : ctx.expiry();
 
-        final boolean keepBinary = opCtx != null && opCtx.isKeepBinary();
-
         if (p != null)
             ctx.kernalContext().resource().injectGeneric(p);
 
         try {
-            if (ctx.store().isLocal()) {
-                DataStreamerImpl ldr = ctx.kernalContext().dataStream().dataStreamer(ctx.name());
+            // Version for all loaded entries.
+            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
-                try {
-                    ldr.skipStore(true);
+            ctx.store().loadCache(new IgniteBiInClosure<KeyCacheObject, Object>() {
+                @Override public void apply(KeyCacheObject key, Object val) throws IgniteException {
+                    long ttl = CU.ttlForLoad(plc);
 
-                    ldr.receiver(new IgniteDrDataStreamerCacheUpdater());
+                    if (ttl == CU.TTL_ZERO)
+                        return;
 
-                    ldr.keepBinary(keepBinary);
-
-                    LocalStoreLoadClosure c = new LocalStoreLoadClosure(p, ldr, plc);
-
-                    ctx.store().loadCache(c, args);
-
-                    c.onDone();
+                    loadEntry(key, val, ver0, (IgniteBiPredicate<Object, Object>)p, topVer, replicate, ttl);
                 }
-                finally {
-                    ldr.closeEx(false);
-                }
-            }
-            else {
-                // Version for all loaded entries.
-                final GridCacheVersion ver0 = ctx.versions().nextForLoad();
-
-                ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
-                    @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
-                        throws IgniteException {
-                        assert ver == null;
-
-                        long ttl = CU.ttlForLoad(plc);
-
-                        if (ttl == CU.TTL_ZERO)
-                            return;
-
-                        loadEntry(key, val, ver0, (IgniteBiPredicate<Object, Object>)p, topVer, replicate, ttl);
-                    }
-                }, args);
-            }
+            }, args);
         }
         finally {
             if (p instanceof PlatformCacheEntryFilter)
@@ -3393,41 +3362,19 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         Collection<KeyCacheObject> keys0 = ctx.cacheKeysView(keys);
 
-        if (ctx.store().isLocal()) {
-            DataStreamerImpl ldr = ctx.kernalContext().dataStream().dataStreamer(ctx.name());
+        // Version for all loaded entries.
+        final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
-            try {
-                ldr.skipStore(true);
+        ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
+            @Override public void apply(KeyCacheObject key, Object val) {
+                long ttl = CU.ttlForLoad(plc0);
 
-                ldr.keepBinary(keepBinary);
+                if (ttl == CU.TTL_ZERO)
+                    return;
 
-                ldr.receiver(new IgniteDrDataStreamerCacheUpdater());
-
-                LocalStoreLoadClosure c = new LocalStoreLoadClosure(null, ldr, plc0);
-
-                ctx.store().localStoreLoadAll(null, keys0, c);
-
-                c.onDone();
+                loadEntry(key, val, ver0, null, topVer, replicate, ttl);
             }
-            finally {
-                ldr.closeEx(false);
-            }
-        }
-        else {
-            // Version for all loaded entries.
-            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
-
-            ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
-                @Override public void apply(KeyCacheObject key, Object val) {
-                    long ttl = CU.ttlForLoad(plc0);
-
-                    if (ttl == CU.TTL_ZERO)
-                        return;
-
-                    loadEntry(key, val, ver0, null, topVer, replicate, ttl);
-                }
-            });
-        }
+        });
     }
 
     /**
@@ -3783,7 +3730,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     !ctx.skipStore(),
                     ctx.mvccEnabled(),
                     0,
-                    null
+                    null,
+                    false
                 );
 
                 assert tx != null;
@@ -3898,7 +3846,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     !skipStore,
                     ctx.mvccEnabled(),
                     0,
-                    null);
+                    null,
+                    false);
 
                 return asyncOp(tx, op, opCtx, /*retry*/false);
             }
@@ -4555,7 +4504,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 opCtx == null || !opCtx.skipStore(),
                 ctx.mvccEnabled(),
                 0,
-                null);
+                null,
+                false);
 
             IgniteInternalFuture<T> fut = asyncOp(tx, op, opCtx, retry);
 

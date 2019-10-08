@@ -21,10 +21,10 @@ use Apache\Ignite\Exception\ClientException;
 use Apache\Ignite\Internal\Utils\ArgumentChecker;
 
 /**
- * Class representing Ignite client configuration.
+ * Class representing GridGain client configuration.
  *
  * The configuration includes:
- *   - (mandatory) Ignite node endpoint(s)
+ *   - (mandatory) GridGain node endpoint(s)
  *   - (optional) user credentials for authentication
  *   - (optional) TLS options for secure connection
  *   - (optional) connection options
@@ -43,12 +43,12 @@ class ClientConfiguration
     const ENDPOINT_PORT_DEFAULT = 10800;
 
     /**
-     * Creates an instance of Ignite client configuration
+     * Creates an instance of GridGain client configuration
      * with the provided mandatory settings and default optional settings.
      *
      * By default, the client does not use authentication and secure connection.
      *
-     * @param string ...$endpoints Ignite node endpoint(s). The client randomly connects/reconnects
+     * @param string ...$endpoints GridGain node endpoint(s). The client randomly connects/reconnects
      * to one of the specified node.
      *
      * @throws ClientException if error.
@@ -65,10 +65,10 @@ class ClientConfiguration
         $this->receiveChunkSize = 0;
         $this->tcpNoDelay = true;
     }
-    
+
     /**
-     * Returns Ignite node endpoints specified in the constructor.
-     * 
+     * Returns GridGain node endpoints specified in the constructor.
+     *
      * @return string[] endpoints
      */
     public function getEndpoints(): array
@@ -80,9 +80,9 @@ class ClientConfiguration
      * Sets username which will be used for authentication during the client's connection.
      *
      * If username is not set, the client does not use authentication during connection.
-     * 
+     *
      * @param string|null $userName username. If null, authentication is disabled.
-     * 
+     *
      * @return ClientConfiguration the same instance of the ClientConfiguration.
      */
     public function setUserName(?string $userName): ClientConfiguration
@@ -90,25 +90,25 @@ class ClientConfiguration
         $this->userName = $userName;
         return $this;
     }
-    
+
     /**
      * Returns the current username.
-     * 
+     *
      * @return string|null username or null (if authentication is disabled).
      */
     public function getUserName(): ?string
     {
         return $this->userName;
     }
-    
+
     /**
      * Sets password which will be used for authentication during the client's connection.
      *
      * Password is ignored, if username is not set.
      * If password is not set, it is considered empty.
-     * 
+     *
      * @param string|null $password password. If null, password is empty.
-     * 
+     *
      * @return ClientConfiguration the same instance of the ClientConfiguration.
      */
     public function setPassword(?string $password): ClientConfiguration
@@ -116,17 +116,17 @@ class ClientConfiguration
         $this->password = $password;
         return $this;
     }
-    
+
     /**
      * Returns the current password.
-     * 
+     *
      * @return string|null password or null (if password is empty).
      */
     public function getPassword(): ?string
     {
         return $this->password;
     }
-    
+
     /**
      * Enables and setup TLS connection.
      *
@@ -142,10 +142,10 @@ class ClientConfiguration
         $this->tlsOptions = $tlsOptions;
         return $this;
     }
-    
+
     /**
      * Returns the current TLS connection options.
-     * 
+     *
      * @return array|null TLS connection options or null (if secure connection is not used).
      */
     public function getTLSOptions(): ?array

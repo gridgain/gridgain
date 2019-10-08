@@ -29,11 +29,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
     /**
+     * Prefix for keys in metastorage used by Ignite internally. No user keys should start with this prefix.
+     */
+    public static final String IGNITE_INTERNAL_KEY_PREFIX = "ignite.internal.";
+
+    /**
      * Write value into distributed metastorage.
      *
      * @param key The key.
      * @param val Value to write. Must not be null.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      */
     void write(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException;
 
@@ -42,7 +47,7 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      *
      * @param key The key.
      * @param val Value to write. Must not be null.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      */
     GridFutureAdapter<?> writeAsync(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException;
 
@@ -50,7 +55,7 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      * Remove value from distributed metastorage.
      *
      * @param key The key.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      */
     void remove(@NotNull String key) throws IgniteCheckedException;
 
@@ -60,7 +65,7 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      * @param key The key.
      * @param expVal Expected value. Might be null.
      * @param newVal Value to write. Must not be null.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      * @return {@code True} if expected value matched the actual one and write was completed successfully.
      *      {@code False} otherwise.
      */
@@ -76,7 +81,7 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      * @param key The key.
      * @param expVal Expected value. Might be null.
      * @param newVal Value to write. Must not be null.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      * @return {@code True} if expected value matched the actual one and write was completed successfully.
      *      {@code False} otherwise.
      */
@@ -91,7 +96,7 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      *
      * @param key The key.
      * @param expVal Expected value. Must not be null.
-     * @throws IgniteCheckedException If cluster is in deactivated state.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      * @return {@code True} if expected value matched the actual one and remove was completed successfully.
      *      {@code False} otherwise.
      */

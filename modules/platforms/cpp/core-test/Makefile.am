@@ -53,6 +53,7 @@ ignite_tests_LDFLAGS = \
 	-rdynamic
 
 ignite_tests_SOURCES = \
+	src/affinity_test.cpp \
 	src/reference_test.cpp \
 	src/bits_test.cpp \
 	src/binary_identity_resolver_test.cpp \
@@ -65,7 +66,8 @@ ignite_tests_SOURCES = \
 	src/ignition_test.cpp \
 	src/interop_memory_test.cpp \
 	src/interop_test.cpp \
-	src/cluster_test.cpp \
+	src/cluster_group_test.cpp \
+	src/cluster_node_test.cpp \
 	src/cache_invoke_test.cpp \
 	src/handle_registry_test.cpp \
 	src/ignite_error_test.cpp \

@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import javax.cache.Cache;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -24,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -48,8 +48,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 
 /**
  * Test to reproduce corrupted indexes problem after partition file eviction and truncation.
@@ -99,20 +97,6 @@ public class IgnitePdsCorruptedIndexTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         stopAllGrids();
 
@@ -145,6 +129,7 @@ public class IgnitePdsCorruptedIndexTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrid(0);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         haltFileIO = true;
 
         additionalArgs = new ArrayList<>();

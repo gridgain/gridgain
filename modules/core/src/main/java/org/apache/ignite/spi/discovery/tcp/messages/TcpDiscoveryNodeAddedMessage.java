@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
@@ -34,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
-public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -66,6 +68,9 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
 
     /** Start time of the first grid node. */
     private final long gridStartTime;
+
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -105,6 +110,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
         this.topHist = msg.topHist;
         this.dataPacket = msg.dataPacket;
         this.gridStartTime = msg.gridStartTime;
+        this.spanContainer = msg.spanContainer;
     }
 
     /**
@@ -227,6 +233,15 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
     }
 
     /**
+     * Clears unmarshalled discovery data to minimize message size.
+     * These data are used only on "collect" stage and are not part of persistent state.
+     */
+    public void clearUnmarshalledDiscoveryData() {
+        if (dataPacket != null)
+            dataPacket.clearUnmarshalledJoiningNodeData();
+    }
+
+    /**
      * @return First grid node start time.
      */
     public long gridStartTime() {
@@ -236,5 +251,10 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryNodeAddedMessage.class, this, "super", super.toString());
+    }
+
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

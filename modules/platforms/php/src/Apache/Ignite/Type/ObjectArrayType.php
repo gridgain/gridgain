@@ -21,28 +21,28 @@ use Apache\Ignite\Exception\ClientException;
 use Apache\Ignite\Internal\Binary\BinaryUtils;
 
 /**
- * Class representing an array type of Ignite objects.
+ * Class representing an array type of GridGain objects.
  *
  * It is described by ObjectType::OBJECT_ARRAY.
  */
 class ObjectArrayType extends ObjectType
 {
     private $elementType;
-    
+
     /**
      * Public constructor.
      *
-     * Optionally specifies Ignite type of elements in the array.
+     * Optionally specifies GridGain type of elements in the array.
      *
-     * If Ignite type of elements is not specified then during operations the Ignite client
-     * tries to make automatic mapping between PHP types and Ignite object types -
+     * If GridGain type of elements is not specified then during operations the GridGain client
+     * tries to make automatic mapping between PHP types and GridGain object types -
      * according to the mapping table defined in the description of the ObjectType class.
-     * 
-     * @param int|ObjectType|null $elementType Ignite type of the array element:
+     *
+     * @param int|ObjectType|null $elementType GridGain type of the array element:
      *   - either a type code of primitive (simple) type (@ref PrimitiveTypeCodes)
      *   - or an instance of class representing non-primitive (composite) type
      *   - or null (or not specified) that means the type is not specified
-     * 
+     *
      * @throws ClientException if error.
      */
     public function __construct($elementType = null)
@@ -51,11 +51,11 @@ class ObjectArrayType extends ObjectType
         BinaryUtils::checkObjectType($elementType, 'elementType');
         $this->elementType = $elementType;
     }
-    
+
     /**
-     * Returns Ignite type of the array element.
-     * 
-     * @return int|ObjectType|null Ignite type of the array element:
+     * Returns GridGain type of the array element.
+     *
+     * @return int|ObjectType|null GridGain type of the array element:
      *   - either a type code of primitive (simple) type (@ref PrimitiveTypeCodes)
      *   - or an instance of class representing non-primitive (composite) type
      *   - or null that means the type is not specified

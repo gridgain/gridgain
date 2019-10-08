@@ -17,17 +17,13 @@
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
-import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -39,7 +35,6 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
      * @param name Name.
      * @param regionMetrics Region metrics.
      * @param dataRegion Data region.
-     * @param reuseList Reuse list.
      * @param wal Wal.
      * @param metaPageId Meta page id.
      * @param initNew Initialize new.
@@ -49,7 +44,6 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
         String name,
         DataRegionMetricsImpl regionMetrics,
         DataRegion dataRegion,
-        ReuseList reuseList,
         IgniteWriteAheadLogManager wal,
         long metaPageId,
         boolean initNew,
@@ -60,7 +54,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
             name,
             regionMetrics,
             dataRegion,
-            reuseList,
+            null,
             wal,
             metaPageId,
             initNew,
@@ -69,17 +63,12 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override public IOVersions<? extends AbstractDataPageIO<CacheDataRow>> ioVersions() {
-        return DataPageIO.VERSIONS;
-    }
-
-    /** {@inheritDoc} */
     @Override public void insertDataRow(CacheDataRow row, IoStatisticsHolder statHolder) throws IgniteCheckedException {
         super.insertDataRow(row, statHolder);
 
         assert row.key().partition() == PageIdUtils.partId(row.link()) :
             "Constructed a link with invalid partition ID [partId=" + row.key().partition() +
-            ", link=" + U.hexLong(row.link()) + ']';
+                ", link=" + U.hexLong(row.link()) + ']';
     }
 
     /** {@inheritDoc} */

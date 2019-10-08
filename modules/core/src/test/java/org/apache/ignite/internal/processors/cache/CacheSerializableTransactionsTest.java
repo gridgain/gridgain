@@ -105,6 +105,9 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
     private static final int CLIENTS = 3;
 
     /** */
+    public static final int ACCEPTABLE_TRANSACTIONS_RETRIES_CNT = 1_000;
+
+    /** */
     private boolean client;
 
     /** {@inheritDoc} */
@@ -131,11 +134,6 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
         startGridsMultiThreaded(SRVS, CLIENTS);
 
         client = false;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 5 * 60_000;
     }
 
     /**
@@ -3575,7 +3573,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
     public void testRandomOperations() throws Exception {
         Ignite ignite0 = ignite(0);
 
-        long stopTime = U.currentTimeMillis() + getTestTimeout() - 30_000;
+        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
         for (CacheConfiguration<Integer, Integer> ccfg : cacheConfigurations()) {
             logCacheInfo(ccfg);
@@ -3737,7 +3735,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
 
             IgniteInternalFuture<?> restartFut = restart ? restartFuture(stop, null) : null;
 
-            final long stopTime = U.currentTimeMillis() + getTestTimeout() - 30_000;
+            final long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
             for (int i = 0; i < SF.apply(30); i++) {
                 final AtomicInteger cntr = new AtomicInteger();
@@ -3880,7 +3878,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
 
                         barrier.await();
 
-                        final int ITERATIONS_COUNT = SF.applyLB(1000, 50);
+                        final int ITERATIONS_COUNT = SF.applyLB(600, 50);
                         for (int i = 0; i < ITERATIONS_COUNT; i++) {
                             try {
                                 try (Transaction tx = txs.txStart(OPTIMISTIC, SERIALIZABLE)) {
@@ -3964,7 +3962,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void getRemoveTx(boolean nearCache, boolean store) throws Exception {
-        long stopTime = U.currentTimeMillis() + getTestTimeout() - 30_000;
+        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
         final Ignite ignite0 = ignite(0);
 
@@ -4017,6 +4015,8 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
                         barrier.await();
 
                         for (int i = 0; i < SF.apply(50); i++) {
+                            AtomicInteger retriesCntr = new AtomicInteger();
+
                             while (true) {
                                 try {
                                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -4047,6 +4047,9 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
                                 }
                                 catch (TransactionOptimisticException ignore) {
                                     // Retry.
+                                    if (retriesCntr.incrementAndGet() > ACCEPTABLE_TRANSACTIONS_RETRIES_CNT)
+                                        fail("Trying to fail a little bit sooner then default timeout," +
+                                            " core reason is https://ggsystems.atlassian.net/browse/GG-19679");
                                 }
                             }
                         }

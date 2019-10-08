@@ -17,6 +17,7 @@
 package org.apache.ignite.events;
 
 import java.util.List;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -760,6 +761,39 @@ public interface EventType {
      * @see ClusterActivationEvent
      */
     public static final int EVT_CLUSTER_DEACTIVATED = 141;
+
+    /**
+     * Built-in event type: page replacement started in one of the data regions. The name of the data region will
+     * be indicated in the event.
+     * <p>
+     * Fired when all existing free pages are exhausted and Ignite replaces one of the loaded pages with a
+     * cold page from disk.
+     * <p>
+     * When started, page replacement negatively affects performance; it is recommended to monitor page replacement
+     * metrics and set data region size accordingly.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see org.apache.ignite.configuration.DataRegionConfiguration#setMaxSize(long)
+     * @see PageReplacementStartEvent
+     */
+    public static final int EVT_PAGE_REPLACEMENT_STARTED = 142;
+
+    /**
+     * Built-in event type: cluster tag has been changed by user request.
+     * Event includes the following information: ID of the cluster, old tag and new tag.
+     *
+     * <p>
+     * Fired when new tag is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#tag(String)
+     * @see IgniteCluster#id()
+     */
+    public static final int EVT_CLUSTER_TAG_UPDATED = 143;
 
     /**
      * All checkpoint events. This array can be directly passed into

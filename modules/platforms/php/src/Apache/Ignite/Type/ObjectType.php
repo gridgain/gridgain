@@ -17,22 +17,22 @@
 
 namespace Apache\Ignite\Type;
 
-/** 
- * Base class representing a type of Ignite object.
+/**
+ * Base class representing a type of GridGain object.
  *
  * The class is abstract and has no public constructor. Only subclasses may be instantiated.
  *
- * There are two groups of Ignite object types:
+ * There are two groups of GridGain object types:
  *
  * - Primitive (simple) types. To fully describe such a type:
- * it is enough to specify Ignite type code @ref PrimitiveTypeCodes only.
+ * it is enough to specify GridGain type code @ref PrimitiveTypeCodes only.
  *
  * - Non-primitive (composite) types. To fully describe such a type:
- * Ignite type code @ref CompositeTypeCodes with additional information
+ * GridGain type code @ref CompositeTypeCodes with additional information
  * (eg. a kind of map or a kind of collection) should be specified.
  *
- * This class helps the Ignite client to make a mapping between PHP types
- * and types used by Ignite according to the following mapping tables:
+ * This class helps the GridGain client to make a mapping between PHP types
+ * and types used by GridGain according to the following mapping tables:
  *
  * ----------------------------------------------------------------------------
  *
@@ -49,19 +49,19 @@ namespace Apache\Ignite\Type;
  *   - Ds\\Set, Ds\\Map - PHP Data Structures extension classes: http://php.net/manual/en/book.ds.php
  *   - Brick\\Math\\BigDecimal - PHP class from the extension library
  *                               to work with arbitrary precision numbers: https://github.com/brick/math
- *   - Date, Time, Timestamp, EnumItem, BinaryObject - PHP classes introduced by the Ignite client.
+ *   - Date, Time, Timestamp, EnumItem, BinaryObject - PHP classes introduced by the GridGain client.
  *
- * Ignite type code
+ * GridGain type code
  * ----------------
- * It is a type code of Ignite primitive type (@ref PrimitiveTypeCodes)
- * or Ignite composite type (@ref CompositeTypeCodes).
+ * It is a type code of GridGain primitive type (@ref PrimitiveTypeCodes)
+ * or GridGain composite type (@ref CompositeTypeCodes).
  *
  * ----------------------------------------------------------------------------
  *
- * MAPPING FROM IGNITE TYPE CODE TO PHP TYPE WHEN READING DATA
+ * MAPPING FROM GRIDGAIN TYPE CODE TO PHP TYPE WHEN READING DATA
  * ----------------
  *
- * | Ignite type code             | PHP type                                      |
+ * | GridGain type code           | PHP type                                      |
  * | ---------------------------- | ----------------------------------------------|
  * | BYTE                         | integer                                       |
  * | SHORT                        | integer                                       |
@@ -106,24 +106,24 @@ namespace Apache\Ignite\Type;
  * | MAP (LINKED_HASH_MAP)        | Ds\\Map                                       |
  * | NULL                         | null**                                        |
  *
- * (*) If an application does not explicitly specify an Ignite type for a field and
- * COMPLEX_OBJECT is received, the Ignite client returns BinaryObject to the application.
+ * (*) If an application does not explicitly specify a GridGain type for a field and
+ * COMPLEX_OBJECT is received, the GridGain client returns BinaryObject to the application.
  * If an application explicitly specifies ComplexObjectType for a field,
- * the Ignite client deserializes the received COMPLEX_OBJECT into PHP object
+ * the GridGain client deserializes the received COMPLEX_OBJECT into PHP object
  * specified by the ComplexObjectType.
  *
- * (**) NULL cannot be specified as an Ignite type of a field but PHP null may be returned
+ * (**) NULL cannot be specified as a GridGain type of a field but PHP null may be returned
  * as a value of a field.
  *
  * ----------------------------------------------------------------------------
  *
- * DEFAULT MAPPING FROM PHP TYPE TO IGNITE TYPE CODE WHEN WRITING DATA
+ * DEFAULT MAPPING FROM PHP TYPE TO GRIDGAIN TYPE CODE WHEN WRITING DATA
  * ----------------
  *
- * This mapping is used when an application does not explicitly specify an Ignite type
+ * This mapping is used when an application does not explicitly specify a GridGain type
  * for a field and it is writing data to that field.
  *
- * | PHP type                                    | Ignite type code      |
+ * | PHP type                                    | GridGain type code    |
  * | ------------------------------------------- | ----------------------|
  * | boolean                                     | BOOLEAN               |
  * | integer                                     | INTEGER               |
@@ -151,7 +151,7 @@ namespace Apache\Ignite\Type;
  * | Ds\\Set                                     | COLLECTION (HASH_SET) |
  * | Ds\\Map                                     | MAP (HASH_MAP)        |
  *
- * All other PHP types have no default mapping to Ignite type codes.
+ * All other PHP types have no default mapping to GridGain type codes.
  *
  * (*) Any other PHP Object - is any PHP class, not explicitly mentioned in the table.
  *
@@ -162,14 +162,14 @@ namespace Apache\Ignite\Type;
  *
  * ----------------------------------------------------------------------------
  *
- * ALLOWED PHP TYPES WHEN WRITING DATA OF THE SPECIFIED IGNITE TYPE CODE
+ * ALLOWED PHP TYPES WHEN WRITING DATA OF THE SPECIFIED GRIDGAIN TYPE CODE
  * ----------------
  *
- * When an application explicitly specifies an Ignite type for a field
+ * When an application explicitly specifies a GridGain type for a field
  * and it is writing data to that field, the following PHP types
- * are allowed for every concrete Ignite type code.
+ * are allowed for every concrete GridGain type code.
  *
- * | Specified Ignite type code   | Allowed PHP types                             |
+ * | Specified GridGain type code | Allowed PHP types                             |
  * | ---------------------------- | ----------------------------------------------|
  * | BYTE                         | integer                                       |
  * | SHORT                        | integer                                       |
@@ -213,10 +213,10 @@ namespace Apache\Ignite\Type;
  * | MAP (HASH_MAP)               | Ds\\Map, associative array                    |
  * | MAP (LINKED_HASH_MAP)        | Ds\\Map, associative array                    |
  *
- * (*) For all *_ARRAY Ignite types an empty PHP indexed array is allowed.
+ * (*) For all *_ARRAY GridGain types an empty PHP indexed array is allowed.
  *
  * PHP null is allowed as value of a field (but not as a key/value in a cache)
- * or as a value of Array/Set/Map element for all Ignite types,
+ * or as a value of Array/Set/Map element for all GridGain types,
  * except BYTE, SHORT, INTEGER, LONG, FLOAT, DOUBLE, CHAR, BOOLEAN.
  *
  * ----------------------------------------------------------------------------
@@ -228,27 +228,27 @@ abstract class ObjectType
      *  @anchor PrimitiveTypeCodes
      *  @{
      */
-    
+
     /**
      * Single byte value. Can also represent small signed integer value.
      */
     const BYTE = 1;
-    
+
     /**
      * 2-bytes long signed integer number.
      */
     const SHORT = 2;
-    
+
     /**
      * 4-bytes long signed integer number.
      */
     const INTEGER = 3;
-    
+
     /**
      * 8-bytes long signed integer number.
      */
     const LONG = 4;
-    
+
     /**
      * 4-byte long floating-point number.
      */
@@ -258,123 +258,123 @@ abstract class ObjectType
      * 8-byte long floating-point number.
      */
     const DOUBLE = 6;
-    
+
     /**
      * Single UTF-16 code unit.
      */
     const CHAR = 7;
-    
+
     /**
      * Boolean value.
      */
     const BOOLEAN = 8;
-    
+
     /**
      * String in UTF-8 encoding.
      */
     const STRING = 9;
-    
+
     /**
      * A universally unique identifier (UUID) is a 128-bit number used to identify information in computer systems.
      */
     const UUID = 10;
-    
+
     /**
      * Date, represented as a number of milliseconds elapsed since 00:00:00 1 Jan 1970 UTC.
      */
     const DATE = 11;
-    
+
     /**
      * Array of bytes.
      */
     const BYTE_ARRAY = 12;
-    
+
     /**
      * Array of short signed integer numbers.
      */
     const SHORT_ARRAY = 13;
-    
+
     /**
      * Array of signed integer numbers.
      */
     const INTEGER_ARRAY = 14;
-    
+
     /**
      * Array of long signed integer numbers.
      */
     const LONG_ARRAY = 15;
-    
+
     /**
      * Array of floating point numbers.
      */
     const FLOAT_ARRAY = 16;
-    
+
     /**
      * Array of floating point numbers with double precision.
      */
     const DOUBLE_ARRAY = 17;
-    
+
     /**
      * Array of UTF-16 code units.
      */
     const CHAR_ARRAY = 18;
-    
+
     /**
      * Array of boolean values.
      */
     const BOOLEAN_ARRAY = 19;
-    
+
     /**
      * Array of UTF-8 string values.
      */
     const STRING_ARRAY = 20;
-    
+
     /**
      * Array of UUIDs.
      */
     const UUID_ARRAY = 21;
-    
+
     /**
      * Array of dates.
      */
     const DATE_ARRAY = 22;
-    
+
     /**
      * Value of an enumerable type. For such types defined only a finite number of named values.
      */
     const ENUM = 28;
-    
+
     /**
      * Array of enumerable type value.
      */
     const ENUM_ARRAY = 29;
-    
+
     /**
      * Numeric value of any desired precision and scale.
      */
     const DECIMAL = 30;
-    
+
     /**
      * Array of decimal values.
      */
     const DECIMAL_ARRAY = 31;
-    
+
     /**
      * More precise than a Date data type. Except for a milliseconds since epoch, contains a nanoseconds
-     * fraction of a last millisecond, which value could be in a range from 0 to 999999. 
+     * fraction of a last millisecond, which value could be in a range from 0 to 999999.
      */
     const TIMESTAMP = 33;
-    
+
     /**
      * Array of timestamp values.
      */
     const TIMESTAMP_ARRAY = 34;
-    
+
     /**
      * Time, represented as a number of milliseconds elapsed since midnight, i.e. 00:00:00 UTC.
      */
     const TIME = 36;
-    
+
     /**
      * Array of time values.
      */
@@ -389,27 +389,27 @@ abstract class ObjectType
      * Array of objects of any type.
      */
     const OBJECT_ARRAY = 23;
-    
+
     /**
      * General collection type.
      */
     const COLLECTION = 24;
-    
+
     /**
      * Map-like collection type. Contains pairs of key and value objects.
      */
     const MAP = 25;
-    
+
     /**
      * Wrapped binary object type.
      */
     const BINARY_OBJECT = 27;
-    
+
     /**
      * Wrapped enumerable type.
      */
     const BINARY_ENUM = 38;
-    
+
     /**
      * null value.
      */
@@ -420,13 +420,13 @@ abstract class ObjectType
      */
     const COMPLEX_OBJECT = 103;
     /** @} */ // end of CompositeTypeCodes
-    
+
     private $typeCode;
-    
+
     /**
-     * Gets Ignite type code of this Ignite object type.
-     * 
-     * @return int Ignite type code
+     * Gets GridGain type code of this GridGain object type.
+     *
+     * @return int GridGain type code
      */
     public function getTypeCode(): int
     {

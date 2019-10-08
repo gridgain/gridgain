@@ -20,7 +20,7 @@ require('jasmine-expect');
 
 const config = require('../config');
 const TestingHelper = require('../TestingHelper');
-const IgniteClient = require('apache-ignite-client');
+const IgniteClient = require('gridgain-client');
 const Errors = IgniteClient.Errors;
 const SqlQuery = IgniteClient.SqlQuery;
 const SqlFieldsQuery = IgniteClient.SqlFieldsQuery;
@@ -177,7 +177,6 @@ describe('sql query test suite >', () => {
                 const cursor = await cache.query(new SqlQuery(TABLE_NAME, `SELECT * FROM ${TABLE_NAME}`).
                     setType(TABLE_NAME).
                     setPageSize(2).
-                    setLocal(false).
                     setSql('field1 > ? and field1 <= ?').
                     setArgTypes(ObjectType.PRIMITIVE_TYPE.INTEGER, ObjectType.PRIMITIVE_TYPE.INTEGER).
                     setArgs(3, 7).

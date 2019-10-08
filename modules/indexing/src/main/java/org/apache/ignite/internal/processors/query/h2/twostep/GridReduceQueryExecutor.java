@@ -56,17 +56,18 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedUpdateRun;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSortColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlType;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryCancelRequest;
@@ -210,7 +211,7 @@ public class GridReduceQueryExecutor {
     public void onFail(ClusterNode node, GridQueryFailResponse msg) {
         ReduceQueryRun r = runs.get(msg.queryRequestId());
 
-        fail(r, node.id(), msg.error(), msg.failCode());
+        fail(r, node.id(), msg.error(), msg.failCode(), msg.sqlErrCode());
     }
 
     /**
@@ -218,21 +219,23 @@ public class GridReduceQueryExecutor {
      * @param nodeId Failed node ID.
      * @param msg Error message.
      */
-    private void fail(ReduceQueryRun r, UUID nodeId, String msg, byte failCode) {
+    private void fail(ReduceQueryRun r, UUID nodeId, String msg, byte failCode, int sqlErrCode) {
         if (r != null) {
             CacheException e;
 
-            if (failCode == GridQueryFailResponse.CANCELLED_BY_ORIGINATOR) {
-                e = new CacheException("Failed to execute map query on remote node [nodeId=" + nodeId +
-                    ", errMsg=" + msg + ']', new QueryCancelledException());
-            }
-            else if (failCode == GridQueryFailResponse.RETRY_QUERY) {
-                e = new CacheException("Failed to execute map query on remote node [nodeId=" + nodeId +
-                    ", errMsg=" + msg + ']', new QueryRetryException(msg));
-            }
+            String mapperFailedMsg = "Failed to execute map query on remote node [nodeId=" + nodeId +
+                ", errMsg=" + msg + ']';
+
+            if (failCode == GridQueryFailResponse.CANCELLED_BY_ORIGINATOR)
+                e = new CacheException(mapperFailedMsg, new QueryCancelledException());
+            else if (failCode == GridQueryFailResponse.RETRY_QUERY)
+                e = new CacheException(mapperFailedMsg, new QueryRetryException(msg));
             else {
-                e = new CacheException("Failed to execute map query on remote node [nodeId=" + nodeId +
-                    ", errMsg=" + msg + ']');
+                Throwable mapExc = sqlErrCode > 0
+                    ? new IgniteSQLMapStepException(mapperFailedMsg, new IgniteSQLException(msg, sqlErrCode))
+                    : null;
+
+                e = new CacheException(mapperFailedMsg, mapExc);
             }
 
             r.setStateOnException(nodeId, e);
@@ -289,7 +292,10 @@ public class GridReduceQueryExecutor {
         catch (Exception e) {
             U.error(log, "Error in message.", e);
 
-            fail(r, node.id(), "Error in message.", GridQueryFailResponse.GENERAL_ERROR);
+            IgniteSQLException sqlCause = X.cause(e, IgniteSQLException.class);
+
+            fail(r, node.id(), "Error in message.", GridQueryFailResponse.GENERAL_ERROR,
+                sqlCause == null ? 0 : sqlCause.statusCode());
 
             return;
         }
@@ -618,7 +624,7 @@ public class GridReduceQueryExecutor {
                             if (err.getCause() instanceof IgniteClientDisconnectedException)
                                 throw err;
 
-                            if (wasCancelled(err))
+                            if (QueryUtils.wasCancelled(err))
                                 throw new QueryCancelledException(); // Throw correct exception.
 
                             throw err;
@@ -656,52 +662,38 @@ public class GridReduceQueryExecutor {
                             null,
                             null,
                             null,
-                            maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                            maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
                             true);
 
                         H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
-                        QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
+                        if (qry.explain())
+                            return explainPlan(r.connection(), qry, params);
 
-                        try {
-                            if (qry.explain()) {
-                                try {
-                                    return explainPlan(r.connection(), qry, params);
-                                }
-                                finally {
-                                    H2Utils.resetSession(r.connection());
-                                }
-                            }
+                        GridCacheSqlQuery rdc = qry.reduceQuery();
 
-                            GridCacheSqlQuery rdc = qry.reduceQuery();
+                        Collection<Object> params0 = F.asList(rdc.parameters(params));
 
-                            Collection<Object> params0 = F.asList(rdc.parameters(params));
+                        final PreparedStatement stmt = h2.preparedStatementWithParams(r.connection(), rdc.query(),
+                            params0, false);
 
-                            final PreparedStatement stmt = h2.preparedStatementWithParams(r.connection(), rdc.query(),
-                                params0, false);
+                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
 
-                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
+                        ResultSet res = h2.executeSqlQueryWithTimer(stmt, r.connection(),
+                            rdc.query(),
+                            F.asList(rdc.parameters(params)),
+                            timeoutMillis,
+                            cancel,
+                            dataPageScanEnabled,
+                            qryInfo
+                        );
 
-                            ResultSet res = h2.executeSqlQueryWithTimer(stmt, r.connection(),
-                                rdc.query(),
-                                F.asList(rdc.parameters(params)),
-                                timeoutMillis,
-                                cancel,
-                                dataPageScanEnabled,
-                                qryInfo
-                                );
+                        resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
 
-                            resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
+                        // don't recycle at final block
+                        detachedConn = null;
 
-                            // don't recycle at final block
-                            detachedConn = null;
-
-                            mvccTracker = null; // To prevent callback inside finally block;
-                        }
-                        finally {
-                            if (detachedConn != null)
-                                H2Utils.resetSession(detachedConn.object().connection());
-                        }
+                        mvccTracker = null; // To prevent callback inside finally block;
                     }
                 }
                 else {
@@ -719,10 +711,8 @@ public class GridReduceQueryExecutor {
             catch (IgniteCheckedException | RuntimeException e) {
                 release = true;
 
-                U.closeQuiet(r.connection());
-
                 if (e instanceof CacheException) {
-                    if (wasCancelled((CacheException)e))
+                    if (QueryUtils.wasCancelled(e))
                         throw new CacheException("Failed to run reduce query locally.",
                             new QueryCancelledException());
 
@@ -742,8 +732,11 @@ public class GridReduceQueryExecutor {
                 throw new CacheException("Failed to run reduce query locally. " + cause.getMessage(), cause);
             }
             finally {
-                if (detachedConn != null)
+                if (detachedConn != null) {
+                    H2Utils.resetSession(detachedConn.object().connection());
+
                     detachedConn.recycle();
+                }
 
                 if (release) {
                     releaseRemoteResources(finalNodes, r, qryReqId, qry.distributedJoins(), mvccTracker);
@@ -863,7 +856,7 @@ public class GridReduceQueryExecutor {
 
             U.error(log, "Error during update [localNodeId=" + ctx.localNodeId() + "]", e);
 
-            throw new CacheException("Failed to run update. " + e.getMessage(), e);
+            throw new CacheException("Failed to run SQL update query. " + e.getMessage(), e);
         }
         finally {
             if (release)
@@ -899,16 +892,6 @@ public class GridReduceQueryExecutor {
             U.error(log, "Error in dml response processing. [localNodeId=" + ctx.localNodeId() + ", nodeId=" +
                 node.id() + ", msg=" + msg.toString() + ']', e);
         }
-    }
-
-    /**
-     * Returns true if the exception is triggered by query cancel.
-     *
-     * @param e Exception.
-     * @return {@code true} if exception is caused by cancel.
-     */
-    private boolean wasCancelled(CacheException e) {
-        return X.cause(e, QueryCancelledException.class) != null;
     }
 
     /**
@@ -1196,6 +1179,7 @@ public class GridReduceQueryExecutor {
             return tbl;
         }
         catch (Exception e) {
+            H2Utils.resetSession(conn);
             U.closeQuiet(conn);
 
             throw new IgniteCheckedException(e);

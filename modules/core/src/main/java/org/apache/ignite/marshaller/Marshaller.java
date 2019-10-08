@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * {@code Marshaller} allows to marshal or unmarshal objects in grid. It provides
@@ -76,23 +75,21 @@ public interface Marshaller {
     /**
      * Marshals object to the output stream. This method should not close
      * given output stream.
-     * Note: {@code null} obj will be marshaled to binary {@code null} representation.
      *
-     * @param obj Object to marshal.
+     * @param obj Object to marshal. {@code null} object will be marshaled to binary {@code null} representation.
      * @param out Output stream to marshal into.
      * @throws IgniteCheckedException If marshalling failed.
      */
-    public void marshal(@Nullable Object obj, OutputStream out) throws IgniteCheckedException;
+    public void marshal(Object obj, OutputStream out) throws IgniteCheckedException;
 
     /**
      * Marshals object to byte array.
-     * Note: {@code null} obj will be marshaled to binary {@code null} representation.
      *
-     * @param obj Object to marshal.
+     * @param obj Object to marshal. {@code null} object will be marshaled to binary {@code null} representation.
      * @return Byte array.
      * @throws IgniteCheckedException If marshalling failed.
      */
-    public byte[] marshal(@Nullable Object obj) throws IgniteCheckedException;
+    public byte[] marshal(Object obj) throws IgniteCheckedException;
 
     /**
      * Unmarshals object from the input stream using given class loader.
@@ -100,20 +97,20 @@ public interface Marshaller {
      *
      * @param <T> Type of unmarshalled object.
      * @param in Input stream.
-     * @param clsLdr Class loader to use.
+     * @param clsLdr If not {@code null} then given class loader will be used for unmarshal object.
      * @return Unmarshalled object.
      * @throws IgniteCheckedException If unmarshalling failed.
      */
-    public <T> T unmarshal(InputStream in, @Nullable ClassLoader clsLdr) throws IgniteCheckedException;
+    public <T> T unmarshal(InputStream in, ClassLoader clsLdr) throws IgniteCheckedException;
 
     /**
      * Unmarshals object from byte array using given class loader.
      *
      * @param <T> Type of unmarshalled object.
      * @param arr Byte array.
-     * @param clsLdr Class loader to use.
+     * @param clsLdr If not {@code null} then given class loader will be used for unmarshal object.
      * @return Unmarshalled object.
      * @throws IgniteCheckedException If unmarshalling failed.
      */
-    public <T> T unmarshal(byte[] arr, @Nullable ClassLoader clsLdr) throws IgniteCheckedException;
+    public <T> T unmarshal(byte[] arr, ClassLoader clsLdr) throws IgniteCheckedException;
 }

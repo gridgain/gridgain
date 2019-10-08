@@ -62,7 +62,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
 
         Collections.reverse(dirOrdTbls);
 
-        String reversedOrder = replaceTablePlaceholders(sql, (String[]) dirOrdTbls.toArray());
+        String reversedOrder = replaceTablePlaceholders(sql, dirOrdTbls.toArray(new String[dirOrdTbls.size()]));
 
         if (log.isDebugEnabled())
             log.debug("Reversed join order=" + reversedOrder);
@@ -103,7 +103,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
             .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
                 .setEnforceJoinOrder(enfJoinOrder)
                 .setLocal(true)
-                .setMaxMemory(Long.MAX_VALUE))
+                .setMaxMemory(-1))
             .getAll();
 
         if (log.isDebugEnabled())

@@ -23,11 +23,9 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -58,7 +56,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionMetri
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
-import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -73,7 +70,6 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.PluginProvider;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY;
 import static org.apache.ignite.transactions.TransactionState.MARKED_ROLLBACK;
 
 /**
@@ -149,12 +145,6 @@ public class GridCacheSharedContext<K, V> {
 
     /** Store session listeners. */
     private Collection<CacheStoreSessionListener> storeSesLsnrs;
-
-    /** Local store count. */
-    private final AtomicInteger locStoreCnt;
-
-    /** Indicating whether local store keeps primary only. */
-    private final boolean locStorePrimaryOnly = IgniteSystemProperties.getBoolean(IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY);
 
     /** */
     private final IgniteLogger msgLog;
@@ -259,8 +249,6 @@ public class GridCacheSharedContext<K, V> {
 
         ctxMap = new ConcurrentHashMap<>();
 
-        locStoreCnt = new AtomicInteger();
-
         if (dbMgr != null && CU.isPersistenceEnabled(kernalCtx.config()))
             dhtAtomicUpdCnt = new AtomicIntegerArray(kernalCtx.config().getSystemThreadPoolSize());
 
@@ -299,8 +287,6 @@ public class GridCacheSharedContext<K, V> {
 
         if (msgLog.isInfoEnabled())
             msgLog.info("Components activation performed in " + (System.currentTimeMillis() - time) + " ms.");
-
-        ((DistributedMetaStorageImpl)kernalCtx.distributedMetastorage()).inMemoryReadyForWrite();
     }
 
     /**
@@ -367,7 +353,15 @@ public class GridCacheSharedContext<K, V> {
         this.rebalanceEnabled = rebalanceEnabled;
 
         if (rebalanceEnabled)
-            cache().enableRebalance();
+            enableRebalance();
+    }
+
+    /**
+     * Gets all caches having cache proxy and starts on them force rebalance.
+     */
+    private void enableRebalance() {
+        for (IgniteCacheProxy c : cache().publicCaches())
+            c.rebalance();
     }
 
     /**
@@ -541,9 +535,6 @@ public class GridCacheSharedContext<K, V> {
 
         CacheStoreManager mgr = cacheCtx.store();
 
-        if (mgr.configured() && mgr.isLocal())
-            locStoreCnt.incrementAndGet();
-
         ctxMap.put(cacheCtx.cacheId(), cacheCtx);
     }
 
@@ -554,11 +545,6 @@ public class GridCacheSharedContext<K, V> {
         int cacheId = cacheCtx.cacheId();
 
         ctxMap.remove(cacheId, cacheCtx);
-
-        CacheStoreManager mgr = cacheCtx.store();
-
-        if (mgr.configured() && mgr.isLocal())
-            locStoreCnt.decrementAndGet();
 
         // Safely clean up the message listeners.
         ioMgr.removeCacheHandlers(cacheId);
@@ -871,23 +857,11 @@ public class GridCacheSharedContext<K, V> {
     }
 
     /**
-     * @return Count of caches with configured local stores.
-     */
-    public int getLocalStoreCount() {
-        return locStoreCnt.get();
-    }
-
-    /**
      * @param nodeId Node ID.
      * @return Node or {@code null}.
      */
     @Nullable public ClusterNode node(UUID nodeId) {
         return kernalCtx.discovery().node(nodeId);
-    }
-
-    /** Indicating whether local store keeps primary only. */
-    public boolean localStorePrimaryOnly() {
-        return locStorePrimaryOnly;
     }
 
     /**
@@ -987,9 +961,6 @@ public class GridCacheSharedContext<K, V> {
 
             CacheStoreManager store = cacheCtx.store();
             CacheStoreManager activeStore = activeCacheCtx.store();
-
-            if (store.isLocal() != activeStore.isLocal())
-                return "caches with local and non-local stores can't be enlisted in one transaction";
 
             if (store.isWriteBehind() != activeStore.isWriteBehind())
                 return "caches with different write-behind setting can't be enlisted in one transaction";

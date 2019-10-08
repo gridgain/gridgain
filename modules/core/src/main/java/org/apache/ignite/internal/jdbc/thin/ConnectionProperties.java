@@ -458,4 +458,48 @@ public interface ConnectionProperties {
      */
     public void setAffinityAwarenessPartitionDistributionsCacheSize(
         int affinityAwarenessPartDistributionsCacheSize) throws SQLException;
+
+    /**
+     * Note: zero value means query memory manager uses default limit.
+     * Note: negative value means ('unlimited') memory management is disabled for query.
+     *
+     * @return Query memory limit in bytes.
+     */
+    @Nullable public Long getQueryMaxMemory();
+
+    /**
+     * Note: zero value makes query memory manager to use default limit.
+     * Note: negative value (means 'unlimited') disable memory management for queries.
+     *
+     * @param maxMemory Query memory limit in bytes.
+     */
+    public void setQueryMaxMemory(@Nullable Long maxMemory) throws SQLException;
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @return Query timeout in seconds.
+     */
+    @Nullable public Integer getQueryTimeout();
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @param qryTimeout Query timeout in seconds.
+     */
+    public void setQueryMaxMemory(@Nullable Integer qryTimeout) throws SQLException;
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @return Connection timeout in milliseconds.
+     */
+    @Nullable public int getConnectionTimeout();
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @param connTimeout Connection timeout in milliseconds.
+     */
+    public void setConnectionTimeout(@Nullable Integer connTimeout) throws SQLException;
 }

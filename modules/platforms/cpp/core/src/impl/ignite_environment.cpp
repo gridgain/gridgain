@@ -22,6 +22,7 @@
 #include <ignite/impl/compute/compute_task_holder.h>
 #include <ignite/impl/cluster/cluster_node_impl.h>
 
+#include <ignite/ignite.h>
 #include <ignite/binary/binary.h>
 #include <ignite/cache/query/continuous/continuous_query.h>
 #include <ignite/ignite_binding_context.h>
@@ -100,6 +101,12 @@ namespace ignite
             std::map<Guid, SP_ClusterNodeImpl> nodes;
 
         public:
+            ClusterNodesHolder() :
+                nodesLock()
+            {
+                // No-op.
+            }
+
             void AddNode(SP_ClusterNodeImpl node)
             {
                 CsLockGuard mtx(nodesLock);
@@ -135,10 +142,10 @@ namespace ignite
                 case OperationCallback::NODE_INFO:
                 {
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
-                    interop::InteropInputStream inStream(mem.Get());
-                    binary::BinaryReaderImpl reader(&inStream);
-
-                    SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(reader));
+                    SharedPointer<InteropMemory> memCopy(new InteropUnpooledMemory(mem.Get()->Capacity()));
+                    memCopy.Get()->Length(mem.Get()->Length());
+                    memcpy(memCopy.Get()->Data(), mem.Get()->Data(), mem.Get()->Capacity());
+                    SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(memCopy));
                     env->Get()->nodes.Get()->AddNode(node);
                     break;
                 }
@@ -317,7 +324,8 @@ namespace ignite
             metaUpdater(0),
             binding(),
             moduleMgr(),
-            nodes(new ClusterNodesHolder())
+            nodes(new ClusterNodesHolder()),
+            ignite(NULL)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -330,6 +338,7 @@ namespace ignite
         {
             delete[] name;
 
+            delete ignite;
             delete metaUpdater;
             delete metaMgr;
             delete cfg;
@@ -373,6 +382,8 @@ namespace ignite
 
             common::dynamic::Module currentModule = common::dynamic::GetCurrent();
             moduleMgr.Get()->RegisterModule(currentModule);
+
+            ignite = new Ignite(new IgniteImpl(SharedPointer<IgniteEnvironment>(this, SharedPointerEmptyDeleter)));
         }
 
         const char* IgniteEnvironment::InstanceName() const
@@ -467,7 +478,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteLocal();
+                job->ExecuteLocal(this);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
@@ -498,6 +509,11 @@ namespace ignite
 
             IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
                 "Job is not registred for handle", "jobHandle", jobHandle);
+        }
+
+        ignite::Ignite* IgniteEnvironment::GetIgnite()
+        {
+            return ignite;
         }
 
         void IgniteEnvironment::ComputeTaskReduce(int64_t taskHandle)
@@ -575,7 +591,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteRemote(writer);
+                job->ExecuteRemote(this, writer);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,

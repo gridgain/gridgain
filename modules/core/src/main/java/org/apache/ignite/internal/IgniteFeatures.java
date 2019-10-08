@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 
 /**
@@ -57,8 +58,50 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
+
     /** Distributed metastorage. */
-    DISTRIBUTED_METASTORAGE(11);
+    DISTRIBUTED_METASTORAGE(11),
+
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
+
+    /** Support new security processor. */
+    IGNITE_SECURITY_PROCESSOR(13),
+
+    /** Replacing TcpDiscoveryNode field with nodeId field in discovery messages. */
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
+
+    /** Indexing enabled. */
+    INDEXING(15),
+
+    /** Support of cluster ID and tag. */
+    CLUSTER_ID_AND_TAG(16),
+
+    /** LRT system and user time dump settings.  */
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
+
+    /** A mode when data nodes throttle update rate regarding to DR sender load. */
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /** Support of DR events from  Web Console. */
+    WC_DR_EVENTS(20),
+
+    /** Support of rolling upgrade status task for Web Console. */
+    WC_ROLLING_UPGRADE_STATUS(21),
+
+    /** Support of chain parameter in snapshot delete task for Web Console. */
+    WC_SNAPSHOT_CHAIN_MODE(22),
+
+    /** Support of baseline auto adjustment for Web Console. */
+    WC_BASELINE_AUTO_ADJUSTMENT(23),
+
+    /** Scheduling disabled. */
+    WC_SCHEDULING_NOT_AVAILABLE(24),
+
+    /** Support of DR-specific visor tasks used by control utility. */
+    DR_CONTROL_UTILITY(25);
 
     /**
      * Unique feature identifier.
@@ -91,8 +134,8 @@ public enum IgniteFeatures {
         if (ctx != null) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.isEnabled() && !status.isForcedModeEnabled())
-                return status.getSupportedFeatures().contains(feature);
+            if (status.enabled() && !status.forcedModeEnabled())
+                return status.supportedFeatures().contains(feature);
         }
 
         return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
@@ -134,8 +177,8 @@ public enum IgniteFeatures {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.isEnabled() && !status.isForcedModeEnabled())
-                return status.getSupportedFeatures().contains(feature);
+            if (status.enabled() && !status.forcedModeEnabled())
+                return status.supportedFeatures().contains(feature);
         }
 
         for (ClusterNode next : nodes) {
@@ -149,12 +192,21 @@ public enum IgniteFeatures {
     /**
      * Features supported by the current node.
      *
+     * @param ctx Kernal context.
      * @return Byte array representing all supported features by current node.
      */
-    public static byte[] allFeatures() {
+    public static byte[] allFeatures(GridKernalContext ctx) {
         final BitSet set = new BitSet();
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
+            // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+                continue;
+
+            // Add only when indexing is enabled.
+            if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
             final int featureId = value.getFeatureId();
 
             assert !set.get(featureId) : "Duplicate feature ID found for [" + value + "] having same ID ["

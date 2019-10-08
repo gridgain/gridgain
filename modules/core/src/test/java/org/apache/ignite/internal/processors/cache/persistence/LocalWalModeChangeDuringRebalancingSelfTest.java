@@ -33,11 +33,13 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -60,7 +62,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -99,6 +100,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
                 )
                 // Test verifies checkpoint count, so it is essencial that no checkpoint is triggered by timeout
                 .setCheckpointFrequency(999_999_999_999L)
+                .setWalMode(WALMode.LOG_ONLY)
                 .setFileIOFactory(new TestFileIOFactory(new DataStorageConfiguration().getFileIOFactory()))
         );
 
@@ -173,8 +175,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
 
         cleanPersistenceDir();
@@ -218,8 +218,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         System.clearProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING);
 
         System.clearProperty(IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED);
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /**
@@ -253,6 +251,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     private void doTestSimple() throws Exception {
         Ignite ignite = startGrids(3);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
@@ -331,6 +330,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         Ignite ignite = startGrids(3);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         ignite.cluster().setBaselineTopology(3);
@@ -341,7 +341,9 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         awaitExchange((IgniteEx)ignite);
 
-        doLoad(cache, 4, 10_000);
+        // Ensure each partition has received an update.
+        for (int k = 0; k < RendezvousAffinityFunction.DFLT_PARTITION_COUNT; k++)
+            cache.put(k, k);
 
         IgniteEx newIgnite = startGrid(2);
 
@@ -383,6 +385,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     public void testLocalAndGlobalWalStateInterdependence() throws Exception {
         Ignite ignite = startGrids(3);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
@@ -446,7 +449,11 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         for (int nodeIdx = 2; nodeIdx < nodeCnt; nodeIdx++) {
             CacheGroupContext grpCtx = grid(nodeIdx).cachex(REPL_CACHE).context().group();
 
-            assertFalse(grpCtx.walEnabled());
+            assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                @Override public boolean apply() {
+                    return !grpCtx.walEnabled();
+                }
+            }, 5_000));
         }
 
         // Invoke rebalance manually.
@@ -492,6 +499,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     private void doTestParallelExchange(AtomicReference<CountDownLatch> latchRef) throws Exception {
         Ignite ignite = startGrids(3);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
@@ -541,6 +549,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     public void testDataClearedAfterRestartWithDisabledWal() throws Exception {
         Ignite ignite = startGrid(0);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
@@ -590,6 +599,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     public void testWalNotDisabledAfterShrinkingBaselineTopology() throws Exception {
         Ignite ignite = startGrids(4);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
@@ -813,5 +823,10 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         @Override public void close() throws IOException {
             delegate.close();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getPartitionMapExchangeTimeout() {
+        return super.getPartitionMapExchangeTimeout() * 2;
     }
 }

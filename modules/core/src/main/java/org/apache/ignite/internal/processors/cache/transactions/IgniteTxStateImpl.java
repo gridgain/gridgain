@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.ignite.IgniteCacheRestartingException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -288,15 +287,18 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
 
         GridCacheContext<?, ?> nonLocCtx = null;
 
+        Map<Integer, GridCacheContext> cacheCtxs = U.newHashMap(activeCacheIds.size());
+
         for (int i = 0; i < activeCacheIds.size(); i++) {
             int cacheId = activeCacheIds.get(i);
 
             GridCacheContext<?, ?> cacheCtx = cctx.cacheContext(cacheId);
 
             if (!cacheCtx.isLocal()) {
-                nonLocCtx = cacheCtx;
+                if (nonLocCtx == null)
+                    nonLocCtx = cacheCtx;
 
-                break;
+                cacheCtxs.putIfAbsent(cacheCtx.cacheId(), cacheCtx);
             }
         }
 
@@ -305,13 +307,17 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
 
         nonLocCtx.topology().readLock();
 
-        if (nonLocCtx.topology().stopping()) {
-            fut.onDone(
-                cctx.cache().isCacheRestarting(nonLocCtx.name())?
-                    new IgniteCacheRestartingException(nonLocCtx.name()):
-                    new CacheStoppedException(nonLocCtx.name()));
+        for (Map.Entry<Integer, GridCacheContext> e : cacheCtxs.entrySet()) {
+            GridCacheContext activeCacheCtx = e.getValue();
 
-            return null;
+            if (activeCacheCtx.topology().stopping()) {
+                fut.onDone(
+                    cctx.cache().isCacheRestarting(activeCacheCtx.name()) ?
+                        new IgniteCacheRestartingException(activeCacheCtx.name()) :
+                        new CacheStoppedException(activeCacheCtx.name()));
+
+                return null;
+            }
         }
 
         return nonLocCtx.topology().topologyVersionFuture();
@@ -376,19 +382,29 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
         if (!cacheIds.isEmpty()) {
             Collection<CacheStoreManager> stores = new ArrayList<>(cacheIds.size());
 
+            Boolean writeToStoreFromDht = null;
+
             for (int i = 0; i < cacheIds.size(); i++) {
                 int cacheId = cacheIds.get(i);
 
                 CacheStoreManager store = cctx.cacheContext(cacheId).store();
 
-                if (store.configured())
+                if (store.configured()) {
+                    // Transaction must be committed to store either on originating node,
+                    // or on primary nodes (write-behind). Mixed stores are not allowed.
+                    if (writeToStoreFromDht == null)
+                        writeToStoreFromDht = store.isWriteToStoreFromDht();
+                    else
+                        assert writeToStoreFromDht == store.isWriteToStoreFromDht();
+
                     stores.add(store);
+                }
             }
 
             return stores;
         }
 
-        return null;
+        return Collections.emptyList();
     }
 
     /** {@inheritDoc} */
