@@ -38,48 +38,60 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
-// t0d0 affinity key
-// t0d0 driver node?
-// t0d0 inline size?
-// t0d0 asc/desc
-// t0d0 static configuration
-// t0d0 not activated grid
+/** */
+// t0d0 figure out test failures in non forked mode
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
+    /** */
     private Ignite driver;
 
+    /** */
+    private boolean client;
+
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setClientMode(client)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        // t0d0 baseline
-        // t0d0 disable by system property
-        startGrids(2);
-
-        G.setClientMode(true);
-        startGrid(3);
-
-        driver = grid(0);
+        // baseline node
+        driver = startGrid(0);
 
         driver.cluster().active(true);
+        driver.cluster().baselineAutoAdjustEnabled(false);
+        driver.cluster().setBaselineTopology(Collections.singleton(grid(0).localNode()));
+
+        // node out of baseline
+        startGrid(1);
+
+        // client node
+        client = true;
+
+        startGrid(3);
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
     }
 
+    /** */
     @Test
     public void testNoTablesNoIndexes() throws Exception {
         checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
     }
 
+    /** */
     @Test
+    @SuppressWarnings("ThrowableNotThrown")
     public void testDdlTableIndexes() throws Exception {
         execSql(driver, "CREATE TABLE Person(id INT PRIMARY KEY, name VARCHAR, age INT)");
 
@@ -145,6 +157,8 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
     }
 
+    /** */
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-11125")
     @Test
     public void testDdlTableIndexes2() throws Exception {
         execSql(driver, "CREATE TABLE Person(id1 INT, id2 INT, name VARCHAR, age INT, PRIMARY KEY (id1, id2))");
@@ -159,7 +173,6 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
-        // t0d0 check index columns
         List<Object> expWithSecondary = Arrays.asList(
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID1\" ASC, \"ID2\" ASC", false, false, 10),
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
@@ -170,6 +183,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         checkIndexes(idxs -> assertEqualsCollections(expWithSecondary, idxs));
     }
 
+    /** */
     @Test
     public void testQueryEntityIndexes() throws Exception {
         driver.createCache(new CacheConfiguration<>("cache")
@@ -217,6 +231,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     public void testTextIndex() throws Exception {
         IgniteCache<Object, Object> cache = driver.createCache(new CacheConfiguration<>("cache")
@@ -243,6 +258,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         checkIndexes(idxs -> assertEqualsCollections(expIdxs, idxs));
     }
 
+    /** */
     private void checkIndexes(Consumer<List<List<?>>> checker) {
         for (Ignite ign : G.allGrids()) {
             List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
@@ -251,11 +267,14 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     private static List<List<?>> execSql(Ignite ign, String sql) {
         return ((IgniteEx)ign).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 
+    /** */
     public static class TestValue {
+        /** */
         @QuerySqlField
         int i;
     }
