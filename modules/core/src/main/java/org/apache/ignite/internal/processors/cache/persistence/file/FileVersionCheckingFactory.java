@@ -75,7 +75,7 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
             if (fileIO.size() < minHdr)
                 return createPageStore(type, file, latestVersion(), allocatedTracker);
 
-            ByteBuffer hdr = ByteBuffer.allocate(minHdr).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer hdr = ByteBuffer.allocate(minHdr).order(ByteOrder.nativeOrder());
 
             fileIO.readFully(hdr);
 
