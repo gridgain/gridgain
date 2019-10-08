@@ -41,7 +41,7 @@ javaVersion() {
         echo "${0}, [ERROR]: awk is not found"
         exit 1
     fi
-    version=$("$1" -version 2>&1 | awk -F '"' '/version/ {print $2}')
+    version=$("$1" -version 2>&1 | awk -F[\"\-] '/version/ {print $2}')
 }
 
 # Extract only major version of java to `version` variable.
@@ -52,12 +52,7 @@ javaMajorVersion() {
     if [ ${version} -eq 1 ]; then
         # Version seems starts from 1, we need second number.
         javaVersion "$1"
-        backIFS=$IFS
-
-        IFS=. ver=(${version##*-})
-        version=${ver[1]}
-
-        IFS=$backIFS
+        version=$(awk -F[\"\.] '{print $2}' <<< ${version})
     fi
 }
 
