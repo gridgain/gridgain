@@ -29,7 +29,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -43,6 +45,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
@@ -471,6 +474,21 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         for (int i = 1; i < cnt; i++)
             assertDistributedMetastoragesAreEqual(grid(0), grid(i));
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
+    public void testFeatureDisabled() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        //noinspection ThrowableNotThrown
+        assertThrows(log, ignite.context()::distributedMetastorage, UnsupportedOperationException.class, "");
+
+        assertFalse(IgniteFeatures.nodeSupports(
+            ignite.localNode().attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES),
+            IgniteFeatures.DISTRIBUTED_METASTORAGE
+        ));
     }
 
     /** */
