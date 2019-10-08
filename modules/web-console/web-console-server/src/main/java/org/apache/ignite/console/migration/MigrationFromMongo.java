@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.migration.MigrateUtils.asListOfObjectIds;
 import static org.apache.ignite.console.migration.MigrateUtils.asPrimitives;
 import static org.apache.ignite.console.migration.MigrateUtils.asStrings;
@@ -119,18 +120,20 @@ public class MigrationFromMongo {
      */
     public void migrate() {
         if (F.isEmpty(mongoDbUrl)) {
-            log.info("MongoDB URL was not specified. Migration disabled.");
+            log.info(message("migration.mongo.url.empty.0"));
+            log.info(message("migration.mongo.url.empty.1"));
+            log.info(message("migration.mongo.url.empty.2"));
 
             return;
         }
 
         if (txMgr.doInTransaction(accRepo::hasUsers)) {
-            log.warn("Database was already migrated. Consider to disable migration in application settings.");
+            log.warn(message("migration.mongo.non.empty.database"));
 
             return;
         }
 
-        log.info("Migration started...");
+        log.info(message("migration.mongo.stated"));
 
         ConnectionString connStr = new ConnectionString(mongoDbUrl);
 
@@ -141,10 +144,10 @@ public class MigrationFromMongo {
 
             migrateAccounts();
 
-            log.info("Migration finished!");
+            log.info(message("migration.mongo.finished"));
         }
         catch (Throwable e) {
-            log.error("Migration failed", e);
+            log.error(message("migration.mongo.failed"), e);
         }
         finally {
             U.closeQuiet(mongoClient);

@@ -17,9 +17,11 @@
 package org.apache.ignite.console.common;
 
 import java.io.File;
+import java.net.InetAddress;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.console.dto.DataObject;
@@ -31,7 +33,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.event.ApplicationPreparedEvent;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -179,27 +184,60 @@ public class Utils {
         System.setProperty(IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED, "true)");
 
         StopWatch stopWatch = new StopWatch();
+
+        app.addListeners(
+            (ApplicationListener<ApplicationPreparedEvent>)evt -> {
+                Logger log = LoggerFactory.getLogger(cls);
+
+                log.info("Starting {}{}{}", appName, getValue(" on ", () -> InetAddress.getLocalHost().getHostName()),
+                    getValue(" with PID ", () -> System.getProperty("PID")));
+
+                String[] activeProfiles = evt.getApplicationContext().getEnvironment().getActiveProfiles();
+
+                if (!F.isEmpty(activeProfiles))
+                    log.info("The following profiles are active: {}", String.join(",", activeProfiles));
+            },
+            (ApplicationListener<ApplicationReadyEvent>)evt -> {
+                stopWatch.stop();
+
+                Logger log = LoggerFactory.getLogger(cls);
+
+                try {
+                    File logsDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "log", false);
+
+                    log.info("Full log is available in {}", logsDir.getAbsolutePath());
+                }
+                catch (IgniteCheckedException ignored) {
+                    // No-op.
+                }
+
+                String port = evt.getApplicationContext().getEnvironment().getProperty("local.server.port");
+
+                log.info("{} started on TCP port {} in {} seconds", appName, port, stopWatch.getTotalTimeSeconds());
+            }
+        );
+
         stopWatch.start();
 
-        ConfigurableApplicationContext ctx = app.run(args);
+        return app.run(args);
+    }
 
-        stopWatch.stop();
-
-        Logger log = LoggerFactory.getLogger(cls);
-
+    /**
+     * @param prefix Prefix for message.
+     * @param call Suffix supplier.
+     * @return Message.
+     */
+    private static String getValue(String prefix, Callable<String> call) {
         try {
-            File logsDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "log", false);
+            String val = call.call();
 
-            log.info("Full log is available in {}", logsDir.getAbsolutePath());
+            if (!F.isEmpty(val))
+                return prefix + val;
         }
-        catch (IgniteCheckedException ignored) {
+        catch (Exception ignored) {
             // No-op.
         }
 
-        String port = ctx.getEnvironment().getProperty("local.server.port");
-
-        log.info("{} started on TCP port {} in {} seconds", appName, port, stopWatch.getTotalTimeSeconds());
-
-        return ctx;
+        return "";
     }
 }

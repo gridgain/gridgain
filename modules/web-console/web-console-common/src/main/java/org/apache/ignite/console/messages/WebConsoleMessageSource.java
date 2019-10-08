@@ -44,4 +44,12 @@ public class WebConsoleMessageSource extends WildcardReloadableResourceBundleMes
     public static WebConsoleMessageSourceAccessor getAccessor() {
         return accessor;
     }
+
+    /**
+     * @param code Code.
+     * @param args Args.
+     */
+    public static String message(String code, Object... args) {
+        return getAccessor().getMessage(code, args);
+    }
 }
