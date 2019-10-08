@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.stat;
 
-import com.google.common.collect.Sets;
 import java.util.Set;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
+import com.google.common.collect.Sets;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -233,8 +232,6 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
         long logicalReadsIdx = ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, cacheName, HASH_PK_IDX_NAME);
 
         Assert.assertEquals(idxPageReadsCnt, logicalReadsIdx);
-
-        LockSupport.park();
     }
 
     /**
