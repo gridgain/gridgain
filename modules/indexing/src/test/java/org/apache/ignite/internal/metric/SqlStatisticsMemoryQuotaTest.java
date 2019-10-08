@@ -18,6 +18,7 @@ package org.apache.ignite.internal.metric;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -56,13 +57,18 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     @After
     public void cleanUp() {
         stopAllGrids();
+
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
     }
 
     /**
-     * Clean up.
+     * Set up.
      */
     @Before
     public void setup() {
+        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
+            String.valueOf(Runtime.getRuntime().maxMemory() / 2));
+
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.refresh();
     }
 
