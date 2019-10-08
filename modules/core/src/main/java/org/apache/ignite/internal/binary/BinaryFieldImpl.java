@@ -31,6 +31,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryField;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.nonNull;
@@ -285,10 +286,19 @@ public class BinaryFieldImpl implements BinaryFieldEx {
             BinaryType expType = ctx.metadata(typeId);
             BinaryType actualType = obj.type();
 
+            String actualTypeName = null;
+
+            try {
+                actualTypeName = actualType.typeName();
+            }
+            catch (Exception e) {
+               U.error(ctx.log(), "Failed to get actual binary type name." , e);
+            }
+
             throw new BinaryObjectException("Failed to get field because type ID of passed object differs" +
                 " from type ID this " + BinaryField.class.getSimpleName() + " belongs to [expected=[typeId=" + typeId +
                 ", typeName=" + (nonNull(expType) ? expType.typeName() : null) + "], actual=[typeId=" +
-                actualType.typeId() + ", typeName=" + actualType.typeName() + "], fieldId=" + fieldId +
+                actualType.typeId() + ", typeName=" + actualTypeName + "], fieldId=" + fieldId +
                 ", fieldName=" + fieldName + ", fieldType=" +
                 (nonNull(expType) ? expType.fieldTypeName(fieldName) : null) + ']');
         }
