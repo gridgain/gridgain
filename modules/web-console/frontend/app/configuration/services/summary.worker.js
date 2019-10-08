@@ -26,7 +26,7 @@ import IgniteJavaTransformer from '../generator/generator/JavaTransformer.servic
 import IgniteSpringTransformer from '../generator/generator/SpringTransformer.service';
 
 import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
-import {isPersistenceEnabled} from 'app/services/configuration-checker'
+import {isPersistenceEnabled} from 'app/domain/configuration-checker'
 import get from 'lodash/get';
 import filter from 'lodash/filter';
 import isEmpty from 'lodash/isEmpty';
