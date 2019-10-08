@@ -95,6 +95,9 @@ public class SslContextFactory implements Factory<SSLContext> {
     /** Enabled protocols. */
     private String[] protocols;
 
+    /** Cached instance of an {@link SSLContext}. */
+    private SSLContext sslCtx;
+
     /**
      * Gets key store type used for context creation.
      *
@@ -511,11 +514,17 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /** {@inheritDoc} */
     @Override public SSLContext create() {
-        try {
-            return createSslContext();
-        }
-        catch (SSLException e) {
-            throw new IgniteException(e);
+        if (sslCtx != null)
+            return sslCtx;
+        else {
+            try {
+                sslCtx = createSslContext();
+
+                return sslCtx;
+            }
+            catch (SSLException e) {
+                throw new IgniteException(e);
+            }
         }
     }
 }
