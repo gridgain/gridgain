@@ -84,7 +84,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
 public class CacheGroupContext {
     /**
      * Unique group ID. Currently for shared group it is generated as group name hash,
-     * for non-shared as cache name hash (see {@link ClusterCachesInfo#checkCacheConflict}).
+     * for non-shared as cache name hash (see {@code ClusterCachesInfo#checkCacheConflict(CacheConfiguration)}).
      */
     private final int grpId;
 
@@ -260,6 +260,19 @@ public class CacheGroupContext {
 
             statHolderIdx = new IoStatisticsHolderIndex(HASH_INDEX, cacheOrGroupName(), HASH_PK_IDX_NAME, mmgr);
             statHolderData = new IoStatisticsHolderCache(cacheOrGroupName(), grpId, mmgr);
+
+            ctx.kernalContext().ioStats().onCacheGroupRegistered(
+                cacheOrGroupName(),
+                grpId,
+                (IoStatisticsHolderCache)statHolderData
+            );
+
+            ctx.kernalContext().ioStats().onIndexRegistered(
+                HASH_INDEX,
+                cacheOrGroupName(),
+                HASH_PK_IDX_NAME,
+                (IoStatisticsHolderIndex)statHolderIdx
+            );
         }
     }
 
