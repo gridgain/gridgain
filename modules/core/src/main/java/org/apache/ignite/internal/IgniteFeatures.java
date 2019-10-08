@@ -102,7 +102,10 @@ public enum IgniteFeatures {
     WC_SCHEDULING_NOT_AVAILABLE(24),
 
     /** Support of DR-specific visor tasks used by control utility. */
-    DR_CONTROL_UTILITY(25);
+    DR_CONTROL_UTILITY(25),
+
+    /** Support of SQL out-of-memory awareness. */
+    SQL_OOM_AWARE(26);
 
     /**
      * Unique feature identifier.
