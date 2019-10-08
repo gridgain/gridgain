@@ -976,7 +976,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         int newBltId = 0;
 
         if (currBlt != null)
-            newBltId = activate(globalState.state(), state) ? currBlt.id() + 1 : currBlt.id();
+            newBltId = activate(globalState.stateOrPreviousState(), state) ? currBlt.id() + 1 : currBlt.id();
 
         if (baselineNodes != null && !baselineNodes.isEmpty()) {
             List<BaselineNode> baselineNodes0 = new ArrayList<>();
@@ -997,7 +997,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (forceChangeBaselineTop)
             newBlt = BaselineTopology.build(baselineNodes, newBltId);
-        else if (activate(globalState.state(), state)) {
+        else if (activate(globalState.stateOrPreviousState(), state)) {
             if (baselineNodes == null)
                 baselineNodes = baselineNodes();
 
@@ -1086,7 +1086,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         List<StoredCacheData> storedCfgs = null;
 
-        if (activate(curState.state(), state) && !inMemoryMode) {
+        if (activate(curState.stateOrPreviousState(), state) && !inMemoryMode) {
             try {
                 Map<String, StoredCacheData> cfgs = ctx.cache().context().pageStore().readCacheConfigurations();
 
