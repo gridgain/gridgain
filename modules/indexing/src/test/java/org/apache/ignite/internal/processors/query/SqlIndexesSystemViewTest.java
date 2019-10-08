@@ -42,8 +42,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /** */
-// t0d0 figure out test failures in non forked mode
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
+    // t0d0 figure out test failures in non forked mode
     /** */
     private Ignite driver;
 
@@ -64,7 +64,6 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         driver = startGrid(0);
 
         driver.cluster().active(true);
-        driver.cluster().baselineAutoAdjustEnabled(false);
         driver.cluster().setBaselineTopology(Collections.singleton(grid(0).localNode()));
 
         // node out of baseline
@@ -136,7 +135,6 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         checkIndexes(idxs -> assertEqualsCollections(expWithSecondary, idxs));
 
-        // t0d0 case when remove index fails
         execSql(driver, "DROP INDEX NameIdx");
 
         checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
@@ -150,6 +148,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
+        // t0d0 investigate why fails sometimes
         checkIndexes(idxs -> assertEqualsCollections(expWithCompound, idxs));
 
         execSql(driver, "DROP TABLE Person");

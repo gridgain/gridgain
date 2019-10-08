@@ -178,7 +178,6 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         driver = startGrid(0);
 
         driver.cluster().active(true);
-        driver.cluster().baselineAutoAdjustEnabled(false);
         driver.cluster().setBaselineTopology(Collections.singleton(grid(0).localNode()));
 
         // node out of baseline
