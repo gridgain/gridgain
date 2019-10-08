@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -37,7 +38,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /** */
-// t0d0 disable by system property
 public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     /** */
     private Ignite driver;
@@ -86,6 +86,30 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
             GridTestUtils.assertThrowsWithCause(
                 () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
                 IgniteException.class);
+        }
+    }
+
+    /** */
+    @Test
+    public void testIndexesViewDisabledBySystemProperty() throws Exception {
+        String old = System.getProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
+
+        try {
+            startNodes();
+
+            ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
+                new CacheConfiguration<>("cache")
+                    .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
+                    .setIndexes(Collections.singleton(new QueryIndex("i")))))
+            };
+
+            checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+        }
+        finally {
+            if (old == null)
+                System.clearProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
+            else
+                System.setProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS, old);
         }
     }
 
