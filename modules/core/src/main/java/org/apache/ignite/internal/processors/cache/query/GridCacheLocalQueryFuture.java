@@ -27,6 +27,8 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.marshaller.Marshaller;
 
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
+
 /**
  * Local query future.
  */
@@ -130,6 +132,8 @@ public class GridCacheLocalQueryFuture<K, V, R> extends GridCacheQueryFutureAdap
                 cctx.io().nextIoId(),
                 qry.query().includeMetadata(),
                 true,
+                INVALID_TIMESTAMP,
+                INVALID_TIMESTAMP,
                 qry.arguments()
             );
         }

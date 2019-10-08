@@ -35,12 +35,14 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A response to {@link GridNearTxEnlistRequest}.
  */
-public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware {
+public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, ProcessingTimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -73,6 +75,17 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
     @GridDirectCollection(UUID.class)
     private Collection<UUID> newDhtNodes;
 
+    /** @see ProcessingTimeLoggableResponse#reqSentTimestamp(). */
+    @GridDirectTransient
+    private long reqSentTimestamp = INVALID_TIMESTAMP;
+
+    /** @see ProcessingTimeLoggableResponse#reqReceivedTimestamp(). */
+    @GridDirectTransient
+    private long reqReceivedTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableResponse#reqTimeData(). */
+    private long reqTimeData = INVALID_TIMESTAMP;
+
     /**
      * Default constructor.
      */
@@ -91,6 +104,8 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param dhtVer Dht version.
      * @param dhtFutId Dht future id.
      * @param newDhtNodes New DHT nodes involved into transaction.
+     * @param reqReceivedTimestamp Request receive timestamp.
+     * @param reqSentTimestamp Request send timestamp.
      */
     public GridNearTxEnlistResponse(int cacheId,
         IgniteUuid futId,
@@ -99,11 +114,12 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         GridCacheReturn res,
         GridCacheVersion dhtVer,
         IgniteUuid dhtFutId,
-        Set<UUID> newDhtNodes) {
-        this.cacheId = cacheId;
-        this.futId = futId;
-        this.miniId = miniId;
-        this.lockVer = lockVer;
+        Set<UUID> newDhtNodes,
+        long reqReceivedTimestamp,
+        long reqSentTimestamp)
+    {
+        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSentTimestamp);
+
         this.res = res;
         this.dhtVer = dhtVer;
         this.dhtFutId = dhtFutId;
@@ -118,14 +134,48 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param miniId Mini future id.
      * @param lockVer Lock version.
      * @param err Error.
+     * @param reqReceivedTimestamp Request receive timestamp.
+     * @param reqSentTimestamp Request send timestamp.
      */
-    public GridNearTxEnlistResponse(int cacheId, IgniteUuid futId, int miniId, GridCacheVersion lockVer,
-        Throwable err) {
+    public GridNearTxEnlistResponse(
+        int cacheId,
+        IgniteUuid futId,
+        int miniId,
+        GridCacheVersion lockVer,
+        Throwable err,
+        long reqReceivedTimestamp,
+        long reqSentTimestamp)
+    {
+        this(cacheId, futId, miniId, lockVer, reqReceivedTimestamp, reqSentTimestamp);
+
+        this.err = err;
+    }
+
+    /**
+     * Common constructor
+     *
+     * @param cacheId Cache id.
+     * @param futId Future id.
+     * @param miniId Mini id.
+     * @param lockVer Lock version.
+     * @param reqReceivedTimestamp Request receive timestamp.
+     * @param reqSentTimestamp Request send timestamp.
+     */
+    private GridNearTxEnlistResponse(
+        int cacheId,
+        IgniteUuid futId,
+        int miniId,
+        GridCacheVersion lockVer,
+        long reqReceivedTimestamp,
+        long reqSentTimestamp)
+    {
         this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
         this.lockVer = lockVer;
-        this.err = err;
+
+        reqReceivedTimestamp(reqReceivedTimestamp);
+        reqSentTimestamp(reqSentTimestamp);
     }
 
     /**
@@ -187,9 +237,40 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         return newDhtNodes;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void reqSentTimestamp(long reqSentTimestamp) {
+        this.reqSentTimestamp = reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqSentTimestamp() {
+        return reqSentTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqReceivedTimestamp(long reqReceivedTimestamp) {
+        this.reqReceivedTimestamp = reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqReceivedTimestamp() {
+        return reqReceivedTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reqTimeData(long reqTimeData) {
+        this.reqTimeData = reqTimeData;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reqTimeData() {
+        return reqTimeData;
+    }
+
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 12;
+        return 13;
     }
 
     /** {@inheritDoc} */
@@ -250,6 +331,12 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
                 writer.incrementState();
 
             case 11:
+                if (!writer.writeLong("reqTimeData", reqTimeData))
+                    return false;
+
+                writer.incrementState();
+
+            case 12:
                 if (!writer.writeMessage("res", res))
                     return false;
 
@@ -328,6 +415,14 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
                 reader.incrementState();
 
             case 11:
+                reqTimeData = reader.readLong("reqTimeData");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 12:
                 res = reader.readMessage("res");
 
                 if (!reader.isLastRead())

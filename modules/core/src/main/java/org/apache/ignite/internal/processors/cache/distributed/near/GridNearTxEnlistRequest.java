@@ -43,14 +43,17 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableRequest;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.plugin.extensions.communication.ProcessingTimeLoggableResponse.INVALID_TIMESTAMP;
 
 /**
  * Request to enlist into transaction and acquire locks for entries produced with Cache API operations.
  *
  * One request per batch of entries is used.
  */
-public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable {
+public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -111,6 +114,13 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
 
     /** Need previous value flag. */
     private boolean needRes;
+
+    /** @see TimeLoggableRequest#sendTimestamp(). */
+    private long sendTimestamp = INVALID_TIMESTAMP;
+
+    /** @see TimeLoggableRequest#receiveTimestamp(). */
+    @GridDirectTransient
+    private long receiveTimestamp = INVALID_TIMESTAMP;
 
     /**
      * Default constructor.
@@ -407,6 +417,26 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
     }
 
     /** {@inheritDoc} */
+    @Override public long sendTimestamp() {
+        return sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendTimestamp(long sendTimestamp) {
+        this.sendTimestamp = sendTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long receiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void receiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -482,42 +512,48 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 writer.incrementState();
 
             case 14:
-                if (!writer.writeUuid("subjId", subjId))
+                if (!writer.writeLong("sendTimestamp", sendTimestamp))
                     return false;
 
                 writer.incrementState();
 
             case 15:
-                if (!writer.writeInt("taskNameHash", taskNameHash))
+                if (!writer.writeUuid("subjId", subjId))
                     return false;
 
                 writer.incrementState();
 
             case 16:
-                if (!writer.writeLong("threadId", threadId))
+                if (!writer.writeInt("taskNameHash", taskNameHash))
                     return false;
 
                 writer.incrementState();
 
             case 17:
-                if (!writer.writeLong("timeout", timeout))
+                if (!writer.writeLong("threadId", threadId))
                     return false;
 
                 writer.incrementState();
 
             case 18:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                if (!writer.writeLong("timeout", timeout))
                     return false;
 
                 writer.incrementState();
 
             case 19:
-                if (!writer.writeLong("txTimeout", txTimeout))
+                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
                     return false;
 
                 writer.incrementState();
 
             case 20:
+                if (!writer.writeLong("txTimeout", txTimeout))
+                    return false;
+
+                writer.incrementState();
+
+            case 21:
                 if (!writer.writeObjectArray("values", values, MessageCollectionItemType.MSG))
                     return false;
 
@@ -624,7 +660,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 14:
-                subjId = reader.readUuid("subjId");
+                sendTimestamp = reader.readLong("sendTimestamp");
 
                 if (!reader.isLastRead())
                     return false;
@@ -632,7 +668,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 15:
-                taskNameHash = reader.readInt("taskNameHash");
+                subjId = reader.readUuid("subjId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -640,7 +676,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 16:
-                threadId = reader.readLong("threadId");
+                taskNameHash = reader.readInt("taskNameHash");
 
                 if (!reader.isLastRead())
                     return false;
@@ -648,7 +684,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 17:
-                timeout = reader.readLong("timeout");
+                threadId = reader.readLong("threadId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -656,7 +692,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 18:
-                topVer = reader.readAffinityTopologyVersion("topVer");
+                timeout = reader.readLong("timeout");
 
                 if (!reader.isLastRead())
                     return false;
@@ -664,7 +700,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 19:
-                txTimeout = reader.readLong("txTimeout");
+                topVer = reader.readAffinityTopologyVersion("topVer");
 
                 if (!reader.isLastRead())
                     return false;
@@ -672,6 +708,14 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
                 reader.incrementState();
 
             case 20:
+                txTimeout = reader.readLong("txTimeout");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 21:
                 values = reader.readObjectArray("values", MessageCollectionItemType.MSG, Message.class);
 
                 if (!reader.isLastRead())
@@ -686,7 +730,7 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 21;
+        return 22;
     }
 
     /** {@inheritDoc} */

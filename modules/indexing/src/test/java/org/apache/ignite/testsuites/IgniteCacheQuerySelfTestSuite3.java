@@ -18,6 +18,8 @@ package org.apache.ignite.testsuites;
 
 import junit.framework.JUnit4TestAdapter;
 import junit.framework.TestSuite;
+import org.apache.ignite.internal.processors.cache.CacheMessagesTimeLoggingTestSql;
+import org.apache.ignite.internal.processors.cache.CacheMessagesTimeLoggingTestSqlPersist;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousBatchForceServerModeAckTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryConcurrentPartitionUpdateTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryCounterPartitionedAtomicTest;
@@ -88,6 +90,9 @@ public class IgniteCacheQuerySelfTestSuite3 {
         suite.addTest(new JUnit4TestAdapter(CacheContinuousWithTransformerRandomOperationsTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IgniteCacheContinuousQueryReconnectTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(CacheMessagesTimeLoggingTestSql.class));
+        suite.addTest(new JUnit4TestAdapter(CacheMessagesTimeLoggingTestSqlPersist.class));
 
         return suite;
     }

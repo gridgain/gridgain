@@ -623,6 +623,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         if (res != null) {
             try {
                 // Reply back to sender.
+                res.copyTimestamps(req);
+
                 ctx.io().send(nodeId, res, ctx.ioPolicy());
 
                 if (txLockMsgLog.isDebugEnabled()) {
@@ -1354,6 +1356,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             ctx.deploymentEnabled(),
             false);
 
+        res.copyTimestamps(req);
+
         try {
             ctx.io().send(nearNode, res, ctx.ioPolicy());
         }
@@ -1406,6 +1410,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 clienRemapVer,
                 ctx.deploymentEnabled(),
                 clienRemapVer != null);
+
+            res.copyTimestamps(req);
 
             if (err == null) {
                 res.pending(localDhtPendingVersions(entries, mappedVer));
@@ -1508,7 +1514,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             U.error(log, "Failed to get value for lock reply message for node [node=" +
                 U.toShortString(nearNode) + ", req=" + req + ']', e);
 
-            return new GridNearLockResponse(ctx.cacheId(),
+            GridNearLockResponse res =  new GridNearLockResponse(ctx.cacheId(),
                 req.version(),
                 req.futureId(),
                 req.miniId(),
@@ -1518,6 +1524,10 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 null,
                 ctx.deploymentEnabled(),
                 false);
+
+            res.copyTimestamps(req);
+
+            return res;
         }
     }
 
@@ -2046,7 +2056,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.futureId(),
                 req.miniId(),
                 req.version(),
-                ex);
+                ex,
+                req.receiveTimestamp(),
+                req.sendTimestamp());
 
             try {
                 ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -2078,6 +2090,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             req.keepBinary());
 
         fut.listen(NearTxResultHandler.instance());
+
+        fut.receiveTimestamp(req.receiveTimestamp());
+        fut.sendTimestamp(req.sendTimestamp());
 
         fut.init();
     }
@@ -2314,6 +2329,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.batchId(),
                 null);
 
+            res.copyTimestamps(req);
+
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());
             }
@@ -2327,6 +2344,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.dhtFutureId(),
                 req.batchId(),
                 e);
+
+            res.copyTimestamps(req);
 
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());

@@ -1195,6 +1195,8 @@ public class IgniteTxHandler {
                 req.miniId(),
                 req.deployInfo() != null);
 
+            res.copyTimestamps(req);
+
             // Start near transaction first.
             nearTx = !F.isEmpty(req.nearWrites()) ? startNearRemoteTx(ctx.deploy().globalLoader(), nodeId, req) : null;
             dhtTx = startRemoteTx(nodeId, req, res);
@@ -1264,6 +1266,8 @@ public class IgniteTxHandler {
                 req.miniId(),
                 e,
                 req.deployInfo() != null);
+
+            res.copyTimestamps(req);
         }
 
         if (req.onePhaseCommit()) {
@@ -1603,6 +1607,8 @@ public class IgniteTxHandler {
                 req.version(),
                 req.futureId(),
                 req.miniId());
+
+            res.copyTimestamps(req);
 
             if (req.checkCommitted()) {
                 res.checkCommitted(true);
@@ -2179,6 +2185,8 @@ public class IgniteTxHandler {
             req.miniId(),
             prepared,
             req.deployInfo() != null);
+
+        res.copyTimestamps(req);
 
         try {
             ctx.io().send(nodeId, res, req.system() ? UTILITY_CACHE_POOL : SYSTEM_POOL);
