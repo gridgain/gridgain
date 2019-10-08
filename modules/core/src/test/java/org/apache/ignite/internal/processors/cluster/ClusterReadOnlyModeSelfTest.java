@@ -95,9 +95,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
     public void testDistributedMetastorageAvailableForUpdatesOnReadOnlyCluster() throws Exception {
         IgniteEx node = startGrids(SERVER_NODES_COUNT);
 
-        node.cluster().active(true);
-
-        assertNotSame(READ_ONLY,node.cluster().state());
+        node.cluster().state(ACTIVE);
 
         String key = "1";
         String val = "val1";
@@ -122,7 +120,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
     public void testLocksNotAvaliableOnReadOnlyCluster() throws Exception {
         IgniteEx grid = startGrid(SERVER_NODES_COUNT);
 
-        grid.cluster().active(true);
+        grid.cluster().state(ACTIVE);
 
         final int key = 0;
 
@@ -156,7 +154,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
     public void testEnableReadOnlyModeInsideTransaction() throws Exception {
         IgniteEx grid = startGrids(SERVER_NODES_COUNT);
 
-        grid.cluster().active(true);
+        grid.cluster().state(ACTIVE);
 
         CacheConfiguration cfg = Stream.of(grid.configuration().getCacheConfiguration())
             .filter(c -> c.getAtomicityMode() == CacheAtomicityMode.TRANSACTIONAL)
@@ -215,7 +213,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
     public void testEnableReadOnlyModeInsideTransactionFailed() throws Exception {
         IgniteEx grid = startGrid(0);
 
-        grid.cluster().active(true);
+        grid.cluster().state(ACTIVE);
 
         GridTestUtils.assertThrows(
             log,
@@ -232,7 +230,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
                 }
             },
             IgniteException.class,
-            "Failed to activate read-only mode (must invoke the method outside of an active transaction)."
+            "Failed to read-only (must invoke the method outside of an active transaction)."
         );
 
     }
@@ -257,7 +255,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
         startGrids(1);
         startGrid("client");
 
-        grid(0).cluster().active(true);
+        grid(0).cluster().state(ACTIVE);
 
         awaitPartitionMapExchange();
 
@@ -281,7 +279,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
     public void testReadOnlyModeForgottenAfterClusterRestart() throws Exception {
         IgniteEx grid = startGrids(2);
 
-        grid.cluster().active(true);
+        grid.cluster().state(ACTIVE);
 
         awaitPartitionMapExchange();
 
@@ -295,7 +293,7 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        assertTrue("Cluster must be activate", grid.cluster().active());
+        assertEquals("Cluster must be activate", ACTIVE, grid.cluster().state());
 
         checkClusterInReadOnlyMode(false, grid);
     }

@@ -976,7 +976,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         int newBltId = 0;
 
         if (currBlt != null)
-            newBltId = activate(globalState.stateOrPreviousState(), state) ? currBlt.id() + 1 : currBlt.id();
+            newBltId = ClusterState.active(state) ? currBlt.id() + 1 : currBlt.id();
 
         if (baselineNodes != null && !baselineNodes.isEmpty()) {
             List<BaselineNode> baselineNodes0 = new ArrayList<>();
@@ -997,7 +997,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (forceChangeBaselineTop)
             newBlt = BaselineTopology.build(baselineNodes, newBltId);
-        else if (activate(globalState.stateOrPreviousState(), state)) {
+        else if (ClusterState.active(state)) {
             if (baselineNodes == null)
                 baselineNodes = baselineNodes();
 

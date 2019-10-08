@@ -209,6 +209,19 @@ public class DiscoveryDataClusterState implements Serializable {
     }
 
     /**
+     * @return Previous cluster state if state in transition now and current cluster state otherwise.
+     */
+    public ClusterState stateOrPreviousState() {
+        if (transition()) {
+            assert prevState != null : this.toString();
+
+            return prevState.state;
+        }
+        else
+            return this.state;
+    }
+
+    /**
      * @return Current cluster state (or new state in case when transition is in progress).
      * @deprecated Use {@link #state()} instead.
      */
