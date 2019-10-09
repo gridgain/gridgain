@@ -50,7 +50,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.migration.MigrateUtils.asListOfObjectIds;
 import static org.apache.ignite.console.migration.MigrateUtils.asPrimitives;
 import static org.apache.ignite.console.migration.MigrateUtils.asStrings;
@@ -120,20 +119,20 @@ public class MigrationFromMongo {
      */
     public void migrate() {
         if (F.isEmpty(mongoDbUrl)) {
-            log.info(message("migration.mongo.url.empty.0"));
-            log.info(message("migration.mongo.url.empty.1"));
-            log.info(message("migration.mongo.url.empty.2"));
+            log.info("MongoDB URL was not specified in configuration");
+            log.info("Migration from old Web Console will not be executed");
+            log.info("Migration instructions: https://www.gridgain.com/docs/web-console/latest/migration");
 
             return;
         }
 
         if (txMgr.doInTransaction(accRepo::hasUsers)) {
-            log.warn(message("migration.mongo.non.empty.database"));
+            log.warn("Database was already migrated. Consider to disable migration in application settings");
 
             return;
         }
 
-        log.info(message("migration.mongo.stated"));
+        log.info("Migration started...");
 
         ConnectionString connStr = new ConnectionString(mongoDbUrl);
 
@@ -144,10 +143,10 @@ public class MigrationFromMongo {
 
             migrateAccounts();
 
-            log.info(message("migration.mongo.finished"));
+            log.info("Migration finished");
         }
         catch (Throwable e) {
-            log.error(message("migration.mongo.failed"), e);
+            log.error("Migration failed", e);
         }
         finally {
             U.closeQuiet(mongoClient);
