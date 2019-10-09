@@ -81,6 +81,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -160,6 +161,14 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** Flag is used to detect and manage case when new node (this one) joins old cluster. */
     private volatile boolean compatibilityMode;
+
+    /**
+     * Flag indicates that the feature is disabled.
+     * No values should be stored in metastorage nor passed in joining node discovery data.
+     */
+    private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
+    );
 
     /**
      * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
@@ -399,6 +408,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
+        if (!clusterIdAndTagSupport)
+            return;
+
         if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
             compatibilityMode = true;
 
@@ -415,6 +427,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+        if (!clusterIdAndTagSupport)
+            return;
+
         assert ctx.clientNode();
 
         locClusterId = null;
@@ -426,6 +441,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
+        if (!clusterIdAndTagSupport)
+            return null;
+
         assert ctx.clientNode();
 
         cluster.setId(locClusterId);
@@ -595,6 +613,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
+        if (!clusterIdAndTagSupport)
+            return;
+
         if (!compatibilityMode)
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
@@ -620,6 +641,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
         }
+
+        if (!clusterIdAndTagSupport)
+            return;
 
         ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
 
@@ -694,6 +718,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
         }
+
+        if (!clusterIdAndTagSupport)
+            return;
 
         IgniteClusterMXBeanImpl mxBeanImpl = new IgniteClusterMXBeanImpl(cluster);
 
