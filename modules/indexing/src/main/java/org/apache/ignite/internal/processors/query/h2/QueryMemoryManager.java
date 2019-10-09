@@ -145,12 +145,9 @@ public class QueryMemoryManager extends H2MemoryTracker {
     public QueryMemoryTracker createQueryMemoryTracker(long maxQueryMemory) {
         assert maxQueryMemory >= 0;
 
-        if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().allNodes(), IgniteFeatures.SQL_OOM_AWARE))
-            return  null;
-
         if (dfltSqlQryMemoryLimit < 0) {
-            if (maxQueryMemory > 0)
-                LT.warn(log, "SQL memory management is disabled on node.");
+            if (log.isDebugEnabled())
+                LT.warn(log, "SQL memory management is disabled " + ((globalQuota > 0) ? "for query" : "on node"));
 
             return null;
         }
