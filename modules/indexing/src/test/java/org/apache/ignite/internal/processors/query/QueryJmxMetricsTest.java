@@ -18,6 +18,9 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.Set;
 import javax.management.ObjectName;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
@@ -38,6 +41,36 @@ public class QueryJmxMetricsTest extends AbstractIndexingCommonTest {
         super.beforeTest();
 
         startGrid();
+
+        fillGrid();
+    }
+
+    /**
+     * Initial fill the the grid with caches, data and queries.
+     */
+    private void fillGrid() {
+        grid().createCache(new CacheConfiguration<>()
+            .setName("test0")
+            .setGroupName("grp0"));
+
+        grid().createCache(new CacheConfiguration<>()
+            .setName("test1"));
+
+        grid().context().query().querySqlFields(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL VARCHAR)"), false);
+
+        for (int i = 0; i < 10; ++i) {
+            grid().cache("test0").put(i, "val" + i);
+            grid().cache("test1").put("key" + i, i);
+
+            grid().context().query().querySqlFields(
+                new SqlFieldsQuery("INSERT INTO  TEST VALUES (?, ?)").setArgs(i, "val" + i), false);
+        }
+
+        grid().context().query().querySqlFields(
+            new SqlFieldsQuery("SELECT * FROM TEST"), false).getAll();
+
+        grid().context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE INDEX IDX0 ON TEST(VAL)"), false).getAll();
     }
 
     /** {@inheritDoc} */
