@@ -139,6 +139,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_CONSISTEN
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RESTART_CODE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
@@ -1567,6 +1568,9 @@ public class IgnitionEx {
         /** Query executor service. */
         private ThreadPoolExecutor schemaExecSvc;
 
+        /** Rebalance executor service. */
+        private ThreadPoolExecutor rebalanceExecSvc;
+
         /** Executor service. */
         private Map<String, ThreadPoolExecutor> customExecSvcs;
 
@@ -1789,11 +1793,9 @@ public class IgnitionEx {
                                 new IgniteException(S.toString(GridWorker.class, deadWorker))));
                     }
                 },
-                IgniteSystemProperties.getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT,
-                    cfg.getSystemWorkerBlockedTimeout() != null
-                    ? cfg.getSystemWorkerBlockedTimeout()
-                    : cfg.getFailureDetectionTimeout()),
-                log);
+                getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, cfg.getSystemWorkerBlockedTimeout()),
+                log
+            );
 
             stripedExecSvc = new StripedExecutor(
                 cfg.getStripedPoolSize(),
@@ -1866,7 +1868,9 @@ public class IgnitionEx {
                 cfg.getAsyncCallbackPoolSize(),
                 cfg.getIgniteInstanceName(),
                 "callback",
-                oomeHnd);
+                oomeHnd,
+                false,
+                0);
 
             if (cfg.getConnectorConfiguration() != null) {
                 validateThreadPoolSize(cfg.getConnectorConfiguration().getThreadPoolSize(), "connector");
@@ -1952,6 +1956,18 @@ public class IgnitionEx {
 
             schemaExecSvc.allowCoreThreadTimeOut(true);
 
+            validateThreadPoolSize(cfg.getRebalanceThreadPoolSize(), "rebalance");
+
+            rebalanceExecSvc = new IgniteThreadPoolExecutor(
+                "rebalance",
+                cfg.getIgniteInstanceName(),
+                cfg.getRebalanceThreadPoolSize(),
+                cfg.getRebalanceThreadPoolSize(),
+                DFLT_THREAD_KEEP_ALIVE_TIME,
+                new LinkedBlockingQueue<>(),
+                GridIoPolicy.UNDEFINED,
+                oomeHnd);
+
             if (!F.isEmpty(cfg.getExecutorConfiguration())) {
                 validateCustomExecutorsConfiguration(cfg.getExecutorConfiguration());
 
@@ -2001,6 +2017,7 @@ public class IgnitionEx {
                     callbackExecSvc,
                     qryExecSvc,
                     schemaExecSvc,
+                    rebalanceExecSvc,
                     customExecSvcs,
                     new CA() {
                         @Override public void apply() {
@@ -2629,6 +2646,10 @@ public class IgnitionEx {
             U.shutdownNow(getClass(), schemaExecSvc, log);
 
             schemaExecSvc = null;
+
+            U.shutdownNow(getClass(), rebalanceExecSvc, log);
+
+            rebalanceExecSvc = null;
 
             U.shutdownNow(getClass(), stripedExecSvc, log);
 

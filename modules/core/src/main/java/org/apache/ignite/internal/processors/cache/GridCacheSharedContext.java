@@ -56,7 +56,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionMetri
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
-import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -288,8 +287,6 @@ public class GridCacheSharedContext<K, V> {
 
         if (msgLog.isInfoEnabled())
             msgLog.info("Components activation performed in " + (System.currentTimeMillis() - time) + " ms.");
-
-        ((DistributedMetaStorageImpl)kernalCtx.distributedMetastorage()).inMemoryReadyForWrite();
     }
 
     /**
@@ -356,7 +353,15 @@ public class GridCacheSharedContext<K, V> {
         this.rebalanceEnabled = rebalanceEnabled;
 
         if (rebalanceEnabled)
-            cache().enableRebalance();
+            enableRebalance();
+    }
+
+    /**
+     * Gets all caches having cache proxy and starts on them force rebalance.
+     */
+    private void enableRebalance() {
+        for (IgniteCacheProxy c : cache().publicCaches())
+            c.rebalance();
     }
 
     /**

@@ -1199,7 +1199,7 @@ public class QueryUtils {
      * @param e Original exception.
      * @return Schema exception.
      */
-    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Exception e) {
+    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Throwable e) {
         if (e == null)
             return null;
 
@@ -1353,10 +1353,11 @@ public class QueryUtils {
      *
      * @param schemaName Schema name.
      * @param tblName Table name.
+     * @param tblDigest Table digest.
      * @return Value type name.
      */
-    public static String createTableValueTypeName(String schemaName, String tblName) {
-        return createTableCacheName(schemaName, tblName) + "_" + UUID.randomUUID().toString().replace("-", "_");
+    public static String createTableValueTypeName(String schemaName, String tblName, String tblDigest) {
+        return createTableCacheName(schemaName, tblName) + "_" + tblDigest;
     }
 
     /**

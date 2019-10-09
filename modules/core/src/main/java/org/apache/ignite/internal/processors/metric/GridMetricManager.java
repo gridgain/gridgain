@@ -40,7 +40,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
@@ -116,9 +115,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** System metrics prefix. */
     public static final String SYS_METRICS = "sys";
 
-    /** System metrics prefix. */
-    public static final String DIAGNOSTIC_METRICS = "diagnostic";
-
     /** Partition map exchange metrics prefix. */
     public static final String PME_METRICS = "pme";
 
@@ -152,9 +148,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Daemon thread count metric name. */
     public static final String DAEMON_THREAD_CNT = "DaemonThreadCount";
 
-    /** Metric registry name for transaction metrics. */
-    public static final String TRANSACTION_METRICS = "transactions";
-
     /** PME duration metric name. */
     public static final String PME_DURATION = "Duration";
 
@@ -187,6 +180,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Metric registry creation listeners. */
     private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
+
+    /** Metric registry remove listeners. */
+    private final List<Consumer<MetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
 
     /** Metrics update worker. */
     private GridTimeoutProcessor.CancelableTask metricsUpdateTask;
@@ -240,8 +236,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
             "Histogram of cache operations blocked PME durations in milliseconds.");
-
-        registerTransactionMetrics();
     }
 
     /** {@inheritDoc} */
@@ -291,13 +285,21 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         metricRegCreationLsnrs.add(lsnr);
     }
 
+    /** {@inheritDoc} */
+    @Override public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr) {
+        metricRegRemoveLsnrs.add(lsnr);
+    }
+
     /**
-     * Removes group.
+     * Removes metric registry.
      *
-     * @param grpName Group name.
+     * @param regName Metric registry name.
      */
-    public void remove(String grpName) {
-        registries.remove(grpName);
+    public void remove(String regName) {
+        MetricRegistry mreg = registries.remove(regName);
+
+        if (mreg != null)
+            notifyListeners(mreg, metricRegRemoveLsnrs);
     }
 
     /**
@@ -333,6 +335,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      */
     public void registerThreadPools(
@@ -350,6 +353,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         // Executors
@@ -364,6 +368,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
         monitorExecutor("GridQueryExecutor", qryExecSvc);
         monitorExecutor("GridSchemaExecutor", schemaExecSvc);
+        monitorExecutor("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             monitorExecutor("GridIndexingExecutor", idxExecSvc);
@@ -534,25 +539,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         catch (RuntimeException ignored) {
             return -1;
         }
-    }
-
-    /** */
-    private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
-
-        reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
-        reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
-
-        reg.histogram(
-            GridNearTxLocal.METRIC_SYSTEM_TIME_HISTOGRAM,
-            GridNearTxLocal.METRIC_TIME_BUCKETS,
-            "Transactions system times on node represented as histogram."
-        );
-        reg.histogram(
-            GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM,
-            GridNearTxLocal.METRIC_TIME_BUCKETS,
-            "Transactions user times on node represented as histogram."
-        );
     }
 
     /** */

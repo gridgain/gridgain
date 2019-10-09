@@ -342,6 +342,17 @@ public class GridH2Table extends TableBase {
     }
 
     /**
+     * @return Explicit affinity key column or {@code null} if not available (skip _KEY column or it's alias).
+     */
+    @Nullable public IndexColumn getExplicitAffinityKeyColumn() {
+        // Only explicit affinity column should be shown. Do not do this for _KEY or it's alias.
+        if (affKeyCol == null || affKeyColIsKey)
+            return null;
+
+        return affKeyCol;
+    }
+
+    /**
      * Check whether passed column can be used for partition pruning.
      *
      * @param col Column.
@@ -479,7 +490,7 @@ public class GridH2Table extends TableBase {
         }
 
         // Acquire the lock.
-        lock(exclusive);
+        lock(exclusive, true);
 
         if (destroyed) {
             unlock(exclusive);
@@ -542,13 +553,27 @@ public class GridH2Table extends TableBase {
      *
      * @param exclusive Exclusive flag.
      */
-    @SuppressWarnings({"LockAcquiredButNotSafelyReleased", "CallToThreadYield"})
     private void lock(boolean exclusive) {
+        lock(exclusive, false);
+    }
+
+    /**
+     * Acquire table lock.
+     *
+     * @param exclusive Exclusive flag.
+     * @param interruptibly Acquires interruptibly lock or not interruplible lock flag.
+     */
+    @SuppressWarnings({"LockAcquiredButNotSafelyReleased", "CallToThreadYield"})
+    private void lock(boolean exclusive, boolean interruptibly) {
         Lock l = exclusive ? lock.writeLock() : lock.readLock();
 
         try {
-            if (!exclusive)
-                l.lockInterruptibly();
+            if (!exclusive) {
+                if (interruptibly)
+                    l.lockInterruptibly();
+                else
+                    l.lock();
+            }
             else {
                 for (;;) {
                     if (l.tryLock(200, TimeUnit.MILLISECONDS))
@@ -1115,7 +1140,7 @@ public class GridH2Table extends TableBase {
 
     /** {@inheritDoc} */
     @Override public TableType getTableType() {
-        return TableType.EXTERNAL_TABLE_ENGINE;
+        return TableType.TABLE;
     }
 
     /** {@inheritDoc} */

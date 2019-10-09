@@ -68,6 +68,9 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     /** */
     private static final String GROUP = "group1";
 
+    /** Acceptable time inaccuracy for testRebalanceEstimateFinishTime() */
+    public static final long ACCEPTABLE_TIME_INACCURACY = 25_000L;
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -107,6 +110,8 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
             .setRebalanceDelay(REBALANCE_DELAY);
 
         cfg.setCacheConfiguration(cfg1, cfg2, cfg3);
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
@@ -230,7 +235,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                 CacheMetrics snapshot = ig.cache(CACHE1).metrics();
 
                 return snapshot.getRebalancedKeys() > snapshot.getEstimatedRebalancingKeys()
-                    && res.getRebalance().get(ignite.cluster().localNode().id()) == 1.0
+                    && Double.compare(res.getRebalance().get(ignite.cluster().localNode().id()), 1.0) == 0
                     && snapshot.getRebalancingPartitionsCount() == 0;
             }
         }, 5000);
@@ -342,7 +347,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
             @Override public boolean apply() {
                 return ig2.cache(CACHE1).localMetrics().getKeysToRebalanceLeft() == 0;
             }
-        }, timeLeft + 12_000L);
+        }, timeLeft + ACCEPTABLE_TIME_INACCURACY);
 
         assertTrue("Some keys aren't rebalanced.", allKeysRebalanced);
 
@@ -359,7 +364,8 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
         long diff = finishTime - currTime;
 
-        assertTrue("Expected less than 12000, but actual: " + diff, Math.abs(diff) < 12_000L);
+        assertTrue("Expected less than " + ACCEPTABLE_TIME_INACCURACY + ", but actual: " + diff,
+            Math.abs(diff) < ACCEPTABLE_TIME_INACCURACY);
     }
 
     /**
