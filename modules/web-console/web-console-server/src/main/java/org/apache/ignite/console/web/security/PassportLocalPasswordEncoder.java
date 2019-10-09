@@ -20,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.crypto.codec.Hex;

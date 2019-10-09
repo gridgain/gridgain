@@ -32,8 +32,8 @@
 
         <RollingFile
             name="FILE"
-            fileName="${env:IGNITE_HOME:-.}/work/log/web-console-server.log"
-            filePattern="${env:IGNITE_HOME:-.}/work/log/web-console-server-%d{yyyy-MM-dd}-%i.log.gz">
+            fileName="${sys:IGNITE_HOME:-.}/work/log/web-console-server.log"
+            filePattern="${sys:IGNITE_HOME:-.}/work/log/web-console-server-%d{yyyy-MM-dd}-%i.log.gz">
             <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
             <Policies>
                 <OnStartupTriggeringPolicy />
@@ -55,6 +55,8 @@
         </Logger>
 
         <Logger name="org.apache.ignite.spi.checkpoint.noop" level="ERROR"/>
+
+        <Logger name="org.apache.ignite.cache.msg" level="WARN"/>
 
         <Logger name="org.gridgain.console.web.controller.OverrideRequestMappingConfiguration$OverrideRequestMappingHandlerMapping" level="WARN"/>
 

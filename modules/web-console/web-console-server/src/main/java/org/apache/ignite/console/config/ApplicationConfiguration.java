@@ -18,7 +18,6 @@ package org.apache.ignite.console.config;
 
 import java.util.Map;
 import java.util.concurrent.Executor;
-
 import org.apache.ignite.console.web.security.PassportLocalPasswordEncoder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.annotation.Bean;
