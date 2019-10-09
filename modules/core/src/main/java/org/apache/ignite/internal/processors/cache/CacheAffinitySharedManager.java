@@ -2824,7 +2824,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 affFunc,
                 ccfg.getNodeFilter(),
                 ccfg.getBackups(),
-                ccfg.getCacheMode() == LOCAL
+                ccfg.getCacheMode() == LOCAL,
+                grpDesc.persistenceEnabled()
             );
 
             return new CacheGroupNoAffOrFiltredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
@@ -2871,7 +2872,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             affFunc,
             ccfg.getNodeFilter(),
             ccfg.getBackups(),
-            ccfg.getCacheMode() == LOCAL
+            ccfg.getCacheMode() == LOCAL,
+            grpDesc.persistenceEnabled()
         );
 
         return new CacheGroupNoAffOrFiltredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
