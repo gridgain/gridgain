@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -43,7 +43,6 @@ import org.junit.Test;
 
 /** */
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
-    // t0d0 figure out test failures in non forked mode
     /** */
     private Ignite driver;
 
@@ -85,7 +84,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testNoTablesNoIndexes() throws Exception {
-        checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+        checkIndexes(List::isEmpty);
     }
 
     /** */
@@ -100,7 +99,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+        checkIndexes(expInitial::equals);
 
         driver.cluster().active(false);
 
@@ -112,7 +111,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         driver.cluster().active(true);
 
-        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+        checkIndexes(expInitial::equals);
 
         try {
             execSql(driver, "CREATE INDEX NameIdx ON Person(surname)");
@@ -122,7 +121,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         catch (IgniteSQLException ignored) {
         }
 
-        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+        checkIndexes(expInitial::equals);
 
         execSql(driver, "CREATE INDEX NameIdx ON Person(name)");
 
@@ -133,11 +132,11 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expWithSecondary, idxs));
+        checkIndexes(expWithSecondary::equals);
 
         execSql(driver, "DROP INDEX NameIdx");
 
-        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+        checkIndexes(expInitial::equals);
 
         execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
@@ -148,12 +147,11 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
-        // t0d0 investigate why fails sometimes
-        checkIndexes(idxs -> assertEqualsCollections(expWithCompound, idxs));
+        checkIndexes(expWithCompound::equals);
 
         execSql(driver, "DROP TABLE Person");
 
-        checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+        checkIndexes(List::isEmpty);
     }
 
     /** */
@@ -168,7 +166,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expInitial, idxs));
+        checkIndexes(expInitial::equals);
 
         execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
@@ -179,7 +177,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expWithSecondary, idxs));
+        checkIndexes(expWithSecondary::equals);
     }
 
     /** */
@@ -196,11 +194,11 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expCache, idxs));
+        checkIndexes(expCache::equals);
 
         driver.destroyCache("cache");
 
-        checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+        checkIndexes(List::isEmpty);
 
         List<Object> expGrp = Arrays.asList(
             Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
@@ -217,17 +215,11 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         driver.createCache(new CacheConfiguration<>("cache2")
             .setGroupName("group"));
 
-        checkIndexes(idxs -> assertEqualsCollections(expGrp, idxs));
+        checkIndexes(expGrp::equals);
 
         driver.destroyCache("cache1");
 
-        // t0d0 investigate why some indexes can still be visible
-        checkIndexes(idxs -> {
-            if (!idxs.isEmpty())
-                System.err.println(idxs);
-
-            assertTrue(idxs.isEmpty());
-        });
+        checkIndexes(List::isEmpty);
     }
 
     /** */
@@ -254,15 +246,17 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         );
 
         // It is expected that TEXT index is not present in the list
-        checkIndexes(idxs -> assertEqualsCollections(expIdxs, idxs));
+        checkIndexes(expIdxs::equals);
     }
 
     /** */
-    private void checkIndexes(Consumer<List<List<?>>> checker) {
+    private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
-            List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
 
-            checker.accept(indexes);
+                return checker.test(indexes);
+            }, 1000));
         }
     }
 

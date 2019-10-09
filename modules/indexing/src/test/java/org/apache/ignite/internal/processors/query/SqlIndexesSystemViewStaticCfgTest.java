@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.Predicate;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -103,7 +103,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
                     .setIndexes(Collections.singleton(new QueryIndex("i")))))
             };
 
-            checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+            checkIndexes(List::isEmpty);
         }
         finally {
             if (old == null)
@@ -131,11 +131,11 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expCache, idxs));
+        checkIndexes(expCache::equals);
 
         driver.destroyCache("cache");
 
-        checkIndexes(idxs -> assertTrue(idxs.isEmpty()));
+        checkIndexes(List::isEmpty);
     }
 
     /** */
@@ -159,17 +159,11 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
             Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
-        checkIndexes(idxs -> assertEqualsCollections(expGrp, idxs));
+        checkIndexes(expGrp::equals);
 
         driver.destroyCache("cache1");
 
-        // t0d0 investigate why some indexes can still be visible
-        checkIndexes(idxs -> {
-            if (!idxs.isEmpty())
-                System.err.println(idxs);
-
-            assertTrue(idxs.isEmpty());
-        });
+        checkIndexes(List::isEmpty);
     }
 
     /** */
@@ -189,11 +183,13 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkIndexes(Consumer<List<List<?>>> checker) {
+    private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
-            List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY INDEX_NAME");
 
-            checker.accept(indexes);
+                return checker.test(indexes);
+            }, 1000));
         }
     }
 
