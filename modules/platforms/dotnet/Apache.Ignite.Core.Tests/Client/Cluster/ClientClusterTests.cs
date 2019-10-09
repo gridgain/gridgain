@@ -47,6 +47,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             var ignite = Ignition.GetIgnite();
             GetCluster().SetActive(true);
+
             // To make sure there is no persisted cache from previous runs.
             ignite.DestroyCache(PersistentCache);
             ignite.GetOrCreateCache<int, int>(cacheCfg);
@@ -56,6 +57,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         protected override IgniteConfiguration GetIgniteConfiguration()
         {
             var baseConfig = base.GetIgniteConfiguration();
+
             baseConfig.DataStorageConfiguration = new DataStorageConfiguration
             {
                 DataRegionConfigurations = new[]
@@ -67,6 +69,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                     }
                 }
             };
+
             return baseConfig;
         }
 
@@ -78,6 +81,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var clientCluster = GetCluster();
             clientCluster.SetActive(true);
+
             Assert.IsTrue(clientCluster.IsActive());
         }
 
@@ -89,6 +93,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var clientCluster = GetCluster();
             clientCluster.SetActive(false);
+
             Assert.IsFalse(clientCluster.IsActive());
         }
 
@@ -100,6 +105,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var clientCluster = GetCluster();
             clientCluster.DisableWal(PersistentCache);
+
             Assert.IsTrue(clientCluster.EnableWal(PersistentCache));
             Assert.IsTrue(clientCluster.IsWalEnabled(PersistentCache));
         }
@@ -112,6 +118,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var clientCluster = GetCluster();
             clientCluster.DisableWal(PersistentCache);
+
             Assert.IsTrue(clientCluster.EnableWal(PersistentCache));
             Assert.IsFalse(clientCluster.EnableWal(PersistentCache));
         }
@@ -144,8 +151,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestDisableWal()
         {
-            IClientCluster clientCluster = GetCluster();
+            var clientCluster = GetCluster();
             clientCluster.EnableWal(PersistentCache);
+
             Assert.IsTrue(clientCluster.DisableWal(PersistentCache));
             Assert.IsFalse(clientCluster.IsWalEnabled(PersistentCache));
         }
@@ -156,8 +164,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestDisableWalReturnsFalseIfWalWasDisabledBefore()
         {
-            IClientCluster clientCluster = GetCluster();
+            var clientCluster = GetCluster();
             clientCluster.EnableWal(PersistentCache);
+
             Assert.IsTrue(clientCluster.DisableWal(PersistentCache));
             Assert.IsFalse(clientCluster.DisableWal(PersistentCache));
         }
