@@ -320,8 +320,9 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /** Client node to perform operations. */
     private IgniteEx clnt;
 
+    /** {@inheritDoc} */
     @Before
-    public void before() throws Exception {
+    @Override public void before() throws Exception {
         super.before();
 
         startGrid(0);
