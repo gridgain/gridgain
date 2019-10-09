@@ -81,7 +81,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -167,7 +167,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * No values should be stored in metastorage nor passed in joining node discovery data.
      */
     private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
     );
 
     /**

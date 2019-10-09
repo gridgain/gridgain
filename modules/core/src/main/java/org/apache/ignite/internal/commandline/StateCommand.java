@@ -23,7 +23,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandList.STATE;
 
 /**
@@ -32,7 +32,7 @@ import static org.apache.ignite.internal.commandline.CommandList.STATE;
 public class StateCommand implements Command<Void> {
     /** */
     private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
     );
 
     /** {@inheritDoc} */

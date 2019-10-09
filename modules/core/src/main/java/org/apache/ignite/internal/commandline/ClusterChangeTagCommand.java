@@ -27,7 +27,7 @@ import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTask;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTaskArg;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTaskResult;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
@@ -48,7 +48,7 @@ public class ClusterChangeTagCommand implements Command<String> {
 
     /** Flag indicates that the feature is disabled. */
     private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE_SUPPORT, false
+        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
     );
 
     /** {@inheritDoc} */
