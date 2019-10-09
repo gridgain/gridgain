@@ -18,6 +18,16 @@ How to run
 
 NOTE: Cluster URL should be specified in `ignite-web-console-agent-x.x.x\default.properties` in `node-uri` parameter.
 
+How to update
+-------------------------------------
+1. Navigate to current Web Console installation directory.
+2. Stop the current of Web Console.
+3. Copy its “work“ directory to some place.
+4. Download and unpack a new version of Web Console to NEW folder.
+5. Copy work directory from step 3 to the new Web Console installation directory.
+6. Start the new version of Web Console.
+7. Archivate folder of old Web Console just in case it will be needed for rollback.
+
 Technical details
 -------------------------------------
 1. Package content:
