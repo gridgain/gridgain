@@ -107,7 +107,7 @@ public enum IgniteFeatures {
     /**
      * Rolling upgrade based on distributed metastorage.
      */
-    DISTRIBUTED_ROLLING_UPGRADE_MODE(14);
+    DISTRIBUTED_ROLLING_UPGRADE_MODE(26);
 
     /**
      * Unique feature identifier.
@@ -206,7 +206,7 @@ public enum IgniteFeatures {
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
-            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
                 continue;
 
             //Disable new rolling upgrade
