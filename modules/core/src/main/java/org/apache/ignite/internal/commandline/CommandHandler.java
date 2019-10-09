@@ -710,7 +710,7 @@ public class CommandHandler {
     }
 
     /**
-     * Commands filter.
+     * Returns {@code true}, if the given command should be skipped.
      * @param cmd Command.
      */
     private boolean skipCommand(CommandList cmd) {
