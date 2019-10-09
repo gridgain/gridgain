@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -67,6 +66,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -257,6 +257,78 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-24303")
+    public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
+        backups = 2;
+
+        final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
+
+        Ignite prim = startGrids(srvNodes);
+
+        prim.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = prim.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(cache, 10_000);
+
+        List<Ignite> backups = backupNodes(primaryKeys.get(0), DEFAULT_CACHE_NAME);
+
+        assertFalse(backups.contains(prim));
+
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+
+        long seed = System.nanoTime();
+
+        log.info("Seed: " + seed);
+
+        Random r = new Random(seed);
+
+        assertTrue(prim == grid(0));
+
+        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
+            while (U.currentTimeMillis() < stop) {
+                doSleep(1_000);
+
+                Ignite restartNode = grid(1 + r.nextInt(backups.size()));
+
+                assertFalse(prim == restartNode);
+
+                String name = restartNode.name();
+
+                stopGrid(true, name);
+
+                try {
+                    waitForTopology(SERVER_NODES);
+
+                    resetBaselineTopology();
+
+                    awaitPartitionMapExchange();
+
+                    doSleep(5_000);
+
+                    startGrid(name);
+
+                    resetBaselineTopology();
+
+                    awaitPartitionMapExchange();
+                }
+                catch (Exception e) {
+                    fail(X.getFullStackTrace(e));
+                }
+            }
+        }, 1, "node-restarter");
+
+        // Wait with timeout to avoid hanging suite.
+        doRandomUpdates(r, prim, primaryKeys, cache, stop).get(stop + 30_000);
+        fut.get();
+
+        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
+    }
+
+    /**
      * Tests reproduces the problem: deferred removal queue should never be cleared during rebalance OR rebalanced
      * entries could undo deletion causing inconsistency.
      */
@@ -272,7 +344,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         List<Integer> keys = partitionKeys(prim.cache(DEFAULT_CACHE_NAME), primaryParts[0], 2, 0);
 
         prim.cache(DEFAULT_CACHE_NAME).put(keys.get(0), keys.get(0));
-        prim.cache(DEFAULT_CACHE_NAME).put(keys.get(1), keys.get(1));
 
         forceCheckpoint();
 
@@ -300,8 +371,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             doSleep(2000);
 
-            prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(1)); // Ensure queue cleanup is triggered.
-
+            // Ensure queue cleanup is triggered before releasing supply message.
             spi.stopBlock();
         });
 
@@ -721,6 +791,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         rndAddrsField.set(customDiscoSpi, true);
 
         Ignite crd = startGrid(0); // Start coordinator with custom discovery SPI.
+
+        crd.cluster().baselineAutoAdjustEnabled(false);
+
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 

@@ -65,7 +65,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
@@ -249,7 +248,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
      * then it must be restored using value of this field.
      */
-    private PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
+    private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
 
     /** */
     static {
@@ -1741,8 +1740,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         cfg.setCheckpointSpi(cpSpi);
 
         cfg.setEventStorageSpi(new MemoryEventStorageSpi());
-
-        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
 

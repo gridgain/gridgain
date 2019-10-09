@@ -25,7 +25,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -139,10 +138,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** Create time. */
     @GridToStringExclude
     private final long createTime = U.currentTimeMillis();
-
-    /** Lock. */
-    @GridToStringExclude
-    private final ReentrantLock lock = new ReentrantLock();
 
     /** */
     @GridToStringExclude
@@ -396,7 +391,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * TODO FIXME Get rid of deferred delete queue https://issues.apache.org/jira/browse/IGNITE-11704
      */
-    public void cleanupRemoveQueue() {
+    void cleanupRemoveQueue() {
         if (state() == MOVING) {
             if (rmvQueue.sizex() >= rmvQueueMaxSize) {
                 LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
@@ -441,21 +436,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         cleanupRemoveQueue();
 
         rmvQueue.add(new RemovedEntryHolder(cacheId, key, ver, rmvdEntryTtl));
-    }
-
-    /**
-     * Locks partition.
-     */
-    @SuppressWarnings({"LockAcquiredButNotSafelyReleased"})
-    public void lock() {
-        lock.lock();
-    }
-
-    /**
-     * Unlocks partition.
-     */
-    public void unlock() {
-        lock.unlock();
     }
 
     /**
