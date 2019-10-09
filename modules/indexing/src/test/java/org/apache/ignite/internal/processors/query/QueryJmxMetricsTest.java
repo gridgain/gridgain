@@ -54,6 +54,8 @@ public class QueryJmxMetricsTest extends AbstractIndexingCommonTest {
     public void testJmxAllMBeanInfo() throws Exception {
         Set<ObjectName> names = grid().configuration().getMBeanServer().queryNames(new ObjectName("*:*"), null);
 
+        log.info("Available beans: " + names.size());
+
         boolean errors = false;
 
         for (ObjectName name : names) {
