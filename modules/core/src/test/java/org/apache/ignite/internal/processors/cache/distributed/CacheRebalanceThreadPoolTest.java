@@ -40,14 +40,13 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 /**
+ *
  */
-@WithSystemProperty(key = "IGNITE_BASELINE_AUTO_ADJUST_ENABLED", value = "false")
 public class CacheRebalanceThreadPoolTest extends GridCommonAbstractTest {
     /** */
     private static final int REBALANCE_POOL_SIZE = 4;

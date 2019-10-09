@@ -17,20 +17,17 @@
 package org.apache.ignite.cluster;
 
 import java.util.Collection;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  * Checks {@link ClusterState} change.
  */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 public class GridClusterStateChangeSelfTest extends GridCommonAbstractTest {
     /** Names of nodes. */
     private static final Collection<String> NODES_NAMES = U.sealList("server1", "server2", "client1", "client2", "daemon1", "daemon2");
