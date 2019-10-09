@@ -125,7 +125,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         log.info("Seed: " + seed);
         Random random = new Random(seed);
 
-        for (int it = 0; it < 2; it++) {
+        for (int it = 0; it < 10; it++) {
             int operation = random.nextInt(TestTransaction.POSSIBLE_OPERATIONS);
 
             switch (operation) {
@@ -159,6 +159,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
                     tx.putAll(
                         random.ints(5, 0, KEYS_SET)
                             .boxed()
+                            .distinct()
                             .collect(Collectors.toMap(
                                 k -> k, k -> k)
                             )
