@@ -28,11 +28,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.apache.ignite.console.common.SessionAttribute;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
+import org.apache.ignite.console.services.SessionsService;
 import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
+import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.internal.util.typedef.F;
@@ -49,11 +53,15 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
+import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_LOGOUT;
+import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
+import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
+import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 
 /**
@@ -71,13 +79,23 @@ public class BrowsersService extends AbstractSocketHandler {
     private static final int MAX_TEXT_MESSAGE_SIZE = 10 * 1024 * 1024;
 
     /** */
+    private static final String EXPIRED_SESSION_ERROR_MESSAGE =
+        "Failed to handle request - unknown session token (maybe expired session)";
+
+    /** The name of the attribute under which the session token is saved. */
+    private static final String SESSION_TOKEN_ATTR_PREFIX = "SESSION_TOKEN_";
+
+    /** */
     private final Map<String, VisorTaskDescriptor> visorTasks = new HashMap<>();
 
     /** */
-    private final Map<UserKey, Collection<WebSocketSession>> locBrowsers;
+    private final Map<UserKey, Collection<WebSocketSession>> locBrowsers = new ConcurrentHashMap<>();
 
     /** */
-    private final Map<String, WebSocketSession> locRequests;
+    private final Map<String, WebSocketSession> locRequests = new ConcurrentHashMap<>();
+
+    /** */
+    private final Map<String, SessionAttribute> sesTokRequests = new ConcurrentHashMap<>();
 
     /** */
     private volatile WebSocketEvent lastAnn;
@@ -88,16 +106,28 @@ public class BrowsersService extends AbstractSocketHandler {
     /** */
     private final TransitionService transitionSrvc;
 
+    /** */
+    protected final ClustersRepository clustersRepo;
+
+    /** */
+    private final SessionsService sesSrvc;
+
     /**
      * @param agentsSrvc Agents service.
      * @param transitionSrvc Service for transfering messages between backends.
+     * @param clustersRepo Repositories to work with clusters.
+     * @param sesSrvc Sessions service.
      */
-    public BrowsersService(AgentsService agentsSrvc, TransitionService transitionSrvc) {
+    public BrowsersService(
+        AgentsService agentsSrvc,
+        TransitionService transitionSrvc,
+        ClustersRepository clustersRepo,
+        SessionsService sesSrvc
+    ) {
         this.agentsSrvc = agentsSrvc;
         this.transitionSrvc = transitionSrvc;
-
-        locBrowsers = new ConcurrentHashMap<>();
-        locRequests = new ConcurrentHashMap<>();
+        this.clustersRepo = clustersRepo;
+        this.sesSrvc = sesSrvc;
 
         registerVisorTasks();
     }
@@ -158,19 +188,55 @@ public class BrowsersService extends AbstractSocketHandler {
                 case NODE_REST:
                 case NODE_VISOR:
                     JsonObject payload = fromJson(evt.getPayload());
+                    JsonObject params = payload.getJsonObject("params");
 
                     String clusterId = payload.getString("clusterId");
+
+                    if (evt.getEventType().equals(NODE_VISOR))
+                        params = buildRestExeParams(clusterId, params);
 
                     if (F.isEmpty(clusterId))
                         throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
 
-                    if (evt.getEventType().equals(NODE_VISOR))
-                        evt.setPayload(toJson(fillVisorGatewayTaskParams(payload)));
+                    TopologySnapshot top = clustersRepo.get(clusterId);
+
+                    if (top == null)
+                        throw new IllegalStateException(messages.getMessageWithArgs("err.cluster-not-found-by-id", clusterId));
+
+                    // TODO GG-24427 Append sessionId if it exists in session store.
+                    if (top.isSecured()) {
+                        SessionAttribute sesAttr = new SessionAttribute(ses, SESSION_TOKEN_ATTR_PREFIX + clusterId);
+
+                        String sesTok = sesSrvc.get(sesAttr);
+
+                        if (F.isEmpty(sesTok) && Stream.of("user", "password").noneMatch(params::containsKey)) {
+                            sendMessageQuiet(ses, evt.response(RestResult.fail(STATUS_FAILED, "Failed to handle request - unknown session token (maybe expired session)")));
+
+                            return;
+                        }
+                        
+                        params.add("sessionToken", sesTok);
+
+                        sesTokRequests.put(evt.getRequestId(), sesAttr);
+                    }
+
+                    if (evt.getEventType().equals(NODE_VISOR) || top.isSecured()) {
+                        payload.put("params", params);
+
+                        evt.setPayload(toJson(payload));
+                    }
 
                     sendToAgent(new AgentKey(accId, clusterId), evt);
 
                     break;
 
+                case CLUSTER_LOGOUT:
+                    SessionAttribute sesAttr = new SessionAttribute(ses, SESSION_TOKEN_ATTR_PREFIX + evt.getPayload());
+
+                    sesSrvc.remove(sesAttr);
+
+                    break;
+                    
                 default:
                     throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-evt", evt));
             }
@@ -319,26 +385,25 @@ public class BrowsersService extends AbstractSocketHandler {
     }
 
     /**
-     * Prepare task event for execution on agent.
+     * Prepare exe params for send REST request on node.
      *
-     * @param payload Task event.
+     * @param clusterId Cluster Id.
+     * @param params Task params.
      */
-    protected JsonObject fillVisorGatewayTaskParams(JsonObject payload) {
-        JsonObject params = payload.getJsonObject("params");
-
+    protected JsonObject buildRestExeParams(String clusterId, JsonObject params) {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException(messages.getMessageWithArgs("err.not-specified-task-id", payload));
+            throw new IllegalStateException(messages.getMessageWithArgs("err.not-specified-task-id", params));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-task", taskId, payload));
+            throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-task", taskId, params));
 
-        JsonObject exeParams =  new JsonObject()
+        JsonObject exeParams = new JsonObject()
             .add("cmd", "exe")
             .add("name", "org.apache.ignite.internal.visor.compute.VisorGatewayTask")
             .add("p1", nids)
@@ -346,27 +411,54 @@ public class BrowsersService extends AbstractSocketHandler {
 
         AtomicInteger idx = new AtomicInteger(3);
 
-        Arrays.stream(desc.getArgumentsClasses()).forEach(arg ->  exeParams.put("p" + idx.getAndIncrement(), arg));
+        Arrays.stream(desc.getArgumentsClasses()).forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
 
         JsonArray args = params.getJsonArray("args");
 
         if (!F.isEmpty(args))
             args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
 
-        Stream.of("user", "password", "sessionToken").forEach(p -> exeParams.add(p, params.get(p)));
+        Stream.of("user", "password").forEach(p -> exeParams.add(p, params.get(p)));
 
-        payload.put("params", exeParams);
-
-        return payload;
+        return exeParams;
     }
 
     /**
      * @param evt Event.
      */
     void processResponse(WebSocketEvent evt) {
+        SessionAttribute sesAttr = sesTokRequests.remove(evt.getRequestId());
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
-        if (ses != null)
+        if (sesAttr != null && !evt.getEventType().equals(ERROR)) {
+            WebSocketRequest evt0 = (WebSocketRequest)evt;
+
+            try {
+                RestResult res = fromJson(evt0.getPayload(), RestResult.class);
+
+                switch (res.getSuccessStatus()) {
+                    case STATUS_SUCCESS:
+                        if (!F.isEmpty(res.getSessionToken()))
+                            sesSrvc.update(sesAttr, res.getSessionToken());
+
+                        break;
+                    case STATUS_FAILED:
+                        if (res.getError().startsWith(EXPIRED_SESSION_ERROR_MESSAGE))
+                            sesSrvc.remove(sesAttr);
+
+                        break;
+                    default:
+                        // No-op.
+                }
+
+                res.clearSessionToken();
+
+                sendMessageQuiet(ses, evt0.response(res));
+            }
+            catch (Exception ignored) {
+                sendMessageQuiet(ses, evt);
+            }
+        } else if (ses != null)
             sendMessageQuiet(ses, evt);
     }
 
