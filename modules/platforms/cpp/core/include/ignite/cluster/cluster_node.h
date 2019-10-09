@@ -128,15 +128,8 @@ namespace ignite
              */
             long GetOrder();
 
-            /**
-             * Get node version.
-             *
-             * @return Prodcut version.
-             */
-            const IgniteProductVersion& GetVersion();
-
         private:
-            common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;
+            common::concurrent::SharedPointer<impl::cluster::ClusterNodeImpl> impl;
         };
     }
 }

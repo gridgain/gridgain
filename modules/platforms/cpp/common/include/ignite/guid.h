@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,7 +57,7 @@ namespace ignite
 
         /**
          * Returns the least significant 64 bits of this instance.
-         *  
+         *
          * @return The least significant 64 bits of this instance.
          */
         int64_t GetLeastSignificantBits() const;
@@ -105,12 +105,75 @@ namespace ignite
          * @return True if equal.
          */
         friend bool IGNITE_IMPORT_EXPORT operator== (const Guid& val1, const Guid& val2);
+
+        /**
+         * Compare to another value.
+         *
+         * @param other Instance to compare to.
+         * @return Zero if equals, negative number if less and positive if more.
+         */
+        int64_t Compare(const Guid& other) const;
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if equal.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator==(const Guid& val1, const Guid& val2);
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if not equal.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator!=(const Guid& val1, const Guid& val2);
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if less.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator<(const Guid& val1, const Guid& val2);
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if less or equal.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator<=(const Guid& val1, const Guid& val2);
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if greater.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator>(const Guid& val1, const Guid& val2);
+
+        /**
+         * Comparison operator.
+         *
+         * @param val1 First value.
+         * @param val2 Second value.
+         * @return True if greater or equal.
+         */
+        friend bool IGNITE_IMPORT_EXPORT operator>=(const Guid& val1, const Guid& val2);
+
     private:
         /** Most significant bits. */
-        int64_t most;  
+        int64_t most;
 
         /** Least significant bits. */
-        int64_t least; 
+        int64_t least;
     };
 
     /**
@@ -129,11 +192,12 @@ namespace ignite
         uint16_t part4 = static_cast<uint16_t>(guid.GetLeastSignificantBits() >> 48);
         uint64_t part5 = guid.GetLeastSignificantBits() & 0x0000FFFFFFFFFFFFULL;
 
-        os  << std::setfill<C>('0') << std::setw(8)  << std::hex << part1 << '-'
-            << std::setfill<C>('0') << std::setw(4)  << std::hex << part2 << '-'
-            << std::setfill<C>('0') << std::setw(4)  << std::hex << part3 << '-'
-            << std::setfill<C>('0') << std::setw(4)  << std::hex << part4 << '-'
-            << std::setfill<C>('0') << std::setw(12) << std::hex << part5;
+        os  << std::hex
+            << std::setfill<C>('0') << std::setw(8)  << part1 << '-'
+            << std::setfill<C>('0') << std::setw(4)  << part2 << '-'
+            << std::setfill<C>('0') << std::setw(4)  << part3 << '-'
+            << std::setfill<C>('0') << std::setw(4)  << part4 << '-'
+            << std::setfill<C>('0') << std::setw(12) << part5 << std::dec;
 
         return os;
     }

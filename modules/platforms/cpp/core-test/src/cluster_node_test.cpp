@@ -240,21 +240,4 @@ BOOST_AUTO_TEST_CASE(IgniteGetOrder)
     BOOST_REQUIRE(order1 > 0 && order2 > 0);
 }
 
-BOOST_AUTO_TEST_CASE(IgniteGetVersion)
-{
-    IgniteCluster cluster = server.GetCluster();
-
-    BOOST_REQUIRE(cluster.IsActive());
-
-    ClusterGroup group = cluster.AsClusterGroup();
-
-    std::vector<ClusterNode> nodes = group.GetNodes();
-
-    BOOST_REQUIRE(nodes.size() == 2);
-
-    IgniteProductVersion ver = nodes[0].GetVersion();
-
-    BOOST_REQUIRE(ver.revHash.size() == IgniteProductVersion::SHA1_LENGTH);
-}
-
 BOOST_AUTO_TEST_SUITE_END()

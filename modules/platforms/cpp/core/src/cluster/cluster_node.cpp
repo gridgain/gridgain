@@ -78,10 +78,5 @@ namespace ignite
         {
             return impl.Get()->GetOrder();
         }
-
-        const IgniteProductVersion& ClusterNode::GetVersion()
-        {
-            return impl.Get()->GetVersion();
-        }
     }
 }
