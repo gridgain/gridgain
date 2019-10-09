@@ -98,7 +98,7 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
     public TransactionMetricsAdapter(GridKernalContext ctx) {
         gridKernalCtx = ctx;
 
-        MetricRegistry mreg = ctx.metric().registry(TX_METRICS);
+        MetricRegistry mreg = gridKernalCtx.metric().registry(TX_METRICS);
 
         txCommits = mreg.intMetric("txCommits", "Number of transaction commits.");
         txRollbacks = mreg.intMetric("txRollbacks", "Number of transaction rollbacks.");
@@ -118,6 +118,11 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
             METRIC_TIME_BUCKETS,
             "Transactions user times on node represented as histogram."
         );
+    }
+
+    /** Callback invoked when {@link IgniteTxManager} started. */
+    public void onTxManagerStarted() {
+        MetricRegistry mreg = gridKernalCtx.metric().registry(TX_METRICS);
 
         mreg.register("AllOwnerTransactions",
             this::getAllOwnerTransactions,
@@ -311,7 +316,7 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
             }
         }
 
-        long duration = System.currentTimeMillis() - tx.startTime();
+        final Long duration = System.currentTimeMillis() - tx.startTime();
 
         return top + "DURATION: " + duration;
     }
@@ -321,6 +326,7 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
      */
     private Collection<GridNearTxLocal> nearTxs(long duration) {
         final long start = System.currentTimeMillis();
+
         IgniteClosure<IgniteInternalTx, GridNearTxLocal> c = new IgniteClosure<IgniteInternalTx, GridNearTxLocal>() {
             @Override public GridNearTxLocal apply(IgniteInternalTx tx) {
                 return ((GridNearTxLocal)tx);
@@ -353,26 +359,30 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
      * Count total number of holding locks on local node.
      */
     private long txHoldingLockNum() {
-        long holdingLockCntr = 0;
+        long holdingLockCounter = 0;
 
         IgniteTxManager tm = gridKernalCtx.cache().context().tm();
+
         for (IgniteInternalTx tx : tm.activeTransactions()) {
             if ((tx.optimistic() && tx.state() == TransactionState.ACTIVE) || tx.empty() || !tx.local())
                 continue;
 
-            holdingLockCntr++;
+            holdingLockCounter++;
         }
 
-        return holdingLockCntr;
+        return holdingLockCounter;
     }
 
     /**
      * Count total number of locked keys on local node.
      */
     private long txLockedKeysNum() {
-        GridCacheMvccManager mvccMgr = gridKernalCtx.cache().context().mvcc();
+        GridCacheMvccManager mvccManager = gridKernalCtx.cache().context().mvcc();
 
-        return mvccMgr.lockedKeys().size() + mvccMgr.nearLockedKeys().size();
+        if (mvccManager == null)
+            return 0;
+
+        return mvccManager.lockedKeys().size() + mvccManager.nearLockedKeys().size();
     }
 
     /** {@inheritDoc} */

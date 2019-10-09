@@ -41,11 +41,11 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.AbstractGridWithAgentTest;
 import org.gridgain.dto.tracing.Span;
 import org.gridgain.dto.topology.TopologySnapshot;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
@@ -106,7 +106,8 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
      * Should send changed baseline topology.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    //@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    @Ignore
     public void shouldSendChangedBaselineTopology() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
         changeGmcUri(ignite_1);
