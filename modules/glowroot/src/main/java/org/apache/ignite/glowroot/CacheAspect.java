@@ -72,7 +72,7 @@ public class CacheAspect {
         @OnBefore
         public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCache proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
             if ("query".equals(val))
-                return ctx.startTraceEntry(MessageSupplier.create("cache name={} query={}", proxy.getName(), params[0].toString()), timer);
+                return ctx.startTraceEntry(MessageSupplier.create("trace_type=cache_query cache_name={} query={}", proxy.getName(), params[0].toString()), timer);
             else {
                 String args = Arrays.stream(params).map(new Function<Object, String>() {
                     @Override public String apply(Object o) {
@@ -87,7 +87,7 @@ public class CacheAspect {
                     }
                 }).collect(Collectors.joining(","));
 
-                return ctx.startTraceEntry(MessageSupplier.create("cache name={} op={} args={}", proxy.getName(), val, args), timer);
+                return ctx.startTraceEntry(MessageSupplier.create("trace_type=cache_ops cache_name={} op={} args={}", proxy.getName(), val, args), timer);
             }
         }
 

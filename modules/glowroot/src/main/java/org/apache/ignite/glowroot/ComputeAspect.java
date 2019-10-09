@@ -43,7 +43,7 @@ public class ComputeAspect {
                 b.append(" ");
             }
 
-            return ctx.startTraceEntry(MessageSupplier.create("task {}", b.toString()), timer);
+            return ctx.startTraceEntry(MessageSupplier.create("trace_type=compute task={}", b.toString()), timer);
         }
 
         /** */

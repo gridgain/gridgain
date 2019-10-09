@@ -105,7 +105,7 @@ public class TransactionAspect {
          */
         @OnBefore
         public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver Transaction proxy) {
-            return ctx.startTraceEntry(MessageSupplier.create("commit tx: label={}", proxy.label()),
+            return ctx.startTraceEntry(MessageSupplier.create("trace_type=commit_tx label={}", proxy.label()),
                 timer);
         }
 
