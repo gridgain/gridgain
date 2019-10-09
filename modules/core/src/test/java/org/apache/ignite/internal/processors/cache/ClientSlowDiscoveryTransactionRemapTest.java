@@ -67,9 +67,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         operations.add(new NamedClosure<>(getPutDifferentKey, "getPutDifferentKey"));
         operations.add(new NamedClosure<>(putAllRemoveAllSameKeys, "putAllRemoveAllSameKeys"));
         operations.add(new NamedClosure<>(putAllRemoveAllDifferentKeys, "putAllRemoveAllDifferentKeys"));
-        operations.add(new NamedClosure<>(randomOperation, "random1"));
-        operations.add(new NamedClosure<>(randomOperation, "random2"));
-        operations.add(new NamedClosure<>(randomOperation, "random3"));
+        operations.add(new NamedClosure<>(randomOperation, "random"));
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values())
             for (TransactionIsolation isolation : TransactionIsolation.values())
