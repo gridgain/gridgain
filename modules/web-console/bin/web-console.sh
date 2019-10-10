@@ -154,6 +154,7 @@ if [ $version -eq 8 ] ; then
 elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
     JVM_OPTS="\
         -XX:+AggressiveOpts \
+        --add-opens=java.base/java.lang=ALL-UNNAMED \
         --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
@@ -165,6 +166,7 @@ elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
 
 elif [ $version -ge 11 ] ; then
     JVM_OPTS="\
+        --add-opens=java.base/java.lang=ALL-UNNAMED \
         --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
