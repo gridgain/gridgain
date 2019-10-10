@@ -45,6 +45,17 @@ public class GridH2JavaObject extends GridH2ValueMessage {
     public GridH2JavaObject(Value val) {
         assert val.getType().getValueType() == Value.JAVA_OBJECT : val.getType();
 
+//        Object obj = val.getObject();
+//
+//        if (obj instanceof Collection) {
+//            Collection col = (Collection)obj;
+//
+//            for (Object item : col) {
+//                if (item instanceof BinaryObjectImpl)
+//                    ((BinaryObjectImpl)item).detachAllowed(true);
+//            }
+//        }
+
         b = val.getBytesNoCopy();
     }
 
