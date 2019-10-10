@@ -62,7 +62,7 @@ export class PageProfile implements OnInit, OnDestroy {
         private User: ReturnType<typeof UserFactory>,
         private Confirm: Confirm,
         private fb: FormBuilder,
-        private translate: TranslateService
+        private $translate: TranslateService
     ) {
         this.countries = Countries.getAll();
     }
@@ -103,7 +103,7 @@ export class PageProfile implements OnInit, OnDestroy {
 
     async generateToken() {
         try {
-            const msg = await this.translate.get('profile.confirmChangeToken').toPromise();
+            const msg = await this.$translate.get('profile.confirmChangeToken').toPromise();
             await this.Confirm.confirm(msg);
             this.form.get('token').setValue(uuidv4());
         }
