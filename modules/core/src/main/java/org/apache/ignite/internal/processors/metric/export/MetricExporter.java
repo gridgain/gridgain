@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.metric.export;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
@@ -100,7 +102,7 @@ public class MetricExporter extends GridProcessorAdapter {
 
         assert consistentId != null : "ConsistentId is null.";
 
-        Map<String, MetricRegistry> metrics = ctx.metric().registries();
+        Map<String, MetricRegistry> metrics = deepCopyRegistries(ctx.metric().registries());
 
         return metricMessage(clusterId, tag, consistentId, metrics);
     }
@@ -180,6 +182,32 @@ public class MetricExporter extends GridProcessorAdapter {
         }
 
         return bldr.build();
+    }
+
+    /**
+     * @param metrics Metrics map to copy.
+     * @return Deep copy of the map.
+     */
+    private Map<String, MetricRegistry> deepCopyRegistries(Map<String, MetricRegistry> metrics) {
+        Map<String, MetricRegistry> res = U.newHashMap(metrics.size());
+
+        for (Map.Entry<String, MetricRegistry> entry : metrics.entrySet())
+            res.put(entry.getKey(), deepCopyMetrics(entry.getValue()));
+
+        return res;
+    }
+
+    /**
+     * @param registry Registry to copy.
+     * @return Registry copy.
+     */
+    private MetricRegistry deepCopyMetrics(MetricRegistry registry) {
+        HashMap<String, Metric> cpy = U.newHashMap(registry.metrics().size());
+
+        for (Map.Entry<String, Metric> entry : registry.metrics().entrySet())
+            cpy.put(entry.getKey(), entry.getValue());
+
+        return new MetricRegistry(registry.type(), registry.name(), log, cpy);
     }
 
     /**

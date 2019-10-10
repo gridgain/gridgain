@@ -67,7 +67,7 @@ public class MetricRegistry implements Iterable<Metric> {
     private final IgniteLogger log;
 
     /** Registered metrics. */
-    private final ConcurrentHashMap<String, Metric> metrics = new ConcurrentHashMap<>();
+    private final Map<String, Metric> metrics;
 
     /**
      * @param grpName Group name.
@@ -77,6 +77,21 @@ public class MetricRegistry implements Iterable<Metric> {
         this.type = type;
         this.grpName = grpName;
         this.log = log;
+
+        metrics = new ConcurrentHashMap<>();
+    }
+
+    /**
+     * @param type Type.
+     * @param grpName Group name.
+     * @param log Logger.
+     * @param metrics Metrics snapshot.
+     */
+    public MetricRegistry(String type, String grpName, IgniteLogger log, Map<String, Metric> metrics) {
+        this.type = type;
+        this.grpName = grpName;
+        this.log = log;
+        this.metrics = Collections.unmodifiableMap(metrics);
     }
 
     /**
