@@ -177,12 +177,13 @@ public class DrCacheCommand extends
 
         Pattern cacheNamePattern = arg.pattern;
 
-        if (F.isEmpty(nodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null);
-
         List<UUID> nodeIds = nodes.stream()
+            .filter(DrAbstractRemoteSubCommand::drControlUtilitySupported)
             .map(GridClientNode::nodeId)
             .collect(Collectors.toList());
+
+        if (F.isEmpty(nodeIds))
+            throw new GridClientDisconnectedException("Connectable nodes not found", null);
 
         if (arg.remoteDataCenterId == 0 && arg.action != null) {
             Map<String, UUID> cacheNameToNodeMap = new HashMap<>();
@@ -206,7 +207,7 @@ public class DrCacheCommand extends
             }
         }
 
-        return compute.execute(
+        return compute.projection(DrAbstractRemoteSubCommand::drControlUtilitySupported).execute(
             "org.gridgain.grid.internal.visor.dr.console.VisorDrCacheTask",
             new VisorTaskArgument<>(nodeIds, arg.toVisorArgs(), false)
         );
@@ -214,6 +215,8 @@ public class DrCacheCommand extends
 
     /** {@inheritDoc} */
     @Override protected void printResult(VisorDrCacheTaskResult res, Logger log) {
+        printUnrecognizedNodesMessage(log, false);
+
         log.info("Data Center ID: " + res.getDataCenterId());
 
         log.info(DELIM);

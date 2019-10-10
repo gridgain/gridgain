@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -345,7 +344,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         List<Integer> keys = partitionKeys(prim.cache(DEFAULT_CACHE_NAME), primaryParts[0], 2, 0);
 
         prim.cache(DEFAULT_CACHE_NAME).put(keys.get(0), keys.get(0));
-        prim.cache(DEFAULT_CACHE_NAME).put(keys.get(1), keys.get(1));
 
         forceCheckpoint();
 
@@ -373,8 +371,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             doSleep(2000);
 
-            prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(1)); // Ensure queue cleanup is triggered.
-
+            // Ensure queue cleanup is triggered before releasing supply message.
             spi.stopBlock();
         });
 
@@ -794,6 +791,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         rndAddrsField.set(customDiscoSpi, true);
 
         Ignite crd = startGrid(0); // Start coordinator with custom discovery SPI.
+
+        crd.cluster().baselineAutoAdjustEnabled(false);
+
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
