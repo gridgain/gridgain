@@ -23,6 +23,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.file.OpenOption;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecora
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -131,6 +133,10 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
 
             final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 1_000, 20);
 
+            final LongAdderMetric mm = new LongAdderMetric("total", "");
+
+            long start = System.currentTimeMillis();
+
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
@@ -139,7 +145,8 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         while (run.get()) {
                             System.out.println(
                                 "Put rate over last 10 seconds: " + (putRate10secs.value() / 10) +
-                                    " puts/sec, over last 1 second: " + putRate1sec.value());
+                                    " puts/sec, over last 1 second: " + putRate1sec.value() + " form start: " +
+                                    (System.currentTimeMillis() - start) + " total: " + mm.value());
 
                             if (putRate10secs.value() == 0) {
                                 zeroDropdown.set(true);
@@ -175,6 +182,8 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         putRate10secs.increment();
 
                         putRate1sec.increment();
+
+                        mm.increment();
                     }
 
                     run.set(false);

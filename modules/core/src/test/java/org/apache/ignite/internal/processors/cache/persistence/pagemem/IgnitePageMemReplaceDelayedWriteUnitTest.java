@@ -44,8 +44,8 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
-import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
@@ -119,7 +119,8 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+        Collection<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -182,7 +183,8 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+        Collection<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 

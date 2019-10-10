@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -26,7 +27,7 @@ import org.apache.ignite.internal.pagemem.FullPageId;
  */
 class CheckpointPages {
     /** */
-    private final Collection<FullPageId> segCheckpointPages;
+    private Collection<FullPageId> segCheckpointPages;
 
     /** The sign which allows to replace pages from a checkpoint by page replacer. */
     private final IgniteInternalFuture allowToReplace;
@@ -45,7 +46,7 @@ class CheckpointPages {
      * @return {@code true} If fullPageId is allowable to store to disk.
      */
     public boolean allowToSave(FullPageId fullPageId) throws IgniteCheckedException {
-        Collection<FullPageId> checkpointPages = segCheckpointPages;
+        Collection<FullPageId> checkpointPages = segCheckpointPages; // change this  markAsSaved move
 
         if (checkpointPages == null || allowToReplace == null)
             return false;
@@ -53,7 +54,9 @@ class CheckpointPages {
         //Uninterruptibly is important because otherwise in case of interrupt of client thread node would be stopped.
         allowToReplace.getUninterruptibly();
 
-        return checkpointPages.contains(fullPageId);
+        //System.err.println("remove: " + fullPageId);
+
+        return checkpointPages.remove(fullPageId);
     }
 
     /**
@@ -62,6 +65,13 @@ class CheckpointPages {
      */
     public boolean contains(FullPageId fullPageId) {
         Collection<FullPageId> checkpointPages = segCheckpointPages;
+
+        assert checkpointPages != null;
+
+/*        if (checkpointPages == null)
+            return getClo.apply(fullPageId);
+
+        return checkpointPages != null && (getClo.apply(fullPageId) || checkpointPages.contains(fullPageId));*/
 
         return checkpointPages != null && checkpointPages.contains(fullPageId);
     }
@@ -83,5 +93,9 @@ class CheckpointPages {
         Collection<FullPageId> checkpointPages = segCheckpointPages;
 
         return checkpointPages == null ? 0 : checkpointPages.size();
+    }
+
+    public void cpPages(Collection<FullPageId> pages) {
+        segCheckpointPages = pages;
     }
 }

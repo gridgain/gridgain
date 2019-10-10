@@ -175,12 +175,14 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         inCheckpointBackoffCntr.set(0);
 
         notInCheckpointBackoffCntr.set(0);
+
+        cpBufThrottledThreads.values().forEach(LockSupport::unpark);
     }
 
     /**
      * @return {@code True} if throttling should be enabled, and {@code False} otherwise.
      */
-    private boolean shouldThrottle() {
+    @Override public boolean shouldThrottle() {
         int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
 
         return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;

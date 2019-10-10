@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -26,6 +28,9 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridTuple3;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
@@ -83,6 +88,12 @@ public interface PageMemoryEx extends PageMemory {
      */
     public long partitionMetaPageId(int grpId, int partId) throws IgniteCheckedException;
 
+    /** */
+    boolean shouldThrottle();
+
+    /** */
+    FullPageId pageToDumpFirst();
+
     /**
      * @see #acquirePage(int, long)
      * Will read page from file if it is not present in memory
@@ -116,7 +127,7 @@ public interface PageMemoryEx extends PageMemory {
      * @throws IgniteException If checkpoint has been already started and was not finished.
      * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToReplace) throws IgniteException;
+    public GridMultiCollectionWrapper beginCheckpoint(IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
      * Gets a collection of dirty page IDs since the last checkpoint and dirty pages with user data are presented. If a
@@ -127,9 +138,10 @@ public interface PageMemoryEx extends PageMemory {
      * @return Couple of collection of dirty page IDs and flag. The flag is {@code true}, if since last checkpoint at
      * least one page with user data (not relates with system cache) became a dirty, and {@code false} otherwise.
      * @throws IgniteException If checkpoint has been already started and was not finished.
+     * @throws IgniteCheckedException In case of interruption or execution abortion.
      * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
+    public T3<Collection[], Boolean, Integer> beginCheckpointEx(
         IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
@@ -179,4 +191,8 @@ public interface PageMemoryEx extends PageMemory {
      * @return Future that will be completed when all pages are cleared.
      */
     public IgniteInternalFuture<Void> clearAsync(LoadedPagesMap.KeyPredicate pred, boolean cleanDirty);
+
+    public void checkpointPages(Collection<FullPageId> pages);
+
+    public Collection<FullPageId> checkpointPages();
 }

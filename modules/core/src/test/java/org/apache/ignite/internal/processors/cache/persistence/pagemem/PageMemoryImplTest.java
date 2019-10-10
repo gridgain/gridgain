@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -51,8 +52,8 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
-import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
@@ -217,7 +218,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         // Mark some pages as dirty.
         writePage(memory, cowPageId, (byte)2);
 
-        GridMultiCollectionWrapper<FullPageId> cpPages = memory.beginCheckpoint(new GridFinishedFuture());
+        Collection<FullPageId> cpPages = memory.beginCheckpoint(new GridFinishedFuture());
 
         assertEquals(1, cpPages.size());
 
@@ -239,7 +240,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void doCheckpoint(
-        GridMultiCollectionWrapper<FullPageId> cpPages,
+        Collection<FullPageId> cpPages,
         PageMemoryImpl memory,
         TestPageStoreManager pageStoreMgr
     ) throws Exception {

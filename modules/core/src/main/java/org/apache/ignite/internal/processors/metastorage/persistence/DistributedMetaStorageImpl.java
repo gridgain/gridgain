@@ -1095,7 +1095,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         if (e instanceof Error)
             throw (Error)e;
 
-        throw U.convertException((IgniteCheckedException)e);
+        throw U.convertException(U.cast(e));
     }
 
     /**
