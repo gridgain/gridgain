@@ -87,7 +87,7 @@ public class MetricsServiceTest extends AbstractServiceTest {
         Assert.assertEquals(1, nodesCaptor.getValue().size());
         Assert.assertEquals(TOPIC_METRICS, topicCaptor.getValue());
         Assert.assertTrue(msgCaptor.getValue() instanceof MetricRequest);
-        Assert.assertEquals(Integer.valueOf(-1), ((MetricRequest) msgCaptor.getValue()).schemaVersion());
+        Assert.assertEquals(-1, ((MetricRequest) msgCaptor.getValue()).schemaVersion());
         Assert.assertEquals(Byte.valueOf(SYSTEM_POOL), plcCaptor.getValue());
     }
 
