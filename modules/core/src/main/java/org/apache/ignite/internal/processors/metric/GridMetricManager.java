@@ -55,11 +55,12 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
-import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_SYSTEM_TIME_HISTOGRAM;
-import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TIME_BUCKETS;
-import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TOTAL_SYSTEM_TIME;
-import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_TOTAL_USER_TIME;
-import static org.apache.ignite.internal.processors.cache.transactions.TransactionMetricsAdapter.METRIC_USER_TIME_HISTOGRAM;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.COMM_METRICS;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.OUTBOUND_MSG_QUEUE_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_BYTES_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -114,6 +115,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Group for a thread pools. */
     public static final String THREAD_POOLS = "threadPools";
+
+    /** Metric registry type for striped tread pools. */
+    public static final String STRIPED_THREAD_POOLS = "stripedThreadPools";
 
     /** Metrics update frequency. */
     private static final long METRICS_UPDATE_FREQ = 3000;
@@ -243,7 +247,19 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
             "Histogram of cache operations blocked PME durations in milliseconds.");
 
-        registerTransactionMetrics();
+        MetricRegistry ioMetric = registry(COMM_METRICS);
+
+        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, () -> ctx.config().getCommunicationSpi().getOutboundMessagesQueueSize(),
+                "Outbound messages queue size.");
+
+        ioMetric.register(SENT_MSG_CNT, () -> ctx.config().getCommunicationSpi().getSentMessagesCount(), "Sent messages count.");
+
+        ioMetric.register(SENT_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getSentBytesCount(), "Sent bytes count.");
+
+        ioMetric.register(RCVD_MSGS_CNT, () -> ctx.config().getCommunicationSpi().getReceivedMessagesCount(),
+                "Received messages count.");
+
+        ioMetric.register(RCVD_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getReceivedBytesCount(), "Received bytes count.");
     }
 
     /** {@inheritDoc} */
@@ -551,25 +567,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         catch (RuntimeException ignored) {
             return -1;
         }
-    }
-
-    /** */
-    private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(TX_METRICS);
-
-        reg.longAdderMetric(METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
-        reg.longAdderMetric(METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
-
-        reg.histogram(
-            METRIC_SYSTEM_TIME_HISTOGRAM,
-            METRIC_TIME_BUCKETS,
-            "Transactions system times on node represented as histogram."
-        );
-        reg.histogram(
-            METRIC_USER_TIME_HISTOGRAM,
-            METRIC_TIME_BUCKETS,
-            "Transactions user times on node represented as histogram."
-        );
     }
 
     /** */
