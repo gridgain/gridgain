@@ -940,52 +940,6 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    public void testCeilPow2Long() throws Exception {
-        assertEquals(2, U.ceilPow2Long(2));
-        assertEquals(4, U.ceilPow2Long(3));
-        assertEquals(4, U.ceilPow2Long(4));
-        assertEquals(8, U.ceilPow2Long(5));
-        assertEquals(8, U.ceilPow2Long(6));
-        assertEquals(8, U.ceilPow2Long(7));
-        assertEquals(8, U.ceilPow2Long(8));
-        assertEquals(16, U.ceilPow2Long(9));
-        assertEquals(1 << 15, U.ceilPow2Long((1 << 15) - 1));
-        assertEquals(1 << 15, U.ceilPow2Long(1 << 15));
-        assertEquals(1 << 16, U.ceilPow2Long((1 << 15) + 1));
-        assertEquals(1 << 26, U.ceilPow2Long((1 << 26) - 100));
-        assertEquals(1 << 26, U.ceilPow2Long(1 << 26));
-        assertEquals(1 << 27, U.ceilPow2Long((1 << 26) + 100));
-        assertEquals(1L << 61, U.ceilPow2Long((1L << 61) - 100));
-        assertEquals(1L << 61, U.ceilPow2Long(1L << 61));
-        assertEquals(1L << 62, U.ceilPow2Long((1L << 61) + 100));
-        assertEquals(1L << 62, U.ceilPow2Long((1L << 62) - 1));
-        assertEquals(1L << 62, U.ceilPow2Long(1L << 62));
-
-        assertCeilPow2LongThrows((1L << 62) + 1);
-        assertCeilPow2LongThrows(-1);
-        assertCeilPow2LongThrows((-1L << 62) + 1);
-        assertCeilPow2LongThrows((-1L << 62) - 1);
-        assertCeilPow2LongThrows((-1L << 63) + 1);
-        assertCeilPow2LongThrows(-1L << 63);
-        assertCeilPow2LongThrows(-1L << 32);
-    }
-
-    /** */
-    private void assertCeilPow2LongThrows(long l) {
-        try {
-            U.ceilPow2Long(l);
-
-            fail("Exception not thrown.");
-        }
-        catch (IllegalArgumentException ignore) {
-            // No-op.
-        }
-    }
-
-    /**
-     *
-     */
-    @Test
     public void testIsOldestNodeVersionAtLeast() {
         IgniteProductVersion v240 = IgniteProductVersion.fromString("2.4.0");
         IgniteProductVersion v241 = IgniteProductVersion.fromString("2.4.1");

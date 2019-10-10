@@ -24,7 +24,6 @@ import org.h2.store.Data;
 import org.h2.value.Value;
 
 /**
- * TODO: Add in-memory buffer with memory tracker.
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
 public class PlainExternalResult extends AbstractExternalResult {
@@ -71,7 +70,7 @@ public class PlainExternalResult extends AbstractExternalResult {
         if (rows.isEmpty())
             return size;
 
-        Data buff = createDataBuffer(rowSize(rows));
+        Data buff = createDataBuffer(rowSize(rows)); // TODO do not create big buffer
 
         for (Value[] row : rows)
             addRowToBuffer(row, buff);

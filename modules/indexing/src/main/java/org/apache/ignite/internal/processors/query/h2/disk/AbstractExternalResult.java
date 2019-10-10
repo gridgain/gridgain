@@ -62,13 +62,16 @@ public abstract class AbstractExternalResult implements ResultExternal {
     protected final File file;
 
     /** Spill file IO.*/
-    protected volatile FileIO fileIo;
+    protected final FileIO fileIo;
 
     /** Memory tracker. */
     protected final H2MemoryTracker memTracker;
 
     /** Parent result. */
     protected final AbstractExternalResult parent;
+
+    /** IO factory. */
+    private final FileIOFactory fileIOFactory;
 
     /** Child results count. Parent result is closed only when all children are closed. */
     private int childCnt;
@@ -92,7 +95,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
                 false
             ), fileName);
 
-            FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
+            fileIOFactory = ctx.query().fileIOFactory();
 
             fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
 
@@ -119,12 +122,19 @@ public abstract class AbstractExternalResult implements ResultExternal {
         log = parent.log;
         size = parent.size;
         file = parent.file;
-        fileIo = parent.fileIo;
+        fileIOFactory = parent.fileIOFactory;
+        try {
+            fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+        }
+        catch (IOException e) {
+            throw new IgniteException("Failed to create a spill file for the intermediate query results.", e);
+        }
+
         this.parent = parent;
         memTracker = parent.memTracker;
 
         if (memTracker != null)
-            memTracker.registerCloseListener(this::close);
+            memTracker.registerCloseListener(this::close); // TODO remove this
     }
 
     /**
@@ -185,15 +195,9 @@ public abstract class AbstractExternalResult implements ResultExternal {
      */
     @NotNull protected ByteBuffer readDataFromFile(int rowLen) {
         try {
-            ByteBuffer rowBytes = ByteBuffer.allocate(rowLen); // 2 x integer for length in bytes and columns count.
+            ByteBuffer rowBytes = ByteBuffer.allocate(rowLen); // TODO can we preallocate buffer?
 
-            while (rowBytes.hasRemaining()) {
-                int bytesRead = fileIo.read(rowBytes);
-
-                if (bytesRead <= 0)
-                    throw new IOException("Can not read data from file: " + file.getAbsolutePath() +
-                        ", curPos=" + fileIo.position() + ", rowLen=" + rowLen + "]");
-            }
+            fileIo.readFully(rowBytes);
 
             rowBytes.flip();
 
@@ -272,13 +276,17 @@ public abstract class AbstractExternalResult implements ResultExternal {
     protected void markRowRemoved(long addr) {
         setFilePosition(addr);
 
-        ByteBuffer hdr = readRowHeaderFromFile();
+        ByteBuffer hdr = readRowHeaderFromFile(); // TODO do not read from, use setFilePosition(addr + TOMBSTONE_OFFSET);
 
         hdr.getInt(); // Skip row length.
 
         hdr.putInt(-1); // Put tombstone: -1 on columns count position.
 
         hdr.flip();
+
+        //boolean res = U.delete(file.getParentFile());
+
+       // System.out.println("deletion res=" + res);
 
         setFilePosition(addr);
 
@@ -346,6 +354,8 @@ public abstract class AbstractExternalResult implements ResultExternal {
 
         closed = true;
 
+        U.closeQuiet(fileIo);
+
         if (parent == null) {
             if (childCnt == 0)
                 onClose();
@@ -362,7 +372,6 @@ public abstract class AbstractExternalResult implements ResultExternal {
 
     /** */
     protected void onClose() {
-        U.closeQuiet(fileIo);
         file.delete();
 
         if (log.isDebugEnabled())

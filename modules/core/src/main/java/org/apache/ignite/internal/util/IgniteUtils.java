@@ -1124,32 +1124,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Gets nearest power of 2 larger or equal than v.
-     *
-     * Copied from <a href="https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2">bithacks</a>.
-     *
-     * @param v Value.
-     * @return Nearest power of 2.
-     */
-    public static long ceilPow2Long(long v) {
-        if (v == 0)
-            return 1;
-        else if (v < 0 || v > (1L << 62))
-            throw new IllegalArgumentException("Argument out of range: " + v);
-
-        v--;
-
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v |= v >> 32;
-
-        return ++v;
-    }
-
-    /**
      * @param i Value.
      * @return {@code true} If the given value is power of 2 (0 is not power of 2).
      */

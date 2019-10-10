@@ -123,6 +123,7 @@ public class H2ManagedLocalResult implements LocalResult {
             return memTracker.reserved(memory);
     }
 
+    /** {@inheritDoc} */
     @Override public boolean isLazy() {
         return false;
     }

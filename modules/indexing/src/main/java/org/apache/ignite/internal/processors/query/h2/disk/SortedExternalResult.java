@@ -154,24 +154,22 @@ public class SortedExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
-        if (isAnyDistinct()) {
-            if (containsRowWithOrderCheck(row))
+        if (isAnyDistinct() && containsRowWithOrderCheck(row))
                 return size;
-        }
 
         addRowToBuffer(row);
 
         if (needToSpill())
             spillRowsBufferToDisk();
 
-        return size++;
+        return ++size;
     }
 
     /**
      * Checks if current result contains given row with sort order check.
      *
      * @param row Row.
-     * @return {@code True} if current result does not contain th given row.
+     * @return {@code True} if current result does not contain the given row.
      */
     private boolean containsRowWithOrderCheck(Value[] row) {
         Value[] previous = getPreviousRow(row);
@@ -244,7 +242,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
         markRowRemoved(addr);
 
-        return size--;
+        return --size;
     }
 
     /**
@@ -255,7 +253,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     }
 
     /**
-     * Adds row in-memory row buffer.
+     * Adds row to in-memory row buffer.
      * @param row Row.
      */
     private void addRowToBuffer(Value[] row) {

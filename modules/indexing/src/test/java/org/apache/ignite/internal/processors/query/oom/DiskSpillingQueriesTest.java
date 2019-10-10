@@ -25,6 +25,12 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
+ * TODO Refactor AbstractExternalResult
+ * TODO Shallow copy of ManagedResult - how to handle memory reserved by the result set detached from the query?
+ * TODO Move tracker outside of external result.
+ * TODO Memory tracking overhaul - see Andrey's notes in PR.
+ * TODO Tests for huge results
+ * TODO Unit tests?
  */
 @RunWith(Parameterized.class)
 public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
