@@ -175,7 +175,7 @@ public class IgniteDataConsumer implements AutoCloseable {
                     logger.log(Level.WARNING, "Unable to persist traceItem=[" + traceItem + ']', e);
                 }
             }
-            else if (traceItem instanceof CacheQueryTraceItem) {
+            else if (traceItem instanceof CommitTraceItem) {
                 CommitTraceItem commitTraceItem = (CommitTraceItem)traceItem;
 
                 try {
