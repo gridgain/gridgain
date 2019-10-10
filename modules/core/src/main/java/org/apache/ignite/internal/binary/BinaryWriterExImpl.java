@@ -965,15 +965,25 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         if (po == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
+            po = po.detach();
 
-            int len = po.length();
+            byte[] poArr = po.array();
 
-            out.unsafeEnsure(1 + 4 + len + 4);
+            out.unsafeEnsure(1 + 4 + poArr.length + 4);
 
             out.unsafeWriteByte(GridBinaryMarshaller.BINARY_OBJ);
-            out.unsafeWriteInt(len);
-            out.write(po.array(), po.start(), len);
-            out.unsafeWriteInt(0);
+            out.unsafeWriteInt(poArr.length);
+            out.writeByteArray(poArr);
+            out.unsafeWriteInt(po.start());
+
+//            int len = po.length();
+//
+//            out.unsafeEnsure(1 + 4 + len + 4);
+//
+//            out.unsafeWriteByte(GridBinaryMarshaller.BINARY_OBJ);
+//            out.unsafeWriteInt(len);
+//            out.write(po.array(), po.start(), len);
+//            out.unsafeWriteInt(0);
         }
     }
 
