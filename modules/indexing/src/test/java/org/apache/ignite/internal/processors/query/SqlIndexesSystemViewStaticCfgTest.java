@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -90,26 +91,23 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS, value = "true")
     @Test
     public void testIndexesViewDisabledBySystemProperty() throws Exception {
-        String old = System.getProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
+        ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
+            new CacheConfiguration<>("cache")
+                .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
+                .setIndexes(Collections.singleton(new QueryIndex("i")))))
+        };
 
-        try {
-            startNodes();
+        startNodes();
 
-            ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
-                new CacheConfiguration<>("cache")
-                    .setQueryEntities(Collections.singleton(new QueryEntity(Integer.class, TestValue.class)
-                    .setIndexes(Collections.singleton(new QueryIndex("i")))))
-            };
+        for (Ignite ign : G.allGrids()) {
+            Throwable e = GridTestUtils.assertThrowsWithCause(
+                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                IgniteSQLException.class);
 
-            checkIndexes(List::isEmpty);
-        }
-        finally {
-            if (old == null)
-                System.clearProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
-            else
-                System.setProperty(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS, old);
+            assertTrue(e.getMessage().contains("Schema \"SYS\" not found"));
         }
     }
 
