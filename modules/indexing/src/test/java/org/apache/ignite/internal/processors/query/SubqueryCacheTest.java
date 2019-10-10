@@ -47,7 +47,7 @@ public class SubqueryCacheTest extends AbstractIndexingCommonTest {
     private static final int OUTER_SIZE = 10;
 
     /** Inner table size. */
-    private static final int INNER_SIZE = 10;
+    private static final int INNER_SIZE = 50;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -202,14 +202,10 @@ public class SubqueryCacheTest extends AbstractIndexingCommonTest {
      * Utility class with custom SQL functions.
      */
     public static class TestSQLFunctions {
-        /** Callable count. */
+        /** Count of functions call. */
         static final AtomicLong CALL_CNT = new AtomicLong();
 
-        /**
-         * Sleep function to simulate long running queries.
-         *
-         * @return Return specified argument.
-         */
+        /** */
         @QuerySqlFunction(deterministic = true)
         public static long det_foo(long val) {
             CALL_CNT.getAndIncrement();
@@ -217,9 +213,7 @@ public class SubqueryCacheTest extends AbstractIndexingCommonTest {
             return val;
         }
 
-        /**
-         *
-         */
+        /** */
         @QuerySqlFunction(deterministic = false)
         public static long nondet_foo(long val) {
             CALL_CNT.getAndIncrement();

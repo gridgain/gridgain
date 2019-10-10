@@ -110,7 +110,7 @@ public class SubqueryCacheDisableTest extends AbstractIndexingCommonTest {
 
         for (long i = 0; i < OUTER_SIZE; ++i) {
             cacheA.put(i, grid(0).binary().builder("A_VAL")
-                .setField("JID", i % OUTER_SIZE)
+                .setField("JID", i)
                 .setField("VAL", i)
                 .build());
         }
