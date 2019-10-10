@@ -27,20 +27,46 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
+/**
+ * Class that parses glowroot trace message strings and returns corresponing {@code TraceItem} model objects.
+ */
 class DataParser {
+    /** **/
     private static final Logger logger = Logger.getLogger(DataParser.class.getName());
 
+    /**
+     * Pattern for parsing cache ops trace message string:
+     * 'trace_type=cache_ops cache_name=CacheQueryExampleOrganizations op=put args=Long,Organization'
+     */
     private static final Pattern CACHE_OPS_PATTERN = Pattern.compile("cache_name=| op=| args=");
 
+    /**
+     * Pattern for parsing cache query trace message string:
+     * 'trace_type=cache_ops cache_name=CacheQueryExampleOrganizations query=Select 1;'
+     */
     private static final Pattern CACHE_QUERY_PATTERN = Pattern.compile("cache_name=| query=");
 
+    /**
+     * Pattern for parsing compute trace message string.
+     */
     private static final Pattern COMPUTE_PATTERN = Pattern.compile("task=");
 
+    /**
+     * Pattern for parsing ignite transaction commit trace message string.
+     */
     private static final Pattern COMMIT_TX_PATTERN = Pattern.compile("label=");
 
-    // TODO: 08.10.19 Seems that in order not to mess I should rename Transaction here and everywhere to something more glowroot specific.
-    public static TraceItem parse(GlowrootTransactionMeta txMeta, long durationNanos, long offsetNanos, String traceMsg) {
-
+    /**
+     * Parses trace item message string and returns corresponfing trace item model object.
+     *
+     * @param txMeta Glowroot transaction metadata.
+     * @param durationNanos Trace duration in nanoseconds.
+     * @param offsetNanos Trace offset in nanoseconds from the beginning of transaction.
+     * @param traceMsg Trace messae string.
+     * @return Trace item model object.
+     */
+    public static TraceItem parse(GlowrootTransactionMeta txMeta, long durationNanos, long offsetNanos,
+        String traceMsg) {
         if (traceMsg.startsWith("trace_type=cache_query")) {
             String[] traceAttrs = CACHE_QUERY_PATTERN.split(traceMsg);
 
@@ -49,7 +75,8 @@ class DataParser {
         else if (traceMsg.startsWith("trace_type=cache_ops")) {
             String[] traceAttrs = CACHE_OPS_PATTERN.split(traceMsg);
 
-            return new CacheTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2], traceAttrs[3]);
+            return new CacheTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2],
+                traceAttrs[3]);
         }
         else if (traceMsg.startsWith("trace_type=compute")) {
             String[] traceAttrs = COMPUTE_PATTERN.split(traceMsg);

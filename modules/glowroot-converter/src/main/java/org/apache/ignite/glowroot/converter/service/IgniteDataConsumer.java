@@ -32,20 +32,36 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Class that persists glowroot traces to Ignite.
+ */
 public class IgniteDataConsumer implements AutoCloseable {
-
+    /** **/
     private static final Logger logger = Logger.getLogger(IgniteDataConsumer.class.getName());
 
+    /** jdbc thin connection to Ignite. **/
     private final Connection conn;
 
+    /** Prepared statement to populate cache ops table. **/
     private final PreparedStatement populateCachePreparedStmt;
 
-    private final PreparedStatement populateCacheQueryPreparedStmt;
+    /** Prepared statement to populate cache query table. **/
+    private final PreparedStatement populateCacheQryPreparedStmt;
 
+    /** Prepared statement to populate compute table. **/
     private final PreparedStatement populateComputePreparedStmt;
 
+    /** Prepared statement to populate transactions commit table. **/
     private final PreparedStatement populateTxCommitPreparedStmt;
 
+    /**
+     * Establish connection to Ignite cluster, prepares some jdbc statements and set streaming mode.
+     *
+     * @param igniteJdbcConnStr Ignite jdbc thin connection string.
+     * @param cleanupAllData Boolean param that forses all data and schema cleanup as initial step.
+     * @param overwriteEntries Boolean param that forses overwrite mode.
+     * @throws SQLException If failed during jdbc operations processing.
+     */
     public IgniteDataConsumer(String igniteJdbcConnStr, boolean cleanupAllData,
         boolean overwriteEntries) throws SQLException {
         conn = DriverManager.getConnection(igniteJdbcConnStr);
@@ -64,7 +80,7 @@ public class IgniteDataConsumer implements AutoCloseable {
                     "id, glowroot_tx_id, duration_nanos, offset_nanos, cache_name, operation, args) " +
                     "values (?, ?, ?, ?, ?, ?, ?)");
 
-            populateCacheQueryPreparedStmt = conn.prepareStatement(
+            populateCacheQryPreparedStmt = conn.prepareStatement(
                 "insert into CACHE_QUERY_TRACES(" +
                     "id, glowroot_tx_id, duration_nanos, offset_nanos, cache_name, query) " +
                     "values (?, ?, ?, ?, ?, ?)");
@@ -81,9 +97,14 @@ public class IgniteDataConsumer implements AutoCloseable {
         }
     }
 
+    /**
+     * Persist trace items to Ignite.
+     *
+     * @param traceItems Glowroot trace items.
+     */
     public void persist(List<TraceItem> traceItems) {
         assert traceItems != null;
-        assert populateCacheQueryPreparedStmt != null;
+        assert populateCacheQryPreparedStmt != null;
         assert populateCachePreparedStmt != null;
 
         for (TraceItem traceItem : traceItems) {
@@ -113,22 +134,22 @@ public class IgniteDataConsumer implements AutoCloseable {
                 }
             }
             else if (traceItem instanceof CacheQueryTraceItem) {
-                CacheQueryTraceItem cacheQueryTraceItem = (CacheQueryTraceItem)traceItem;
+                CacheQueryTraceItem cacheQryTraceItem = (CacheQueryTraceItem)traceItem;
 
                 try {
-                    populateCacheQueryPreparedStmt.setObject(1, UUID.randomUUID());
+                    populateCacheQryPreparedStmt.setObject(1, UUID.randomUUID());
 
-                    populateCacheQueryPreparedStmt.setObject(2, cacheQueryTraceItem.glowrootTxId());
+                    populateCacheQryPreparedStmt.setObject(2, cacheQryTraceItem.glowrootTxId());
 
-                    populateCachePreparedStmt.setLong(3, cacheQueryTraceItem.durationNanos());
+                    populateCachePreparedStmt.setLong(3, cacheQryTraceItem.durationNanos());
 
-                    populateCachePreparedStmt.setLong(4, cacheQueryTraceItem.offsetNanos());
+                    populateCachePreparedStmt.setLong(4, cacheQryTraceItem.offsetNanos());
 
-                    populateCacheQueryPreparedStmt.setString(5, cacheQueryTraceItem.cacheName());
+                    populateCacheQryPreparedStmt.setString(5, cacheQryTraceItem.cacheName());
 
-                    populateCacheQueryPreparedStmt.setString(6, cacheQueryTraceItem.query());
+                    populateCacheQryPreparedStmt.setString(6, cacheQryTraceItem.query());
 
-                    populateCacheQueryPreparedStmt.executeUpdate();
+                    populateCacheQryPreparedStmt.executeUpdate();
                 }
                 catch (SQLException e) {
                     logger.log(Level.WARNING, "Unable to persist traceItem=[" + traceItem + ']', e);
@@ -148,7 +169,7 @@ public class IgniteDataConsumer implements AutoCloseable {
 
                     populateComputePreparedStmt.setString(5, computeTraceItem.task());
 
-                    populateCacheQueryPreparedStmt.executeUpdate();
+                    populateCacheQryPreparedStmt.executeUpdate();
                 }
                 catch (SQLException e) {
                     logger.log(Level.WARNING, "Unable to persist traceItem=[" + traceItem + ']', e);
@@ -174,18 +195,27 @@ public class IgniteDataConsumer implements AutoCloseable {
                     logger.log(Level.WARNING, "Unable to persist traceItem=[" + traceItem + ']', e);
                 }
             }
-            else {
-                // TODO: 08.10.19 logger warning.
-            }
+            else
+                logger.log(Level.WARNING, "Unexpected trace item type=[" + traceItem.getClass() + ']');
         }
     }
 
+    /**
+     * Closes corresponding statesments and connections.
+     * @throws Exception If failed.
+     */
     @Override public void close() throws Exception {
         if (populateCachePreparedStmt != null)
             populateCachePreparedStmt.close();
 
-        if (populateCacheQueryPreparedStmt != null)
-            populateCacheQueryPreparedStmt.close();
+        if (populateCacheQryPreparedStmt != null)
+            populateCacheQryPreparedStmt.close();
+
+        if (populateComputePreparedStmt != null)
+            populateComputePreparedStmt.close();
+
+        if (populateTxCommitPreparedStmt != null)
+            populateTxCommitPreparedStmt.close();
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("SET STREAMING OFF;");
@@ -198,6 +228,13 @@ public class IgniteDataConsumer implements AutoCloseable {
             conn.close();
     }
 
+    /**
+     * Prepares schema.
+     *
+     * @param cleanupAllData Boolean param that forses all data and schema cleanup as initial step.
+     * @param igniteJdbcStmt Ignite jdbc thin connection string.
+     * @throws SQLException If Failed.
+     */
     private static void prepareSchema(boolean cleanupAllData, Statement igniteJdbcStmt) throws SQLException {
         if (cleanupAllData) {
             igniteJdbcStmt.executeQuery(
