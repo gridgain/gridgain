@@ -104,7 +104,7 @@ public enum IgniteFeatures {
     DR_CONTROL_UTILITY(25),
 
     /** Baseline auto-adjust. */
-    BASELINE_AUTO_ADJUST(26);
+    BASELINE_AUTO_ADJUST(28);
 
     /**
      * Unique feature identifier.
