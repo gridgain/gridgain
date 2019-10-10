@@ -14,14 +14,32 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.glowroot.converter.model;public final class CacheTraceItem extends TraceItem {
+package org.apache.ignite.glowroot.converter.model;
 
+/**
+ * Cache trace item produced by {@code org.apache.ignite.glowroot.CacheAspect}
+ */
+public final class CacheTraceItem extends TraceItem {
+
+    /** Cache name. **/
     private final String cacheName;
 
+    /** Cache operation. e.g, put, get, etc. **/
     private final String operation;
 
+    /** Comma separated list of arguments meta: argument types, etc. **/
     private final String args;
 
+    /**
+     * Constructor.
+     *
+     * @param txId Glowroot transaction id.
+     * @param durationNanos Trace duration in nanoseconds.
+     * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
+     * @param cacheName Cache name.
+     * @param operation Cache operation e.g, put, get, etc.
+     * @param args  Comma separated list of arguments meta: argument types, etc.
+     */
     public CacheTraceItem(String txId, long durationNanos, long offsetNanos, String cacheName, String operation,
         String args) {
         super(txId, durationNanos, offsetNanos);

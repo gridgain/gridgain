@@ -14,14 +14,28 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.glowroot.converter.model;public final class GlowrootTransactionMeta {
+package org.apache.ignite.glowroot.converter.model;
 
+/**
+ * Glowroot transaction metadata.
+ */
+public final class GlowrootTransactionMeta {
+
+    /** Glowroot transaction id.**/
     private final String id;
 
+    /** Glowroot transaction start time. **/
     private final long startTime;
 
+    /** Glowroot transaction duration. **/
     private final long durationNanos;
 
+    /**
+     * Constructor
+     * @param id Glowroot transaction id
+     * @param startTime Glowroot transaction start time.
+     * @param durationNanos Glowroot transaction duration.
+     */
     public GlowrootTransactionMeta(String id, long startTime, long durationNanos) {
         this.id = id;
         this.startTime = startTime;

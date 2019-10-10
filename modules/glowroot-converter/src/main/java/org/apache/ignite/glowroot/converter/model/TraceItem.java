@@ -14,16 +14,40 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.glowroot.converter.model;public abstract class TraceItem {
+package org.apache.ignite.glowroot.converter.model;
 
+/**
+ * Basic class for all glowroot trace items.
+ */
+public abstract class TraceItem {
+
+    /**
+     * Within context of GridGain CE Gloowroot plugin every trace item is bounded to glowroot transaction.
+     * Glowroot transaction may or may not be bounded to an Ignite transaction.
+     *   Ignite Transaction -> Glowroot Transaction -> 0..many traces.
+     *   No Ignite Transaction -> Glowroot Transaction -> 0..1 trace.
+     */
     private final String glowrootTxId;
 
+    /**
+     * Trace duration in nanoseconds
+     */
     private final long durationNanos;
 
+    /**
+     * Trace offset in nanoseconds from the begining of glowroot transaction.
+     */
     private final long offsetNanos;
 
-    public TraceItem(String txId, long durationNanos, long offsetNanos) {
-        this.glowrootTxId = txId;
+    /**
+     * Constructor.
+     *
+     * @param txId Glowroot transaction id.
+     * @param durationNanos Trace duration in nanoseconds.
+     * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
+     */
+    protected TraceItem(String txId, long durationNanos, long offsetNanos) {
+        glowrootTxId = txId;
         this.durationNanos = durationNanos;
         this.offsetNanos = offsetNanos;
     }

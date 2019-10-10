@@ -14,17 +14,33 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.glowroot.converter.model;public final class CacheQueryTraceItem extends TraceItem {
+package org.apache.ignite.glowroot.converter.model;
 
+/**
+ * Cache query trace item produced by {@code org.apache.ignite.glowroot.CacheAspect}
+ */
+public final class CacheQueryTraceItem extends TraceItem {
+
+    /** Cache name. **/
     private final String cacheName;
 
-    private final String query;
+    /** Query. **/
+    private final String qry;
 
-    public CacheQueryTraceItem(String txId, long durationNanos, long offsetNanos, String cacheName, String query) {
+    /**
+     * Constructor.
+     *
+     * @param txId Glowroot transaction id.
+     * @param durationNanos Trace duration in nanoseconds.
+     * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
+     * @param cacheName Cache name.
+     * @param qry Query.
+     */
+    public CacheQueryTraceItem(String txId, long durationNanos, long offsetNanos, String cacheName, String qry) {
         super(txId, durationNanos, offsetNanos);
 
         this.cacheName = cacheName;
-        this.query = query;
+        this.qry = qry;
     }
 
     /**
@@ -38,6 +54,6 @@ package org.apache.ignite.glowroot.converter.model;public final class CacheQuery
      * @return Query.
      */
     public String query() {
-        return query;
+        return qry;
     }
 }

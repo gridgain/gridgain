@@ -14,10 +14,24 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.glowroot.converter.model;public final class ComputeTraceItem extends TraceItem {
+package org.apache.ignite.glowroot.converter.model;
 
+/**
+ * Compute task trace item produced by {@code org.apache.ignite.glowroot.ComputeAspect}
+ */
+public final class ComputeTraceItem extends TraceItem {
+
+    /** Compute task.**/
     private final String task;
 
+    /**
+     * Constructor.
+     *
+     * @param txId Glowroot transaction id.
+     * @param durationNanos Trace duration in nanoseconds.
+     * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
+     * @param task ompute task..
+     */
     public ComputeTraceItem(String txId, long durationNanos, long offsetNanos, String task) {
         super(txId, durationNanos, offsetNanos);
 
