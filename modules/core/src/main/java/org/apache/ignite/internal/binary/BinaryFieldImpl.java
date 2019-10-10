@@ -291,7 +291,7 @@ public class BinaryFieldImpl implements BinaryFieldEx {
             try {
                 actualTypeName = actualType.typeName();
             }
-            catch (Exception e) {
+            catch (BinaryObjectException e) {
                U.error(ctx.log(), "Failed to get actual binary type name." , e);
             }
 

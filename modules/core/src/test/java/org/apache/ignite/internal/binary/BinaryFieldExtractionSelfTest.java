@@ -30,6 +30,7 @@ import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.TYPE_ID_POS;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
@@ -194,9 +195,9 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checking the exception and its text when changing the typeId by spoil
-     * internal array of a BinaryField for case of not finding the actual
-     * BinaryType.
+     * Check that when changing typeId of BinaryObject, when trying to get the
+     * field value BinaryObjectException will be thrown with the corresponding
+     * text.
      *
      * @throws Exception If failed.
      */
@@ -219,7 +220,7 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
 
         Field arrField = U.findField(timeValBinObj.getClass(), "arr");
         byte[] arr = (byte[])arrField.get(timeValBinObj);
-        arr[start + 4] = 42;
+        arr[start + TYPE_ID_POS] += 1;
 
         String expMsg = exceptionMessageOfDifferentTypeIdBinaryField(
             beforeTypeId,
