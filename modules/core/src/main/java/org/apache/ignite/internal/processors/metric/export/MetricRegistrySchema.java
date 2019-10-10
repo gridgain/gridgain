@@ -46,7 +46,6 @@ import static org.apache.ignite.internal.util.GridUnsafe.putInt;
  * 9 - byte[k] - name bytes
  * ... repeat ...
  */
-
 //TODO: add version to the metric registry schema (should also contain node version for mixed clusters)
 public class MetricRegistrySchema {
     /** Schema length in bytes. */
@@ -64,15 +63,28 @@ public class MetricRegistrySchema {
     /** Size of schema in binary representation. */
     private final int len;
 
+    /**
+     * @param items List of schema items.
+     * @param len Size of schema in binary representation.
+     */
     private MetricRegistrySchema(List<MetricRegistrySchemaItem> items, int len) {
         this.items = items;
         this.len = len;
     }
 
+    /**
+     * @return List of schema items.
+     */
     public List<MetricRegistrySchemaItem> items() {
         return Collections.unmodifiableList(items);
     }
 
+    /**
+     * @param arr Binary representation of the registry schema.
+     * @param off Offset in the {@code arr}.
+     * @param len Size of schema in binary representation.
+     * @return Schema representation.
+     */
     public static MetricRegistrySchema fromBytes(byte[] arr, int off, int len) {
         if (len > arr.length - off) {
             throw new IllegalArgumentException("Schema can't be converted from byte array. " +
@@ -130,6 +142,12 @@ public class MetricRegistrySchema {
         return arr;
     }
 
+    /**
+     * Writes the schema directly to the given array.
+     *
+     * @param arr Array to write the schema to.
+     * @param off Offset from which the schema will be written.
+     */
     public void toBytes(byte[] arr, int off) {
         if (len > arr.length - off) {
             throw new IllegalArgumentException("Schema can't be converted to byte array. " +
@@ -160,23 +178,41 @@ public class MetricRegistrySchema {
         }
     }
 
+    /**
+     * Adds a metric with the given metric type.
+     *
+     * @param key Metric name.
+     * @param metricType Metric type.
+     */
     private void add(String key, MetricType metricType) {
         items.add(new MetricRegistrySchemaItem(key, metricType));
     }
 
+    /**
+     * @return Size of schema in binary representation.
+     */
     public int length() {
         return len;
     }
 
-
+    /**
+     * Metrics registry builder.
+     */
     public static class Builder {
+        /** Collected registry schema items. */
         private List<MetricRegistrySchemaItem> items = new ArrayList<>();
+
+        /** Size of schema in binary representation. */
         private int len;
 
         public static Builder newInstance() {
             return new Builder();
         }
 
+        /**
+         * @param name Metric name.
+         * @param metricType Metric type.
+         */
         public void add(String name, MetricType metricType) {
             if (items == null)
                 throw new IllegalStateException("Builder can't be used twice.");
@@ -190,6 +226,9 @@ public class MetricRegistrySchema {
             len += VALUE_TYPE_SIZE + NAME_LEN_SIZE + nameBytes.length;
         }
 
+        /**
+         * @return Built schema.
+         */
         public MetricRegistrySchema build() {
             if (items == null)
                 throw new IllegalStateException("Builder can't be used twice.");

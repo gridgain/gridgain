@@ -34,7 +34,6 @@ import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_M
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_TYPE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC;
@@ -185,13 +184,11 @@ class TcpCommunicationMetricsListener {
 
             sentMsgsMetric.increment();
 
-            //sentMsgsMetricsByType.computeIfAbsent(msg.directType(), sentMsgsCntByTypeMetricFactory).increment();
+            sentMsgsMetricsByType.computeIfAbsent(msg.directType(), sentMsgsCntByTypeMetricFactory).increment();
 
-            //sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, sentMsgsCntByNodeIdMetricFactory).increment();
+            sentMsgsMetricsByConsistentId.computeIfAbsent(consistentId, sentMsgsCntByConsistentIdMetricFactory).increment();
 
-            //sentMsgsMetricsByConsistentId.computeIfAbsent(consistentId, sentMsgsCntByConsistentIdMetricFactory).increment();
-
-            //sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, id -> new AtomicLong()).incrementAndGet();
+            sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, id -> new AtomicLong()).incrementAndGet();
         }
     }
 
@@ -213,13 +210,11 @@ class TcpCommunicationMetricsListener {
 
             rcvdMsgsMetric.increment();
 
-            //rcvdMsgsMetricsByType.computeIfAbsent(msg.directType(), rcvdMsgsCntByTypeMetricFactory).increment();
+            rcvdMsgsMetricsByType.computeIfAbsent(msg.directType(), rcvdMsgsCntByTypeMetricFactory).increment();
 
-            //rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, rcvdMsgsCntByNodeIdMetricFactory).increment();
+            rcvdMsgsMetricsByConsistentId.computeIfAbsent(consistentId, rcvdMsgsCntByConsistentIdMetricFactory).increment();
 
-            //rcvdMsgsMetricsByConsistentId.computeIfAbsent(consistentId, rcvdMsgsCntByConsistentIdMetricFactory).increment();
-
-            //rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, id -> new AtomicLong()).incrementAndGet();
+            rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, id -> new AtomicLong()).incrementAndGet();
         }
     }
 

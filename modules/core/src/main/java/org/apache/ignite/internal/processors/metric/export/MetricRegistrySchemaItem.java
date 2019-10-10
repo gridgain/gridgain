@@ -17,23 +17,37 @@
 package org.apache.ignite.internal.processors.metric.export;
 
 import java.util.Objects;
-
-import org.apache.ignite.internal.util.GridUnsafe;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Registry schema item.
+ */
 public class MetricRegistrySchemaItem {
+    /** */
     private final String name;
+
+    /** */
     private final MetricType metricType;
 
+    /**
+     * @param name Metric name.
+     * @param metricType Metric type.
+     */
     public MetricRegistrySchemaItem(@NotNull String name, MetricType metricType) {
         this.name = name;
         this.metricType = metricType;
     }
 
+    /**
+     * @return Metric name.
+     */
     public String name() {
         return name;
     }
 
+    /**
+     * @return Metric type.
+     */
     public MetricType metricType() {
         return metricType;
     }

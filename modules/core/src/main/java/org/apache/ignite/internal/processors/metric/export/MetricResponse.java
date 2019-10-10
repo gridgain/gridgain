@@ -130,6 +130,17 @@ public class MetricResponse implements Message {
         // No-op.
     }
 
+    /**
+     * @param schemaVer Schema version.
+     * @param ts Timestamp.
+     * @param clusterId Cluster ID.
+     * @param userTag Cluster tag assigned by user.
+     * @param consistentId Node consistent ID.
+     * @param schemaSize Schema size in binary format.
+     * @param dataSize Data size.
+     * @param schemaWriter Schema writer.
+     * @param dataWriter Data writer.
+     */
     public MetricResponse(
             int schemaVer,
             long ts,
@@ -170,22 +181,37 @@ public class MetricResponse implements Message {
             dataWriter.accept(body, dataOff);
     }
 
+    /**
+     * @return Message size.
+     */
     public int size() {
         return getInt(body, BYTE_ARR_OFF + MSG_SIZE_OFF);
     }
 
+    /**
+     * @return Protocol version.
+     */
     public short protocolVersion() {
         return getShort(body, BYTE_ARR_OFF + PROTO_VER_OFF);
     }
 
+    /**
+     * @return Timestamp.
+     */
     public long timestamp() {
         return getLong(body, BYTE_ARR_OFF + TIMESTAMP_OFF);
     }
 
+    /**
+     * @return Schema version.
+     */
     public int schemaVersion() {
         return getInt(body, BYTE_ARR_OFF + SCHEMA_VER_OFF);
     }
 
+    /**
+     * @return Cluster ID.
+     */
     //TODO: could be null?
     public UUID clusterId() {
         long mostSigBits = getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF);
@@ -195,6 +221,9 @@ public class MetricResponse implements Message {
         return new UUID(mostSigBits, leastSigBits);
     }
 
+    /**
+     * @return User tag.
+     */
     @Nullable public String userTag() {
         int len = userTagSize();
 
@@ -204,10 +233,16 @@ public class MetricResponse implements Message {
         return new String(body, USER_TAG_OFF, len, UTF_8);
     }
 
+    /**
+     * @return User tag size.
+     */
     private int userTagSize() {
         return getInt(body, BYTE_ARR_OFF + USER_TAG_SIZE_OFF);
     }
 
+    /**
+     * @return Consistent ID.
+     */
     public String consistentId() {
         int consistentIdSizeOff = BASE_HEADER_SIZE + userTagSize();
 
@@ -218,6 +253,9 @@ public class MetricResponse implements Message {
         return new String(body, off, len, UTF_8);
     }
 
+    /**
+     * @return Metrics schema for this message.
+     */
     @Nullable public MetricSchema schema() {
         int off = schemaOffset();
 
@@ -227,6 +265,10 @@ public class MetricResponse implements Message {
         return MetricSchema.fromBytes(body, off, schemaSize());
     }
 
+    /**
+     * @param schema Schema obtained by {@link #schema()}.
+     * @param consumer Visitor for the values from this message.
+     */
     public void processData(MetricSchema schema, MetricValueConsumer consumer) {
         int off = dataOffset();
 
@@ -285,23 +327,54 @@ public class MetricResponse implements Message {
         }
     }
 
-
+    /**
+     * @return Schema offset.
+     */
     public int schemaOffset() {
         return getInt(body, BYTE_ARR_OFF + SCHEMA_OFF_OFF);
     }
 
+    /**
+     * @return Schema size.
+     */
     public int schemaSize() {
         return getInt(body, BYTE_ARR_OFF + SCHEMA_SIZE_OFF);
     }
 
+    /**
+     * @return Data offset.
+     */
     public int dataOffset() {
         return getInt(body, BYTE_ARR_OFF + DATA_OFF_OFF);
     }
 
+    /**
+     * @return Data size.
+     */
     public int dataSize() {
         return getInt(body, BYTE_ARR_OFF + DATA_SIZE_OFF);
     }
 
+    /**
+     * @return Message body.
+     */
+    public byte[] body() {
+        return body;
+    }
+
+    /**
+     * Writes message header.
+     *
+     * @param schemaVer Schema version.
+     * @param ts Timestamp.
+     * @param clusterId Cluster ID.
+     * @param userTagBytes User tags bytes.
+     * @param consistentIdBytes Consistent ID bytes.
+     * @param schemaOff Schema offset.
+     * @param schemaSize Schema size.
+     * @param dataOff Data offset.
+     * @param dataSize Data size.
+     */
     private void header(
             int schemaVer,
             long ts,
@@ -352,7 +425,6 @@ public class MetricResponse implements Message {
         copyMemory(consistentIdBytes, BYTE_ARR_OFF, body, BYTE_ARR_OFF + off, consistentIdBytes.length);
     }
 
-
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -370,7 +442,6 @@ public class MetricResponse implements Message {
                     return false;
 
                 writer.incrementState();
-
         }
 
         return true;
@@ -391,7 +462,6 @@ public class MetricResponse implements Message {
                     return false;
 
                 reader.incrementState();
-
         }
 
         return reader.afterMessageRead(MetricResponse.class);
@@ -410,9 +480,5 @@ public class MetricResponse implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
-    }
-
-    public byte[] body() {
-        return body;
     }
 }

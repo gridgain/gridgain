@@ -75,7 +75,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
 
         memMetrics = new DataRegionMetricsImpl(plcCfg,
             new GridMetricManager(new GridTestKernalContext(new GridTestLog4jLogger(), cfg)),
-            NO_OP_METRICS, log);
+            NO_OP_METRICS);
 
         memMetrics.enableMetrics();
     }

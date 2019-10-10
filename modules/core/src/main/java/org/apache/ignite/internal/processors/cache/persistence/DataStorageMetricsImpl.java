@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.util.Collection;
 import org.apache.ignite.DataRegionMetrics;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -114,8 +113,7 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
         GridMetricManager mmgr,
         boolean metricsEnabled,
         long rateTimeInterval,
-        int subInts,
-        IgniteLogger log
+        int subInts
     ) {
         this.metricsEnabled = metricsEnabled;
         this.rateTimeInterval = rateTimeInterval;

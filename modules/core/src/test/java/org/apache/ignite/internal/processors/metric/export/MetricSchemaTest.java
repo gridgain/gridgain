@@ -26,19 +26,27 @@ import static org.apache.ignite.internal.processors.metric.export.MetricSchema.R
 import static org.apache.ignite.internal.processors.metric.export.MetricSchema.SCHEMA_ITEM_CNT_SIZE;
 import static org.junit.Assert.*;
 
+/**
+ *
+ */
 public class MetricSchemaTest {
+    /** */
     private static final String ITEM_NAME_PREF = "item.name.";
 
+    /** */
     private static final String REG_PREF = "registry.";
 
+    /** */
     private static final int CNT = 4;
 
+    /** */
     private static final String DISALLOWED = "disallowed";
 
+    /** */
     private static final int ARR_EXPANDED_DELTA = 128;
 
+    /** */
     private static final int SCHEMA_OFF = 64;
-
 
     @Test
     public void testBuild() {

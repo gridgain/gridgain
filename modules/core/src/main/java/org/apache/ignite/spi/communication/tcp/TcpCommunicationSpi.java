@@ -402,8 +402,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     /** Communication metrics group name. */
     public static final String COMMUNICATION_METRICS_GROUP_NAME = "communication.tcp";
 
-    public static final String COMMUNICATION_METRICS_GROUP_TYPE = "communication.tcp.node";
-
     /** */
     public static final String SENT_MESSAGES_METRIC_NAME = "sentMessagesCount";
 

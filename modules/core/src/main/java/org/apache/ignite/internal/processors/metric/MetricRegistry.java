@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.metric;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.IntSupplier;
@@ -27,6 +27,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.BooleanGauge;
 import org.apache.ignite.internal.processors.metric.impl.BooleanMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.DoubleGauge;
@@ -38,10 +39,8 @@ import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderWithDelegateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongGauge;
-import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.ObjectGauge;
 import org.apache.ignite.internal.processors.metric.impl.ObjectMetricImpl;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
@@ -58,8 +57,7 @@ import static org.apache.ignite.internal.util.lang.GridFunc.nonThrowableSupplier
  * Represents named set of metrics produced by one metrics source.
  */
 public class MetricRegistry implements Iterable<Metric> {
-    public static final NullLogger NULL_LOG = new NullLogger();
-
+    /** Registry type. */
     private final String type;
 
     /** Registry name. */
@@ -69,11 +67,7 @@ public class MetricRegistry implements Iterable<Metric> {
     private final IgniteLogger log;
 
     /** Registered metrics. */
-    private final Map<String, Metric> metrics = new LinkedHashMap<>();
-
-    public MetricRegistry(String type, String grpName) {
-        this(type, grpName, NULL_LOG);
-    }
+    private final ConcurrentHashMap<String, Metric> metrics = new ConcurrentHashMap<>();
 
     /**
      * @param grpName Group name.
@@ -85,6 +79,9 @@ public class MetricRegistry implements Iterable<Metric> {
         this.log = log;
     }
 
+    /**
+     * @return Registry type.
+     */
     public String type() {
         return type;
     }
@@ -121,6 +118,9 @@ public class MetricRegistry implements Iterable<Metric> {
         return metrics.values().iterator();
     }
 
+    /**
+     * @return Metrics map.
+     */
     public Map<String, Metric> metrics() {
         return Collections.unmodifiableMap(metrics);
     }

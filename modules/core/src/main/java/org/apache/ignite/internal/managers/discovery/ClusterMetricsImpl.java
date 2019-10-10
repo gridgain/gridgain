@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoManager.RC
 import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
+import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.LAST_DATA_VER;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
@@ -202,8 +203,6 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         this.ctx = ctx;
         this.nodeStartTime = nodeStartTime;
 
-        //MetricRegistry mreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, ctx.log(getClass()));
-
         MetricRegistry mreg = ctx.metric().registry(SYS_METRICS);
 
         gcCpuLoad = mreg.findMetric(GC_CPU_LOAD);
@@ -232,7 +231,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
         pmeDuration = pmeReg.findMetric(PME_DURATION);
 
-        lastDataVer = ctx.metric().registry(SYS_METRICS).findMetric(LAST_DATA_VER);
+        lastDataVer = ctx.metric().registry(CACHE_METRICS).findMetric(LAST_DATA_VER);
 
         MetricRegistry ioReg = ctx.metric().registry(COMM_METRICS);
 

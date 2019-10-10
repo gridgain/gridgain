@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -115,10 +114,8 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      * @param dataRegionMetricsProvider Data region metrics provider.
      */
     public DataRegionMetricsImpl(DataRegionConfiguration memPlcCfg,
-                                 GridMetricManager mmgr,
-                                 DataRegionMetricsProvider dataRegionMetricsProvider,
-                                 IgniteLogger log
-    ) {
+        GridMetricManager mmgr,
+        DataRegionMetricsProvider dataRegionMetricsProvider) {
         this.memPlcCfg = memPlcCfg;
         this.dataRegionMetricsProvider = dataRegionMetricsProvider;
         this.mmgr = mmgr;
@@ -428,19 +425,10 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public LongAdderMetric getOrAllocateGroupPageAllocationTracker(String grpName) {
         return grpAllocationTrackers.computeIfAbsent(grpName,
-                id -> {
-                    String name = metricName(CACHE_GROUP_METRICS_PREFIX, grpName);
-
-                    MetricRegistry mreg = mmgr.registry(name);
-
-                    LongAdderMetric m = mreg.longAdderMetric(
-                            "TotalAllocatedPages",
-                            totalAllocatedPages::add,
-                            "Cache group total allocated pages.");
-
-                    return m;
-                }
-        );
+            id -> mmgr.registry(metricName(CACHE_GROUP_METRICS_PREFIX, grpName)).longAdderMetric(
+                "TotalAllocatedPages",
+                totalAllocatedPages::add,
+                "Cache group total allocated pages."));
     }
 
     /**

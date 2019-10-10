@@ -18,19 +18,35 @@ package org.apache.ignite.internal.processors.metric.export;
 
 import java.util.Objects;
 
+/**
+ * Metrics schema item.
+ */
 public class MetricSchemaItem {
+    /** Item index. */
     private final short idx;
+
+    /** Schema item prefix. */
     private final String pref;
 
+    /**
+     * @param idx Item index.
+     * @param pref Schema item prefix.
+     */
     public MetricSchemaItem(short idx, String pref) {
         this.idx = idx;
         this.pref = pref;
     }
 
+    /**
+     * @return Item index.
+     */
     public short index() {
         return idx;
     }
 
+    /**
+     * @return Schema item prefix.
+     */
     public String prefix() {
         return pref;
     }

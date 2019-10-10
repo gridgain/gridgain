@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.metric;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -73,9 +72,7 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         IoStatisticsType type,
         String cacheName,
         String idxName,
-        GridMetricManager mmgr,
-        IgniteLogger log
-    ) {
+        GridMetricManager mmgr) {
         assert cacheName != null && idxName != null;
 
         this.cacheName = cacheName;

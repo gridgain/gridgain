@@ -275,12 +275,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
         AtomicInteger maxCalculatedInlineSize = new AtomicInteger();
 
         IoStatisticsHolder stats = new IoStatisticsHolderIndex(
-                SORTED_INDEX,
-                cctx.name(),
-                idxName,
-                cctx.kernalContext().metric(),
-                log
-        );
+            SORTED_INDEX,
+            cctx.name(),
+            idxName,
+            cctx.kernalContext().metric());
 
         for (int i = 0; i < segments.length; i++) {
             db.checkpointReadLock();

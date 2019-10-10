@@ -1154,7 +1154,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
 
                 startProcessor(new MetricExporter(ctx));
-
                 //TODO: start metrics exporter
 
                 startTimer.finishGlobalStage("Start processors");

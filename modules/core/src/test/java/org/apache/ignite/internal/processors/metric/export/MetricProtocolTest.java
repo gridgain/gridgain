@@ -31,6 +31,9 @@ import org.junit.Test;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 
+/**
+ *
+ */
 public class MetricProtocolTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -55,6 +58,9 @@ public class MetricProtocolTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testRequestMetrics() throws Exception {
         Ignite ignite = startGrid();
@@ -101,5 +107,4 @@ public class MetricProtocolTest extends GridCommonAbstractTest {
 
         latch.await();
     }
-
 }

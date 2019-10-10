@@ -24,16 +24,23 @@ import static org.apache.ignite.internal.processors.metric.export.MetricRegistry
 import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.VALUE_TYPE_SIZE;
 import static org.junit.Assert.assertEquals;
 
-
+/**
+ *
+ */
 public class MetricRegistrySchemaTest {
+    /** */
     private static final String ITEM_NAME_PREF = "item.name.";
 
+    /** */
     private static final int CNT = 4;
 
+    /** */
     private static final String DISALLOWED = "disallowed";
 
+    /** */
     private static final int ARR_EXPANDED_DELTA = 128;
 
+    /** */
     private static final int SCHEMA_OFF = 64;
 
     @Test
@@ -132,7 +139,6 @@ public class MetricRegistrySchemaTest {
         assertEquals(schema.length(), schema1.length());
         assertEquals(schema.items(), schema1.items());
     }
-
 
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaToBytesInPlaceBoundsViolated() {

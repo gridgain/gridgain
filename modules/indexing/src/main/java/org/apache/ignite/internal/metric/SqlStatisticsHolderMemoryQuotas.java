@@ -16,10 +16,10 @@
 
 package org.apache.ignite.internal.metric;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 
 /**
@@ -37,13 +37,19 @@ public class SqlStatisticsHolderMemoryQuotas {
     /** Measures number of sql memory allocations on this node. */
     private final LongAdderMetric quotaRequestedCnt;
 
+    /** Measures total memory in bytes it is possible to allocate on this node. */
+    private final LongGauge quotaMaxMem;
+
+    /** Measures total memory in bytes available to reserve. */
+    private final LongGauge quotaFreeMem;
+
     /**
      * Creates this mertrics holder.
      *
      * @param memMgr Memory manager which tracks sql memory.
      * @param metricMgr registers and exports outside this class metrics.
      */
-    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr, IgniteLogger log) {
+    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         this.memMgr = memMgr;
 
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
@@ -52,14 +58,21 @@ public class SqlStatisticsHolderMemoryQuotas {
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
 
-        quotasMetrics.register("maxMem", this.memMgr::maxMemory,
+        quotaMaxMem = new LongGauge("maxMem",
             "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
-            "Negative value if sql memory quotas are disabled. " +
-            "Individual queries have additional per query quotas.");
+                "Negative value if sql memory quotas are disabled. " +
+                "Individual queries have additional per query quotas.",
+            this.memMgr::maxMemory
+        );
 
-        quotasMetrics.register("freeMem", () -> this.memMgr.maxMemory() - this.memMgr.memoryReserved(),
+        quotaFreeMem = new LongGauge("freeMem",
             "How much memory in bytes currently left available for the queries on this node. " +
-            "Negative value if sql memory quotas are disabled.");
+                "Negative value if sql memory quotas are disabled.",
+            () -> this.memMgr.maxMemory() - this.memMgr.memoryReserved()
+        );
+
+        quotasMetrics.register(quotaMaxMem);
+        quotasMetrics.register(quotaFreeMem);
     }
 
     /**

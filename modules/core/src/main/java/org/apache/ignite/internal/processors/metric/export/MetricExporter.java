@@ -44,13 +44,14 @@ import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
 
 /**
- * header
- * schema
- * reg schemas idx
- * reg schemas
- * data
+ * Ignite processor which writes the metrics in a compact binary format for GMC:
+ *
+ * Header
+ * Schema
+ * Reg schemas idx
+ * Reg schemas
+ * Data
  */
-
 public class MetricExporter extends GridProcessorAdapter {
     /** Default varint byte buffer capacity. */
     private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;

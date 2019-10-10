@@ -36,17 +36,27 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ *
+ */
 public class MetricExporterTest {
-
+    /** */
     private static MetricExporter exporter;
 
+    /** */
     private static final IgniteLogger LOG = new NullLogger();
 
+    /**
+     * @throws Exception if failed.
+     */
     @Before
     public void setUp() throws Exception {
         exporter = new MetricExporter(new StandaloneGridKernalContext(LOG, null, null));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testResponse() {
         String userTag = "testUserTag";

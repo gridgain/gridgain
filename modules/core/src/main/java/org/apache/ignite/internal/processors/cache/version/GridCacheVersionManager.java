@@ -31,7 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
+import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 
 /**
  * Makes sure that cache lock order values come in proper sequence.
@@ -97,7 +97,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
     /** {@inheritDoc} */
     @Override public void start0() throws IgniteCheckedException {
-        MetricRegistry sysreg = cctx.kernalContext().metric().registry(SYS_METRICS);
+        MetricRegistry sysreg = cctx.kernalContext().metric().registry(CACHE_METRICS);
 
         lastDataVer = sysreg.longMetric(LAST_DATA_VER, "The latest data version on the node.");
 

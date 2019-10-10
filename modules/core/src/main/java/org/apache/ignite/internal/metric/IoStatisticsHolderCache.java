@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.metric;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -54,7 +53,7 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
      * @param grpId Group id.
      * @param mmgr Metric manager.
      */
-    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr, IgniteLogger log) {
+    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr) {
         assert cacheName != null;
 
         this.cacheName = cacheName;
@@ -66,8 +65,8 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
         mreg.objectMetric("name", String.class, null).value(cacheName);
         mreg.intMetric("grpId", null).value(grpId);
 
-        logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
-        physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
+        this.logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
+        this.physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
     }
 
     /** {@inheritDoc} */

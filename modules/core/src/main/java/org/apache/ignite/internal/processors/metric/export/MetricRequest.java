@@ -29,37 +29,60 @@ public class MetricRequest implements Message {
     /** Protocol version 1. */
     private static final short PROTO_VER_1 = 1;
 
+    /** */
     private short protoVer = PROTO_VER_1;
 
+    /** */
     private int schemaVer;
 
+    /** */
     private boolean schemaOnly;
 
+    /**
+     * Default metrics request.
+     */
     public MetricRequest() {
         this(-1);
     }
 
+    /**
+     * @param schemaVer Schema version.
+     */
     public MetricRequest(int schemaVer) {
         this(schemaVer, false);
     }
 
+    /**
+     * @param schemaVer Schema version.
+     * @param schemaOnly Schema only flag.
+     */
     public MetricRequest(int schemaVer, boolean schemaOnly) {
         this.schemaVer = schemaVer;
         this.schemaOnly = schemaOnly;
     }
 
+    /**
+     * @return Protocol version.
+     */
     public short protocolVersion() {
         return protoVer;
     }
 
-    public Integer schemaVersion() {
+    /**
+     * @return Schema version.
+     */
+    public int schemaVersion() {
         return schemaVer;
     }
 
+    /**
+     * @return Schema only flag.
+     */
     public boolean schemaOnly() {
         return schemaOnly;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
@@ -94,6 +117,7 @@ public class MetricRequest implements Message {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
@@ -130,15 +154,18 @@ public class MetricRequest implements Message {
         return reader.afterMessageRead(MetricRequest.class);
     }
 
+    /** {@inheritDoc} */
     @Override public short directType() {
         return -63;
     }
 
+    /** {@inheritDoc} */
     @Override public byte fieldsCount() {
         return 3;
     }
 
+    /** {@inheritDoc} */
     @Override public void onAckReceived() {
-
+        // No-op.
     }
 }
