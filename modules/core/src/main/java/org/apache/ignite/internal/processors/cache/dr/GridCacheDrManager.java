@@ -64,6 +64,14 @@ public interface GridCacheDrManager extends GridCacheManager {
     public void onExchange(AffinityTopologyVersion topVer, boolean left) throws IgniteCheckedException;
 
     /**
+     * Enrich cache version with dr-specific data.
+     *
+     * @param ver Version.
+     * @return Enriched version based on provided one.
+     */
+    public GridCacheVersion enrich(GridCacheVersion ver);
+
+    /**
      * @return {@code True} is DR is enabled.
      */
     public boolean enabled();

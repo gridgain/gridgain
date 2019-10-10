@@ -74,7 +74,7 @@ public class GridCacheMvccFlagsTest extends GridCommonAbstractTest {
 
         UUID id = UUID.randomUUID();
 
-        GridCacheVersion ver = new GridCacheVersion(1, 0, 0, 0);
+        GridCacheVersion ver = new GridCacheVersion(1, 0L, 0, 0);
 
         GridCacheMvccCandidate c = new GridCacheMvccCandidate(
             entry,
@@ -116,7 +116,7 @@ public class GridCacheMvccFlagsTest extends GridCommonAbstractTest {
 
         UUID id = UUID.randomUUID();
 
-        GridCacheVersion ver = new GridCacheVersion(1, 0, 0, 0);
+        GridCacheVersion ver = new GridCacheVersion(1, 0L, 0, 0);
 
         GridCacheMvccCandidate c = new GridCacheMvccCandidate(
             entry,

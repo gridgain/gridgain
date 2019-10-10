@@ -30,7 +30,7 @@ public class CacheVersionIO {
     private static final byte NULL_PROTO_VER = 0;
 
     /** */
-    private static final byte MAX_PROTO_VER = 2;
+    private static final byte MAX_PROTO_VER = 4;
 
     /** */
     private static final int NULL_SIZE = 1;
@@ -41,20 +41,19 @@ public class CacheVersionIO {
     /** Serialized size in bytes. */
     private static final int SIZE_V2 = 33;
 
+    /** Serialized size in bytes. */
+    private static final int SIZE_V3 = 25;
+
+    /** Serialized size in bytes. */
+    private static final int SIZE_V4 = 41;
+
     /**
      * @param ver Version.
      * @param allowNull Is {@code null} version allowed.
      * @return Serialized size in bytes.
      */
     public static int size(GridCacheVersion ver, boolean allowNull) {
-        if (ver == null) {
-            if (allowNull)
-                return NULL_SIZE;
-
-            throw new IllegalStateException("Cache version is null");
-        }
-
-        return ver instanceof GridCacheVersionEx ? SIZE_V2 : SIZE_V1;
+        return sizeForVersion(protoVersion(ver, allowNull));
     }
 
     /**
@@ -63,31 +62,58 @@ public class CacheVersionIO {
      * @param allowNull Is {@code null} version allowed.
      */
     public static void write(ByteBuffer buf, GridCacheVersion ver, boolean allowNull) {
-        if (ver == null) {
-            if (allowNull)
+        byte protoVer = protoVersion(ver, allowNull);
+
+        switch (protoVer) {
+            case NULL_PROTO_VER:
                 buf.put(NULL_PROTO_VER);
-            else
-                throw new IllegalStateException("Cache version is null");
-        }
-        else if (ver instanceof GridCacheVersionEx) {
-            byte protoVer = 2; // Version of serialization protocol.
 
-            buf.put(protoVer);
-            buf.putInt(ver.topologyVersion());
-            buf.putInt(ver.nodeOrderAndDrIdRaw());
-            buf.putLong(ver.order());
+                break;
 
-            buf.putInt(ver.conflictVersion().topologyVersion());
-            buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
-            buf.putLong(ver.conflictVersion().order());
-        }
-        else {
-            byte protoVer = 1; // Version of serialization protocol.
+            case 1:
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
 
-            buf.put(protoVer);
-            buf.putInt(ver.topologyVersion());
-            buf.putInt(ver.nodeOrderAndDrIdRaw());
-            buf.putLong(ver.order());
+                break;
+
+            case 2:
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+
+                buf.putInt(ver.conflictVersion().topologyVersion());
+                buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
+                buf.putLong(ver.conflictVersion().order());
+
+                break;
+
+            case 3:
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+                buf.putLong(ver.updateTime());
+
+                break;
+
+            case 4:
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+                buf.putLong(ver.updateTime());
+
+                buf.putInt(ver.conflictVersion().topologyVersion());
+                buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
+                buf.putLong(ver.conflictVersion().order());
+
+                break;
+
+            default:
+                throw new IllegalStateException("Unknown protocol version " + protoVer);
         }
     }
 
@@ -97,31 +123,58 @@ public class CacheVersionIO {
      * @param allowNull Is {@code null} version allowed.
      */
     public static void write(long addr, GridCacheVersion ver, boolean allowNull) {
-        if (ver == null) {
-            if (allowNull)
+        byte protoVer = protoVersion(ver, allowNull);
+
+        switch (protoVer) {
+            case NULL_PROTO_VER:
                 PageUtils.putByte(addr, 0, NULL_PROTO_VER);
-            else
-                throw new IllegalStateException("Cache version is null");
-        }
-        else if (ver instanceof GridCacheVersionEx) {
-            byte protoVer = 2; // Version of serialization protocol.
 
-            PageUtils.putByte(addr, 0, protoVer);
-            PageUtils.putInt(addr, 1, ver.topologyVersion());
-            PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 9, ver.order());
+                break;
 
-            PageUtils.putInt(addr, 17, ver.conflictVersion().topologyVersion());
-            PageUtils.putInt(addr, 21, ver.conflictVersion().nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 25, ver.conflictVersion().order());
-        }
-        else {
-            byte protoVer = 1; // Version of serialization protocol.
+            case 1:
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
 
-            PageUtils.putByte(addr, 0, protoVer);
-            PageUtils.putInt(addr, 1, ver.topologyVersion());
-            PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 9, ver.order());
+                break;
+
+            case 2:
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+
+                PageUtils.putInt(addr, 17, ver.conflictVersion().topologyVersion());
+                PageUtils.putInt(addr, 21, ver.conflictVersion().nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 25, ver.conflictVersion().order());
+
+                break;
+
+            case 3:
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+                PageUtils.putLong(addr, 17, ver.updateTime());
+
+                break;
+
+            case 4:
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+                PageUtils.putLong(addr, 17, ver.updateTime());
+
+                PageUtils.putInt(addr, 25, ver.conflictVersion().topologyVersion());
+                PageUtils.putInt(addr, 29, ver.conflictVersion().nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 33, ver.conflictVersion().order());
+
+                break;
+
+            default:
+                throw new IllegalStateException("Unknown protocol version " + protoVer);
         }
     }
 
@@ -178,7 +231,7 @@ public class CacheVersionIO {
      * @param protoVer Protocol version.
      * @return Size.
      */
-    private static int sizeForVersion(int protoVer) {
+    private static int sizeForVersion(byte protoVer) {
         switch (protoVer) {
             case NULL_PROTO_VER:
                 return NULL_SIZE;
@@ -189,14 +242,44 @@ public class CacheVersionIO {
             case 2:
                 return SIZE_V2;
 
+            case 3:
+                return SIZE_V3;
+
+            case 4:
+                return SIZE_V4;
+
             default:
                 throw new IllegalStateException();
         }
     }
 
     /**
-     * Reads GridCacheVersion instance from the given buffer. Moves buffer's position by the number of used
-     * bytes.
+     * Get protocol version.
+     *
+     * @param ver Version.
+     * @param allowNull Allow null.
+     */
+    private static byte protoVersion(GridCacheVersion ver, boolean allowNull) {
+        if (ver == null) {
+            if (allowNull)
+                return NULL_PROTO_VER;
+
+            throw new IllegalStateException("Cache version is null");
+        }
+
+        byte baseVer = 1;
+
+        if (ver.updateTime() >= 0)
+            baseVer += 2;
+
+        if (ver instanceof GridCacheVersionEx)
+            baseVer += 1;
+
+        return baseVer;
+    }
+
+    /**
+     * Reads GridCacheVersion instance from the given buffer. Moves buffer's position by the number of used bytes.
      *
      * @param buf Byte buffer.
      * @param allowNull Is {@code null} version allowed.
@@ -227,7 +310,30 @@ public class CacheVersionIO {
                 int conflictNodeOrderDrId = buf.getInt();
                 long conflictOrder = buf.getLong();
 
-                return new GridCacheVersionEx(topVer, nodeOrderDrId, order,
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, -1L,
+                    new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
+            }
+
+            case 3: {
+                int topVer = buf.getInt();
+                int nodeOrderDrId = buf.getInt();
+                long order = buf.getLong();
+                long updateTime = buf.getLong();
+
+                return new GridCacheVersion(topVer, nodeOrderDrId, order, updateTime);
+            }
+
+            case 4: {
+                int topVer = buf.getInt();
+                int nodeOrderDrId = buf.getInt();
+                long order = buf.getLong();
+                long updateTime = buf.getLong();
+
+                int conflictTop = buf.getInt();
+                int conflictNodeOrderDrId = buf.getInt();
+                long conflictOrder = buf.getLong();
+
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, updateTime,
                     new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
             }
 
@@ -268,7 +374,30 @@ public class CacheVersionIO {
                 int conflictNodeOrderDrId = PageUtils.getInt(pageAddr, 21);
                 long conflictOrder = PageUtils.getLong(pageAddr, 25);
 
-                return new GridCacheVersionEx(topVer, nodeOrderDrId, order,
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, -1L,
+                    new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
+            }
+
+            case 3: {
+                int topVer = PageUtils.getInt(pageAddr, 1);
+                int nodeOrderDrId = PageUtils.getInt(pageAddr, 5);
+                long order = PageUtils.getLong(pageAddr, 9);
+                long updateTime = PageUtils.getLong(pageAddr, 17);
+
+                return new GridCacheVersion(topVer, nodeOrderDrId, order, updateTime);
+            }
+
+            case 4: {
+                int topVer = PageUtils.getInt(pageAddr, 1);
+                int nodeOrderDrId = PageUtils.getInt(pageAddr, 5);
+                long order = PageUtils.getLong(pageAddr, 9);
+                long updateTime = PageUtils.getLong(pageAddr, 17);
+
+                int conflictTop = PageUtils.getInt(pageAddr, 25);
+                int conflictNodeOrderDrId = PageUtils.getInt(pageAddr, 29);
+                long conflictOrder = PageUtils.getLong(pageAddr, 33);
+
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, updateTime,
                     new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
             }
 

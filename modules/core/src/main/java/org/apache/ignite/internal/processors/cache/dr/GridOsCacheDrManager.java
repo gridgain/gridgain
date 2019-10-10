@@ -77,6 +77,11 @@ public class GridOsCacheDrManager implements GridCacheDrManager {
     }
 
     /** {@inheritDoc} */
+    @Override public GridCacheVersion enrich(GridCacheVersion ver) {
+        return ver;
+    }
+
+    /** {@inheritDoc} */
     @Override public void onExchange(AffinityTopologyVersion topVer, boolean left) throws IgniteCheckedException {
         // No-op.
     }
