@@ -104,71 +104,71 @@ public class DataConverter {
             System.exit(-1);
         }
 
-        // TODO: 08.10.19 Tmp.
-        try {
-            Connection conn = DriverManager.getConnection(igniteJdbcConnStr);
-
-            ResultSet rs = conn.createStatement().executeQuery("Select count(*) from CACHE_TRACES");
-
-            rs.next();
-
-            logger.info("Ignite total items: " +  rs.getLong(1));
-
-            logger.info("CACHE_TRACES");
-
-            ResultSet rsTraces = conn.createStatement().executeQuery("Select * from CACHE_TRACES");
-
-            while (rsTraces.next()) {
-                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-                    " glowroot_tx_id=" + rsTraces.getObject(2) +
-                    " duration_nanos=" + rsTraces.getObject(3) +
-                    " offset_nanos=" + rsTraces.getObject(4) +
-                    " cache_name=" + rsTraces.getObject(5) +
-                    " operation=" + rsTraces.getObject(6) +
-                    " args=" + rsTraces.getObject(7));
-            }
-
-            logger.info("CACHE_QUERY_TRACES");
-
-            ResultSet rsQueryTraces = conn.createStatement().executeQuery("Select * from CACHE_QUERY_TRACES");
-
-            while (rsTraces.next()) {
-                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
-                    " duration_nanos=" + rsQueryTraces.getObject(3) +
-                    " offset_nanos=" + rsQueryTraces.getObject(4) +
-                    " cache_name=" + rsQueryTraces.getObject(5) +
-                    " query=" + rsQueryTraces.getObject(6));
-            }
-
-            logger.info("COMPUTE_TRACES");
-
-            ResultSet rsComputeTraces = conn.createStatement().executeQuery("Select * from COMPUTE_TRACES");
-
-            while (rsTraces.next()) {
-                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
-                    " duration_nanos=" + rsQueryTraces.getObject(3) +
-                    " offset_nanos=" + rsQueryTraces.getObject(4) +
-                    " task=" + rsQueryTraces.getObject(5));
-            }
-
-            logger.info("TX_COMMIT_TRACES");
-
-            ResultSet rsTxCommitTraces = conn.createStatement().executeQuery("Select * from TX_COMMIT_TRACES");
-
-            while (rsTraces.next()) {
-                logger.info("Ignite record: id=" + rsTxCommitTraces.getObject(1) +
-                    " glowroot_tx_id=" + rsTxCommitTraces.getObject(2) +
-                    " duration_nanos=" + rsTxCommitTraces.getObject(3) +
-                    " offset_nanos=" + rsTxCommitTraces.getObject(4) +
-                    " label=" + rsTxCommitTraces.getObject(5));
-            }
-
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
+//        // TODO: 08.10.19 Tmp.
+//        try {
+//            Connection conn = DriverManager.getConnection(igniteJdbcConnStr);
+//
+//            ResultSet rs = conn.createStatement().executeQuery("Select count(*) from CACHE_TRACES");
+//
+//            rs.next();
+//
+//            logger.info("Ignite total items: " +  rs.getLong(1));
+//
+//            logger.info("CACHE_TRACES");
+//
+//            ResultSet rsTraces = conn.createStatement().executeQuery("Select * from CACHE_TRACES");
+//
+//            while (rsTraces.next()) {
+//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
+//                    " glowroot_tx_id=" + rsTraces.getObject(2) +
+//                    " duration_nanos=" + rsTraces.getObject(3) +
+//                    " offset_nanos=" + rsTraces.getObject(4) +
+//                    " cache_name=" + rsTraces.getObject(5) +
+//                    " operation=" + rsTraces.getObject(6) +
+//                    " args=" + rsTraces.getObject(7));
+//            }
+//
+//            logger.info("CACHE_QUERY_TRACES");
+//
+//            ResultSet rsQueryTraces = conn.createStatement().executeQuery("Select * from CACHE_QUERY_TRACES");
+//
+//            while (rsTraces.next()) {
+//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
+//                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
+//                    " duration_nanos=" + rsQueryTraces.getObject(3) +
+//                    " offset_nanos=" + rsQueryTraces.getObject(4) +
+//                    " cache_name=" + rsQueryTraces.getObject(5) +
+//                    " query=" + rsQueryTraces.getObject(6));
+//            }
+//
+//            logger.info("COMPUTE_TRACES");
+//
+//            ResultSet rsComputeTraces = conn.createStatement().executeQuery("Select * from COMPUTE_TRACES");
+//
+//            while (rsTraces.next()) {
+//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
+//                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
+//                    " duration_nanos=" + rsQueryTraces.getObject(3) +
+//                    " offset_nanos=" + rsQueryTraces.getObject(4) +
+//                    " task=" + rsQueryTraces.getObject(5));
+//            }
+//
+//            logger.info("TX_COMMIT_TRACES");
+//
+//            ResultSet rsTxCommitTraces = conn.createStatement().executeQuery("Select * from TX_COMMIT_TRACES");
+//
+//            while (rsTraces.next()) {
+//                logger.info("Ignite record: id=" + rsTxCommitTraces.getObject(1) +
+//                    " glowroot_tx_id=" + rsTxCommitTraces.getObject(2) +
+//                    " duration_nanos=" + rsTxCommitTraces.getObject(3) +
+//                    " offset_nanos=" + rsTxCommitTraces.getObject(4) +
+//                    " label=" + rsTxCommitTraces.getObject(5));
+//            }
+//
+//        }
+//        catch (SQLException e) {
+//            e.printStackTrace();
+//        }
         System.exit(0);
     }
 
