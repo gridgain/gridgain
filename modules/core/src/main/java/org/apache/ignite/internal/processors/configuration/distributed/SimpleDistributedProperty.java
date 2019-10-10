@@ -82,7 +82,7 @@ public class SimpleDistributedProperty<T extends Serializable> implements Distri
     }
 
     /** {@inheritDoc} */
-    public GridFutureAdapter<?> propagateAsync(T expectedVal, T newVal) throws IgniteCheckedException {
+    @Override public GridFutureAdapter<?> propagateAsync(T expectedVal, T newVal) throws IgniteCheckedException {
         ensureClusterWideUpdateIsReady();
 
         return clusterWideUpdater.casUpdate(name, expectedVal, newVal);
