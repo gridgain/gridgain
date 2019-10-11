@@ -489,44 +489,6 @@ export default class AgentManager {
     }
 
     /**
-     * @param cluster Cluster info.
-     * @param credentials Cluster credentials.
-     * @param event Event type.
-     * @param params Request params.
-     */
-    private sendToActiveCluster<T>(
-        cluster: AgentTypes.ClusterStats,
-        credentials: {username: string, password: string} | {},
-        event: string,
-        params: object
-    ): ng.IPromise<T> {
-        return this.sendToAgent<AgentTypes.GridRestResponse<T>>(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
-            .then((res) => {
-                switch (res.successStatus) {
-                    case AgentTypes.SuccessStatus.SUCCESS:
-                        return res.response;
-
-                    case AgentTypes.SuccessStatus.FAILED:
-                        if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)'))
-                            return this.restOnActiveCluster(event, params, 'Incorrect or expired session.');
-
-                        throw new Error(res.error);
-
-                    case AgentTypes.SuccessStatus.AUTH_FAILED:
-                        this.clustersSecrets.get(cluster.id).resetCredentials();
-
-                        return this.restOnActiveCluster(event, params, 'Incorrect user and/or password.');
-
-                    case AgentTypes.SuccessStatus.SECURITY_CHECK_FAILED:
-                        throw new Error('Access denied. You are not authorized to access this functionality.');
-
-                    default:
-                        throw new Error('Illegal status in node response');
-                }
-            });
-    }
-
-    /**
      * @param event Event type.
      * @param params Request params.
      * @param authErrMsg Authentication failure message.
@@ -554,13 +516,36 @@ export default class AgentManager {
                     })
                     .then((secrets) => ({cluster, credentials: secrets.getCredentials()}));
             })
-            .then(({cluster, credentials}) => this.sendToActiveCluster<T>(cluster, credentials, event, params));
+            .then(({cluster, credentials}) => this.sendToAgent<AgentTypes.GridRestResponse<T>>(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
+                .then((res) => {
+                    switch (res.successStatus) {
+                        case AgentTypes.SuccessStatus.SUCCESS:
+                            return res.response;
+
+                        case AgentTypes.SuccessStatus.FAILED:
+                            if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)'))
+                                return this.restOnActiveCluster(event, params, 'Unknown or expired session.');
+
+                            throw new Error(res.error);
+
+                        case AgentTypes.SuccessStatus.AUTH_FAILED:
+                            this.clustersSecrets.get(cluster.id).resetCredentials();
+
+                            return this.restOnActiveCluster(event, params, 'Incorrect user and/or password.');
+
+                        case AgentTypes.SuccessStatus.SECURITY_CHECK_FAILED:
+                            throw new Error('Access denied. You are not authorized to access this functionality.');
+
+                        default:
+                            throw new Error('Illegal status in node response');
+                    }
+                })
+            );
     }
 
     logout(clusterId: string) {
-        this.clustersSecrets.reset(clusterId);
-
-        return this.sendToAgent('cluster:logout', clusterId);
+        return this.sendToAgent('cluster:logout', clusterId)
+            .then(() => this.clustersSecrets.reset(clusterId));
     }
 
     /**
