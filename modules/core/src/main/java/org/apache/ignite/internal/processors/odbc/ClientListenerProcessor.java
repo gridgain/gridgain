@@ -163,8 +163,6 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
                             .build();
 
-                        srv0.start();
-
                         srv = srv0;
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
@@ -197,6 +195,14 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 throw new IgniteCheckedException("Failed to start client connector processor.", e);
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
+        super.onKernalStart(active);
+
+        if (srv != null)
+            srv.start();
     }
 
     /**
@@ -260,7 +266,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             @Override public void onMessageReceived(GridNioSession ses, Object msg) throws IgniteCheckedException {
                 ClientListenerConnectionContext connCtx = ses.meta(ClientListenerNioListener.CONN_CTX_META_KEY);
 
-                if (connCtx != null && connCtx.parser() != null) {
+                if (connCtx != null && connCtx.parser() != null && connCtx.handler().isCancellationSupported()) {
                     byte[] inMsg;
 
                     int cmdType;

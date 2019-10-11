@@ -36,7 +36,6 @@ import './modules/states/settings.state';
 import './core';
 import './modules/user/user.module';
 import './modules/branding/branding.module';
-import './modules/navbar/navbar.module';
 import './modules/getting-started/GettingStarted.provider';
 import './modules/ace.module';
 import './modules/loading/loading.module';
@@ -125,6 +124,7 @@ import panelCollapsible from './components/panel-collapsible';
 import clusterSelector from './components/cluster-selector';
 import connectedClusters from './components/connected-clusters-badge';
 import connectedClustersDialog from './components/connected-clusters-dialog';
+import stacktraceViewerDialog from './components/stacktrace-viewer-dialog';
 import pageLanding from './components/page-landing';
 import passwordVisibility from './components/password-visibility';
 import progressLine from './components/progress-line';
@@ -193,7 +193,6 @@ export default angular
         'ignite-console.states.errors',
         'ignite-console.states.settings',
         // Common modules.
-        'ignite-console.navbar',
         'ignite-console.getting-started',
         'ignite-console.loading',
         // Ignite configuration module.
@@ -226,6 +225,7 @@ export default angular
         servicesModule.name,
         connectedClusters.name,
         connectedClustersDialog.name,
+        stacktraceViewerDialog.name,
         igniteListOfRegisteredUsers.name,
         dialogAdminCreateUser.name,
         pageLanding.name,

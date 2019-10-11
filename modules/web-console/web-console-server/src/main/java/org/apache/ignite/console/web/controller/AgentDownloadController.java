@@ -49,9 +49,6 @@ import static org.springframework.http.HttpHeaders.PRAGMA;
  */
 @RestController
 public class AgentDownloadController {
-    /** Buffer size of 30Mb to handle Web Agent ZIP file manipulations. */
-    private static final int BUFFER_SZ = 30 * 1024 * 1024;
-
     /** Messages accessor. */
     private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
@@ -108,6 +105,7 @@ public class AgentDownloadController {
                     "#server-key-store-password=MY_PASSWORD",
                     "#server-trust-store=ca.jks",
                     "#server-trust-store-password=MY_PASSWORD",
+                    "#passwords-key-store=Path to key store that keeps encrypted passwords",
                     "#cipher-suites=CIPHER1,CIPHER2,CIPHER3"
                 );
 

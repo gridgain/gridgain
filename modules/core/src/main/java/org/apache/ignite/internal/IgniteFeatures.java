@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
@@ -95,8 +96,16 @@ public enum IgniteFeatures {
     WC_SNAPSHOT_CHAIN_MODE(22),
 
     /** Support of baseline auto adjustment for Web Console. */
-    WC_BASELINE_AUTO_ADJUSTMENT(23)
-    ;
+    WC_BASELINE_AUTO_ADJUSTMENT(23),
+
+    /** Scheduling disabled. */
+    WC_SCHEDULING_NOT_AVAILABLE(24),
+
+    /** Support of DR-specific visor tasks used by control utility. */
+    DR_CONTROL_UTILITY(25),
+
+    /** Baseline auto-adjust. */
+    BASELINE_AUTO_ADJUST(28);
 
     /**
      * Unique feature identifier.
@@ -195,11 +204,15 @@ public enum IgniteFeatures {
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
-            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
                 continue;
 
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
+            // Add only when scheduling is disabled.
+            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
                 continue;
 
             final int featureId = value.getFeatureId();

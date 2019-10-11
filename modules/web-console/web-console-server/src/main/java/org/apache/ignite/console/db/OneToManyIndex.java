@@ -44,22 +44,27 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
      * Constructor.
      *
      * @param ignite Ignite.
-     * @param idxName Index name.
+     * @param cacheName Cache name.
      */
-    public OneToManyIndex(Ignite ignite, String idxName, Function<K, String> msgGenerator) {
-        super(ignite, idxName);
-
-        this.msgGenerator = msgGenerator;
+    public OneToManyIndex(Ignite ignite, String cacheName) {
+        this(ignite, cacheName, -1);
     }
 
     /**
      * Constructor.
      *
      * @param ignite Ignite.
-     * @param idxName Index name.
+     * @param cacheName Cache name.
+     * @param expirationTimeout Cache expiration timeout.
      */
-    public OneToManyIndex(Ignite ignite, String idxName) {
-        this(ignite, idxName, (key) -> messages.getMessage("err.data-access-violation"));
+    public OneToManyIndex(
+        Ignite ignite,
+        String cacheName,
+        long expirationTimeout
+    ) {
+        super(ignite, cacheName, expirationTimeout);
+
+        this.msgGenerator = (key) -> messages.getMessage("err.data-access-violation");
     }
 
     /**
@@ -100,7 +105,7 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
 
         childrenIds.add(child);
 
-        cache.put(parentId, childrenIds);
+        cache().put(parentId, childrenIds);
     }
 
     /**
@@ -114,7 +119,7 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
 
         children.addAll(childrenToAdd);
 
-        cache.put(parent, children);
+        cache().put(parent, children);
     }
 
     /**
@@ -128,7 +133,7 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
 
         children.remove(child);
 
-        cache.put(parent, children);
+        cache().put(parent, children);
     }
 
     /**
@@ -142,7 +147,7 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
 
         children.removeAll(childrenToRmv);
 
-        cache.put(parent, children);
+        cache().put(parent, children);
     }
 
     /**

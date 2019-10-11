@@ -232,7 +232,12 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.T1;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.T4;
+import org.apache.ignite.internal.util.typedef.T5;
+import org.apache.ignite.internal.util.typedef.T6;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -2438,6 +2443,33 @@ public abstract class IgniteUtils {
         Collections.sort(macs);
 
         return macs;
+    }
+
+    /**
+     * Sort addresses: IPv4 & real addresses first.
+     *
+     * @param addrs Addresses to sort.
+     * @return Sorted list.
+     */
+    public static Collection<String> sortAddresses(Collection<String> addrs) {
+        if (F.isEmpty(addrs))
+            return Collections.emptyList();
+
+        int sz = addrs.size();
+
+        List<SortableAddress> sorted = new ArrayList<>(sz);
+
+        for (String addr : addrs)
+            sorted.add(new SortableAddress(addr));
+
+        Collections.sort(sorted);
+
+        Collection<String> res = new ArrayList<>(sz);
+
+        for (SortableAddress sa : sorted)
+            res.add(sa.address());
+
+        return res;
     }
 
     /**
@@ -7409,6 +7441,102 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Create one-element tuple.
+     *
+     * @param v0 First element.
+     * @param <V0> Type of first element.
+     * @return Tuple.
+     */
+    public static <V0> T1<V0> tuple(V0 v0) {
+        return new T1<>(v0);
+    }
+
+    /**
+     * Create two-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @return Tuple.
+     */
+    public static <V0, V1> T2<V0, V1> tuple(V0 v0, V1 v1) {
+        return new T2<>(v0, v1);
+    }
+
+    /**
+     * Create three-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2> T3<V0, V1, V2> tuple(V0 v0, V1 v1, V2 v2) {
+        return new T3<>(v0, v1, v2);
+    }
+
+    /**
+     * Create four-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3> T4<V0, V1, V2, V3> tuple(V0 v0, V1 v1, V2 v2, V3 v3) {
+        return new T4<>(v0, v1, v2, v3);
+    }
+
+    /**
+     * Create five-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4> T5<V0, V1, V2, V3, V4> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4) {
+        return new T5<>(v0, v1, v2, v3, v4);
+    }
+
+    /**
+     * Create six-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param v5 Sixth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @param <V5> Type of sixth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4, V5> T6<V0, V1, V2, V3, V4, V5> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4, V5 v5) {
+        return new T6<>(v0, v1, v2, v3, v4, v5);
+    }
+
+    /**
      * Utility method creating {@link JMException} with given cause.
      *
      * @param e Cause exception.
@@ -11527,6 +11655,103 @@ public abstract class IgniteUtils {
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
             throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * Special wrapper over address that can be sorted in following order:
+     *     IPv4, private IPv4, IPv4 local host, IPv6.
+     *     Lower addresses first.
+     */
+    private static class SortableAddress implements Comparable<SortableAddress> {
+        /**
+         *
+         */
+        private int type;
+
+        /**
+         *
+         */
+        private BigDecimal bits;
+
+        /**
+         *
+         */
+        private String addr;
+
+        /**
+         * Constructor.
+         *
+         * @param addr Address as string.
+         */
+        private SortableAddress(String addr) {
+            this.addr = addr;
+
+            if (addr.indexOf(':') > 0)
+                type = 4; // IPv6
+            else {
+                try {
+                    InetAddress inetAddr = InetAddress.getByName(addr);
+
+                    if (inetAddr.isLoopbackAddress())
+                        type = 3;  // localhost
+                    else if (inetAddr.isSiteLocalAddress())
+                        type = 2;  // private IPv4
+                    else
+                        type = 1; // other IPv4
+                }
+                catch (UnknownHostException ignored) {
+                    type = 5;
+                }
+            }
+
+            bits = BigDecimal.valueOf(0L);
+
+            try {
+                String[] octets = addr.contains(".") ? addr.split(".") : addr.split(":");
+
+                int len = octets.length;
+
+                for (int i = 0; i < len; i++) {
+                    long oct = F.isEmpty(octets[i]) ? 0 : Long.valueOf(octets[i]);
+                    long pow = Double.valueOf(Math.pow(256, octets.length - 1 - i)).longValue();
+
+                    bits = bits.add(BigDecimal.valueOf(oct * pow));
+                }
+            }
+            catch (Exception ignore) {
+                // No-op.
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public int compareTo(@NotNull SortableAddress o) {
+            return (type == o.type ? bits.compareTo(o.bits) : Integer.compare(type, o.type));
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            SortableAddress other = (SortableAddress)o;
+
+            return addr != null ? addr.equals(other.addr) : other.addr == null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return addr != null ? addr.hashCode() : 0;
+        }
+
+        /**
+         * @return Address.
+         */
+        public String address() {
+            return addr;
         }
     }
 
