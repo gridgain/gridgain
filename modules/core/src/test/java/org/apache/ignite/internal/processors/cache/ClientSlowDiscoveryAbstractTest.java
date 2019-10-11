@@ -34,8 +34,6 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
-import org.junit.Before;
 
 /**
  *
@@ -72,27 +70,6 @@ public class ClientSlowDiscoveryAbstractTest extends GridCommonAbstractTest {
 
         return cfg;
     }
-
-    /**
-     *
-     */
-    @Before
-    public void before() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    /**
-     *
-     */
-    @After
-    public void after() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
 
     /**
      *

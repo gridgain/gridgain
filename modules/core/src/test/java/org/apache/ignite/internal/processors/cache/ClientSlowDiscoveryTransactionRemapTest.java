@@ -40,14 +40,19 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionTimeoutException;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.internal.util.collections.Sets;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
+import static org.apache.ignite.transactions.TransactionConcurrency.*;
+import static org.apache.ignite.transactions.TransactionIsolation.*;
 
 /**
  * Tests for client nodes with slow discovery.
@@ -70,55 +75,70 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         operations.add(new NamedClosure<>(randomOperation, "random"));
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values())
-            for (TransactionIsolation isolation : TransactionIsolation.values())
+            for (TransactionIsolation isolation : TransactionIsolation.values()) {
+                if (!shouldBeTested(concurrency, isolation))
+                    continue;
+
                 for (IgniteInClosure<TestTransaction<Integer, Integer>> operation : operations)
-                    params.add(new Object[] {concurrency, isolation, operation});
+                    params.add(new Object[]{concurrency, isolation, operation});
+            }
 
         return params;
+    }
+
+    /**
+     * @param concurrency Concurrency.
+     * @param isolation Isolation.
+     * @return {@code True} if pair concurrency - isolation should be tested.
+     */
+    private static boolean shouldBeTested(TransactionConcurrency concurrency, TransactionIsolation isolation) {
+        if (concurrency == PESSIMISTIC)
+            return isolation == REPEATABLE_READ || isolation == READ_COMMITTED;
+        return concurrency == OPTIMISTIC && isolation == SERIALIZABLE;
     }
 
     /** Keys set. */
     private static final int KEYS_SET = 64;
 
     /** Put remove same key. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> putRemoveSameKey = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> putRemoveSameKey = tx -> {
         tx.put(1, 1);
         tx.remove(1);
         tx.put(1, 100);
     };
 
     /** Put remove different key. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> putRemoveDifferentKey = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> putRemoveDifferentKey = tx -> {
         tx.put(1, 1);
         tx.remove(2);
     };
 
     /** Get put same key. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> getPutSameKey = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> getPutSameKey = tx -> {
         int val = tx.get(1);
         tx.put(1, val + 1);
     };
 
     /** Get put different key. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> getPutDifferentKey = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> getPutDifferentKey = tx -> {
         int val = tx.get(1);
         tx.put(2, val + 1);
     };
 
     /** Put all remove all same keys. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> putAllRemoveAllSameKeys = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> putAllRemoveAllSameKeys = tx -> {
         tx.putAll(Maps.asMap(Sets.newSet(1, 2, 3, 4, 5), k -> k));
         tx.removeAll(Sets.newSet(1, 2, 3, 4, 5));
     };
 
     /** Put all remove all different keys. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> putAllRemoveAllDifferentKeys = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> putAllRemoveAllDifferentKeys = tx -> {
         tx.putAll(Maps.asMap(Sets.newSet(1, 2, 3, 4, 5), k -> k));
         tx.removeAll(Sets.newSet(6, 7, 8, 9, 10));
     };
 
     /** Random operation. */
-    public static IgniteInClosure<TestTransaction<Integer, Integer>> randomOperation = tx -> {
+    private static IgniteInClosure<TestTransaction<Integer, Integer>> randomOperation = tx -> {
         long seed = ThreadLocalRandom.current().nextLong();
         log.info("Seed: " + seed);
         Random random = new Random(seed);
@@ -180,7 +200,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /**
      * Interface to work with cache operations within transaction.
      */
-    static interface TestTransaction<K, V> {
+    private static interface TestTransaction<K, V> {
         /** Possible operations. */
         static int POSSIBLE_OPERATIONS = 5;
         /**
@@ -209,7 +229,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /**
      * Closure with possibility to set name to have proper print in test parameters.
      */
-    public static class NamedClosure<K, V> implements IgniteInClosure<TestTransaction<K, V>> {
+    private static class NamedClosure<K, V> implements IgniteInClosure<TestTransaction<K, V>> {
         /** Closure. */
         private final IgniteInClosure<TestTransaction<K, V>> c;
         /** Name. */
@@ -238,7 +258,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /**
      * Implementation for transaction operations backed by Ignite cache.
      */
-    static class TestTransactionEngine<K, V> implements TestTransaction<K, V> {
+    private static class TestTransactionEngine<K, V> implements TestTransaction<K, V> {
         /** Removed. */
         private final Object RMV = new Object();
         /** Cache. */
@@ -319,13 +339,31 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /** Client node to perform operations. */
     private IgniteEx clnt;
 
-    /** {@inheritDoc} */
-    @Before
-    @Override public void before() throws Exception {
-        super.before();
+    /**
+     *
+     */
+    @BeforeClass
+    public void beforeTests() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
 
         startGrid(0);
+    }
 
+    /**
+     *
+     */
+    @AfterClass
+    public void afterTests() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Before
+    public void before() throws Exception {
         clientMode = true;
 
         NodeJoinInterceptingDiscoverySpi clientDiscoSpi = new NodeJoinInterceptingDiscoverySpi();
@@ -348,6 +386,13 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         discoverySpiSupplier = TcpDiscoverySpi::new;
 
         startGrid(2);
+    }
+
+    @After
+    public void after() throws Exception {
+        // Stop client nodes.
+        stopGrid(1);
+        stopGrid(2);
     }
 
     /**
@@ -408,7 +453,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         }
 
         // After resume second client join, transaction should be timed out and rolled back.
-        if (concurrency == TransactionConcurrency.PESSIMISTIC) {
+        if (concurrency == PESSIMISTIC) {
             assertThrowsWithCause((Callable<Object>) txFut::get, TransactionTimeoutException.class);
 
             // Check that initial data is not changed by rollbacked transaction.

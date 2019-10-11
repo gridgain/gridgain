@@ -28,13 +28,35 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  *
  */
 public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAbstractTest {
+    /**
+     *
+     */
+    @Before
+    public void before() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /**
+     *
+     */
+    @After
+    public void after() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * Test check that client join works well if cache configured on it stopped on server nodes
      * but discovery event about cache stop is not delivered to client node immediately.
