@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     using System;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
 
@@ -46,7 +47,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             };
 
             var ignite = Ignition.GetIgnite();
-            GetCluster().SetActive(true);
+            GetClientCluster().SetActive(true);
 
             // To make sure there is no persisted cache from previous runs.
             ignite.DestroyCache(PersistentCache);
@@ -79,10 +80,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestClusterActivation()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.SetActive(true);
 
             Assert.IsTrue(clientCluster.IsActive());
+            Assert.IsTrue(GetCluster().IsActive());
         }
 
         /// <summary>
@@ -91,10 +93,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestClusterDeactivation()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.SetActive(false);
 
             Assert.IsFalse(clientCluster.IsActive());
+            Assert.IsFalse(GetCluster().IsActive());
         }
 
         /// <summary>
@@ -103,11 +106,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestEnableWal()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.DisableWal(PersistentCache);
 
             Assert.IsTrue(clientCluster.EnableWal(PersistentCache));
             Assert.IsTrue(clientCluster.IsWalEnabled(PersistentCache));
+            Assert.IsTrue(GetCluster().IsWalEnabled(PersistentCache));
         }
 
         /// <summary>
@@ -116,7 +120,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestEnableWalReturnsFalseIfWalWasEnabledBefore()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.DisableWal(PersistentCache);
 
             Assert.IsTrue(clientCluster.EnableWal(PersistentCache));
@@ -130,7 +134,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [TestCase("")]
         public void TestEnableWalValidatesCacheNameArgument(string cacheName)
         {
-            Assert.Throws<ArgumentException>(() => GetCluster().EnableWal(cacheName),
+            Assert.Throws<ArgumentException>(() => GetClientCluster().EnableWal(cacheName),
                 "'cacheName' argument should not be null or empty.");
         }
 
@@ -141,8 +145,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [TestCase("")]
         public void TestIsWalEnabledValidatesCacheNameArgument(string cacheName)
         {
-            Assert.Throws<ArgumentException>(() => GetCluster().IsWalEnabled(cacheName),
-                "'cacheName' argument should not be null or empty.");
+            TestDelegate action = () => GetClientCluster().IsWalEnabled(cacheName);
+            var ex = Assert.Throws<ArgumentException>(action);
+            Assert.IsTrue(ex.Message.StartsWith("'cacheName' argument should not be null or empty."));
         }
 
         /// <summary>
@@ -151,11 +156,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestDisableWal()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.EnableWal(PersistentCache);
 
             Assert.IsTrue(clientCluster.DisableWal(PersistentCache));
             Assert.IsFalse(clientCluster.IsWalEnabled(PersistentCache));
+            Assert.IsFalse(GetCluster().IsWalEnabled(PersistentCache));
         }
 
         /// <summary>
@@ -164,7 +170,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestDisableWalReturnsFalseIfWalWasDisabledBefore()
         {
-            var clientCluster = GetCluster();
+            var clientCluster = GetClientCluster();
             clientCluster.EnableWal(PersistentCache);
 
             Assert.IsTrue(clientCluster.DisableWal(PersistentCache));
@@ -178,8 +184,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [TestCase("")]
         public void TestDisableWalValidatesCacheNameArgument(string cacheName)
         {
-            Assert.Throws<ArgumentException>(() => GetCluster().DisableWal(cacheName),
-                "'cacheName' argument should not be null or empty.");
+            TestDelegate action = () => GetClientCluster().DisableWal(cacheName);
+            var ex = Assert.Throws<ArgumentException>(action);
+            Assert.IsTrue(ex.Message.StartsWith("'cacheName' argument should not be null or empty."));
         }
 
         /// <summary>
@@ -188,15 +195,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestInvalidCacheNameTriggersIgniteClientException()
         {
-            Assert.Throws<IgniteClientException>(() => GetCluster().EnableWal("invalidCache"));
+            const string invalidCacheName = "invalidCacheName";
+            TestDelegate action = () => GetClientCluster().EnableWal(invalidCacheName);
+            var ex = Assert.Throws<IgniteClientException>(action);
+            Assert.AreEqual("Cache doesn't exist: " + invalidCacheName, ex.Message);
+        }
+
+        /// <summary>
+        /// Returns Ignite client cluster.
+        /// </summary>
+        private IClientCluster GetClientCluster()
+        {
+            return Client.GetCluster();
         }
 
         /// <summary>
         /// Returns Ignite cluster.
         /// </summary>
-        private IClientCluster GetCluster()
+        private ICluster GetCluster()
         {
-            return Client.GetCluster();
+            return Ignition.GetIgnite().GetCluster();
         }
     }
 }
