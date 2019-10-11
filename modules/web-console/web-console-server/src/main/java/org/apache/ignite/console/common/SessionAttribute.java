@@ -20,6 +20,9 @@ import org.springframework.web.socket.WebSocketSession;
 
 import static org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor.HTTP_SESSION_ID_ATTR_NAME;
 
+/**
+ * Session attribute description.
+ */
 public class SessionAttribute {
     /** Session id. */
     private String sesId;
@@ -28,12 +31,20 @@ public class SessionAttribute {
     private String name;
 
     /**
+     * @param sesId Session id.
+     * @param name Attribute name.
+     */
+    public SessionAttribute(String sesId, String name) {
+        this.sesId = sesId;
+        this.name = name;
+    }
+
+    /**
      * @param ses A WebSocket session abstraction.
      * @param name Attribute name.
      */
     public SessionAttribute(WebSocketSession ses, String name) {
-        this.sesId = (String)ses.getAttributes().get(HTTP_SESSION_ID_ATTR_NAME);
-        this.name = name;
+        this((String)ses.getAttributes().get(HTTP_SESSION_ID_ATTR_NAME), name);
     }
 
     /**
