@@ -48,15 +48,243 @@
         </dependency>
 
         <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.glowroot</groupId>
             <artifactId>glowroot-agent-embedded-unshaded</artifactId>
             <version>0.13.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-wire-api</artifactId>
+            <version>0.13.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-agent-core-unshaded</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-ui</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-common2</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-common</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot.build</groupId>
+            <artifactId>glowroot-build-error-prone-jdk6</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot.build</groupId>
+            <artifactId>glowroot-build-checker-jdk6</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glowroot</groupId>
+            <artifactId>glowroot-agent-bytecode-api</artifactId>
+            <version>0.13.5</version>
+            <scope>runtime</scope>
         </dependency>
 
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.1</version>
+                <executions>
+                    <execution>
+                        <id>install-glowroot-wire-api-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-wire-api-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-wire-api</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-wire-api-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-agent-embedded-unshaded-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-agent-embedded-unshaded-0.13.5.jar
+                            </file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-agent-embedded-unshaded</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-agent-embedded-unshaded-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-agent-core-unshaded-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-agent-core-unshaded-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-agent-core-unshaded</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-agent-core-unshaded-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-ui-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-ui-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-ui</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-ui-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-common2-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-common2-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-common2</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-common2-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-common-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-common-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-common</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-common-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-build-error-prone-jdk6-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-build-error-prone-jdk6-0.13.5.jar</file>
+                            <groupId>org.glowroot.build</groupId>
+                            <artifactId>glowroot-build-error-prone-jdk6</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-build-error-prone-jdk6-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-build-checker-jdk6-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-build-checker-jdk6-0.13.5.jar</file>
+                            <groupId>org.glowroot.build</groupId>
+                            <artifactId>glowroot-build-checker-jdk6</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-build-checker-jdk6-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+
+                    <execution>
+                        <id>install-glowroot-agent-bytecode-api-lib</id>
+                        <configuration>
+                            <file>${project.basedir}/src/main/resources/glowroot-agent-bytecode-api-0.13.5.jar</file>
+                            <groupId>org.glowroot</groupId>
+                            <artifactId>glowroot-agent-bytecode-api</artifactId>
+                            <version>0.13.5</version>
+                            <packaging>jar</packaging>
+                            <generatePom>false</generatePom>
+                            <pomFile>${project.basedir}/src/main/resources/glowroot-agent-bytecode-api-0.13.5.pom</pomFile>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
