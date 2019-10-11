@@ -34,6 +34,13 @@ fixture('Basic configuration')
     })
     .after(dropTestDB);
 
+test('Check selector picker version list', async(t) => {
+    const page = new PageConfigurationBasic();
+
+    await t.hover(page.versionPicker._selector)
+        .expect(page.versionPicker.menuItems.count).eql(8, 'Should contains 8 supported versions.');
+});
+
 test('Off-heap size visibility for different Ignite versions', async(t) => {
     const page = new PageConfigurationBasic();
     const ignite2 = 'Ignite 2.4';
