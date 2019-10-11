@@ -26,13 +26,7 @@ public class StompDestinationsUtils {
     private static final String CLUSTER_PREFIX_DEST = "/app/agent/cluster";
 
     /** Cluster topology dest. */
-    private static final String CLUSTER_TOPOLOGY_DEST = CLUSTER_PREFIX_DEST + "/cluster-topology/";
-
-    /** Baseline topology dest. */
-    private static final String BASELINE_TOPOLOGY_DEST = CLUSTER_PREFIX_DEST + "/baseline-topology/";
-
-    /** Cluster active state dest. */
-    private static final String CLUSTER_ACTIVE_STATE_DEST = CLUSTER_PREFIX_DEST + "/active-state/";
+    private static final String CLUSTER_TOPOLOGY_DEST = CLUSTER_PREFIX_DEST + "/topology/";
 
     /** Cluster node configuration. */
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s";
@@ -52,22 +46,6 @@ public class StompDestinationsUtils {
      */
     public static String buildClusterTopologyDest(UUID clusterId) {
         return CLUSTER_TOPOLOGY_DEST + clusterId;
-    }
-
-    /**
-     * @param clusterId Cluster id.
-     * @return Baseline topology destination.
-     */
-    public static String buildBaselineTopologyDest(UUID clusterId) {
-        return BASELINE_TOPOLOGY_DEST + clusterId;
-    }
-
-    /**
-     * @param clusterId Cluster id.
-     * @return Cluster active state destination.
-     */
-    public static String buildClusterActiveStateDest(UUID clusterId) {
-        return CLUSTER_ACTIVE_STATE_DEST + clusterId;
     }
 
     /**
@@ -118,9 +96,10 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @return Add cluster destination.
+     * @param clusterId Cluster id.
+     * @return Send cluster info destination.
      */
-    public static String buildClusterAddDest() {
-        return "/app/cluster/add";
+    public static String buildClusterDest(UUID clusterId) {
+        return "/app/agent/cluster/" + clusterId;
     }
 }

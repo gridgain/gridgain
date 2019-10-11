@@ -17,13 +17,15 @@
 package org.gridgain.dto.topology;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static java.util.Collections.emptyList;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Class with topology snapshot.
@@ -32,27 +34,40 @@ public class TopologySnapshot {
     /** */
     private long topVer;
 
-    /***/
-    private List<Node> nodes = emptyList();
+    /** */
+    private String crdConsistentId;
+
+    /** */
+    private Collection<Node> nodes = emptyList();
 
     /**
      * @param topVer Topology version.
-     * @param nodes Cluster nodes.
+     * @param crdConsistentId Coordinator node consistent id.
+     * @param clusterNodes Cluster nodes.
      * @return Topology snapshot.
      */
-    public static TopologySnapshot topology(long topVer, Collection<ClusterNode> nodes) {
-        List<Node> clusterNodes = nodes != null ? nodes.stream().map(Node::new).collect(toList()) : emptyList();
-        return new TopologySnapshot(topVer, clusterNodes);
-    }
+    public static TopologySnapshot topology(
+        long topVer,
+        Object crdConsistentId,
+        Collection<ClusterNode> clusterNodes,
+        Collection<BaselineNode> baselineNodes
+    ) {
+        Map<String, Node> nodes = clusterNodes.stream()
+            .map(n -> new Node(n).setBaselineNode(false).setOnline(true))
+            .collect(toMap(Node::getConsistentId, Function.identity()));
 
-    /**
-     * @param topVer Topology version.
-     * @param nodes Cluster nodes.
-     * @return Baseline snapshot.
-     */
-    public static TopologySnapshot baseline(long topVer, Collection<BaselineNode> nodes) {
-        List<Node> baseLineNodes = nodes != null ? nodes.stream().map(Node::new).collect(toList()) : emptyList();
-        return new TopologySnapshot(topVer, baseLineNodes);
+        for (BaselineNode node : baselineNodes) {
+            String id = String.valueOf(node.consistentId());
+
+            if (nodes.containsKey(id)) {
+                Node n = nodes.get(id).setBaselineNode(true);
+
+                nodes.put(n.getConsistentId(), n);
+            } else
+                nodes.put(id, new Node(node).setBaselineNode(true).setOnline(false));
+        }
+
+        return new TopologySnapshot(topVer, crdConsistentId, nodes.values());
     }
 
     /**
@@ -66,10 +81,12 @@ public class TopologySnapshot {
      * Create topology snapshot for cluster.
      *
      * @param topVer Topology version.
+     * @param crdConsistentId Coordinator node consistent id.
      * @param nodes List of cluster nodes.
      */
-    private TopologySnapshot(long topVer, List<Node> nodes) {
+    private TopologySnapshot(long topVer, Object crdConsistentId, Collection<Node> nodes) {
         this.topVer = topVer;
+        this.crdConsistentId = String.valueOf(crdConsistentId);
         this.nodes = nodes;
     }
 
@@ -88,16 +105,30 @@ public class TopologySnapshot {
     }
 
     /**
+     * @return Coordinator node consistent id.
+     */
+    public String getCoordinatorConsistentId() {
+        return crdConsistentId;
+    }
+
+    /**
+     * @param crdConsistentId Coordinator node consistent id.
+     */
+    public void setCoordinatorConsistentId(String crdConsistentId) {
+        this.crdConsistentId = crdConsistentId;
+    }
+
+    /**
      * @return Cluster nodes.
      */
-    public List<Node> getNodes() {
+    public Collection<Node> getNodes() {
         return nodes;
     }
 
     /**
      * @param nodes Cluster nodes.
      */
-    public void setNodes(List<Node> nodes) {
+    public void setNodes(Collection<Node> nodes) {
         this.nodes = nodes;
     }
 

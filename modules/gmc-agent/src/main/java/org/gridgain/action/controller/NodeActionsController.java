@@ -44,6 +44,7 @@ public class NodeActionsController {
 
     /**
      * @param arg Argument.
+     * @return Completeble feature.
      */
     public CompletableFuture<VisorNodePingTaskResult> pingNode(VisorNodePingTaskArg arg) {
         CompletableFuture<VisorNodePingTaskResult> fut = new CompletableFuture<>();

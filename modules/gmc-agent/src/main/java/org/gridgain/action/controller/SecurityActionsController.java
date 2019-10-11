@@ -55,6 +55,7 @@ public class SecurityActionsController {
 
     /**
      * @param reqCreds Request credentials.
+     * @return Completeble feature with token.
      */
     public CompletableFuture<String> authenticate(AuthenticateCredentials reqCreds) {
         CompletableFuture<String> fut = new CompletableFuture<>();

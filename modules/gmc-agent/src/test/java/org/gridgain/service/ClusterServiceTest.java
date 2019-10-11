@@ -34,8 +34,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -45,13 +43,13 @@ import static org.mockito.Mockito.when;
 /**
  * Topology service test.
  */
-public class TopologyServiceTest extends AbstractServiceTest {
+public class ClusterServiceTest extends AbstractServiceTest {
     /**
      * Should send topology with cluster nodes.
      */
     @Test
     public void sendTopologyUpdate() {
-        TopologyService srvc = new TopologyService(getMockContext(), mgr);
+        ClusterService srvc = new ClusterService(getMockContext(), mgr);
 
         srvc.sendTopologyUpdate(null, null);
 
@@ -63,52 +61,8 @@ public class TopologyServiceTest extends AbstractServiceTest {
 
         Assert.assertEquals(buildClusterTopologyDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
         Assert.assertEquals(1, actualTop.getTopologyVersion());
-        Assert.assertEquals(1, actualTop.getNodes().size());
-        Assert.assertEquals(UUID.fromString("b-b-b-b-b"), actualTop.getNodes().get(0).getNodeId());
-        Assert.assertEquals(UUID.fromString("c-c-c-c-c").toString(), actualTop.getNodes().get(0).getConsistentId());
-        Assert.assertTrue(actualTop.getNodes().get(0).isClient());
-    }
-
-    /**
-     * Should send baseline topology.
-     */
-    @Test
-    public void sendBaseline() {
-        TopologyService srvc = new TopologyService(getMockContext(), mgr);
-
-        srvc.sendBaseline();
-
-        ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
-
-        TopologySnapshot actualTop = (TopologySnapshot) payloadCaptor.getValue();
-
-        Assert.assertEquals(buildBaselineTopologyDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
-        Assert.assertEquals(1, actualTop.getTopologyVersion());
-        Assert.assertEquals(1, actualTop.getNodes().size());
-        Assert.assertNull(actualTop.getNodes().get(0).getNodeId());
-        Assert.assertEquals(UUID.fromString("d-d-d-d-d").toString(), actualTop.getNodes().get(0).getConsistentId());
-        Assert.assertFalse(actualTop.getNodes().get(0).isClient());
-    }
-
-    /**
-     * Should send cluster active state.
-     */
-    @Test
-    public void sendClusterActiveState() {
-        TopologyService srvc = new TopologyService(getMockContext(), mgr);
-
-        srvc.sendClusterActiveState(null);
-
-        ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
-
-        Boolean activeState = (Boolean) payloadCaptor.getValue();
-
-        Assert.assertEquals(buildClusterActiveStateDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
-        Assert.assertTrue(activeState);
+        Assert.assertEquals(UUID.fromString("c-c-c-c-c").toString(), actualTop.getCoordinatorConsistentId());
+        Assert.assertEquals(2, actualTop.getNodes().size());
     }
 
     /** {@inheritDoc} */
@@ -134,6 +88,7 @@ public class TopologyServiceTest extends AbstractServiceTest {
         );
         clusterNode.setAttributes(attrs);
         when(cluster.nodes()).thenReturn(Lists.newArrayList(clusterNode));
+        when(cluster.localNode()).thenReturn(clusterNode);
 
         TcpDiscoveryNode baseNode = new TcpDiscoveryNode(
                 UUID.fromString("e-e-e-e-e"),

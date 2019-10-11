@@ -34,14 +34,14 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     AgentSelfTest.class,
-    BaselineActionsControllerTest.class,
-    NodeActionsControllerTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithSecurityBaseTest.class,
+    BaselineActionsControllerTest.class,
     ClusterActionsControllerTest.class,
-    SecurityActionsControllerTest.class,
+    NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,
-    QueryRegistryTest.class
+    QueryRegistryTest.class,
+    SecurityActionsControllerTest.class
 })
 public class AgentSelfTestSuite {
 }

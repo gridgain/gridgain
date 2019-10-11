@@ -22,6 +22,7 @@ import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collector;
@@ -29,6 +30,9 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.F;
@@ -38,6 +42,7 @@ import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.Session;
 
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
 /**
@@ -222,5 +227,22 @@ public class AgentUtils {
     public static void authorizeIfNeeded(IgniteSecurity security, String name, SecurityPermission perm) {
         if (security.enabled())
             security.authorize(name, perm);
+    }
+
+    /**
+     * @param ctx Context.
+     * @param nodes Nodes.
+     *
+     * @return Set of supported cluster features.
+     */
+    public static Set<String> getClusterFeatures(GridKernalContext ctx, Collection<ClusterNode> nodes) {
+        IgniteFeatures[] enums = IgniteFeatures.values();
+        Set<String> features = U.newHashSet(enums.length);
+
+        for (IgniteFeatures val : enums)
+            if (allNodesSupports(ctx, nodes, val))
+                features.add(val.name());
+
+        return features;
     }
 }

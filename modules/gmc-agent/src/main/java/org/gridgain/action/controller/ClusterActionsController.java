@@ -41,6 +41,7 @@ public class ClusterActionsController {
 
     /**
      * Activate cluster.
+     * @return Completeble feature.
      */
     public CompletableFuture<Void> activate() {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -52,6 +53,7 @@ public class ClusterActionsController {
 
     /**
      * Deactivate cluster.
+     * @return Completeble feature.
      */
     public CompletableFuture<Void> deactivate() {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);

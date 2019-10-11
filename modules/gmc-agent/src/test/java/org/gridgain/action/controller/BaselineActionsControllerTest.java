@@ -16,9 +16,13 @@
 
 package org.gridgain.action.controller;
 
+import com.google.common.collect.Lists;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.dto.action.Request;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridgain.dto.action.ActionStatus.COMPLETED;
@@ -64,5 +68,29 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
                 .setArgument(10_000);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000);
+    }
+
+    /**
+     * Should set the baselineAutoAdjustTimeout cluster property to 10_000ms.
+     */
+    @Test
+    public void setBaselineTopology() throws Exception {
+        cluster.baselineAutoAdjustEnabled(false);
+
+        IgniteEx ignite_2 = startGrid(2);
+        IgniteEx ignite_3 = startGrid(3);
+
+        List<String> ids = Lists.newArrayList(
+            cluster.localNode().id().toString(),
+            ignite_2.cluster().localNode().id().toString(),
+            ignite_3.cluster().localNode().id().toString()
+        );
+
+        Request req = new Request()
+            .setId(UUID.randomUUID())
+            .setAction("BaselineActions.setBaselineTopology")
+            .setArgument(ids);
+
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.currentBaselineTopology().size() == 3);
     }
 }

@@ -16,10 +16,16 @@
 
 package org.gridgain.action.controller;
 
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
+
+import java.util.Collection;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
@@ -40,6 +46,7 @@ public class BaselineActionsController {
 
     /**
      * @param isAutoAdjustEnabled Is auto adjust enabled.
+     * @return Completeble feature.
      */
     public CompletableFuture<Void> updateAutoAdjustEnabled(boolean isAutoAdjustEnabled) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -50,12 +57,28 @@ public class BaselineActionsController {
     }
 
     /**
-     * @param isAutoAdjustEnabled Is auto adjust enabled.
+     * @param awaitingTime Awaiting time in ms.
+     * @return Completeble feature.
      */
-    public CompletableFuture<Void> updateAutoAdjustAwaitingTime(long isAutoAdjustEnabled) {
+    public CompletableFuture<Void> updateAutoAdjustAwaitingTime(long awaitingTime) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
-        ctx.grid().cluster().baselineAutoAdjustTimeout(isAutoAdjustEnabled);
+        ctx.grid().cluster().baselineAutoAdjustTimeout(awaitingTime);
+
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * @param ids Node ids.
+     * @return Completeble feature.
+     */
+    public CompletableFuture<Void> setBaselineTopology(Collection<String> ids) {
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+
+        Set<UUID> uuids = ids.stream().map(UUID::fromString).collect(Collectors.toSet());
+
+        Collection<ClusterNode> nodes = ctx.grid().cluster().forNodeIds(uuids).forServers().nodes();
+        ctx.grid().cluster().setBaselineTopology(nodes);
 
         return CompletableFuture.completedFuture(null);
     }
