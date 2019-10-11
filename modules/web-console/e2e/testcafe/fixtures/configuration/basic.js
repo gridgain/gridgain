@@ -35,10 +35,14 @@ fixture('Basic configuration')
     .after(dropTestDB);
 
 test('Check selector picker version list', async(t) => {
+    const knownSupportedVersions = ['Ignite 2.7', 'Ignite 2.6', 'Ignite 2.5', 'Ignite 2.4', 'Ignite 2.3', 'Ignite 2.1', 'Ignite 2.0', 'Ignite 1.x'];
     const page = new PageConfigurationBasic();
 
     await t.hover(page.versionPicker._selector)
-        .expect(page.versionPicker.menuItems.count).eql(8, 'Should contains 8 supported versions.');
+        .expect(page.versionPicker.menuItems.count).eql(knownSupportedVersions.length, 'Should contains 8 supported versions.');
+
+    for (let i = 0; i < knownSupportedVersions.length; i++)
+        await page.versionPicker.pickVersion(knownSupportedVersions[i]);
 });
 
 test('Off-heap size visibility for different Ignite versions', async(t) => {
