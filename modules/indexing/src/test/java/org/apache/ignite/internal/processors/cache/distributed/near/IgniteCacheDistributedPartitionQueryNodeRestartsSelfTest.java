@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,32 +21,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.processors.query.h2.twostep.GridReduceQueryExecutor;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_RETRY_TIMEOUT;
 
 /**
  * Tests distributed queries over set of partitions on unstable topology.
  */
+@WithSystemProperty(key = IGNITE_SQL_RETRY_TIMEOUT, value = "1000000")
 public class IgniteCacheDistributedPartitionQueryNodeRestartsSelfTest extends
     IgniteCacheDistributedPartitionQueryAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        System.setProperty(IgniteSystemProperties.IGNITE_SQL_RETRY_TIMEOUT, Long.toString(1000_000L));
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_SQL_RETRY_TIMEOUT,
-            Long.toString(GridReduceQueryExecutor.DFLT_RETRY_TIMEOUT));
-
-        super.afterTestsStopped();
-    }
-
     /**
      * Tests join query within region on unstable topology.
      */
@@ -110,7 +98,7 @@ public class IgniteCacheDistributedPartitionQueryNodeRestartsSelfTest extends
         }, RESTART_THREADS_CNT);
 
         // Test duration.
-        U.sleep(60_000);
+        U.sleep(GridTestUtils.SF.applyLB(60_000, 20_000));
 
         stop.set(true);
 
