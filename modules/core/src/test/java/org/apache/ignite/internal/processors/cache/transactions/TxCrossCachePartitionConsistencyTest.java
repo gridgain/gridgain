@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -156,39 +157,39 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
             BooleanSupplier stopPred = stop::get;
 
             IgniteInternalFuture<?> restartFut = multithreadedAsync(() -> {
-                while (!stopPred.getAsBoolean()) {
+                doSleep(2_000);
+
+                Ignite restartNode = grid(r.nextInt(3));
+
+                String name = restartNode.name();
+
+                if (persistenceEnabled) {
+                    stopGrid(true, name);
+
+                    resetBaselineTopology();
+                }
+                else
+                    stopGrid(name, true);
+
+                try {
                     doSleep(2_000);
 
-                    Ignite restartNode = grid(r.nextInt(3));
-
-                    String name = restartNode.name();
-
-                    stopGrid(name, true);
+                    startGrid(name);
 
                     if (persistenceEnabled)
                         resetBaselineTopology();
 
-                    try {
-                        doSleep(2_000);
-
-                        startGrid(name);
-
-                        if (persistenceEnabled)
-                            resetBaselineTopology();
-
-                        awaitPartitionMapExchange();
-                    }
-                    catch (Exception e) {
-                        fail(X.getFullStackTrace(e));
-                    }
+                    awaitPartitionMapExchange();
+                }
+                catch (Exception e) {
+                    fail(X.getFullStackTrace(e));
+                }
+                finally {
+                    stop.set(true);
                 }
             }, 1, "node-restarter");
 
             IgniteInternalFuture<?> txFut = doRandomUpdates(r, client, keys, stopPred);
-
-            doSleep(10_000);
-
-            stop.set(true);
 
             txFut.get();
             restartFut.get();
@@ -250,7 +251,7 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
                         X.hasCause(e, TransactionRollbackException.class));
                 }
             }
-        }, Runtime.getRuntime().availableProcessors() * 2, "tx-update-thread");
+        }, Runtime.getRuntime().availableProcessors(), "tx-update-thread");
     }
 
     /**
@@ -272,6 +273,23 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
             for (Integer key : keys)
                 ds.addData(key, new Deposit(key, balance));
         }
+    }
+
+    /**
+     * @param skipCheckpointOnStop Skip checkpoint on stop.
+     * @param name Grid instance.
+     */
+    protected void stopGrid(boolean skipCheckpointOnStop, String name) {
+        IgniteEx grid = grid(name);
+
+        if (skipCheckpointOnStop) {
+            GridCacheDatabaseSharedManager db =
+                (GridCacheDatabaseSharedManager)grid.context().cache().context().database();
+
+            db.enableCheckpoints(false);
+        }
+
+        stopGrid(grid.name(), skipCheckpointOnStop);
     }
 
     /** Deposit. */
