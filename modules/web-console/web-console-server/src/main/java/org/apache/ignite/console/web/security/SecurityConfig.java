@@ -19,11 +19,9 @@ package org.apache.ignite.console.web.security;
 import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -42,9 +40,6 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.session.ExpiringSession;
-import org.springframework.session.Session;
-import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
@@ -60,9 +55,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @EnableSpringHttpSession
 @Profile("!test")
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    /** The number of seconds that the {@link Session} should be kept alive between client requests. */
-    private static final int MAX_INACTIVE_INTERVAL_SECONDS = 60 * 60 * 24 * 30;
-
     /** Sign in route. */
     public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
@@ -190,15 +182,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         res.setStatus(HttpServletResponse.SC_OK);
 
         res.getWriter().flush();
-    }
-
-    /**
-     * @param ignite Ignite.
-     */
-    @Bean
-    public SessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite) {
-        return new IgniteSessionRepository(ignite)
-            .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
     }
 
     /**

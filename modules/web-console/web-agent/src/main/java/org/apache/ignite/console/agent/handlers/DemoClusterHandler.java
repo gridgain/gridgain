@@ -22,7 +22,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.console.agent.AgentConfiguration;
-import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.TopologySnapshot;
@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOG
 /**
  * API to transfer topology from demo cluster to Web Console.
  */
-public class DemoClusterHandler extends AbstractClusterHandler{
+public class DemoClusterHandler extends AbstractClusterHandler {
     /** Demo cluster ID. */
     static final String DEMO_CLUSTER_ID = UUID.randomUUID().toString();
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.agent.handlers;
+package org.apache.ignite.console.rest;
 
 import org.apache.ignite.console.json.JsonObject;
 
