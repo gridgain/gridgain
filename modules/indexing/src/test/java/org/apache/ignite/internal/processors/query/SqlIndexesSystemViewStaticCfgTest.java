@@ -113,6 +113,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @SuppressWarnings("ThrowableNotThrown")
     public void testStaticCacheCfg() throws Exception {
         ccfg = (CacheConfiguration<Object, Object>[])new CacheConfiguration[] {
             new CacheConfiguration<>("cache")
@@ -128,6 +129,18 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
+
+        checkIndexes(expCache::equals);
+
+        driver.cluster().active(false);
+
+        for (Ignite ign : G.allGrids()) {
+            GridTestUtils.assertThrowsWithCause(
+                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                IgniteException.class);
+        }
+
+        driver.cluster().active(true);
 
         checkIndexes(expCache::equals);
 
