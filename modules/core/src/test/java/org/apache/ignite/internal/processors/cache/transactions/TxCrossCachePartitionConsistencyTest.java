@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -43,7 +44,6 @@ import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction.DFLT_PARTITION_COUNT;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -68,6 +68,9 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
 
     /** */
     private static final int NODES_CNT = 3;
+
+    /** */
+    private static final int PARTS_CNT = 64;
 
     /** */
     private boolean persistenceEnabled;
@@ -98,6 +101,7 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
         ccfg.setBackups(backups);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setOnheapCacheEnabled(false);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
         return ccfg;
     }
@@ -148,7 +152,7 @@ public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest
 
             final long balance = 1_000_000_000;
 
-            List<Integer> keys = IntStream.range(0, DFLT_PARTITION_COUNT).boxed().collect(Collectors.toList());
+            List<Integer> keys = IntStream.range(0, PARTS_CNT).boxed().collect(Collectors.toList());
 
             preload(crd, keys, balance);
 
