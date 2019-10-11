@@ -78,6 +78,7 @@ import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -108,7 +109,8 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  */
 @SystemPropertiesList({
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
 })
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */

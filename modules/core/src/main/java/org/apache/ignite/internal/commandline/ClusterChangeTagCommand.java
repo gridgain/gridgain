@@ -46,14 +46,9 @@ public class ClusterChangeTagCommand implements Command<String> {
     /** */
     private String newTagArg;
 
-    /** Flag indicates that the feature is disabled. */
-    private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
-    );
-
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
-        if (!clusterIdAndTagSupport)
+        if (!clusterIdAndTagSupport())
             return null;
 
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -92,7 +87,7 @@ public class ClusterChangeTagCommand implements Command<String> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        if (!clusterIdAndTagSupport)
+        if (!clusterIdAndTagSupport())
             return;
 
         Command.usage(logger, "Change cluster tag to new value:", CLUSTER_CHANGE_TAG, "newTagValue", optional(CMD_AUTO_CONFIRMATION));
@@ -122,5 +117,14 @@ public class ClusterChangeTagCommand implements Command<String> {
     /** */
     private VisorClusterChangeTagTaskArg toVisorArguments() {
         return new VisorClusterChangeTagTaskArg(newTagArg);
+    }
+
+    /**
+     * @return {@code true} if the feature is enabled.
+     **/
+    private static boolean clusterIdAndTagSupport() {
+        return IgniteSystemProperties.getBoolean(
+            IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
+        );
     }
 }

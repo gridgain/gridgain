@@ -99,8 +99,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static java.io.File.separatorChar;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -219,6 +219,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    })
     public void testClusterChangeTag() throws Exception {
         final String newTag = "new_tag";
 
@@ -342,8 +346,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key= IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value="true")
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    })
     public void testState() throws Exception {
         final String newTag = "new_tag";
 

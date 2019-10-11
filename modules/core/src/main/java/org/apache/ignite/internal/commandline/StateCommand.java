@@ -30,10 +30,6 @@ import static org.apache.ignite.internal.commandline.CommandList.STATE;
  * Command to print cluster state.
  */
 public class StateCommand implements Command<Void> {
-    /** */
-    private final boolean clusterIdAndTagSupport = IgniteSystemProperties.getBoolean(
-        IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
-    );
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
@@ -50,7 +46,7 @@ public class StateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            if (clusterIdAndTagSupport) {
+            if (clusterIdAndTagSupport()) {
                 UUID id = state.id();
                 String tag = state.tag();
 
@@ -87,5 +83,14 @@ public class StateCommand implements Command<Void> {
     /** {@inheritDoc} */
     @Override public String name() {
         return STATE.toCommandName();
+    }
+
+    /**
+     * @return {@code true} if the feature is enabled.
+     **/
+    private static boolean clusterIdAndTagSupport() {
+        return IgniteSystemProperties.getBoolean(
+            IGNITE_CLUSTER_ID_AND_TAG_FEATURE, false
+        );
     }
 }
