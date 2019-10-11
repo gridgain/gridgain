@@ -18,6 +18,7 @@ package org.apache.ignite.console.utils;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Set;
@@ -208,5 +209,12 @@ public class Utils {
      */
     public static <T> Set<T> concat(Set<T> evts1, Set<T> evts2) {
         return Stream.concat(evts1.stream(), evts2.stream()).collect(toSet());
+    }
+
+    /**
+     * @return Current time in milliseconds at UTC time zone.
+     */
+    public static long now() {
+        return Instant.now().toEpochMilli();
     }
 }

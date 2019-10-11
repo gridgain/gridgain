@@ -19,6 +19,7 @@ package org.apache.ignite.console.migration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,6 +194,9 @@ public class MigrateUtils {
         if (val instanceof String)
             return Long.parseLong(val.toString());
 
+        if (val instanceof Date)
+            return ((Date)val).getTime();
+
         throw new ClassCastException("Expected long value, but found: " + val);
     }
 
@@ -213,6 +217,9 @@ public class MigrateUtils {
 
         if (val instanceof String)
             return Long.parseLong(val.toString());
+
+        if (val instanceof Date)
+            return ((Date)val).getTime();
 
         throw new ClassCastException("Expected long value, but found: " + val);
     }

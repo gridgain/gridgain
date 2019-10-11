@@ -21,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -49,6 +50,7 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
+import static org.apache.ignite.console.utils.Utils.now;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 
@@ -187,6 +189,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         HttpServletResponse res,
         Authentication authentication
     ) throws IOException {
+        Object p = authentication.getPrincipal();
+
+        if (p instanceof Account)
+            accountsSrv.updateLastLogin(((Account)p).getId(), now());
+
         res.setStatus(HttpServletResponse.SC_OK);
 
         res.getWriter().flush();

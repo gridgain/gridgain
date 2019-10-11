@@ -55,9 +55,11 @@ import static org.apache.ignite.console.migration.MigrateUtils.asPrimitives;
 import static org.apache.ignite.console.migration.MigrateUtils.asStrings;
 import static org.apache.ignite.console.migration.MigrateUtils.getDocument;
 import static org.apache.ignite.console.migration.MigrateUtils.getInteger;
+import static org.apache.ignite.console.migration.MigrateUtils.getLong;
 import static org.apache.ignite.console.migration.MigrateUtils.mongoIdsToNewIds;
 import static org.apache.ignite.console.migration.MigrateUtils.mongoToJson;
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.now;
 
 /**
  * Service to migrate user data from MongoDB to GridGain persistence.
@@ -171,6 +173,11 @@ public class MigrationFromMongo {
         acc.setCountry(doc.getString("country"));
         acc.setToken(doc.getString("token"));
         acc.setResetPasswordToken(doc.getString("resetPasswordToken"));
+
+        long now = now();
+
+        acc.setLastActivity(getLong(doc, "lastActivity", now));
+        acc.setLastLogin(getLong(doc, "lastLogin", now));
 
         acc.setAdmin(doc.getBoolean("admin", false));
 

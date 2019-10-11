@@ -239,15 +239,29 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /**
      * @return Last login.
      */
-    public String lastLogin() {
-        return lastLogin;
+    public long getLastLogin() {
+        return Long.parseLong(lastLogin);
+    }
+
+    /**
+     * @param lastLogin Last login.
+     */
+    public void setLastLogin(long lastLogin) {
+        this.lastLogin = String.valueOf(lastLogin);
     }
 
     /**
      * @return Last activity.
      */
-    public String lastActivity() {
-        return lastActivity;
+    public long getLastActivity() {
+        return Long.parseLong(lastActivity);
+    }
+
+    /**
+     * @param lastActivity Last activity.
+     */
+    public void setLastActivity(long lastActivity) {
+        this.lastActivity = String.valueOf(lastActivity);
     }
 
     /**
