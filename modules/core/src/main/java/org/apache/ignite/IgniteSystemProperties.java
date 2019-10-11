@@ -1174,11 +1174,6 @@ public final class IgniteSystemProperties {
         "IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE_SUPPORT";
 
     /**
-     * Undocumented experimental internal API that must not be touched by regular users.
-     */
-    public static final String IGNITE_DISTRIBUTED_META_STORAGE_FEATURE = "IGNITE_DISTRIBUTED_META_STORAGE_FEATURE";
-
-    /**
      * Maximum number of diagnostic warning messages per category, when waiting for PME.
      */
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
