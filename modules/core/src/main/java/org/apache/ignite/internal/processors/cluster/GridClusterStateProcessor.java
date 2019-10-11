@@ -893,6 +893,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (state.transition())
                 transitionFuts.put(state.transitionRequestId(), new GridFutureAdapter<>());
 
+            state.setPrevState(globalState);
+
             globalState = state;
 
             if (stateDiscoData.recentHistory != null) {
@@ -900,9 +902,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     bltHist.bufferHistoryItemForStore(item);
             }
 
-            ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
+            final boolean readOnly = readOnly(globalState.stateOrPreviousState());
 
-            if (readOnly(globalState.state()))
+            ctx.cache().context().readOnlyMode(readOnly);
+
+            if (readOnly)
                 ctx.cache().context().database().forceCheckpoint("Cluster read-only mode enabled");
         }
     }
@@ -1294,14 +1298,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         IgniteCompute comp = ((ClusterGroupAdapter)ctx.cluster().get().forServers()).compute();
 
-        IgniteFuture<Void> fut;
-
-        if (IgniteFeatures.allNodesSupports(ctx, ctx.discovery().serverNodes(topVer), CLUSTER_READ_ONLY_MODE))
-            fut = comp.runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
-        else {
-            // Backward compatibility.
-            fut = comp.runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), blt, forceBlt));
-        }
+        IgniteFuture<Void> fut = comp.runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
 
         return ((IgniteFutureImpl<Void>)fut).internalFuture();
     }
@@ -1326,14 +1323,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (F.isEmpty(clusterGrpAdapter.nodes()))
             return new IgniteFinishedFutureImpl<>(INACTIVE);
 
-        IgniteCompute comp = clusterGrpAdapter.compute();
-
-        if (IgniteFeatures.allNodesSupports(ctx, ctx.discovery().serverNodes(topVer), CLUSTER_READ_ONLY_MODE))
-            return comp.callAsync(new GetClusterStateComputeRequest());
-        else {
-            // Backward compatibility.
-            return comp.callAsync(new CheckGlobalStateComputeRequest()).chain(f -> f.get() ? ACTIVE : INACTIVE);
-        }
+        return clusterGrpAdapter.compute().callAsync(new GetClusterStateComputeRequest());
     }
 
     /** {@inheritDoc} */
@@ -2040,55 +2030,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      *
      */
     @GridInternal
-    private static class ClientChangeGlobalStateComputeRequest implements IgniteRunnable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        private final boolean activate;
-
-        /** */
-        private final BaselineTopology baselineTopology;
-
-        /** */
-        private final boolean forceChangeBaselineTopology;
-
-        /** Ignite. */
-        @IgniteInstanceResource
-        private IgniteEx ig;
-
-        /**
-         * @param activate New cluster state.
-         */
-        private ClientChangeGlobalStateComputeRequest(
-            boolean activate,
-            BaselineTopology blt,
-            boolean forceBlt
-        ) {
-            this.activate = activate;
-            this.baselineTopology = blt;
-            this.forceChangeBaselineTopology = forceBlt;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void run() {
-            try {
-                ig.context().state().changeGlobalState(
-                    activate,
-                    baselineTopology != null ? baselineTopology.currentBaseline() : null,
-                    forceChangeBaselineTopology
-                ).get();
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex);
-            }
-        }
-    }
-
-    /**
-     *
-     */
-    @GridInternal
     private static class ClientSetGlobalStateComputeRequest implements IgniteRunnable {
         /** */
         private static final long serialVersionUID = 0L;
@@ -2133,24 +2074,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             catch (IgniteCheckedException ex) {
                 throw new IgniteException(ex);
             }
-        }
-    }
-
-    /**
-     *
-     */
-    @GridInternal
-    private static class CheckGlobalStateComputeRequest implements IgniteCallable<Boolean> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Ignite. */
-        @IgniteInstanceResource
-        private Ignite ig;
-
-        /** {@inheritDoc} */
-        @Override public Boolean call() throws Exception {
-            return ig.active();
         }
     }
 

@@ -93,12 +93,7 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
      * @return New cluster state.
      */
     public ClusterState state() {
-        if (state != null)
-            return state;
-        else {
-            // Backward compatibility.
-            return clusterActive ? ClusterState.ACTIVE : ClusterState.INACTIVE;
-        }
+        return state;
     }
 
     /** {@inheritDoc} */

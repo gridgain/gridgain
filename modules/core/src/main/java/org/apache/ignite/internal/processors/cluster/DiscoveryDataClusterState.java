@@ -28,7 +28,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
@@ -133,6 +132,18 @@ public class DiscoveryDataClusterState implements Serializable {
     }
 
     /**
+     * Sets previous cluster state {@code prevState}.
+     *
+     * @param prevState Previous cluster state.
+     */
+    void setPrevState(DiscoveryDataClusterState prevState) {
+        assert prevState != null;
+        assert this.prevState == null : this;
+
+        this.prevState = prevState;
+    }
+
+    /**
      * @param prevState Previous state. May be non-null only for transitional states.
      * @param state New cluster state.
      * @param baselineTopology Baseline topology for new cluster state.
@@ -234,12 +245,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Current cluster state (or new state in case when transition is in progress).
      */
     public ClusterState state() {
-        if (state == null) {
-            // Backward compatibility.
-            return active ? ACTIVE : INACTIVE;
-        }
-        else
-            return state;
+        return state;
     }
 
     /**
@@ -334,14 +340,8 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Cluster state that finished transition.
      */
     public DiscoveryDataClusterState finish(boolean success) {
-        ClusterState newState = state;
-
-        // Backward compatibility.
-        if (newState == null)
-            newState = active ? ACTIVE : INACTIVE;
-
         if(success)
-            return createState(newState, baselineTopology);
+            return createState(state, baselineTopology);
         else
             return prevState != null ? prevState : createState(INACTIVE, null);
     }

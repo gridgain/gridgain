@@ -31,9 +31,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-
 /**
  * Message represent request for change cluster global state.
  */
@@ -186,24 +183,14 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
      */
     @Deprecated
     public boolean activate() {
-        if (state != null)
-            return ClusterState.active(state);
-        else {
-            // Backward compatibility.
-            return activate;
-        }
+        return ClusterState.active(state);
     }
 
     /**
      * @return New cluster state.
      */
     public ClusterState state() {
-        if (state != null)
-            return state;
-        else {
-            // Backward compatibility.
-            return activate ? ACTIVE : INACTIVE;
-        }
+        return state;
     }
 
     /**

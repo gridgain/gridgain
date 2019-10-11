@@ -66,8 +66,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.parseFile;
@@ -337,8 +335,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            verifyClusterStateSupports(newState);
-
             ctx.state().changeGlobalState(newState, baselineNodes(), false).get();
         }
         catch (IgniteCheckedException e) {
@@ -346,14 +342,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
         finally {
             unguard();
-        }
-    }
-
-    /** */
-    private void verifyClusterStateSupports(ClusterState state) {
-        if (state == ClusterState.READ_ONLY) {
-            if (!allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
-                throw new IgniteException("Not all nodes in cluster supports cluster read-only mode");
         }
     }
 

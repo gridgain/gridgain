@@ -37,10 +37,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
 import org.apache.ignite.internal.client.GridClientCacheFlag;
@@ -59,14 +57,13 @@ import org.apache.ignite.internal.client.marshaller.jdk.GridClientJdkMarshaller;
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientOptimizedMarshaller;
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientZipOptimizedMarshaller;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequest;
-import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
-import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeMetricsBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientResponse;
@@ -86,8 +83,8 @@ import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.client.GridClientCacheFlag.KEEP_BINARIES;
 import static org.apache.ignite.internal.client.GridClientCacheFlag.encodeCacheFlags;
 import static org.apache.ignite.internal.client.impl.connection.GridClientConnectionCloseReason.CONN_IDLE;
@@ -814,13 +811,11 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     }
 
     /** {@inheritDoc} */
-    @Override public GridClientFuture<?> changeState(boolean active, UUID destNodeId)
-        throws GridClientClosedException, GridClientConnectionResetException {
-        GridClientStateRequest msg = new GridClientStateRequest();
-
-        msg.active(active);
-
-        return makeRequest(msg, destNodeId);
+    @Override public GridClientFuture<?> changeState(
+        boolean active,
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        return changeState(active ? ACTIVE : INACTIVE, destNodeId);
     }
 
     /** {@inheritDoc} */
@@ -830,69 +825,32 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     ) throws GridClientClosedException, GridClientConnectionResetException {
         assert state != null;
 
-        if (nodeSupports(destNodeId, CLUSTER_READ_ONLY_MODE))
-            return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
-        else {
-            // Backward compatibility.
-            assert state == ClusterState.ACTIVE || state == ClusterState.INACTIVE : state;
-
-            return changeState(state == ClusterState.ACTIVE, destNodeId);
-        }
+        return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
     }
 
     /** {@inheritDoc} */
-    @Override public GridClientFuture<Boolean> currentState(UUID destNodeId)
-        throws GridClientClosedException, GridClientConnectionResetException {
-        GridClientStateRequest msg = new GridClientStateRequest();
+    @Override public GridClientFuture<Boolean> currentState(
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        GridClientFutureAdapter<Boolean> resFut = new GridClientFutureAdapter<>();
 
-        msg.requestCurrentState();
+        state(destNodeId).listen(fut -> {
+            try {
+                resFut.onDone(ClusterState.active(fut.get()));
+            }
+            catch (GridClientException e) {
+                resFut.onDone(e);
+            }
+        });
 
-        return makeRequest(msg, destNodeId);
+        return resFut;
     }
 
     /** {@inheritDoc} */
     @Override public GridClientFuture<ClusterState> state(
         UUID destNodeId
     ) throws GridClientClosedException, GridClientConnectionResetException {
-        if (nodeSupports(destNodeId, CLUSTER_READ_ONLY_MODE))
-            return makeRequest(GridClientClusterStateRequest.currentState(), destNodeId);
-        else {
-            // Backward compatibility
-            GridClientFutureAdapter<ClusterState> resFut = new GridClientFutureAdapter<>();
-
-            currentState(destNodeId).listen(fut -> {
-                try {
-                    resFut.onDone(fut.get() ? ClusterState.ACTIVE : ClusterState.INACTIVE);
-                }
-                catch (GridClientException e) {
-                    resFut.onDone(e);
-                }
-            });
-
-            return resFut;
-        }
-    }
-
-    /**
-     * Checks that cluster node with {@code nodeId} is supports {@code feature} or not.
-     *
-     * @param nodeId Id of node of cluster
-     * @param feature Feature
-     * @return {@code True} if node supports feature and {@code false} otherwise.
-     * @throws GridClientConnectionResetException clusterNode If something goes wrong.
-     */
-    private boolean nodeSupports(
-        UUID nodeId,
-        IgniteFeatures feature
-    ) throws GridClientConnectionResetException {
-        try {
-            GridClientNode clusterNode = node(nodeId, true, false, nodeId).get();
-
-            return IgniteFeatures.nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
-        }
-        catch (GridClientException e) {
-            throw new GridClientConnectionResetException("Can't get node with id " + nodeId, e);
-        }
+        return makeRequest(GridClientClusterStateRequest.currentState(), destNodeId);
     }
 
     /** {@inheritDoc} */
