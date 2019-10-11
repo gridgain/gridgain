@@ -64,9 +64,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
      */
     private final long dfltSqlQryMemoryLimit;
 
-    /** Kernal context. */
-    private final GridKernalContext ctx;
-
     /** Logger. */
     private final IgniteLogger log;
 
@@ -90,8 +87,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
      * @param ctx Kernal context.
      */
     public QueryMemoryManager(GridKernalContext ctx) {
-        this.ctx = ctx;
-
         this.globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, 0);
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
