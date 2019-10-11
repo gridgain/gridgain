@@ -39,6 +39,8 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @After
     public void stopAll() {
         stopAllGrids();
+
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
     }
 
     /**

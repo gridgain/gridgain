@@ -85,7 +85,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
+        long dfltSqlGlobQuota = Runtime.getRuntime().maxMemory() / 2;
 
         assertEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"));
         assertEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"));
