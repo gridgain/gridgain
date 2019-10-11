@@ -41,18 +41,19 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.internal.util.collections.Sets;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
-import static org.apache.ignite.transactions.TransactionConcurrency.*;
-import static org.apache.ignite.transactions.TransactionIsolation.*;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  * Tests for client nodes with slow discovery.
@@ -339,11 +340,8 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     /** Client node to perform operations. */
     private IgniteEx clnt;
 
-    /**
-     *
-     */
-    @BeforeClass
-    public void beforeTests() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -351,11 +349,8 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
         startGrid(0);
     }
 
-    /**
-     *
-     */
-    @AfterClass
-    public void afterTests() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
