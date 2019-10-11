@@ -119,13 +119,15 @@ public class MigrationFromMongo {
      */
     public void migrate() {
         if (F.isEmpty(mongoDbUrl)) {
-            log.info("MongoDB URL was not specified. Migration disabled.");
+            log.info("MongoDB URL was not specified in configuration");
+            log.info("Migration from old Web Console will not be executed");
+            log.info("Migration instructions: https://www.gridgain.com/docs/web-console/latest/migration");
 
             return;
         }
 
         if (txMgr.doInTransaction(accRepo::hasUsers)) {
-            log.warn("Database was already migrated. Consider to disable migration in application settings.");
+            log.warn("Database was already migrated. Consider to disable migration in application settings");
 
             return;
         }
@@ -141,7 +143,7 @@ public class MigrationFromMongo {
 
             migrateAccounts();
 
-            log.info("Migration finished!");
+            log.info("Migration finished");
         }
         catch (Throwable e) {
             log.error("Migration failed", e);

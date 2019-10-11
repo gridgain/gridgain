@@ -16,6 +16,9 @@
 
 package org.apache.ignite.console.listener;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventType;
@@ -23,10 +26,6 @@ import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.stream.Stream;
 
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;

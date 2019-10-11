@@ -26,6 +26,7 @@ import IgniteJavaTransformer from '../generator/generator/JavaTransformer.servic
 import IgniteSpringTransformer from '../generator/generator/SpringTransformer.service';
 
 import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
+import {isPersistenceEnabled} from 'app/domain/configuration-checker';
 import get from 'lodash/get';
 import filter from 'lodash/filter';
 import isEmpty from 'lodash/isEmpty';
@@ -109,9 +110,10 @@ onmessage = function(e) {
 
     // Generate loader for caches with configured store.
     const cachesToLoad = filter(cluster.caches, (cache) => nonNil(_.get(cache, 'cacheStoreFactory.kind')));
+    const persistenceEnabled = isPersistenceEnabled(cluster);
 
     if (nonEmpty(cachesToLoad))
-        zip.file(`${srcPath}/load/LoadCaches.java`, java.loadCaches(cachesToLoad, 'load', 'LoadCaches', `"${clientXml}"`));
+        zip.file(`${srcPath}/load/LoadCaches.java`, java.loadCaches(cachesToLoad, 'load', 'LoadCaches', `"${clientXml}"`, persistenceEnabled));
 
     const startupPath = `${srcPath}/startup`;
 
