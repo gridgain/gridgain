@@ -178,7 +178,9 @@ public class IgniteWalReplayingAfterRestartTest extends GridCommonAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * Verifies that validation of WAL segment sizes isn't triggered when WAL archive is disabled.
+     */
     @Test
     public void testFsyncWalValidationAfterRestart() throws Exception {
         logMode = WALMode.FSYNC;
