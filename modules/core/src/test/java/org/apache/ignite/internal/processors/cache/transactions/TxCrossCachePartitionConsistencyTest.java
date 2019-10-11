@@ -48,8 +48,9 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
- * Tst scenario:
- * 1. Two keys from the same partition but in different caches are enlisted in a transaction.
+ * Test scenario:
+ * 1. Two keys from the same partition but in different caches are enlisted in a transaction
+ * (caches have different affinity settings).
  * 2. Random node is restarted under load
  *
  * Success: partitions are consistent, total balances invariant is held.
