@@ -42,6 +42,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
@@ -65,6 +66,9 @@ public class IgniteWalReplayingAfterRestartTest extends GridCommonAbstractTest {
     public static final int PART_NUM = 32;
 
     /** */
+    private WALMode logMode = WALMode.LOG_ONLY;
+
+    /** */
     @Before
     public void beforeIgniteWalReplayingAfterRestartTest() throws Exception {
         U.delete(Paths.get(U.defaultWorkDirectory()));
@@ -73,6 +77,8 @@ public class IgniteWalReplayingAfterRestartTest extends GridCommonAbstractTest {
     /** */
     @After
     public void afterIgniteWalReplayingAfterRestartTest() throws Exception {
+        stopAllGrids();
+
         stopAllGrids();
 
         U.delete(Paths.get(U.defaultWorkDirectory()));
@@ -91,7 +97,7 @@ public class IgniteWalReplayingAfterRestartTest extends GridCommonAbstractTest {
         cfg.setCacheConfiguration(ccfg);
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration()
-            .setWalMode(WALMode.LOG_ONLY)
+            .setWalMode(logMode)
             .setWalSegments(SEGMENTS_CNT)
             .setWalSegmentSize(512 * 1024)
             .setWalHistorySize(100)
@@ -173,5 +179,27 @@ public class IgniteWalReplayingAfterRestartTest extends GridCommonAbstractTest {
                 }
             }
         }
+    }
+
+    /**
+     * Verifies that validation of WAL segment sizes isn't triggered when WAL archive is disabled.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-24868")
+    public void testFsyncWalValidationAfterRestart() throws Exception {
+        logMode = WALMode.FSYNC;
+
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < 128; i++)
+            cache.put("key" + i, new byte[1024]);
+
+        stopGrid(0);
+
+        startGrid(0);
     }
 }
