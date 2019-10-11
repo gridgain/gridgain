@@ -183,6 +183,15 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test invalid cache name triggers IgniteClientException.
+        /// </summary>
+        [Test]
+        public void TestInvalidCacheNameTriggersIgniteClientException()
+        {
+            Assert.Throws<IgniteClientException>(() => GetCluster().EnableWal("invalidCache"));
+        }
+
+        /// <summary>
         /// Returns Ignite cluster.
         /// </summary>
         private IClientCluster GetCluster()
