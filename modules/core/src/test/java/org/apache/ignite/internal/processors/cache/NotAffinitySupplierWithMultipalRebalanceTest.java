@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -117,9 +118,79 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
      */
     @Test
     public void testPersistentHistoricalRebalance() throws Exception {
+        supplingHistoricalFromOldBackup(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    public void supplingHistoricalFromOldBackup(boolean persistentEnabled) throws Exception {
         System.setProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
 
-        supplingFromOldBackup(true);
+        this.persistentEnabled = persistentEnabled;
+
+        IgniteEx ignite0 = startGrids(NODES_CNT);
+
+        for (int i = 1; i < 4; i++)
+            startGrid("new_" + i);
+
+        ignite0.cluster().active(true);
+
+        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, CUSTOM_CACHE);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
+        awaitPartitionMapExchange();
+
+        stopGrid("new_1");
+        stopGrid("new_2");
+
+        awaitPartitionMapExchange();
+
+        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, CUSTOM_CACHE);
+
+        TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1", true);
+        TestRecordingCommunicationSpi testCommunicationSpi2 = startNodeWithBlockingRebalance("new_2", true);
+
+        testCommunicationSpi1.waitForBlocked();
+        testCommunicationSpi2.waitForBlocked();
+
+        checkState(GridDhtPartitionState.RENTING, RANDEZVOUSE_CACHE);
+        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+
+        AtomicBoolean hasMissed = new AtomicBoolean();
+
+        for (Ignite ign : G.allGrids()) {
+            ign.events().localListen(event -> {
+                info("Partition missing event: " + event);
+
+                hasMissed.compareAndSet(false, true);
+
+                return false;
+            }, EVT_CACHE_REBALANCE_PART_MISSED);
+        }
+
+        TestRecordingCommunicationSpi testCommunicationSpi0 = (TestRecordingCommunicationSpi)ignite0
+            .configuration().getCommunicationSpi();
+
+        testCommunicationSpi0.record(GridDhtPartitionsFullMessage.class);
+
+        testCommunicationSpi1.stopBlock();
+
+        testCommunicationSpi0.waitForRecorded();
+
+        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+
+        testCommunicationSpi2.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        checkState(GridDhtPartitionState.MOVING, RANDEZVOUSE_CACHE);
+        checkState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
+
+        assertFalse(hasMissed.get());
     }
 
     /**
@@ -142,9 +213,9 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
         awaitPartitionMapExchange();
 
-        TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1");
-        TestRecordingCommunicationSpi testCommunicationSpi2 = startNodeWithBlockingRebalance("new_2");
-        TestRecordingCommunicationSpi testCommunicationSpi3 = startNodeWithBlockingRebalance("new_3");
+        TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1", false);
+        TestRecordingCommunicationSpi testCommunicationSpi2 = startNodeWithBlockingRebalance("new_2", false);
+        TestRecordingCommunicationSpi testCommunicationSpi3 = startNodeWithBlockingRebalance("new_3", false);
 
         ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
 
@@ -214,7 +285,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
      * @return Test communication SPI.
      * @throws Exception If failed.
      */
-    @NotNull private TestRecordingCommunicationSpi startNodeWithBlockingRebalance(String name) throws Exception {
+    @NotNull private TestRecordingCommunicationSpi startNodeWithBlockingRebalance(String name,
+        boolean historicalRebalance) throws Exception {
         IgniteConfiguration cfg = optimize(getConfiguration(name));
 
         TestRecordingCommunicationSpi communicationSpi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
@@ -223,9 +295,17 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
             if (msg instanceof GridDhtPartitionDemandMessage) {
                 GridDhtPartitionDemandMessage demandMessage = (GridDhtPartitionDemandMessage)msg;
 
-                if (CU.cacheId(RANDEZVOUSE_CACHE) != demandMessage.groupId()
+                long rebalanceId = U.field(demandMessage, "rebalanceId");
+
+                if ((CU.cacheId(RANDEZVOUSE_CACHE) != demandMessage.groupId()
                     && CU.cacheId(CUSTOM_CACHE) != demandMessage.groupId())
+                    || rebalanceId < 0)
                     return false;
+
+                if (historicalRebalance)
+                    assertTrue("Waited fro historical rebalance, msg: " + demandMessage, demandMessage.partitions().hasHistorical());
+                else
+                    assertTrue("Waited fro full rebalance, msg: " + demandMessage, demandMessage.partitions().hasFull());
 
                 info("Message was caught: " + msg.getClass().getSimpleName()
                     + " to: " + node.consistentId()
