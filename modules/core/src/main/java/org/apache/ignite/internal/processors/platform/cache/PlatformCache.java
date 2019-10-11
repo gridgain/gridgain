@@ -352,6 +352,10 @@ public class PlatformCache extends PlatformAbstractTarget {
     /** */
     public static final int OP_SIZE_LONG_LOC = 92;
 
+    /** */
+    public static final int OP_NEAR_CACHE_QRY_CONTINUOUS = 93;
+
+
     /** Underlying JCache in binary mode. */
     private final IgniteCacheProxy cache;
 
@@ -959,6 +963,10 @@ public class PlatformCache extends PlatformAbstractTarget {
                 qry.start(cache, loc, bufSize, timeInterval, autoUnsubscribe, initQry);
 
                 return new PlatformContinuousQueryProxy(platformCtx, qry);
+            }
+
+            case OP_NEAR_CACHE_QRY_CONTINUOUS: {
+
             }
 
             case OP_WITH_EXPIRY_POLICY: {
