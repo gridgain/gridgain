@@ -25,6 +25,7 @@ import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.configuration.Factory;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -98,7 +99,7 @@ public class SslContextFactory implements Factory<SSLContext> {
     private String[] protocols;
 
     /** Cached instance of an {@link SSLContext}. */
-    private SSLContext sslCtx;
+    private final AtomicReference<SSLContext> sslCtx = new AtomicReference<>();
 
     /**
      * Gets key store type used for context creation.
@@ -516,17 +517,20 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /** {@inheritDoc} */
     @Override public SSLContext create() {
-        if (sslCtx != null)
-            return sslCtx;
-        else {
-            try {
-                sslCtx = createSslContext();
+        SSLContext ctx = sslCtx.get();
 
-                return sslCtx;
+        if (ctx == null) {
+            try {
+                ctx = createSslContext();
+
+                if (!sslCtx.compareAndSet(null, ctx))
+                    ctx = sslCtx.get();
             }
             catch (SSLException e) {
                 throw new IgniteException(e);
             }
         }
+
+        return ctx;
     }
 }
