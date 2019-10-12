@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewBase
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewCacheGroupsIOStatistics;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodeAttributes;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodeMetrics;
-import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewNodes;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewQueryHistoryMetrics;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewRunningQueries;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
@@ -253,7 +252,6 @@ public class SchemaManager {
     private Collection<SqlSystemView> systemViews(GridKernalContext ctx) {
         Collection<SqlSystemView> views = new ArrayList<>();
 
-        views.add(new SqlSystemViewNodes(ctx));
         views.add(new SqlSystemViewNodeAttributes(ctx));
         views.add(new SqlSystemViewBaselineNodes(ctx));
         views.add(new SqlSystemViewNodeMetrics(ctx));
