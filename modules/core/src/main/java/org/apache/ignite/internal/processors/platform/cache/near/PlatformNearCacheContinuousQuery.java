@@ -17,31 +17,19 @@
 package org.apache.ignite.internal.processors.platform.cache.near;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
-import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
-import org.apache.ignite.internal.processors.platform.PlatformJavaObjectFactoryProxy;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformQueryCursor;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
-import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 
-import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
-import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListenerException;
-import java.io.ObjectStreamException;
-import java.util.Iterator;
-import java.util.List;
+import javax.cache.event.EventType;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -98,6 +86,8 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
     @Override public void start(IgniteCacheProxy cache, boolean loc, int bufSize, long timeInterval,
         boolean autoUnsubscribe, Query initialQry) throws IgniteCheckedException {
         lock.writeLock().lock();
+        assert initialQry == null;
+        assert !loc;
 
         try {
             try {
@@ -110,31 +100,7 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
                 qry.setAutoUnsubscribe(autoUnsubscribe);
                 qry.setInitialQuery(initialQry);
 
-                cursor = cache.query(qry.setLocal(loc));
-
-                if (initialQry != null)
-                    initialQryCur = new PlatformQueryCursor(platformCtx, new QueryCursorEx<Cache.Entry>() {
-                        @Override public Iterator<Cache.Entry> iterator() {
-                            return cursor.iterator();
-                        }
-
-                        @Override public List<Cache.Entry> getAll() {
-                            return cursor.getAll();
-                        }
-
-                        @Override public void close() {
-                            // No-op: do not close whole continuous query when initial query cursor closes.
-                        }
-
-                        @Override public void getAll(Consumer<Cache.Entry> clo) throws IgniteCheckedException {
-                            for (Cache.Entry t : this)
-                                clo.consume(t);
-                        }
-
-                        @Override public List<GridQueryFieldMetadata> fieldsMeta() {
-                            return null;
-                        }
-                    }, initialQry.getPageSize() > 0 ? initialQry.getPageSize() : Query.DFLT_PAGE_SIZE);
+                cursor = cache.query(qry);
             }
             catch (Exception e) {
                 try
@@ -171,22 +137,9 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
-        if (javaFilter != null)
-            return javaFilter.evaluate(evt);
-
-        lock.readLock().lock();
-
-        try {
-            if (ptr == 0)
-                throw new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
-
-            return !hasFilter || PlatformUtils.evaluateContinuousQueryEvent(platformCtx, ptr, evt);
-        }
-        finally {
-            lock.readLock().unlock();
-        }
+        // New entries (CREATED) do not matter for near cache invalidation.
+        return evt.getEventType() != EventType.CREATED;
     }
 
     /** {@inheritDoc} */
@@ -225,18 +178,5 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
 
             platformCtx.gateway().continuousQueryFilterRelease(ptr0);
         }
-    }
-
-    /**
-     * Replacer for remote filter.
-     *
-     * @return Filter to be deployed on remote node.
-     * @throws ObjectStreamException If failed.
-     */
-    Object writeReplace() throws ObjectStreamException {
-        if (javaFilter != null)
-            return javaFilter;
-
-        return filter == null ? null : platformCtx.createContinuousQueryFilter(filter);
     }
 }
