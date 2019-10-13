@@ -17,13 +17,39 @@
 namespace Apache.Ignite.Core.Tests.Cache
 {
     using Apache.Ignite.Core.Cache;
+    using NUnit.Framework;
 
     /// <summary>
     /// Tests for <see cref="ICache{TK,TV}.WithNearCache"/> functionality.
     /// See also <see cref="CacheNearTest"/>.
     /// </summary>
-    public class CacheWithNearCacheTest
+    public class CacheWithNearCacheTest : TestBase
     {
+        /// <summary>
+        /// Tests that near cache returns the same object instance as we put there.
+        /// </summary>
+        [Test]
+        public void TestNearCacheReturnsSameObjectReference()
+        {
+            var cache = Ignite.GetOrCreateCache<int, Foo>("c").WithNearCache();
+
+            var obj = new Foo(12);
+            cache[1] = obj;
+
+            var res = cache[1];
+            Assert.AreSame(obj, res);
+        }
+
+        /** */
+        private class Foo
+        {
+            public Foo(int val)
+            {
+                Val = val;
+            }
+
+            public int Val;
+        }
         
     }
 }
