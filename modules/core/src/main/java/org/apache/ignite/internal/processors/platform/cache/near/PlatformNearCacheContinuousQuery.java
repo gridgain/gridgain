@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
-import org.apache.ignite.internal.processors.platform.cache.query.PlatformQueryCursor;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 
 import javax.cache.event.CacheEntryEvent;
@@ -52,22 +51,15 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
     /** Lock for concurrency control. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    /** Wrapped initial qry cursor. */
-    private PlatformQueryCursor initialQryCur;
-
     /**
      * Constructor.
      *
      * @param platformCtx Context.
      * @param ptr Pointer to native counterpart.
-     * @param hasFilter Whether filter exists.
-     * @param filter Filter.
      */
-    public PlatformNearCacheContinuousQuery(PlatformContext platformCtx, long ptr, boolean hasFilter, Object filter) {
+    public PlatformNearCacheContinuousQuery(PlatformContext platformCtx, long ptr) {
         assert ptr != 0L;
 
-        // TODO: Filter for event types
-        // TODO: Transformer to send keys only
         this.platformCtx = platformCtx;
         this.ptr = ptr;
     }
@@ -94,6 +86,8 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
                 ContinuousQuery qry = new ContinuousQuery();
 
                 qry.setLocalListener(this);
+
+                // TODO: replace with setRemoteFilterFactory
                 qry.setRemoteFilter(this); // Filter must be set always for correct resource release.
                 qry.setPageSize(bufSize);
                 qry.setTimeInterval(timeInterval);
@@ -161,7 +155,7 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
 
     /** {@inheritDoc} */
     @Override public PlatformTarget getInitialQueryCursor() {
-        return initialQryCur;
+        return null;
     }
 
     /**
