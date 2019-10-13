@@ -23,7 +23,8 @@ namespace Apache.Ignite.Core.Tests.Cache
     using NUnit.Framework;
 
     /// <summary>
-    /// Near cache test.
+    /// Java-based (legacy) near cache test.
+    /// See also <see cref="CacheWithNearCacheTest"/>.
     /// </summary>
     public class CacheNearTest : IEventListener<CacheEvent>
     {

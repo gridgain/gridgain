@@ -104,8 +104,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (nearCacheConfiguration != null)
             {
-                // TODO: Set up change notifier.
-                // TODO: Use _ignite.NearCacheManager.GetNearCache(Name)
+                // TODO: Set up change notifier - pass it as a factory to GetNearCache?
                 _nearCacheConfiguration = nearCacheConfiguration;
                 _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
             }

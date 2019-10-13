@@ -112,6 +112,7 @@
     <Compile Include="Cache\CacheCreateTest.cs" />
     <Compile Include="Cache\CacheQueryMetricsTest.cs" />
     <Compile Include="Cache\CacheTimeoutOnPmeTransactionalTest.cs" />
+    <Compile Include="Cache\CacheWithNearCacheTest.cs" />
     <Compile Include="Cache\DataRegionMetricsTest.cs" />
     <Compile Include="Cache\DataStorageMetricsTest.cs" />
     <Compile Include="Cache\PartitionPreloadTest.cs" />
