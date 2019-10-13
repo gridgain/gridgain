@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testframework.junits;
 
+import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -97,8 +98,8 @@ public class GridTestKernalContext extends GridKernalContextImpl {
         GridTestUtils.setFieldValue(grid(), "ctx", this);
 
         config().setGridLogger(log);
-
         config().setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
+        config().setMBeanServer(ManagementFactory.getPlatformMBeanServer());
 
         if (cfg.getMetricExporterSpi() == null || cfg.getMetricExporterSpi().length == 0)
             cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
