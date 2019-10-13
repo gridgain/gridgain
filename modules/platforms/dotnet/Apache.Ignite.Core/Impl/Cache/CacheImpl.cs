@@ -72,12 +72,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Near cache configuration, null when not enabled. */
         private readonly NearCacheConfiguration _nearCacheConfiguration;
 
-        // TODO: Init capacity from settings
-        // TODO: Eviction
-        // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
         /** Near cache. */
-        private readonly ConcurrentDictionary<TK, TV> _nearCache;
-
+        private readonly NearCache<TK, TV> _nearCache;
 
         /// <summary>
         /// Constructor.
@@ -111,7 +107,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 // TODO: Set up change notifier.
                 // TODO: Use _ignite.NearCacheManager.GetNearCache(Name)
                 _nearCacheConfiguration = nearCacheConfiguration;
-                _nearCache = new ConcurrentDictionary<TK, TV>();
+                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
             }
         }
 
@@ -564,8 +560,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (CanUseNear)
             {
-                // TODO: Eviction according to limits.
-                _nearCache[key] = val;
+                _nearCache.Put(key, val);
             }
 
             DoOutOp(CacheOp.Put, key, val);

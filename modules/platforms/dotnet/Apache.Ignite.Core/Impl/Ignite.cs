@@ -140,6 +140,9 @@ namespace Apache.Ignite.Core.Impl
         /** Plugin processor. */
         private readonly PluginProcessor _pluginProcessor;
 
+        /** Near cache manager. */
+        private readonly NearCacheManager _nearCacheManager = new NearCacheManager();
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -963,6 +966,14 @@ namespace Apache.Ignite.Core.Impl
         public HandleRegistry HandleRegistry
         {
             get { return _cbs.HandleRegistry; }
+        }
+
+        /// <summary>
+        /// Gets the near cache manager.
+        /// </summary>
+        public NearCacheManager NearCacheManager
+        {
+            get { return _nearCacheManager; }
         }
 
         /// <summary>

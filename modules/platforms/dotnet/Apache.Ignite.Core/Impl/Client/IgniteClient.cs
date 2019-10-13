@@ -27,6 +27,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Cache;
     using Apache.Ignite.Core.Impl.Client.Cache;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
@@ -218,6 +219,12 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public PluginProcessor PluginProcessor
+        {
+            get { throw GetClientNotSupportedException(); }
+        }
+
+        /** <inheritDoc /> */
+        public NearCacheManager NearCacheManager
         {
             get { throw GetClientNotSupportedException(); }
         }

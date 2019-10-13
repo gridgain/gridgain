@@ -16,11 +16,27 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
+    using System.Collections.Concurrent;
+
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache
+    internal class NearCache<TK, TV>
     {
-        
+        // TODO: Init capacity from settings
+        // TODO: Eviction
+        // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
+        private readonly ConcurrentDictionary<TK, TV> _map = new ConcurrentDictionary<TK, TV>();
+
+        public bool TryGetValue(TK key, out TV val)
+        {
+            return _map.TryGetValue(key, out val);
+        }
+
+        public void Put(TK key, TV val)
+        {
+            // TODO: Eviction according to limits.
+            _map[key] = val;
+        }
     }
 }

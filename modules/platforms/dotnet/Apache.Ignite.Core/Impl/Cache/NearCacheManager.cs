@@ -20,9 +20,9 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System.Collections.Generic;
 
     /// <summary>
-    /// Manages <see cref="NearCache"/> instances.
+    /// Manages <see cref="NearCache{TK,TV}"/> instances.
     /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can exist for a given cache, and all of them share the same
-    /// <see cref="NearCache"/> instance.
+    /// <see cref="NearCache{TK,TV}"/> instance.
     /// </summary>
     internal class NearCacheManager
     {
@@ -37,6 +37,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             // TODO: How do we remove near caches when underlying cache is destroyed? String name is not enough.
             // TODO: Use similar WeakReference mechanism as DataStreamer does
             _nearCaches = new Dictionary<string, WeakReference>();
+        }
+
+        public NearCache<TK, TV> GetNearCache<TK, TV>(string name)
+        {
+            // TODO: Return cache instance, set up continuous query.
+            return new NearCache<TK, TV>();
         }
     }
 }
