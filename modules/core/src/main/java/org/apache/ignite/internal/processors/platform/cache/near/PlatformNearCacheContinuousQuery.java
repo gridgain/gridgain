@@ -89,10 +89,6 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
 
                 // TODO: replace with setRemoteFilterFactory
                 qry.setRemoteFilter(this); // Filter must be set always for correct resource release.
-                qry.setPageSize(bufSize);
-                qry.setTimeInterval(timeInterval);
-                qry.setAutoUnsubscribe(autoUnsubscribe);
-                qry.setInitialQuery(initialQry);
 
                 cursor = cache.query(qry);
             }

@@ -37,12 +37,7 @@ import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryMetrics;
-import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.cache.query.TextQuery;
+import org.apache.ignite.cache.query.*;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
@@ -55,6 +50,7 @@ import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.PlatformNativeException;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
+import org.apache.ignite.internal.processors.platform.cache.near.PlatformNearCacheContinuousQuery;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQueryProxy;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformFieldsQueryCursor;
@@ -966,7 +962,14 @@ public class PlatformCache extends PlatformAbstractTarget {
             }
 
             case OP_NEAR_CACHE_QRY_CONTINUOUS: {
+                long ptr = reader.readLong();
 
+                PlatformNearCacheContinuousQuery qry = new PlatformNearCacheContinuousQuery(platformCtx, ptr);
+
+                qry.start(cache, false, ContinuousQuery.DFLT_PAGE_SIZE,
+                        ContinuousQuery.DFLT_TIME_INTERVAL, false, null);
+
+                return new PlatformContinuousQueryProxy(platformCtx, qry);
             }
 
             case OP_WITH_EXPIRY_POLICY: {
