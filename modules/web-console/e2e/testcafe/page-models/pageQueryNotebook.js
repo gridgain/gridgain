@@ -25,15 +25,17 @@ export class Paragraph extends PanelCollapsible {
         super(title);
 
         this.topRightExecuteButton = this.body.find('query-actions-button').find('button').withExactText('Execute');
-        this.bottomExecuteButton = this.body.find('.sql-controls').find('button').withExactText('Execute');
+        this.bottomExecuteButton = this._selector.find('.sql-controls').find('button').withExactText('Execute');
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');
         this.clearResultButton = this.body.find('i.fa.fa-eraser');
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
-        this.cancelQueryButton = this.actions.find('button').withExactText('Cancel');
+        this.cancelQueryButton = this._selector.find('button').withExactText('Cancel');
         this.moreQueryActionsButton = this.actions.find('query-actions-button .fa-caret-down').parent('button');
         this.renameQueryButton = this.actions.find('a').withText('Rename');
+        this.sqlControls = this._selector.find('.sql-controls');
+        this.queryFlags = this.sqlControls.child().nth(2);
     }
     async enterQuery(text, options = {replace: false}) {
         return await enterAceText(this.queryField.with({timeout: 0}), text, options);

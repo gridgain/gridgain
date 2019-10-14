@@ -28,6 +28,20 @@ export const cacheNamesCollectorTask = (caches) => (ws) => {
     });
 };
 
+/**
+ * @param {string} nid
+ * @returns {(ws: import('./WebSocketHook').WebSocket) => void}
+ */
+export const foreverExecutingQuery = (nid) => (ws) => {
+    ws.on('node:visor', (e) => {
+        switch (e.params.taskId) {
+            case 'cacheNodesTaskX2':
+                return taskResult([nid]);
+            default: break;
+        }
+    });
+};
+
 export const simeplFakeSQLQuery = (nid, response) => (ws) => {
     ws.on('node:visor', (e) => {
         switch (e.params.taskId) {

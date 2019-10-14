@@ -17,7 +17,7 @@
 import _ from 'lodash';
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {
-    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
+    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery, foreverExecutingQuery,
     FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES, INACTIVE_CLUSTER
 } from '../../mocks/agentTasks';
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
@@ -95,7 +95,7 @@ test('Sending a request', async(t) => {
         .expect(paragraph.resultsTable._selector.exists).notOk();
 });
 
-// https://ggsystems.atlassian.net/browse/GG-23314
+// Regression test for https://ggsystems.atlassian.net/browse/GG-23314
 test('Very long query name', async(t) => {
     await t.addRequestHooks(
         t.ctx.ws = new WebSocketHook()
@@ -122,4 +122,26 @@ test('Very long query name', async(t) => {
     await t.expect(paragraphPanels.nth(0).clientWidth).eql(oldWidth, 'Panel width should not depend on query name length');
 });
 
+// Regression test for https://ggsystems.atlassian.net/browse/GG-23314
+test('Cancel button layout', async(t) => {
+    await t.addRequestHooks(
+        t.ctx.ws = new WebSocketHook()
+            .use(
+                agentStat(FAKE_CLUSTERS),
+                cacheNamesCollectorTask(FAKE_CACHES),
+                foreverExecutingQuery(_.first(_.keys(FAKE_CLUSTERS.clusters[0].nodes)))
+            )
+    );
 
+    await t.resizeWindow(1130, 800);
+    await t
+        .useRole(user)
+        .navigateTo(resolveUrl('/queries/notebooks'));
+    await notebooks.createNotebook('Foo');
+    await t.click(notebooks.getNotebookByName('Foo'));
+    await paragraph.enterQuery(query, {replace: true});
+    const oldFlagsPosition = await paragraph.queryFlags.boundingClientRect;
+    await t.click(paragraph.bottomExecuteButton);
+    await t.expect(paragraph.cancelQueryButton.visible).ok('Cancel button is visible while query is running');
+    await t.expect(paragraph.queryFlags.boundingClientRect).eql(oldFlagsPosition, 'Cancel button should not change query panel height');
+});
