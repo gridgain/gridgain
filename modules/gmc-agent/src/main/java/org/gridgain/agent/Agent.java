@@ -39,11 +39,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.action.Request;
-import org.gridgain.dto.ClusterInfo;
 import org.gridgain.service.ActionService;
+import org.gridgain.service.ClusterService;
 import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.MetricsService;
-import org.gridgain.service.TopologyService;
 import org.gridgain.service.config.NodeConfigurationService;
 import org.gridgain.service.tracing.TracingService;
 import org.gridgain.service.tracing.GmcSpanExporter;
@@ -58,7 +57,6 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.gridgain.utils.AgentUtils.monitoringUri;
 import static org.gridgain.utils.AgentUtils.toWsUri;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
 
 /**
@@ -74,8 +72,8 @@ public class Agent extends ManagementConsoleProcessor {
     /** Websocket manager. */
     private WebSocketManager mgr;
 
-    /** Topology service. */
-    private TopologyService topSrvc;
+    /** Cluster service. */
+    private ClusterService clusterSrvc;
 
     /** Tracing service. */
     private TracingService tracingSrvc;
@@ -140,7 +138,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
-        U.closeQuiet(topSrvc);
+        U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
 
         disconnected.set(false);
@@ -252,7 +250,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);
-        U.closeQuiet(topSrvc);
+        U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
 
         if (!cfg.isEnable()) {
@@ -262,7 +260,7 @@ public class Agent extends ManagementConsoleProcessor {
         }
 
         mgr = new WebSocketManager(ctx);
-        topSrvc = new TopologyService(ctx, mgr);
+        clusterSrvc = new ClusterService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
@@ -333,9 +331,7 @@ public class Agent extends ManagementConsoleProcessor {
 
             U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
 
-            ses.send(buildClusterAddDest(), new ClusterInfo(cluster.id(), cluster.tag()));
-
-            topSrvc.sendInitialState();
+            clusterSrvc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {

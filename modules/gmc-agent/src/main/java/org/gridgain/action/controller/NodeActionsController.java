@@ -17,15 +17,13 @@
 package org.gridgain.action.controller;
 
 import org.apache.ignite.IgniteCompute;
+import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.node.VisorNodePingTask;
 import org.apache.ignite.internal.visor.node.VisorNodePingTaskArg;
 import org.apache.ignite.internal.visor.node.VisorNodePingTaskResult;
 import org.gridgain.action.annotation.ActionController;
-import org.gridgain.utils.AgentUtils;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Cluster actions controller.
@@ -44,13 +42,11 @@ public class NodeActionsController {
 
     /**
      * @param arg Argument.
+     * @return Completeble feature.
      */
-    public CompletableFuture<VisorNodePingTaskResult> pingNode(VisorNodePingTaskArg arg) {
-        CompletableFuture<VisorNodePingTaskResult> fut = new CompletableFuture<>();
+    public ComputeTaskFuture<VisorNodePingTaskResult> pingNode(VisorNodePingTaskArg arg) {
         VisorTaskArgument<VisorNodePingTaskArg> taskArg = new VisorTaskArgument<>(arg.getNodeId(), arg, false);
 
-        compute.executeAsync(VisorNodePingTask.class, taskArg).chain(f -> AgentUtils.completeFuture(f, fut));
-
-        return fut;
+        return compute.executeAsync(VisorNodePingTask.class, taskArg);
     }
 }

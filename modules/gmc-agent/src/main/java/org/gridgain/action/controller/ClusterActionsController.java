@@ -20,8 +20,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
-import java.util.concurrent.CompletableFuture;
-
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
 /**
@@ -42,22 +40,18 @@ public class ClusterActionsController {
     /**
      * Activate cluster.
      */
-    public CompletableFuture<Void> activate() {
+    public void activate() {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().active(true);
-
-        return CompletableFuture.completedFuture(null);
     }
 
     /**
      * Deactivate cluster.
      */
-    public CompletableFuture<Void> deactivate() {
+    public void deactivate() {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().active(false);
-
-        return CompletableFuture.completedFuture(null);
     }
 }

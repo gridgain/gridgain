@@ -55,6 +55,12 @@ public class Node {
     /** */
     private Map<String, Object> attrs;
 
+    /** Baseline node. */
+    private boolean baselineNode;
+
+    /** Online. */
+    private boolean online;
+
     /**
      * Default constructor for serialization.
      */
@@ -68,12 +74,20 @@ public class Node {
      * @param nid Node ID.
      * @param consistentId Consistent ID.
      * @param client Client flag.
+     * @param baselineNode Is baseline node.
      * @param attrs Node attributes.
      */
-    public Node(UUID nid, Object consistentId, boolean client, Map<String, Object> attrs) {
+    public Node(
+        UUID nid,
+        Object consistentId,
+        boolean client,
+        boolean baselineNode,
+        Map<String, Object> attrs
+    ) {
         this.nid = nid;
         this.consistentId = String.valueOf(consistentId);
         this.client = client;
+        this.baselineNode = baselineNode;
         this.attrs = attrs
             .entrySet()
             .stream()
@@ -87,7 +101,7 @@ public class Node {
      * @param node Cluster node.
      */
     public Node(ClusterNode node) {
-        this(node.id(), node.consistentId(), node.isClient(), node.attributes());
+        this(node.id(), node.consistentId(), node.isClient(), false, node.attributes());
     }
 
     /**
@@ -96,7 +110,7 @@ public class Node {
      * @param node Baseline node.
      */
     public Node(BaselineNode node) {
-        this(null, node.consistentId(), false, node.attributes());
+        this(null, node.consistentId(), false, true, node.attributes());
     }
 
     /**
@@ -153,6 +167,38 @@ public class Node {
      */
     public void setAttributes(Map<String, Object> attrs) {
         this.attrs = attrs;
+    }
+
+    /**
+     * @return @{code True} if node is in baseline.
+     */
+    public boolean isBaselineNode() {
+        return baselineNode;
+    }
+
+    /**
+     * @param baselineNode Baseline node.
+     * @return @{code This} for method chaining.
+     */
+    public Node setBaselineNode(boolean baselineNode) {
+        this.baselineNode = baselineNode;
+        return this;
+    }
+
+    /**
+     * @return @{code True} if node is online.
+     */
+    public boolean isOnline() {
+        return online;
+    }
+
+    /**
+     * @param online Online.
+     * @return @{code This} for method chaining.
+     */
+    public Node setOnline(boolean online) {
+        this.online = online;
+        return this;
     }
 
     /** {@inheritDoc} */

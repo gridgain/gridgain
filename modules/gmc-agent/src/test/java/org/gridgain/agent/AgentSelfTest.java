@@ -37,8 +37,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.AbstractGridWithAgentTest;
+import org.gridgain.dto.cluster.ClusterInfo;
 import org.gridgain.dto.tracing.Span;
 import org.gridgain.dto.topology.TopologySnapshot;
 import org.junit.Ignore;
@@ -49,9 +49,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
-import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
@@ -73,10 +71,8 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
         IgniteCluster cluster = ignite.cluster();
         cluster.active(true);
 
-        assertWithPoll(() -> interceptor.getPayload(buildClusterAddDest()) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildClusterDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildBaselineTopologyDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildClusterActiveStateDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
     }
@@ -106,18 +102,17 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
      * Should send changed baseline topology.
      */
     @Test
-    //@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
-    @Ignore
-    public void shouldSendChangedBaselineTopology() throws Exception {
+    public void shouldSendChangedTopologyWhenBaselineWasChanged() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
         changeGmcUri(ignite_1);
+        ignite_1.cluster().baselineAutoAdjustEnabled(false);
 
         IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
 
         assertWithPoll(
             () -> {
-                TopologySnapshot top = interceptor.getPayload(buildBaselineTopologyDest(cluster.id()), TopologySnapshot.class);
+                TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
                 return top != null && top.getNodes().size() == 1;
             }
         );
@@ -129,7 +124,7 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
 
         assertWithPoll(
             () -> {
-                TopologySnapshot top = interceptor.getPayload(buildBaselineTopologyDest(cluster.id()), TopologySnapshot.class);
+                TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
                 return top != null && top.getNodes().size() == 2;
             }
         );
@@ -148,8 +143,8 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
 
         assertWithPoll(
             () -> {
-                Boolean state = interceptor.getPayload(buildClusterActiveStateDest(cluster.id()), Boolean.class);
-                return state != null && state;
+                ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
+                return info != null && info.isActive();
             }
         );
 
@@ -157,8 +152,8 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
 
         assertWithPoll(
             () -> {
-                Boolean state = interceptor.getPayload(buildClusterActiveStateDest(cluster.id()), Boolean.class);
-                return state != null && !state;
+                ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
+                return info != null && !info.isActive();
             }
         );
     }

@@ -17,7 +17,6 @@
 package org.gridgain.service;
 
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +30,8 @@ import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.gridgain.agent.WebSocketManager;
+import org.gridgain.dto.cluster.BaselineInfo;
+import org.gridgain.dto.cluster.ClusterInfo;
 import org.gridgain.dto.topology.TopologySnapshot;
 
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
@@ -38,14 +39,14 @@ import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.gridgain.utils.AgentUtils.getClusterFeatures;
 
 /**
  * Topology service.
  */
-public class TopologyService implements AutoCloseable {
+public class ClusterService implements AutoCloseable {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_JOINED, EVT_NODE_FAILED, EVT_NODE_LEFT};
 
@@ -55,17 +56,20 @@ public class TopologyService implements AutoCloseable {
     /** TODO GG-21449 this code emulates EVT_BASELINE_CHANGED */
     private volatile Set<String> curBaseline;
 
+    /** Baseline parameters. */
+    private volatile BaselineInfo curBaselineParameters;
+
     /** Context. */
     private GridKernalContext ctx;
+
+    /** Cluster. */
+    private IgniteClusterEx cluster;
 
     /** Manager. */
     private WebSocketManager mgr;
 
     /** Logger. */
     private IgniteLogger log;
-
-    /** Cluster ID. */
-    private UUID clusterId;
 
     /** Executor service. */
     private ScheduledExecutorService baselineExecSrvc = Executors.newScheduledThreadPool(1);
@@ -74,23 +78,21 @@ public class TopologyService implements AutoCloseable {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public TopologyService(GridKernalContext ctx, WebSocketManager mgr) {
+    public ClusterService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
-
-        clusterId = ctx.grid().cluster().id();
+        cluster = ctx.grid().cluster();
+        log = ctx.log(ClusterService.class);
 
         GridEventStorageManager evtMgr = ctx.event();
-
-        log = ctx.log(TopologyService.class);
 
         // Listener for topology changes.
         evtMgr.addDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
 
         // Listen for activation/deactivation.
-        evtMgr.addLocalEventListener(this::sendClusterActiveState, EVTS_ACTIVATION);
+        evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_ACTIVATION);
 
-        // TODO GG-21449 this code emulates EVT_BASELINE_CHANGED
+        // TODO GG-21449 this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*
         baselineExecSrvc.scheduleWithFixedDelay(() -> {
             Set<String> baseline = ctx
                 .grid()
@@ -106,9 +108,30 @@ public class TopologyService implements AutoCloseable {
             else if (!curBaseline.equals(baseline)) {
                 curBaseline = baseline;
 
-                sendBaseline();
+                sendTopologyUpdate(null, ctx.discovery().discoCache());
+            }
+
+            BaselineInfo baselineParameters = new BaselineInfo(
+                cluster.isBaselineAutoAdjustEnabled(),
+                cluster.baselineAutoAdjustTimeout()
+            );
+
+            if (curBaselineParameters == null)
+                curBaselineParameters = baselineParameters;
+            else if (!curBaselineParameters.equals(baselineParameters)) {
+                curBaselineParameters = baselineParameters;
+
+                sendClusterInfo(null);
             }
         }, 2, 5, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Send initial states.
+     */
+    public void sendInitialState() {
+        sendClusterInfo(null);
+        sendTopologyUpdate(null, ctx.discovery().discoCache());
     }
 
     /**
@@ -118,50 +141,40 @@ public class TopologyService implements AutoCloseable {
         // TODO GG-22191 change on debug level.
         log.info("Sending full topology to GMC");
 
+        Object crdId = cluster.localNode().consistentId();
         mgr.send(
-            buildClusterTopologyDest(clusterId),
-            TopologySnapshot.topology(ctx.grid().cluster().topologyVersion(), ctx.grid().cluster().nodes())
+            buildClusterTopologyDest(cluster.id()),
+            TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
         );
+
+        if (evt != null)
+            sendClusterInfo(null);
     }
 
     /**
-     * Send cluster active state to GMC.
+     * Send cluster info.
      */
-    void sendClusterActiveState(Event evt) {
+    void sendClusterInfo(Event evt) {
         // TODO GG-22191 change on debug level.
-        log.info("Sending cluster active state to GMC");
+        log.info("Sending cluster info to GMC");
 
-        mgr.send(buildClusterActiveStateDest(clusterId), ctx.grid().cluster().active());
-    }
+        ClusterInfo clusterInfo= new ClusterInfo(cluster.id(), cluster.tag())
+            .setActive(cluster.active())
+            .setBaselineParameters(
+                new BaselineInfo(
+                    cluster.isBaselineAutoAdjustEnabled(),
+                    cluster.baselineAutoAdjustTimeout()
+                )
+            )
+            .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
-    /**
-     * Send cluster baseline to GMC.
-     */
-    void sendBaseline() {
-        // TODO GG-22191 change on debug level.
-        log.info("Sending cluster baseline to GMC");
-
-        IgniteClusterEx cluster = ctx.grid().cluster();
-
-        mgr.send(
-            buildBaselineTopologyDest(cluster.id()),
-            TopologySnapshot.baseline(cluster.topologyVersion(), cluster.currentBaselineTopology())
-        );
-    }
-
-    /**
-     * Start topology service.
-     */
-    public void sendInitialState() {
-        sendTopologyUpdate(null, ctx.discovery().discoCache());
-        sendClusterActiveState(null);
-        sendBaseline();
+        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
         ctx.event().removeDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
-        ctx.event().removeLocalEventListener(this::sendClusterActiveState, EVTS_ACTIVATION);
+        ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_ACTIVATION);
 
         baselineExecSrvc.shutdown();
     }
