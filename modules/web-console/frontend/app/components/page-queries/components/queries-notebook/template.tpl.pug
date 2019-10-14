@@ -186,13 +186,6 @@ mixin query-actions
     )
         span(translate='queries.notebook.queryActions.explain.buttonLabel')
 
-    button.btn-ignite.btn-ignite--secondary(
-        ng-if='paragraph.executionInProgress(false) || paragraph.executionInProgress(true)'
-        ng-click='cancelQuery(paragraph)'
-        data-placement='bottom'
-        bs-tooltip='::{title: ("queries.notebook.queryActions.cancel.tooltip"|translate)}'
-    )
-        span(translate='queries.notebook.queryActions.cancel.buttonLabel')
 
 mixin table-result-heading-query
     .total.row
@@ -344,6 +337,14 @@ mixin chart-result
 mixin paragraph-scan
     panel-title {{ paragraph.name }}
     panel-actions
+        span {{paragraph.executionInProgress(false) || paragraph.executionInProgress(true)}}
+        button.btn-ignite.btn-ignite--secondary(
+            ng-if='paragraph.checkScanInProgress(false) || paragraph.checkScanInProgress(true)'
+            ng-click='cancelQuery(paragraph)'
+            data-placement='bottom'
+            bs-tooltip='::{title: ("queries.notebook.queryActions.cancel.tooltip"|translate)}'
+        )
+            span(translate='queries.notebook.queryActions.cancel.buttonLabel')
         query-actions-button(actions='$ctrl.scanActions' item='paragraph')
     panel-content
         .col-sm-12.sql-controls
@@ -386,13 +387,6 @@ mixin paragraph-scan
                     span.icon-left.fa.fa-fw.fa-refresh.fa-spin(ng-show='paragraph.checkScanInProgress(true)')
                     span(translate='queries.notebook.scanActions.scanOnSelectedNode')
 
-                button.btn-ignite.btn-ignite--secondary(
-                    ng-if='paragraph.checkScanInProgress(false) || paragraph.checkScanInProgress(true)'
-                    ng-click='cancelQuery(paragraph)'
-                    data-placement='bottom'
-                    bs-tooltip='::{title: ("queries.notebook.scanActions.cancelTooltip"|translate)}'
-                    translate='queries.notebook.scanActions.cancel'
-                )
             div
 
         .col-sm-12.sql-result(ng-if='paragraph.queryExecuted() && !paragraph.scanningInProgress' ng-switch='paragraph.resultType()')
@@ -435,6 +429,13 @@ mixin paragraph-scan
 mixin paragraph-query
     panel-title {{ paragraph.name }}
     panel-actions
+        button.btn-ignite.btn-ignite--secondary(
+            ng-if='paragraph.executionInProgress(false) || paragraph.executionInProgress(true)'
+            ng-click='cancelQuery(paragraph)'
+            data-placement='bottom'
+            bs-tooltip='::{title: ("queries.notebook.scanActions.cancelTooltip"|translate)}'
+            translate='queries.notebook.scanActions.cancel'
+        )
         query-actions-button(actions='$ctrl.queryActions' item='paragraph')
     panel-content
         .col-sm-12
