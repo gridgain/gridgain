@@ -34,7 +34,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class IgniteSessionRepository implements SessionRepository<ExpiringSession> {
     /** The number of seconds that the {@link Session} should be kept alive between requests (default: 30 days). */
-    @Value("${sessions.inactive.timeout:2592000}")
+    @Value("${server.sessions.inactive.timeout:2592000}")
     private int maxInactiveInterval;
 
     /** */

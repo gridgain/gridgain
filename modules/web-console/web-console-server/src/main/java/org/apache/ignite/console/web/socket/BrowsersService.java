@@ -203,7 +203,6 @@ public class BrowsersService extends AbstractSocketHandler {
                     if (top == null)
                         throw new IllegalStateException(messages.getMessageWithArgs("err.cluster-not-found-by-id", clusterId));
 
-                    // TODO GG-24427 Append sessionId if it exists in session store.
                     if (top.isSecured()) {
                         SessionAttribute sesAttr = new SessionAttribute(ses, SESSION_TOKEN_ATTR_PREFIX + clusterId);
 
@@ -458,7 +457,8 @@ public class BrowsersService extends AbstractSocketHandler {
             catch (Exception ignored) {
                 sendMessageQuiet(ses, evt);
             }
-        } else if (ses != null)
+        }
+        else if (ses != null)
             sendMessageQuiet(ses, evt);
     }
 

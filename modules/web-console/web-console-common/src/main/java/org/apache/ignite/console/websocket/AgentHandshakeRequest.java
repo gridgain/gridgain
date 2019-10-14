@@ -30,10 +30,10 @@ import static java.util.stream.Stream.of;
  */
 public class AgentHandshakeRequest {
     /** Version 8.8.0 Initial version. */
-    public static final String VER_8_8_0 = "8.8.0";
+    public static final String VER_2019_10_01 = "2019_10_01";
 
     /** Current version. */
-    public static final String CURRENT_VER = VER_8_8_0;
+    public static final String CURRENT_VER = VER_2019_10_01;
 
     /** Supported versions. */
     public static final Set<String> SUPPORTED_VERS = of(CURRENT_VER).collect(toSet());
