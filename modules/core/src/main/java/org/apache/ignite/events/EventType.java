@@ -19,7 +19,6 @@ package org.apache.ignite.events;
 import java.util.List;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
