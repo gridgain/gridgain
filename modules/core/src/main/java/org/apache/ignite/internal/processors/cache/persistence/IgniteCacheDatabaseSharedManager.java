@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import javax.management.InstanceNotFoundException;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,6 +70,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
 import org.jetbrains.annotations.Nullable;
@@ -880,6 +882,20 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @throws IgniteCheckedException If failed.
      */
     public void waitForCheckpoint(String reason) throws IgniteCheckedException {
+        waitForCheckpoint(reason, null);
+    }
+
+    /**
+     * Waits until current state is checkpointed and execution listeners after finish.
+     *
+     * @param reason Reason for checkpoint wakeup if it would be required.
+     * @param lsnr Listeners which should be called in checkpoint thread after current checkpoint finished.
+     * @throws IgniteCheckedException If failed.
+     */
+    public <R> void waitForCheckpoint(
+        String reason,
+        IgniteInClosure<? super IgniteInternalFuture<R>> lsnr
+    ) throws IgniteCheckedException {
         // No-op
     }
 
