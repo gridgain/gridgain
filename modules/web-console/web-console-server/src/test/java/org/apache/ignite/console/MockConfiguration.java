@@ -19,6 +19,7 @@ package org.apache.ignite.console;
 import java.util.Collections;
 import java.util.Spliterators;
 import java.util.UUID;
+import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
@@ -48,7 +49,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
-import javax.cache.expiry.ExpiryPolicy;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;

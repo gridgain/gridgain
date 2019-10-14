@@ -20,7 +20,9 @@ import org.apache.ignite.console.MockUserDetailsServiceConfiguration;
 import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.WithMockTestUser;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.apache.ignite.console.MockUserDetailsServiceConfiguration.TEST_EMAIL;
 import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
+import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
+import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -61,9 +65,27 @@ public class AgentDownloadControllerTest {
     /** Endpoint for server-side Spring MVC test support */
     private MockMvc mvc;
 
+    /**
+     * @throws Exception If failed.
+     */
+    @BeforeClass
+    public static void setup() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @AfterClass
+    public static void tearDown() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
     /** */
     @Before
-    public void setup() {
+    public void init() {
         this.mvc = MockMvcBuilders.webAppContextSetup(ctx).build();
 
         cleanup();
