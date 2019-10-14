@@ -201,6 +201,6 @@ public class BrowsersServiceSelfTest {
 
         assertEquals("user", params.get("user"));
         assertEquals("password", params.get("password"));
-        assertEquals("sessionToken", params.get("sessionToken"));
+        assertEquals("testToken", params.get("sessionToken"));
     }
 }
