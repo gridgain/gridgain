@@ -61,7 +61,7 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     public static final int NEW_NODES = 3;
 
     /** Cache with randezvous affinity. */
-    public static final String RANDEZVOUSE_CACHE = DEFAULT_CACHE_NAME + "_randezvous_aff";
+    public static final String RENDEZVOUS_CACHE = DEFAULT_CACHE_NAME + "_rendezvous_aff";
 
     /** Cache with custom affinity. */
     public static final String CUSTOM_CACHE = DEFAULT_CACHE_NAME + "_specific_aff";
@@ -73,12 +73,13 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
+            .setIncludeEventTypes(EVT_CACHE_REBALANCE_PART_MISSED)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(persistentEnabled)))
             .setCacheConfiguration(
-                new CacheConfiguration(RANDEZVOUSE_CACHE)
+                new CacheConfiguration(RENDEZVOUS_CACHE)
                     .setBackups(BACKUPS),
                 new CacheConfiguration(CUSTOM_CACHE)
                     .setBackups(BACKUPS)
@@ -136,7 +137,7 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
         ignite0.cluster().active(true);
 
-        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, RENDEZVOUS_CACHE);
         loadData(ignite0, CUSTOM_CACHE);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
@@ -148,7 +149,7 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
         awaitPartitionMapExchange();
 
-        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, RENDEZVOUS_CACHE);
         loadData(ignite0, CUSTOM_CACHE);
 
         TestRecordingCommunicationSpi testCommunicationSpi1 = startNodeWithBlockingRebalance("new_1", true);
@@ -157,8 +158,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
         testCommunicationSpi1.waitForBlocked();
         testCommunicationSpi2.waitForBlocked();
 
-        checkState(GridDhtPartitionState.RENTING, RANDEZVOUSE_CACHE);
-        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, RENDEZVOUS_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
 
         AtomicBoolean hasMissed = new AtomicBoolean();
 
@@ -181,14 +182,14 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
         testCommunicationSpi0.waitForRecorded();
 
-        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
 
         testCommunicationSpi2.stopBlock();
 
         awaitPartitionMapExchange();
 
-        checkState(GridDhtPartitionState.MOVING, RANDEZVOUSE_CACHE);
-        checkState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.MOVING, RENDEZVOUS_CACHE);
+        checkPartitionsState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
 
         assertFalse(hasMissed.get());
     }
@@ -206,7 +207,7 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
         TestRecordingCommunicationSpi testCommunicationSpi0 = (TestRecordingCommunicationSpi)ignite0
             .configuration().getCommunicationSpi();
 
-        loadData(ignite0, RANDEZVOUSE_CACHE);
+        loadData(ignite0, RENDEZVOUS_CACHE);
         loadData(ignite0, CUSTOM_CACHE);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
@@ -223,8 +224,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
         testCommunicationSpi2.waitForBlocked();
         testCommunicationSpi3.waitForBlocked();
 
-        checkState(GridDhtPartitionState.RENTING, RANDEZVOUSE_CACHE);
-        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, RENDEZVOUS_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
 
         AtomicBoolean hasMissed = new AtomicBoolean();
 
@@ -245,25 +246,24 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
         testCommunicationSpi0.waitForRecorded();
 
-        checkState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.RENTING, CUSTOM_CACHE);
 
         testCommunicationSpi3.stopBlock();
 
         awaitPartitionMapExchange();
 
-        checkState(GridDhtPartitionState.MOVING, RANDEZVOUSE_CACHE);
-        checkState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
+        checkPartitionsState(GridDhtPartitionState.MOVING, RENDEZVOUS_CACHE);
+        checkPartitionsState(GridDhtPartitionState.MOVING, CUSTOM_CACHE);
 
         assertFalse(hasMissed.get());
     }
 
     /**
-     * Check partiiton state on all nodes by all caches.
+     * Checks partitions state on all nodes by all caches.
      */
-    private void checkState(GridDhtPartitionState state, String cacheName) {
-        for (Ignite ign : G.allGrids()) {
+    private void checkPartitionsState(GridDhtPartitionState state, String cacheName) {
+        for (Ignite ign : G.allGrids())
             checkPartitionState((IgniteEx)ign, state, cacheName);
-        }
     }
 
     /**
@@ -297,15 +297,15 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
 
                 long rebalanceId = U.field(demandMessage, "rebalanceId");
 
-                if ((CU.cacheId(RANDEZVOUSE_CACHE) != demandMessage.groupId()
+                if ((CU.cacheId(RENDEZVOUS_CACHE) != demandMessage.groupId()
                     && CU.cacheId(CUSTOM_CACHE) != demandMessage.groupId())
                     || rebalanceId < 0)
                     return false;
 
                 if (historicalRebalance)
-                    assertTrue("Waited fro historical rebalance, msg: " + demandMessage, demandMessage.partitions().hasHistorical());
+                    assertTrue("Waited from historical rebalance, msg: " + demandMessage, demandMessage.partitions().hasHistorical());
                 else
-                    assertTrue("Waited fro full rebalance, msg: " + demandMessage, demandMessage.partitions().hasFull());
+                    assertTrue("Waited from full rebalance, msg: " + demandMessage, demandMessage.partitions().hasFull());
 
                 info("Message was caught: " + msg.getClass().getSimpleName()
                     + " to: " + node.consistentId()
