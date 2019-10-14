@@ -14,23 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
-
 /**
- * Implementation of {@link DistributedProperty} for {@link Boolean}.
+ * <!-- Package description. -->
+ * Contains Ignite Thin Client API classes.
  */
-public class DistributedBooleanProperty extends SimpleDistributedProperty<Boolean> {
-
-    /** {@inheritDoc} */
-    DistributedBooleanProperty(String name) {
-        super(name);
-    }
-
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedBooleanProperty detachedBooleanProperty(String name) {
-        return new DistributedBooleanProperty(name);
-    }
-}
+package org.apache.ignite.client;

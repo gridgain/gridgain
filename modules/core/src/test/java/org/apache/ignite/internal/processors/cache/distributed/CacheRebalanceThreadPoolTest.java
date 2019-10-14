@@ -213,6 +213,8 @@ public class CacheRebalanceThreadPoolTest extends GridCommonAbstractTest {
             this.persistenceEnabled = persistenceEnabled;
 
             IgniteEx ex = startGrids(1);
+
+            ex.cluster().baselineAutoAdjustEnabled(false);
             ex.cluster().active(true);
 
             List<Integer> parts = movingKeysAfterJoin(ex, CACHE1, 1);
