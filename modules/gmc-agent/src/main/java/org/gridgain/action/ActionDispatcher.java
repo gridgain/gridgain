@@ -32,9 +32,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.lang.IgniteFuture;
 import org.gridgain.dto.action.Request;
-import org.gridgain.utils.AgentUtils;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.gridgain.action.annotation.ActionControllerAnnotationProcessor.getActions;
+import static org.gridgain.utils.AgentUtils.completeIgniteFuture;
 import static org.gridgain.utils.AgentUtils.completeFutureWithException;
 
 /**
@@ -136,19 +137,18 @@ public class ActionDispatcher implements AutoCloseable {
      * @param arg Argument.
      */
     private CompletableFuture invoke(Method mtd, Object controller, Object arg) throws Exception {
-        CompletableFuture fut = new CompletableFuture<>();
         Object res = arg == null ? mtd.invoke(controller) : mtd.invoke(controller, arg);
 
         if (res instanceof Void)
-            fut.complete(null);
-        else if (res instanceof CompletableFuture)
-            return (CompletableFuture) res;
-        else if (res instanceof IgniteFuture)
-            ((IgniteFuture) res).chain(f -> AgentUtils.completeFuture((IgniteFuture) f, fut));
-        else
-            fut.complete(res);
+            return completedFuture(null);
 
-        return fut;
+        if (res instanceof CompletableFuture)
+            return (CompletableFuture) res;
+
+        if (res instanceof IgniteFuture)
+           return completeIgniteFuture((IgniteFuture) res);
+
+        return completedFuture(res);
     }
 
     /** {@inheritDoc} */
