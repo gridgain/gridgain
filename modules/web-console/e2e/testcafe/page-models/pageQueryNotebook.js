@@ -18,6 +18,7 @@ import {Selector} from 'testcafe';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 import {Table} from '../components/Table';
 import {ace, enterAceText} from '../components/ace';
+import {FormField} from '../components/FormField';
 
 export class Paragraph extends PanelCollapsible {
     constructor(title) {
@@ -30,6 +31,9 @@ export class Paragraph extends PanelCollapsible {
         this.showQueryButton = this.body.find('a').withExactText('Show query');
         this.clearResultButton = this.body.find('i.fa.fa-eraser');
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
+        this.cancelQueryButton = this.actions.find('button').withExactText('Cancel');
+        this.moreQueryActionsButton = this.actions.find('query-actions-button .fa-caret-down').parent('button');
+        this.renameQueryButton = this.actions.find('a').withText('Rename');
     }
     async enterQuery(text, options = {replace: false}) {
         return await enterAceText(this.queryField.with({timeout: 0}), text, options);
@@ -65,3 +69,13 @@ export const showStacktraceDialog = {
     downloadLink: showStacktraceDialogSelector.find('span').withText('Full stacktrace is not available'),
     okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
 };
+
+const renameQueryDialogSelector = Selector('.modal-header').withText('Rename Query').parent('.modal');
+
+export const renameQueryDialog = {
+    dialog: renameQueryDialogSelector,
+    input: new FormField({label: 'New query name'}),
+    confirmButton: renameQueryDialogSelector.find('button').withText('Confirm')
+};
+
+export const paragraphPanels = Selector('queries-notebook panel-collapsible');

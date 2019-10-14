@@ -22,7 +22,9 @@ import {
 } from '../../mocks/agentTasks';
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {Paragraph, showQueryDialog, confirmClearQueryDialog} from '../../page-models/pageQueryNotebook';
+import {
+    Paragraph, showQueryDialog, confirmClearQueryDialog, renameQueryDialog, paragraphPanels
+} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
 const user = createRegularUser();
@@ -92,3 +94,32 @@ test('Sending a request', async(t) => {
         .click(confirmClearQueryDialog.confirmButton)
         .expect(paragraph.resultsTable._selector.exists).notOk();
 });
+
+// https://ggsystems.atlassian.net/browse/GG-23314
+test('Very long query name', async(t) => {
+    await t.addRequestHooks(
+        t.ctx.ws = new WebSocketHook()
+            .use(
+                agentStat(FAKE_CLUSTERS),
+                cacheNamesCollectorTask(FAKE_CACHES),
+            )
+    );
+
+    await t
+        .useRole(user)
+        .navigateTo(resolveUrl('/queries/notebooks'));
+
+    const veryLongName = 'Foo '.repeat(30);
+    const notebookName = 'Test';
+    await notebooks.createNotebook(notebookName);
+    await t.click(notebooks.getNotebookByName(notebookName));
+    const query = new Paragraph('Query');
+    const oldWidth = await query.body.clientWidth;
+    await t.click(query.moreQueryActionsButton);
+    await t.click(query.renameQueryButton);
+    await t.typeText(renameQueryDialog.input.control, veryLongName, {replace: true});
+    await t.click(renameQueryDialog.confirmButton);
+    await t.expect(paragraphPanels.nth(0).clientWidth).eql(oldWidth, 'Panel width should not depend on query name length');
+});
+
+
