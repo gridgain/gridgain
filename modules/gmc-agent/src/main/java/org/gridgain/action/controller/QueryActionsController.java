@@ -36,6 +36,7 @@ import org.gridgain.dto.action.query.ScanQueryArgument;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -165,8 +166,8 @@ public class QueryActionsController {
      * @param arg Argument.
      * @return List of query results.
      */
-    public CompletableFuture<QueryResult> executeScanQuery(ScanQueryArgument arg) {
-        final CompletableFuture<QueryResult> fut = new CompletableFuture<>();
+    public CompletableFuture<List<QueryResult>> executeScanQuery(ScanQueryArgument arg) {
+        final CompletableFuture<List<QueryResult>> fut = new CompletableFuture<>();
         String qryId = requireNonNull(arg.getQueryId(), "Failed to execute query due to empty query ID");
 
         ctx.closure().runLocalSafe(() -> {
@@ -186,7 +187,7 @@ public class QueryActionsController {
                 if (res.isHasMore())
                     res.setCursorId(qryRegistry.addCursor(qryId, cursorHolder));
 
-                fut.complete(res);
+                fut.complete(Collections.singletonList(res));
             }
             catch (Throwable e) {
                 log.warning("Failed to execute scan query: [qryId=" + qryId + ", cache=" + arg.getCacheName() + "]", e);
