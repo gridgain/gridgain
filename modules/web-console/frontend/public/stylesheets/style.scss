@@ -269,7 +269,9 @@ body {
 
     min-height: 100vh;
     display: grid;
-    grid-template-columns: auto 1fr;
+    // Zero min width prevents from content blowing out column width
+    // https://stackoverflow.com/a/43312314/333777
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto var(--header-height) 1fr;
     grid-template-areas: 'notifications notifications' 'header header' 'sidebar content';
 
