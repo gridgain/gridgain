@@ -39,7 +39,7 @@ test('Check selector picker version list', async(t) => {
     const page = new PageConfigurationBasic();
 
     await t.hover(page.versionPicker._selector)
-        .expect(page.versionPicker.menuItems.count).eql(knownSupportedVersions.length, 'It should not contain unsupported versions');
+        .expect(page.versionPicker.menuItems.count).eql(knownSupportedVersions.length, 'Version picker should not contain unsupported versions');
 
     for (let i = 0; i < knownSupportedVersions.length; i++)
         await page.versionPicker.pickVersion(knownSupportedVersions[i]);
