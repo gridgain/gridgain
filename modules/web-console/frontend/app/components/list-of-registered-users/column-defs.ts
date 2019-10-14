@@ -24,7 +24,7 @@ const MODEL_HEADER_TEMPLATE = `<div class='ui-grid-cell-contents' bs-tooltip dat
 const CACHE_HEADER_TEMPLATE = `<div class='ui-grid-cell-contents' bs-tooltip data-title='{{ col.headerTooltip(col) }}' data-placement='top'><i class='fa fa-database'></i>${ICON_SORT}</div>`;
 
 const EMAIL_TEMPLATE = '<div class="ui-grid-cell-contents"><a bs-tooltip data-title="{{ COL_FIELD }}" ng-href="mailto:{{ COL_FIELD }}">{{ COL_FIELD }}</a></div>';
-const DATE_WITH_TITLE = '<div class="ui-grid-cell-contents"><label bs-tooltip data-title="{{ COL_FIELD | date:\'M/d/yy HH:mm\' }}">{{ COL_FIELD | date:"M/d/yy HH:mm" }}</label></div>';
+const DATE_WITH_TITLE = '<div class="ui-grid-cell-contents"><label bs-tooltip data-title="{{ COL_FIELD === -1 ? \'n/a\' : COL_FIELD | date:\'M/d/yy HH:mm\' }}">{{ COL_FIELD === -1 ? \'n/a\' : COL_FIELD | date:"M/d/yy HH:mm" }}</label></div>';
 const VALUE_WITH_TITLE = '<div class="ui-grid-cell-contents"><label bs-tooltip data-title="{{ COL_FIELD }}">{{ COL_FIELD }}</label></div>';
 
 export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [

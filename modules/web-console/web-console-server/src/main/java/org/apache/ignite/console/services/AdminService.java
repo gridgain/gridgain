@@ -17,6 +17,7 @@
 package org.apache.ignite.console.services;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
@@ -27,13 +28,16 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.security.IgniteSessionRepository;
 import org.apache.ignite.console.web.socket.TransitionService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.session.ExpiringSession;
 import org.springframework.stereotype.Service;
 
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
+import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
  * Service to handle administrator actions.
@@ -64,6 +68,9 @@ public class AdminService {
     /** */
     private final TransitionService transitionSrvc;
 
+    /** */
+    private final IgniteSessionRepository sesRepo;
+
     /**
      * @param txMgr Transactions manager.
      * @param accountsSrv Service to work with accounts.
@@ -73,6 +80,7 @@ public class AdminService {
      * @param evtPublisher Service to publish events.
      * @param annRepo Repository to work with announcement.
      * @param transitionSrvc Transition service.
+     * @param sesRepo Sessions repository.
      */
     public AdminService(
         TransactionManager txMgr,
@@ -82,7 +90,8 @@ public class AdminService {
         ActivitiesService activitiesSrv,
         EventPublisher evtPublisher,
         AnnouncementRepository annRepo,
-        TransitionService transitionSrvc
+        TransitionService transitionSrvc,
+        IgniteSessionRepository sesRepo
     ) {
         this.txMgr = txMgr;
         this.accountsSrv = accountsSrv;
@@ -92,6 +101,7 @@ public class AdminService {
         this.evtPublisher = evtPublisher;
         this.annRepo = annRepo;
         this.transitionSrvc = transitionSrvc;
+        this.sesRepo = sesRepo;
     }
 
     /**
@@ -104,7 +114,15 @@ public class AdminService {
 
         JsonArray res = new JsonArray();
 
-        accounts.forEach(account ->
+        accounts.forEach(account -> {
+            Map<String, ExpiringSession> ses = sesRepo.findByIndexNameAndIndexValue(
+                PRINCIPAL_NAME_INDEX_NAME,
+                account.getUsername()
+            );
+
+            long lastLogin = ses.values().stream().map(ExpiringSession::getCreationTime).max(Long::compareTo).orElse(-1L);
+            long lastActivity = ses.values().stream().map(ExpiringSession::getLastAccessedTime).max(Long::compareTo).orElse(-1L);
+
             res.add(new JsonObject()
                 .add("id", account.getId())
                 .add("firstName", account.getFirstName())
@@ -113,16 +131,16 @@ public class AdminService {
                 .add("email", account.getUsername())
                 .add("company", account.getCompany())
                 .add("country", account.getCountry())
-                .add("lastLogin", account.getLastLogin())
-                .add("lastActivity", account.getLastActivity())
+                .add("lastLogin", lastLogin)
+                .add("lastActivity", lastActivity)
                 .add("activated", account.isEnabled())
                 .add("counters", new JsonObject()
                     .add("clusters", 0)
                     .add("caches", 0)
                     .add("models", 0))
                 .add("activitiesDetail", activitiesSrv.activitiesForPeriod(account.getId(), startDate, endDate))
-            )
-        );
+            );
+        });
 
         return res;
     }

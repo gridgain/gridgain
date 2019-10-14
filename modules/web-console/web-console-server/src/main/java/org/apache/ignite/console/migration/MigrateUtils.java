@@ -194,9 +194,6 @@ public class MigrateUtils {
         if (val instanceof String)
             return Long.parseLong(val.toString());
 
-        if (val instanceof Date)
-            return ((Date)val).getTime();
-
         throw new ClassCastException("Expected long value, but found: " + val);
     }
 
@@ -217,9 +214,6 @@ public class MigrateUtils {
 
         if (val instanceof String)
             return Long.parseLong(val.toString());
-
-        if (val instanceof Date)
-            return ((Date)val).getTime();
 
         throw new ClassCastException("Expected long value, but found: " + val);
     }

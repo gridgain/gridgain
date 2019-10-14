@@ -33,8 +33,6 @@ import org.apache.ignite.console.web.security.MissingConfirmRegistrationExceptio
 import org.apache.ignite.console.web.socket.AgentsService;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
@@ -55,9 +53,6 @@ import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_
  */
 @Service
 public class AccountsService implements UserDetailsService {
-    /** */
-    private static final Logger log = LoggerFactory.getLogger(AccountsService.class);
-
     /** Tx manager. */
     protected TransactionManager txMgr;
 
@@ -318,44 +313,6 @@ public class AccountsService implements UserDetailsService {
             accountsRepo.save(acc);
 
             evtPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
-        });
-    }
-
-    /**
-     * @param accId Account ID.
-     * @param lastActivity Time of last activity.
-     */
-    public void updateLastActivity(UUID accId, long lastActivity) {
-        txMgr.doInTransaction(() -> {
-            try {
-                Account acc = accountsRepo.getById(accId);
-
-                acc.setLastActivity(lastActivity);
-
-                accountsRepo.save(acc);
-            }
-            catch (Throwable e) {
-                log.error("Failed to update last activity for account: " + accId, e);
-            }
-        });
-    }
-
-    /**
-     * @param accId Account ID.
-     * @param lastLogin Time of last login.
-     */
-    public void updateLastLogin(UUID accId, long lastLogin) {
-        txMgr.doInTransaction(() -> {
-            try {
-                Account acc = accountsRepo.getById(accId);
-
-                acc.setLastLogin(lastLogin);
-
-                accountsRepo.save(acc);
-            }
-            catch (Throwable e) {
-                log.error("Failed to update last login for account: " + accId, e);
-            }
         });
     }
 }

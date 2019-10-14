@@ -16,13 +16,22 @@
 
 package org.apache.ignite.console.web.security;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
@@ -32,7 +41,10 @@ import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvaila
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
-public class IgniteSessionRepository implements SessionRepository<ExpiringSession> {
+public class IgniteSessionRepository implements
+    SessionRepository<ExpiringSession>,
+    FindByIndexNameSessionRepository<ExpiringSession>
+{
     /** */
     private final Ignite ignite;
 
@@ -124,5 +136,35 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<String, ExpiringSession> findByIndexNameAndIndexValue(String idxName, String idxVal) {
+        if (!PRINCIPAL_NAME_INDEX_NAME.equals(idxName))
+            return Collections.emptyMap();
+
+        Collection<MapSession> sessions = new ArrayList<>();
+
+        try (QueryCursor<Cache.Entry<String, Object>> cursor = cache().query(new ScanQuery())) {
+            cursor.forEach(item -> {
+                Object v = item.getValue();
+
+                if (v instanceof MapSession) {
+                    MapSession ms = (MapSession)v;
+
+                    Object name = ms.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
+
+                    if (idxVal.equals(name))
+                        sessions.add((MapSession)v);
+                }
+            });
+        }
+
+        Map<String, ExpiringSession> sesMap = new HashMap<>(sessions.size());
+
+        for (MapSession session : sessions)
+            sesMap.put(session.getId(), session);
+
+        return sesMap;
     }
 }

@@ -16,10 +16,12 @@
 
 package org.apache.ignite.console.web.security;
 
-import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.web.model.SignInRequest;
 import org.springframework.context.support.MessageSourceAccessor;
@@ -30,6 +32,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
  * Custom filter for retrieve credentials from body and authenticate user. Default implementation use path parameters.
@@ -42,8 +45,10 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
     protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** {@inheritDoc} */
-    @Override public Authentication attemptAuthentication(HttpServletRequest req,
-        HttpServletResponse res) throws AuthenticationException {
+    @Override public Authentication attemptAuthentication(
+        HttpServletRequest req,
+        HttpServletResponse res
+    ) throws AuthenticationException {
         try {
             SignInRequest params = objMapper.readValue(req.getReader(), SignInRequest.class);
 
@@ -55,7 +60,15 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
 
             tok.setDetails(params.getActivationToken());
 
-            return getAuthenticationManager().authenticate(tok);
+            Authentication auth = getAuthenticationManager().authenticate(tok);
+
+            Account p = (Account)auth.getPrincipal();
+
+            HttpSession s = req.getSession();
+
+            s.setAttribute(PRINCIPAL_NAME_INDEX_NAME, p.getEmail());
+
+            return auth;
         }
         catch (IOException e) {
             throw new PreAuthenticatedCredentialsNotFoundException(messages.getMessage("err.parse-signin-req-failed"), e);
