@@ -664,7 +664,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        doSleep(60_000);
+        doSleep(GridTestUtils.SF.applyLB(60_000, 30_000));
 
         done.set(true);
 
