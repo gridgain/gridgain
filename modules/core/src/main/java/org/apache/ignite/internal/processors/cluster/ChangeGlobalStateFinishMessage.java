@@ -40,9 +40,6 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     private final UUID reqId;
 
     /** New cluster state. */
-    private final boolean clusterActive;
-
-    /** New cluster state. */
     private final ClusterState state;
 
     /** State change error. */
@@ -63,7 +60,6 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
         this.reqId = reqId;
         this.state = state;
         this.transitionRes = transitionRes;
-        this.clusterActive = ClusterState.active(state);
     }
 
     /**
@@ -79,14 +75,14 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
      */
     @Deprecated
     public boolean clusterActive() {
-        return clusterActive;
+        return ClusterState.active(state);
     }
 
     /**
      * @return Transition success status.
      */
     public boolean success() {
-        return transitionRes == null ? clusterActive : transitionRes;
+        return transitionRes == null ? ClusterState.active(state) : transitionRes;
     }
 
     /**
