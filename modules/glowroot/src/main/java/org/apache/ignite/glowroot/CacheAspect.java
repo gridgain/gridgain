@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
-import org.glowroot.agent.plugin.api.ThreadContext;
+import org.glowroot.agent.plugin.api.OptionalThreadContext;
 import org.glowroot.agent.plugin.api.TimerName;
 import org.glowroot.agent.plugin.api.TraceEntry;
 import org.glowroot.agent.plugin.api.weaving.BindMethodName;
@@ -38,6 +38,12 @@ import org.glowroot.agent.plugin.api.weaving.Shim;
  * Trace cache operations.
  */
 public class CacheAspect {
+
+    /**
+     * Per thread tx context holder.
+     */
+    private static ThreadLocal<TraceEntry> txTraceCtx = new ThreadLocal<>();
+
     /** */
     @Shim("org.apache.ignite.IgniteCache")
     public interface IgniteCache {
@@ -70,7 +76,16 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(ThreadContext ctx, @BindReceiver IgniteCache proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver IgniteCache proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+            if (!ctx.isInTransaction()) {
+                TraceEntry txTraceEntry = ctx.startTransaction("Ignite",
+                    Thread.currentThread().getName(),
+                    MessageSupplier.create(""),
+                    timer);
+
+                txTraceCtx.set(txTraceEntry);
+            }
+
             if ("query".equals(val))
                 return ctx.startTraceEntry(MessageSupplier.create("trace_type=cache_query cache_name={} query={}", proxy.getName(), params[0].toString()), timer);
             else {
@@ -97,6 +112,11 @@ public class CacheAspect {
         @OnReturn
         public static void onReturn(@BindTraveler TraceEntry traceEntry) {
             traceEntry.end();
+
+            TraceEntry txTraceEntry = txTraceCtx.get();
+
+            if (txTraceEntry != null)
+                txTraceEntry.end();
         }
 
         /**
@@ -107,6 +127,11 @@ public class CacheAspect {
         public static void onThrow(@BindThrowable Throwable throwable,
             @BindTraveler TraceEntry traceEntry) {
             traceEntry.endWithError(throwable);
+
+            TraceEntry txTraceEntry = txTraceCtx.get();
+
+            if (txTraceEntry != null)
+                txTraceEntry.endWithError(throwable);
         }
     }
 }
