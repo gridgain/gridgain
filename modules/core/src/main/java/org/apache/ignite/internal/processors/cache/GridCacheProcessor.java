@@ -3037,6 +3037,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             for (ExchangeActions.CacheActionData action: cachesToStopByGrp.getValue()) {
                                 stopGateway(action.request());
 
+                                context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
+
                                 sharedCtx.database().checkpointReadLock();
 
                                 try {
