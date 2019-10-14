@@ -56,6 +56,7 @@ import org.apache.ignite.lang.IgnitePredicate;
  * event storage SPI if they are disabled in Ignite configuration.
  * @see EventType#EVT_CLUSTER_ACTIVATED
  * @see EventType#EVT_CLUSTER_DEACTIVATED
+ * @see EventType#EVT_CLUSTER_READ_ONLY_MODE_ENABLED
  */
 public class ClusterActivationEvent extends EventAdapter {
     /** */

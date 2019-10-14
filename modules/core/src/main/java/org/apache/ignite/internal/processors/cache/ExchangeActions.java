@@ -24,10 +24,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.active;
 
 /**
  * Cache change requests to execute when receive {@link DynamicCacheChangeBatch} event.
@@ -201,14 +205,21 @@ public class ExchangeActions {
      * @return {@code True} if has deactivate request.
      */
     public boolean deactivate() {
-        return stateChangeReq != null && stateChangeReq.activeChanged() && !stateChangeReq.activate();
+        return stateChangeReq != null && stateChangeReq.activeChanged() && !active(stateChangeReq.state());
     }
 
     /**
      * @return {@code True} if has activate request.
      */
     public boolean activate() {
-        return stateChangeReq != null && stateChangeReq.activeChanged() && stateChangeReq.activate();
+        return stateChangeReq != null && stateChangeReq.activeChanged() && active(stateChangeReq.state());
+    }
+
+    /**
+     * @return {@code True} if has enable cluster read-only request.
+     */
+    public boolean readOnlyEnabled() {
+        return stateChangeReq != null && stateChangeReq.prevState() != READ_ONLY && stateChangeReq.state() == READ_ONLY;
     }
 
     /**

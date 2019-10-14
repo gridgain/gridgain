@@ -19,6 +19,7 @@ package org.apache.ignite.events;
 import java.util.List;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -794,6 +795,18 @@ public interface EventType {
      * @see IgniteCluster#id()
      */
     public static final int EVT_CLUSTER_TAG_UPDATED = 143;
+
+    /**
+     * Built-in event type: Cluster read-only mode enabled.
+     * <p>
+     * Fired when cluster read-only mode enabled.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ClusterActivationEvent
+     */
+    public static final int EVT_CLUSTER_READ_ONLY_MODE_ENABLED = 144;
 
     /**
      * All checkpoint events. This array can be directly passed into

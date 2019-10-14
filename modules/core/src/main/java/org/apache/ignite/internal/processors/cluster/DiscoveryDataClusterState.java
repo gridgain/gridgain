@@ -45,9 +45,6 @@ public class DiscoveryDataClusterState implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Flag indicating if the cluster in in active state. */
-    private final boolean active;
-
     /** Current cluster state. */
     private final ClusterState state;
 
@@ -162,8 +159,6 @@ public class DiscoveryDataClusterState implements Serializable {
         assert state != null;
 
         this.prevState = prevState;
-        // Backward compatibility.
-        this.active = ClusterState.active(state);
         this.state = state;
         this.lastStateChangeTime = U.currentTimeMillis();
         this.baselineTopology = baselineTopology;
@@ -238,7 +233,7 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     @Deprecated
     public boolean active() {
-        return active;
+        return ClusterState.active(state);
     }
 
     /**

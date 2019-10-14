@@ -592,6 +592,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             recordEvent("Cluster activated.", EventType.EVT_CLUSTER_ACTIVATED);
                         else if (exchActions.deactivate())
                             recordEvent("Cluster deactivated.", EventType.EVT_CLUSTER_DEACTIVATED);
+
+                        if (exchActions.readOnlyEnabled())
+                            recordEvent("Cluster read-only mode enabled.", EventType.EVT_CLUSTER_READ_ONLY_MODE_ENABLED);
                     });
                 }
             }

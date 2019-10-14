@@ -26,6 +26,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.active;
+
 /**
  *
  */
@@ -37,24 +39,25 @@ public class StateChangeRequest {
     private final BaselineTopologyHistoryItem prevBltHistItem;
 
     /** */
-    private final boolean activeChanged;
+    private ClusterState prevState;
 
     /** */
     private final AffinityTopologyVersion topVer;
 
     /**
      * @param msg Message.
+     * @param prevState Previous cluster state.
      * @param topVer State change topology versoin.
      */
     public StateChangeRequest(
         ChangeGlobalStateMessage msg,
         BaselineTopologyHistoryItem bltHistItem,
-        boolean activeChanged,
+        ClusterState prevState,
         AffinityTopologyVersion topVer
     ) {
         this.msg = msg;
         prevBltHistItem = bltHistItem;
-        this.activeChanged = activeChanged;
+        this.prevState = prevState;
         this.topVer = topVer;
     }
 
@@ -96,10 +99,17 @@ public class StateChangeRequest {
     }
 
     /**
+     * @return Previous cluster state.
+     */
+    public ClusterState prevState() {
+        return prevState;
+    }
+
+    /**
      * @return {@code True} if active state was changed.
      */
     public boolean activeChanged() {
-        return activeChanged;
+        return active(prevState) && !active(msg.state()) || !active(prevState) && active(msg.state());
     }
 
     /**

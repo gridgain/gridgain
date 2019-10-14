@@ -47,9 +47,6 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     /** Initiator node ID. */
     private UUID initiatingNodeId;
 
-    /** If true activate else deactivate. */
-    private boolean activate;
-
     /** Cluster state */
     private ClusterState state;
 
@@ -97,7 +94,6 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
         this.reqId = reqId;
         this.initiatingNodeId = initiatingNodeId;
         this.storedCfgs = storedCfgs;
-        this.activate = ClusterState.active(state);
         this.state = state;
         this.baselineTopology = baselineTopology;
         this.forceChangeBaselineTopology = forceChangeBaselineTopology;

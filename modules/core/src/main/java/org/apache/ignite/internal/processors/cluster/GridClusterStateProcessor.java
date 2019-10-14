@@ -655,7 +655,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 StateChangeRequest req = new StateChangeRequest(
                     msg,
                     bltHistItem,
-                    activate(state.state(), msg.state()) || deactivate(state.state(), msg.state()),
+                    state.state(),
                     stateChangeTopVer
                 );
 
@@ -1422,7 +1422,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             Exception e = new IgniteCheckedException("Failed to perform final activation steps", ex);
 
             U.error(log, "Failed to perform final activation steps [nodeId=" + ctx.localNodeId() +
-                ", client=" + ctx.clientNode() + ", topVer=" + req.topologyVersion() + "]", ex);
+                ", client=" + ctx.clientNode() + ", topVer=" + req.topologyVersion() + "]. New state: " + req.state(), ex);
 
             sendChangeGlobalStateResponse(req.requestId(), req.initiatorNodeId(), e);
         }
@@ -1718,7 +1718,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             StateChangeRequest stateChangeReq = new StateChangeRequest(
                 msg,
                 BaselineTopologyHistoryItem.fromBaseline(blt),
-                false,
+                msg.state(),
                 null
             );
 
