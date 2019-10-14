@@ -30,7 +30,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.lang.IgniteFuture;
 import org.gridgain.dto.action.Request;
+import org.gridgain.utils.AgentUtils;
 
 import static org.gridgain.action.annotation.ActionControllerAnnotationProcessor.getActions;
 import static org.gridgain.utils.AgentUtils.completeFutureWithException;
@@ -87,7 +89,7 @@ public class ActionDispatcher implements AutoCloseable {
      * @param mtd Method.
      * @param req Request.
      */
-    private CompletableFuture<?> handleRequest(ActionMethod mtd, Request req) {
+    private CompletableFuture handleRequest(ActionMethod mtd, Request req) {
         try {
             Class<?> ctrlCls = mtd.getControllerClass();
             boolean securityEnabled = ctx.security().enabled();
@@ -133,10 +135,20 @@ public class ActionDispatcher implements AutoCloseable {
      * @param controller Controller.
      * @param arg Argument.
      */
-    private CompletableFuture<?> invoke(Method mtd, Object controller, Object arg) throws Exception {
-        return arg == null
-                ? (CompletableFuture) mtd.invoke(controller)
-                : (CompletableFuture) mtd.invoke(controller, arg);
+    private CompletableFuture invoke(Method mtd, Object controller, Object arg) throws Exception {
+        CompletableFuture fut = new CompletableFuture<>();
+        Object res = arg == null ? mtd.invoke(controller) : mtd.invoke(controller, arg);
+
+        if (res instanceof Void)
+            fut.complete(null);
+        else if (res instanceof CompletableFuture)
+            return (CompletableFuture) res;
+        else if (res instanceof IgniteFuture)
+            ((IgniteFuture) res).chain(f -> AgentUtils.completeFuture((IgniteFuture) f, fut));
+        else
+            fut.complete(res);
+
+        return fut;
     }
 
     /** {@inheritDoc} */

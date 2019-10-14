@@ -23,7 +23,7 @@ import java.util.Objects;
 /**
  * DTO for baseline parameters.
  */
-public class BaselineParameters {
+public class BaselineInfo {
     /** Is auto adjust enabled. */
     private boolean isAutoAdjustEnabled;
 
@@ -33,7 +33,7 @@ public class BaselineParameters {
     /**
      * Default constructor.
      */
-    public BaselineParameters() {
+    public BaselineInfo() {
         // No-op.
     }
 
@@ -41,13 +41,13 @@ public class BaselineParameters {
      * @param isAutoAdjustEnabled Is auto adjust enabled.
      * @param autoAdjustAwaitingTime Auto adjust awaiting time.
      */
-    public BaselineParameters(boolean isAutoAdjustEnabled, long autoAdjustAwaitingTime) {
+    public BaselineInfo(boolean isAutoAdjustEnabled, long autoAdjustAwaitingTime) {
         this.isAutoAdjustEnabled = isAutoAdjustEnabled;
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
     }
 
     /**
-     * @return @{code true} if auto adjust is enabled.
+     * @return @{code True} if auto adjust is enabled.
      */
     public boolean isAutoAdjustEnabled() {
         return isAutoAdjustEnabled;
@@ -57,7 +57,7 @@ public class BaselineParameters {
      * @param autoAdjustEnabled Auto adjust enabled.
      * @return @{code This} for method chaining.
      */
-    public BaselineParameters setAutoAdjustEnabled(boolean autoAdjustEnabled) {
+    public BaselineInfo setAutoAdjustEnabled(boolean autoAdjustEnabled) {
         isAutoAdjustEnabled = autoAdjustEnabled;
         return this;
     }
@@ -73,7 +73,7 @@ public class BaselineParameters {
      * @param autoAdjustAwaitingTime Auto adjust awaiting time.
      * @return @{code This} for method chaining.
      */
-    public BaselineParameters setAutoAdjustAwaitingTime(long autoAdjustAwaitingTime) {
+    public BaselineInfo setAutoAdjustAwaitingTime(long autoAdjustAwaitingTime) {
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
         return this;
     }
@@ -86,7 +86,7 @@ public class BaselineParameters {
         if (o == null || getClass() != o.getClass())
             return false;
 
-        BaselineParameters that = (BaselineParameters) o;
+        BaselineInfo that = (BaselineInfo) o;
 
         return isAutoAdjustEnabled == that.isAutoAdjustEnabled && autoAdjustAwaitingTime == that.autoAdjustAwaitingTime;
     }
@@ -98,6 +98,6 @@ public class BaselineParameters {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(BaselineParameters.class, this);
+        return S.toString(BaselineInfo.class, this);
     }
 }

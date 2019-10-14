@@ -28,8 +28,6 @@ import org.gridgain.action.Session;
 import org.gridgain.action.SessionRegistry;
 import org.gridgain.utils.AgentUtils;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Controller for security actions.
  */
@@ -57,23 +55,14 @@ public class SecurityActionsController {
      * @param reqCreds Request credentials.
      * @return Completeble feature with token.
      */
-    public CompletableFuture<String> authenticate(AuthenticateCredentials reqCreds) {
-        CompletableFuture<String> fut = new CompletableFuture<>();
+    public String authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
+        Session ses = authenticate0(reqCreds);
+        registry.saveSession(ses);
 
-        try {
-            Session ses = authenticate0(reqCreds);
-            registry.saveSession(ses);
+        if (log.isDebugEnabled())
+            log.debug("Session ID was generated for request: " + ses.id());
 
-            if (log.isDebugEnabled())
-                log.debug("Session ID was generated for request: " + ses.id());
-
-            fut.complete(ses.id().toString());
-        }
-        catch (Exception e) {
-            fut.completeExceptionally(e);
-        }
-
-        return fut;
+        return ses.id().toString();
     }
 
     /**

@@ -163,7 +163,8 @@ public class AgentUtils {
      * @param igniteFut Ignite future.
      * @param completableFut Completable future.
      */
-    public static <T> CompletableFuture<T> completeFuture(IgniteFuture<T> igniteFut, CompletableFuture<T> completableFut) {
+    @SuppressWarnings("unchecked")
+    public static CompletableFuture completeFuture(IgniteFuture igniteFut, CompletableFuture completableFut) {
         try {
             completableFut.complete(igniteFut.get());
         }

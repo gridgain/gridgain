@@ -33,7 +33,7 @@ public class ClusterInfo {
     private String tag;
 
     /** Baseline parameters. */
-    private BaselineParameters baselineParameters;
+    private BaselineInfo baselineParameters;
 
     /** Is active. */
     private boolean isActive;
@@ -92,7 +92,7 @@ public class ClusterInfo {
     /**
      * @return Baseline parameters.
      */
-    public BaselineParameters getBaselineParameters() {
+    public BaselineInfo getBaselineParameters() {
         return baselineParameters;
     }
 
@@ -100,7 +100,7 @@ public class ClusterInfo {
      * @param baselineParameters Baseline parameters.
      * @return @{code This} for method chaining.
      */
-    public ClusterInfo setBaselineParameters(BaselineParameters baselineParameters) {
+    public ClusterInfo setBaselineParameters(BaselineInfo baselineParameters) {
         this.baselineParameters = baselineParameters;
         return this;
     }

@@ -25,6 +25,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static java.util.Collections.emptyList;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -53,17 +54,15 @@ public class TopologySnapshot {
         Collection<BaselineNode> baselineNodes
     ) {
         Map<String, Node> nodes = clusterNodes.stream()
-            .map(n -> new Node(n).setBaselineNode(false).setOnline(true))
-            .collect(toMap(Node::getConsistentId, Function.identity()));
+            .map(n -> new Node(n).setOnline(true))
+            .collect(toMap(Node::getConsistentId, identity()));
 
         for (BaselineNode node : baselineNodes) {
             String id = String.valueOf(node.consistentId());
 
-            if (nodes.containsKey(id)) {
-                Node n = nodes.get(id).setBaselineNode(true);
-
-                nodes.put(n.getConsistentId(), n);
-            } else
+            if (nodes.containsKey(id))
+                nodes.compute(id, (key, val) -> val.setBaselineNode(true));
+            else
                 nodes.put(id, new Node(node).setBaselineNode(true).setOnline(false));
         }
 

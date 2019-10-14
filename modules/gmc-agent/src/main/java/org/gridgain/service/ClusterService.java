@@ -30,7 +30,7 @@ import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.gridgain.agent.WebSocketManager;
-import org.gridgain.dto.cluster.BaselineParameters;
+import org.gridgain.dto.cluster.BaselineInfo;
 import org.gridgain.dto.cluster.ClusterInfo;
 import org.gridgain.dto.topology.TopologySnapshot;
 
@@ -57,7 +57,7 @@ public class ClusterService implements AutoCloseable {
     private volatile Set<String> curBaseline;
 
     /** Baseline parameters. */
-    private volatile BaselineParameters curBaselineParameters;
+    private volatile BaselineInfo curBaselineParameters;
 
     /** Context. */
     private GridKernalContext ctx;
@@ -111,7 +111,7 @@ public class ClusterService implements AutoCloseable {
                 sendTopologyUpdate(null, ctx.discovery().discoCache());
             }
 
-            BaselineParameters baselineParameters = new BaselineParameters(
+            BaselineInfo baselineParameters = new BaselineInfo(
                 cluster.isBaselineAutoAdjustEnabled(),
                 cluster.baselineAutoAdjustTimeout()
             );
@@ -161,7 +161,7 @@ public class ClusterService implements AutoCloseable {
         ClusterInfo clusterInfo= new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())
             .setBaselineParameters(
-                new BaselineParameters(
+                new BaselineInfo(
                     cluster.isBaselineAutoAdjustEnabled(),
                     cluster.baselineAutoAdjustTimeout()
                 )
