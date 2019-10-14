@@ -21,6 +21,8 @@ export const taskResult = (result) => ({
     status: 0
 });
 
+export const DFLT_FAILURE_RESPONSE = {message: 'Expected error'};
+
 export const cacheNamesCollectorTask = (caches) => (ws) => {
     ws.on('node:visor', (e) => {
         if (e.params.taskId === 'cacheNamesCollectorTask')
@@ -90,6 +92,12 @@ const CLUSTER_2 = {
             client: false
         }
     }
+};
+
+export const AGENT_ONLY_NO_CLUSTER = {
+    hasAgent: true,
+    hasDemo: true,
+    clusters: []
 };
 
 export const FAKE_CLUSTERS = {
@@ -167,4 +175,13 @@ export const FAKE_CACHES = {
 
 export const agentStat = (clusters) => (ws) => {
     ws.emit('agent:status', clusters);
+};
+
+/**
+ * Return error responce on request with specified event type.
+ *
+ * @param {string} eventType
+ */
+export const errorResponceForEventType = (eventType) => (ws) => {
+    ws.errorOn(eventType, () => DFLT_FAILURE_RESPONSE);
 };

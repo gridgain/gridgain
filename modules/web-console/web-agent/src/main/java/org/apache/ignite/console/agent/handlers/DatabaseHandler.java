@@ -104,6 +104,9 @@ public class DatabaseHandler {
         List<Map<String, String>> drivers = new ArrayList<>();
 
         if (driversFolder != null) {
+            if (!driversFolder.exists())
+                throw new IllegalStateException("JDBC drivers folder does not exists");
+
             log.info("Collecting JDBC drivers in folder: " + driversFolder.getPath());
 
             File[] list = driversFolder.listFiles((dir, name) -> name.endsWith(".jar"));
