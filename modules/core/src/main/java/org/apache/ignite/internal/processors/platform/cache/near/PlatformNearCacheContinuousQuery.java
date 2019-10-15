@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.platform.cache.near;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.ContinuousQuery;
+import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
@@ -35,7 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Platform Near Cache update listener query.
  */
-public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery {
+public class PlatformNearCacheContinuousQuery {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -68,27 +69,18 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
      * Start query execution.
      *
      * @param cache Cache.
-     * @param loc Local flag.
-     * @param bufSize Buffer size.
-     * @param timeInterval Time interval.
-     * @param autoUnsubscribe Auto-unsubscribe flag.
-     * @param initialQry Initial query.
      */
     @SuppressWarnings("unchecked")
-    @Override public void start(IgniteCacheProxy cache, boolean loc, int bufSize, long timeInterval,
-        boolean autoUnsubscribe, Query initialQry) throws IgniteCheckedException {
+    public void start(IgniteCacheProxy cache) throws IgniteCheckedException {
         lock.writeLock().lock();
-        assert initialQry == null;
-        assert !loc;
 
         try {
             try {
-                ContinuousQuery qry = new ContinuousQuery();
+                ContinuousQueryWithTransformer qry = new ContinuousQueryWithTransformer();
 
                 qry.setLocalListener(this);
-
-                // TODO: replace with setRemoteFilterFactory
-                qry.setRemoteFilter(this); // Filter must be set always for correct resource release.
+                qry.setRemoteFilterFactory(this);
+                qry.setRemoteTransformerFactory(this);
 
                 cursor = cache.query(qry);
             }
@@ -112,13 +104,14 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
-    @Override public void onUpdated(Iterable evts) throws CacheEntryListenerException {
+    public void onUpdated(Iterable evts) throws CacheEntryListenerException {
         lock.readLock().lock();
 
         try {
             if (ptr == 0)
                 throw new CacheEntryListenerException("Failed to notify listener because it has been closed.");
 
+            // TODO: Key-only events
             PlatformUtils.applyContinuousQueryEvents(platformCtx, ptr, evts);
         }
         finally {
@@ -127,18 +120,19 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
     }
 
     /** {@inheritDoc} */
-    @Override public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
+    public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
         // New entries (CREATED) do not matter for near cache invalidation.
         return evt.getEventType() != EventType.CREATED;
     }
 
     /** {@inheritDoc} */
-    @Override public void onQueryUnregister() {
+    public void onQueryUnregister() {
+        // TODO: Propagate this call similar to the old class
         close();
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    public void close() {
         lock.writeLock().lock();
 
         try {
@@ -147,11 +141,6 @@ public class PlatformNearCacheContinuousQuery implements PlatformContinuousQuery
         finally {
             lock.writeLock().unlock();
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public PlatformTarget getInitialQueryCursor() {
-        return null;
     }
 
     /**

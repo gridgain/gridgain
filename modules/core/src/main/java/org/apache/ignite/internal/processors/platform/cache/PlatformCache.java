@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.platform.PlatformNativeException;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.processors.platform.cache.near.PlatformNearCacheContinuousQuery;
+import org.apache.ignite.internal.processors.platform.cache.near.PlatformNearCacheContinuousQueryProxy;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQueryProxy;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformFieldsQueryCursor;
@@ -966,10 +967,9 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 PlatformNearCacheContinuousQuery qry = new PlatformNearCacheContinuousQuery(platformCtx, ptr);
 
-                qry.start(cache, false, ContinuousQuery.DFLT_PAGE_SIZE,
-                        ContinuousQuery.DFLT_TIME_INTERVAL, false, null);
+                qry.start(cache);
 
-                return new PlatformContinuousQueryProxy(platformCtx, qry);
+                return new PlatformNearCacheContinuousQueryProxy(platformCtx, qry);
             }
 
             case OP_WITH_EXPIRY_POLICY: {
