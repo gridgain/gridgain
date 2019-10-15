@@ -38,7 +38,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
     private static final int NODE_ORDER_MASK = 0x07_FF_FF_FF;
 
     /** Update time not set value. */
-    private static final long UPDATE_TIME_NOT_SET_VAL = -1;
+    static final long UPDATE_TIME_NOT_SET_VAL = -1;
 
     /** DR center ID shift. */
     private static final int DR_ID_SHIFT = 27;
@@ -80,6 +80,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
      * @param order Version order.
      * @param nodeOrder Node order.
      * @param dataCenterId Replication data center ID.
+     * @param updateTime Update time.
      */
     public GridCacheVersion(int topVer, long order, int nodeOrder, int dataCenterId, long updateTime) {
         assert topVer >= 0 : topVer;
@@ -113,6 +114,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
      * @param topVer Topology version plus number of seconds from the start time of the first grid node.
      * @param nodeOrderDrId Node order and DR ID.
      * @param order Version order.
+     * @param updateTime Update time.
      */
     public GridCacheVersion(int topVer, int nodeOrderDrId, long order, long updateTime) {
         this(topVer, nodeOrderDrId, order);

@@ -67,6 +67,19 @@ public class GridCacheVersionEx extends GridCacheVersion {
      * @param order Version order.
      * @param drVer DR version.
      */
+    public GridCacheVersionEx(int topVer, int nodeOrderDrId, long order, GridCacheVersion drVer) {
+        this(topVer, nodeOrderDrId, order, UPDATE_TIME_NOT_SET_VAL, drVer);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param topVer Topology version.
+     * @param nodeOrderDrId Node order and DR ID.
+     * @param order Version order.
+     * @param updateTime Update time.
+     * @param drVer DR version.
+     */
     public GridCacheVersionEx(int topVer, int nodeOrderDrId, long order, long updateTime, GridCacheVersion drVer) {
         super(topVer, nodeOrderDrId, order, updateTime);
 

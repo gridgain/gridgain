@@ -279,7 +279,8 @@ public class CacheVersionIO {
     }
 
     /**
-     * Reads GridCacheVersion instance from the given buffer. Moves buffer's position by the number of used bytes.
+     * Reads GridCacheVersion instance from the given buffer.
+     * Moves buffer's position by the number of used bytes.
      *
      * @param buf Byte buffer.
      * @param allowNull Is {@code null} version allowed.
@@ -310,7 +311,7 @@ public class CacheVersionIO {
                 int conflictNodeOrderDrId = buf.getInt();
                 long conflictOrder = buf.getLong();
 
-                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, -1L,
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order,
                     new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
             }
 
@@ -374,7 +375,7 @@ public class CacheVersionIO {
                 int conflictNodeOrderDrId = PageUtils.getInt(pageAddr, 21);
                 long conflictOrder = PageUtils.getLong(pageAddr, 25);
 
-                return new GridCacheVersionEx(topVer, nodeOrderDrId, order, -1L,
+                return new GridCacheVersionEx(topVer, nodeOrderDrId, order,
                     new GridCacheVersion(conflictTop, conflictNodeOrderDrId, conflictOrder));
             }
 
