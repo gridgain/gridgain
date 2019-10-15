@@ -20,13 +20,19 @@ import flow from 'lodash/flow';
 
 export default angular
     .module('ignite-console.page-configure.pc-ui-grid-filters', ['ui.grid'])
-    .decorator('$tooltip', ['$delegate', ($delegate) => {
-        return function(el, config) {
-            const instance = $delegate(el, config);
+    .decorator('$tooltip', ['$delegate', ($delegate: mgcrea.ngStrap.tooltip.ITooltipService) => {
+        return function(el: JQLite, config: mgcrea.ngStrap.tooltip.ITooltipOptions) {
+            type HackedTooltip = mgcrea.ngStrap.tooltip.ITooltip & {
+                $referenceElement: JQLite | null,
+                destroy: () => void,
+                $applyPlacement: () => void,
+                $element: JQLite
+            }
+            const instance = $delegate(el, config) as HackedTooltip;
             instance.$referenceElement = el;
             instance.destroy = flow(instance.destroy, () => instance.$referenceElement = null);
             instance.$applyPlacement = flow(instance.$applyPlacement, () => {
-                if (!instance.$element)
+                if (!instance.$referenceElement || !instance.$element)
                     return;
 
                 const refWidth = instance.$referenceElement[0].getBoundingClientRect().width;
