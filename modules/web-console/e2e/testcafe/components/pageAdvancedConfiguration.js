@@ -23,5 +23,7 @@ export const pageAdvancedConfiguration = {
     cachesNavButton: Selector('.pca-menu-link[ui-sref="base.configuration.edit.advanced.caches"]'),
     async save() {
         await t.click(this.saveButton);
-    }
+    },
+    fieldErrorNotification: Selector('.form-field__error'),
+    popoverErrorNotification: Selector('.popover.validation-error')
 };
