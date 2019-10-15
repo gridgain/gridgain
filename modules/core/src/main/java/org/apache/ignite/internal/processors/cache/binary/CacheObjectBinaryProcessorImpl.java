@@ -575,7 +575,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             if (res.rejected())
                 throw res.error();
-            else
+            else if (!ctx.clientNode())
                 metadataFileStore.waitForWriteOp(typeId, res.typeVersion());
         }
         catch (IgniteCheckedException e) {
