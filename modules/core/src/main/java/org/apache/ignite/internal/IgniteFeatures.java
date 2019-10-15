@@ -107,7 +107,10 @@ public enum IgniteFeatures {
     /**
      * Rolling upgrade based on distributed metastorage.
      */
-    DISTRIBUTED_ROLLING_UPGRADE_MODE(26);
+    DISTRIBUTED_ROLLING_UPGRADE_MODE(26),
+
+    /** Baseline auto-adjust. */
+    BASELINE_AUTO_ADJUST(28);
 
     /**
      * Unique feature identifier.
