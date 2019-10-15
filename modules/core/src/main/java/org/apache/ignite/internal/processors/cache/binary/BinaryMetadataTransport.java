@@ -203,7 +203,7 @@ final class BinaryMetadataTransport {
         BinaryMetadata mergedMeta = mergeMetadata(oldMeta, newMeta, changedSchemas);
 
         if (mergedMeta == oldMeta) {
-            resFut.onDone(MetadataUpdateResult.createSuccessfulResult());
+            resFut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
 
             return null;
         }
@@ -281,7 +281,7 @@ final class BinaryMetadataTransport {
         BinaryMetadataHolder holder = metaLocCache.get(typeId);
 
         if (holder.acceptedVersion() >= ver)
-            resFut.onDone(MetadataUpdateResult.createSuccessfulResult());
+            resFut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
 
         return resFut;
     }
@@ -434,7 +434,7 @@ final class BinaryMetadataTransport {
                                         acceptedVer)) {
                                     obsoleteUpd = true;
 
-                                    fut.onDone(MetadataUpdateResult.createSuccessfulResult());
+                                    fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
 
                                     break;
                                 }
@@ -579,8 +579,6 @@ final class BinaryMetadataTransport {
                     return;
                 }
 
-                //TODO sync write should be eliminated from here first
-                metadataFileStore.writeMetadata(holder.metadata());
                 metadataFileStore.writeMetadataAsync(holder.metadata(), holder.pendingVersion());
 
                 metaLocCache.put(typeId, new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
@@ -613,7 +611,7 @@ final class BinaryMetadataTransport {
             }
 
             if (fut != null)
-                fut.onDone(MetadataUpdateResult.createSuccessfulResult());
+                fut.onDone(MetadataUpdateResult.createSuccessfulResult(newAcceptedVer));
         }
     }
 
@@ -656,6 +654,11 @@ final class BinaryMetadataTransport {
          */
         void key(SyncKey key) {
             this.key = key;
+        }
+
+        /** */
+        public int typeVersion() {
+            return key.ver;
         }
 
         /** {@inheritDoc} */
@@ -796,7 +799,7 @@ final class BinaryMetadataTransport {
                 return;
 
             if (msg0.metadataNotFound()) {
-                fut.onDone(MetadataUpdateResult.createSuccessfulResult());
+                fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
 
                 return;
             }
@@ -821,7 +824,7 @@ final class BinaryMetadataTransport {
                     while (!metaLocCache.replace(typeId, oldHolder, newHolder));
                 }
 
-                fut.onDone(MetadataUpdateResult.createSuccessfulResult());
+                fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
             }
             catch (IgniteCheckedException e) {
                 fut.onDone(MetadataUpdateResult.createFailureResult(new BinaryObjectException(e)));

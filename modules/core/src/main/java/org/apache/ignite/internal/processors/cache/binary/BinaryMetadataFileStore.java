@@ -63,6 +63,9 @@ class BinaryMetadataFileStore {
     /** */
     private final IgniteLogger log;
 
+    /** */
+    private BinaryMetadataWriter writer;
+
     /**
      * @param metadataLocCache Metadata locale cache.
      * @param ctx Context.
@@ -98,6 +101,7 @@ class BinaryMetadataFileStore {
         }
 
         U.ensureDirectory(workDir, "directory for serialized binary metadata", log);
+        writer = new BinaryMetadataWriter();
 
         new IgniteThread(writer).start();
     }
@@ -194,12 +198,14 @@ class BinaryMetadataFileStore {
         return null;
     }
 
-    private BinaryMetadataWriter writer = new BinaryMetadataWriter();
-
     /**
      *
      */
     IgniteInternalFuture<Void> writeMetadataAsync(BinaryMetadata meta, int typeVer) {
+        if (!CU.isPersistenceEnabled(ctx.config()))
+            return null;
+
+        writer.submit(new WriteOpTask(meta, typeVer));
 
         return new GridFinishedFuture<>();
     }
@@ -215,7 +221,17 @@ class BinaryMetadataFileStore {
         }
     }
 
-    private final ConcurrentHashMap<WriteOpSync, IgniteInternalFuture> writeOpFutures = new ConcurrentHashMap<>();
+    public void waitForWriteOp(int typeId, int typeVer) throws IgniteCheckedException {
+        if (typeVer < 0)
+            return;
+
+        GridFutureAdapter fut = writeOpFutures.get(new WriteOpSync(typeId, typeVer));
+
+        if (fut != null)
+            fut.get();
+    }
+
+    private final ConcurrentHashMap<WriteOpSync, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
 
     private class BinaryMetadataWriter extends GridWorker {
 
@@ -234,6 +250,21 @@ class BinaryMetadataFileStore {
         }
 
         @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+           while (!isCancelled()) {
+               try {
+                   body0();
+               }
+               catch (InterruptedException e) {
+                   if (!isCancelled) {
+                       ctx.failure().process(new FailureContext(FailureType.SYSTEM_WORKER_TERMINATION, e));
+
+                       throw e;
+                   }
+               }
+           }
+        }
+
+        private void body0() throws InterruptedException {
             WriteOpTask task;
 
             blockingSectionBegin();
@@ -245,9 +276,12 @@ class BinaryMetadataFileStore {
                 blockingSectionEnd();
             }
 
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " writing binMeta " + task.meta.typeId() + " asynchronously; ver is " + task.typeVer);
-            //TODO write meta here, bla-bla-bla
+            writeMetadata(task.meta);
+
+            GridFutureAdapter fut = writeOpFutures.remove(new WriteOpSync(task.meta.typeId(), task.typeVer));
+
+            if (fut != null)
+                fut.onDone();
         }
     }
 
