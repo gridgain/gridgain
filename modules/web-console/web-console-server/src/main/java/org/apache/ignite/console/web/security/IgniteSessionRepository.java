@@ -21,21 +21,21 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
+import static java.util.stream.StreamSupport.stream;
 import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
@@ -45,6 +45,9 @@ public class IgniteSessionRepository implements
     SessionRepository<ExpiringSession>,
     FindByIndexNameSessionRepository<ExpiringSession>
 {
+    /** */
+    private static final String SPRING_SECURITY_CONTEXT = "SPRING_SECURITY_CONTEXT";
+
     /** */
     private final Ignite ignite;
 
@@ -100,6 +103,15 @@ public class IgniteSessionRepository implements
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
         try {
+            SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
+
+            if (ctx != null) {
+                Object p = ctx.getAuthentication().getPrincipal();
+
+                if (p instanceof Account)
+                    ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, ((Account)p).getEmail());
+            }
+
             cache().put(ses.getId(), new MapSession(ses));
         }
         catch (RuntimeException e) {
@@ -145,8 +157,8 @@ public class IgniteSessionRepository implements
 
         Collection<MapSession> sessions = new ArrayList<>();
 
-        try (QueryCursor<Cache.Entry<String, Object>> cursor = cache().query(new ScanQuery())) {
-            cursor.forEach(item -> {
+        stream(cache().spliterator(), false).forEach(
+            item -> {
                 Object v = item.getValue();
 
                 if (v instanceof MapSession) {
@@ -157,8 +169,8 @@ public class IgniteSessionRepository implements
                     if (idxVal.equals(name))
                         sessions.add((MapSession)v);
                 }
-            });
-        }
+            }
+        );
 
         Map<String, ExpiringSession> sesMap = new HashMap<>(sessions.size());
 
