@@ -357,7 +357,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         /** {@inheritDoc} */
         @Override public void handleException(StompSession ses, StompCommand cmd, StompHeaders headers, byte[] payload, Throwable e) {
-            log.error("Failed to send message", e);
+            log.warning("Failed to send message", e);
         }
 
         /** {@inheritDoc} */
