@@ -226,10 +226,10 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
-                JSONArray arr = ctx.read("$.rows[*]");
-                boolean hasMore = ctx.read("$.hasMore");
-                String id = ctx.read("$.rows[0][1]");
-                String val = ctx.read("$.rows[0][3]");
+                JSONArray arr = ctx.read("$[0].rows[*]");
+                boolean hasMore = ctx.read("$[0].hasMore");
+                String id = ctx.read("$[0].rows[0][1]");
+                String val = ctx.read("$[0].rows[0][3]");
 
                 return arr.size() == 1 && hasMore && "key_2".equals(id) && "value_2".equals(val);
             }
