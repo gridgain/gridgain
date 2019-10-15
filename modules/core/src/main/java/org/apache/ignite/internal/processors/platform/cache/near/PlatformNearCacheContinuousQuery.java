@@ -17,17 +17,15 @@
 package org.apache.ignite.internal.processors.platform.cache.near;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
-import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
-import org.apache.ignite.internal.processors.platform.PlatformTarget;
-import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 
+import javax.cache.configuration.FactoryBuilder;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.EventType;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -36,7 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Platform Near Cache update listener query.
  */
-public class PlatformNearCacheContinuousQuery {
+public class PlatformNearCacheContinuousQuery implements ContinuousQueryWithTransformer.EventListener, CacheEntryEventFilter {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -79,8 +77,10 @@ public class PlatformNearCacheContinuousQuery {
                 ContinuousQueryWithTransformer qry = new ContinuousQueryWithTransformer();
 
                 qry.setLocalListener(this);
-                qry.setRemoteFilterFactory(this);
-                qry.setRemoteTransformerFactory(this);
+
+                // TODO: Dedicated classes
+                qry.setRemoteFilterFactory(FactoryBuilder.factoryOf(PlatformNearCacheContinuousQuery.class));
+                qry.setRemoteTransformerFactory(FactoryBuilder.factoryOf(PlatformNearCacheContinuousQuery.class));
 
                 cursor = cache.query(qry);
             }
