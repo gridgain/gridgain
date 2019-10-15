@@ -23,7 +23,7 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
     panel-title Service configuration
     panel-description
         | Service Grid allows for deployments of arbitrary user-defined services on the cluster.
-        | #[a.link-success(href="https://apacheignite.readme.io/docs/fault-tolerance" target="_blank") More info]
+        | #[a.link-success(href="https://apacheignite.readme.io/docs/service-grid" target="_blank") More info]
     panel-content.pca-form-row(ng-if=`ui.isPanelLoaded('${form}')`)
         .pca-form-column-6
             mixin clusters-service-configurations
