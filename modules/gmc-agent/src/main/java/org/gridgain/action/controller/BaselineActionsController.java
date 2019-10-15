@@ -16,15 +16,18 @@
 
 package org.gridgain.action.controller;
 
+import org.apache.ignite.IgniteIllegalStateException;
+import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
@@ -45,7 +48,6 @@ public class BaselineActionsController {
 
     /**
      * @param isAutoAdjustEnabled Is auto adjust enabled.
-     * @return Completeble feature.
      */
     public void updateAutoAdjustEnabled(boolean isAutoAdjustEnabled) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -55,7 +57,6 @@ public class BaselineActionsController {
 
     /**
      * @param awaitingTime Awaiting time in ms.
-     * @return Completeble feature.
      */
     public void updateAutoAdjustAwaitingTime(long awaitingTime) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -65,14 +66,61 @@ public class BaselineActionsController {
 
     /**
      * @param ids Node ids.
-     * @return Completeble feature.
      */
     public void setBaselineTopology(Collection<String> ids) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
-        Set<UUID> uuids = ids.stream().map(UUID::fromString).collect(Collectors.toSet());
+        ctx.grid().cluster().setBaselineTopology(findNodesByConsistentIds(ids));
+    }
 
-        Collection<ClusterNode> nodes = ctx.grid().cluster().forNodeIds(uuids).forServers().nodes();
-        ctx.grid().cluster().setBaselineTopology(nodes);
+    /**
+     * @param ids Ids.
+     */
+    private Collection<BaselineNode> findNodesByConsistentIds(Collection<String> ids) {
+        Map<String, BaselineNode> baseline = currentBaseLine();
+        Map<String, BaselineNode> srvrs = currentServers();
+
+        Collection<BaselineNode> baselineTop = new ArrayList<>();
+
+        for (String consistentId : ids) {
+            if (srvrs.containsKey(consistentId))
+                baselineTop.add(srvrs.get(consistentId));
+
+            else if (baseline.containsKey(consistentId))
+                baselineTop.add(baseline.get(consistentId));
+
+            else
+                throw new IgniteIllegalStateException("Check arguments. Node not found for consistent ID: " + consistentId);
+        }
+
+        return baselineTop;
+    }
+
+    /**
+     * @return Current baseline.
+     */
+    private Map<String, BaselineNode> currentBaseLine() {
+        Map<String, BaselineNode> nodes = new HashMap<>();
+
+        Collection<BaselineNode> baseline = ctx.grid().cluster().currentBaselineTopology();
+
+        if (!F.isEmpty(baseline)) {
+            for (BaselineNode node : baseline)
+                nodes.put(node.consistentId().toString(), node);
+        }
+
+        return nodes;
+    }
+
+    /**
+     * @return Current server nodes.
+     */
+    private Map<String, BaselineNode> currentServers() {
+        Map<String, BaselineNode> nodes = new HashMap<>();
+
+        for (ClusterNode node : ctx.grid().cluster().forServers().nodes())
+            nodes.put(node.consistentId().toString(), node);
+
+        return nodes;
     }
 }
