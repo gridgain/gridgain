@@ -337,7 +337,6 @@ mixin chart-result
 mixin paragraph-scan
     panel-title {{ paragraph.name }}
     panel-actions
-        span {{paragraph.executionInProgress(false) || paragraph.executionInProgress(true)}}
         button.btn-ignite.btn-ignite--secondary(
             ng-if='paragraph.checkScanInProgress(false) || paragraph.checkScanInProgress(true)'
             ng-click='cancelQuery(paragraph)'
