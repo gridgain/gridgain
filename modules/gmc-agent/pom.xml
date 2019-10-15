@@ -37,12 +37,14 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-opencensus</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Third-party dependencies -->
