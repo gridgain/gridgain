@@ -16,10 +16,6 @@
 
 import {Selector} from 'testcafe';
 
-export class ImportFromDatabaseDialog {
-    constructor() {
-        this.importFromDBButton = Selector('.btn-ignite').withText('Import from Database');
-        this.dialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
-        this.importImpossibleMsg = this.dialog.find('div').withText('Domain model could not be imported');
-    }
-}
+export const importDBButton = Selector('.btn-ignite').withText('Import from Database');
+export const importDBDialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
+export const importDBImpossibleMsg = importDBDialog.find('div').withText('Domain model could not be imported');

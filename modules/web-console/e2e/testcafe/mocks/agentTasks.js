@@ -181,7 +181,8 @@ export const agentStat = (clusters) => (ws) => {
  * Return error responce on request with specified event type.
  *
  * @param {string} eventType
+ * @returns {(ws: import('./WebSocketHook').WebSocket) => void}
  */
-export const errorResponceForEventType = (eventType) => (ws) => {
+export const errorResponseForEventType = (eventType) => (ws) => {
     ws.errorOn(eventType, () => DFLT_FAILURE_RESPONSE);
 };
