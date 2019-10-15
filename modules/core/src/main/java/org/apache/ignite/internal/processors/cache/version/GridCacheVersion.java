@@ -233,7 +233,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
             updateTime = in.readLong();
         }
         catch (Exception ignored) {
-            updateTime = -1;
+            updateTime = UPDATE_TIME_NOT_SET_VAL;
         }
     }
 
@@ -307,10 +307,11 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeLong("updTime", updateTime))
+                if (!writer.writeLong("updateTime", updateTime))
                     return false;
 
                 writer.incrementState();
+
         }
 
         return true;
@@ -349,12 +350,13 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
                 reader.incrementState();
 
             case 3:
-                updateTime = reader.readLong("updTime");
+                updateTime = reader.readLong("updateTime");
 
                 if (!reader.isLastRead())
                     return false;
 
                 reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridCacheVersion.class);

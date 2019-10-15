@@ -110,21 +110,10 @@ public class GridCacheVersionEx extends GridCacheVersion {
                     return false;
 
                 writer.incrementState();
-
-//            case 4:
-//                if (!writer.writeLong("updTime", updateTime))
-//                    return false;
-//
-//                writer.incrementState();
         }
 
         return true;
     }
-
-//    /** {@inheritDoc} */
-//    @Override public long updateTime() {
-//        return updateTime;
-//    }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
@@ -144,14 +133,6 @@ public class GridCacheVersionEx extends GridCacheVersion {
                     return false;
 
                 reader.incrementState();
-
-//            case 4:
-//                updateTime = reader.readLong("updTime");
-//
-//                if (!reader.isLastRead())
-//                    return false;
-//
-//                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridCacheVersionEx.class);
@@ -164,13 +145,6 @@ public class GridCacheVersionEx extends GridCacheVersion {
         drVer = new GridCacheVersion();
 
         drVer.readExternal(in);
-
-//        try {
-//            updateTime = in.readLong();
-//        }
-//        catch (Exception ignored) {
-//            updateTime = -1;
-//        }
     }
 
     /** {@inheritDoc} */
@@ -178,8 +152,6 @@ public class GridCacheVersionEx extends GridCacheVersion {
         super.writeExternal(out);
 
         drVer.writeExternal(out);
-
-//        out.writeLong(updateTime);
     }
 
     /** {@inheritDoc} */
