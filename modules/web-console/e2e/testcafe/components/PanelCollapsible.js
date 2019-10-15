@@ -20,6 +20,7 @@ export class PanelCollapsible {
     constructor(title) {
         this._selector = Selector('.panel-collapsible__title').withText(title).parent('panel-collapsible');
         this.heading = this._selector.find('.panel-collapsible__heading');
+        this.title = this._selector.find('.panel-collapsible__title');
         this.actions = this._selector.find('panel-actions');
         this.body = this._selector.find('.panel-collapsible__content').addCustomDOMProperties({
             isOpened: (el) => !el.classList.contains('ng-hide')

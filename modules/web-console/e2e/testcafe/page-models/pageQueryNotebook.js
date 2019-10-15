@@ -20,12 +20,16 @@ import {Table} from '../components/Table';
 import {ace, enterAceText} from '../components/ace';
 import {FormField} from '../components/FormField';
 
+export const addSqlQueryButton = Selector('button').withText('Add query');
+export const addScanQueryButton = Selector('button').withText('Add scan');
+
 export class Paragraph extends PanelCollapsible {
     constructor(title) {
         super(title);
 
-        this.topRightExecuteButton = this.body.find('query-actions-button').find('button').withExactText('Execute');
+        this.topRightExecuteButton = this.actions.find('query-actions-button').find('button').withExactText('Execute');
         this.bottomExecuteButton = this._selector.find('.sql-controls').find('button').withExactText('Execute');
+        this.topRightScanButton = this.actions.find('query-actions-button').find('button').withExactText('Scan');
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');

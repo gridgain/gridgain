@@ -23,7 +23,8 @@ import {
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
 import {
-    Paragraph, showQueryDialog, confirmClearQueryDialog, renameQueryDialog, paragraphPanels
+    Paragraph, showQueryDialog, confirmClearQueryDialog, renameQueryDialog, paragraphPanels,
+    addScanQueryButton
 } from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
@@ -122,26 +123,40 @@ test('Very long query name', async(t) => {
     await t.expect(paragraphPanels.nth(0).clientWidth).eql(oldWidth, 'Panel width should not depend on query name length');
 });
 
-// Regression test for https://ggsystems.atlassian.net/browse/GG-23314
-test('Cancel button layout', async(t) => {
-    await t.addRequestHooks(
-        t.ctx.ws = new WebSocketHook()
-            .use(
-                agentStat(FAKE_CLUSTERS),
-                cacheNamesCollectorTask(FAKE_CACHES),
-                foreverExecutingQuery(_.first(_.keys(FAKE_CLUSTERS.clusters[0].nodes)))
-            )
-    );
-
-    await t.resizeWindow(1130, 800);
+test('Cancel query button', async(t) => {
     await t
+        .addRequestHooks(
+            t.ctx.ws = new WebSocketHook()
+                .use(
+                    agentStat(FAKE_CLUSTERS),
+                    cacheNamesCollectorTask(FAKE_CACHES),
+                    foreverExecutingQuery(_.first(_.keys(FAKE_CLUSTERS.clusters[0].nodes)))
+                )
+        )
+        .resizeWindow(1130, 800)
         .useRole(user)
         .navigateTo(resolveUrl('/queries/notebooks'));
     await notebooks.createNotebook('Foo');
     await t.click(notebooks.getNotebookByName('Foo'));
+
+    // SQL query
     await paragraph.enterQuery(query, {replace: true});
     const oldFlagsPosition = await paragraph.queryFlags.boundingClientRect;
-    await t.click(paragraph.bottomExecuteButton);
-    await t.expect(paragraph.cancelQueryButton.visible).ok('Cancel button is visible while query is running');
-    await t.expect(paragraph.queryFlags.boundingClientRect).eql(oldFlagsPosition, 'Cancel button should not change query panel height');
+    await t
+        .click(paragraph.bottomExecuteButton)
+        .expect(paragraph.cancelQueryButton.visible).ok('Cancel button is visible while query is running')
+        // Regression test for https://ggsystems.atlassian.net/browse/GG-23314
+        .expect(paragraph.queryFlags.boundingClientRect).eql(oldFlagsPosition, 'Cancel button should not change query panel height')
+        .click(paragraph.cancelQueryButton)
+        .expect(paragraph.cancelQueryButton.exists).notOk('SQL query cancel button is hidden after query is cancelled')
+        .click(paragraph.title);
+
+    // Scan query
+    const scan = new Paragraph('Scan1');
+    await t
+        .click(addScanQueryButton)
+        .click(scan.topRightScanButton)
+        .expect(scan.cancelQueryButton.visible).ok('Scan query cancel button is visible while query is running')
+        .click(scan.cancelQueryButton)
+        .expect(scan.cancelQueryButton.exists).notOk('Scan query cancel button is hidden after query is cancelled');
 });
