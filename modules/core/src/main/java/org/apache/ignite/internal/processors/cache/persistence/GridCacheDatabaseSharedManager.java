@@ -97,7 +97,6 @@ import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
-import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
@@ -4880,8 +4879,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     if (cmp != 0)
                         return cmp;
 
-                    return Long.compare(PageIdUtils.effectivePageId(o1.pageId()),
-                        PageIdUtils.effectivePageId(o2.pageId()));
+                    return Long.compare(o1.effectivePageId(), o2.effectivePageId());
                 }
             };
 
