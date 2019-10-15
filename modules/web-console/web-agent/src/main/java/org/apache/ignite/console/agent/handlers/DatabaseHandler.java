@@ -105,7 +105,7 @@ public class DatabaseHandler {
 
         if (driversFolder != null) {
             if (!driversFolder.exists())
-                throw new IllegalStateException("JDBC drivers folder does not exists");
+                throw new IllegalStateException("JDBC drivers folder does not exist");
 
             log.info("Collecting JDBC drivers in folder: " + driversFolder.getPath());
 
