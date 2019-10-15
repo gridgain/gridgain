@@ -123,7 +123,7 @@ public class AgentDownloadControllerTest {
     public void shouldReturnArchive() throws Exception {
         ReflectionTestUtils.setField(agentDownloadController, "agentFolderName", "modules/web-console/web-console-server/src/test/resources");
 
-        this.mvc.perform(get("/api/v1/downloads/agent").with(user(TEST_EMAIL)))
+        this.mvc.perform(get("/api/v1/downloads/agent"))
             .andExpect(status().isOk())
             .andExpect(content().contentType("application/zip"));
     }
