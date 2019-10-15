@@ -18,7 +18,6 @@ package org.gridgain.dto.topology;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.Function;
 
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -57,13 +56,15 @@ public class TopologySnapshot {
             .map(n -> new Node(n).setOnline(true))
             .collect(toMap(Node::getConsistentId, identity()));
 
-        for (BaselineNode node : baselineNodes) {
-            String id = String.valueOf(node.consistentId());
+        if (baselineNodes != null) {
+            for (BaselineNode node : baselineNodes) {
+                String id = String.valueOf(node.consistentId());
 
-            if (nodes.containsKey(id))
-                nodes.compute(id, (key, val) -> val.setBaselineNode(true));
-            else
-                nodes.put(id, new Node(node).setBaselineNode(true).setOnline(false));
+                if (nodes.containsKey(id))
+                    nodes.compute(id, (key, val) -> val.setBaselineNode(true));
+                else
+                    nodes.put(id, new Node(node).setBaselineNode(true).setOnline(false));
+            }
         }
 
         return new TopologySnapshot(topVer, crdConsistentId, nodes.values());
