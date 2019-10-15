@@ -14,21 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
-
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
-
 /**
- * Checkpoint futures.
+ * <!-- Package description. -->
+ * Contains Ignite Thin Client API classes.
  */
-public interface CheckpointFuture {
-    /**
-     * @return Begin future.
-     */
-    public GridFutureAdapter beginFuture();
-
-    /**
-     * @return Finish future.
-     */
-    public GridFutureAdapter<Object> finishFuture();
-}
+package org.apache.ignite.client;
