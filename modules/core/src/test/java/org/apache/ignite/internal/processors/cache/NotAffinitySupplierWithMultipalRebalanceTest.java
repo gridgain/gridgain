@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -66,8 +67,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     /** Cache with custom affinity. */
     public static final String CUSTOM_CACHE = DEFAULT_CACHE_NAME + "_specific_aff";
 
-    /** Persistent enabled. */
-    public boolean persistentEnabled;
+    /** Persistence enabled. */
+    public boolean persistenceEnabled;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -77,7 +78,7 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                    .setPersistenceEnabled(persistentEnabled)))
+                    .setPersistenceEnabled(persistenceEnabled)))
             .setCacheConfiguration(
                 new CacheConfiguration(RENDEZVOUS_CACHE)
                     .setBackups(BACKUPS),
@@ -95,14 +96,13 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
-        System.clearProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testPersistentFullRebalance() throws Exception {
+    public void testPersistenceFullRebalance() throws Exception {
         supplingFromOldBackup(true);
     }
 
@@ -118,17 +118,9 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
      * @throws Exception If failed.
      */
     @Test
-    public void testPersistentHistoricalRebalance() throws Exception {
-        supplingHistoricalFromOldBackup(true);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void supplingHistoricalFromOldBackup(boolean persistentEnabled) throws Exception {
-        System.setProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
-
-        this.persistentEnabled = persistentEnabled;
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+    public void testPersistenceHistoricalRebalance() throws Exception {
+        this.persistenceEnabled = true;
 
         IgniteEx ignite0 = startGrids(NODES_CNT);
 
@@ -197,8 +189,8 @@ public class NotAffinitySupplierWithMultipalRebalanceTest extends GridCommonAbst
     /**
      * @throws Exception If failed.
      */
-    public void supplingFromOldBackup(boolean persistentEnabled) throws Exception {
-        this.persistentEnabled = persistentEnabled;
+    public void supplingFromOldBackup(boolean persistenceEnabled) throws Exception {
+        this.persistenceEnabled = persistenceEnabled;
 
         IgniteEx ignite0 = startGrids(NODES_CNT);
 
