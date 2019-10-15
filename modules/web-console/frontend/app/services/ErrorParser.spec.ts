@@ -21,7 +21,8 @@ const parser = new ErrorParser(new JavaTypes());
 
 import { assert } from 'chai';
 
-const EXPECTED_CAUSES = ['Root cause', 'Duplicate cause', 'Final cause'];
+// First letter of cause should be capital: GG-24882.
+const EXPECTED_CAUSES = ['Root cause (in lower case)', 'Duplicate cause', 'Final cause'];
 
 const TEST_ERROR = {
     className: 'test.Exception1',
@@ -37,7 +38,7 @@ Caused by: class test.Exception3: Duplicate cause
 Caused by: class test.Exception4: Duplicate cause
     at test.Class4.function(Class4.java:1)
     ... 29 more
-Caused by: class test.Exception5: Root cause
+Caused by: class test.Exception5: root cause (in lower case)
     at test.Class5.function(Class5.java:1)
     ... 40 more
 ]`
