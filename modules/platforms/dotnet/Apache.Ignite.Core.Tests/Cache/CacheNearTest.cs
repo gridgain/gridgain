@@ -79,6 +79,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         public void TestExistingNearCache()
         {
             var cache = _grid.GetCache<int, string>(DefaultCacheName);
+            AssertCacheIsNear(cache);
 
             cache[1] = "1";
 
@@ -88,6 +89,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             // GetOrCreate when exists
             nearCache = _grid.GetOrCreateNearCache<int, string>(DefaultCacheName, new NearCacheConfiguration());
             Assert.AreEqual("1", nearCache[1]);
+
+            cache[1] = "2";
+            Assert.AreEqual("2", nearCache[1]);
         }
 
         /// <summary>
@@ -169,6 +173,9 @@ namespace Apache.Ignite.Core.Tests.Cache
                     new NearCacheConfiguration());
 
                 Assert.AreEqual("1", cache2[1]);
+
+                cache[1] = "2";
+                Assert.AreEqual("2", cache2[1]);
             }
         }
 
