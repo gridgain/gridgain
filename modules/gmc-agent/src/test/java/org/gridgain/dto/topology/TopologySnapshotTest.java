@@ -107,4 +107,44 @@ public class TopologySnapshotTest {
             }
         }
     }
+
+    /**
+     * Should create topology with empty baseline.
+     */
+    @Test
+    public void topologyWithEmptyBaseline() {
+        UUID clusterNodeId_1 = UUID.fromString("b-b-b-b-b");
+        String consistentNodeId_1 = UUID.fromString("c-c-c-c-c").toString();
+        TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
+            clusterNodeId_1,
+            Lists.newArrayList("127.0.0.1"),
+            Collections.emptyList(),
+            8080,
+            new TestDiscoveryMetricsProvider(),
+            IgniteProductVersion.fromString("1.2.3-0-DEV"),
+            consistentNodeId_1
+        );
+        clusterNode_1.setAttributes(Collections.emptyMap());
+
+        UUID crdId = UUID.fromString("c-c-c-c-c");
+        TopologySnapshot top = TopologySnapshot.topology(
+            1,
+            crdId,
+            Lists.newArrayList(clusterNode_1),
+            null
+        );
+
+        assertEquals(1, top.getTopologyVersion());
+        assertEquals(crdId.toString(), top.getCoordinatorConsistentId());
+        assertEquals(1, top.getNodes().size());
+
+        for (Node node : top.getNodes()) {
+            if (consistentNodeId_1.equals(node.getConsistentId())) {
+                assertTrue(node.isOnline());
+                assertFalse(node.isBaselineNode());
+                assertFalse(node.isClient());
+                assertEquals(clusterNodeId_1, node.getNodeId());
+            }
+        }
+    }
 }

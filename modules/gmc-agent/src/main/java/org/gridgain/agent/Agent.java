@@ -47,6 +47,7 @@ import org.gridgain.service.config.NodeConfigurationService;
 import org.gridgain.service.tracing.TracingService;
 import org.gridgain.service.tracing.GmcSpanExporter;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
+import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
@@ -352,6 +353,11 @@ public class Agent extends ManagementConsoleProcessor {
                     actSrvc.onActionRequest((Request) payload);
                 }
             });
+        }
+
+        /** {@inheritDoc} */
+        @Override public void handleException(StompSession ses, StompCommand cmd, StompHeaders headers, byte[] payload, Throwable e) {
+            log.warning("Failed to process a STOMP frame", e);
         }
 
         /** {@inheritDoc} */
