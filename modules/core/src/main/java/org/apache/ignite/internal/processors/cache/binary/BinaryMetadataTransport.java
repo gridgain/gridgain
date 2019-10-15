@@ -579,7 +579,9 @@ final class BinaryMetadataTransport {
                     return;
                 }
 
+                //TODO sync write should be eliminated from here first
                 metadataFileStore.writeMetadata(holder.metadata());
+                metadataFileStore.writeMetadataAsync(holder.metadata(), holder.pendingVersion());
 
                 metaLocCache.put(typeId, new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
             }

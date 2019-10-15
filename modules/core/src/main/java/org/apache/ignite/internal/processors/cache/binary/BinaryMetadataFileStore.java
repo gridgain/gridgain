@@ -17,19 +17,28 @@ package org.apache.ignite.internal.processors.cache.binary;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -89,6 +98,8 @@ class BinaryMetadataFileStore {
         }
 
         U.ensureDirectory(workDir, "directory for serialized binary metadata", log);
+
+        new IgniteThread(writer).start();
     }
 
     /**
@@ -181,5 +192,75 @@ class BinaryMetadataFileStore {
         }
 
         return null;
+    }
+
+    private BinaryMetadataWriter writer = new BinaryMetadataWriter();
+
+    /**
+     *
+     */
+    IgniteInternalFuture<Void> writeMetadataAsync(BinaryMetadata meta, int typeVer) {
+
+        return new GridFinishedFuture<>();
+    }
+
+    private final class WriteOpTask {
+        private final BinaryMetadata meta;
+
+        private final int typeVer;
+
+        private WriteOpTask(BinaryMetadata meta, int ver) {
+            this.meta = meta;
+            typeVer = ver;
+        }
+    }
+
+    private final ConcurrentHashMap<WriteOpSync, IgniteInternalFuture> writeOpFutures = new ConcurrentHashMap<>();
+
+    private class BinaryMetadataWriter extends GridWorker {
+
+        /** */
+        private final BlockingQueue<WriteOpTask> queue = new LinkedBlockingQueue();
+
+        protected BinaryMetadataWriter() {
+            super(ctx.igniteInstanceName(), "binary-metadata-writer", BinaryMetadataFileStore.this.log, ctx.workersRegistry());
+        }
+
+        public void submit(WriteOpTask task) {
+            //TODO graceful shutdown
+            writeOpFutures.put(new WriteOpSync(task.meta.typeId(), task.typeVer), new GridFutureAdapter());
+
+            queue.add(task);
+        }
+
+        @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+            WriteOpTask task;
+
+            blockingSectionBegin();
+
+            try {
+                task = queue.take();
+            }
+            finally {
+                blockingSectionEnd();
+            }
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " writing binMeta " + task.meta.typeId() + " asynchronously; ver is " + task.typeVer);
+            //TODO write meta here, bla-bla-bla
+        }
+    }
+
+    private final class WriteOpSync {
+        /** */
+        private final int typeId;
+
+        /** */
+        private final int typeVer;
+
+        private WriteOpSync(int typeId, int typeVer) {
+            this.typeId = typeId;
+            this.typeVer = typeVer;
+        }
     }
 }

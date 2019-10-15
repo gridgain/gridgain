@@ -575,6 +575,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             if (res.rejected())
                 throw res.error();
+            else
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] " + System.currentTimeMillis() + " need to consult fileStore for another future");
         }
         catch (IgniteCheckedException e) {
             IgniteCheckedException ex = e;
