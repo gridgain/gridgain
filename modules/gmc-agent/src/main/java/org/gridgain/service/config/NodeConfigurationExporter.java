@@ -16,6 +16,9 @@
 
 package org.gridgain.service.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.dto.IgniteConfigurationWrapper;
@@ -25,6 +28,9 @@ import org.gridgain.service.sender.CoordinatorSender;
  * Node configuration exporter.
  */
 public class NodeConfigurationExporter implements AutoCloseable {
+    /** Mapper. */
+    private final ObjectMapper mapper = new ObjectMapper();
+
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;
 
@@ -32,7 +38,10 @@ public class NodeConfigurationExporter implements AutoCloseable {
     public static final String NODE_CONFIGURATION_TOPIC = "gmc-node-configuration-topic";
 
     /** Sender. */
-    private final CoordinatorSender<IgniteConfigurationWrapper> snd;
+    private final CoordinatorSender<String> snd;
+
+    /** Logger. */
+    private final IgniteLogger log;
 
     /** Context. */
     private GridKernalContext ctx;
@@ -43,13 +52,18 @@ public class NodeConfigurationExporter implements AutoCloseable {
     public NodeConfigurationExporter(GridKernalContext ctx) {
         this.ctx = ctx;
         this.snd = new CoordinatorSender<>(ctx, QUEUE_CAP, NODE_CONFIGURATION_TOPIC);
+        this.log = ctx.log(NodeConfigurationExporter.class);
     }
 
     /**
      * Send node configuration to coordinator.
      */
     public void export() {
-        snd.send(new IgniteConfigurationWrapper(ctx.config()));
+        try {
+            snd.send(mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config())));
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialiaze the IgniteConfigurationWrapper to string", e);
+        }
     }
 
     /** {@inheritDoc} */
