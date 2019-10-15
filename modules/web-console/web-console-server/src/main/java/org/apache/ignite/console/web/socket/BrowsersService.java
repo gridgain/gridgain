@@ -209,7 +209,7 @@ public class BrowsersService extends AbstractSocketHandler {
                         String sesTok = sesSrvc.get(sesAttr);
 
                         if (F.isEmpty(sesTok) && Stream.of("user", "password").noneMatch(params::containsKey)) {
-                            sendMessageQuiet(ses, evt.response(RestResult.fail(STATUS_FAILED, "Failed to handle request - unknown session token (maybe expired session)")));
+                            sendMessageQuiet(ses, evt.response(RestResult.fail(STATUS_FAILED, EXPIRED_SESSION_ERROR_MESSAGE)));
 
                             return;
                         }
@@ -441,11 +441,13 @@ public class BrowsersService extends AbstractSocketHandler {
                             sesSrvc.update(sesAttr, res.getSessionToken());
 
                         break;
+                        
                     case STATUS_FAILED:
                         if (res.getError().startsWith(EXPIRED_SESSION_ERROR_MESSAGE))
                             sesSrvc.remove(sesAttr);
 
                         break;
+                        
                     default:
                         // No-op.
                 }
