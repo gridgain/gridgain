@@ -30,6 +30,7 @@ import org.apache.ignite.console.web.controller.AgentDownloadControllerTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.apache.ignite.console.web.socket.AgentsServiceSelfTest;
 import org.apache.ignite.console.web.socket.BrowsersServiceTest;
+import org.apache.ignite.console.web.socket.TransitionServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -52,7 +53,7 @@ import org.junit.runners.Suite;
     PasswordEncoderTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceTest.class,
-//    TransitionServiceSelfTest.class
+    TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {
 }
