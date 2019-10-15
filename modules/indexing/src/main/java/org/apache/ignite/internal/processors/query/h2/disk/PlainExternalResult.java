@@ -16,23 +16,32 @@
 
 package org.apache.ignite.internal.processors.query.h2.disk;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.result.ResultExternal;
-import org.h2.store.Data;
 import org.h2.value.Value;
+import org.h2.value.ValueRow;
 
 /**
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
 public class PlainExternalResult extends AbstractExternalResult {
+    /** In-memory buffer. */
+    private List<Map.Entry<ValueRow, Value[]>> rowBuff;
+
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker.
      */
     public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
-        super(ctx, memTracker);
+        super(ctx, memTracker, false, 0);
     }
 
     /**
@@ -44,25 +53,39 @@ public class PlainExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public void reset() {
-        rewindFile();
+        spillRows();
+
+        data.rewindFile();
     }
 
     /** {@inheritDoc} */
     @Override public Value[] next() {
-        Value[] row = readRowFromFile();
+        Value[] row = data.readRowFromFile().getValue();
 
         return row;
     }
 
     /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
-        Data buff = createDataBuffer(rowSize(row));
+        addRowToBuffer(row);
 
-        addRowToBuffer(row, buff);
+        if (needToSpill())
+            spillRows();
 
-        writeBufferToFile(buff);
+        return size;
+    }
 
-        return ++size;
+    private void addRowToBuffer(Value[] row) {
+        if (rowBuff == null)
+            rowBuff = new ArrayList<>();
+
+        rowBuff.add(new IgniteBiTuple<>(null, row));
+
+        long delta = H2Utils.calculateMemoryDelta(null, null, row);
+
+        memTracker.reserved(delta);
+
+        size++;
     }
 
     /** {@inheritDoc} */
@@ -70,15 +93,32 @@ public class PlainExternalResult extends AbstractExternalResult {
         if (rows.isEmpty())
             return size;
 
-        Data buff = createDataBuffer(rowSize(rows)); // TODO do not create big buffer
-
         for (Value[] row : rows)
-            addRowToBuffer(row, buff);
+            addRowToBuffer(row);
 
-        writeBufferToFile(buff);
+        if (needToSpill())
+            spillRows();
 
-        return size += rows.size();
+        return size;
     }
+
+    private void spillRows() {
+        if (F.isEmpty(rowBuff))
+            return;
+
+        data.store(rowBuff);
+
+        long delta = 0;
+
+        for (Map.Entry<ValueRow, Value[]> row : rowBuff)
+            delta += H2Utils.calculateMemoryDelta(null, row.getValue(), null);
+
+        memTracker.released(-delta);
+
+        rowBuff.clear();
+    }
+
+
 
     /** {@inheritDoc} */
     @Override public int removeRow(Value[] values) {

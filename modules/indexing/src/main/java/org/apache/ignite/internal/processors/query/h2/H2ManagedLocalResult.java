@@ -103,9 +103,8 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** */
-    private boolean isEnoughMemoryAfterReservation(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
+    private boolean updateMemoryTracker(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
-        assert row != null;
 
         if (memTracker == null)
             return true; // No memory management set.
@@ -346,20 +345,24 @@ public class H2ManagedLocalResult implements LocalResult {
                     distinctRows.put(array, values);
                 }
                 rowCount = distinctRows.size();
-                if (!isEnoughMemoryAfterReservation(array, previous, values)) {
-                    createExternalResult();
-                    rowCount = external.addRows(distinctRows.values());
+                if (!updateMemoryTracker(array, previous, values)) {
+                    addRowsToDisk();
+
                     distinctRows = null;
                 }
             } else {
                 rowCount = external.addRow(values);
             }
         } else {
-            rows.add(values);
             rowCount++;
-            if (!isEnoughMemoryAfterReservation(null,null, values)) {
-                addRowsToDisk();
+            if (external == null) {
+                rows.add(values);
+                if (!updateMemoryTracker(null, null, values)) {
+                    addRowsToDisk();
+                }
             }
+            else
+                external.addRow(values);
         }
     }
 
@@ -373,8 +376,14 @@ public class H2ManagedLocalResult implements LocalResult {
 
         memReserved = 0;
 
-        rowCount = external.addRows(rows);
-        rows.clear();
+        if (distinctRows == null) {
+            rowCount = external.addRows(rows);
+            rows.clear();
+        }
+        else {
+            rowCount = external.addRows(distinctRows.values());
+            distinctRows.clear();
+        }
     }
 
     /** {@inheritDoc} */
@@ -472,7 +481,7 @@ public class H2ManagedLocalResult implements LocalResult {
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
-            if (!isEnoughMemoryAfterReservation(null,null, row))
+            if (!updateMemoryTracker(null,null, row))
                 addRowsToDisk();
         }
         if (withTiesSortOrder != null && row != null) {
@@ -480,7 +489,7 @@ public class H2ManagedLocalResult implements LocalResult {
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
-                if (!isEnoughMemoryAfterReservation(null,null, row))
+                if (!updateMemoryTracker(null,null, row))
                     addRowsToDisk();
             }
         }

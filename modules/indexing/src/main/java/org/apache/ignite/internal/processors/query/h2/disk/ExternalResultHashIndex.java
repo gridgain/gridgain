@@ -19,8 +19,8 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -43,12 +43,15 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
     /** Minimum index capacity. */
     private static final long MIN_CAPACITY = 1L << 8; // 256 entries.
-    private static final long MAX_CAPACITY = 1L << 59 - 1;
-    public static final int REMOVED_FLAG = -2;
-    public static final int EMPTY_FLAG = -1;
 
     /** */
-    private final GridKernalContext ctx;
+    private static final long MAX_CAPACITY = 1L << 59 - 1;
+
+    /** */
+    public static final long REMOVED_FLAG = 1L << 63;
+
+    /** */
+    private final FileIOFactory fileIOFactory;
 
     /** Index file directory. */
     private final String dir;
@@ -66,7 +69,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private FileIO fileIo;
 
     /** Row store. */
-    private final SortedExternalResult rowStore;
+    private final ExternalResultData rowStore;
 
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
     private final ByteBuffer reusableBuff = ByteBuffer.allocate(Entry.ENTRY_BYTES);
@@ -82,8 +85,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param rowStore External result being indexed by this hash index.
      * @param initSize Init hash map size.
      */
-    ExternalResultHashIndex(GridKernalContext ctx, File spillFile, SortedExternalResult rowStore, long initSize) {
-        this.ctx = ctx;
+    ExternalResultHashIndex(FileIOFactory fileIOFactory, File spillFile, ExternalResultData rowStore, long initSize) {
+        this.fileIOFactory = fileIOFactory;
         dir = spillFile.getParent();
         spillFileName = spillFile.getName();
         this.rowStore = rowStore;
@@ -103,6 +106,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param rowAddr Row address in the rows file.
      */
     public void put(ValueRow key, long rowAddr) {
+        assert key != null;
+
         ensureCapacity();
 
         int hashCode = key.hashCode();
@@ -116,10 +121,22 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row distinct key.
      * @return Row address in the rows file.
      */
-    public Long get(ValueRow key) {
+    public long get(ValueRow key) {
         Entry entry = findEntry(key);
 
-        return entry == null ? null : entry.rowAddress();
+        return entry == null ? -1 : entry.rowAddress();
+    }
+
+    /**
+     * Finds row address in the hash index by its key.
+     *
+     * @param key Row distinct key.
+     * @return Whether row is in the file.
+     */
+    public boolean contains(ValueRow key) {
+        Entry entry = findEntry(key);
+
+        return entry != null;
     }
 
     /**
@@ -128,13 +145,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row distinct key
      * @return Row address in the rows file.
      */
-    public Long remove(ValueRow key) {
+    public long remove(ValueRow key) {
         Entry entry = findEntry(key);
 
         if (entry == null)
-            return null;
+            return -1;
 
-        writeEntryToIndexFile(entry.slot(), key.hashCode(), REMOVED_FLAG);
+        writeEntryToIndexFile(entry.slot(), key.hashCode(),entry.rowAddress() | REMOVED_FLAG);
 
         entriesCnt--;
 
@@ -199,7 +216,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row key.
      * @return Entry row address.
      */
-    private Entry findEntry(ValueRow key) {
+    private Entry findEntry(ValueRow key) { // TODO return row/address when heeded
         int hashCode = key.hashCode();
         long slot = slot(hashCode);
         long initialSlot = slot;
@@ -207,15 +224,15 @@ public class ExternalResultHashIndex implements AutoCloseable {
         Entry entry = readEntryFromIndexFile(slot);
 
         while (!entry.isEmpty()) {
-            if (hashCode == entry.hashCode()) { // 1. Check hashcode equals.
-                Value[] row = rowStore.readRowFromFile(entry.rowAddress());
+            if (!entry.isRemoved() && hashCode == entry.hashCode()) { // 1. Check hashcode equals.
+                Map.Entry<ValueRow, Value[]> row = rowStore.readRowFromFile(entry.rowAddress());
 
-                if (row != null) {
-                    ValueRow keyFromDisk = rowStore.getRowKey(row);
+                assert row != null : "row=" + row;
 
-                    if (key.equals(keyFromDisk)) // 2. Check the actual row equals the given key.
-                        break;
-                }
+                ValueRow keyFromDisk = row.getKey();
+
+                if (key.equals(keyFromDisk)) // 2. Check the actual row equals the given key.
+                    break;
             }
 
             slot = (slot + 1) % cap; // Check the next slot.
@@ -246,21 +263,16 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param fileCh File to read from.
      * @return Byte buffer with data.
      */
-    private Entry readEntryFromIndexFile(Long slot, FileIO fileCh) {
+    private Entry readEntryFromIndexFile(long slot, FileIO fileCh) {
         try {
-            if (slot != null)
+            if (slot != -1)
                 gotoSlot(slot);
             else
                 slot = fileCh.position() / Entry.ENTRY_BYTES;
 
             reusableBuff.clear();
 
-            while (reusableBuff.hasRemaining()) {
-                int bytesRead = fileCh.read(reusableBuff);
-
-                if (bytesRead <= 0)
-                    throw new IOException("Can not read data from file: " + idxFile.getAbsolutePath());
-            }
+            fileCh.readFully(reusableBuff);
 
             reusableBuff.flip();
 
@@ -298,12 +310,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             reusableBuff.putLong(addr + 1);
             reusableBuff.flip();
 
-            while (reusableBuff.hasRemaining()) {
-                int bytesWritten = fileIo.write(reusableBuff);
-
-                if (bytesWritten <= 0)
-                    throw new IOException("Can not write data to file: " + idxFile.getAbsolutePath());
-            }
+            fileIo.writeFully(reusableBuff);
         }
         catch (IOException e) {
             U.closeQuiet(this);
@@ -358,7 +365,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             oldFile.position(0);
 
             for (long i = 0; i < oldSize; i++) {
-                Entry e = readEntryFromIndexFile(null, oldFile);
+                Entry e = readEntryFromIndexFile(-1, oldFile);
 
                 if (!e.isRemoved() && !e.isEmpty())
                     putEntryToFreeSlot(e.hashCode(), e.rowAddress());
@@ -395,8 +402,6 @@ public class ExternalResultHashIndex implements AutoCloseable {
             idxFile = new File(dir, spillFileName + "_idx_" + id++);
 
             idxFile.deleteOnExit();
-
-            FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
             fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
 
@@ -447,7 +452,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
          * @return Address of the row in the rows file.
          */
         public long rowAddress() {
-            return rowAddr;
+            return rowAddr & ~REMOVED_FLAG;
         }
 
         /**
@@ -461,14 +466,14 @@ public class ExternalResultHashIndex implements AutoCloseable {
          * @return Removed flag.
          */
         public boolean isRemoved() {
-            return rowAddr == REMOVED_FLAG;
+            return (rowAddr & REMOVED_FLAG) != 0L;
         }
 
         /**
          * @return Empty flag.
          */
         public boolean isEmpty() {
-            return rowAddr == EMPTY_FLAG;
+            return rowAddr == -1;
         }
 
         /** {@inheritDoc} */
