@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
@@ -248,5 +249,13 @@ public class AgentUtils {
                 features.add(val.name());
 
         return features;
+    }
+
+    /**
+     * @param col Column.
+     * @return Empty stream if collection is null else stream of collection elements.
+     */
+    public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
+        return col == null ? Stream.empty() : col.stream();
     }
 }
