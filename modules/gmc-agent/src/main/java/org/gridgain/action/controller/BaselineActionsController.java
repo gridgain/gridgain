@@ -87,10 +87,6 @@ public class BaselineActionsController {
 
             else if (baseline.containsKey(consistentId))
                 baselineTop.add(baseline.get(consistentId));
-
-            else
-                throw new IgniteIllegalStateException("Check arguments. Node with consistent ID [" + consistentId +
-                    "] not found in server nodes.");
         }
 
         return baselineTop;
