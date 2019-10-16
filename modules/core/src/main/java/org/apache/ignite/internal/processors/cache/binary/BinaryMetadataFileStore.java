@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.binary;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,15 +28,14 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
@@ -64,7 +64,10 @@ class BinaryMetadataFileStore {
     private final IgniteLogger log;
 
     /** */
-    private BinaryMetadataWriter writer;
+    private BinaryMetadataAsyncWriter writer;
+
+    /** */
+    private final ConcurrentHashMap<WriteOpSync, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
 
     /**
      * @param metadataLocCache Metadata locale cache.
@@ -101,9 +104,17 @@ class BinaryMetadataFileStore {
         }
 
         U.ensureDirectory(workDir, "directory for serialized binary metadata", log);
-        writer = new BinaryMetadataWriter();
 
+        writer = new BinaryMetadataAsyncWriter();
         new IgniteThread(writer).start();
+    }
+
+    /**
+     * Stops worker for async writing of binary metadata.
+     */
+    void stop() {
+        if (writer != null)
+            U.cancel(writer);
     }
 
     /**
@@ -198,35 +209,23 @@ class BinaryMetadataFileStore {
         return null;
     }
 
-    void stop() {
-        if (writer != null)
-            U.cancel(writer);
+    /**
+     *
+     */
+    void writeMetadataAsync(BinaryMetadata meta, int typeVer) {
+        if (!CU.isPersistenceEnabled(ctx.config()))
+            return;
+
+        writer.submit(new WriteOpTask(meta, typeVer));
     }
 
     /**
      *
+     * @param typeId
+     * @param typeVer
+     * @throws IgniteCheckedException
      */
-    IgniteInternalFuture<Void> writeMetadataAsync(BinaryMetadata meta, int typeVer) {
-        if (!CU.isPersistenceEnabled(ctx.config()))
-            return null;
-
-        writer.submit(new WriteOpTask(meta, typeVer));
-
-        return new GridFinishedFuture<>();
-    }
-
-    private final class WriteOpTask {
-        private final BinaryMetadata meta;
-
-        private final int typeVer;
-
-        private WriteOpTask(BinaryMetadata meta, int ver) {
-            this.meta = meta;
-            typeVer = ver;
-        }
-    }
-
-    public void waitForWriteOp(int typeId, int typeVer) throws IgniteCheckedException {
+    void waitForWriteCompletion(int typeId, int typeVer) throws IgniteCheckedException {
         if (typeVer < 0)
             return;
 
@@ -236,18 +235,20 @@ class BinaryMetadataFileStore {
             fut.get();
     }
 
-    private final ConcurrentHashMap<WriteOpSync, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
-
-    private class BinaryMetadataWriter extends GridWorker {
-
+    /**
+     *
+     */
+    private class BinaryMetadataAsyncWriter extends GridWorker {
         /** */
         private final BlockingQueue<WriteOpTask> queue = new LinkedBlockingQueue();
 
-        protected BinaryMetadataWriter() {
+        /** */
+        BinaryMetadataAsyncWriter() {
             super(ctx.igniteInstanceName(), "binary-metadata-writer", BinaryMetadataFileStore.this.log, ctx.workersRegistry());
         }
 
-        public void submit(WriteOpTask task) {
+        /** */
+        void submit(WriteOpTask task) {
             if (isCancelled())
                 return;
 
@@ -256,18 +257,21 @@ class BinaryMetadataFileStore {
             queue.add(task);
         }
 
-        /** */
+        /** {@inheritDoc} */
         @Override public void cancel() {
             super.cancel();
 
+            queue.clear();
+
+            IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled (node is stopping).");
+
             for (GridFutureAdapter fut : writeOpFutures.values())
-                fut.onDone();
+                fut.onDone(err);
 
             writeOpFutures.clear();
-
-            queue.clear();
         }
 
+        /** {@inheritDoc} */
         @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
            while (!isCancelled()) {
                try {
@@ -283,6 +287,7 @@ class BinaryMetadataFileStore {
            }
         }
 
+        /** */
         private void body0() throws InterruptedException {
             WriteOpTask task;
 
@@ -304,16 +309,59 @@ class BinaryMetadataFileStore {
         }
     }
 
-    private final class WriteOpSync {
+    /**
+     *
+     */
+    private static final class WriteOpTask {
+        /** */
+        private final BinaryMetadata meta;
+        /** */
+        private final int typeVer;
+
+        /** */
+        private WriteOpTask(BinaryMetadata meta, int ver) {
+            this.meta = meta;
+            typeVer = ver;
+        }
+    }
+
+    /**
+     *
+     */
+    private static final class WriteOpSync {
         /** */
         private final int typeId;
 
         /** */
         private final int typeVer;
 
+        /** */
         private WriteOpSync(int typeId, int typeVer) {
             this.typeId = typeId;
             this.typeVer = typeVer;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(typeId, typeVer);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object obj) {
+            if (obj == this)
+                return true;
+
+            if (!(obj instanceof WriteOpSync))
+                return false;
+
+            WriteOpSync that = (WriteOpSync)obj;
+
+            return (that.typeId == typeId) && (that.typeVer == typeVer);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(WriteOpSync.class, this);
         }
     }
 }

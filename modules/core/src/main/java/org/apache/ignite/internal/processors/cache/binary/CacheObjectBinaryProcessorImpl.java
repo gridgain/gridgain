@@ -579,7 +579,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             if (res.rejected())
                 throw res.error();
             else if (!ctx.clientNode())
-                metadataFileStore.waitForWriteOp(typeId, res.typeVersion());
+                metadataFileStore.waitForWriteCompletion(typeId, res.typeVersion());
         }
         catch (IgniteCheckedException e) {
             IgniteCheckedException ex = e;
@@ -698,7 +698,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             }
             else if (metadataFileStore != null) {
                 try {
-                    metadataFileStore.waitForWriteOp(typeId, holder.acceptedVersion());
+                    metadataFileStore.waitForWriteCompletion(typeId, holder.acceptedVersion());
                 }
                 catch (IgniteCheckedException e) {
                     log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
@@ -823,7 +823,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
         if (holder != null && metadataFileStore != null) {
             try {
-                metadataFileStore.waitForWriteOp(typeId, holder.acceptedVersion());
+                metadataFileStore.waitForWriteCompletion(typeId, holder.acceptedVersion());
             }
             catch (IgniteCheckedException e) {
                 log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
