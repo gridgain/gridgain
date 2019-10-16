@@ -16,17 +16,18 @@
 
 package org.gridgain.action.controller;
 
-import org.apache.ignite.cluster.ClusterNode;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
+import static org.gridgain.utils.AgentUtils.fromNullableCollection;
 
 /**
  * Baseline actions controller.
@@ -45,7 +46,6 @@ public class BaselineActionsController {
 
     /**
      * @param isAutoAdjustEnabled Is auto adjust enabled.
-     * @return Completeble feature.
      */
     public void updateAutoAdjustEnabled(boolean isAutoAdjustEnabled) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -55,7 +55,6 @@ public class BaselineActionsController {
 
     /**
      * @param awaitingTime Awaiting time in ms.
-     * @return Completeble feature.
      */
     public void updateAutoAdjustAwaitingTime(long awaitingTime) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
@@ -64,15 +63,47 @@ public class BaselineActionsController {
     }
 
     /**
-     * @param ids Node ids.
-     * @return Completeble feature.
+     * @param consIds Node consistent ids.
      */
-    public void setBaselineTopology(Collection<String> ids) {
+    public void setBaselineTopology(Collection<String> consIds) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
-        Set<UUID> uuids = ids.stream().map(UUID::fromString).collect(Collectors.toSet());
+        ctx.grid().cluster().setBaselineTopology(baselineNodesForIds(consIds));
+    }
 
-        Collection<ClusterNode> nodes = ctx.grid().cluster().forNodeIds(uuids).forServers().nodes();
-        ctx.grid().cluster().setBaselineTopology(nodes);
+    /**
+     * @param consIds Node consistent ids.
+     */
+    private Collection<BaselineNode> baselineNodesForIds(Collection<String> consIds) {
+        Map<String, BaselineNode> baseline = currentBaseLine();
+        Map<String, BaselineNode> srvrs = currentServers();
+
+        Collection<BaselineNode> baselineTop = new ArrayList<>();
+
+        for (String consistentId : consIds) {
+            if (srvrs.containsKey(consistentId))
+                baselineTop.add(srvrs.get(consistentId));
+
+            else if (baseline.containsKey(consistentId))
+                baselineTop.add(baseline.get(consistentId));
+        }
+
+        return baselineTop;
+    }
+
+    /**
+     * @return Current baseline.
+     */
+    private Map<String, BaselineNode> currentBaseLine() {
+        return fromNullableCollection(ctx.grid().cluster().currentBaselineTopology())
+            .collect(toMap(n -> n.consistentId().toString(), identity()));
+    }
+
+    /**
+     * @return Current server nodes.
+     */
+    private Map<String, BaselineNode> currentServers() {
+        return ctx.grid().cluster().forServers().nodes().stream()
+            .collect(toMap(n -> n.consistentId().toString(), identity()));
     }
 }

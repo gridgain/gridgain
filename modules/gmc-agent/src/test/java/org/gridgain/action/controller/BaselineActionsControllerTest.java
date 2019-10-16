@@ -71,7 +71,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     }
 
     /**
-     * Should set the baselineAutoAdjustTimeout cluster property to 10_000ms.
+     * Should set new baseline topology.
      */
     @Test
     public void setBaselineTopology() throws Exception {
@@ -81,9 +81,9 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         IgniteEx ignite_3 = startGrid(3);
 
         List<String> ids = Lists.newArrayList(
-            cluster.localNode().id().toString(),
-            ignite_2.cluster().localNode().id().toString(),
-            ignite_3.cluster().localNode().id().toString()
+            cluster.localNode().consistentId().toString(),
+            ignite_2.cluster().localNode().consistentId().toString(),
+            ignite_3.cluster().localNode().consistentId().toString()
         );
 
         Request req = new Request()
