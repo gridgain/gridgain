@@ -63,7 +63,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
             snd.send(mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config())));
         }
         catch (JsonProcessingException e) {
-            log.error("Failed to serialiaze the IgniteConfigurationWrapper to JSON", e);
+            log.error("Failed to serialize the IgniteConfiguration to JSON", e);
         }
     }
 

@@ -72,10 +72,13 @@ public class NodeConfigurationService implements AutoCloseable {
      */
     boolean onNodeConfiguration(UUID nid, Object cfgList) {
         String cfg = F.first((List<String>) cfgList);
-        String consistentId = ctx.cluster().get().node(nid).consistentId().toString();
-        NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
 
-        snd.send(nodeCfg);
+        if (!F.isEmpty(cfg)) {
+            String consistentId = ctx.cluster().get().node(nid).consistentId().toString();
+            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
+
+            snd.send(nodeCfg);
+        }
 
         return true;
     }

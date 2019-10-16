@@ -18,18 +18,17 @@ package org.gridgain.action.controller;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
+import static org.gridgain.utils.AgentUtils.fromNullableCollection;
 
 /**
  * Baseline actions controller.
@@ -101,10 +100,7 @@ public class BaselineActionsController {
      * @return Current baseline.
      */
     private Map<String, BaselineNode> currentBaseLine() {
-        if (F.isEmpty(ctx.grid().cluster().currentBaselineTopology()))
-            return Collections.emptyMap();
-
-        return ctx.grid().cluster().currentBaselineTopology().stream()
+        return fromNullableCollection(ctx.grid().cluster().currentBaselineTopology())
             .collect(toMap(n -> n.consistentId().toString(), identity()));
     }
 
