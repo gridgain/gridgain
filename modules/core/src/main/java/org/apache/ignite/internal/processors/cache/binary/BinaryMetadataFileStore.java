@@ -198,6 +198,11 @@ class BinaryMetadataFileStore {
         return null;
     }
 
+    void stop() {
+        if (writer != null)
+            U.cancel(writer);
+    }
+
     /**
      *
      */

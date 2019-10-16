@@ -324,6 +324,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Override public void stop(boolean cancel) {
         if (transport != null)
             transport.stop();
+
+        if (metadataFileStore != null)
+            metadataFileStore.stop();
     }
 
     /** {@inheritDoc} */
