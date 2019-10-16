@@ -38,7 +38,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.socket.WebSocketSession;
 
 import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
@@ -118,11 +117,6 @@ public class BrowsersServiceSelfTest {
         ));
 
         AgentKey key = new AgentKey(UUID.randomUUID(), clusterId);
-
-        ReflectionTestUtils.setField(transitionSrvc, "ignite", ignite);
-        ReflectionTestUtils.setField(transitionSrvc, "agentsSrvc", agentsSrvc);
-
-        doCallRealMethod().when(transitionSrvc).sendToAgent(eq(key), eq(req));
 
         browsersSrvc.sendToAgent(key, req);
 
