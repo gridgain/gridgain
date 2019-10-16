@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
 
@@ -914,6 +915,38 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                     Assert.AreEqual(cacheName, cache[i]);
                 }
             }
+        }
+
+        /// <summary>
+        /// Test cache with empty expire policy does not remove value.
+        /// </summary>
+        [Test]
+        public void TestCacheWithExpiryPolicyOnCreate()
+        {
+            var cache = GetCache<int>();
+            cache.Put(1, 1);
+            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+            var cacheWithExpiryPolicy = cache.WithExpiryPolicy(expiryPolicy);
+
+            var value = cache.Get(1);
+
+            // Initially added value is the same.
+            Assert.AreEqual(value, cache.Get(1));
+            Assert.AreEqual(value, cacheWithExpiryPolicy.Get(1));
+
+            cache.Put(2, 2);
+
+            // Second value is the same.
+            /*
+            Assert.AreEqual(2, cache.Get(2));
+            Assert.AreEqual(2, cacheWithExpiryPolicy.Get(2));
+            */
+            Thread.Sleep(1000);
+
+            // Expiry policies should be applied, no cache item exists.
+            Assert.AreEqual(1, cache.Get(1));
+            Assert.AreEqual(2, cache.Get(2));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(2));
         }
 
         private class Container

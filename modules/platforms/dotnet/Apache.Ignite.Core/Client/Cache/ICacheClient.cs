@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Client.Cache
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
 
     /// <summary>
@@ -422,5 +423,16 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <typeparam name="TV1">Value type in binary mode.</typeparam>
         /// <returns>Cache instance with binary mode enabled.</returns>
         ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>();
+
+        /// <summary>
+        /// Returns cache with the specified expired policy set. This policy will be used for each operation
+        /// invoked on the returned cache.
+        /// <para />
+        /// Expiry durations for each operation are calculated only once and then used as constants. Please
+        /// consider this when implementing custom expiry policy implementations.
+        /// </summary>
+        /// <param name="plc">Expiry policy to use.</param>
+        /// <returns>Cache instance with the specified expiry policy set.</returns>
+        ICacheClient<TK, TV> WithExpiryPolicy(IExpiryPolicy plc);
     }
 }

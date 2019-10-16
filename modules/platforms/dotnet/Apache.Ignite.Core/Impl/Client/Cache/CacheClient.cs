@@ -25,12 +25,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache;
+    using Apache.Ignite.Core.Impl.Cache.Expiry;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Client.Cache.Query;
     using Apache.Ignite.Core.Impl.Common;
@@ -538,6 +540,16 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             }
 
             return new CacheClient<TK1, TV1>(_ignite, _name, true);
+        }
+
+        /** <inheritDoc /> */
+        public ICacheClient<TK, TV> WithExpiryPolicy(IExpiryPolicy plc)
+        {
+            IgniteArgumentCheck.NotNull(plc, "plc");
+
+            DoOutOp(ClientOp.CacheWithExpiryPolicy, w => ExpiryPolicySerializer.WritePolicy(w, plc));
+
+            return new CacheClient<TK, TV>(_ignite, _name, _keepBinary);
         }
 
         /** <inheritDoc /> */
