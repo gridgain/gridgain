@@ -19,7 +19,6 @@ package org.apache.ignite.internal;
 import java.lang.reflect.Constructor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
-import org.apache.ignite.internal.processors.gmc.ManagementConsoleProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
@@ -100,13 +99,6 @@ public enum IgniteComponentType {
         CompressionProcessor.class.getName(),
         "org.apache.ignite.internal.processors.compress.CompressionProcessorImpl",
         "ignite-compress"
-    ),
-
-    /** Management console agent. */
-    MANAGEMENT_CONSOLE_AGENT(
-        ManagementConsoleProcessor.class.getName(),
-        "org.gridgain.agent.Agent",
-        "gridgain-management-console-agent"
     );
 
     /** No-op class name. */
