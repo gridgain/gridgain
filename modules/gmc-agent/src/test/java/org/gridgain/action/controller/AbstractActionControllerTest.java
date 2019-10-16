@@ -135,7 +135,7 @@ abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
     /**
      * @param cond Condition.
      */
-    protected void assertWithPoll(Callable<Boolean> cond) {
+    @Override protected void assertWithPoll(Callable<Boolean> cond) {
         with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
     }
 }

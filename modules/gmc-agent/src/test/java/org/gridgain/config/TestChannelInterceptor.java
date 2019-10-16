@@ -104,6 +104,24 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
     /**
      * @param dest Destination.
      */
+    public <K, V> Map<K, V> getMapPayload(String dest, Class<K> keyClazz, Class<V> valClazz) {
+        Object payload = messages.get(dest);
+        if (payload == null)
+            return null;
+
+        JavaType type = mapper.getTypeFactory().constructMapType(Map.class, keyClazz, valClazz);
+
+        try {
+            return mapper.readValue((byte[]) payload, type);
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @param dest Destination.
+     */
     public Object getPayload(String dest) {
         return messages.get(dest);
     }
