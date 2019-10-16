@@ -214,6 +214,8 @@ import org.apache.ignite.internal.processors.query.SqlQueryHistoryFromClientSelf
 import org.apache.ignite.internal.processors.query.SqlQueryHistorySelfTest;
 import org.apache.ignite.internal.processors.query.SqlSchemaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
+import org.apache.ignite.internal.processors.query.SubqueryCacheDisableTest;
+import org.apache.ignite.internal.processors.query.SubqueryCacheTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.H2ResultSetIteratorNullifyOnEndSelfTest;
@@ -302,6 +304,8 @@ import org.junit.runners.Suite;
     DuplicateKeyValueClassesSelfTest.class,
     GridCacheLazyQueryPartitionsReleaseTest.class,
     StopNodeOnRebuildIndexFailureTest.class,
+    SubqueryCacheTest.class,
+    SubqueryCacheDisableTest.class,
 
     // Dynamic index create/drop tests.
     SchemaExchangeSelfTest.class,

@@ -1201,6 +1201,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
+     * Enable the H2 result reuse optimization.
+     *
+     * Default is {@code true}.
+     */
+    public static final String IGNITE_H2_OPTIMIZE_REUSE_RESULTS = "IGNITE_H2_OPTIMIZE_REUSE_RESULTS";
+
+    /**
      * Defines default memory limit for every single sql query (query quota).
      * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
      *
