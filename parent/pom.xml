@@ -359,7 +359,7 @@
                         <version>false</version>
                         <additionalparam>${javadoc.opts}</additionalparam>
                         <links>
-                            <link>http://hadoop.apache.org/docs/current/api/</link>
+                            <link>https://hadoop.apache.org/docs/current/api/</link>
                         </links>
                         <groups>
                             <group>
@@ -445,6 +445,10 @@
                             <group>
                                 <title>SPI: Event Storage</title>
                                 <packages>org.apache.ignite.spi.eventstorage*</packages>
+                            </group>
+                            <group>
+                                <title>SPI: Metric</title>
+                                <packages>org.apache.ignite.spi.metric*</packages>
                             </group>
                             <group>
                                 <title>Communication Failure Detection</title>
