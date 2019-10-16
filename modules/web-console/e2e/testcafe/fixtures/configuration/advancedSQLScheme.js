@@ -18,7 +18,7 @@ import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools
 import {createRegularUser} from '../../roles';
 import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfiguration'
 import {createModelButton, general} from '../../page-models/pageConfigurationAdvancedModels';
-import {successNotification} from '../../components/notifications';
+import {successNotification, popoverErrorNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();
 
@@ -39,22 +39,20 @@ test('Base required fields checked on save.', async(t) => {
 
     await t.click(createModelButton)
         .click(pageAdvancedConfiguration.saveButton)
-        .expect(pageAdvancedConfiguration.fieldErrorNotification.withText('Key type could not be empty!').visible)
-        .ok('Error notification for key field should be visible');
+        .expect(general.keyType.getError('required').visible).ok('Error notification for key field should be visible');
 
     await t.typeText(general.keyType.control, 'test.cls.name.Key')
         .click(pageAdvancedConfiguration.saveButton)
-        .expect(pageAdvancedConfiguration.fieldErrorNotification.withText('Value type could not be empty!').visible)
-        .ok('Error notification for value field should be visible');
+        .expect(general.valueType.getError('required').visible).ok('Error notification for value field should be visible');
 
     await t.typeText(general.valueType.control, VALUE_CLS)
         .click(pageAdvancedConfiguration.saveButton)
-        .expect(pageAdvancedConfiguration.popoverErrorNotification.withText('SQL query domain model should be configured').visible)
+        .expect(popoverErrorNotification.withText('SQL query domain model should be configured').visible)
         .ok('Error notification for not configured SQL query section should be visible');
 
     await general.queryMetadata.selectOption('Annotations');
     await t.click(pageAdvancedConfiguration.saveButton)
-        .expect(pageAdvancedConfiguration.popoverErrorNotification.withText('Domain model for cache store should be configured when generation of POJO classes is enabled').visible)
+        .expect(popoverErrorNotification.withText('Domain model for cache store should be configured when generation of POJO classes is enabled').visible)
         .ok('Error notification for not configured cache store section should be visible');
 
     await t.click(general.generatePOJOClasses.control)
