@@ -696,6 +696,17 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                     // No-op.
                 }
             }
+            else if (metadataFileStore != null) {
+                try {
+                    metadataFileStore.waitForWriteOp(typeId, holder.acceptedVersion());
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                        ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                    return null;
+                }
+            }
 
             return holder.metadata();
         }
@@ -807,6 +818,18 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + holder.pendingVersion()
                         + ", acceptedVer=" + holder.acceptedVersion() + ']');
+            }
+        }
+
+        if (holder != null && metadataFileStore != null) {
+            try {
+                metadataFileStore.waitForWriteOp(typeId, holder.acceptedVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                return null;
             }
         }
 
