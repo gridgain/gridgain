@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.gridgain.service;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,10 +22,16 @@ import java.util.UUID;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema;
+import org.apache.ignite.internal.processors.metric.export.MetricRequest;
+import org.apache.ignite.internal.processors.metric.export.MetricResponse;
+import org.apache.ignite.internal.processors.metric.export.MetricSchema;
+import org.apache.ignite.internal.processors.metric.export.MetricType;
+import org.apache.ignite.internal.processors.metric.export.VarIntWriter;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -54,9 +60,18 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
  * Reg schemas
  * Data
  */
-public class MetricExporter extends GridProcessorAdapter {
+public class MetricExporter implements AutoCloseable {
     /** Default varint byte buffer capacity. */
     private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;
+
+    /** Context. */
+    private final GridKernalContext ctx;
+
+    /** Logger. */
+    private final IgniteLogger log;
+
+    /** Listener. */
+    private final GridMessageListener lsnr;
 
     /**
      * Constructor.
@@ -64,24 +79,23 @@ public class MetricExporter extends GridProcessorAdapter {
      * @param ctx Kernal context.
      */
     public MetricExporter(GridKernalContext ctx) {
-        super(ctx);
+        this.ctx = ctx;
+        this.log = ctx.log(MetricExporter.class);
 
-        ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
-            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                if (msg instanceof MetricRequest) {
-                    MetricResponse res = export();
+        this.lsnr = (UUID nodeId, Object msg, byte plc) -> {
+            if (msg instanceof MetricRequest) {
+                MetricResponse res = export();
 
-                    try {
-                        ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
-                    }
-                    catch (IgniteCheckedException e) {
-                        log.error("Error during sending message [topic=" + TOPIC_METRICS +
-                                ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
-                    }
+                try {
+                    ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
+                } catch (IgniteCheckedException e) {
+                    log.error("Error during sending message [topic=" + TOPIC_METRICS +
+                        ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
                 }
             }
-        });
+        };
 
+        ctx.io().addMessageListener(TOPIC_METRICS, lsnr);
     }
 
     /**
@@ -105,6 +119,12 @@ public class MetricExporter extends GridProcessorAdapter {
         Map<String, MetricRegistry> metrics = deepCopyRegistries(ctx.metric().registries());
 
         return metricMessage(clusterId, tag, consistentId, metrics);
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public void close() throws Exception {
+        ctx.io().removeMessageListener(TOPIC_METRICS, lsnr);
     }
 
     /**

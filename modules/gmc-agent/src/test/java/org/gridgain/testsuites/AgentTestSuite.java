@@ -19,6 +19,7 @@ package org.gridgain.testsuites;
 import org.gridgain.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.gridgain.dto.action.RequestDeserializerTest;
 import org.gridgain.dto.topology.TopologySnapshotTest;
+import org.gridgain.service.MetricExporterTest;
 import org.gridgain.service.sender.RetryableSenderTest;
 import org.gridgain.service.MetricsServiceTest;
 import org.gridgain.service.ClusterServiceTest;
@@ -36,6 +37,7 @@ import org.junit.runners.Suite;
     ClusterServiceTest.class,
     GmcSpanExporterTest.class,
     MetricsServiceTest.class,
+    MetricExporterTest.class,
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
     TracingServiceTest.class,

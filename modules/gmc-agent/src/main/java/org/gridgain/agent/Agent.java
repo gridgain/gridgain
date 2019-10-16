@@ -41,6 +41,7 @@ import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.action.Request;
 import org.gridgain.service.ActionService;
 import org.gridgain.service.ClusterService;
+import org.gridgain.service.MetricExporter;
 import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.config.NodeConfigurationService;
@@ -85,6 +86,9 @@ public class Agent extends ManagementConsoleProcessor {
     /** Node configuration exporter. */
     private NodeConfigurationExporter nodeConfigurationExporter;
 
+    /** Metric exporter. */
+    private MetricExporter metricExporter;
+
     /** Metric service. */
     private MetricsService metricSrvc;
 
@@ -117,6 +121,7 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void onKernalStart(boolean active) {
         spanExporter = new GmcSpanExporter(ctx);
         nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
+        metricExporter = new MetricExporter(ctx);
         metaStorage = ctx.distributedMetastorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
@@ -135,6 +140,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.shutdownNow(this.getClass(), connectPool, log);
 
         U.closeQuiet(actSrvc);
+        U.closeQuiet(metricExporter);
         U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
