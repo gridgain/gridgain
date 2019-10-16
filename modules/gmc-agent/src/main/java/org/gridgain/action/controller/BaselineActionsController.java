@@ -16,6 +16,10 @@
 
 package org.gridgain.action.controller;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -23,11 +27,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
@@ -65,24 +64,24 @@ public class BaselineActionsController {
     }
 
     /**
-     * @param ids Node ids.
+     * @param consIds Node consistent ids.
      */
-    public void setBaselineTopology(Collection<String> ids) {
+    public void setBaselineTopology(Collection<String> consIds) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
-        ctx.grid().cluster().setBaselineTopology(findNodesByConsistentIds(ids));
+        ctx.grid().cluster().setBaselineTopology(findNodesByConsistentIds(consIds));
     }
 
     /**
-     * @param ids Ids.
+     * @param consIds Node consistent ids.
      */
-    private Collection<BaselineNode> findNodesByConsistentIds(Collection<String> ids) {
+    private Collection<BaselineNode> findNodesByConsistentIds(Collection<String> consIds) {
         Map<String, BaselineNode> baseline = currentBaseLine();
         Map<String, BaselineNode> srvrs = currentServers();
 
         Collection<BaselineNode> baselineTop = new ArrayList<>();
 
-        for (String consistentId : ids) {
+        for (String consistentId : consIds) {
             if (srvrs.containsKey(consistentId))
                 baselineTop.add(srvrs.get(consistentId));
 
