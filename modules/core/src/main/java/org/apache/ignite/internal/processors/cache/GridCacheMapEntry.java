@@ -2284,11 +2284,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             boolean readFromStore = readThrough && needVal && (cctx.readThrough() &&
                 (op == GridCacheOperation.TRANSFORM || cctx.loadPreviousValue()));
 
-            GridCacheVersion ver = drEnrich(newVer);
+            GridCacheVersion timedVer = drEnrich(newVer);
 
             c = new AtomicCacheUpdateClosure(this,
                 topVer,
-                ver,
+                timedVer,
                 op,
                 writeObj,
                 invokeArgs,
