@@ -26,9 +26,10 @@ export class WebSocket {
 
     /**
      * @param {string} eventType
+     * @param {string} goalEventType
      * @param {(any)=>any} listener
      */
-    on(eventType, listener) {
+    _on(eventType, goalEventType, listener) {
         this.socket.on('message', (msg) => {
             const e = JSON.parse(msg);
 
@@ -36,11 +37,27 @@ export class WebSocket {
                 const res = listener(e.payload);
 
                 if (res)
-                    this.emit(e.eventType, res, e.requestId);
+                    this.emit(goalEventType, res, e.requestId);
             }
         });
 
         return this;
+    }
+
+    /**
+     * @param {string} eventType
+     * @param {(any)=>any} listener
+     */
+    on(eventType, listener) {
+        return this._on(eventType, eventType, listener);
+    }
+
+    /**
+     * @param {string} eventType
+     * @param {(any)=>any} listener
+     */
+    errorOn(eventType, listener) {
+        return this._on(eventType, 'error', listener);
     }
 
     /**
