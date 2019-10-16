@@ -19,7 +19,6 @@ package org.gridgain.action.controller;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
-import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
@@ -69,13 +68,13 @@ public class BaselineActionsController {
     public void setBaselineTopology(Collection<String> consIds) {
         authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
-        ctx.grid().cluster().setBaselineTopology(findNodesByConsistentIds(consIds));
+        ctx.grid().cluster().setBaselineTopology(baselineNodesForIds(consIds));
     }
 
     /**
      * @param consIds Node consistent ids.
      */
-    private Collection<BaselineNode> findNodesByConsistentIds(Collection<String> consIds) {
+    private Collection<BaselineNode> baselineNodesForIds(Collection<String> consIds) {
         Map<String, BaselineNode> baseline = currentBaseLine();
         Map<String, BaselineNode> srvrs = currentServers();
 
