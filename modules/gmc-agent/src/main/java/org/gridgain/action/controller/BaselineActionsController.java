@@ -18,16 +18,17 @@ package org.gridgain.action.controller;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.cluster.BaselineNode;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.gridgain.action.annotation.ActionController;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.gridgain.utils.AgentUtils.authorizeIfNeeded;
 
 /**
@@ -89,7 +90,8 @@ public class BaselineActionsController {
                 baselineTop.add(baseline.get(consistentId));
 
             else
-                throw new IgniteIllegalStateException("Check arguments. Node not found for consistent ID: " + consistentId);
+                throw new IgniteIllegalStateException("Check arguments. Node with consistent ID [" + consistentId +
+                    "] not found in server nodes.");
         }
 
         return baselineTop;
@@ -99,27 +101,18 @@ public class BaselineActionsController {
      * @return Current baseline.
      */
     private Map<String, BaselineNode> currentBaseLine() {
-        Map<String, BaselineNode> nodes = new HashMap<>();
+        if (F.isEmpty(ctx.grid().cluster().currentBaselineTopology()))
+            return Collections.emptyMap();
 
-        Collection<BaselineNode> baseline = ctx.grid().cluster().currentBaselineTopology();
-
-        if (!F.isEmpty(baseline)) {
-            for (BaselineNode node : baseline)
-                nodes.put(node.consistentId().toString(), node);
-        }
-
-        return nodes;
+        return ctx.grid().cluster().currentBaselineTopology().stream()
+            .collect(toMap(n -> n.consistentId().toString(), identity()));
     }
 
     /**
      * @return Current server nodes.
      */
     private Map<String, BaselineNode> currentServers() {
-        Map<String, BaselineNode> nodes = new HashMap<>();
-
-        for (ClusterNode node : ctx.grid().cluster().forServers().nodes())
-            nodes.put(node.consistentId().toString(), node);
-
-        return nodes;
+        return ctx.grid().cluster().forServers().nodes().stream()
+            .collect(toMap(n -> n.consistentId().toString(), identity()));
     }
 }
