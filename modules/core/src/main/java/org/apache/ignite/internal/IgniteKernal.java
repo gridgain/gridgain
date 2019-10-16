@@ -151,7 +151,6 @@ import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingPro
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.export.MetricExporter;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.nodevalidation.OsDiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
@@ -1150,9 +1149,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
-
-                startProcessor(new MetricExporter(ctx));
-                //TODO: start metrics exporter
 
                 startTimer.finishGlobalStage("Start processors");
 

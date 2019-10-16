@@ -70,7 +70,6 @@ import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
-import org.apache.ignite.internal.processors.metric.export.MetricExporter;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.platform.PlatformProcessor;
@@ -679,9 +678,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
-        else if (comp instanceof MetricExporter) {
-            // No-op.
-        }
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
