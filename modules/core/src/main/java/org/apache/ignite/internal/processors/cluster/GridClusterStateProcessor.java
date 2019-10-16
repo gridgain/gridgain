@@ -1829,13 +1829,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     private static String prettyStr(ClusterState state) {
         switch (state) {
             case ACTIVE:
-                return "activate";
+                return "activate cluster";
 
             case INACTIVE:
-                return "deactivate";
+                return "deactivate cluster";
 
             case READ_ONLY:
-                return "read-only";
+                return "activate cluster in read-only mode";
 
             default:
                 throw new IllegalArgumentException("Unknown cluster state: " + state);
