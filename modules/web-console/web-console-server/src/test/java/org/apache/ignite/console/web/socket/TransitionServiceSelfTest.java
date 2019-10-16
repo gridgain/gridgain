@@ -17,8 +17,11 @@
 package org.apache.ignite.console.web.socket;
 
 import java.util.UUID;
+import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +31,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
+import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -39,7 +44,7 @@ import static org.mockito.Mockito.verify;
  *  Transition service test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(classes = {TestGridConfiguration.class})
 public class TransitionServiceSelfTest {
     /** Transition service. */
     @Autowired
@@ -52,6 +57,24 @@ public class TransitionServiceSelfTest {
     /** Announcement captor. */
     @Captor
     private ArgumentCaptor<WebSocketEvent<Announcement>> annCaptor;
+
+    /**
+     * @throws Exception If failed.
+     */
+    @BeforeClass
+    public static void setup() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @AfterClass
+    public static void tearDown() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
 
     /** */
     @Test

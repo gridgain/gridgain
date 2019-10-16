@@ -119,7 +119,12 @@ public class BrowsersServiceSelfTest {
 
         AgentKey key = new AgentKey(UUID.randomUUID(), clusterId);
 
-        ReflectionTestUtils.invokeMethod(browsersSrvc, "sendToAgent", key, req);
+        ReflectionTestUtils.setField(transitionSrvc, "ignite", ignite);
+        ReflectionTestUtils.setField(transitionSrvc, "agentsSrvc", agentsSrvc);
+
+        doCallRealMethod().when(transitionSrvc).sendToAgent(eq(key), eq(req));
+
+        browsersSrvc.sendToAgent(key, req);
 
         ArgumentCaptor<AgentRequest> captor = ArgumentCaptor.forClass(AgentRequest.class);
 

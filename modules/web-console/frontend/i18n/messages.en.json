@@ -301,7 +301,8 @@
             "noClustersMessage": "You have no connected clusters."
         },
         "gridColumnTitles": {
-            "name": "Cluster",
+            "tag": "Cluster Tag",
+            "id": "Cluster ID",
             "nids": "Number of Nodes",
             "status": "Status"
         },
