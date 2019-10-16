@@ -457,11 +457,15 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     /** {@inheritDoc} */
     @Override protected void storeValue(CacheObject val, long expireTime, GridCacheVersion ver) {
         // No-op: queries are disabled for near cache.
+        // TODO: Can happen with TX? Check it.
+        System.out.println("storeValue: " + val);
     }
 
     /** {@inheritDoc} */
     @Override protected void removeValue() {
         // No-op.
+        // TODO: ??
+        System.out.println("removeValue: " + val);
     }
 
     /** {@inheritDoc} */
@@ -474,6 +478,12 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
         throws IgniteCheckedException {
         return null;
+    }
+
+    @Override protected void value(@Nullable CacheObject val) {
+        // TODO: Happens in Atomic caches
+        System.out.println("GridNearCacheEntry.value: " + val);
+        super.value(val);
     }
 
     /** {@inheritDoc} */

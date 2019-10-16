@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -118,7 +119,8 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 // Update entry.
                 cache[1] = "2";
-                Assert.Equals("2", nearCache[1]);
+                Thread.Sleep(1000);  // TODO: Not good
+                Assert.AreEqual("2", nearCache[1]);
             }
         }
 
