@@ -243,10 +243,24 @@ class BinaryMetadataFileStore {
         }
 
         public void submit(WriteOpTask task) {
-            //TODO graceful shutdown
+            if (isCancelled())
+                return;
+
             writeOpFutures.put(new WriteOpSync(task.meta.typeId(), task.typeVer), new GridFutureAdapter());
 
             queue.add(task);
+        }
+
+        /** */
+        @Override public void cancel() {
+            super.cancel();
+
+            for (GridFutureAdapter fut : writeOpFutures.values())
+                fut.onDone();
+
+            writeOpFutures.clear();
+
+            queue.clear();
         }
 
         @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
@@ -271,12 +285,12 @@ class BinaryMetadataFileStore {
 
             try {
                 task = queue.take();
+
+                writeMetadata(task.meta);
             }
             finally {
                 blockingSectionEnd();
             }
-
-            writeMetadata(task.meta);
 
             GridFutureAdapter fut = writeOpFutures.remove(new WriteOpSync(task.meta.typeId(), task.typeVer));
 
