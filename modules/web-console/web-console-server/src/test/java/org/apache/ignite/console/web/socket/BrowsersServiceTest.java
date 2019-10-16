@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.junit.Test;
@@ -36,6 +37,8 @@ import static org.apache.ignite.console.utils.Utils.entry;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -43,8 +46,8 @@ import static org.mockito.Mockito.verify;
  *  Transition service test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest
-public class BrowsersServiceSelfTest {
+@SpringBootTest(classes = {MockConfiguration.class})
+public class BrowsersServiceTest {
     /** Browsers service. */
     @Autowired
     private BrowsersService browsersSrvc;
@@ -57,9 +60,11 @@ public class BrowsersServiceSelfTest {
     @Autowired
     private Ignite ignite;
 
-    /**
-     *
-     */
+    /** Ignite instance. */
+    @MockBean
+    private TransitionService transitionSrvc;
+
+    /**  */
     @Test
     public void testSendToAgent() throws Exception {
         String clusterId = UUID.randomUUID().toString();
@@ -77,7 +82,12 @@ public class BrowsersServiceSelfTest {
 
         AgentKey key = new AgentKey(UUID.randomUUID(), clusterId);
 
-        ReflectionTestUtils.invokeMethod(browsersSrvc, "sendToAgent", key, req);
+        ReflectionTestUtils.setField(transitionSrvc, "ignite", ignite);
+        ReflectionTestUtils.setField(transitionSrvc, "agentsSrvc", agentsSrvc);
+
+        doCallRealMethod().when(transitionSrvc).sendToAgent(eq(key), eq(req));
+
+        browsersSrvc.sendToAgent(key, req);
 
         ArgumentCaptor<AgentRequest> captor = ArgumentCaptor.forClass(AgentRequest.class);
 

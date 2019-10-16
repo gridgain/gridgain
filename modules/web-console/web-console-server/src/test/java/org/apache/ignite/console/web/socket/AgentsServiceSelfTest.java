@@ -19,12 +19,15 @@ package org.apache.ignite.console.web.socket;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +38,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
+import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
@@ -52,7 +57,7 @@ import static org.mockito.Mockito.when;
  *  Transition service test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(classes = {TestGridConfiguration.class})
 public class AgentsServiceSelfTest {
     /** Agents service. */
     @Autowired
@@ -65,6 +70,24 @@ public class AgentsServiceSelfTest {
     /** Browsers service. */
     @MockBean
     private BrowsersService browsersSrvc;
+
+    /**
+     * @throws Exception If failed.
+     */
+    @BeforeClass
+    public static void setup() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @AfterClass
+    public static void tearDown() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
 
     /** */
     @Test
@@ -104,7 +127,7 @@ public class AgentsServiceSelfTest {
         ArgumentCaptor<UserKey> keyCaptor = ArgumentCaptor.forClass(UserKey.class);
         ArgumentCaptor<WebSocketEvent> evtCaptor = ArgumentCaptor.forClass(WebSocketEvent.class);
 
-        verify(browsersSrvc, times(2)).sendToBrowsers(keyCaptor.capture(), evtCaptor.capture());
+        verify(browsersSrvc, times(3)).sendToBrowsers(keyCaptor.capture(), evtCaptor.capture());
 
         assertEquals(acc.getId(), keyCaptor.getValue().getAccId());
         assertEquals(AGENT_STATUS, evtCaptor.getValue().getEventType());

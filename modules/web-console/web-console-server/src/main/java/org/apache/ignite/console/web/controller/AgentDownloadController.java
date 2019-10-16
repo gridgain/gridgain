@@ -16,11 +16,11 @@
 
 package org.apache.ignite.console.web.controller;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 import io.swagger.annotations.ApiOperation;
@@ -29,15 +29,15 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.ignite.console.dto.Account;
-import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.common.Utils.currentRequestOrigin;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.internal.util.io.GridFilenameUtils.removeExtension;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
@@ -49,9 +49,6 @@ import static org.springframework.http.HttpHeaders.PRAGMA;
  */
 @RestController
 public class AgentDownloadController {
-    /** Messages accessor. */
-    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
-
     /** */
     @Value("${agent.folder.name:agent_dists}")
     private String agentFolderName;
@@ -67,14 +64,17 @@ public class AgentDownloadController {
     @ApiOperation(value = "Download agent archive.")
     @GetMapping(path = "/api/v1/downloads/agent")
     public void load(@AuthenticationPrincipal Account user, HttpServletResponse res) throws Exception {
-        Path agentFolder = Paths.get(agentFolderName);
+        File agentFolder = U.resolveIgnitePath(agentFolderName);
+
+        if (agentFolder == null)
+            throw new FileNotFoundException(message("err.agent-dist-not-found"));
 
         Pattern ptrn = Pattern.compile(agentFileRegExp);
 
-        Path latestAgentPath = Files.list(agentFolder)
+        Path latestAgentPath = Files.list(agentFolder.toPath())
             .filter(f -> !Files.isDirectory(f) && ptrn.matcher(f.getFileName().toString()).matches())
             .max(Comparator.comparingLong(f -> f.toFile().lastModified()))
-            .orElseThrow(() -> new FileNotFoundException(messages.getMessage("err.agent-dist-not-found")));
+            .orElseThrow(() -> new FileNotFoundException(message("err.agent-dist-not-found")));
 
             try (ZipArchiveOutputStream zos = new ZipArchiveOutputStream(res.getOutputStream())) {
                 String latestAgentFileName = latestAgentPath.getFileName().toString();

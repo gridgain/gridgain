@@ -16,13 +16,14 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.UUID;
 import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
-import org.apache.ignite.console.event.EventType;
 import org.apache.ignite.console.event.EventPublisher;
+import org.apache.ignite.console.event.EventType;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -41,8 +42,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.UUID;
 
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;

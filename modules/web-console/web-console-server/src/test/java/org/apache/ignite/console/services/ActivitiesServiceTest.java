@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.UUID;
 import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.event.Event;
@@ -29,8 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.UUID;
 
 import static org.apache.ignite.console.event.ActivityEventType.ACTIVITY_UPDATE;
 import static org.mockito.Matchers.any;
