@@ -22,8 +22,12 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
@@ -51,16 +55,36 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  */
 public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstractTest {
     /** */
-    private static IgniteEx ignite;
+    public static final String MEMORY_CACHE_NAME = "inmemory";
+
+    /** */
+    public static final String PERSISTENT_CACHE_NAME = "persistent";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         final IgniteConfiguration cfg = super.getConfiguration(name);
 
-        final CacheConfiguration cCfg = new CacheConfiguration()
-            .setName(DEFAULT_CACHE_NAME);
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
-        cfg.setCacheConfiguration(cCfg);
+        dsCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setMaxSize(256 * 1024L * 1024L).setName("default"));
+
+        dsCfg.setDataRegionConfigurations(new DataRegionConfiguration()
+            .setPersistenceEnabled(true).setMaxSize(256 * 1024 * 1024).setName("persistent"));
+
+        cfg.setDataStorageConfiguration(dsCfg);
+
+        final CacheConfiguration cCfg1 = new CacheConfiguration()
+            .setName(MEMORY_CACHE_NAME)
+            .setDataRegionName("default")
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1));
+
+        final CacheConfiguration cCfg2 = new CacheConfiguration()
+            .setName(PERSISTENT_CACHE_NAME)
+            .setDataRegionName("persistent")
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1));
+
+        cfg.setCacheConfiguration(cCfg1, cCfg2);
 
         return cfg;
     }
@@ -69,85 +93,125 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        ignite = startGrid(0);
+        cleanPersistenceDir();
+
+        Ignite ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids(true);
+
+        cleanPersistenceDir();
     }
 
     /**
      * Simple test JMX bean for indexes IO stats.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
-    public void testIndexBasic() throws Exception {
-        resetMetric(ignite, metricName(HASH_INDEX.metricGroupName(), DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+    public void testExistingCachesMetrics() {
+        IgniteEx ignite = ignite(0);
 
-        int cnt = 100;
+        MetricRegistry pkMem = ignite.context().metric()
+            .registry(metricName(HASH_INDEX.metricGroupName(), MEMORY_CACHE_NAME, HASH_PK_IDX_NAME));
+        MetricRegistry pkPers = ignite.context().metric()
+            .registry(metricName(HASH_INDEX.metricGroupName(), PERSISTENT_CACHE_NAME, HASH_PK_IDX_NAME));
+        MetricRegistry grpMem = ignite.context().metric()
+            .registry(metricName(CACHE_GROUP.metricGroupName(), MEMORY_CACHE_NAME));
+        MetricRegistry grpPers = ignite.context().metric()
+            .registry(metricName(CACHE_GROUP.metricGroupName(), PERSISTENT_CACHE_NAME));
 
-        populateCache(cnt);
+        resetAllIoMetrics(ignite);
 
-        MetricRegistry mreg = ignite.context().metric()
-            .registry(metricName(HASH_INDEX.metricGroupName(), DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+        // Check that in initial state all metrics are zero.
+        assertEquals(0, pkMem.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0, pkMem.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(0, pkMem.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0, pkMem.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(0, grpMem.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0, grpMem.<LongMetric>findMetric(PHYSICAL_READS).value());
 
-        long idxLeafLogicalCnt = mreg.<LongMetric>findMetric(LOGICAL_READS_LEAF).value();
+        assertEquals(0, pkPers.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(0, grpPers.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0, grpPers.<LongMetric>findMetric(PHYSICAL_READS).value());
 
-        assertEquals(cnt, idxLeafLogicalCnt);
+        int cnt = 500;
 
-        long idxLeafPhysicalCnt = mreg.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value();
+        populateCaches(0, cnt);
 
-        assertEquals(0, idxLeafPhysicalCnt);
+        resetAllIoMetrics(ignite);
 
-        long idxInnerLogicalCnt = mreg.<LongMetric>findMetric(LOGICAL_READS_INNER).value();
+        readCaches(0, cnt);
 
-        assertEquals(0, idxInnerLogicalCnt);
+        // 1 of the reads got resolved from the inner page.
+        // Each data page is touched twice - one during index traversal and second
+        assertEquals(cnt - 1,     pkMem.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0,           pkMem.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt,         pkMem.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0,           pkMem.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt,     grpMem.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0,           grpMem.<LongMetric>findMetric(PHYSICAL_READS).value());
 
-        long idxInnerPhysicalCnt = mreg.<LongMetric>findMetric(PHYSICAL_READS_INNER).value();
+        // 1 of the reads got resolved from the inner page.
+        assertEquals(cnt - 1,     pkPers.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0,           pkPers.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt,         pkPers.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0,           pkPers.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt,     grpPers.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0,           grpPers.<LongMetric>findMetric(PHYSICAL_READS).value());
 
-        assertEquals(0, idxInnerPhysicalCnt);
-    }
+        // Force physical reads
+        ignite.cluster().active(false);
+        ignite.cluster().active(true);
 
-    /**
-     * Simple test JMX bean for caches IO stats.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testCacheBasic() throws Exception {
-        int cnt = 100;
+        resetAllIoMetrics(ignite);
 
-        populateCache(cnt);
+        assertEquals(0, pkPers.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0, pkPers.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(0, grpPers.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0, grpPers.<LongMetric>findMetric(PHYSICAL_READS).value());
 
-        clearCache(cnt);
+        readCaches(0, cnt);
 
-        resetMetric(ignite, metricName(CACHE_GROUP.metricGroupName(), DEFAULT_CACHE_NAME));
-
-        populateCache(cnt);
-
-        MetricRegistry mreg = ignite.context().metric()
-            .registry(metricName(CACHE_GROUP.metricGroupName(), DEFAULT_CACHE_NAME));
-
-        long cacheLogicalReadsCnt = mreg.<LongMetric>findMetric(LOGICAL_READS).value();
-
-        assertEquals(cnt, cacheLogicalReadsCnt);
-
-        long cachePhysicalReadsCnt = mreg.<LongMetric>findMetric(PHYSICAL_READS).value();
-
-        assertEquals(0, cachePhysicalReadsCnt);
+        // We had a split, so now we have 2 leaf pages and 1 inner page read from disk.
+        // For sure should overflow 2 data pages.
+        assertEquals(cnt - 1,     pkPers.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(2,           pkPers.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt,         pkPers.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(1,           pkPers.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt,     grpPers.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertTrue(grpPers.<LongMetric>findMetric(PHYSICAL_READS).value() > 2);
     }
 
     /**
      * @param cnt Number of inserting elements.
      */
-    private void populateCache(int cnt) {
-        for (int i = 0; i < cnt; i++)
-            ignite.cache(DEFAULT_CACHE_NAME).put(i, i);
+    private void populateCaches(int start, int cnt) {
+        for (int i = start; i < cnt; i++) {
+            ignite(0).cache(MEMORY_CACHE_NAME).put(i, i);
+
+            ignite(0).cache(PERSISTENT_CACHE_NAME).put(i, i);
+        }
     }
 
     /**
-     * @param cnt Number of removing elements.
+     * @param cnt Number of inserting elements.
      */
-    private void clearCache(int cnt) {
-        for (int i = 0; i < cnt; i++)
-            ignite.cache(DEFAULT_CACHE_NAME).remove(i);
+    private void readCaches(int start, int cnt) {
+        for (int i = start; i < cnt; i++) {
+            ignite(0).cache(MEMORY_CACHE_NAME).get(i);
+
+            ignite(0).cache(PERSISTENT_CACHE_NAME).get(i);
+        }
     }
 
     /**
@@ -155,7 +219,7 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
      *
      * @param ignite Ignite.
      */
-    public static void resetAllIoMetrics(IgniteEx ignite) throws MalformedObjectNameException {
+    public static void resetAllIoMetrics(IgniteEx ignite) {
         GridMetricManager mmgr = ignite.context().metric();
 
         StreamSupport.stream(mmgr.spliterator(), false)

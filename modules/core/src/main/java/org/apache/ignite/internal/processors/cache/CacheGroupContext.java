@@ -258,8 +258,15 @@ public class CacheGroupContext {
         else {
             GridMetricManager mmgr = ctx.kernalContext().metric();
 
-            statHolderIdx = new IoStatisticsHolderIndex(HASH_INDEX, cacheOrGroupName(), HASH_PK_IDX_NAME, mmgr);
             statHolderData = new IoStatisticsHolderCache(cacheOrGroupName(), grpId, mmgr);
+
+            statHolderIdx = new IoStatisticsHolderIndex(
+                HASH_INDEX,
+                cacheOrGroupName(),
+                HASH_PK_IDX_NAME,
+                mmgr,
+                statHolderData
+            );
 
             ctx.kernalContext().ioStats().onCacheGroupRegistered(
                 cacheOrGroupName(),

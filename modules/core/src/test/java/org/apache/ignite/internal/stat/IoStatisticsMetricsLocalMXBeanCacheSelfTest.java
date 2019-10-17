@@ -151,7 +151,7 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
      */
     @Test
     public void testTransactonalCache() {
-        cacheTest(TRANSACTIONAL_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 3, RECORD_COUNT * 2);
+        cacheTest(TRANSACTIONAL_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 3 + RECORD_COUNT * 2, RECORD_COUNT * 2);
     }
 
     /**
@@ -159,7 +159,7 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
      */
     @Test
     public void testMvccCache() {
-        cacheTest(MVCC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 6, RECORD_COUNT * 3);
+        cacheTest(MVCC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 14, RECORD_COUNT * 3);
     }
 
     /**
@@ -167,7 +167,7 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
      */
     @Test
     public void testAtomicCache() {
-        cacheTest(ATOMIC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 2, RECORD_COUNT);
+        cacheTest(ATOMIC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 2 + RECORD_COUNT, RECORD_COUNT);
     }
 
     /**
@@ -205,7 +205,7 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
 
         long logicalReads = ioStatMgr.logicalReads(IoStatisticsType.CACHE_GROUP, CACHE_GROUP_NAME, null);
 
-        assertEquals(RECORD_COUNT * 4, logicalReads);
+        assertEquals(RECORD_COUNT * 6, logicalReads);
     }
 
     /**
@@ -248,6 +248,7 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
             for (int i = 0; i < cnt; i++) {
                 cache.put(i, i);
                 cache.put(i, i); //Second invocation required to warm up MVCC cache to fill old versions chains.
+                // Total 4 data page reads.
             }
         }
 
@@ -258,6 +259,9 @@ public class IoStatisticsMetricsLocalMXBeanCacheSelfTest extends GridCommonAbstr
 
             for (int i = 0; i < cnt; i++)
                 cache.put(i, i);
+            // Total 2 data page reads.
         }
+
+        // Overall - 6 data page reads per record.
     }
 }

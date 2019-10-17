@@ -40,6 +40,13 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
     private static final int RECORD_COUNT = 5000;
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 

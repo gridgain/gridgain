@@ -277,7 +277,9 @@ public class H2TreeIndex extends H2TreeIndexBase {
             SORTED_INDEX,
             cctx.name(),
             idxName,
-            cctx.kernalContext().metric());
+            cctx.kernalContext().metric(),
+            cctx.group().statisticsHolderData()
+        );
 
         cctx.kernalContext().ioStats().onIndexRegistered(
             IoStatisticsType.SORTED_INDEX,
