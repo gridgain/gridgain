@@ -14,26 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.transactions;
-
 /**
- *
+ * <!-- Package description. -->
+ * Contains Ignite Thin Client API classes.
  */
-public interface IgniteTxRemoteState extends IgniteTxState {
-    /**
-     * @param key Key.
-     * @param e Entry.
-     */
-    public void addWriteEntry(IgniteTxKey key, IgniteTxEntry e);
-
-    /**
-     * @param key Entry key.
-     */
-    public void clearEntry(IgniteTxKey key);
-
-    /**
-     * @param cacheId Cache id.
-     * @param part Partition number.
-     */
-    public void invalidPartition(int cacheId, int part);
-}
+package org.apache.ignite.client;
