@@ -32,7 +32,7 @@ public class StompDestinationsUtils {
     private static final String CLUSTER_CACHES_INFO_DEST = CLUSTER_PREFIX_DEST + "/caches/";
 
     /** Cluster caches sql meta destination. */
-    private static final String CLUSTER_CACHES_SQL_META_DEST = CLUSTER_CACHES_INFO_DEST + "/sql-meta/";
+    private static final String CLUSTER_CACHES_SQL_META_DEST = CLUSTER_CACHES_INFO_DEST + "sql-meta/";
 
     /** Cluster node configuration. */
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s";

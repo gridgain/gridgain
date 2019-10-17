@@ -169,12 +169,16 @@ public class WebSocketManager implements AutoCloseable {
      * @param payload Payload.
      */
     public synchronized boolean send(String dest, Object payload) {
-        boolean connected = ses != null && ses.isConnected();
+        boolean connected = isConnected();
 
         if (connected)
             ses.send(dest, payload);
 
         return connected;
+    }
+
+    public boolean isConnected() {
+        return ses != null && ses.isConnected();
     }
 
     /** {@inheritDoc} */

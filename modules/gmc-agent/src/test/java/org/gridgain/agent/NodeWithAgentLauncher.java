@@ -32,6 +32,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 
+import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
+import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 
@@ -90,7 +92,7 @@ public class NodeWithAgentLauncher {
                     )
             )
             // TODO temporary fix for GG-22214
-            .setIncludeEventTypes(EVT_CLUSTER_ACTIVATED, EVT_CLUSTER_DEACTIVATED)
+            .setIncludeEventTypes(EVT_CLUSTER_ACTIVATED, EVT_CLUSTER_DEACTIVATED, EVT_CACHE_STARTED, EVT_CACHE_STOPPED)
             .setTracingSpi(new OpenCensusTracingSpi())
             .setFailureHandler(new NoOpFailureHandler())
             .setDiscoverySpi(

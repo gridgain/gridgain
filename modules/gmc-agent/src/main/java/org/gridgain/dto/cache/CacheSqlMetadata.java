@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -41,6 +42,9 @@ public class CacheSqlMetadata {
 
     /** Fields. */
     private Map<String, Map<String, String>> fields = new LinkedHashMap<>();
+
+    /** Not null fields. */
+    private Map<String, Set<String>> notNullFields = new LinkedHashMap<>();
 
     /** Indexes. */
     private Map<String, List<CacheSqlIndexMetadata>> indexes = new LinkedHashMap<>();
@@ -114,6 +118,22 @@ public class CacheSqlMetadata {
      */
     public Map<String, Map<String, String>> getFields() {
         return fields;
+    }
+
+    /**
+     * @return Not null fields.
+     */
+    public Map<String, Set<String>> getNotNullFields() {
+        return notNullFields;
+    }
+
+    /**
+     * @param notNullFields Not null fields.
+     * @return @{code This} for method chaining.
+     */
+    public CacheSqlMetadata setNotNullFields(Map<String, Set<String>> notNullFields) {
+        this.notNullFields = notNullFields;
+        return this;
     }
 
     /**

@@ -16,6 +16,7 @@
 
 package org.gridgain.utils;
 
+import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -24,6 +25,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -33,16 +36,24 @@ import org.gridgain.action.query.CursorHolder;
 import org.gridgain.dto.action.query.QueryArgument;
 import org.gridgain.dto.action.query.QueryField;
 import org.gridgain.dto.action.query.QueryResult;
+import org.gridgain.dto.cache.CacheSqlIndexMetadata;
+import org.gridgain.dto.cache.CacheSqlMetadata;
 
 import javax.cache.Cache;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * SQL query utils.
@@ -370,5 +381,105 @@ public class QueryUtils {
         return S.toString(obj.getClass().getSimpleName(),
                 "hash", hash, false,
                 "typeId", obj.type().typeId(), true);
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @param types Types.
+     * @return Cache sql metadata
+     */
+    public static CacheSqlMetadata queryTypesToMetadata(String cacheName, Collection<GridQueryTypeDescriptor> types) {
+        CacheSqlMetadata metadata = new CacheSqlMetadata().setCacheName(cacheName);
+
+        for (GridQueryTypeDescriptor type : types) {
+            // Filter internal types (e.g., data structures).
+            if (type.name().startsWith("GridCache"))
+                continue;
+
+            metadata.getTypes().add(type.name());
+            metadata.getKeyClasses().put(type.name(), type.keyClass().getName());
+            metadata.getValueClasses().put(type.name(), type.valueClass().getName());
+            metadata.getFields().put(type.name(), getFields(type));
+            metadata.getNotNullFields().put(type.name(), getNotNullFields(type));
+            metadata.getIndexes().put(type.name(), getIndexes(type));
+        }
+
+        return metadata;
+    }
+
+    /**
+     * @param type Type.
+     * @return List of cache sql index metadata.
+     */
+    private static List<CacheSqlIndexMetadata> getIndexes(GridQueryTypeDescriptor type) {
+        List<CacheSqlIndexMetadata> indexes = new ArrayList<>();
+
+        for (Map.Entry<String, GridQueryIndexDescriptor> e : type.indexes().entrySet()) {
+            GridQueryIndexDescriptor desc = e.getValue();
+
+            // Add only SQL indexes.
+            if (desc.type() == QueryIndexType.SORTED) {
+                Collection<String> idxFields = new LinkedList<>();
+                Collection<String> descendings = new LinkedList<>();
+
+                for (String idxField : e.getValue().fields()) {
+                    String idxFieldUpper = idxField.toUpperCase();
+
+                    idxFields.add(idxFieldUpper);
+
+                    if (desc.descending(idxField))
+                        descendings.add(idxFieldUpper);
+                }
+
+                indexes.add(
+                    new CacheSqlIndexMetadata()
+                        .setName(e.getKey().toUpperCase())
+                        .setFields(idxFields)
+                        .setUnique(false)
+                        .setDescendings(descendings)
+                );
+            }
+        }
+
+        return indexes;
+    }
+
+    /**
+     * @param type Type.
+     * @return Set of not null fields.
+     */
+    private static Set<String> getNotNullFields(GridQueryTypeDescriptor type) {
+        HashSet<String> notNullFieldsSet = new HashSet<>();
+
+        for (Map.Entry<String, Class<?>> e : type.fields().entrySet()) {
+            String fieldName = e.getKey();
+
+            if (type.property(fieldName).notNull())
+                notNullFieldsSet.add(fieldName.toUpperCase());
+        }
+
+        return notNullFieldsSet;
+    }
+
+    /**
+     * @param type Type.
+     * @return Map of field name and type.
+     */
+    private static Map<String, String> getFields(GridQueryTypeDescriptor type) {
+        Map<String, String> fieldsMap = new LinkedHashMap<>();
+
+        // _KEY and _VAL are not included in GridIndexingTypeDescriptor.valueFields
+        if (type.fields().isEmpty()) {
+            fieldsMap.put("_KEY", type.keyClass().getName());
+            fieldsMap.put("_VAL", type.valueClass().getName());
+        }
+
+        for (Map.Entry<String, Class<?>> e : type.fields().entrySet()) {
+            String fieldName = e.getKey();
+
+            fieldsMap.put(fieldName.toUpperCase(), e.getValue().getName());
+        }
+
+        return fieldsMap;
     }
 }

@@ -80,19 +80,19 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
 
         IgniteEx ignite_2 = startGrid(0);
 
-        IgniteCache<Object, Object> cache = ignite_2.getOrCreateCache("test-cache");
+        IgniteCache<Object, Object> cache = ignite_2.getOrCreateCache("test-cache-1");
         cache.put(1, 2);
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
         });
 
         cache.destroy();
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
         });
     }
 
@@ -108,23 +108,23 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("DROP TABLE gmc_agent_test_table;"),
+            new SqlFieldsQuery("DROP TABLE gmc_agent_test_table_1;"),
             true
         );
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
     }
 
@@ -140,36 +140,44 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_2 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
         assertWithPoll(() -> {
-            Map<String, CacheSqlMetadata> metadata =
-                interceptor.getMapPayload(buildClusterCachesSqlMetaDest(cluster.id()), String.class, CacheSqlMetadata.class);
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
             if (metadata == null)
                 return false;
 
-            CacheSqlMetadata cacheMeta = metadata.get("SQL_PUBLIC_GMC_AGENT_TEST_TABLE");
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
             Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE");
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("ALTER TABLE gmc_agent_test_table ADD id_2 int;"),
+            new SqlFieldsQuery("ALTER TABLE gmc_agent_test_table_2 ADD id_2 int;"),
             true
         );
 
         assertWithPoll(() -> {
-            Map<String, CacheSqlMetadata> metadata =
-                interceptor.getMapPayload(buildClusterCachesSqlMetaDest(cluster.id()), String.class, CacheSqlMetadata.class);
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
             if (metadata == null)
                 return false;
 
-            CacheSqlMetadata cacheMeta = metadata.get("SQL_PUBLIC_GMC_AGENT_TEST_TABLE");
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
             Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE") && fields.containsKey("ID_2");
@@ -188,36 +196,44 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_3 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
         assertWithPoll(() -> {
-            Map<String, CacheSqlMetadata> metadata =
-                interceptor.getMapPayload(buildClusterCachesSqlMetaDest(cluster.id()), String.class, CacheSqlMetadata.class);
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
             if (metadata == null)
                 return false;
 
-            CacheSqlMetadata cacheMeta = metadata.get("SQL_PUBLIC_GMC_AGENT_TEST_TABLE");
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
             List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
 
             return cacheMeta != null && idxes.isEmpty();
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE INDEX my_index ON gmc_agent_test_table (value)"),
+            new SqlFieldsQuery("CREATE INDEX my_index ON gmc_agent_test_table_3 (value)"),
             true
         );
 
         assertWithPoll(() -> {
-            Map<String, CacheSqlMetadata> metadata =
-                interceptor.getMapPayload(buildClusterCachesSqlMetaDest(cluster.id()), String.class, CacheSqlMetadata.class);
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
             if (metadata == null)
                 return false;
 
-            CacheSqlMetadata cacheMeta = metadata.get("SQL_PUBLIC_GMC_AGENT_TEST_TABLE");
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
             List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
 
             return cacheMeta != null && idxes.size() == 1;
@@ -229,13 +245,17 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
         );
 
         assertWithPoll(() -> {
-            Map<String, CacheSqlMetadata> metadata =
-                interceptor.getMapPayload(buildClusterCachesSqlMetaDest(cluster.id()), String.class, CacheSqlMetadata.class);
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
             if (metadata == null)
                 return false;
 
-            CacheSqlMetadata cacheMeta = metadata.get("SQL_PUBLIC_GMC_AGENT_TEST_TABLE");
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
             List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
 
             return cacheMeta != null && idxes.isEmpty();
