@@ -20,6 +20,8 @@ import {isVisible} from '../helpers';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 
 export const createModelButton = Selector('pc-items-table footer-slot .link-success').filter(isVisible);
+export const popoverErrorNotification = Selector('.popover.validation-error');
+
 export const general = {
     generatePOJOClasses: new FormField({id: 'generatePojoInput'}),
     queryMetadata: new FormField({id: 'queryMetadataInput'}),

@@ -17,8 +17,8 @@
 import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
 import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfiguration'
-import {createModelButton, general} from '../../page-models/pageConfigurationAdvancedModels';
-import {successNotification, popoverErrorNotification} from '../../components/notifications';
+import {createModelButton, popoverErrorNotification, general} from '../../page-models/pageConfigurationAdvancedModels';
+import {successNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();
 
