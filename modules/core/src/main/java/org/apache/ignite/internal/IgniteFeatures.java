@@ -94,8 +94,8 @@ public enum IgniteFeatures {
     /** Support of chain parameter in snapshot delete task for Web Console. */
     WC_SNAPSHOT_CHAIN_MODE(22),
 
-    /** Support of baseline auto adjustment for Web Console. */
-    WC_BASELINE_AUTO_ADJUSTMENT(23),
+    /** Support of baseline auto adjustment. */
+    BASELINE_AUTO_ADJUSTMENT(23),
 
     /** Scheduling disabled. */
     WC_SCHEDULING_NOT_AVAILABLE(24),
