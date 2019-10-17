@@ -37,8 +37,8 @@ import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskArg;
 import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskResult;
 
 import static java.lang.Boolean.TRUE;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
@@ -69,7 +69,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
         Command.usage(logger, "Set baseline topology based on version:", BASELINE,
             BaselineSubcommands.VERSION.text() + " topologyVersion", optional(CMD_AUTO_CONFIRMATION));
 
-        if (autoAdjustSupport())
+        if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
             Command.usage(logger, "Set baseline autoadjustment settings:", BASELINE,
                 AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
                 optional(CMD_AUTO_CONFIRMATION)
@@ -154,7 +154,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
         logger.info("Cluster state: " + (res.isActive() ? "active" : "inactive"));
         logger.info("Current topology version: " + res.getTopologyVersion());
 
-        if (res.isAutoAdjustEnabled() != null && autoAdjustSupport()) {
+        if (res.isAutoAdjustEnabled() != null && isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
             logger.info("Baseline auto adjustment " + (TRUE.equals(res.isAutoAdjustEnabled()) ? "enabled" : "disabled") +
                 ": softTimeout=" + res.getAutoAdjustAwaitingTime()
             );
@@ -238,7 +238,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
 
         BaselineSubcommands cmd = of(argIter.nextArg("Expected baseline action"));
 
-        if (cmd == null || (!autoAdjustSupport() && cmd == AUTO_ADJUST))
+        if (cmd == null || (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && cmd == AUTO_ADJUST))
             throw new IllegalArgumentException("Expected correct baseline action");
 
         BaselineArguments.Builder baselineArgs = new BaselineArguments.Builder(cmd);
@@ -287,12 +287,5 @@ public class BaselineCommand implements Command<BaselineArguments> {
     /** {@inheritDoc} */
     @Override public String name() {
         return BASELINE.toCommandName();
-    }
-
-    /**
-     * @return {@code true} if baseline auto-adjust feature is supported.
-     */
-    private static boolean autoAdjustSupport() {
-        return getBoolean(IGNITE_BASELINE_AUTO_ADJUST_FEATURE, false);
     }
 }
