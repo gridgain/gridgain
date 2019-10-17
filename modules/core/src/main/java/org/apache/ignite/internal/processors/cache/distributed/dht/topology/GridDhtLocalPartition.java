@@ -935,7 +935,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Tries to start partition clear process {@link GridDhtLocalPartition#clearAll(EvictionContext)}).
+     * Tries to start partition clear process.
      * Only one thread is allowed to do such process concurrently.
      * At the end of clearing method completes {@code clearFuture}.
      *
@@ -1015,7 +1015,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                 if (forceTestCheckpointOnEviction) {
                     if (partWhereTestCheckpointEnforced == null && clearedEntities >= fullSize()) {
-                        ctx.database().forceCheckpoint("test").finishFuture().get();
+                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
 
                         log.warning("Forced checkpoint by test reasons for partition: " + this);
 

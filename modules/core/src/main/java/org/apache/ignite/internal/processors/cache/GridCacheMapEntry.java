@@ -3343,7 +3343,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean preload,
         AffinityTopologyVersion topVer,
         GridDrType drType,
-        boolean fromStore
+        boolean fromStore,
+        CacheDataRow row
     ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         ensureFreeSpace();
 
@@ -3368,32 +3369,30 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
-            IgniteBiPredicate<CacheObject, GridCacheVersion> p = new IgniteBiPredicate<CacheObject, GridCacheVersion>() {
-                @Override public boolean apply(@Nullable CacheObject val, GridCacheVersion currVer) {
-                    boolean update0;
+            IgniteBiPredicate<CacheObject, GridCacheVersion> p = (val0, ver0) -> {
+                boolean update0;
 
-                    GridCacheVersion currVer = row != null ? row.version() : GridCacheMapEntry.this.ver;
+                GridCacheVersion currVer = ver0 != null ? ver0 : this.ver;
 
-                    boolean isStartVer = cctx.shared().versions().isStartVersion(currVer);
+                boolean isStartVer = cctx.shared().versions().isStartVersion(currVer);
 
-                    if (cctx.group().persistenceEnabled()) {
-                        if (!isStartVer) {
-                            if (cctx.atomic())
-                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
-                            else
-                                update0 = currVer.compareTo(ver) < 0;
-                        }
+                if (cctx.group().persistenceEnabled()) {
+                    if (!isStartVer) {
+                        if (cctx.atomic())
+                            update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
                         else
-                            update0 = true;
+                            update0 = currVer.compareTo(ver) < 0;
                     }
                     else
-                        update0 = isStartVer;
-
-                    // Such combination may exist during datastreamer first update.
-                    update0 |= (!preload && val == null);
-
-                    return update0;
+                        update0 = true;
                 }
+                else
+                    update0 = isStartVer;
+
+                // Such combination may exist during datastreamer first update.
+                update0 |= (!preload && val0 == null);
+
+                return update0;
             };
 
             if (unswapped) {
@@ -3420,7 +3419,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                     else
-                        storeValue(val, expTime, ver);
+                        storeValue(val, expTime, ver, null, row);
                 }
             }
             else {
@@ -3451,7 +3450,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
                 else {
                     // Optimization to access storage only once.
-                    UpdateClosure c = storeValue(val, expTime, ver, p);
+                    UpdateClosure c = storeValue(val, expTime, ver, p, row);
 
                     // Update if tree is changed or removal is replicated from supplier node and is absent locally.
                     update = c.operationType() != IgniteTree.OperationType.NOOP ||
@@ -4298,7 +4297,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long expireTime,
         GridCacheVersion ver
     ) throws IgniteCheckedException {
-        storeValue(val, expireTime, ver, null);
+        storeValue(val, expireTime, ver, null, null);
     }
 
     /**
@@ -4312,7 +4311,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @return {@code True} if storage was modified.
      * @throws IgniteCheckedException If update failed.
      */
-    private boolean storeValue(
+    private UpdateClosure storeValue(
         @Nullable CacheObject val,
         long expireTime,
         GridCacheVersion ver,
@@ -4326,7 +4325,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.offheap().invoke(cctx, key, localPartition(), c);
 
-        return c.treeOp != IgniteTree.OperationType.NOOP;
+        return c;
     }
 
     /**
@@ -5167,7 +5166,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** Flag if it is need to return the old value (value before current tx has been started). */
         private final boolean needOldVal;
 
-
         /**
          *
          * @param tx Transaction.
@@ -5825,7 +5823,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             oldRow = row;
 
-           op = IgniteTree.OperationType.REMOVE;
+            op = IgniteTree.OperationType.REMOVE;
         }
 
         /** {@inheritDoc} */
@@ -5891,6 +5889,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             this.ver = ver;
             this.expireTime = expireTime;
             this.p = p;
+            this.newRow = newRow;
         }
 
         /** {@inheritDoc} */
@@ -5914,7 +5913,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (!p.apply(val, ver)) {
                     filtered = true;
 
-                treeOp = IgniteTree.OperationType.NOOP;
+                    treeOp = IgniteTree.OperationType.NOOP;
 
                     return;
                 }

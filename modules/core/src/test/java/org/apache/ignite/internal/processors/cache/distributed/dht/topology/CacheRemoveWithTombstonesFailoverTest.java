@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -34,7 +33,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -77,7 +75,6 @@ public class CacheRemoveWithTombstonesFailoverTest extends PartitionsEvictManage
      * Test check that tombstones reside in persistent partition will be cleared after node restart.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testTombstonesClearedAfterRestart() throws Exception {
         IgniteEx crd = startGrid(0);
 
