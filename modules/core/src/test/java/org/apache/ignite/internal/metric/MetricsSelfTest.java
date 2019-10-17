@@ -55,7 +55,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
     /** */
     @Before
     public void setUp() throws Exception {
-        mreg = new MetricRegistry("group", null, log);
+        mreg = new MetricRegistry("type", "group", log);
     }
 
     /** */
