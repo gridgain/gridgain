@@ -923,30 +923,21 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnCreate()
         {
-            var cache = GetCache<int>();
-            cache.Put(1, 1);
-            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
-            var cacheWithExpiryPolicy = cache.WithExpiryPolicy(expiryPolicy);
+            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
+            var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            var value = cache.Get(1);
+            cacheWithExpiryPolicy.Put(1, 1);
 
             // Initially added value is the same.
-            Assert.AreEqual(value, cache.Get(1));
-            Assert.AreEqual(value, cacheWithExpiryPolicy.Get(1));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
 
-            cache.Put(2, 2);
+            var config = cacheWithExpiryPolicy.GetConfiguration();
 
-            // Second value is the same.
-            /*
-            Assert.AreEqual(2, cache.Get(2));
-            Assert.AreEqual(2, cacheWithExpiryPolicy.Get(2));
-            */
-            Thread.Sleep(1000);
+            // Wait for an expiration.
+            Thread.Sleep(200);
 
             // Expiry policies should be applied, no cache item exists.
-            Assert.AreEqual(1, cache.Get(1));
-            Assert.AreEqual(2, cache.Get(2));
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(2));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
         }
 
         private class Container

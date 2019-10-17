@@ -1,12 +1,12 @@
 package org.apache.ignite.internal.processors.platform.client.cache;
 
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
+import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
-import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
 
-import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
 
 /**
@@ -14,7 +14,7 @@ import javax.cache.expiry.ExpiryPolicy;
  */
 public class ClientCacheWithExpiryPolicyRequest extends ClientCacheRequest {
     /** Cache configuration. */
-    private final Factory<? extends ExpiryPolicy> expiryPolicyFactoy;
+    private final ExpiryPolicy expiryPolicy;
 
     /**
      * Constructor.
@@ -25,13 +25,16 @@ public class ClientCacheWithExpiryPolicyRequest extends ClientCacheRequest {
     public ClientCacheWithExpiryPolicyRequest(BinaryRawReader reader, ClientListenerProtocolVersion ver) {
         super(reader);
 
-        expiryPolicyFactoy = PlatformConfigurationUtils.readExpiryPolicyFactory(reader);
+        expiryPolicy = new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong());
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
-        cache(ctx).withExpiryPolicy(expiryPolicyFactoy.create());
+        IgniteCache cache = cache(ctx);
+        IgniteCache igniteCache = cache.withExpiryPolicy(expiryPolicy);
+
+
         return super.process(ctx);
     }
 }
