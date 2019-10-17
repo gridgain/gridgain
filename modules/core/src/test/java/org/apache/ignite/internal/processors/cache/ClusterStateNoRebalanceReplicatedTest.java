@@ -21,7 +21,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 /**
  *
  */
-public class ClusterStateReplicatedSelfTest extends ClusterStateServerAbstractTest {
+public class ClusterStateNoRebalanceReplicatedTest extends ClusterStateNoRebalanceAbstractTest {
     /** {@inheritDoc} */
     @Override protected CacheConfiguration cacheConfiguration(String cacheName) {
         return ClusterStateTestUtils.replicatedCache(cacheName);
