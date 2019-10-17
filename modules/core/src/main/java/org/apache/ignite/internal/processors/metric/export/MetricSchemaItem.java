@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.metric.export;
 
 import java.util.Objects;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Metrics schema item.
@@ -67,5 +68,10 @@ public class MetricSchemaItem {
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(idx, pref);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(MetricSchemaItem.class, this);
     }
 }

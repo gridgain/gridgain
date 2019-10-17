@@ -552,11 +552,6 @@
                                 <packages>org.apache.ignite.spi.tracing.opencensus*</packages>
                             </group>
                         </groups>
-                        <header>
-                            <![CDATA[
-                                    Ignite - In-Memory Database and Caching Platform
-                                ]]>
-                        </header>
                         <bottom>
                             <![CDATA[
                                     <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">

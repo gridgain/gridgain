@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.metric.export;
 
 /**
- * <p>Supports expandable byte buffer with varint put operations for {@code int} and {@code long} types.</p>
+ * <p>Supports expandable byte buffer with varint put operations for {@code int} and {@code long} types.</p> Varint
+ * encoding allows to write integer values with large number of leading zeros in less than 4 bytes.
+ * See https://en.wikipedia.org/wiki/Variable-length_quantity
  * <p>Each put operation moves position forward accordingly to the written type size.</p>
  */
 public class VarIntWriter {

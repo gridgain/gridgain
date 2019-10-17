@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.internal.processors.metric.export.MetricRequest.PROTO_VER_1;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.HISTOGRAM;
@@ -74,9 +76,6 @@ import static org.apache.ignite.internal.util.GridUnsafe.putShort;
 public class MetricResponse implements Message {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Protocol version 1. */
-    private static final short PROTO_VER_1 = 1;
 
     /** Header size without user tag bytes. */
     static final int BASE_HEADER_SIZE = 54;
@@ -212,7 +211,6 @@ public class MetricResponse implements Message {
     /**
      * @return Cluster ID.
      */
-    //TODO: could be null?
     public UUID clusterId() {
         long mostSigBits = getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF);
 
@@ -480,5 +478,16 @@ public class MetricResponse implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(MetricResponse.class, this,
+            "protoVer", protocolVersion(),
+            "timestamp", timestamp(),
+            "consistentId", consistentId(),
+            "schemaSize", schemaSize(),
+            "dataSize", dataSize()
+        );
     }
 }

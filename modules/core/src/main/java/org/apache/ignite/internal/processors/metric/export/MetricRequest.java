@@ -16,18 +16,22 @@
 
 package org.apache.ignite.internal.processors.metric.export;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Metrics request message. Sent from GMC agent to any arbitrary node to request latest metrics.
+ */
 public class MetricRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Protocol version 1. */
-    private static final short PROTO_VER_1 = 1;
+    public static final short PROTO_VER_1 = 1;
 
     /** */
     private short protoVer = PROTO_VER_1;
@@ -167,5 +171,10 @@ public class MetricRequest implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(MetricRequest.class, this);
     }
 }
