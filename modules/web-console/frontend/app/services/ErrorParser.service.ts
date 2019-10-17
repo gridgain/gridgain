@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
+
 import isEmpty from 'lodash/isEmpty';
 import {nonEmpty} from 'app/utils/lodashMixins';
 
