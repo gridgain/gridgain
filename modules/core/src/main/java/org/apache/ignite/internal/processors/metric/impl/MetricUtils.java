@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.metric.impl;
 
-import java.util.Map;
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
