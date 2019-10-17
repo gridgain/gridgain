@@ -19,22 +19,15 @@ package org.apache.ignite.internal.processors.query;
 import java.util.List;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Assert;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 /**
  * Test verifies that optimization can be disabled with system property.
  */
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_H2_OPTIMIZE_REUSE_RESULTS, value = "false")
 public class SubqueryCacheDisableTest extends SubqueryCacheAbstractTest {
-    /** Class rule. */
-    @ClassRule
-    public static final TestRule classRule = new SystemPropertiesRule();
-
     /**
      * Ensure that optimization is disabled when property
      * {@link IgniteSystemProperties#IGNITE_H2_OPTIMIZE_REUSE_RESULTS}
