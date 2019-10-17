@@ -91,10 +91,12 @@ public class DistributedBaselineConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    dfltEnabled = ChangeTopologyWatcher.isSupported(ctx) && !persistenceEnabled;
+                    if (ChangeTopologyWatcher.isSupported(ctx)) {
+                        dfltEnabled = !persistenceEnabled;
 
-                    setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
-                    setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
+                        setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
+                        setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
+                    }
                 }
             }
         );
