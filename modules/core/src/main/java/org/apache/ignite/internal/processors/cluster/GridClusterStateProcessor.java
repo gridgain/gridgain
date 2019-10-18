@@ -1674,6 +1674,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             && cluster.isBaselineAutoAdjustEnabled()
             && cluster.baselineAutoAdjustTimeout() == 0L;
 
+        try {
+            throw new RuntimeException();
+        }
+        catch (RuntimeException e) {
+            log.error("GG-24341 " + autoAdjustBaseline, e);
+        }
+
         if (autoAdjustBaseline) {
             BaselineTopology oldBlt = oldState.baselineTopology();
 
