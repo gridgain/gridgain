@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -41,6 +42,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.gridgain.utils.AgentUtils.fromNullableCollection;
 import static org.gridgain.utils.AgentUtils.getClusterFeatures;
 
 /**
@@ -94,11 +96,9 @@ public class ClusterService implements AutoCloseable {
 
         // TODO GG-21449 this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*
         baselineExecSrvc.scheduleWithFixedDelay(() -> {
-            Set<String> baseline = ctx
-                .grid()
-                .cluster()
-                .currentBaselineTopology()
-                .stream()
+            Stream<BaselineNode> stream = fromNullableCollection(ctx.grid().cluster().currentBaselineTopology());
+
+            Set<String> baseline = stream
                 .map(BaselineNode::consistentId)
                 .map(Object::toString)
                 .collect(Collectors.toSet());
