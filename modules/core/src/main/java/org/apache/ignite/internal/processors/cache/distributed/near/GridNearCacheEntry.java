@@ -35,6 +35,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheE
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.platform.PlatformNoopProcessor;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -199,8 +201,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         GridCacheVersion dhtVer,
         UUID primaryNodeId,
         AffinityTopologyVersion topVer)
-        throws GridCacheEntryRemovedException
-    {
+            throws GridCacheEntryRemovedException, IgniteCheckedException {
         assert dhtVer != null;
 
         cctx.versions().onReceived(primaryNodeId, dhtVer);
@@ -243,8 +244,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         long expireTime,
         long ttl,
         UUID primaryNodeId,
-        AffinityTopologyVersion topVer)
-    {
+        AffinityTopologyVersion topVer) throws IgniteCheckedException {
         assert dhtVer != null;
 
         cctx.versions().onReceived(primaryNodeId, dhtVer);
@@ -477,9 +477,19 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected void value(@Nullable CacheObject val) {
-        // this.cctx.kernalContext().platform().context().
+    @Override protected void value(@Nullable CacheObject val) throws IgniteCheckedException {
         super.value(val);
+
+        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        if (proc instanceof PlatformNoopProcessor) {
+            return;
+        }
+        // TODO: val is null on remove
+        // TODO: Nothing happens on Clear
+        // TODO: Send cache name (or ID?) and key
+        // TODO: How to pass key in a better way? byte[] or Object?
+        byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
+        proc.context().invalidateNearCache(keyBytes);
     }
 
     /** {@inheritDoc} */

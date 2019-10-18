@@ -268,7 +268,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      *
      * @param val Value to store.
      */
-    protected void value(@Nullable CacheObject val) {
+    protected void value(@Nullable CacheObject val) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
 
         this.val = val;

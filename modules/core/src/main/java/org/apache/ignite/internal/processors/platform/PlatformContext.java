@@ -287,4 +287,10 @@ public interface PlatformContext {
      * @return Current platform name.
      */
     public String platform();
+
+    /**
+     * Updates the near cache.
+     * @param keyBytes
+     */
+    public void invalidateNearCache(byte[] keyBytes);
 }

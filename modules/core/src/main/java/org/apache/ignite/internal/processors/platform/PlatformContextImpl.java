@@ -584,4 +584,9 @@ public class PlatformContextImpl implements PlatformContext {
     @Override public String platform() {
         return platform;
     }
+
+    /** {@inheritDoc} */
+    @Override public void invalidateNearCache(byte[] keyBytes) {
+        // TODO: Callback
+    }
 }
