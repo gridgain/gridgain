@@ -17,38 +17,47 @@
 package org.apache.ignite.glowroot.converter.model;
 
 /**
- * Ignite transaction commit trace item produced by {@code org.apache.ignite.glowroot.TransactionAspect}
+ * Cache configuration trace item.
  */
-public final class CommitTraceItem extends TraceItem {
+public class CacheConfigMeta
+{
 
-    /** Label.**/
-    private final String lb;
+    /** Cache name. **/
+    private final String cacheName;
+
+    /** Cachne Configuration. **/
+    private final String cfg;
 
     /**
      * Constructor.
      *
-     * @param glowrootTx Glowroot transaction.
-     * @param durationNanos Trace duration in nanoseconds.
-     * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
-     * @param lb Label.
+     * @param cacheName Cache name.
+     * @param cfg Cache configuration.
      */
-    public CommitTraceItem(GlowrootTransactionMeta glowrootTx, long durationNanos, long offsetNanos, String lb) {
-        super(glowrootTx, durationNanos, offsetNanos);
-
-        this.lb = lb;
+    public CacheConfigMeta(String cacheName, String cfg) {
+        this.cacheName = cacheName;
+        this.cfg = cfg;
     }
 
     /**
-     * @return Label.
+     * @return Cache name.
      */
-    public String label() {
-        return lb;
+    public String cacheName() {
+        return cacheName;
+    }
+
+    /**
+     * @return Cachne Configuration.
+     */
+    public String config() {
+        return cfg;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "CommitTraceItem{" +
-            "label='" + lb + '\'' +
+        return "CacheConfigMeta{" +
+            "cacheName='" + cacheName + '\'' +
+            ", cfg='" + cfg + '\'' +
             '}';
     }
 }

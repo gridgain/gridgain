@@ -30,14 +30,15 @@ public final class CacheQueryTraceItem extends TraceItem {
     /**
      * Constructor.
      *
-     * @param txId Glowroot transaction id.
+     * @param glowrootTx Glowroot transaction.
      * @param durationNanos Trace duration in nanoseconds.
      * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
      * @param cacheName Cache name.
      * @param qry Query.
      */
-    public CacheQueryTraceItem(String txId, long durationNanos, long offsetNanos, String cacheName, String qry) {
-        super(txId, durationNanos, offsetNanos);
+    public CacheQueryTraceItem(GlowrootTransactionMeta glowrootTx, long durationNanos, long offsetNanos,
+        String cacheName, String qry) {
+        super(glowrootTx, durationNanos, offsetNanos);
 
         this.cacheName = cacheName;
         this.qry = qry;
@@ -55,5 +56,13 @@ public final class CacheQueryTraceItem extends TraceItem {
      */
     public String query() {
         return qry;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "CacheQueryTraceItem{" +
+            "cacheName='" + cacheName + '\'' +
+            ", qry='" + qry + '\'' +
+            '}';
     }
 }

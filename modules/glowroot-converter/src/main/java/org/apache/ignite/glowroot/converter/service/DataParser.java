@@ -16,16 +16,16 @@
 
 package org.apache.ignite.glowroot.converter.service;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import org.apache.ignite.glowroot.converter.model.CacheConfigMeta;
 import org.apache.ignite.glowroot.converter.model.CacheQueryTraceItem;
 import org.apache.ignite.glowroot.converter.model.CacheTraceItem;
 import org.apache.ignite.glowroot.converter.model.CommitTraceItem;
 import org.apache.ignite.glowroot.converter.model.ComputeTraceItem;
 import org.apache.ignite.glowroot.converter.model.GlowrootTransactionMeta;
 import org.apache.ignite.glowroot.converter.model.TraceItem;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Pattern;
 
 /**
  * Class that parses glowroot trace message strings and returns corresponing {@code TraceItem} model objects.
@@ -57,6 +57,11 @@ class DataParser {
     private static final Pattern COMMIT_TX_PATTERN = Pattern.compile("label=");
 
     /**
+     * Pattern for parsing ignite cache config trace message string.
+     */
+    private static final Pattern CACHE_CONFIG_PATTERN = Pattern.compile("cache_name=| config=");
+
+    /**
      * Parses trace item message string and returns corresponfing trace item model object.
      *
      * @param txMeta Glowroot transaction metadata.
@@ -70,29 +75,42 @@ class DataParser {
         if (traceMsg.startsWith("trace_type=cache_query")) {
             String[] traceAttrs = CACHE_QUERY_PATTERN.split(traceMsg);
 
-            return new CacheQueryTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2]);
+            return new CacheQueryTraceItem(txMeta, durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2]);
         }
         else if (traceMsg.startsWith("trace_type=cache_ops")) {
             String[] traceAttrs = CACHE_OPS_PATTERN.split(traceMsg);
 
-            return new CacheTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2],
+            return new CacheTraceItem(txMeta, durationNanos, offsetNanos, traceAttrs[1], traceAttrs[2],
                 traceAttrs[3]);
         }
         else if (traceMsg.startsWith("trace_type=compute")) {
             String[] traceAttrs = COMPUTE_PATTERN.split(traceMsg);
 
-            return new ComputeTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1]);
+            return new ComputeTraceItem(txMeta, durationNanos, offsetNanos, traceAttrs[1]);
         }
         else if (traceMsg.startsWith("trace_type=commit_tx")) {
             String[] traceAttrs = COMMIT_TX_PATTERN.split(traceMsg);
 
-            return new CommitTraceItem(txMeta.id(), durationNanos, offsetNanos, traceAttrs[1]);
-
+            return new CommitTraceItem(txMeta, durationNanos, offsetNanos, traceAttrs[1]);
         }
         else {
             logger.log(Level.WARNING, "Unexpected trace message: " + traceMsg);
 
             return null;
         }
+    }
+
+    /**
+     * Parses cache configurations messages.
+     *
+     * @param cacheCfgMsg Cache configurations messages.
+     * @return Cache Configuration.
+     */
+    public static CacheConfigMeta parseCacheConfigMeta(String cacheCfgMsg) {
+        assert  cacheCfgMsg.startsWith("trace_type=cache_config");
+
+        String[] traceAttrs = CACHE_CONFIG_PATTERN.split(cacheCfgMsg);
+
+        return new CacheConfigMeta(traceAttrs[1], traceAttrs[2]);
     }
 }

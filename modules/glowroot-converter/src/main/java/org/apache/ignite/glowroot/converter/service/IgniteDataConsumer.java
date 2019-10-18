@@ -16,6 +16,7 @@
 
 package org.apache.ignite.glowroot.converter.service;
 
+import org.apache.ignite.glowroot.converter.model.CacheConfigMeta;
 import org.apache.ignite.glowroot.converter.model.CacheQueryTraceItem;
 import org.apache.ignite.glowroot.converter.model.CacheTraceItem;
 import org.apache.ignite.glowroot.converter.model.CommitTraceItem;
@@ -54,6 +55,9 @@ public class IgniteDataConsumer implements AutoCloseable {
     /** Prepared statement to populate transactions commit table. **/
     private final PreparedStatement populateTxCommitPreparedStmt;
 
+    /** Prepared statement to populate cache configurations. **/
+    private final PreparedStatement populateCacheCfgPreparedStmt;
+
     /**
      * Establish connection to Ignite cluster, prepares some jdbc statements and set streaming mode.
      *
@@ -66,7 +70,6 @@ public class IgniteDataConsumer implements AutoCloseable {
         boolean overwriteEntries) throws SQLException {
         conn = DriverManager.getConnection(igniteJdbcConnStr);
 
-        // TODO: 08.10.19 Verify that exception will be thrown.
         try (Statement stmt = conn.createStatement()) {
             prepareSchema(cleanupAllData, stmt);
 
@@ -77,23 +80,29 @@ public class IgniteDataConsumer implements AutoCloseable {
 
             populateCachePreparedStmt = conn.prepareStatement(
                 "insert into CACHE_TRACES(" +
-                    "id, glowroot_tx_id, duration_nanos, offset_nanos, cache_name, operation, args) " +
-                    "values (?, ?, ?, ?, ?, ?, ?)");
+                    "id, glowroot_tx_id, glowroot_tx_start_time, duration_nanos, offset_nanos, cache_name, operation," +
+                    " args) " +
+                    "values (?, ?, ?, ?, ?, ?, ?, ?)");
 
             populateCacheQryPreparedStmt = conn.prepareStatement(
                 "insert into CACHE_QUERY_TRACES(" +
-                    "id, glowroot_tx_id, duration_nanos, offset_nanos, cache_name, query) " +
-                    "values (?, ?, ?, ?, ?, ?)");
+                    "id, glowroot_tx_id, glowroot_tx_start_time, duration_nanos, offset_nanos, cache_name, query) " +
+                    "values (?, ?, ?, ?, ?, ?, ?)");
 
             populateComputePreparedStmt = conn.prepareStatement(
                 "insert into COMPUTE_TRACES(" +
-                    "id, glowroot_tx_id, duration_nanos, offset_nanos, task) " +
-                    "values (?, ?, ?, ?, ?)");
+                    "id, glowroot_tx_id, glowroot_tx_start_time, duration_nanos, offset_nanos, task) " +
+                    "values (?, ?, ?, ?, ?, ?)");
 
             populateTxCommitPreparedStmt = conn.prepareStatement(
                 "insert into TX_COMMIT_TRACES(" +
-                    "id, glowroot_tx_id, duration_nanos, offset_nanos, label) " +
-                    "values (?, ?, ?, ?, ?)");
+                    "id, glowroot_tx_id, glowroot_tx_start_time, duration_nanos, offset_nanos, label) " +
+                    "values (?, ?, ?, ?, ?, ?)");
+
+            populateCacheCfgPreparedStmt = conn.prepareStatement(
+                "insert into CACHE_CONFIGURATIONS(" +
+                    "id, cache_name, config) " +
+                    "values (?, ?, ?)");
         }
     }
 
@@ -114,18 +123,20 @@ public class IgniteDataConsumer implements AutoCloseable {
                 try {
                     populateCachePreparedStmt.setObject(1, UUID.randomUUID());
 
-                    populateCachePreparedStmt.setObject(2, cacheTraceItem.glowrootTxId());
+                    populateCachePreparedStmt.setObject(2, cacheTraceItem.glowrootTransaction().id());
 
+                    populateCachePreparedStmt.setLong(3,
+                        cacheTraceItem.glowrootTransaction().startTime());
 
-                    populateCachePreparedStmt.setLong(3, cacheTraceItem.durationNanos());
+                    populateCachePreparedStmt.setLong(4, cacheTraceItem.durationNanos());
 
-                    populateCachePreparedStmt.setLong(4, cacheTraceItem.offsetNanos());
+                    populateCachePreparedStmt.setLong(5, cacheTraceItem.offsetNanos());
 
-                    populateCachePreparedStmt.setString(5, cacheTraceItem.cacheName());
+                    populateCachePreparedStmt.setString(6, cacheTraceItem.cacheName());
 
-                    populateCachePreparedStmt.setString(6, cacheTraceItem.operation());
+                    populateCachePreparedStmt.setString(7, cacheTraceItem.operation());
 
-                    populateCachePreparedStmt.setString(7, cacheTraceItem.args());
+                    populateCachePreparedStmt.setString(8, cacheTraceItem.args());
 
                     populateCachePreparedStmt.executeUpdate();
                 }
@@ -139,15 +150,19 @@ public class IgniteDataConsumer implements AutoCloseable {
                 try {
                     populateCacheQryPreparedStmt.setObject(1, UUID.randomUUID());
 
-                    populateCacheQryPreparedStmt.setObject(2, cacheQryTraceItem.glowrootTxId());
+                    populateCacheQryPreparedStmt.setObject(2,
+                        cacheQryTraceItem.glowrootTransaction().id());
 
-                    populateCachePreparedStmt.setLong(3, cacheQryTraceItem.durationNanos());
+                    populateCacheQryPreparedStmt.setLong(3,
+                        cacheQryTraceItem.glowrootTransaction().startTime());
 
-                    populateCachePreparedStmt.setLong(4, cacheQryTraceItem.offsetNanos());
+                    populateCacheQryPreparedStmt.setLong(4, cacheQryTraceItem.durationNanos());
 
-                    populateCacheQryPreparedStmt.setString(5, cacheQryTraceItem.cacheName());
+                    populateCacheQryPreparedStmt.setLong(5, cacheQryTraceItem.offsetNanos());
 
-                    populateCacheQryPreparedStmt.setString(6, cacheQryTraceItem.query());
+                    populateCacheQryPreparedStmt.setString(6, cacheQryTraceItem.cacheName());
+
+                    populateCacheQryPreparedStmt.setString(7, cacheQryTraceItem.query());
 
                     populateCacheQryPreparedStmt.executeUpdate();
                 }
@@ -161,15 +176,18 @@ public class IgniteDataConsumer implements AutoCloseable {
                 try {
                     populateComputePreparedStmt.setObject(1, UUID.randomUUID());
 
-                    populateComputePreparedStmt.setObject(2, computeTraceItem.glowrootTxId());
+                    populateComputePreparedStmt.setObject(2, computeTraceItem.glowrootTransaction().id());
 
-                    populateComputePreparedStmt.setLong(3, computeTraceItem.durationNanos());
+                    populateComputePreparedStmt.setLong(3,
+                        computeTraceItem.glowrootTransaction().startTime());
 
-                    populateComputePreparedStmt.setLong(4, computeTraceItem.offsetNanos());
+                    populateComputePreparedStmt.setLong(4, computeTraceItem.durationNanos());
 
-                    populateComputePreparedStmt.setString(5, computeTraceItem.task());
+                    populateComputePreparedStmt.setLong(5, computeTraceItem.offsetNanos());
 
-                    populateCacheQryPreparedStmt.executeUpdate();
+                    populateComputePreparedStmt.setString(6, computeTraceItem.task());
+
+                    populateComputePreparedStmt.executeUpdate();
                 }
                 catch (SQLException e) {
                     logger.log(Level.WARNING, "Unable to persist traceItem=[" + traceItem + ']', e);
@@ -181,13 +199,16 @@ public class IgniteDataConsumer implements AutoCloseable {
                 try {
                     populateTxCommitPreparedStmt.setObject(1, UUID.randomUUID());
 
-                    populateTxCommitPreparedStmt.setObject(2, commitTraceItem.glowrootTxId());
+                    populateTxCommitPreparedStmt.setObject(2, commitTraceItem.glowrootTransaction().id());
 
-                    populateTxCommitPreparedStmt.setLong(3, commitTraceItem.durationNanos());
+                    populateTxCommitPreparedStmt.setLong(3,
+                        commitTraceItem.glowrootTransaction().startTime());
 
-                    populateTxCommitPreparedStmt.setLong(4, commitTraceItem.offsetNanos());
+                    populateTxCommitPreparedStmt.setLong(4, commitTraceItem.durationNanos());
 
-                    populateTxCommitPreparedStmt.setString(5, commitTraceItem.label());
+                    populateTxCommitPreparedStmt.setLong(5, commitTraceItem.offsetNanos());
+
+                    populateTxCommitPreparedStmt.setString(6, commitTraceItem.label());
 
                     populateTxCommitPreparedStmt.executeUpdate();
                 }
@@ -197,6 +218,31 @@ public class IgniteDataConsumer implements AutoCloseable {
             }
             else
                 logger.log(Level.WARNING, "Unexpected trace item type=[" + traceItem.getClass() + ']');
+        }
+    }
+
+    /**
+     * Persist cache configurations.
+     *
+     * @param cacheCfgItems Cache configuration items.
+     */
+    public void persistCacheConfigMeta(List<CacheConfigMeta> cacheCfgItems) {
+        assert cacheCfgItems != null;
+        assert populateCacheCfgPreparedStmt != null;
+
+        for (CacheConfigMeta cacheConfigItem : cacheCfgItems) {
+            try {
+                populateCacheCfgPreparedStmt.setObject(1, UUID.randomUUID());
+
+                populateCacheCfgPreparedStmt.setString(2, cacheConfigItem.cacheName());
+
+                populateCacheCfgPreparedStmt.setString(3, cacheConfigItem.config());
+
+                populateCacheCfgPreparedStmt.executeUpdate();
+            }
+            catch (SQLException e) {
+                logger.log(Level.WARNING, "Unable to persist cacheConfigItem=[" + cacheConfigItem + ']', e);
+            }
         }
     }
 
@@ -216,6 +262,9 @@ public class IgniteDataConsumer implements AutoCloseable {
 
         if (populateTxCommitPreparedStmt != null)
             populateTxCommitPreparedStmt.close();
+
+        if (populateCacheCfgPreparedStmt != null)
+            populateCacheCfgPreparedStmt.close();
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("SET STREAMING OFF;");
@@ -241,45 +290,56 @@ public class IgniteDataConsumer implements AutoCloseable {
                 "drop table if exists CACHE_TRACES;" +
                     "drop table if exists CACHE_QUERY_TRACES;" +
                     "drop table if exists COMPUTE_TRACES;" +
-                    "drop table if exists TX_COMMIT_TRACES;");
+                    "drop table if exists TX_COMMIT_TRACES;" +
+                    "drop table if exists CACHE_CONFIGURATIONS");
         }
 
         // TODO: 07.10.19 Do we really need id?
-        // TODO: 07.10.19 Use more accurate varchar size?
+        // TODO: 07.10.19 Use more accurate varchar size where possible.
         igniteJdbcStmt.execute(
             "create table if not exists CACHE_TRACES"
-                + "  (id                UUID PRIMARY KEY,"
-                + "   glowroot_tx_id    UUID,"
-                + "   duration_nanos    BIGINT,"
-                + "   offset_nanos      BIGINT,"
-                + "   cache_name        VARCHAR,"
-                + "   operation         VARCHAR,"
-                + "   args              VARCHAR)");
+                + "  (id                        UUID PRIMARY KEY,"
+                + "   glowroot_tx_id            UUID,"
+                + "   glowroot_tx_start_time    BIGINT,"
+                + "   duration_nanos            BIGINT,"
+                + "   offset_nanos              BIGINT,"
+                + "   cache_name                VARCHAR,"
+                + "   operation                 VARCHAR,"
+                + "   args                      VARCHAR)");
 
         igniteJdbcStmt.execute(
             "create table if not exists CACHE_QUERY_TRACES"
-                + "  (id                UUID PRIMARY KEY,"
-                + "   glowroot_tx_id    UUID,"
-                + "   duration_nanos    BIGINT,"
-                + "   offset_nanos      BIGINT,"
-                + "   cache_name        VARCHAR,"
-                + "   query             VARCHAR)");
+                + "  (id                        UUID PRIMARY KEY,"
+                + "   glowroot_tx_id            UUID,"
+                + "   glowroot_tx_start_time    BIGINT,"
+                + "   duration_nanos            BIGINT,"
+                + "   offset_nanos              BIGINT,"
+                + "   cache_name                VARCHAR,"
+                + "   query                     VARCHAR)");
 
         igniteJdbcStmt.execute(
             "create table if not exists COMPUTE_TRACES"
-                + "  (id                UUID PRIMARY KEY,"
-                + "   glowroot_tx_id    UUID,"
-                + "   duration_nanos    BIGINT,"
-                + "   offset_nanos      BIGINT,"
-                + "   task              VARCHAR)");
+                + "  (id                        UUID PRIMARY KEY,"
+                + "   glowroot_tx_id            UUID,"
+                + "   glowroot_tx_start_time    BIGINT,"
+                + "   duration_nanos            BIGINT,"
+                + "   offset_nanos              BIGINT,"
+                + "   task                      VARCHAR)");
 
         igniteJdbcStmt.execute(
             "create table if not exists TX_COMMIT_TRACES"
-                + "  (id                UUID PRIMARY KEY,"
-                + "   glowroot_tx_id    UUID,"
-                + "   duration_nanos    BIGINT,"
-                + "   offset_nanos      BIGINT,"
-                + "   label             VARCHAR)");
+                + "  (id                        UUID PRIMARY KEY,"
+                + "   glowroot_tx_id            UUID,"
+                + "   glowroot_tx_start_time    BIGINT,"
+                + "   duration_nanos            BIGINT,"
+                + "   offset_nanos              BIGINT,"
+                + "   label                     VARCHAR)");
+
+        igniteJdbcStmt.execute(
+            "create table if not exists CACHE_CONFIGURATIONS"
+                + "  (id                        UUID PRIMARY KEY,"
+                + "   cache_name                VARCHAR,"
+                + "   config                    VARCHAR,)");
 
         // TODO: 04.10.19 Indexes.
     }

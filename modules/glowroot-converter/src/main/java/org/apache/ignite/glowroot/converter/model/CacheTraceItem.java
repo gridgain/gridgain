@@ -33,16 +33,16 @@ public final class CacheTraceItem extends TraceItem {
     /**
      * Constructor.
      *
-     * @param txId Glowroot transaction id.
+     * @param glowrootTx Glowroot transaction.
      * @param durationNanos Trace duration in nanoseconds.
      * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
      * @param cacheName Cache name.
      * @param operation Cache operation e.g, put, get, etc.
      * @param args  Comma separated list of arguments meta: argument types, etc.
      */
-    public CacheTraceItem(String txId, long durationNanos, long offsetNanos, String cacheName, String operation,
-        String args) {
-        super(txId, durationNanos, offsetNanos);
+    public CacheTraceItem(GlowrootTransactionMeta glowrootTx, long durationNanos, long offsetNanos, String cacheName,
+        String operation, String args) {
+        super(glowrootTx, durationNanos, offsetNanos);
 
         this.cacheName = cacheName;
         this.operation = operation;
@@ -68,5 +68,14 @@ public final class CacheTraceItem extends TraceItem {
      */
     public String args() {
         return args;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "CacheTraceItem{" +
+            "cacheName='" + cacheName + '\'' +
+            ", operation='" + operation + '\'' +
+            ", args='" + args + '\'' +
+            '}';
     }
 }

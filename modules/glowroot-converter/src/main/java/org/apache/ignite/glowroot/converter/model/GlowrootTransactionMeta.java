@@ -62,4 +62,13 @@ public final class GlowrootTransactionMeta {
     public long durationNanos() {
         return durationNanos;
     }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "GlowrootTransactionMeta{" +
+            "id='" + id + '\'' +
+            ", startTime=" + startTime +
+            ", durationNanos=" + durationNanos +
+            '}';
+    }
 }

@@ -27,13 +27,13 @@ public final class ComputeTraceItem extends TraceItem {
     /**
      * Constructor.
      *
-     * @param txId Glowroot transaction id.
+     * @param glowrootTx Glowroot transaction.
      * @param durationNanos Trace duration in nanoseconds.
      * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
      * @param task ompute task..
      */
-    public ComputeTraceItem(String txId, long durationNanos, long offsetNanos, String task) {
-        super(txId, durationNanos, offsetNanos);
+    public ComputeTraceItem(GlowrootTransactionMeta glowrootTx, long durationNanos, long offsetNanos, String task) {
+        super(glowrootTx, durationNanos, offsetNanos);
 
         this.task = task;
     }
@@ -43,5 +43,12 @@ public final class ComputeTraceItem extends TraceItem {
      */
     public String task() {
         return task;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "ComputeTraceItem{" +
+            "task='" + task + '\'' +
+            '}';
     }
 }

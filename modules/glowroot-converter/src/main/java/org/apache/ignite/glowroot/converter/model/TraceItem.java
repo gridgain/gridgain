@@ -22,41 +22,36 @@ package org.apache.ignite.glowroot.converter.model;
 public abstract class TraceItem {
 
     /**
-     * Within context of GridGain CE Gloowroot plugin every trace item is bounded to glowroot transaction.
-     * Glowroot transaction may or may not be bounded to an Ignite transaction.
-     *   Ignite Transaction -> Glowroot Transaction -> 0..many traces.
-     *   No Ignite Transaction -> Glowroot Transaction -> 0..1 trace.
+     * Within context of GridGain CE Gloowroot plugin every trace item is bounded to glowroot transaction. Glowroot
+     * transaction may or may not be bounded to an Ignite transaction. Ignite Transaction -> Glowroot Transaction ->
+     * 0..many traces. No Ignite Transaction -> Glowroot Transaction -> 0..1 trace.
      */
-    private final String glowrootTxId;
+    private final GlowrootTransactionMeta glowrootTx;
 
-    /**
-     * Trace duration in nanoseconds
-     */
+    /** Trace duration in nanoseconds. **/
     private final long durationNanos;
 
-    /**
-     * Trace offset in nanoseconds from the begining of glowroot transaction.
-     */
+    /** Trace offset in nanoseconds from the begining of glowroot transaction. **/
     private final long offsetNanos;
 
     /**
      * Constructor.
      *
-     * @param txId Glowroot transaction id.
+     * @param glowrootTx Glowroot transaction.
      * @param durationNanos Trace duration in nanoseconds.
      * @param offsetNanos Trace offset in nanoseconds from the begining of glowroot transaction.
      */
-    protected TraceItem(String txId, long durationNanos, long offsetNanos) {
-        glowrootTxId = txId;
+    protected TraceItem(GlowrootTransactionMeta glowrootTx, long durationNanos, long offsetNanos) {
+        this.glowrootTx = glowrootTx;
         this.durationNanos = durationNanos;
         this.offsetNanos = offsetNanos;
     }
 
     /**
-     * @return gloowroot tx id.
+     * @return gloowroot transaction.
      */
-    public String glowrootTxId() {
-        return glowrootTxId;
+    public GlowrootTransactionMeta glowrootTransaction() {
+        return glowrootTx;
     }
 
     /**
@@ -71,5 +66,14 @@ public abstract class TraceItem {
      */
     public long offsetNanos() {
         return offsetNanos;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "TraceItem{" +
+            "glowrootTx=" + glowrootTx +
+            ", durationNanos=" + durationNanos +
+            ", offsetNanos=" + offsetNanos +
+            '}';
     }
 }

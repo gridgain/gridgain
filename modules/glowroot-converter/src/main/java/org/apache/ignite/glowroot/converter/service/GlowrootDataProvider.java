@@ -17,6 +17,7 @@
 package org.apache.ignite.glowroot.converter.service;
 
 import org.apache.ignite.glowroot.converter.GlowrootUtils;
+import org.apache.ignite.glowroot.converter.model.CacheConfigMeta;
 import org.apache.ignite.glowroot.converter.model.GlowrootTransactionMeta;
 import org.apache.ignite.glowroot.converter.model.TraceItem;
 import org.glowroot.agent.embedded.util.CappedDatabase;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -43,11 +45,14 @@ public class GlowrootDataProvider implements AutoCloseable {
     /** **/
     private static final Logger logger = Logger.getLogger(GlowrootDataProvider.class.getName());
 
+    /** Glowroot H2 jdbc thin connection. **/
+    private final Connection glowrootConn;
+
     /** Glowroot transactions result set with all glowroot transactions. **/
     private final ResultSet transactionsRS;
 
     /** Part of glowroot api to work with inner database that contains trace data. **/
-    private final CappedDatabase traceCappedDatabase;
+    private final CappedDatabase traceCappedDb;
 
     /** Total glowroot transactions count. **/
     private final long totalTxCnt;
@@ -65,8 +70,6 @@ public class GlowrootDataProvider implements AutoCloseable {
     public GlowrootDataProvider(String dataFolderPath) throws SQLException, IOException {
         String glowrootDataFilePath = dataFolderPath + "data.h2.db";
 
-        Connection glowrootConn = null;
-
         glowrootConn = GlowrootUtils.createConnection(new File(glowrootDataFilePath));
 
         ResultSet rsCnt = glowrootConn.createStatement().executeQuery(
@@ -77,10 +80,10 @@ public class GlowrootDataProvider implements AutoCloseable {
         totalTxCnt = rsCnt.getLong(1);
 
         transactionsRS = glowrootConn.createStatement().executeQuery(
-            "Select ID, START_TIME, DURATION_NANOS, ENTRIES_CAPPED_ID from Trace where TRANSACTION_TYPE = " +
-                "'Ignite';");
+            "Select ID, START_TIME, DURATION_NANOS, ENTRIES_CAPPED_ID from Trace where " +
+                "TRANSACTION_TYPE = 'Ignite';");
 
-        traceCappedDatabase = new CappedDatabase(
+        traceCappedDb = new CappedDatabase(
             new File(dataFolderPath + "trace-detail.capped.db"), 1,
             Executors.newSingleThreadScheduledExecutor(), com.google.common.base.Ticker.systemTicker().systemTicker());
     }
@@ -93,6 +96,19 @@ public class GlowrootDataProvider implements AutoCloseable {
      */
     public boolean next() throws SQLException {
         return transactionsRS.next();
+    }
+
+    // TODO: 17.10.19 Comment;
+    public List<CacheConfigMeta> readCacheConfigurations() throws SQLException{
+        ResultSet cacheConfigurationsRS = glowrootConn.createStatement().executeQuery(
+            "Select HEADLINE from Trace where TRANSACTION_TYPE = 'Ignite Cache Meta';");
+
+        List<CacheConfigMeta> res = new ArrayList<>();
+
+        while (cacheConfigurationsRS.next())
+            res.add(DataParser.parseCacheConfigMeta(cacheConfigurationsRS.getString(1)));
+
+        return res;
     }
 
     /**
@@ -121,7 +137,7 @@ public class GlowrootDataProvider implements AutoCloseable {
         }
 
         try {
-            return traceCappedDatabase.readMessages(cappedId, parser()).stream().map(
+            return traceCappedDb.readMessages(cappedId, parser()).stream().map(
                 traceEntry -> DataParser.parse(txMeta, traceEntry.getDurationNanos(), traceEntry.getStartOffsetNanos(),
                     traceEntry.getMessage())).collect(Collectors.toList());
         }
@@ -140,8 +156,11 @@ public class GlowrootDataProvider implements AutoCloseable {
         if (transactionsRS != null)
             transactionsRS.close();
 
-        if (traceCappedDatabase != null)
-            traceCappedDatabase.close();
+        if (traceCappedDb != null)
+            traceCappedDb.close();
+
+        if (glowrootConn != null)
+            glowrootConn.close();
     }
 
     /**

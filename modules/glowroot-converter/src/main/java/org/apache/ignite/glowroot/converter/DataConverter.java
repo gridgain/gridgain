@@ -16,20 +16,22 @@
 
 package org.apache.ignite.glowroot.converter;
 
+import org.apache.ignite.glowroot.converter.model.CacheConfigMeta;
 import org.apache.ignite.glowroot.converter.model.TraceItem;
 import org.apache.ignite.glowroot.converter.service.GlowrootDataProvider;
 import org.apache.ignite.glowroot.converter.service.IgniteDataConsumer;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Main class of GlowRoot to Ignite data converter app.
+ */
 public class DataConverter {
 
+    /** **/
     private static final Logger logger = Logger.getLogger(DataConverter.class.getName());
 
     // TODO: 07.10.19 Write better javadoc: General and param four.
@@ -58,36 +60,18 @@ public class DataConverter {
 
         boolean overwriteEntries = args.length > 3 && Boolean.parseBoolean(args[3]);
 
-        try (IgniteDataConsumer igniteDataConsumer = new IgniteDataConsumer(igniteJdbcConnStr, cleanupAllData, overwriteEntries)) {
+        try (IgniteDataConsumer igniteDataConsumer = new IgniteDataConsumer(igniteJdbcConnStr, cleanupAllData,
+            overwriteEntries)) {
             try (GlowrootDataProvider glowrootDataProvider = new GlowrootDataProvider(glowrootDataFolder)) {
                 logger.info("Total transactions cnt: " + glowrootDataProvider.getTotalTxCnt());
 
-                long tracesCnt = 0;
+                processCacheConfigurations(glowrootDataFolder, igniteDataConsumer, glowrootDataProvider);
 
-                long processedTxCnt = 0;
-
-                try {
-                    while (glowrootDataProvider.next()) {
-                        List<TraceItem> traceItems = glowrootDataProvider.readTraceData();
-
-                        igniteDataConsumer.persist(traceItems);
-
-                        tracesCnt += traceItems.size();
-
-                        processedTxCnt++;
-
-                        if (processedTxCnt % 1000 == 0)
-                            logger.info("Transactions processed: " + processedTxCnt + " Traces processed: " + tracesCnt);
-                    }
-                    logger.info("Transactions processed: " + processedTxCnt + " Traces processed: " + tracesCnt);
-                }
-                catch (SQLException e) {
-                    // TODO: 08.10.19
-                    e.printStackTrace();
-                }
+                processTraces(igniteDataConsumer, glowrootDataProvider);
             }
             catch (SQLException glowrootInitException) {
-                logger.log(Level.SEVERE, "Unable to init glowroot data provider, dataFolderPath=[" + glowrootDataFolder + ']', glowrootInitException);
+                logger.log(Level.SEVERE, "Unable to init glowroot data provider, " +
+                    "dataFolderPath=[" + glowrootDataFolder + ']', glowrootInitException);
                 System.exit(-1);
             }
             catch (Exception glowrootCleanupException) {
@@ -96,7 +80,8 @@ public class DataConverter {
             }
         }
         catch (SQLException igniteInitException) {
-            logger.log(Level.SEVERE, "Unable to init ignite data consumer, url=[" + igniteJdbcConnStr + ']', igniteInitException);
+            logger.log(Level.SEVERE, "Unable to init ignite data consumer, " +
+                "url=[" + igniteJdbcConnStr + ']', igniteInitException);
             System.exit(-1);
         }
         catch (Exception igniteCleanupException) {
@@ -104,83 +89,89 @@ public class DataConverter {
             System.exit(-1);
         }
 
-//        // TODO: 08.10.19 Tmp.
-//        try {
-//            Connection conn = DriverManager.getConnection(igniteJdbcConnStr);
-//
-//            ResultSet rs = conn.createStatement().executeQuery("Select count(*) from CACHE_TRACES");
-//
-//            rs.next();
-//
-//            logger.info("Ignite total items: " +  rs.getLong(1));
-//
-//            logger.info("CACHE_TRACES");
-//
-//            ResultSet rsTraces = conn.createStatement().executeQuery("Select * from CACHE_TRACES");
-//
-//            while (rsTraces.next()) {
-//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-//                    " glowroot_tx_id=" + rsTraces.getObject(2) +
-//                    " duration_nanos=" + rsTraces.getObject(3) +
-//                    " offset_nanos=" + rsTraces.getObject(4) +
-//                    " cache_name=" + rsTraces.getObject(5) +
-//                    " operation=" + rsTraces.getObject(6) +
-//                    " args=" + rsTraces.getObject(7));
-//            }
-//
-//            logger.info("CACHE_QUERY_TRACES");
-//
-//            ResultSet rsQueryTraces = conn.createStatement().executeQuery("Select * from CACHE_QUERY_TRACES");
-//
-//            while (rsTraces.next()) {
-//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-//                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
-//                    " duration_nanos=" + rsQueryTraces.getObject(3) +
-//                    " offset_nanos=" + rsQueryTraces.getObject(4) +
-//                    " cache_name=" + rsQueryTraces.getObject(5) +
-//                    " query=" + rsQueryTraces.getObject(6));
-//            }
-//
-//            logger.info("COMPUTE_TRACES");
-//
-//            ResultSet rsComputeTraces = conn.createStatement().executeQuery("Select * from COMPUTE_TRACES");
-//
-//            while (rsTraces.next()) {
-//                logger.info("Ignite record: id=" + rsTraces.getObject(1) +
-//                    " glowroot_tx_id=" + rsQueryTraces.getObject(2) +
-//                    " duration_nanos=" + rsQueryTraces.getObject(3) +
-//                    " offset_nanos=" + rsQueryTraces.getObject(4) +
-//                    " task=" + rsQueryTraces.getObject(5));
-//            }
-//
-//            logger.info("TX_COMMIT_TRACES");
-//
-//            ResultSet rsTxCommitTraces = conn.createStatement().executeQuery("Select * from TX_COMMIT_TRACES");
-//
-//            while (rsTraces.next()) {
-//                logger.info("Ignite record: id=" + rsTxCommitTraces.getObject(1) +
-//                    " glowroot_tx_id=" + rsTxCommitTraces.getObject(2) +
-//                    " duration_nanos=" + rsTxCommitTraces.getObject(3) +
-//                    " offset_nanos=" + rsTxCommitTraces.getObject(4) +
-//                    " label=" + rsTxCommitTraces.getObject(5));
-//            }
-//
-//        }
-//        catch (SQLException e) {
-//            e.printStackTrace();
-//        }
         System.exit(0);
     }
 
+    /**
+     * Process traces.
+     *
+     * @param igniteDataConsumer Ignite data consumer.
+     * @param glowrootDataProvider Glowroot data provider.
+     */
+    private static void processTraces(IgniteDataConsumer igniteDataConsumer, GlowrootDataProvider glowrootDataProvider){
+        long tracesCnt = 0;
+
+        long processedTxCnt = 0;
+
+        try {
+            while (glowrootDataProvider.next()) {
+                List<TraceItem> traceItems = glowrootDataProvider.readTraceData();
+
+                igniteDataConsumer.persist(traceItems);
+
+                tracesCnt += traceItems.size();
+
+                processedTxCnt++;
+
+                if (processedTxCnt % 1000 == 0)
+                    logger.info("Transactions processed: " + processedTxCnt + " Traces processed: " + tracesCnt);
+            }
+            logger.info("Transactions processed: " + processedTxCnt + " Traces processed: " + tracesCnt);
+        }
+        catch (SQLException e) {
+            logger.log(Level.SEVERE, "Unable to read glowroot data.", e);
+
+            System.exit(-1);
+        }
+    }
+
+    /**
+     * Process cache configurations.
+     *
+     * @param glowrootDataFolder Path to glowroot data folder.
+     * @param igniteDataConsumer Ignite data consumer.
+     * @param glowrootDataProvider Glowroot data provider.
+     */
+    private static void processCacheConfigurations(String glowrootDataFolder, IgniteDataConsumer igniteDataConsumer,
+        GlowrootDataProvider glowrootDataProvider) {
+        logger.info("Processing cache configurations...");
+
+        List<CacheConfigMeta> cacheCfgItems = null;
+
+        try {
+            cacheCfgItems = glowrootDataProvider.readCacheConfigurations();
+        }
+        catch (SQLException cacheCfgReadingException) {
+            logger.log(Level.SEVERE, "Unable to read cache configurations, " +
+                "dataFolderPath=[" + glowrootDataFolder + ']', cacheCfgReadingException);
+        }
+
+        long cacheCfgCnt = 0;
+
+        if (cacheCfgItems != null) {
+            igniteDataConsumer.persistCacheConfigMeta(cacheCfgItems);
+
+            cacheCfgCnt++;
+        }
+
+        logger.info("Cache configurations processed: " + cacheCfgCnt);
+    }
+
+    /**
+     * Validate application arguments.
+     * @param args Arguments to validate.
+     */
     private static void validateApplicationArguments(String[] args) {
         if (args.length < 2)
-            throw new IllegalArgumentException("Missing mandatory arguments: both ignite jdbc connection string and glowroot data directory path should be present.");
+            throw new IllegalArgumentException("Missing mandatory arguments: both ignite jdbc connection string " +
+                "and glowroot data directory path should be present.");
         else if (args.length == 3) {
             try {
                 Boolean.parseBoolean(args[2]);
             }
             catch (Exception e) {
-                throw new IllegalArgumentException("Unexpected argument type: boolean is expected. Third param is for forcing data cleanup before adding new data.");
+                throw new IllegalArgumentException("Unexpected argument type: boolean is expected. Third param is " +
+                    "for forcing data cleanup before adding new data.");
             }
         }
         else if (args.length == 4) {
@@ -188,10 +179,12 @@ public class DataConverter {
                 Boolean.parseBoolean(args[3]);
             }
             catch (Exception e) {
-                throw new IllegalArgumentException("Unexpected argument type: boolean is expected. Fourth param is for forcing overwrite mode.");
+                throw new IllegalArgumentException("Unexpected argument type: boolean is expected. Fourth param is " +
+                    "for forcing overwrite mode.");
             }
         }
         else if (args.length > 4)
-            throw new IllegalArgumentException("There's some crap in the arguments: at most four arguments are expected.");
+            throw new IllegalArgumentException("There's some crap in the arguments: at most four arguments " +
+                "are expected.");
     }
 }
