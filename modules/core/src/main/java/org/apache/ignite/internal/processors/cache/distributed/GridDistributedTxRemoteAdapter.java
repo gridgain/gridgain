@@ -482,8 +482,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
                             if (log.isDebugEnabled())
-                                log.debug("DBG: Transaction does not own lock for entry (will wait) [entry=" + entry +
-                                    ", xidVer=" + this.xidVersion() + ']');
+                                log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
+                                    ", tx=" + this + ']');
 
                             return;
                         }

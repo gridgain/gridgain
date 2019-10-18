@@ -1364,22 +1364,14 @@ public class IgniteTxHandler {
         final GridCacheVersion nearTxId = anyTx != null ? anyTx.nearXidVersion() : null;
 
         if (txFinishMsgLog.isDebugEnabled())
-            log.debug("Received dht finish request [txId=" + nearTxId + ", dhtTxId=" + req.version() +
+            txFinishMsgLog.debug("Received dht finish request [txId=" + nearTxId + ", dhtTxId=" + req.version() +
                 ", node=" + nodeId + ']');
 
         if (anyTx == null && req.commit())
             ctx.tm().addCommittedTx(null, req.version(), null);
 
-        if (dhtTx != null) {
-            log.debug("DBG: finish request [ver=" + req.version() + ']');
-
-            try {
-                finish(nodeId, dhtTx, req);
-            }
-            catch (Throwable e) {
-                e.printStackTrace();
-            }
-        }
+        if (dhtTx != null)
+            finish(nodeId, dhtTx, req);
         else {
             try {
                 applyPartitionsUpdatesCounters(req.updateCounters(), !req.commit(), false);

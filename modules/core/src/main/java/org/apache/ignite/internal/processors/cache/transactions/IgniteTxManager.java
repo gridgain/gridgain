@@ -1128,7 +1128,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (tx.pessimistic() && tx.local())
             return; // Nothing else to do in pessimistic mode.
 
-        // Optimistic or remote.
+        // Optimistic or remote tx.
         assert tx.optimistic() || !tx.local();
 
         if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries())) {
@@ -1564,11 +1564,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 U.warn(log, "Slow transaction detected [tx=" + tx +
                     ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']') ;
 
-            if (!tx.local())
-                log.info("DBG: Committed from TM: " + tx.xidVersion() + ']');
+            if (log.isDebugEnabled())
+                log.debug("Committed from TM [locNodeId=" + cctx.localNodeId() + ", tx=" + tx + ']');
         }
-        else if (!tx.local())
-            log.info("DBG: Did not commit from TM (was already committed): " + tx.xidVersion());
+        else if (log.isDebugEnabled())
+            log.debug("Did not commit from TM (was already committed): " + tx);
     }
 
     /**
@@ -1628,11 +1628,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 tx.txState().onTxEnd(cctx, tx, false);
             }
 
-            if (!tx.local())
-                log.info("DBG: Rolled back from TM: " + tx.xidVersion());
+            if (log.isDebugEnabled())
+                log.debug("Rolled back from TM: " + tx);
         }
-        else if (!tx.local())
-            log.info("DBG: Did not rollback from TM (was already rolled back): " + tx.xidVersion());
+        else if (log.isDebugEnabled())
+            log.debug("Did not rollback from TM (was already rolled back): " + tx);
     }
 
     /**

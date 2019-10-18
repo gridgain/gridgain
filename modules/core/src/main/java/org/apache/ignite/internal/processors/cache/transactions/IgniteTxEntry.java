@@ -594,8 +594,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         return entry;
     }
 
-    private Exception cacheE;
-
     /**
      * @param entry Cache entry.
      */
@@ -604,8 +602,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
             ", entry=" + entry +
             ", ctxNear=" + ctx.isNear() +
             ", ctxDht=" + ctx.isDht() + ']';
-
-        cacheE = new Exception();
 
         this.entry = entry;
     }

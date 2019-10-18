@@ -82,7 +82,7 @@ public final class GridCacheMvcc {
 
     /** Remote queue. */
     @GridToStringInclude
-    public LinkedList<GridCacheMvccCandidate> rmts;
+    private LinkedList<GridCacheMvccCandidate> rmts;
 
     /**
      * @param cctx Cache context.
@@ -121,8 +121,7 @@ public final class GridCacheMvcc {
     }
 
     /**
-     * @return Remote candidate only if it's first in the list and is marked
-     *      as <tt>'used'</tt>.
+     * @return Remote candidate only if it's first in the list and is marked as <tt>'used'</tt>.
      */
     @Nullable private GridCacheMvccCandidate remoteOwner() {
         if (rmts != null) {
@@ -1471,21 +1470,7 @@ public final class GridCacheMvcc {
      * @return {@code True} if lock is owned by the specified version.
      */
     boolean isOwnedBy(GridCacheVersion ver) {
-        CacheLockCandidates owners = localOwners();
-
-        if (owners == null) {
-            if (rmts != null) {
-                assert !rmts.isEmpty();
-
-                GridCacheMvccCandidate first = rmts.getFirst();
-
-                if (first.used() && first.owner())
-                    owners = first;
-                else {
-                    owners = null;
-                }
-            }
-        }
+        CacheLockCandidates owners = allOwners();
 
         return owners != null && owners.hasCandidate(ver);
     }

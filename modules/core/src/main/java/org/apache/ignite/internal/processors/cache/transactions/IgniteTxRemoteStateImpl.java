@@ -101,22 +101,22 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Set<IgniteTxKey> readSet() {
-        return Collections.unmodifiableSet(readMap.keySet());
+        return readMap.keySet();
     }
 
     /** {@inheritDoc} */
     @Override public Set<IgniteTxKey> writeSet() {
-        return Collections.unmodifiableSet(writeMap.keySet());
+        return writeMap.keySet();
     }
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> writeEntries() {
-        return Collections.unmodifiableCollection(writeMap.values());
+        return writeMap.values();
     }
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> readEntries() {
-        return Collections.unmodifiableCollection(readMap.values());
+        return readMap.values();
     }
 
     /** {@inheritDoc} */
@@ -147,7 +147,7 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> allEntries() {
-        return Collections.unmodifiableCollection(F.concat(false, writeEntries(), readEntries()));
+        return F.concat(false, writeEntries(), readEntries());
     }
 
     /** {@inheritDoc} */
