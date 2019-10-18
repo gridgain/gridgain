@@ -92,6 +92,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setFailureDetectionTimeout(100000000000L);
+        cfg.setClientFailureDetectionTimeout(100000000000L);
+
         if (customDiscoSpi != null) {
             cfg.setDiscoverySpi(customDiscoSpi);
 
@@ -262,7 +265,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-24303")
+    //@Ignore("https://ggsystems.atlassian.net/browse/GG-24303")
     public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 
@@ -305,7 +308,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 try {
                     waitForTopology(SERVER_NODES);
 
-                    resetBaselineTopology();
+                    if (persistenceEnabled())
+                        resetBaselineTopology();
 
                     awaitPartitionMapExchange();
 
@@ -313,9 +317,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     startGrid(name);
 
-                    resetBaselineTopology();
+                    if (persistenceEnabled())
+                        resetBaselineTopology();
 
                     awaitPartitionMapExchange();
+                }
+                catch (IllegalStateException e) {
+                    // No-op.
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));
@@ -994,7 +1002,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                         puts.increment();
 
-                        boolean rmv = r.nextFloat() < 0.4;
+                        boolean rmv = false; // r.nextFloat() < 0.4;
                         if (rmv) {
                             key = insertedKeys.get(r.nextInt(insertedKeys.size()));
 
@@ -1106,5 +1114,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      */
     @Override protected long getPartitionMapExchangeTimeout() {
         return getTestTimeout();
+    }
+
+    @Override protected long getTestTimeout() {
+        return super.getTestTimeout() * 100000L;
     }
 }

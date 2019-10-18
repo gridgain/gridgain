@@ -25,7 +25,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_MAX_LENG
  */
 class SBLengthLimit {
     /** */
-    private static final int MAX_TO_STR_LEN = IgniteSystemProperties.getInteger(IGNITE_TO_STRING_MAX_LENGTH, 10_000);
+    private static final int MAX_TO_STR_LEN = IgniteSystemProperties.getInteger(IGNITE_TO_STRING_MAX_LENGTH, 20_000);
 
     /** Length of tail part of message. */
     private static final int TAIL_LEN = MAX_TO_STR_LEN / 10 * 2;

@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -100,22 +101,22 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Set<IgniteTxKey> readSet() {
-        return readMap.keySet();
+        return Collections.unmodifiableSet(readMap.keySet());
     }
 
     /** {@inheritDoc} */
     @Override public Set<IgniteTxKey> writeSet() {
-        return writeMap.keySet();
+        return Collections.unmodifiableSet(writeMap.keySet());
     }
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> writeEntries() {
-        return writeMap.values();
+        return Collections.unmodifiableCollection(writeMap.values());
     }
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> readEntries() {
-        return readMap.values();
+        return Collections.unmodifiableCollection(readMap.values());
     }
 
     /** {@inheritDoc} */
@@ -146,7 +147,7 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Collection<IgniteTxEntry> allEntries() {
-        return F.concat(false, writeEntries(), readEntries());
+        return Collections.unmodifiableCollection(F.concat(false, writeEntries(), readEntries()));
     }
 
     /** {@inheritDoc} */

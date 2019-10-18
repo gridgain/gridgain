@@ -1128,7 +1128,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (tx.pessimistic() && tx.local())
             return; // Nothing else to do in pessimistic mode.
 
-        // Optimistic.
+        // Optimistic or remote.
         assert tx.optimistic() || !tx.local();
 
         if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries())) {
@@ -1564,11 +1564,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 U.warn(log, "Slow transaction detected [tx=" + tx +
                     ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']') ;
 
-            if (log.isDebugEnabled())
-                log.debug("Committed from TM [locNodeId=" + cctx.localNodeId() + ", tx=" + tx + ']');
+            if (!tx.local())
+                log.info("DBG: Committed from TM: " + tx.xidVersion() + ']');
         }
-        else if (log.isDebugEnabled())
-            log.debug("Did not commit from TM (was already committed): " + tx);
+        else if (!tx.local())
+            log.info("DBG: Did not commit from TM (was already committed): " + tx.xidVersion());
     }
 
     /**
@@ -1628,11 +1628,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 tx.txState().onTxEnd(cctx, tx, false);
             }
 
-            if (log.isDebugEnabled())
-                log.debug("Rolled back from TM: " + tx);
+            if (!tx.local())
+                log.info("DBG: Rolled back from TM: " + tx.xidVersion());
         }
-        else if (log.isDebugEnabled())
-            log.debug("Did not rollback from TM (was already rolled back): " + tx);
+        else if (!tx.local())
+            log.info("DBG: Did not rollback from TM (was already rolled back): " + tx.xidVersion());
     }
 
     /**
@@ -1990,7 +1990,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                             tx + ", invalidPart=" + e.partition() + ']';
 
                         // If partition is invalid, we ignore this entry.
-                        tx.addInvalidPartition(cacheCtx, e.partition());
+                        tx.addInvalidPartition(cacheCtx.cacheId(), e.partition());
 
                         break;
                     }
@@ -2031,7 +2031,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 if (log.isDebugEnabled())
                     log.debug("Got removed entry in TM txUnlock(..) method (will retry): " + txEntry);
 
-                txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), tx.topologyVersion()));
+                return; // Ignore and proceed to next lock.
+//                try {
+//                    txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), tx.topologyVersion()));
+//                }
+//                catch (GridDhtInvalidPartitionException e) {
+//                    // Ignore.
+//                }
             }
         }
     }
