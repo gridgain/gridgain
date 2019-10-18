@@ -16,8 +16,12 @@
 package org.apache.ignite.glowroot;
 
 import java.util.Arrays;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import javax.cache.configuration.Configuration;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.glowroot.agent.plugin.api.Agent;
 import org.glowroot.agent.plugin.api.MessageSupplier;
 import org.glowroot.agent.plugin.api.OptionalThreadContext;
@@ -38,6 +42,12 @@ import org.glowroot.agent.plugin.api.weaving.Shim;
  * Trace cache operations.
  */
 public class CacheAspect {
+
+    /** Cache configuration map, in order to log every new cache configuration ones only. **/
+    static ConcurrentHashMap<String, String> cacheConfigurations = new ConcurrentHashMap<>();
+
+    /** Stub for valus in cacheConfigurations, cause we really need only key. **/
+    private static final String EMPTY_STRING = "";
 
     /**
      * Per thread tx context holder.
@@ -76,7 +86,30 @@ public class CacheAspect {
          * @param val Value.
          */
         @OnBefore
-        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver IgniteCache proxy, @BindMethodName String val, @BindParameterArray Object[] params) {
+        public static TraceEntry onBefore(OptionalThreadContext ctx, @BindReceiver IgniteCache proxy,
+            @BindMethodName String val, @BindParameterArray Object[] params) {
+            // TODO: 15.10.19 Use some cache unique identifier, like cache creation time, or uuid. deplumentId
+            // Used in order to trace cache configuration in separate glowroot transaction.
+            if (cacheConfigurations.putIfAbsent(proxy.getName(), EMPTY_STRING) == null) {
+                try {
+                    Method getConfigurationMethod = proxy.getClass().getMethod("getConfiguration", Class.class);
+
+                    Object res = getConfigurationMethod.invoke(proxy, Configuration.class);
+
+                    ctx.startTransaction("Ignite Cache Meta",
+                        Thread.currentThread().getName(),
+                        MessageSupplier.create("trace_type=cache_config cache_name={}, config={}",
+                            proxy.getName(),
+                            res.toString()),
+                        timer,
+                        OptionalThreadContext.AlreadyInTransactionBehavior.CAPTURE_NEW_TRANSACTION).end();
+                }
+                catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            // Used in order to trace non-transactional Ignite cache operations.
             if (!ctx.isInTransaction()) {
                 TraceEntry txTraceEntry = ctx.startTransaction("Ignite",
                     Thread.currentThread().getName(),
@@ -87,22 +120,20 @@ public class CacheAspect {
             }
 
             if ("query".equals(val))
-                return ctx.startTraceEntry(MessageSupplier.create("trace_type=cache_query cache_name={} query={}", proxy.getName(), params[0].toString()), timer);
+                return ctx.startTraceEntry(
+                    MessageSupplier.create("trace_type=cache_query cache_name={} query={}",
+                        proxy.getName(),
+                        params[0].toString()),
+                    timer);
             else {
-                String args = Arrays.stream(params).map(new Function<Object, String>() {
-                    @Override public String apply(Object o) {
-                        if (o instanceof String)
-                            return "String(" + ((String)o).length() + ')';
-                        else if (o instanceof byte[])
-                            return "Byte[](" + ((byte[])o).length + ')';
-                        else if (o instanceof BinaryObjectEx)
-                            return "BinaryObject[type=" + ((BinaryObjectEx)o).typeId(); // TODO details.
+                String args = Arrays.stream(params).map(param -> ReflectionToStringBuilder.reflectionToString(param)).collect(Collectors.joining(","));
 
-                        return o.getClass().getSimpleName();
-                    }
-                }).collect(Collectors.joining(","));
-
-                return ctx.startTraceEntry(MessageSupplier.create("trace_type=cache_ops cache_name={} op={} args={}", proxy.getName(), val, args), timer);
+                return ctx.startTraceEntry(
+                    MessageSupplier.create("trace_type=cache_ops cache_name={} op={} args={}",
+                        proxy.getName(),
+                        val,
+                        args),
+                    timer);
             }
         }
 
