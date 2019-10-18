@@ -16,22 +16,30 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Test;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
  *
  */
 public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
     /** Entry count. */
-    protected static final int ENTRY_CNT = 5000;
+    protected static final int ENTRY_CNT = 50;
 
     /** */
-    protected static final int GRID_CNT = 4;
+    protected static final int GRID_CNT = 2;
 
     /** */
     protected static final String CACHE_NAME = "cache1";
@@ -69,16 +77,52 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
 
         grid(0).cluster().state(INACTIVE);
 
-        checkAllNodesInactive();
+        checkInactive(nodesCount());
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         grid(0).cluster().state(INACTIVE);
 
-        checkAllNodesInactive();
+        checkInactive(nodesCount());
 
         super.afterTest();
+    }
+
+    /** */
+    @Test
+    public void testActivation() {
+        changeStateAndCheckBehaviour(INACTIVE, ACTIVE);
+    }
+
+    /** */
+    @Test
+    public void testActivationWithReadOnly() {
+        changeStateAndCheckBehaviour(INACTIVE, READ_ONLY);
+    }
+
+    /** */
+    @Test
+    public void testEnablingReadOnly() {
+        changeStateAndCheckBehaviour(ACTIVE, READ_ONLY);
+    }
+
+    /** */
+    @Test
+    public void testDisablingReadOnly() {
+        changeStateAndCheckBehaviour(READ_ONLY, ACTIVE);
+    }
+
+    /** */
+    @Test
+    public void testDeactivation() {
+        changeStateAndCheckBehaviour(ACTIVE, INACTIVE);
+    }
+
+    /** */
+    @Test
+    public void testDeactivationFromReadOnly() {
+        changeStateAndCheckBehaviour(READ_ONLY, INACTIVE);
     }
 
     /**
@@ -88,18 +132,82 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
     protected abstract CacheConfiguration cacheConfiguration(String cacheName);
 
     /** */
-    protected void checkAllNodesInactive() {
-        checkInactive(GRID_CNT);
+    protected abstract void changeState(ClusterState state);
+
+    /**
+     * Changes cluster state from {@code initialState} to {@code targetState}.
+     *
+     * @param initialState Initial state.
+     * @param targetState Target state.
+     */
+    private void changeStateAndCheckBehaviour(ClusterState initialState, ClusterState targetState) {
+        assertNotSame(initialState, targetState);
+
+        IgniteEx crd = grid(0);
+
+        checkInactive(nodesCount());
+
+        crd.cluster().state(initialState);
+
+        checkClusterState(nodesCount(), initialState);
+
+        changeState(targetState);
+
+        checkClusterState(nodesCount(), targetState);
+
+        putSomeDataAndCheck();
     }
 
     /** */
-    void checkClusterState(int nodesCnt, ClusterState state) {
+    private void putSomeDataAndCheck() {
+        switch (grid(0).cluster().state()) {
+            case INACTIVE:
+                assertNotNull(assertThrows(
+                    log,
+                    () -> grid(0).cache(CACHE_NAME),
+                    IgniteException.class,
+                    "Can not perform the operation because the cluster is inactive. Note, that the cluster is considered inactive by default if Ignite Persistent Store is used to let all the nodes join the cluster. To activate the cluster call Ignite.active(true)."
+                ));
+
+                break;
+
+            case ACTIVE:
+                for (int k = 0; k < ENTRY_CNT; k++)
+                    grid(0).cache(CACHE_NAME).put(k, k);
+
+                for (int g = 0; g < nodesCount(); g++) {
+                    for (int k = 0; k < ENTRY_CNT; k++)
+                        assertEquals(k, grid(g).cache(CACHE_NAME).get(k));
+                }
+
+                break;
+
+            case READ_ONLY:
+                assertNotNull(assertThrowsWithCause(
+                    () -> grid(0).cache(CACHE_NAME).put(0, 0),
+                    IgniteClusterReadOnlyException.class
+                ));
+
+                for (int g = 0; g < nodesCount(); g++)
+                    assertNull(grid(g).cache(CACHE_NAME).get(0));
+
+                break;
+        }
+    }
+
+    /** */
+    protected int nodesCount() {
+        return GRID_CNT;
+    }
+
+    /** */
+    private void checkClusterState(int nodesCnt, ClusterState state) {
         for (int g = 0; g < nodesCnt ; g++)
             assertEquals(grid(g).name(), state, grid(g).cluster().state());
     }
 
     /** */
-    void checkInactive(int cnt) {
+    private void checkInactive(int cnt) {
         checkClusterState(cnt, INACTIVE);
     }
 }
