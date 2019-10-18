@@ -21,14 +21,16 @@ import {ListEditable} from '../components/ListEditable';
 class VersionPicker {
     constructor() {
         this._selector = Selector('version-picker');
+        this.menuItems = this._selector.find('[role="menuitem"]');
     }
+
     /**
      * @param {string} label Version label
      */
     pickVersion(label) {
         return t
             .hover(this._selector)
-            .click(this._selector.find('[role="menuitem"]').withText(label));
+            .click(this.menuItems.withText(label));
     }
 }
 
