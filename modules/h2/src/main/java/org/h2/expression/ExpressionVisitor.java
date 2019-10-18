@@ -138,6 +138,11 @@ public class ExpressionVisitor {
     public static final int GET_COLUMNS2 = 10;
 
     /**
+     * Do some cleanup, i.e. close cached results in subqueries.
+     */
+    public static final int CLEANUP = 11;
+
+    /**
      * The visitor singleton for the type QUERY_COMPARABLE.
      */
     public static final ExpressionVisitor QUERY_COMPARABLE_VISITOR =
@@ -249,6 +254,15 @@ public class ExpressionVisitor {
     public static ExpressionVisitor getMaxModificationIdVisitor() {
         return new ExpressionVisitor(SET_MAX_DATA_MODIFICATION_ID, 0, null,
                 null, null, null, new long[1], null);
+    }
+
+    /**
+     * Creates cleanup visitor.
+     *
+     * @return Cleanup visitor.
+     */
+    public static ExpressionVisitor getCleanupVisitor() {
+        return new ExpressionVisitor(CLEANUP);
     }
 
     /**

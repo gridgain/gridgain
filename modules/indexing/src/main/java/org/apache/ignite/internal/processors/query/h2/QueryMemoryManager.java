@@ -196,8 +196,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        super.close();
-
         // Cursors are not tracked and can't be forcibly closed to release resources.
         // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
         if (log.isDebugEnabled() && reserved.get() != 0)

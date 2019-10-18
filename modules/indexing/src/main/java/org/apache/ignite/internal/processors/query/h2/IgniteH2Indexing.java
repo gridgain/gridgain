@@ -2151,7 +2151,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 DISK_SPILL_DIR,
                 false);
 
-            U.delete(spillDir); // Try to clean outdated spill files
+            U.delete(spillDir);
         }
         catch (Exception e) {
             log.warning("Failed to cleanup the temporary directory for intermediate " +

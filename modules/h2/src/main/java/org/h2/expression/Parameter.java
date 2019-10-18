@@ -163,6 +163,7 @@ public class Parameter extends Expression implements ParameterInterface {
         case ExpressionVisitor.READONLY:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             return true;
         case ExpressionVisitor.INDEPENDENT:
             return value != null;

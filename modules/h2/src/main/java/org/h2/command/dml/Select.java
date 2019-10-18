@@ -1793,6 +1793,10 @@ public class Select extends Query {
             }
             break;
         }
+        case ExpressionVisitor.CLEANUP: {
+            closeLastResult();
+            break;
+        }
         default:
         }
         ExpressionVisitor v2 = visitor.incrementQueryLevel(1);
@@ -1859,6 +1863,8 @@ public class Select extends Query {
                 resetJoinBatchAfterQuery();
 
                 clearHashJoinIndexAfterQuery();
+
+                isEverything(ExpressionVisitor.getCleanupVisitor());
             }
         }
 

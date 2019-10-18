@@ -103,7 +103,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** */
-    private boolean updateMemoryTracker(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
+    private boolean hasAvailableMemory(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
 
         if (memTracker == null)
@@ -345,7 +345,7 @@ public class H2ManagedLocalResult implements LocalResult {
                     distinctRows.put(array, values);
                 }
                 rowCount = distinctRows.size();
-                if (!updateMemoryTracker(array, previous, values)) {
+                if (!hasAvailableMemory(array, previous, values)) {
                     addRowsToDisk();
 
                     distinctRows = null;
@@ -357,7 +357,7 @@ public class H2ManagedLocalResult implements LocalResult {
             rowCount++;
             if (external == null) {
                 rows.add(values);
-                if (!updateMemoryTracker(null, null, values)) {
+                if (!hasAvailableMemory(null, null, values)) {
                     addRowsToDisk();
                 }
             }
@@ -366,11 +366,15 @@ public class H2ManagedLocalResult implements LocalResult {
         }
     }
 
+    /**
+     * Adds rows to disk.
+     */
     private void addRowsToDisk() {
         if (external == null) {
             createExternalResult();
         }
 
+        // We need to release memory before adding to external result to prevent immediate rows spilling.
         if (memTracker != null)
             memTracker.released(memReserved);
 
@@ -481,7 +485,7 @@ public class H2ManagedLocalResult implements LocalResult {
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
-            if (!updateMemoryTracker(null,null, row))
+            if (!hasAvailableMemory(null,null, row))
                 addRowsToDisk();
         }
         if (withTiesSortOrder != null && row != null) {
@@ -489,7 +493,7 @@ public class H2ManagedLocalResult implements LocalResult {
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
-                if (!updateMemoryTracker(null,null, row))
+                if (!hasAvailableMemory(null,null, row))
                     addRowsToDisk();
             }
         }

@@ -75,19 +75,6 @@ public class PlainExternalResult extends AbstractExternalResult {
         return size;
     }
 
-    private void addRowToBuffer(Value[] row) {
-        if (rowBuff == null)
-            rowBuff = new ArrayList<>();
-
-        rowBuff.add(new IgniteBiTuple<>(null, row));
-
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
-
-        memTracker.reserved(delta);
-
-        size++;
-    }
-
     /** {@inheritDoc} */
     @Override public int addRows(Collection<Value[]> rows) {
         if (rows.isEmpty())
@@ -102,6 +89,27 @@ public class PlainExternalResult extends AbstractExternalResult {
         return size;
     }
 
+    /**
+     * Adds row to in-memory buffer.
+     *
+     * @param row Row.
+     */
+    private void addRowToBuffer(Value[] row) {
+        if (rowBuff == null)
+            rowBuff = new ArrayList<>();
+
+        rowBuff.add(new IgniteBiTuple<>(null, row));
+
+        long delta = H2Utils.calculateMemoryDelta(null, null, row);
+
+        memTracker.reserved(delta);
+
+        size++;
+    }
+
+    /**
+     * Spills rows to disk.
+     */
     private void spillRows() {
         if (F.isEmpty(rowBuff))
             return;
@@ -132,6 +140,9 @@ public class PlainExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public synchronized ResultExternal createShallowCopy() {
+        if (parent != null)
+            return parent.createShallowCopy();
+
         onChildCreated();
 
         return new PlainExternalResult(this);

@@ -48,7 +48,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private static final long MAX_CAPACITY = 1L << 59 - 1;
 
     /** */
-    public static final long REMOVED_FLAG = 1L << 63;
+    private static final long REMOVED_FLAG = 1L << 63;
 
     /** */
     private final FileIOFactory fileIOFactory;
@@ -94,9 +94,30 @@ public class ExternalResultHashIndex implements AutoCloseable {
         if (initSize <= MIN_CAPACITY)
             initSize = MIN_CAPACITY;
 
+        // We need at least the half of hash map be empty to minimize collisions number.
         long initCap = Long.highestOneBit(initSize) * 2;
 
         initNewIndexFile(initCap);
+    }
+
+    /**
+     * Shallow copy constructor.
+     * @param parent Parent.
+     */
+    private ExternalResultHashIndex(ExternalResultHashIndex parent) {
+        try {
+            fileIOFactory = parent.fileIOFactory;
+            idxFile = parent.idxFile;
+            fileIo = fileIOFactory.create(idxFile, READ);
+            rowStore = parent.rowStore;
+            cap = parent.cap;
+            entriesCnt = parent.entriesCnt;
+            dir = parent.dir;
+            spillFileName = parent.spillFileName;
+        }
+        catch (IOException e) {
+            throw new IgniteException("Failed to create new hash index.", e);
+        }
     }
 
     /**
@@ -158,13 +179,6 @@ public class ExternalResultHashIndex implements AutoCloseable {
         return entry.rowAddress();
     }
 
-    /** {@inheritDoc} */
-    @Override public void close() throws Exception {
-        U.closeQuiet(fileIo);
-
-        idxFile.delete();
-    }
-
     /**
      * Puts new index entry to the empty slot..
      *
@@ -216,7 +230,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row key.
      * @return Entry row address.
      */
-    private Entry findEntry(ValueRow key) { // TODO return row/address when heeded
+    private Entry findEntry(ValueRow key) {
         int hashCode = key.hashCode();
         long slot = slot(hashCode);
         long initialSlot = slot;
@@ -259,7 +273,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /**
      * Reads hash map entry from the underlying file.
      *
-     * @param slot number of the entry to read. {@code Null} means sequential reading.
+     * @param slot number of the entry to read. {@code -1} means sequential reading.
      * @param fileCh File to read from.
      * @return Byte buffer with data.
      */
@@ -412,6 +426,20 @@ public class ExternalResultHashIndex implements AutoCloseable {
         catch (IOException e) {
             throw new IgniteException("Failed to create an index spill file for the intermediate query results.", e);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() throws Exception {
+        U.closeQuiet(fileIo);
+
+        idxFile.delete();
+    }
+
+    /**
+     * @return Shallow copy.
+     */
+    ExternalResultHashIndex createShallowCopy() {
+        return new ExternalResultHashIndex(this);
     }
 
     /**

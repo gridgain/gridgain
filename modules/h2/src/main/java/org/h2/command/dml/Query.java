@@ -411,8 +411,7 @@ public abstract class Query extends Prepared {
             return queryWithoutCacheLazyCheck(limit, target);
         }
         fireBeforeSelectTriggers();
-        if (noCache || !session.getDatabase().getOptimizeReuseResults() ||
-                (session.isLazyQueryExecution() && !neverLazy)) {
+        if (ignoreCaching()) {
             return queryWithoutCacheLazyCheck(limit, target);
         }
         Value[] params = getParameterValues();
@@ -422,10 +421,10 @@ public abstract class Query extends Prepared {
                     limit == lastLimit) {
                 if (sameResultAsLast(session, params, lastParameters,
                         lastEvaluated)) {
-                    lastResult = lastResult.createShallowCopy(session);
-                    if (lastResult != null) {
-                        lastResult.reset();
-                        return lastResult;
+                    ResultInterface lastResult0 = lastResult.createShallowCopy(session);
+                    if (lastResult0 != null) {
+                        lastResult0.reset();
+                        return lastResult0;
                     }
                 }
             }
@@ -439,7 +438,16 @@ public abstract class Query extends Prepared {
         return r;
     }
 
-    private void closeLastResult() {
+    public boolean ignoreCaching() {
+        return noCache || !session.getDatabase().getOptimizeReuseResults() ||
+                (session.isLazyQueryExecution() && !neverLazy);
+    }
+
+    public ResultInterface getLastResult(){
+        return lastResult;
+    }
+
+    public void closeLastResult() {
         if (lastResult != null) {
             lastResult.close();
         }

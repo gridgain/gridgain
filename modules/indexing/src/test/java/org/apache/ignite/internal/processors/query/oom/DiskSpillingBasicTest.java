@@ -51,18 +51,29 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         final AtomicBoolean stop = new AtomicBoolean();
 
         String[] qrys = new String[] {
+            // Union/intersect.
             "(SELECT * FROM person WHERE depId < 40 " +
                 "INTERSECT " +
                 "SELECT * FROM person WHERE depId > 1 )" +
                 "UNION  " +
                 "SELECT * FROM person WHERE age > 50 ORDER BY id LIMIT 1000 OFFSET 50 ",
 
+            // Unsorted.
             "SELECT p.id, p.name, p.depId, d.title " +
                 "FROM person p, department d " +
                 " WHERE p.depId > d.id",
 
+            // Sorted.
             "SELECT  code, depId, salary, id  " +
-                "FROM person ORDER BY code, salary, id"
+                "FROM person ORDER BY code, salary, id",
+
+            // Distinct
+            "SELECT  DISTINCT code, salary, id  " +
+                "FROM person ORDER BY code, salary, id",
+
+            // Subquery.
+            "SELECT  code, depId, salary, id  " +
+                "FROM person WHERE depId IN (SELECT id FROM person)"
         };
 
         final int qrysSize = qrys.length;
@@ -131,6 +142,8 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         for (Thread runner : runners) {
             try {
                 runner.join(5000);
+
+                assertFalse(runner.isAlive());
             }
             catch (InterruptedException e) {
                 throw new RuntimeException("Can not stop thread:" + Arrays.toString(runner.getStackTrace()));

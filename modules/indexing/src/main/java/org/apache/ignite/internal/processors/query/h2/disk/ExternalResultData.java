@@ -44,14 +44,14 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * Spill file IO.
  */
 @SuppressWarnings("ForLoopReplaceableByForEach")
-public class ExternalResultData {
+public class ExternalResultData implements AutoCloseable {
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
 
     /** Serialized row header size. */
     private static final int ROW_HEADER_SIZE = Integer.BYTES * 2; // Row length in bytes + column count.
 
-    /** */
+    /** Default row size in bytes. */
     private static final int DEFAULT_ROW_SIZE = 512;
 
     /** */
@@ -87,8 +87,10 @@ public class ExternalResultData {
     /** Sorted chunks addresses on the disk. */
     private final Collection<Chunk> chunks = new ArrayList<>();
 
+    /** Reusable header buffer. */
     private final ByteBuffer headReadBuff = ByteBuffer.allocate(ROW_HEADER_SIZE);
 
+    /** Data buffer. */
     private ByteBuffer readBuff;
 
     /**
@@ -126,6 +128,30 @@ public class ExternalResultData {
         }
     }
 
+    /**
+     * @param parent Parent external data.
+     */
+    private ExternalResultData(ExternalResultData parent) {
+        try {
+            log = parent.log;
+            file = parent.file;
+            fileIOFactory = parent.fileIOFactory;
+            fileIo = fileIOFactory.create(file, READ);
+            if (parent.hashIdx != null)
+                hashIdx = parent.hashIdx.createShallowCopy();
+            else
+                hashIdx = null;
+        }
+        catch (IOException e) {
+            throw new IgniteException("Failed to create external result data.", e);
+        }
+    }
+
+    /**
+     * Stores rows into the file.
+     *
+     * @param rows Rows to store.
+     */
     public void store(Collection<Map.Entry<ValueRow, Value[]>> rows) {
         long initFilePos = lastWrittenPos;
 
@@ -134,14 +160,14 @@ public class ExternalResultData {
         for (Map.Entry<ValueRow, Value[]> row : rows)
             writeToFile(row);
 
-        System.out.println("write to file size=" + rows.size());
-
-        if (rows.size() == 1)
-            System.out.println("write to file size!!!!!=" + rows.size());
-
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
     }
 
+    /**
+     * Writes row to file.
+     *
+     * @param row Row.
+     */
     private void writeToFile(Map.Entry<ValueRow, Value[]> row) {
         writeBuff.reset();
 
@@ -179,6 +205,12 @@ public class ExternalResultData {
         lastWrittenPos = currentFilePosition();
     }
 
+    /**
+     * Marks row as removed.
+     *
+     * @param row Row.
+     * @return {@code True} if row was actually removed.
+     */
     public boolean remove(ValueRow row) {
         assert hashIdx != null;
         assert row != null;
@@ -193,6 +225,11 @@ public class ExternalResultData {
         return true;
     }
 
+    /**
+     * Updates row header as removed.
+     *
+     * @param addr Row address.
+     */
     private void markRemoved(long addr) {
         try {
             fileIo.position(addr + TOMBSTONE_OFFSET); // Skip total length and go to the column count.
@@ -205,7 +242,12 @@ public class ExternalResultData {
         }
     }
 
-
+    /**
+     * Checks if row is contained by the file.
+     *
+     * @param row Row.
+     * @return {@code True} if file contains the row.
+     */
     public boolean contains(ValueRow row) {
         assert hashIdx != null;
         assert row != null;
@@ -213,11 +255,17 @@ public class ExternalResultData {
         return hashIdx.contains(row);
     }
 
-    public Map.Entry<ValueRow, Value[]> get(ValueRow row) {
+    /**
+     * Reads key from the file by its key.
+     *
+     * @param key Row key.
+     * @return Row.
+     */
+    public Map.Entry<ValueRow, Value[]> get(ValueRow key) {
         assert hashIdx != null;
-        assert row != null;
+        assert key != null;
 
-        long addr = hashIdx.get(row);
+        long addr = hashIdx.get(key);
 
         if (addr < 0)
             return null;
@@ -225,10 +273,19 @@ public class ExternalResultData {
         return readRowFromFile(addr);
     }
 
+    /**
+     * @return Next row.
+     */
     Map.Entry<ValueRow, Value[]> readRowFromFile() {
         return readRowFromFile(currentFilePosition());
     }
 
+    /**
+     * Reads row from the given position.
+     *
+     * @param pos Row position.
+     * @return Row.
+     */
     Map.Entry<ValueRow, Value[]> readRowFromFile(long pos) {
         // 1. Read header.
         setFilePosition(pos);
@@ -282,6 +339,11 @@ public class ExternalResultData {
 
     }
 
+    /**
+     * Reads data from file into the buffer.
+     *
+     * @param buff Buffer.
+     */
     private void readFromFile(ByteBuffer buff) {
         try {
             fileIo.readFully(buff);
@@ -349,22 +411,33 @@ public class ExternalResultData {
     /**
      * Sets position in file on the beginning.
      */
-    protected void rewindFile() {
+    void rewindFile() {
         setFilePosition(0);
     }
 
-    public Collection<Chunk> chunks() {
+    /**
+     * @return File chunks.
+     */
+    Collection<Chunk> chunks() {
         return chunks;
     }
 
-    void close() {
-        U.closeQuiet(fileIo); //TODO shallow copy?
+    /** {@inheritDoc} */
+    @Override public void close() {
+        U.closeQuiet(fileIo);
         file.delete();
 
         U.closeQuiet(hashIdx);
 
         if (log.isDebugEnabled())
             log.debug("Deleted spill file "+ file.getName());
+    }
+
+    /**
+     * @return Shallow copy.
+     */
+    ExternalResultData createShallowCopy() {
+        return new ExternalResultData(this);
     }
 
     /**

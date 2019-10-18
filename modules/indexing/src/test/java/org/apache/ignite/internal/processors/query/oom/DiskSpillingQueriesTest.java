@@ -25,12 +25,6 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
- * TODO Refactor AbstractExternalResult
- * TODO Shallow copy of ManagedResult - how to handle memory reserved by the result set detached from the query?
- * TODO Move tracker outside of external result.
- * TODO Memory tracking overhaul - see Andrey's notes in PR.
- * TODO Tests for huge results
- * TODO Unit tests?
  */
 @RunWith(Parameterized.class)
 public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
@@ -139,16 +133,44 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void simpleSubSelect() {
+    public void simpleSubSelectIn() {
         assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
             "FROM person WHERE depId IN (SELECT id FROM department)");
     }
 
     /** */
     @Test
-    public void simpleSubSelectLazy() {
+    public void simpleSubSelectInLazy() {
         assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
             "FROM person WHERE depId IN (SELECT id FROM department) ORDER BY salary DESC");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectExists() {
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department)");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectExistsLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department) ORDER BY salary DESC");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelect() {
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
+            "FROM person WHERE age = (SELECT MAX(age) FROM (SELECT * FROM Person) WHERE id=age)");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department) ORDER BY salary DESC");
     }
 
     /** */

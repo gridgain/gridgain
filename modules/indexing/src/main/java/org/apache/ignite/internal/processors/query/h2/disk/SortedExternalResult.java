@@ -61,7 +61,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     /** In-memory buffer for gathering rows before spilling to disk. */
     private ArrayList<Value[]> unsortedRowsBuf;
 
-    /**  Result queue. */
+    /** Result queue. */
     private Queue<ExternalResultData.Chunk> resQueue;
 
     /**
@@ -99,7 +99,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     /**
      * @param parent Parent.
      */
-    private SortedExternalResult(SortedExternalResult parent) { // TODO shallow copy
+    private SortedExternalResult(SortedExternalResult parent) {
         super(parent);
 
         distinct = parent.distinct;
@@ -107,7 +107,6 @@ public class SortedExternalResult extends AbstractExternalResult {
         visibleColCnt = parent.visibleColCnt;
         sort = parent.sort;
         cmp = parent.cmp;
-        //hashIdx = parent.hashIdx;
     }
 
     /** {@inheritDoc} */
@@ -159,7 +158,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * Checks if current result contains given row with sort order check.
      *
      * @param row Row.
-     * @return {@code True} if current result does not contain the given row.
+     * @return {@code True} if current result contains the given row.
      */
     private boolean containsRowWithOrderCheck(Value[] row) {
         assert unsortedRowsBuf == null;
@@ -170,7 +169,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
         if (previous != null) {
             if (sort != null && sort.compare(previous, row) > 0) {
-                data.remove(distKey); // It is need to replace old row with a new one because of sort order.
+                sortedRowsBuf.remove(distKey); // It is need to replace old row with a new one because of sort order.
 
                 size--;
 
@@ -198,7 +197,11 @@ public class SortedExternalResult extends AbstractExternalResult {
         return true;
     }
 
-
+    /**
+     * @param distinct Distinct flag.
+     * @param distinctIndexes Distinct indexes.
+     * @return {@code True} if this is a distinct result.
+     */
     private static boolean isDistinct(boolean distinct, int[] distinctIndexes) {
         return distinct || distinctIndexes != null;
     }
@@ -328,17 +331,11 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
     }
 
-
-
-    /** {@inheritDoc} */
-    @Override protected void onClose() {
-        super.onClose();
-
-        //U.closeQuiet(hashIdx);
-    }
-
     /** {@inheritDoc} */
     @Override public synchronized ResultExternal createShallowCopy() {
+        if (parent != null)
+            return parent.createShallowCopy();
+
         onChildCreated();
 
         return new SortedExternalResult(this);
