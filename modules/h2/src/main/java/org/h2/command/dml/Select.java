@@ -831,114 +831,131 @@ public class Select extends Query {
                 limitRows != 0 && !fetchPercent && !withTies && offset == 0 && isReadOnly();
         int columnCount = expressions.size();
         LocalResult result = null;
-        if (!lazy && (target == null ||
+        try {
+            if (!lazy && (target == null ||
                 !session.getDatabase().getSettings().optimizeInsertFromSelect)) {
-            result = createLocalResult(result);
-        }
-        // Do not add rows before OFFSET to result if possible
-        boolean quickOffset = !fetchPercent;
-        if (sort != null && (!sortUsingIndex || isAnyDistinct())) {
-            result = createLocalResult(result);
-            result.setSortOrder(sort);
-            if (!sortUsingIndex) {
-                quickOffset = false;
+                result = createLocalResult(result);
             }
-        }
-        if (distinct) {
-            if (!isDistinctQuery) {
+            // Do not add rows before OFFSET to result if possible
+            boolean quickOffset = !fetchPercent;
+            if (sort != null && (!sortUsingIndex || isAnyDistinct())) {
+                result = createLocalResult(result);
+                result.setSortOrder(sort);
+                if (!sortUsingIndex) {
+                    quickOffset = false;
+                }
+            }
+            if (distinct) {
+                if (!isDistinctQuery) {
+                    quickOffset = false;
+                    result = createLocalResult(result);
+                    result.setDistinct();
+                }
+            }
+            else if (distinctExpressions != null) {
                 quickOffset = false;
                 result = createLocalResult(result);
-                result.setDistinct();
+                result.setDistinct(distinctIndexes);
             }
-        } else if (distinctExpressions != null) {
-            quickOffset = false;
-            result = createLocalResult(result);
-            result.setDistinct(distinctIndexes);
-        }
-        if (isWindowQuery || isGroupQuery && !isGroupSortedQuery) {
-            result = createLocalResult(result);
-        }
-        if (!lazy && (limitRows >= 0 || offset > 0)) {
-            result = createLocalResult(result);
-        }
-        topTableFilter.startQuery(session);
-        topTableFilter.reset();
-        boolean exclusive = isForUpdate && !isForUpdateMvcc;
-        topTableFilter.lock(session, exclusive, exclusive);
-        ResultTarget to = result != null ? result : target;
-        lazy &= to == null;
-        LazyResult lazyResult = null;
-        if (limitRows != 0) {
-            // Cannot apply limit now if percent is specified
-            int limit = fetchPercent ? -1 : limitRows;
-            try {
-                if (isQuickAggregateQuery) {
-                    queryQuick(columnCount, to, quickOffset && offset > 0);
-                } else if (isWindowQuery) {
-                    if (isGroupQuery) {
-                        queryGroupWindow(columnCount, result, offset, quickOffset);
-                    } else {
-                        queryWindow(columnCount, result, offset, quickOffset);
+            if (isWindowQuery || isGroupQuery && !isGroupSortedQuery) {
+                result = createLocalResult(result);
+            }
+            if (!lazy && (limitRows >= 0 || offset > 0)) {
+                result = createLocalResult(result);
+            }
+            topTableFilter.startQuery(session);
+            topTableFilter.reset();
+            boolean exclusive = isForUpdate && !isForUpdateMvcc;
+            topTableFilter.lock(session, exclusive, exclusive);
+            ResultTarget to = result != null ? result : target;
+            lazy &= to == null;
+            LazyResult lazyResult = null;
+            if (limitRows != 0) {
+                // Cannot apply limit now if percent is specified
+                int limit = fetchPercent ? -1 : limitRows;
+                try {
+                    if (isQuickAggregateQuery) {
+                        queryQuick(columnCount, to, quickOffset && offset > 0);
                     }
-                } else if (isGroupQuery) {
-                    if (isGroupSortedQuery) {
-                        lazyResult = queryGroupSorted(columnCount, to, offset, quickOffset);
-                    } else {
-                        queryGroup(columnCount, result, offset, quickOffset);
+                    else if (isWindowQuery) {
+                        if (isGroupQuery) {
+                            queryGroupWindow(columnCount, result, offset, quickOffset);
+                        }
+                        else {
+                            queryWindow(columnCount, result, offset, quickOffset);
+                        }
                     }
-                } else if (isDistinctQuery) {
-                    queryDistinct(to, offset, limit, withTies, quickOffset);
-                } else {
-                    lazyResult = queryFlat(columnCount, to, offset, limit, withTies, quickOffset);
+                    else if (isGroupQuery) {
+                        if (isGroupSortedQuery) {
+                            lazyResult = queryGroupSorted(columnCount, to, offset, quickOffset);
+                        }
+                        else {
+                            queryGroup(columnCount, result, offset, quickOffset);
+                        }
+                    }
+                    else if (isDistinctQuery) {
+                        queryDistinct(to, offset, limit, withTies, quickOffset);
+                    }
+                    else {
+                        lazyResult = queryFlat(columnCount, to, offset, limit, withTies, quickOffset);
+                    }
+                    if (quickOffset) {
+                        offset = 0;
+                    }
                 }
-                if (quickOffset) {
-                    offset = 0;
-                }
-            } finally {
-                if (!lazy) {
-                    resetJoinBatchAfterQuery();
+                finally {
+                    if (!lazy) {
+                        resetJoinBatchAfterQuery();
+                    }
                 }
             }
-        }
-        assert lazy == (lazyResult != null): lazy;
-        if (lazyResult != null) {
-            if (limitRows > 0) {
-                lazyResult.setLimit(limitRows);
-            }
-            if (randomAccessResult) {
-                return convertToDistinct(lazyResult);
-            } else {
-                return lazyResult;
-            }
-        }
-        if (offset != 0) {
-            if (offset > Integer.MAX_VALUE) {
-                throw DbException.getInvalidValueException("OFFSET", offset);
-            }
-            result.setOffset((int) offset);
-        }
-        if (limitRows >= 0) {
-            result.setLimit(limitRows);
-            result.setFetchPercent(fetchPercent);
-            if (withTies) {
-                result.setWithTies(sort);
-            }
-        }
-        if (result != null) {
-            result.done();
-            if (randomAccessResult && !distinct) {
-                result = convertToDistinct(result);
-            }
-            if (target != null) {
-                while (result.next()) {
-                    target.addRow(result.currentRow());
+            assert lazy == (lazyResult != null) : lazy;
+            if (lazyResult != null) {
+                if (limitRows > 0) {
+                    lazyResult.setLimit(limitRows);
                 }
+                if (randomAccessResult) {
+                    return convertToDistinct(lazyResult);
+                }
+                else {
+                    return lazyResult;
+                }
+            }
+            if (offset != 0) {
+                if (offset > Integer.MAX_VALUE) {
+                    throw DbException.getInvalidValueException("OFFSET", offset);
+                }
+                result.setOffset((int)offset);
+            }
+            if (limitRows >= 0) {
+                result.setLimit(limitRows);
+                result.setFetchPercent(fetchPercent);
+                if (withTies) {
+                    result.setWithTies(sort);
+                }
+            }
+            if (result != null) {
+                result.done();
+                if (randomAccessResult && !distinct) {
+                    result = convertToDistinct(result);
+                }
+                if (target != null) {
+                    while (result.next()) {
+                        target.addRow(result.currentRow());
+                    }
+                    result.close();
+                    return null;
+                }
+                return result;
+            }
+            return null;
+        }
+        catch (Throwable e) {
+            if (result != null)
                 result.close();
-                return null;
-            }
-            return result;
+
+            throw e;
         }
-        return null;
     }
 
     private void disableLazyForJoinSubqueries(final TableFilter top) {

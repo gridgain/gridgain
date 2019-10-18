@@ -73,7 +73,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
 
             // Subquery.
             "SELECT  code, depId, salary, id  " +
-                "FROM person WHERE depId IN (SELECT id FROM person)"
+                "FROM person WHERE depId IN (SELECT id FROM department)"
         };
 
         final int qrysSize = qrys.length;
@@ -141,7 +141,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
 
         for (Thread runner : runners) {
             try {
-                runner.join(5000);
+                runner.join(60_000);
 
                 assertFalse(runner.isAlive());
             }
