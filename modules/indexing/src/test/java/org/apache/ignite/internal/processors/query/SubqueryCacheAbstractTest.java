@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -27,7 +28,6 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.junit.Assert;
 
 /** */
 public abstract class SubqueryCacheAbstractTest extends AbstractIndexingCommonTest {
@@ -53,6 +53,14 @@ public abstract class SubqueryCacheAbstractTest extends AbstractIndexingCommonTe
         startGrid(0);
 
         createSchema();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        for (String name : Arrays.asList(OUTER_TBL, INNER_TBL))
+            grid(0).cache(name).clear();
 
         populateData();
     }
@@ -70,8 +78,8 @@ public abstract class SubqueryCacheAbstractTest extends AbstractIndexingCommonTe
         createCache(INNER_TBL, Collections.singleton(new QueryEntity(Long.class.getName(), "B_VAL")
             .setTableName(INNER_TBL)
             .addQueryField("ID", Long.class.getName(), null)
-            .addQueryField("A_JID", Long.class.getName(), null)
-            .addQueryField("VAL0", String.class.getName(), null)
+            .addQueryField("JID", Long.class.getName(), null)
+            .addQueryField("VAL", String.class.getName(), null)
             .setKeyFieldName("ID")
         ));
     }
@@ -108,26 +116,9 @@ public abstract class SubqueryCacheAbstractTest extends AbstractIndexingCommonTe
 
         for (long i = 1; i <= INNER_SIZE; ++i)
             cacheB.put(i, grid(0).binary().builder("B_VAL")
-                .setField("A_JID", i)
-                .setField("VAL0", String.format("val%03d", i))
+                .setField("JID", i)
+                .setField("VAL", String.format("val%03d", i))
                 .build());
-
-    }
-
-    /**
-     * @param qry Query.
-     * @param expCallCnt Expected callable count.
-     */
-    private void verify(String qry, long expCallCnt) {
-        TestSQLFunctions.CALL_CNT.set(0);
-
-        FieldsQueryCursor<List<?>> res = sql(qry);
-
-        Assert.assertEquals(0, TestSQLFunctions.CALL_CNT.get());
-
-        res.getAll();
-
-        Assert.assertEquals(expCallCnt, TestSQLFunctions.CALL_CNT.get());
     }
 
     /**

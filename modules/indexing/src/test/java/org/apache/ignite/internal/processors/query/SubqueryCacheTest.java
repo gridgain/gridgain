@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,7 +31,7 @@ public class SubqueryCacheTest extends SubqueryCacheAbstractTest {
      */
     @Test
     public void testOptimizationInClause() {
-        verify("SELECT * FROM " + OUTER_TBL + " WHERE JID IN (SELECT ID FROM "
+        verifySubQueryInvocationCount("SELECT * FROM " + OUTER_TBL + " WHERE JID IN (SELECT ID FROM "
             + INNER_TBL + " WHERE det_foo(ID) = ID)", INNER_SIZE);
     }
 
@@ -43,7 +44,7 @@ public class SubqueryCacheTest extends SubqueryCacheAbstractTest {
      */
     @Test
     public void testOptimizationSelectExpr() {
-        verify("SELECT (SELECT det_foo(ID) FROM " + INNER_TBL + " WHERE ID = 1) FROM " + OUTER_TBL, OUTER_SIZE);
+        verifySubQueryInvocationCount("SELECT (SELECT det_foo(ID) FROM " + INNER_TBL + " WHERE ID = 1) FROM " + OUTER_TBL, OUTER_SIZE);
     }
 
     /**
@@ -55,7 +56,7 @@ public class SubqueryCacheTest extends SubqueryCacheAbstractTest {
      */
     @Test
     public void testOptimizationTblExpr() {
-        verify("SELECT * FROM " + OUTER_TBL + ", (SELECT det_foo(A_JID) as I_ID FROM " + INNER_TBL
+        verifySubQueryInvocationCount("SELECT * FROM " + OUTER_TBL + ", (SELECT det_foo(JID) as I_ID FROM " + INNER_TBL
                 + ") WHERE ID = I_ID", (INNER_SIZE + 1) * OUTER_SIZE);
     }
 
@@ -64,7 +65,7 @@ public class SubqueryCacheTest extends SubqueryCacheAbstractTest {
      */
     @Test
     public void testOptimizationNotWorkWithNonDetermenisticFunctions() {
-        verify("SELECT * FROM " + OUTER_TBL + " WHERE JID IN (SELECT ID FROM "
+        verifySubQueryInvocationCount("SELECT * FROM " + OUTER_TBL + " WHERE JID IN (SELECT ID FROM "
             + INNER_TBL + " WHERE nondet_foo(ID) = ID)", INNER_SIZE * OUTER_SIZE);
     }
 
@@ -73,15 +74,79 @@ public class SubqueryCacheTest extends SubqueryCacheAbstractTest {
      */
     @Test
     public void testOptimizationNotWorkWithCorrelatedQry() {
-        verify("SELECT * FROM " + OUTER_TBL + " as O WHERE JID IN (SELECT ID FROM "
+        verifySubQueryInvocationCount("SELECT * FROM " + OUTER_TBL + " as O WHERE JID IN (SELECT ID FROM "
             + INNER_TBL + " WHERE det_foo(ID) = ID OR O.ID = -ID)", INNER_SIZE * OUTER_SIZE);
+    }
+
+    /**
+     * Ensure that cache remove is reflected by cached subquery
+     */
+    @Test
+    public void testCacheClearCauseSubQueryReExecuting() {
+        verifySuqQueryResult(OUTER_SIZE - 1, () -> grid(0).cache(INNER_TBL).remove(4L));
+    }
+
+    /**
+     * Ensure that cache clear is reflected by cached subquery
+     */
+    @Test
+    public void testRemoveCauseSubQueryReExecuting() {
+        verifySuqQueryResult(0, grid(0).cache(INNER_TBL)::clear);
+    }
+
+    /**
+     * Ensure that cache update is reflected by cached subquery
+     */
+    @Test
+    public void testUpdateCauseSubQueryReExecuting() {
+        verifySuqQueryResult(OUTER_SIZE - 3, () -> {
+            IgniteCache<Long, Object> cache = grid(0).cache(INNER_TBL).withKeepBinary();
+
+            for (long i = 1; i < 4; i++)
+                cache.put(i, cache.get(INNER_SIZE - i - 1));
+        });
+    }
+
+    /**
+     * @param expResSize Expected result size.
+     * @param action Action.
+     */
+    private void verifySuqQueryResult(int expResSize, Runnable action) {
+        String qry = "SELECT * FROM " + OUTER_TBL + " WHERE JID IN (SELECT JID FROM "
+            + INNER_TBL + " WHERE ID = det_foo(ID))";
+
+        TestSQLFunctions.CALL_CNT.set(0);
+
+        // gets query cached
+        for (int i = 0; i < 10; i++) {
+            List<List<?>> res = sql(qry).getAll();
+
+            Assert.assertEquals(OUTER_SIZE, res.size());
+        }
+
+        IgniteCache<?, ?> innerCache = grid(0).cache(INNER_TBL);
+
+        // just to be sure that whole query was eventually cached
+        Assert.assertTrue(10 * innerCache.size() > TestSQLFunctions.CALL_CNT.get());
+
+        long oldCnt = TestSQLFunctions.CALL_CNT.get();
+
+        action.run();
+
+        {
+            List<List<?>> res = sql(qry).getAll();
+
+            Assert.assertEquals(expResSize, res.size());
+        }
+
+        Assert.assertEquals(oldCnt + innerCache.size(), TestSQLFunctions.CALL_CNT.get());
     }
 
     /**
      * @param qry Query.
      * @param expCallCnt Expected callable count.
      */
-    private void verify(String qry, long expCallCnt) {
+    private void verifySubQueryInvocationCount(String qry, long expCallCnt) {
         TestSQLFunctions.CALL_CNT.set(0);
 
         FieldsQueryCursor<List<?>> res = sql(qry);

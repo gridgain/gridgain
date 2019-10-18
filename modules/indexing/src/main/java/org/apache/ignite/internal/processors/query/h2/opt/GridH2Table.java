@@ -171,6 +171,9 @@ public class GridH2Table extends TableBase {
     @GridToStringExclude
     private IgniteLogger log;
 
+    /** Last modification id. */
+    private volatile long lastModificationId;
+
     /**
      * Creates table.
      *
@@ -779,6 +782,8 @@ public class GridH2Table extends TableBase {
                     for (GridH2IndexBase idx : tmpIdxs.values())
                         addToIndex(idx, row0, prevRow0);
                 }
+
+                lastModificationId = database.getNextModificationDataId();
             }
             finally {
                 unlock(false);
@@ -823,6 +828,8 @@ public class GridH2Table extends TableBase {
                 }
 
                 size.decrement();
+
+                lastModificationId = database.getNextModificationDataId();
             }
 
             return rmv;
@@ -1181,7 +1188,7 @@ public class GridH2Table extends TableBase {
 
     /** {@inheritDoc} */
     @Override public long getMaxDataModificationId() {
-        return 0;
+        return lastModificationId;
     }
 
     /** {@inheritDoc} */
