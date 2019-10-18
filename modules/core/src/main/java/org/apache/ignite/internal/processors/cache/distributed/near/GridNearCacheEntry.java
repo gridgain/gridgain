@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheE
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -458,15 +457,11 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     /** {@inheritDoc} */
     @Override protected void storeValue(CacheObject val, long expireTime, GridCacheVersion ver) {
         // No-op: queries are disabled for near cache.
-        // TODO: Can happen with TX? Check it.
-        System.out.println("storeValue: " + val);
     }
 
     /** {@inheritDoc} */
     @Override protected void removeValue() {
         // No-op.
-        // TODO: ??
-        System.out.println("removeValue: " + val);
     }
 
     /** {@inheritDoc} */
@@ -481,23 +476,9 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override protected void value(@Nullable CacheObject val) {
-        // TODO: Happens in Atomic caches
-        try {
-            if (val != null) {
-                // this.cctx.kernalContext().platform().context().
-                byte[] valBytes = val.valueBytes(this.cctx.cacheObjectContext());
-                StringBuilder v = new StringBuilder();
-                for (byte b : valBytes) {
-                    v.append(" ").append(b);
-                }
-                System.out.println("GridNearCacheEntry.value: " + v.toString());
-            } else {
-                System.out.println("GridNearCacheEntry.value: NULL");
-            }
-        } catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
+        // this.cctx.kernalContext().platform().context().
         super.value(val);
     }
 
