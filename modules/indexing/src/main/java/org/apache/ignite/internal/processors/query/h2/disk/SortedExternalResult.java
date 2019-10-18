@@ -64,9 +64,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     /** Result queue. */
     private Queue<ExternalResultData.Chunk> resQueue;
 
-    /**
-     * Comparator for {@code sortedRowsBuf}.
-     */
+    /**  Comparator for {@code sortedRowsBuf}. It is used to prevent duplicated rows keys in {@code sortedRowsBuf}. */
     private Comparator<Value> cmp;
 
     /**
@@ -232,7 +230,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
         // Check on-disk
         if (data.remove(key))
-             size--;
+            --size;
 
         return size;
     }

@@ -23,7 +23,7 @@ import org.h2.result.ResultExternal;
 import org.h2.result.ResultInterface;
 
 /**
- * Basic class for external result. Contains common methods for file IO.
+ * Basic class for external result.
  */
 @SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
 public abstract class AbstractExternalResult implements ResultExternal {

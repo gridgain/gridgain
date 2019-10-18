@@ -185,7 +185,7 @@ public class ExternalResultData implements AutoCloseable {
         writeBuff.checkCapacity(writeBuff.getValueLen(rowKey));
         writeBuff.writeValue(rowKey);
 
-        // 3. Write row value
+        // 3. Write row value.
         int len = 0;
         for (int i = 0; i < rowVal.length; i++)
             len += writeBuff.getValueLen(rowKey);
