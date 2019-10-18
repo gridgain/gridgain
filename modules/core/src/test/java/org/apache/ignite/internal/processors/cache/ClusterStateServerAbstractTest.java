@@ -41,20 +41,18 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     /**
      * Tests that deactivation is prohibited if explicit lock is held in current thread.
      *
-     * @throws Exception If fails.
      */
     @Test
-    public void testDeactivationWithPendingLock() throws Exception {
+    public void testDeactivationWithPendingLock() {
         changeClusterStateWithPendingLock(INACTIVE, FAILED_DEACTIVATE_MSG);
     }
 
     /**
      * Tests that enabling read-only mode is prohibited if explicit lock is held in current thread.
      *
-     * @throws Exception If fails.
      */
     @Test
-    public void testReadOnlyWithPendingLock() throws Exception {
+    public void testReadOnlyWithPendingLock() {
         changeClusterStateWithPendingLock(READ_ONLY, FAILED_READ_ONLY_MSG);
     }
 
@@ -167,11 +165,8 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
      *
      * @param newState New cluster state.
      * @param exceptionMsg Exception message.
-     * @throws Exception If fails.
      */
-    private void changeClusterStateWithPendingLock(ClusterState newState, String exceptionMsg) throws Exception {
-        startGrids(GRID_CNT);
-
+    private void changeClusterStateWithPendingLock(ClusterState newState, String exceptionMsg) {
         grid(0).cluster().state(ACTIVE);
 
         Lock lock = grid(0).cache(CACHE_NAME).lock(1);

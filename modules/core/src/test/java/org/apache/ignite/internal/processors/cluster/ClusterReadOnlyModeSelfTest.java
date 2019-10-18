@@ -210,33 +210,6 @@ public class ClusterReadOnlyModeSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testEnableReadOnlyModeInsideTransactionFailed() throws Exception {
-        IgniteEx grid = startGrid(0);
-
-        grid.cluster().state(ACTIVE);
-
-        GridTestUtils.assertThrows(
-            log,
-            () -> {
-                Transaction tx = grid.transactions().txStart();
-
-                try {
-                    grid.cluster().state(READ_ONLY);
-
-                    return null;
-                }
-                finally {
-                    tx.commit();
-                }
-            },
-            IgniteException.class,
-            "Failed to read-only (must invoke the method outside of an active transaction)."
-        );
-
-    }
-
-    /** */
-    @Test
     public void testIgniteUtilityCacheAvailableForUpdatesOnReadOnlyCluster() throws Exception {
         IgniteEx grid = startGrid(0);
 
