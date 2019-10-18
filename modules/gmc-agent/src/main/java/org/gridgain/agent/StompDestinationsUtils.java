@@ -40,6 +40,9 @@ public class StompDestinationsUtils {
     /** Metrics destination. */
     private static final String METRICS_DEST = "/app/agent/metrics/%s/add";
 
+    /** Events destination. */
+    private static final String EVENTS_DEST = "/app/agent/events/%s/add";
+
     /**
      * @param clusterId Cluster id.
      * @return Cluster topology destination.
@@ -69,6 +72,13 @@ public class StompDestinationsUtils {
      */
     public static String buildMetricsDest(UUID clusterId) {
         return String.format(METRICS_DEST, clusterId);
+    }
+
+    /**
+     * @return Events destination.
+     */
+    public static String buildEventsDest(UUID clusterId) {
+        return String.format(EVENTS_DEST, clusterId);
     }
 
     /**

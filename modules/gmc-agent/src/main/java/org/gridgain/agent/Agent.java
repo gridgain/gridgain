@@ -41,6 +41,8 @@ import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.action.Request;
 import org.gridgain.service.ActionService;
 import org.gridgain.service.ClusterService;
+import org.gridgain.service.event.EventsExporter;
+import org.gridgain.service.event.EventsService;
 import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.config.NodeConfigurationService;
@@ -82,14 +84,17 @@ public class Agent extends ManagementConsoleProcessor {
     /** Span exporter. */
     private GmcSpanExporter spanExporter;
 
-    /** Node configuration exporter. */
-    private NodeConfigurationExporter nodeConfigurationExporter;
+    /** Events exporter. */
+    private EventsExporter evtsExporter;
 
     /** Metric service. */
     private MetricsService metricSrvc;
 
     /** Action service. */
     private ActionService actSrvc;
+
+    /** Event service. */
+    private EventsService evtSrvc;
 
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
@@ -115,15 +120,19 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        spanExporter = new GmcSpanExporter(ctx);
-        nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
         metaStorage = ctx.distributedMetastorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
         ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
-        nodeConfigurationExporter.export();
+
+        try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
+            exporter.export();
+        }
+
+        spanExporter = new GmcSpanExporter(ctx);
+        evtsExporter = new EventsExporter(ctx);
     }
 
     /** {@inheritDoc} */
@@ -135,8 +144,9 @@ public class Agent extends ManagementConsoleProcessor {
         U.shutdownNow(this.getClass(), connectPool, log);
 
         U.closeQuiet(actSrvc);
-        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
+        U.closeQuiet(evtsExporter);
+        U.closeQuiet(evtSrvc);
         U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
@@ -250,6 +260,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.closeQuiet(actSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
+        U.closeQuiet(evtSrvc);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
@@ -264,6 +275,7 @@ public class Agent extends ManagementConsoleProcessor {
         clusterSrvc = new ClusterService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
+        evtSrvc = new EventsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actSrvc = new ActionService(ctx, mgr);
 
