@@ -16,31 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.concurrent.Callable;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
  * Utility class for ClusterState* tests.
  */
 class ClusterStateTestUtils {
-    /** */
-    static final String FAILED_ACTIVATE_MSG =
-        "Failed to activate cluster (must invoke the method outside of an active transaction).";
-
-    /** */
-    static final String FAILED_DEACTIVATE_MSG =
-        "Failed to deactivate cluster (must invoke the method outside of an active transaction).";
-
-    /** */
-    static final String FAILED_READ_ONLY_MSG =
-        "Failed to activate cluster in read-only mode (must invoke the method outside of an active transaction).";
-
     /**
      * @param cacheName Cache name.
      * @return Partitioned cache configuration with 1 backup.
@@ -69,19 +54,6 @@ class ClusterStateTestUtils {
         ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
 
         return ccfg;
-    }
-
-    /**
-     * @param ignite Cluster node.
-     * @param state New cluster state.
-     * @return Callable which tries to change cluster state to {@code state} from {@code ignite} node.
-     */
-    static Callable<Object> changeState(Ignite ignite, ClusterState state) {
-        return () -> {
-            ignite.cluster().state(state);
-
-            return null;
-        };
     }
 
     /** */

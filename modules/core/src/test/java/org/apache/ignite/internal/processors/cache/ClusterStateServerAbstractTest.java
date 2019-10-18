@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -29,15 +30,24 @@ import org.junit.Test;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
-import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.FAILED_ACTIVATE_MSG;
-import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.FAILED_DEACTIVATE_MSG;
-import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.FAILED_READ_ONLY_MSG;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 
 /**
  *
  */
 public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstractTest {
+    /** */
+    private static final String FAILED_DEACTIVATE_MSG =
+        "Failed to deactivate cluster (must invoke the method outside of an active transaction).";
+
+    /** */
+    private static final String FAILED_ACTIVATE_MSG =
+        "Failed to activate cluster (must invoke the method outside of an active transaction).";
+
+    /** */
+    private static final String FAILED_READ_ONLY_MSG =
+        "Failed to activate cluster in read-only mode (must invoke the method outside of an active transaction).";
+
     /**
      * Tests that deactivation is prohibited if explicit lock is held in current thread.
      */
@@ -126,6 +136,11 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
         }
     }
 
+    /** {@inheritDoc} */
+    @Override protected void changeState(ClusterState state) {
+        grid(0).cluster().state(state);
+    }
+
     /** */
     private void changeStateWithPendingTransaction(
         ClusterState state,
@@ -142,7 +157,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
                 cache0.put(1, "1");
 
             //noinspection ThrowableNotThrown
-            assertThrowsAnyCause(log, ClusterStateTestUtils.changeState(grid(0), state), IgniteException.class, exceptionMsg);
+            assertThrowsAnyCause(log, changeStateClo(state), IgniteException.class, exceptionMsg);
         }
 
         assertNotSame(state, grid(0).cluster().state());
@@ -168,10 +183,22 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
 
         try {
             //noinspection ThrowableNotThrown
-            assertThrowsAnyCause(log, ClusterStateTestUtils.changeState(grid(0), newState), IgniteException.class, exceptionMsg);
+            assertThrowsAnyCause(log, changeStateClo(newState), IgniteException.class, exceptionMsg);
         }
         finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * @param state New cluster state.
+     * @return Callable which tries to change cluster state to {@code state} from {@code ignite} node.
+     */
+    Callable<Object> changeStateClo(ClusterState state) {
+        return () -> {
+            grid(0).cluster().state(state);
+
+            return null;
+        };
     }
 }

@@ -19,25 +19,17 @@ package org.apache.ignite.internal.processors.cache;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.junit.Test;
-
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
 
 /**
  *
  */
 public abstract class ClusterStateClientAbstractTest extends ClusterStateAbstractTest {
     /** */
-    private static final int TOTAL_NODES = GRID_CNT + 1;
-
-    /** */
     private boolean client;
 
     /** {@inheritDoc} */
-    @Override protected void checkAllNodesInactive() {
-        checkInactive(TOTAL_NODES);
+    @Override protected int nodesCount() {
+        return GRID_CNT + 1;
     }
 
     /** {@inheritDoc} */
@@ -54,55 +46,12 @@ public abstract class ClusterStateClientAbstractTest extends ClusterStateAbstrac
         startGrid(GRID_CNT);
     }
 
-    /** */
-    @Test
-    public void testActivationFromClient() {
-        changeStateFromClient(INACTIVE, ACTIVE);
-    }
-
-    /** */
-    @Test
-    public void testActivationWithReadOnlyFromClient() {
-        changeStateFromClient(INACTIVE, READ_ONLY);
-    }
-
-    /** */
-    @Test
-    public void testEnablingReadOnlyFromClient() {
-        changeStateFromClient(ACTIVE, READ_ONLY);
-    }
-
-    /** */
-    @Test
-    public void testDisablingReadOnlyFromClient() {
-        changeStateFromClient(READ_ONLY, ACTIVE);
-    }
-
-    /** */
-    private void changeStateFromClient(ClusterState state, ClusterState targetState) {
-        assertNotSame(state, targetState);
-
-        IgniteEx crd = grid(0);
+    /** {@inheritDoc} */
+    @Override protected void changeState(ClusterState state) {
         IgniteEx cl = grid(GRID_CNT);
 
-        checkInactive(TOTAL_NODES);
+        assertTrue(cl.configuration().isClientMode());
 
-        crd.cluster().state(state);
-
-        checkClusterState(TOTAL_NODES, state);
-
-        cl.cluster().state(targetState);
-
-        checkClusterState(TOTAL_NODES, targetState);
-
-        if (targetState != READ_ONLY) {
-            for (int k = 0; k < ENTRY_CNT; k++)
-                cl.cache(CACHE_NAME).put(k, k);
-        }
-
-        for (int g = 0; g < GRID_CNT + 1; g++) {
-            for (int k = 0; k < ENTRY_CNT; k++)
-                assertEquals(targetState != READ_ONLY ? k : null,  grid(g).cache(CACHE_NAME).get(k));
-        }
+        cl.cluster().state(state);
     }
 }
