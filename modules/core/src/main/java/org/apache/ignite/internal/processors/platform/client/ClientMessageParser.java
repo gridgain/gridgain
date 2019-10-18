@@ -131,9 +131,6 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_CACHE_DESTROY = 1056;
 
-    /** */
-        private static final short OP_CACHE_WITH_EXPIRY_POLICY = 1057;
-
     /* Cache service info. */
 
     /** Deprecated since 1.3.0. Replaced by OP_CACHE_PARTITIONS. */
@@ -339,9 +336,6 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_CACHE_GET_OR_CREATE_WITH_CONFIGURATION:
                 return new ClientCacheGetOrCreateWithConfigurationRequest(reader, ver);
-
-            case OP_CACHE_WITH_EXPIRY_POLICY:
-                return new ClientCacheWithExpiryPolicyRequest(reader, ver);
 
             case OP_QUERY_SQL:
                 return new ClientCacheSqlQueryRequest(reader);

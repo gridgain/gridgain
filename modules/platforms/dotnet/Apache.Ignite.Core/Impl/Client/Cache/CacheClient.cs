@@ -61,13 +61,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** Keep binary flag. */
         private readonly bool _keepBinary;
 
+        /** Expiry policy. */
+        private readonly IExpiryPolicy _expiryPolicy;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheClient{TK, TV}" /> class.
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="name">Cache name.</param>
         /// <param name="keepBinary">Binary mode flag.</param>
-        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false)
+        /// /// <param name="expiryPolicy">Expire policy.</param>
+        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false, IExpiryPolicy expiryPolicy = null)
         {
             Debug.Assert(ignite != null);
             Debug.Assert(name != null);
@@ -77,6 +81,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             _marsh = _ignite.Marshaller;
             _id = BinaryUtils.GetCacheId(name);
             _keepBinary = keepBinary;
+            _expiryPolicy = expiryPolicy;
         }
 
         /** <inheritDoc /> */
@@ -547,9 +552,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(plc, "plc");
 
-            DoOutOp(ClientOp.CacheWithExpiryPolicy, w => ExpiryPolicySerializer.WritePolicy(w, plc));
-
-            return new CacheClient<TK, TV>(_ignite, _name, _keepBinary);
+            return new CacheClient<TK, TV>(_ignite, _name, _keepBinary, plc);
         }
 
         /** <inheritDoc /> */
@@ -712,11 +715,18 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
         {
             stream.WriteInt(_id);
-            stream.WriteByte(0); // Flags (skipStore, etc).
+
+            var writer = _marsh.StartMarshal(stream);
+            if (_expiryPolicy != null)
+            {
+                stream.WriteByte(2);
+                ExpiryPolicySerializer.WritePolicy(writer, _expiryPolicy);
+            }
+            else
+                stream.WriteByte(0); // Flags (skipStore, etc).
 
             if (writeAction != null)
             {
-                var writer = _marsh.StartMarshal(stream);
 
                 writeAction(writer);
 

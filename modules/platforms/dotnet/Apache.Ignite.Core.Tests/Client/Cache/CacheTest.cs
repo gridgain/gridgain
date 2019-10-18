@@ -918,7 +918,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         /// <summary>
-        /// Test cache with empty expire policy does not remove value.
+        /// Test cache with expiry policy for Create action.
         /// </summary>
         [Test]
         public void TestCacheWithExpiryPolicyOnCreate()
@@ -931,13 +931,84 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // Initially added value is the same.
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
 
-            var config = cacheWithExpiryPolicy.GetConfiguration();
-
             // Wait for an expiration.
             Thread.Sleep(200);
 
             // Expiry policies should be applied, no cache item exists.
             Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+        }
+
+        /// <summary>
+        /// Test cache with expiry policy for Update enabled.
+        /// </summary>
+        [Test]
+        public void TestCacheWithExpiryPolicyOnUpdate()
+        {
+            var expiryPolicy = new ExpiryPolicy(null, TimeSpan.FromMilliseconds(200), null);
+            var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
+
+            cacheWithExpiryPolicy.Put(1, 1);
+
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            cacheWithExpiryPolicy.Put(1, 2);
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            Thread.Sleep(100);
+            
+            // Expiry policies should be applied, no cache item exists.
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+        }
+
+        /// <summary>
+        /// Test cache with expiry policy for Access enabled.
+        /// </summary>
+        [Test]
+        public void TestCacheWithExpiryPolicyOnAccess()
+        {
+            var expiryPolicy = new ExpiryPolicy(null, null, TimeSpan.FromMilliseconds(200));
+            var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
+
+            cacheWithExpiryPolicy.Put(1, 1);
+
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            cacheWithExpiryPolicy.Get(1);
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+
+            Thread.Sleep(100);
+            
+            // Expiry policies should be applied, no cache item exists.
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+        }
+
+        /// <summary>
+        /// Test cache with expiration does not affect original cache.
+        /// </summary>
+        [Test]
+        public void TestCacheWithExpirationHasIsolatedScope()
+        {
+            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
+            var cache = GetClientCache<int>();
+            var cacheWithExpiryPolicy = cache.WithExpiryPolicy(expiryPolicy);
+
+            cache.Put(1, 1);
+            cacheWithExpiryPolicy.Put(2, 2);
+
+            Thread.Sleep(200);
+            
+            Assert.IsTrue(cache.ContainsKey(1));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(2));
         }
 
         private class Container

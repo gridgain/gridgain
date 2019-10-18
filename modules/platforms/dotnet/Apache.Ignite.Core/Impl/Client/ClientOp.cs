@@ -53,7 +53,6 @@ namespace Apache.Ignite.Core.Impl.Client
         CacheGetOrCreateWithConfiguration = 1054,
         CacheGetConfiguration = 1055,
         CacheDestroy = 1056,
-        CacheWithExpiryPolicy = 1057,
         CachePartitions = 1101,
         
         // Queries.
