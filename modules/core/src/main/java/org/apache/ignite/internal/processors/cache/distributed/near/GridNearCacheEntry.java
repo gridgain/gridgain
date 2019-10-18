@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheE
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -482,7 +483,21 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
     @Override protected void value(@Nullable CacheObject val) {
         // TODO: Happens in Atomic caches
-        System.out.println("GridNearCacheEntry.value: " + val);
+        try {
+            if (val != null) {
+                // this.cctx.kernalContext().platform().context().
+                byte[] valBytes = val.valueBytes(this.cctx.cacheObjectContext());
+                StringBuilder v = new StringBuilder();
+                for (byte b : valBytes) {
+                    v.append(" ").append(b);
+                }
+                System.out.println("GridNearCacheEntry.value: " + v.toString());
+            } else {
+                System.out.println("GridNearCacheEntry.value: NULL");
+            }
+        } catch (IgniteCheckedException e) {
+            e.printStackTrace();
+        }
         super.value(val);
     }
 
