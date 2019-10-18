@@ -28,11 +28,11 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.apache.ignite.console.web.security.IgniteSessionRepository;
 import org.apache.ignite.console.web.socket.TransitionService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.stereotype.Service;
 
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
@@ -69,7 +69,7 @@ public class AdminService {
     private final TransitionService transitionSrvc;
 
     /** */
-    private final IgniteSessionRepository sesRepo;
+    private final FindByIndexNameSessionRepository<ExpiringSession> sesRepo;
 
     /**
      * @param txMgr Transactions manager.
@@ -91,7 +91,7 @@ public class AdminService {
         EventPublisher evtPublisher,
         AnnouncementRepository annRepo,
         TransitionService transitionSrvc,
-        IgniteSessionRepository sesRepo
+        FindByIndexNameSessionRepository<ExpiringSession> sesRepo
     ) {
         this.txMgr = txMgr;
         this.accountsSrv = accountsSrv;

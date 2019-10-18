@@ -29,6 +29,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
 
 /**
  * Grid config.
@@ -49,7 +51,7 @@ public class TestGridConfiguration {
      * @param txMgr Transaction manager.
      */
     @Bean
-    public IgniteSessionRepository sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
+    public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
         return new IgniteSessionRepository(ignite, txMgr)
             .setDefaultMaxInactiveInterval(10_000);
     }
