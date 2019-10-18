@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Events;
+    using Apache.Ignite.Core.Tests.Cache.Store;
     using NUnit.Framework;
 
     /// <summary>
@@ -97,11 +98,19 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests the created near cache.
         /// </summary>
         [Test]
-        public void TestCreateNearCache()
+        public void TestCreateNearCache(
+            [Values(CacheMode.Local, CacheMode.Partitioned, CacheMode.Replicated)] CacheMode cacheMode,
+            [Values(CacheAtomicityMode.Atomic, CacheAtomicityMode.Transactional)] CacheAtomicityMode atomicityMode)
         {
             const string cacheName = "dyn_cache";
 
-            var cache = _grid.CreateCache<int, string>(new CacheConfiguration(cacheName));
+            var cfg = new CacheConfiguration(cacheName)
+            {
+                AtomicityMode = atomicityMode,
+                CacheMode = cacheMode
+            };
+            
+            var cache = _grid.CreateCache<int, string>(cfg);
             cache[1] = "1";
 
             using (var client = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
@@ -121,6 +130,10 @@ namespace Apache.Ignite.Core.Tests.Cache
                 cache[1] = "2";
                 Thread.Sleep(1000);  // TODO: Not good
                 Assert.AreEqual("2", nearCache[1]);
+                
+                // Update through near.
+                nearCache[1] = "3";
+                Assert.AreEqual("3", nearCache[1]);
             }
         }
 
