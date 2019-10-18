@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
+import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -192,10 +193,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * @param ignite Ignite.
+     * @param txMgr Transaction manager.
      */
     @Bean
-    public IgniteSessionRepository sessionRepository(@Autowired Ignite ignite) {
-        return new IgniteSessionRepository(ignite)
+    public IgniteSessionRepository sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
+        return new IgniteSessionRepository(ignite, txMgr)
             .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
     }
 

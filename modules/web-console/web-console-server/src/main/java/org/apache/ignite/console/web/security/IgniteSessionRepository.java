@@ -16,18 +16,18 @@
 
 package org.apache.ignite.console.web.security;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.console.db.CacheHolder;
+import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
@@ -35,21 +35,15 @@ import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
-import static java.util.stream.StreamSupport.stream;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
-public class IgniteSessionRepository implements
-    SessionRepository<ExpiringSession>,
-    FindByIndexNameSessionRepository<ExpiringSession>
-{
+public class IgniteSessionRepository implements FindByIndexNameSessionRepository<ExpiringSession> {
     /** */
     private static final String SPRING_SECURITY_CONTEXT = "SPRING_SECURITY_CONTEXT";
-
-    /** */
-    private final Ignite ignite;
 
     /** Messages accessor. */
     private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
@@ -57,18 +51,29 @@ public class IgniteSessionRepository implements
     /** If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
     private Integer dfltMaxInactiveInterval;
 
-    /** Session cache configuration. */
-    private final CacheConfiguration<String, MapSession> cfg;
+    /** */
+    private final TransactionManager txMgr;
+
+    /** Sessions collection. */
+    private CacheHolder<String, MapSession> sessionsCache;
+
+    /** Account to sessions index. */
+    private OneToManyIndex<String, String> accToSesIdx;
+
+    /** Sessions to account index. */
+    private OneToManyIndex<String, String> sesToAccIdx;
 
     /**
      * @param ignite Ignite.
      */
-    public IgniteSessionRepository(Ignite ignite) {
-       this.ignite = ignite;
+    public IgniteSessionRepository(Ignite ignite, TransactionManager txMgr) {
+       this.txMgr = txMgr;
 
-        cfg = new CacheConfiguration<String, MapSession>()
-            .setName("wc_sessions")
-            .setCacheMode(CacheMode.REPLICATED);
+        txMgr.registerStarter(() -> {
+            sessionsCache = new CacheHolder<>(ignite, "wc_sessions");
+            accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx");
+            sesToAccIdx = new OneToManyIndex<>(ignite, "wc_ses_to_acc_idx");
+        });
     }
 
     /**
@@ -93,26 +98,37 @@ public class IgniteSessionRepository implements
         return ses;
     }
 
-    /**
-     * @return Cache with sessions.
-     */
-    private IgniteCache<String, MapSession> cache() {
-            return ignite.getOrCreateCache(cfg);
-    }
-
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
         try {
-            SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
+            txMgr.doInTransaction(() -> {
+                SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
 
-            if (ctx != null) {
-                Object p = ctx.getAuthentication().getPrincipal();
+                String email = null;
 
-                if (p instanceof Account)
-                    ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, ((Account)p).getEmail());
-            }
+                if (ctx != null) {
+                    Authentication auth = ctx.getAuthentication();
 
-            cache().put(ses.getId(), new MapSession(ses));
+                    if (auth != null) {
+                        Object p = auth.getPrincipal();
+
+                        if (p instanceof Account) {
+                            email = ((Account)p).getEmail();
+
+                            ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, email);
+                        }
+                    }
+                }
+
+                String sesId = ses.getId();
+
+                if (!F.isEmpty(email)) {
+                    accToSesIdx.add(email, sesId);
+                    sesToAccIdx.add(sesId, email);
+                }
+
+                sessionsCache.cache().put(ses.getId(), new MapSession(ses));
+            });
         }
         catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
@@ -122,7 +138,7 @@ public class IgniteSessionRepository implements
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
         try {
-            ExpiringSession ses = cache().get(id);
+            ExpiringSession ses = sessionsCache.get(id);
 
             if (ses == null)
                 return null;
@@ -141,9 +157,17 @@ public class IgniteSessionRepository implements
     }
 
     /** {@inheritDoc} */
-    @Override public void delete(String id) {
+    @Override public void delete(String sesId) {
         try {
-            cache().remove(id);
+            txMgr.doInTransaction(() -> {
+                Set<String> accEmails = sesToAccIdx.get(sesId);
+
+                sesToAccIdx.delete(sesId);
+
+                accEmails.forEach(sesToAccIdx::delete);
+
+                sessionsCache.cache().remove(sesId);
+            });
         }
         catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
@@ -155,28 +179,10 @@ public class IgniteSessionRepository implements
         if (!PRINCIPAL_NAME_INDEX_NAME.equals(idxName))
             return Collections.emptyMap();
 
-        Collection<MapSession> sessions = new ArrayList<>();
-
-        stream(cache().spliterator(), false).forEach(
-            item -> {
-                Object v = item.getValue();
-
-                if (v instanceof MapSession) {
-                    MapSession ms = (MapSession)v;
-
-                    Object name = ms.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
-
-                    if (idxVal.equals(name))
-                        sessions.add((MapSession)v);
-                }
-            }
-        );
-
-        Map<String, ExpiringSession> sesMap = new HashMap<>(sessions.size());
-
-        for (MapSession session : sessions)
-            sesMap.put(session.getId(), session);
-
-        return sesMap;
+        return accToSesIdx
+            .get(idxVal)
+            .stream()
+            .map(this::getSession)
+            .collect(toMap(Session::getId, ses -> ses));
     }
 }
