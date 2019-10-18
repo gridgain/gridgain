@@ -40,7 +40,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause
 public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstractTest {
     /**
      * Tests that deactivation is prohibited if explicit lock is held in current thread.
-     *
      */
     @Test
     public void testDeactivationWithPendingLock() {
@@ -49,7 +48,6 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
 
     /**
      * Tests that enabling read-only mode is prohibited if explicit lock is held in current thread.
-     *
      */
     @Test
     public void testReadOnlyWithPendingLock() {
@@ -57,9 +55,8 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     }
 
     /**
-     * Tests that change cluster mode from {@link ClusterState#ACTIVE} to {@link ClusterState#INACTIVE} is prohibited
-     * if transaction is active in current thread.
-     *
+     * Tests that change cluster mode from {@link ClusterState#ACTIVE} to {@link ClusterState#INACTIVE} is prohibited if
+     * transaction is active in current thread.
      */
     @Test
     public void testDeactivationWithPendingTransaction() {
@@ -74,7 +71,6 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     /**
      * Tests that change cluster mode from {@link ClusterState#READ_ONLY} to {@link ClusterState#INACTIVE} is prohibited
      * if transaction is active in current thread.
-     *
      */
     @Test
     public void testDeactivateFromReadonlyWithPendingTransaction() {
@@ -89,7 +85,6 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     /**
      * Tests that change cluster mode from {@link ClusterState#ACTIVE} to {@link ClusterState#READ_ONLY} is prohibited
      * if transaction is active in current thread.
-     *
      */
     @Test
     public void testReadOnlyWithPendingTransaction() {
@@ -104,7 +99,6 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     /**
      * Tests that change cluster mode from {@link ClusterState#READ_ONLY} to {@link ClusterState#ACTIVE} is prohibited
      * if transaction is active in current thread.
-     *
      */
     @Test
     public void testDisableReadonlyWithPendingTransaction() {
@@ -116,8 +110,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
         }
     }
 
-    /**
-     */
+    /** */
     @Test
     public void testDynamicCacheStart() {
         grid(0).cluster().state(ACTIVE);
