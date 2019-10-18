@@ -99,10 +99,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// </summary>
         [Test]
         public void TestCreateNearCache(
-            [Values(CacheMode.Local, CacheMode.Partitioned, CacheMode.Replicated)] CacheMode cacheMode,
+            [Values(/* TODO: CacheMode.Local,*/ CacheMode.Partitioned, CacheMode.Replicated)] CacheMode cacheMode,
             [Values(CacheAtomicityMode.Atomic, CacheAtomicityMode.Transactional)] CacheAtomicityMode atomicityMode)
         {
-            const string cacheName = "dyn_cache";
+            var cacheName = string.Format("dyn_cache_{0}_{1}", cacheMode, atomicityMode);
 
             var cfg = new CacheConfiguration(cacheName)
             {
