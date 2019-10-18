@@ -586,7 +586,8 @@ public class PlatformContextImpl implements PlatformContext {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidateNearCache(byte[] keyBytes) {
+    @Override public void invalidateNearCache(String name, byte[] keyBytes) {
         // TODO: Callback
+        // TODO: Should we track active caches and avoid unnecessary callbacks?
     }
 }

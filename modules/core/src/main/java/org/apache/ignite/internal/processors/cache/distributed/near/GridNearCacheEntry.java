@@ -489,7 +489,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         // TODO: Send cache name (or ID?) and key
         // TODO: How to pass key in a better way? byte[] or Object?
         byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
-        proc.context().invalidateNearCache(keyBytes);
+        proc.context().invalidateNearCache(this.cctx.name(), keyBytes);
     }
 
     /** {@inheritDoc} */
