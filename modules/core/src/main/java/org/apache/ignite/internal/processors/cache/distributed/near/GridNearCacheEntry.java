@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.platform.PlatformNoopProcessor;
 import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -201,7 +202,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         GridCacheVersion dhtVer,
         UUID primaryNodeId,
         AffinityTopologyVersion topVer)
-            throws GridCacheEntryRemovedException, IgniteCheckedException {
+        throws GridCacheEntryRemovedException
+    {
         assert dhtVer != null;
 
         cctx.versions().onReceived(primaryNodeId, dhtVer);
@@ -244,7 +246,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         long expireTime,
         long ttl,
         UUID primaryNodeId,
-        AffinityTopologyVersion topVer) throws IgniteCheckedException {
+        AffinityTopologyVersion topVer)
+    {
         assert dhtVer != null;
 
         cctx.versions().onReceived(primaryNodeId, dhtVer);
@@ -477,7 +480,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected void value(@Nullable CacheObject val) throws IgniteCheckedException {
+    @Override protected void value(@Nullable CacheObject val) {
         super.value(val);
 
         PlatformProcessor proc = this.cctx.kernalContext().platform();
@@ -485,11 +488,15 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             return;
         }
         // TODO: val is null on remove
-        // TODO: Nothing happens on Clear
+        // TODO: Nothing happens on Clear - reproducer prepared
         // TODO: Send cache name (or ID?) and key
-        // TODO: How to pass key in a better way? byte[] or Object?
-        byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
-        proc.context().invalidateNearCache(this.cctx.name(), keyBytes);
+        // TODO: How to pass key in a better way? byte[] or Object? Do we have cached valueBytes normally or not?
+        try {
+            byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
+            proc.context().invalidateNearCache(this.cctx.name(), keyBytes);
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
     /** {@inheritDoc} */
