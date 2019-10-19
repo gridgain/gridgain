@@ -456,6 +456,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 }
             }
 
+            // TODO: put to near, lock near key for the duration of this op
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
                 (stream, res) =>
