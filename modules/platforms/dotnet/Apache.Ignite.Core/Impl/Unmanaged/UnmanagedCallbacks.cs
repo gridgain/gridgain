@@ -429,11 +429,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
-                // TODO: Unmarshal on cache side in a generic way to reduce allocations.
                 var cacheId = stream.ReadInt();
-                var cacheKey = _ignite.Marshaller.Unmarshal<object>(stream);
-                
-                Console.WriteLine("NearCacheInvalidate {0}: {1}", cacheId, cacheKey);
+
+                _ignite.NearCacheManager.Invalidate(cacheId, stream, _ignite.Marshaller);
             }
 
             return 0;

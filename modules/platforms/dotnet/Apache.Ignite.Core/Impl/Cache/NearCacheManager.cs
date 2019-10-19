@@ -16,12 +16,12 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Manages <see cref="NearCache{TK,TV}"/> instances.
@@ -31,8 +31,8 @@ namespace Apache.Ignite.Core.Impl.Cache
     internal class NearCacheManager
     {
         /** TODO: Use weak references? Java keeps near cache data forever... */
-        private readonly ConcurrentDictionary<Tuple<int, Type, Type>, WeakReference> _nearCaches
-            = new ConcurrentDictionary<Tuple<int, Type, Type>, WeakReference>();
+        private readonly CopyOnWriteConcurrentDictionary<int, INearCache[]> _nearCaches
+            = new CopyOnWriteConcurrentDictionary<int, INearCache[]>();
 
         /// <summary>
         /// Gets the near cache.
@@ -44,8 +44,36 @@ namespace Apache.Ignite.Core.Impl.Cache
             Debug.Assert(nearCacheConfiguration != null);
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
+
+            // TODO: Handle multiple caches with same name.
+            // Don't use CopyOnWriteConcurrentDictionary - we'll need our own locking based on cacheId.
+            var caches = _nearCaches.GetOrAdd(cacheId, id => new INearCache[] { new NearCache<TK, TV>() });
             
-            return new NearCache<TK, TV>();
+            return caches[0] as NearCache<TK, TV>;
+        }
+
+        /// <summary>
+        /// Reads cache key from a stream and invalidates.
+        /// </summary>
+        public void Invalidate(int cacheId, IBinaryStream stream, Marshaller marshaller)
+        {
+            INearCache[] nearCaches;
+            if (!_nearCaches.TryGetValue(cacheId, out nearCaches))
+            {
+                return;
+            }
+            
+            var keyPos = stream.Position;
+
+            for (var i = 0; i < nearCaches.Length; i++)
+            {
+                if (i > 0)
+                {
+                    stream.Seek(keyPos, SeekOrigin.Begin);
+                }
+
+                nearCaches[i].Invalidate(stream, marshaller);
+            }
         }
     }
 }
