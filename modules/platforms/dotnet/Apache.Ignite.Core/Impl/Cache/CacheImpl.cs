@@ -274,26 +274,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 nearCacheConfiguration: _nearCacheConfiguration);
         }
 
-        /** <inheritdoc /> */
-        public ICache<TK, TV> WithNearCache()
-        {
-            // TODO: Overload with configuration.
-            // TODO: Deprecate old methods? Or keep while the feature is in preview?
-            if (_nearCacheConfiguration != null)
-            {
-                return this;
-            }
-
-            return new CacheImpl<TK, TV>(
-                Target,
-                flagSkipStore: _flagSkipStore,
-                flagKeepBinary: _flagKeepBinary,
-                flagNoRetries: _flagNoRetries,
-                flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: new NearCacheConfiguration());
-        }
-
         /** <inheritDoc /> */
         public ICache<TK, TV> WithExpiryPolicy(IExpiryPolicy plc)
         {

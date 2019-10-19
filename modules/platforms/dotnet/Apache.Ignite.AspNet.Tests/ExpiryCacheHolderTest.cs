@@ -129,11 +129,6 @@ namespace Apache.Ignite.AspNet.Tests
                 throw new NotImplementedException();
             }
 
-            public ICache<int, int> WithNearCache()
-            {
-                throw new NotImplementedException();
-            }
-
             public void LoadCache(ICacheEntryFilter<int, int> p, params object[] args)
             {
                 throw new NotImplementedException();

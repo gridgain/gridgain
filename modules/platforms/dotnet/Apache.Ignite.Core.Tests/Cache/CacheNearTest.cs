@@ -16,13 +16,11 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
-    using System;
     using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Events;
-    using Apache.Ignite.Core.Tests.Cache.Store;
     using NUnit.Framework;
 
     /// <summary>
@@ -202,6 +200,21 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Assert.AreEqual("2", cache2[1]);
             }
         }
+        
+        /// <summary>
+        /// Tests that near cache returns the same object instance as we put there.
+        /// </summary>
+        [Test]
+        public void TestNearCacheReturnsSameObjectReference()
+        {
+            var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
+
+            var obj = new Foo(12);
+            cache[1] = obj;
+
+            var res = cache[1];
+            Assert.AreSame(obj, res);
+        }
 
         /// <summary>
         /// Asserts the cache is near.
@@ -226,6 +239,17 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             _lastEvent = evt;
             return true;
+        }
+        
+        /** */
+        private class Foo
+        {
+            public Foo(int val)
+            {
+                Val = val;
+            }
+
+            public int Val;
         }
     }
 }

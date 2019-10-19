@@ -123,13 +123,6 @@ namespace Apache.Ignite.Core.Cache
         ICache<TK, TV> WithAllowAtomicOpsInTx();
 
         /// <summary>
-        /// Gets another cache instance with local .NET Dictionary-based cache in front of it.
-        /// TODO: More docs - limitations etc.
-        /// </summary>
-        /// <returns></returns>
-        ICache<TK, TV> WithNearCache();
-
-        /// <summary>
         /// Executes <see cref="LocalLoadCache"/> on all cache nodes.
         /// </summary>
         /// <param name="p">
