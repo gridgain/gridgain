@@ -17,7 +17,11 @@
 namespace Apache.Ignite.Core.Impl.Cache
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Diagnostics;
+    using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
     /// Manages <see cref="NearCache{TK,TV}"/> instances.
@@ -26,22 +30,21 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// </summary>
     internal class NearCacheManager
     {
-        /** */
-        private readonly Dictionary<string, WeakReference> _nearCaches;
+        /** TODO: Use weak references? Java keeps near cache data forever... */
+        private readonly ConcurrentDictionary<Tuple<int, Type, Type>, WeakReference> _nearCaches
+            = new ConcurrentDictionary<Tuple<int, Type, Type>, WeakReference>();
 
         /// <summary>
-        /// Initializes a new instance of <see cref="NearCacheManager"/> class.
+        /// Gets the near cache.
         /// </summary>
-        public NearCacheManager()
+        public NearCache<TK, TV> GetNearCache<TK, TV>(string cacheName,
+            NearCacheConfiguration nearCacheConfiguration)
         {
-            // TODO: How do we remove near caches when underlying cache is destroyed? String name is not enough.
-            // TODO: Use similar WeakReference mechanism as DataStreamer does
-            _nearCaches = new Dictionary<string, WeakReference>();
-        }
+            Debug.Assert(!string.IsNullOrEmpty(cacheName));
+            Debug.Assert(nearCacheConfiguration != null);
 
-        public NearCache<TK, TV> GetNearCache<TK, TV>(string name)
-        {
-            // TODO: Return cache instance, set up continuous query.
+            var cacheId = BinaryUtils.GetCacheId(cacheName);
+            
             return new NearCache<TK, TV>();
         }
     }

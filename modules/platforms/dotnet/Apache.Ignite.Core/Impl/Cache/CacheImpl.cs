@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Cache
 {
     using System;
     using System.Collections;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
@@ -69,9 +68,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
-        /** Near cache configuration, null when not enabled. */
-        private readonly NearCacheConfiguration _nearCacheConfiguration;
-
         /** Near cache. */
         private readonly NearCache<TK, TV> _nearCache;
 
@@ -87,7 +83,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="nearCacheConfiguration">Near cache configuration. When null, near caching is disabled.</param>
         public CacheImpl(IPlatformTargetInternal target,
             bool flagSkipStore, bool flagKeepBinary, bool flagNoRetries, bool flagPartitionRecover,
-            bool flagAllowAtomicOpsInTx, NearCacheConfiguration nearCacheConfiguration) : base(target)
+            bool flagAllowAtomicOpsInTx) : base(target)
         {
             _ignite = target.Marshaller.Ignite;
             _flagSkipStore = flagSkipStore;
@@ -96,17 +92,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             _flagPartitionRecover = flagPartitionRecover;
             _flagAllowAtomicOpsInTx = flagAllowAtomicOpsInTx;
 
-            _txManager = GetConfiguration().AtomicityMode == CacheAtomicityMode.Transactional
+            var configuration = GetConfiguration();
+            _txManager = configuration.AtomicityMode == CacheAtomicityMode.Transactional
                 ? new CacheTransactionManager(_ignite.GetIgnite().GetTransactions())
                 : null;
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            if (nearCacheConfiguration != null)
+            if (configuration.NearConfiguration != null)
             {
-                // TODO: Set up change notifier - pass it as a factory to GetNearCache?
-                _nearCacheConfiguration = nearCacheConfiguration;
-                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
+                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name, configuration.NearConfiguration);
             }
         }
 
@@ -220,8 +215,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
                 flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx);
         }
 
         /// <summary>
@@ -252,8 +246,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: true,
                 flagNoRetries: _flagNoRetries,
                 flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx);
         }
 
         /** <inheritDoc /> */
@@ -270,8 +263,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
                 flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: true,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: true);
         }
 
         /** <inheritDoc /> */
@@ -287,8 +279,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
                 flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx);
         }
 
         /** <inheritDoc /> */
@@ -1281,8 +1272,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: true,
                 flagPartitionRecover: _flagPartitionRecover,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx);
         }
 
         /** <inheritDoc /> */
@@ -1299,8 +1289,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
                 flagPartitionRecover: true,
-                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx,
-                nearCacheConfiguration: _nearCacheConfiguration);
+                flagAllowAtomicOpsInTx: _flagAllowAtomicOpsInTx);
         }
 
         /** <inheritDoc /> */

@@ -17,11 +17,14 @@
 namespace Apache.Ignite.Core.Impl.Cache
 {
     using System.Collections.Concurrent;
+    using System.Diagnostics;
+    using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache<TK, TV>
+    internal class NearCache<TK, TV> : INearCache
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
@@ -37,6 +40,17 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             // TODO: Eviction according to limits.
             _map[key] = val;
+        }
+
+        public void Invalidate(IBinaryStream keyStream, Marshaller marshaller)
+        {
+            Debug.Assert(keyStream != null);
+            Debug.Assert(marshaller != null);
+
+            var key = marshaller.Unmarshal<TK>(keyStream);
+            TV unused;
+
+            _map.TryRemove(key, out unused);
         }
     }
 }
