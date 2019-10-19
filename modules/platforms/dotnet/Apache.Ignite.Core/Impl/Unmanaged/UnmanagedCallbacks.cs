@@ -212,6 +212,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorStop, PluginProcessorStop);
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
+            AddHandler(UnmanagedCallbackOp.NearCacheInvalidate, NearCacheInvalidate);
         }
 
         /// <summary>
@@ -417,6 +418,25 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             var val = marsh.Unmarshal<object>(inOutStream);
 
             return holder.Process(key, val, val != null, grid);
+        }
+        
+        /// <summary>
+        /// Invalidates near cache entry.
+        /// </summary>
+        /// <param name="memPtr">Memory pointer.</param>
+        /// <returns>Unused.</returns>
+        private long NearCacheInvalidate(long memPtr)
+        {
+            using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
+            {
+                // TODO: Unmarshal on cache side in a generic way to reduce allocations.
+                var cacheId = stream.ReadInt();
+                var cacheKey = _ignite.Marshaller.Unmarshal<object>(stream);
+                
+                Console.WriteLine("NearCacheInvalidate {0}: {1}", cacheId, cacheKey);
+            }
+
+            return 0;
         }
 
         #endregion
