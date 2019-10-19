@@ -226,4 +226,7 @@ class PlatformCallbackOp {
 
     /** */
     public static final int EventLocalListenerApply = 69;
+
+    /** */
+    public static final int NearCacheInvalidate = 70;
 }

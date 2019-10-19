@@ -1191,6 +1191,22 @@ public class PlatformCallbackGateway {
     }
 
     /**
+     * Invalidates near cache data.
+     *
+     * @param memPtr Ptr to a stream with serialized cache id and key to invalidate.
+     */
+    public void nearCacheInvalidate(long memPtr) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.NearCacheInvalidate, memPtr);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
      * Enter gateway.
      */
     protected void enter() {

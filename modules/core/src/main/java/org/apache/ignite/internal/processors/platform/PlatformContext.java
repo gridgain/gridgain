@@ -291,8 +291,8 @@ public interface PlatformContext {
     /**
      * Invalidates the near cache.
      *
-     * @param name Cache name.
+     * @param cacheId Cache id.
      * @param keyBytes Serialized key to invalidate.
      */
-    public void invalidateNearCache(String name, byte[] keyBytes);
+    public void invalidateNearCache(int cacheId, byte[] keyBytes);
 }

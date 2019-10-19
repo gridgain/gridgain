@@ -487,13 +487,11 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         if (proc instanceof PlatformNoopProcessor) {
             return;
         }
-        // TODO: val is null on remove
         // TODO: Nothing happens on Clear - reproducer prepared
-        // TODO: Send cache name (or ID?) and key
         // TODO: How to pass key in a better way? byte[] or Object? Do we have cached valueBytes normally or not?
         try {
             byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
-            proc.context().invalidateNearCache(this.cctx.name(), keyBytes);
+            proc.context().invalidateNearCache(this.cctx.cacheId(), keyBytes);
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }
