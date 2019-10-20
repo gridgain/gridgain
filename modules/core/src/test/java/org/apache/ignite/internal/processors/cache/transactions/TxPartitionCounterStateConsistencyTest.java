@@ -265,7 +265,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
     @Test
-    //@Ignore("https://ggsystems.atlassian.net/browse/GG-24303")
     public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 
