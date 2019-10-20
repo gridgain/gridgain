@@ -36,6 +36,14 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         /// <summary>
         /// Gets the near cache.
+        /// <para />
+        /// Same Ignite cache can be retrieved with different generic type parameters, e.g.:
+        /// Ignite.GetCache{int, int}("my-cache") and Ignite.GetCache{string, string}("my-cache").
+        /// This is not recommended, and we assume it does not usually happen, so we optimize for only one set of
+        /// type parameters, which avoids boxing and increased memory usage.
+        ///
+        /// When the use case above is detected, we downgrade near cache map to {object, object}, which will cause
+        /// more boxing and casting. 
         /// </summary>
         public NearCache<TK, TV> GetNearCache<TK, TV>(string cacheName,
             NearCacheConfiguration nearCacheConfiguration)
