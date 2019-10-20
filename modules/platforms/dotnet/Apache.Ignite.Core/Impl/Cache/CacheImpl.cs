@@ -457,6 +457,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             // TODO: put to near, lock near key for the duration of this op
+            // Instead of locking, get or create an entry wrapper. Update it upon op completion.
+            // If it is removed by then - fine, the result is discarded.
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
                 (stream, res) =>
