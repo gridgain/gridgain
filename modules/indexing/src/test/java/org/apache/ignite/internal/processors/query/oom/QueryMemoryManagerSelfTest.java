@@ -18,11 +18,13 @@ package org.apache.ignite.internal.processors.query.oom;
 
 import java.util.List;
 import java.util.UUID;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
@@ -37,9 +39,32 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     protected boolean client;
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void beforeTest() throws Exception {
+        System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT);
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
+        System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
 
+        super.beforeTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT);
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
+        System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
+    }
+
+    /**
+     * @throws Exception If fails.
+     */
+    @Test
+    public void testDefaults() throws Exception {
         final long maxMem = Runtime.getRuntime().maxMemory();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
@@ -54,22 +79,7 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
         createSchema();
 
         populateData();
-    }
 
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void testDefaults() {
         final String sql = "select * from T as T0, T as T1 where T0.id < 1 " +
             "UNION " +
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3";
@@ -77,6 +87,21 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
         try (FieldsQueryCursor<List<?>> cursor = query(sql, false)) {
             cursor.getAll();
         }
+    }
+
+    /**
+     * @throws Exception If fails.
+     */
+    @Test
+    public void testWrongSqlMemoryPoolSize() throws Exception {
+        final long maxMem = Runtime.getRuntime().maxMemory();
+
+        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
+
+        GridTestUtils.assertThrows(log, () -> {
+            startGrid(0);
+
+        }, IgniteException.class, "Sql memory pool size can't be more than heap memory max size");
     }
 
     /**
