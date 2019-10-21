@@ -63,6 +63,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  *
@@ -1414,7 +1415,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             return null;
         }, "start-node2");
 
-        U.sleep(1000);
+        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == 6, 30000L));
 
         // Stop all nodes participating in state change and not allow last node to finish exchange.
         for (int i = 0; i < 4; i++)
