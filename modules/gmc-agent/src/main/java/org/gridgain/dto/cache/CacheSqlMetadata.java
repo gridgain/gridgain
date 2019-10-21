@@ -31,6 +31,12 @@ public class CacheSqlMetadata {
     /** Cache name. */
     private String cacheName;
 
+    /** Schema name. */
+    private String schemaName;
+
+    /** Table name. */
+    private String tblName;
+
     /** Types. */
     private Collection<String> types = new ArrayList<>();
 
@@ -62,6 +68,38 @@ public class CacheSqlMetadata {
      */
     public CacheSqlMetadata setCacheName(String cacheName) {
         this.cacheName = cacheName;
+        return this;
+    }
+
+    /**
+     * @return Schema name.
+     */
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    /**
+     * @param schemaName Schema name.
+     * @return @{code This} for method chaining.
+     */
+    public CacheSqlMetadata setSchemaName(String schemaName) {
+        this.schemaName = schemaName;
+        return this;
+    }
+
+    /**
+     * @return Table name.
+     */
+    public String getTableName() {
+        return tblName;
+    }
+
+    /**
+     * @param tblName Table name.
+     * @return @{code This} for method chaining.
+     */
+    public CacheSqlMetadata setTableName(String tblName) {
+        this.tblName = tblName;
         return this;
     }
 

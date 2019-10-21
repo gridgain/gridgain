@@ -154,7 +154,7 @@ public class CacheService implements AutoCloseable {
             cachesInfo.add(
                 new CacheInfo()
                     .setName(item.getKey())
-                    .setDeploymentId(cd.deploymentId().globalId())
+                    .setDeploymentId(cd.deploymentId())
                     .setGroup(cd.groupDescriptor().groupName())
             );
         }

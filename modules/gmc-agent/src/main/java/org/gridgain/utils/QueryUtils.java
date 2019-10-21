@@ -384,6 +384,8 @@ public class QueryUtils {
     }
 
     /**
+     * This code is copy-paste of GridCacheQuerySqlMetadataJobV2.
+     *
      * @param cacheName Cache name.
      * @param types Types.
      * @return Cache sql metadata
@@ -396,6 +398,8 @@ public class QueryUtils {
             if (type.name().startsWith("GridCache"))
                 continue;
 
+            metadata.setTableName(type.tableName());
+            metadata.setSchemaName(type.schemaName());
             metadata.getTypes().add(type.name());
             metadata.getKeyClasses().put(type.name(), type.keyClass().getName());
             metadata.getValueClasses().put(type.name(), type.valueClass().getName());
@@ -408,6 +412,7 @@ public class QueryUtils {
     }
 
     /**
+     *
      * @param type Type.
      * @return List of cache sql index metadata.
      */

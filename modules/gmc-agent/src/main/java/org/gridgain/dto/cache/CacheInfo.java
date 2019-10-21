@@ -16,8 +16,10 @@
 
 package org.gridgain.dto.cache;
 
-import java.util.UUID;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteUuid;
+import org.gridgain.dto.IgniteUuidSerializer;
 
 /**
  * DTO for cache info.
@@ -27,7 +29,8 @@ public class CacheInfo {
     private String name;
 
     /** Deployment id. */
-    private UUID deploymentId;
+    @JsonSerialize(using = IgniteUuidSerializer.class)
+    private IgniteUuid deploymentId;
 
     /** Cache group. */
     private String grp;
@@ -51,7 +54,7 @@ public class CacheInfo {
     /**
      * @return Deployment id.
      */
-    public UUID getDeploymentId() {
+    public IgniteUuid getDeploymentId() {
         return deploymentId;
     }
 
@@ -59,7 +62,7 @@ public class CacheInfo {
      * @param deploymentId Deployment id.
      * @return @{code This} for method chaining.
      */
-    public CacheInfo setDeploymentId(UUID deploymentId) {
+    public CacheInfo setDeploymentId(IgniteUuid deploymentId) {
         this.deploymentId = deploymentId;
         return this;
     }
