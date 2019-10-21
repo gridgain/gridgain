@@ -598,6 +598,7 @@ public class IgniteConfiguration {
          * Order alphabetically for maintenance purposes.
          */
         activeOnStart = cfg.isActiveOnStart();
+        clusterStateOnStart = cfg.getClusterStateOnStart();
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();

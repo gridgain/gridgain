@@ -404,9 +404,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         inMemoryMode = !CU.isPersistenceEnabled(ctx.config());
 
         // Start first node as inactive if persistence is enabled.
-        boolean activeOnStart = inMemoryMode && ctx.config().isActiveOnStart();
+        ClusterState stateOnStart = inMemoryMode ? ctx.config().getClusterStateOnStart() : INACTIVE;
 
-        globalState = DiscoveryDataClusterState.createState(activeOnStart ? ACTIVE : INACTIVE, null);
+        globalState = DiscoveryDataClusterState.createState(stateOnStart, null);
 
         ctx.event().addLocalEventListener(lsr, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
