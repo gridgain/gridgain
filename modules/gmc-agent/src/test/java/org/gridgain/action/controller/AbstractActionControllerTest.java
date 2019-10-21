@@ -16,6 +16,9 @@
 
 package org.gridgain.action.controller;
 
+import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -35,10 +38,6 @@ import org.gridgain.dto.action.Request;
 import org.gridgain.dto.action.Response;
 import org.junit.Before;
 
-import java.util.Collections;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
@@ -46,13 +45,14 @@ import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionResponseDest;
+import static org.gridgain.utils.AgentObjectMapperFactory.jsonMapper;
 
 /**
  * Abstract test for action controllers.
  */
 abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
     /** Mapper. */
-    protected final ObjectMapper mapper = new ObjectMapper();
+    protected final ObjectMapper mapper = jsonMapper();
 
     /**
      * Start grid.

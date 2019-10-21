@@ -17,8 +17,6 @@
 package org.gridgain.config;
 
 import java.util.List;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -33,6 +31,8 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
+
+import static org.gridgain.utils.AgentObjectMapperFactory.binaryMapper;
 
 /**
  * Websocket configuration.
@@ -81,7 +81,7 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
     /** {@inheritDoc} */
     @Override public boolean configureMessageConverters(List<MessageConverter> msgConverters) {
         MappingJackson2MessageConverter smileJsonConverter = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
-        smileJsonConverter.setObjectMapper(new ObjectMapper(new SmileFactory()));
+        smileJsonConverter.setObjectMapper(binaryMapper());
 
         msgConverters.add(smileJsonConverter);
 

@@ -24,12 +24,14 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.dto.IgniteConfigurationWrapper;
 import org.gridgain.service.sender.CoordinatorSender;
 
+import static org.gridgain.utils.AgentObjectMapperFactory.jsonMapper;
+
 /**
  * Node configuration exporter.
  */
 public class NodeConfigurationExporter implements AutoCloseable {
     /** Mapper. */
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = jsonMapper();
 
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;
