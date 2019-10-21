@@ -17,7 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Map;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.h2.value.Value;
@@ -45,18 +48,41 @@ public class GridH2JavaObject extends GridH2ValueMessage {
     public GridH2JavaObject(Value val) {
         assert val.getType().getValueType() == Value.JAVA_OBJECT : val.getType();
 
-//        Object obj = val.getObject();
-//
-//        if (obj instanceof Collection) {
-//            Collection col = (Collection)obj;
-//
-//            for (Object item : col) {
-//                if (item instanceof BinaryObjectImpl)
-//                    ((BinaryObjectImpl)item).detachAllowed(true);
-//            }
-//        }
+        allowDetachForSimpleContainers(val.getObject());
 
         b = val.getBytesNoCopy();
+    }
+
+    private void allowDetachForSimpleContainers(Object obj) {
+        if (obj instanceof Collection) {
+            Collection col = (Collection)obj;
+
+            for (Object x : col) {
+                if (x instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x).detachAllowed(true);
+            }
+        }
+        else if (obj instanceof Object[]) {
+            Object[] arr = (Object[])obj;
+
+            for (Object x : arr) {
+                if (x instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x).detachAllowed(true);
+            }
+        }
+        else if (obj instanceof Map) {
+            Map map = (Map)obj;
+
+            for (Object x0 : map.entrySet()) {
+                Map.Entry x = (Map.Entry)x0;
+
+                if (x.getKey() instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x.getKey()).detachAllowed(true);
+
+                if (x.getValue() instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x.getValue()).detachAllowed(true);
+            }
+        }
     }
 
     /** {@inheritDoc} */
