@@ -21,11 +21,13 @@ import java.util.Arrays;
 import java.util.Map;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Partition update counters message.
@@ -33,16 +35,20 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 @IgniteCodeGeneratingFail
 public class PartitionUpdateCountersMessage implements Message {
     /** */
-    private static final int ITEM_SIZE = 4 /* partition */ + 8 /* initial counter */ + 8 /* updates count */;
+    private static final int ITEM_SIZE = 4 /* partition */ + 8 /* initial counter */ + 4 /* updates count */;
 
     /** */
     private static final long serialVersionUID = 193442457510062844L;
 
     /** */
-    private byte data[];
+    private byte[] data;
 
     /** */
     private int cacheId;
+
+    /** */
+    @GridDirectTransient
+    private GridCacheContext cctx;
 
     /** */
     @GridDirectTransient
@@ -69,6 +75,18 @@ public class PartitionUpdateCountersMessage implements Message {
     }
 
     /**
+     * @param cctx Cache context.
+     * @param initSize Initial size.
+     */
+    public PartitionUpdateCountersMessage(GridCacheContext cctx, int initSize) {
+        assert initSize >= 1;
+
+        this.cctx = cctx;
+        cacheId = cctx.cacheId();
+        data = new byte[initSize * ITEM_SIZE];
+    }
+
+    /**
      * @return Cache id.
      */
     public int cacheId() {
@@ -80,6 +98,13 @@ public class PartitionUpdateCountersMessage implements Message {
      */
     public int size() {
         return size;
+    }
+
+    /**
+     * @return Cached cache context.
+     */
+    public @Nullable GridCacheContext context() {
+        return cctx;
     }
 
     /**
@@ -125,13 +150,13 @@ public class PartitionUpdateCountersMessage implements Message {
      * @param idx Item number.
      * @return Update counter delta.
      */
-    public long updatesCount(int idx){
+    public int updatesCount(int idx){
         if (idx >= size)
             throw new ArrayIndexOutOfBoundsException();
 
         long off = GridUnsafe.BYTE_ARR_OFF + idx * ITEM_SIZE + 12;
 
-        return GridUnsafe.getLong(data, off);
+        return GridUnsafe.getInt(data, off);
     }
 
     /**
@@ -139,14 +164,14 @@ public class PartitionUpdateCountersMessage implements Message {
      * @param init Init partition counter.
      * @param updatesCnt Update counter delta.
      */
-    public void add(int part, long init, long updatesCnt) {
+    public void add(int part, long init, int updatesCnt) {
         ensureSpace(size + 1);
 
         long off = GridUnsafe.BYTE_ARR_OFF + size++ * ITEM_SIZE;
 
         GridUnsafe.putInt(data, off, part); off += 4;
         GridUnsafe.putLong(data, off, init); off += 8;
-        GridUnsafe.putLong(data, off, updatesCnt);
+        GridUnsafe.putInt(data, off, updatesCnt);
     }
 
     /**

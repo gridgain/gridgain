@@ -17,15 +17,12 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.io.Externalizable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -54,9 +51,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateTxResult;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.distributed.dht.PartitionUpdateCountersMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -93,8 +87,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.REA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.RELOAD;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRIMARY;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
@@ -455,77 +447,8 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
     public void calculatePartitionUpdateCounters() throws IgniteTxRollbackCheckedException {
         TxCounters counters = txCounters(false);
 
-        if (counters != null && F.isEmpty(counters.updateCounters())) {
-            List<PartitionUpdateCountersMessage> cntrMsgs = new ArrayList<>();
-
-            for (Map.Entry<Integer, Map<Integer, AtomicLong>> record : counters.accumulatedUpdateCounters().entrySet()) {
-                int cacheId = record.getKey();
-
-                Map<Integer, AtomicLong> partToCntrs = record.getValue();
-
-                assert partToCntrs != null;
-
-                if (F.isEmpty(partToCntrs))
-                    continue;
-
-                PartitionUpdateCountersMessage msg = new PartitionUpdateCountersMessage(cacheId, partToCntrs.size());
-
-                GridCacheContext ctx0 = cctx.cacheContext(cacheId);
-
-                GridDhtPartitionTopology top = ctx0.topology();
-
-                assert top != null;
-
-                for (Map.Entry<Integer, AtomicLong> e : partToCntrs.entrySet()) {
-                    AtomicLong acc = e.getValue();
-
-                    assert acc != null;
-
-                    long cntr = acc.get();
-
-                    assert cntr >= 0;
-
-                    if (cntr != 0) {
-                        int p = e.getKey();
-
-                        GridDhtLocalPartition part = top.localPartition(p);
-
-                        // Verify primary tx mapping.
-                        // LOST state is possible if tx is started over LOST partition.
-                        boolean valid = part != null &&
-                            (part.state() == OWNING || part.state() == LOST) &&
-                            part.primary(top.readyTopologyVersion());
-
-                        if (!valid) {
-                            // Local node is no longer primary for the partition, need to rollback a transaction.
-                            if (part != null && !part.primary(top.readyTopologyVersion())) {
-                                log.warning("Failed to prepare a transaction on outdated topology, rolling back " +
-                                    "[tx=" + CU.txString(this) +
-                                    ", readyTopVer=" + top.readyTopologyVersion() +
-                                    ", lostParts=" + top.lostPartitions() +
-                                    ", part=" + part.toString() + ']');
-
-                                throw new IgniteTxRollbackCheckedException("Failed to prepare a transaction on outdated " +
-                                    "topology, please try again [timeout=" + timeout() + ", tx=" + CU.txString(this) + ']');
-                            }
-
-                            // Trigger error.
-                            throw new AssertionError("Invalid primary mapping [tx=" + CU.txString(this) +
-                                ", readyTopVer=" + top.readyTopologyVersion() +
-                                ", lostParts=" + top.lostPartitions() +
-                                ", part=" + (part == null ? "NULL" : part.toString()) + ']');
-                        }
-
-                        msg.add(p, part.getAndIncrementUpdateCounter(cntr), cntr);
-                    }
-                }
-
-                if (msg.size() > 0)
-                    cntrMsgs.add(msg);
-            }
-
-            counters.updateCounters(cntrMsgs);
-        }
+        if (counters != null)
+            counters.calculateUpdateCounters();
     }
 
     /**

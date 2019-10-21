@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.util.collection;
 
+import java.util.Collection;
+
 /**
  * The map for integer keys.
  */
@@ -73,6 +75,11 @@ public interface IntMap<V> {
      * @param act Action.
      */
     <E extends Throwable> void forEach(EntryConsumer<V, E> act) throws E;
+
+    /**
+     * @return Values collection.
+     */
+    Collection<V> values();
 
     /** Returns count of elements. */
     int size();

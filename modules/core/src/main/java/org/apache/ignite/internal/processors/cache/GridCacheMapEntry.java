@@ -1174,7 +1174,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     counters.incrementUpdateCounter(cctx.cacheId(), partition());
 
-                counters.accumulateSizeDelta(cctx.cacheId(), partition(), 1);
+                counters.incrementPartitionSize(cctx.cacheId(), partition());
             }
             else if (res.resultType() == ResultType.PREV_NOT_NULL && compareIgnoreOpCounter(res.resultVersion(), mvccVer) != 0) {
                 TxCounters counters = tx.txCounters(true);
@@ -1191,7 +1191,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     counters.incrementUpdateCounter(cctx.cacheId(), partition());
 
-                counters.accumulateSizeDelta(cctx.cacheId(), partition(), -1);
+                counters.decrementPartitionSize(cctx.cacheId(), partition());
             }
 
             if (cctx.group().persistenceEnabled() && cctx.group().walEnabled()) {
@@ -1320,7 +1320,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     counters.incrementUpdateCounter(cctx.cacheId(), partition());
 
-                counters.accumulateSizeDelta(cctx.cacheId(), partition(), -1);
+                counters.decrementPartitionSize(cctx.cacheId(), partition());
             }
 
             if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
@@ -5234,7 +5234,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     else
                         counters.incrementUpdateCounter(cctx.cacheId(), entry.partition());
 
-                    counters.accumulateSizeDelta(cctx.cacheId(), entry.partition(), -1);
+                    counters.decrementPartitionSize(cctx.cacheId(), entry.partition());
                 }
 
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
@@ -5565,7 +5565,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     else
                         counters.incrementUpdateCounter(cctx.cacheId(), entry.partition());
 
-                    counters.accumulateSizeDelta(cctx.cacheId(), entry.partition(), 1);
+                    counters.incrementPartitionSize(cctx.cacheId(), entry.partition());
                 }
                 else if (res.resultType() == ResultType.PREV_NOT_NULL && compareIgnoreOpCounter(res.resultVersion(), mvccVer) != 0) {
                     TxCounters counters = tx.txCounters(true);
@@ -5582,7 +5582,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     else
                         counters.incrementUpdateCounter(cctx.cacheId(), entry.partition());
 
-                    counters.accumulateSizeDelta(cctx.cacheId(), entry.partition(), -1);
+                    counters.decrementPartitionSize(cctx.cacheId(), entry.partition());
                 }
 
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())

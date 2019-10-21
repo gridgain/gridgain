@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
@@ -84,7 +83,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
         cctx.mvcc().addFuture(this, futId);
 
         for (UUID peer : siblings) {
-            List<PartitionUpdateCountersMessage> cntrs = cctx.tm().txHandler()
+            Collection<PartitionUpdateCountersMessage> cntrs = cctx.tm().txHandler()
                 .filterUpdateCountersForBackupNode(tx, cctx.node(peer));
 
             if (F.isEmpty(cntrs))

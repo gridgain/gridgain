@@ -292,14 +292,8 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long reserve(long delta) {
-        long cntr = get();
-
-        long reserved = reserveCntr.getAndAdd(delta);
-
-        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved;
-
-        return reserved;
+    @Override public long reserve(long delta) {
+        return reserveCntr.getAndAdd(delta);
     }
 
     /** {@inheritDoc} */

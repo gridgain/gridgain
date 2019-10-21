@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.util.collection;
 
+import java.util.Collection;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -87,6 +88,11 @@ public class IntRWHashMap<V> implements IntMap<V> {
         finally {
             lock.readLock().unlock();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Collection<V> values() {
+        throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */

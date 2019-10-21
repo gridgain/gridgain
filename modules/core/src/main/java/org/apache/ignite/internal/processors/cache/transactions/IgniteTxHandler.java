@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -2365,34 +2364,13 @@ public class IgniteTxHandler {
      * @param node Backup node.
      * @return Partition counters for the given backup node.
      */
-    @Nullable public List<PartitionUpdateCountersMessage> filterUpdateCountersForBackupNode(
+    @Nullable public Collection<PartitionUpdateCountersMessage> filterUpdateCountersForBackupNode(
         IgniteInternalTx tx, ClusterNode node) {
         TxCounters txCntrs = tx.txCounters(false);
-        Collection<PartitionUpdateCountersMessage> updCntrs;
 
-        if (txCntrs == null || F.isEmpty(updCntrs = txCntrs.updateCounters()))
-            return null;
+        if (txCntrs != null)
+            return txCntrs.updateCountersForBackupNode(node);
 
-        List<PartitionUpdateCountersMessage> res = new ArrayList<>(updCntrs.size());
-
-        AffinityTopologyVersion top = tx.topologyVersionSnapshot();
-
-        for (PartitionUpdateCountersMessage partCntrs : updCntrs) {
-            GridDhtPartitionTopology topology = ctx.cacheContext(partCntrs.cacheId()).topology();
-
-            PartitionUpdateCountersMessage resCntrs = new PartitionUpdateCountersMessage(partCntrs.cacheId(), partCntrs.size());
-
-            for (int i = 0; i < partCntrs.size(); i++) {
-                int part = partCntrs.partition(i);
-
-                if (topology.nodes(part, top).indexOf(node) > 0)
-                    resCntrs.add(part, partCntrs.initialCounter(i), partCntrs.updatesCount(i));
-            }
-
-            if (resCntrs.size() > 0)
-                res.add(resCntrs);
-        }
-
-        return res;
+        return null;
     }
 }

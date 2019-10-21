@@ -269,15 +269,15 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
      * @param topVer Topology version.
      * @param gaps Even-length array of pairs [start, end] for each gap.
      */
-    @Nullable public void closeBackupUpdateCountersGaps(GridCacheContext cctx,
+    public void closeBackupUpdateCountersGaps(GridCacheContext cctx,
         int part,
         AffinityTopologyVersion topVer,
         GridLongList gaps) {
         assert gaps != null && gaps.size() % 2 == 0;
 
-        for (int i = 0; i < gaps.size() / 2; i++) {
-            long gapStart = gaps.get(i * 2);
-            long gapStop = gaps.get(i * 2 + 1);
+        for (int i = 0; i < gaps.size();) {
+            long gapStart = gaps.get(i++);
+            long gapStop  = gaps.get(i++);
 
             /*
              * No user listeners should be called by this invocation. In the common case of partitioned cache or
