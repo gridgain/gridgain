@@ -289,10 +289,11 @@ public interface PlatformContext {
     public String platform();
 
     /**
-     * Invalidates the near cache.
+     * Updates the near cache.
      *
-     * @param cacheId Cache id.
-     * @param keyBytes Serialized key to invalidate.
+     *  @param cacheId Cache id.
+     * @param keyBytes Serialized key to update.
+     * @param valBytes Serialized value.
      */
-    public void invalidateNearCache(int cacheId, byte[] keyBytes);
+    public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes);
 }

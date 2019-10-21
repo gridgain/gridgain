@@ -21,15 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
-import org.apache.ignite.internal.processors.cache.CacheObject;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
-import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
-import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.*;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -487,11 +479,12 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         if (proc instanceof PlatformNoopProcessor) {
             return;
         }
-        // TODO: Nothing happens on Clear - reproducer prepared
-        // TODO: How to pass key in a better way? byte[] or Object? Do we have cached valueBytes normally or not?
+
         try {
-            byte[] keyBytes = this.key.valueBytes(this.cctx.cacheObjectContext());
-            proc.context().invalidateNearCache(this.cctx.cacheId(), keyBytes);
+            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+            byte[] keyBytes = this.key.valueBytes(ctx);
+            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }

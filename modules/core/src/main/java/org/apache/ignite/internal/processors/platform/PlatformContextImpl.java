@@ -586,14 +586,14 @@ public class PlatformContextImpl implements PlatformContext {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidateNearCache(int cacheId, byte[] keyBytes) {
-        // TODO: Should we track active caches and avoid unnecessary callbacks?
-        // TODO: Use cache id instead of name - perf
+    @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes) {
+        // TODO: Track active caches and avoid unnecessary callbacks
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
             out.writeByteArray(keyBytes);
+            out.writeByteArray(valBytes);
 
             out.synchronize();
 

@@ -64,7 +64,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         public void Invalidate(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
-            // TODO: Ignore updates caused by current thread activity
             INearCache nearCache;
             if (!_nearCaches.TryGetValue(cacheId, out nearCache))
             {
