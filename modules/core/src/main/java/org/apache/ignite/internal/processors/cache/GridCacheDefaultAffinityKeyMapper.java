@@ -24,6 +24,7 @@ import org.apache.ignite.cache.affinity.AffinityKey;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.util.GridArgumentCheck;
 import org.apache.ignite.internal.util.GridReflectionCache;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -81,7 +82,9 @@ public class GridCacheDefaultAffinityKeyMapper implements AffinityKeyMapper {
             return IgniteUtils.hashCode(key);
 
         try {
-            Object o = reflectCache.firstFieldValue(key);
+            Object o = SecurityUtils.hasSecurityManager()
+                ? SecurityUtils.doPrivileged(() -> reflectCache.firstFieldValue(key))
+                : reflectCache.firstFieldValue(key);
 
             if (o != null)
                 return o;

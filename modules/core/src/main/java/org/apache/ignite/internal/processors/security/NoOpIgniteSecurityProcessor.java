@@ -23,6 +23,8 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.security.sandbox.IgniteSandbox;
+import org.apache.ignite.internal.processors.security.sandbox.NoOpSandbox;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -34,6 +36,7 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.security.IgniteSecurityProcessor.ATTR_GRID_SEC_PROC_CLASS;
+import static org.apache.ignite.internal.processors.security.SecurityUtils.MSG_SEC_PROC_CLS_IS_INVALID;
 
 /**
  * No operation IgniteSecurity.
@@ -44,6 +47,9 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
 
     /** Processor delegate. */
     private final GridSecurityProcessor processor;
+
+    /** Instance of IgniteSandbox. */
+    private final IgniteSandbox sandbox = new NoOpSandbox();
 
     /**
      * @param ctx Grid kernal context.
@@ -138,6 +144,11 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     /** {@inheritDoc} */
     @Override public void authorize(String name, SecurityPermission perm) throws SecurityException {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteSandbox sandbox() {
+        return sandbox;
     }
 
     /** {@inheritDoc} */

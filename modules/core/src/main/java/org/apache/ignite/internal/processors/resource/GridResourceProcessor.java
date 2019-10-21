@@ -33,6 +33,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lifecycle.LifecycleBean;
@@ -223,9 +224,12 @@ public class GridResourceProcessor extends GridProcessorAdapter {
             log.debug(S.toString("Injecting resources", "obj", obj, true));
 
         // Unwrap Proxy object.
-        obj = unwrapTarget(obj);
+        final Object target = unwrapTarget(obj);
 
-        inject(obj, annSet, null, null, params);
+        if (SecurityUtils.hasSecurityManager())
+            SecurityUtils.doPrivileged(() -> inject(target, annSet, null, null, params));
+        else
+            inject(target, annSet, null, null, params);
     }
 
     /**

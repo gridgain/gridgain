@@ -212,6 +212,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
@@ -1423,7 +1424,7 @@ public abstract class IgniteUtils {
     public static void dumpThreads(@Nullable IgniteLogger log) {
         ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
 
-        final Set<Long> deadlockedThreadsIds = getDeadlockedThreadIds(mxBean);
+        final Set<Long> deadlockedThreadsIds = SecurityUtils.doPrivileged(() -> getDeadlockedThreadIds(mxBean));
 
         if (deadlockedThreadsIds.isEmpty())
             warn(log, "No deadlocked threads detected.");
@@ -6998,14 +6999,21 @@ public abstract class IgniteUtils {
      * @return Return value.
      * @throws IgniteCheckedException If call failed.
      */
-    @Nullable public static <R> R wrapThreadLoader(ClassLoader ldr, Callable<R> c) throws IgniteCheckedException {
+    public static @Nullable <R> R wrapThreadLoader(ClassLoader ldr, Callable<R> c) throws IgniteCheckedException {
+        // Checks that this method doesn't extend a caller's permissions.
+        // If a ProrectionDomain of passed ClassLoader doesn't have the RuntimePermission "setContextClassLoader",
+        // then a caller's code that instantiated the ClassLoader doesn't too.
+        // In that case, the method throws an exception.
+        if (!hasSetContextClassLoaderPermission(ldr))
+            throw new IgniteCheckedException("The current thread cannot set the context ClassLoader.");
+
         Thread curThread = Thread.currentThread();
 
         // Get original context class loader.
         ClassLoader ctxLdr = curThread.getContextClassLoader();
 
         try {
-            curThread.setContextClassLoader(ldr);
+            setCtxLdr(curThread, ldr);
 
             return c.call();
         }
@@ -7017,8 +7025,31 @@ public abstract class IgniteUtils {
         }
         finally {
             // Set the original class loader back.
-            curThread.setContextClassLoader(ctxLdr);
+            setCtxLdr(curThread, ctxLdr);
         }
+    }
+
+    /**
+     * @param ldr ClassLoader
+     * @return True if the ProtectedDomain of passed ClassLoader has the RuntimePermission "setContextClassLoader".
+     */
+    private static boolean hasSetContextClassLoaderPermission(ClassLoader ldr) {
+        if (SecurityUtils.hasSecurityManager()) {
+            ProtectionDomain pd = SecurityUtils.doPrivileged(
+                () -> ldr.getClass().getProtectionDomain());
+
+            return pd.implies(new RuntimePermission("setContextClassLoader"));
+        }
+
+        return true;
+    }
+
+    /** */
+    private static void setCtxLdr(Thread thread, ClassLoader ldr) {
+        if (SecurityUtils.hasSecurityManager())
+            SecurityUtils.doPrivileged(() -> thread.setContextClassLoader(ldr));
+        else
+            thread.setContextClassLoader(ldr);
     }
 
     /**
@@ -7031,19 +7062,11 @@ public abstract class IgniteUtils {
      * @return Return value.
      */
     @Nullable public static <R> R wrapThreadLoader(ClassLoader ldr, IgniteOutClosure<R> c) {
-        Thread curThread = Thread.currentThread();
-
-        // Get original context class loader.
-        ClassLoader ctxLdr = curThread.getContextClassLoader();
-
         try {
-            curThread.setContextClassLoader(ldr);
-
-            return c.apply();
+            return wrapThreadLoader(ldr, (Callable<R>)c::apply);
         }
-        finally {
-            // Set the original class loader back.
-            curThread.setContextClassLoader(ctxLdr);
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
         }
     }
 
@@ -7052,22 +7075,20 @@ public abstract class IgniteUtils {
      * resets thread context class loader to its initial value.
      *
      * @param ldr Class loader to run the closure under.
-     * @param c Closure to run.
+     * @param r Closure to run.
      */
-    public static void wrapThreadLoader(ClassLoader ldr, Runnable c) {
-        Thread curThread = Thread.currentThread();
-
-        // Get original context class loader.
-        ClassLoader ctxLdr = curThread.getContextClassLoader();
-
+    public static void wrapThreadLoader(ClassLoader ldr, Runnable r) {
         try {
-            curThread.setContextClassLoader(ldr);
+            wrapThreadLoader(ldr, new Callable<Void>() {
+                @Override public Void call() {
+                    r.run();
 
-            c.run();
+                    return null;
+                }
+            });
         }
-        finally {
-            // Set the original class loader back.
-            curThread.setContextClassLoader(ctxLdr);
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
         }
     }
 

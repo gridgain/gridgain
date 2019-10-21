@@ -87,6 +87,7 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.security.sandbox.IgniteSandbox;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.GridBoundedPriorityQueue;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
@@ -838,7 +839,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                     qry.mvccSnapshot(), qry.isDataPageScanEnabled());
             }
 
-            return new ScanQueryIterator(it, qry, topVer, locPart, keyValFilter, transformer, locNode, cctx, log);
+            return new ScanQueryIterator(it, qry, topVer, locPart, wrap(keyValFilter),
+                wrap(transformer), locNode, cctx, log);
         }
         catch (IgniteCheckedException | RuntimeException e) {
             if (intFilter != null)
@@ -846,6 +848,20 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
             throw e;
         }
+    }
+
+    /** */
+    private <E1, E2> IgniteBiPredicate<E1, E2> wrap(final IgniteBiPredicate<E1, E2> p) {
+        final IgniteSandbox sandbox = cctx.kernalContext().security().sandbox();
+
+        return p != null && sandbox.enabled() ? (e1, e2) -> sandbox.execute(() -> p.apply(e1, e2)) : p;
+    }
+
+    /** */
+    private <E, R> IgniteClosure<E, R> wrap(final IgniteClosure<E, R> c) {
+        final IgniteSandbox sandbox = cctx.kernalContext().security().sandbox();
+
+        return c != null && sandbox.enabled() ? e -> sandbox.execute(() -> c.apply(e)) : c;
     }
 
     /**

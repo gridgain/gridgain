@@ -1,11 +1,12 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,10 +18,10 @@
 package org.apache.ignite.internal.processors.security.impl;
 
 import java.net.InetSocketAddress;
+import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,64 +47,16 @@ import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_NODE;
  */
 public class TestSecurityProcessor extends GridProcessorAdapter implements GridSecurityProcessor {
     /** Permissions. */
-    private static final Map<SecurityCredentials, SecurityPermissionSet> PERMS = new ConcurrentHashMap<>();
+    public static final Map<SecurityCredentials, SecurityPermissionSet> PERMS = new ConcurrentHashMap<>();
+
+    /** Sandbox permissions. */
+    private static final Map<SecurityCredentials, Permissions> SANDBOX_PERMS = new ConcurrentHashMap<>();
 
     /** Node security data. */
     private final TestSecurityData nodeSecData;
 
     /** Users security data. */
     private final Collection<TestSecurityData> predefinedAuthData;
-
-    /** Authorize records. */
-    private final List<AuthorizeRecord> authorizeRecords = new ArrayList<>();
-
-    /**
-     *
-     */
-    public static class AuthorizeRecord {
-        /**
-         *
-         */
-        private final String actName;
-
-        /** With permition. */
-        private final SecurityPermission withPermition;
-
-        /** Login. */
-        private final String login;
-
-        /**
-         * @param actName Action name.
-         * @param withPermition With permition.
-         * @param login Login.
-         */
-        public AuthorizeRecord(String actName, SecurityPermission withPermition, String login) {
-            this.actName = actName;
-            this.withPermition = withPermition;
-            this.login = login;
-        }
-
-        /**
-         *
-         */
-        public String getActName() {
-            return actName;
-        }
-
-        /**
-         *
-         */
-        public SecurityPermission getWithPermition() {
-            return withPermition;
-        }
-
-        /**
-         *
-         */
-        public String getLogin() {
-            return login;
-        }
-    }
 
     /**
      * Constructor.
@@ -120,6 +73,9 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
 
     /** {@inheritDoc} */
     @Override public SecurityContext authenticateNode(ClusterNode node, SecurityCredentials cred) {
+        if (!PERMS.containsKey(cred))
+            return null;
+
         return new TestSecurityContext(
             new TestSecuritySubject()
                 .setType(REMOTE_NODE)
@@ -127,6 +83,7 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
                 .setAddr(new InetSocketAddress(F.first(node.addresses()), 0))
                 .setLogin(cred.getLogin())
                 .setPerms(PERMS.get(cred))
+                .sandboxPermissions(SANDBOX_PERMS.get(cred))
         );
     }
 
@@ -137,6 +94,9 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
 
     /** {@inheritDoc} */
     @Override public SecurityContext authenticate(AuthenticationContext ctx) {
+        if (!PERMS.containsKey(ctx.credentials()))
+            return null;
+
         return new TestSecurityContext(
             new TestSecuritySubject()
                 .setType(ctx.subjectType())
@@ -144,6 +104,7 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
                 .setAddr(ctx.address())
                 .setLogin(ctx.credentials().getLogin())
                 .setPerms(PERMS.get(ctx.credentials()))
+                .sandboxPermissions(SANDBOX_PERMS.get(ctx.credentials()))
         );
     }
 
@@ -160,9 +121,6 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     /** {@inheritDoc} */
     @Override public void authorize(String name, SecurityPermission perm, SecurityContext securityCtx)
         throws SecurityException {
-
-        authorizeRecords.add(new AuthorizeRecord(name, perm, (String)securityCtx.subject().login()));
-
         if (!((TestSecurityContext)securityCtx).operationAllowed(name, perm))
             throw new SecurityException("Authorization failed [perm=" + perm +
                 ", name=" + name +
@@ -172,13 +130,6 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     /** {@inheritDoc} */
     @Override public void onSessionExpired(UUID subjId) {
         // No-op.
-    }
-
-    /**
-     *
-     */
-    public List<AuthorizeRecord> getAuthorizeRecords() {
-        return authorizeRecords;
     }
 
     /** {@inheritDoc} */
@@ -191,11 +142,14 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
         super.start();
 
         PERMS.put(nodeSecData.credentials(), nodeSecData.getPermissions());
+        SANDBOX_PERMS.put(nodeSecData.credentials(), nodeSecData.sandboxPermissions());
 
         ctx.addNodeAttribute(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS, nodeSecData.credentials());
 
-        for (TestSecurityData data : predefinedAuthData)
+        for (TestSecurityData data : predefinedAuthData) {
             PERMS.put(data.credentials(), data.getPermissions());
+            SANDBOX_PERMS.put(nodeSecData.credentials(), data.sandboxPermissions());
+        }
     }
 
     /** {@inheritDoc} */
@@ -203,8 +157,11 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
         super.stop(cancel);
 
         PERMS.remove(nodeSecData.credentials());
+        SANDBOX_PERMS.remove(nodeSecData.credentials());
 
-        for (TestSecurityData data : predefinedAuthData)
+        for (TestSecurityData data : predefinedAuthData) {
             PERMS.remove(data.credentials());
+            SANDBOX_PERMS.remove(data.credentials());
+        }
     }
 }

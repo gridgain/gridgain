@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.GridLeanIdentitySet;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -188,7 +189,9 @@ public class GridResourceIoc {
         assert target != null;
         assert annCls != null;
 
-        ClassDescriptor desc = descriptor(dep, target.getClass());
+        ClassDescriptor desc = SecurityUtils.hasSecurityManager()
+            ? SecurityUtils.doPrivileged(() -> descriptor(dep, target.getClass()))
+            : descriptor(dep, target.getClass());
 
         return desc.recursiveFields().length > 0 || desc.annotatedMembers(annCls) != null;
     }
@@ -205,7 +208,9 @@ public class GridResourceIoc {
         assert target != null;
         assert annSet != null;
 
-        return descriptor(dep, target.getClass()).isAnnotated(annSet) != 0;
+        return SecurityUtils.hasSecurityManager()
+            ? SecurityUtils.doPrivileged(() -> descriptor(dep, target.getClass()).isAnnotated(annSet) != 0)
+            : descriptor(dep, target.getClass()).isAnnotated(annSet) != 0;
     }
 
     /**
