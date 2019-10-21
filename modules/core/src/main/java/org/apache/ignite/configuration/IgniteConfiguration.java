@@ -38,6 +38,7 @@ import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.events.Event;
@@ -215,6 +216,10 @@ public class IgniteConfiguration {
     public static final boolean DFLT_LATE_AFF_ASSIGNMENT = true;
 
     /** Default value for active on start flag. */
+    public static final ClusterState DFLT_STATE_ON_START = ClusterState.ACTIVE;
+
+    /** Default value for active on start flag. */
+    @Deprecated
     public static final boolean DFLT_ACTIVE_ON_START = true;
 
     /** Default value for auto-activation flag. */
@@ -522,6 +527,9 @@ public class IgniteConfiguration {
 
     /** Active on start flag. */
     private boolean activeOnStart = DFLT_ACTIVE_ON_START;
+
+    /** Cluster state on start. */
+    private ClusterState clusterStateOnStart = DFLT_STATE_ON_START;
 
     /** Auto-activation flag. */
     private boolean autoActivation = DFLT_AUTO_ACTIVATION;
@@ -2584,9 +2592,27 @@ public class IgniteConfiguration {
      * cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @return Active on start flag value.
+     * @deprecated Use {@link #getClusterStateOnStart()}  instead.
      */
+    @Deprecated
     public boolean isActiveOnStart() {
         return activeOnStart;
+    }
+
+    /**
+     * Gets state of cluster on start. If cluster state on start is {@link ClusterState#INACTIVE},
+     * there will be no cache partition map exchanges performed until the cluster is activated. This should
+     * significantly speed up large topology startup time.
+     * <p>
+     * Default value is {@link #DFLT_STATE_ON_START}.
+     * <p>
+     * This flag is ignored when {@link DataStorageConfiguration} is present:
+     * cluster is always inactive on start when Ignite Persistence is enabled.
+     *
+     * @return State of cluster on start.
+     */
+    public ClusterState getClusterStateOnStart() {
+        return clusterStateOnStart;
     }
 
     /**
@@ -2599,9 +2625,27 @@ public class IgniteConfiguration {
      * @param activeOnStart Active on start flag value.
      * @return {@code this} instance.
      * @see #isActiveOnStart()
+     * @deprecated Use {@link #setClusterStateOnStart(ClusterState)} instead.
      */
+    @Deprecated
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
-        this.activeOnStart = activeOnStart;
+        return setClusterStateOnStart(activeOnStart ? ClusterState.ACTIVE : ClusterState.INACTIVE);
+    }
+
+    /**
+     * Sets state of cluster on start. This value should be the same on all
+     * nodes in the cluster.
+     * <p>
+     * This flag is ignored when {@link DataStorageConfiguration} is present:
+     * cluster is always inactive on start when Ignite Persistence is enabled.
+     *
+     * @param state Cluster state on start value.
+     * @return {@code this} instance.
+     * @see #getClusterStateOnStart()
+     */
+    public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
+        this.clusterStateOnStart = state;
+        this.activeOnStart = ClusterState.active(state);
 
         return this;
     }
