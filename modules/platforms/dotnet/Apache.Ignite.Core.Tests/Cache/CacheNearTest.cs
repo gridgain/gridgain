@@ -211,11 +211,17 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
 
-            var obj = new Foo(12);
-            cache[1] = obj;
+            var obj1 = new Foo(12);
+            var obj2 = new Foo(42);
+            
+            cache[1] = obj1;
+            var res1 = cache[1];
 
-            var res = cache[1];
-            Assert.AreSame(obj, res);
+            cache[1] = obj2;
+            var res2 = cache[1];
+            
+            Assert.AreSame(obj1, res1);
+            Assert.AreSame(obj2, res2);
         }
 
         /// <summary>
