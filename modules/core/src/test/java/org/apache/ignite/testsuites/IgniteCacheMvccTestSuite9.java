@@ -46,6 +46,8 @@ import org.apache.ignite.internal.stat.IoStatisticsManagerSelfTest;
 import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest;
 import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCacheSelfTest;
 import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImplSelfTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanCacheGroupsTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
 
@@ -96,6 +98,8 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(IoStatisticsCachePersistenceSelfTest.class);
         ignoredTests.add(IoStatisticsManagerSelfTest.class);
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanCacheSelfTest.class);
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class);
 

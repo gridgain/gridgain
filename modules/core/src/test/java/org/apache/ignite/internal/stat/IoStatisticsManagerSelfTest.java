@@ -124,7 +124,7 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
         long physicalReadsCnt = ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null);
 
         if (isPersistent)
-            Assert.assertTrue(physicalReadsCnt>0);
+            Assert.assertTrue(physicalReadsCnt > 0);
         else
             Assert.assertEquals(0, physicalReadsCnt);
 
@@ -133,6 +133,23 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
         Assert.assertNotNull(logicalReads);
 
         Assert.assertEquals(RECORD_COUNT, logicalReads.longValue());
+
+        // We expect pages to be rotated with disk.
+        for (int i = 0; i < RECORD_COUNT; i++)
+            ignite(0).cache(DEFAULT_CACHE_NAME).get("KEY-" + i);
+
+        if (isPersistent) {
+            // Check that physical reads grows, but not infinitely.
+            assertTrue(physicalReadsCnt < ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+
+            // There should be no more than 3 page rotations per read (data page, index level 1 page and index level 2 page).
+            assertTrue(physicalReadsCnt + 3 * RECORD_COUNT > ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+        }
+        else
+            assertEquals(0, (long)ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+
+        assertTrue(logicalReads < (long)ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+        assertTrue(logicalReads + 3 * RECORD_COUNT > ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
     }
 
     /**
@@ -147,12 +164,12 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
 
         IoStatisticsManager ioStatMgr = ign.context().ioStats();
 
-        IgniteCache<String, String> cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         ioStatMgr.reset();
 
         for (int i = 0; i < RECORD_COUNT; i++)
-            cache.put("KEY-" + i, "VAL-" + i);
+            cache.put("KEY-" + i, "VALUE-" + i);
 
         return ioStatMgr;
     }
