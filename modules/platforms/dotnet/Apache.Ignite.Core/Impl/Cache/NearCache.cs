@@ -42,15 +42,17 @@ namespace Apache.Ignite.Core.Impl.Cache
             _map[key] = val;
         }
 
-        public void Invalidate(IBinaryStream keyStream, Marshaller marshaller)
+        public void Update(IBinaryStream keyStream, Marshaller marshaller)
         {
             Debug.Assert(keyStream != null);
             Debug.Assert(marshaller != null);
 
-            var key = marshaller.Unmarshal<TK>(keyStream);
-            TV unused;
+            var reader = marshaller.StartUnmarshal(keyStream);
+            
+            var key = reader.Deserialize<TK>();
+            var val = reader.Deserialize<TV>();
 
-            _map.TryRemove(key, out unused);
+            _map[key] = val;
         }
     }
 }

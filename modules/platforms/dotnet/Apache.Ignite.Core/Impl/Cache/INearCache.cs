@@ -27,6 +27,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Reads cache key from a stream and invalidates.
         /// </summary>
-        void Invalidate(IBinaryStream keyStream, Marshaller marshaller);
+        void Update(IBinaryStream keyStream, Marshaller marshaller);
     }
 }

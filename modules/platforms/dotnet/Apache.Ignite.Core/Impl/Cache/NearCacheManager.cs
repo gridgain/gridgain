@@ -60,9 +60,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /// <summary>
-        /// Reads cache key from a stream and invalidates.
+        /// Reads cache entry from a stream and updates the near cache.
         /// </summary>
-        public void Invalidate(int cacheId, IBinaryStream stream, Marshaller marshaller)
+        public void Update(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
             INearCache nearCache;
             if (!_nearCaches.TryGetValue(cacheId, out nearCache))
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return;
             }
             
-            nearCache.Invalidate(stream, marshaller);
+            nearCache.Update(stream, marshaller);
         }
     }
 }
