@@ -223,6 +223,24 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreSame(obj1, res1);
             Assert.AreSame(obj2, res2);
         }
+        
+        /// <summary>
+        /// Tests that near cache is updated from remote node after being populated with local Put call.
+        /// </summary>
+        [Test]
+        public void TestNearCacheUpdatesFromRemoteNodeAfterLocalPut()
+        {
+            // TODO:
+        }
+
+        /// <summary>
+        /// Tests that near cache is cleared from remote node after being populated with local Put call.
+        /// </summary>
+        [Test]
+        public void TestNearCacheClearFromRemoteNodeAfterLocalPut()
+        {
+            // TODO
+        }
 
         /// <summary>
         /// Asserts the cache is near.
