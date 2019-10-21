@@ -50,9 +50,17 @@ namespace Apache.Ignite.Core.Impl.Cache
             var reader = marshaller.StartUnmarshal(keyStream);
             
             var key = reader.Deserialize<TK>();
-            var val = reader.Deserialize<TV>();
 
-            _map[key] = val;
+            if (reader.ReadBoolean())
+            {
+                var val = reader.Deserialize<TV>();
+                _map[key] = val;
+            }
+            else
+            {
+                TV unused;
+                _map.TryRemove(key, out unused);
+            }
         }
     }
 }
