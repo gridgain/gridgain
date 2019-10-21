@@ -30,6 +30,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.gridgain.agent.WebSocketManager;
 import org.gridgain.dto.cluster.BaselineInfo;
 import org.gridgain.dto.cluster.ClusterInfo;
@@ -160,6 +161,7 @@ public class ClusterService implements AutoCloseable {
 
         ClusterInfo clusterInfo= new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())
+            .setInMemory(!CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
                 new BaselineInfo(
                     cluster.isBaselineAutoAdjustEnabled(),

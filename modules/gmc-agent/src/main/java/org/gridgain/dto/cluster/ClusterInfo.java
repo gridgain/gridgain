@@ -38,6 +38,9 @@ public class ClusterInfo {
     /** Is active. */
     private boolean isActive;
 
+    /** Is in memory. */
+    private boolean isInMemory;
+
     /** Features. */
     private Set<String> features = Collections.emptySet();
 
@@ -118,6 +121,22 @@ public class ClusterInfo {
      */
     public ClusterInfo setActive(boolean active) {
         isActive = active;
+        return this;
+    }
+
+    /**
+     * @return @{code True} if cluster running in memory mode.
+     */
+    public boolean isInMemory() {
+        return isInMemory;
+    }
+
+    /**
+     * @param inMemory In memory.
+     * @return @{code This} for method chaining.
+     */
+    public ClusterInfo setInMemory(boolean inMemory) {
+        isInMemory = inMemory;
         return this;
     }
 
