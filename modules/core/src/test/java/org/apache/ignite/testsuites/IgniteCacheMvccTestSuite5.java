@@ -35,6 +35,8 @@ import org.apache.ignite.internal.processors.cache.ClusterStateNoRebalancePartit
 import org.apache.ignite.internal.processors.cache.ClusterStateNoRebalanceReplicatedTest;
 import org.apache.ignite.internal.processors.cache.ClusterStatePartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.ClusterStateReplicatedSelfTest;
+import org.apache.ignite.internal.processors.cache.ClusterStateThinClientPartitionedSelfTest;
+import org.apache.ignite.internal.processors.cache.ClusterStateThinClientReplicatedSelfTest;
 import org.apache.ignite.internal.processors.cache.ConcurrentCacheStartTest;
 import org.apache.ignite.internal.processors.cache.EntryVersionConsistencyReadThroughTest;
 import org.apache.ignite.internal.processors.cache.IgniteCachePutStackOverflowSelfTest;
@@ -82,9 +84,11 @@ public class IgniteCacheMvccTestSuite5 {
         ignoredTests.add(IgniteCacheSyncRebalanceModeSelfTest.class);
         ignoredTests.add(ClusterStatePartitionedSelfTest.class);
         ignoredTests.add(ClusterStateClientPartitionedSelfTest.class);
+        ignoredTests.add(ClusterStateThinClientPartitionedSelfTest.class);
         ignoredTests.add(ClusterStateNoRebalancePartitionedTest.class);
         ignoredTests.add(ClusterStateReplicatedSelfTest.class);
         ignoredTests.add(ClusterStateClientReplicatedSelfTest.class);
+        ignoredTests.add(ClusterStateThinClientReplicatedSelfTest.class);
         ignoredTests.add(ClusterStateNoRebalanceReplicatedTest.class);
         ignoredTests.add(CacheManualRebalancingTest.class);
         ignoredTests.add(GridCacheAffinityBackupsSelfTest.class);
