@@ -24,6 +24,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -32,8 +33,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /** */
 public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest {
@@ -84,6 +88,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployOutsideBaseline() throws Exception {
         checkDeploymentFromOutsideNode(true, false);
     }
@@ -92,6 +97,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployOutsideBaselineNoPersistence() throws Exception {
         checkDeploymentFromOutsideNode(false, false);
     }
@@ -100,6 +106,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployOutsideBaselineStatic() throws Exception {
         checkDeploymentFromOutsideNode(true, true);
     }
@@ -108,6 +115,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployOutsideBaselineStaticNoPersistence() throws Exception {
         checkDeploymentFromOutsideNode(false, true);
     }
@@ -116,6 +124,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployFromNodeAddedToBlt() throws Exception {
         checkDeployWithNodeAddedToBlt(true);
     }
@@ -124,6 +133,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployToNodeAddedToBlt() throws Exception {
         checkDeployWithNodeAddedToBlt(false);
     }
@@ -132,6 +142,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployFromNodeRemovedFromBlt() throws Exception {
         checkDeployFromNodeRemovedFromBlt(true, false);
     }
@@ -140,6 +151,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployFromNodeRemovedFromBltStatic() throws Exception {
         checkDeployFromNodeRemovedFromBlt(true, true);
     }
@@ -148,6 +160,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployToNodeRemovedFromBlt() throws Exception {
         checkDeployFromNodeRemovedFromBlt(false, false);
     }
@@ -156,6 +169,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDeployFromEachNodes() throws Exception {
         checkDeployFromEachNodes(false, false);
     }
@@ -164,6 +178,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testStaticDeployFromEachNodes() throws Exception {
         checkDeployFromEachNodes(false, true);
     }
@@ -225,7 +240,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
     private void checkDeploymentFromOutsideNode(boolean persistence, boolean staticDeploy) throws Exception {
         this.persistence = persistence;
 
-        Ignite insideNode = startGrid(0);
+        IgniteEx insideNode = startGrid(0);
 
         insideNode.cluster().baselineAutoAdjustEnabled(false);
 
@@ -254,7 +269,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
     private void checkDeployWithNodeAddedToBlt(boolean from) throws Exception {
         persistence = true;
 
-        Ignite insideNode = startGrid(0);
+        IgniteEx insideNode = startGrid(0);
 
         insideNode.cluster().baselineAutoAdjustEnabled(false);
 
@@ -293,7 +308,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
     private void checkDeployFromNodeRemovedFromBlt(boolean from, boolean staticDeploy) throws Exception {
         persistence = true;
 
-        Ignite insideNode = startGrid(0);
+        IgniteEx insideNode = startGrid(0);
 
         insideNode.cluster().baselineAutoAdjustEnabled(false);
 
@@ -338,7 +353,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If node failed to start.
      */
     private Ignite deployServiceFromNewNode(boolean staticDeploy, int nodeNum) throws Exception {
-        Ignite ignite;
+        IgniteEx ignite;
 
         if (staticDeploy) {
             srvcCfg = getClusterSingletonServiceConfiguration();

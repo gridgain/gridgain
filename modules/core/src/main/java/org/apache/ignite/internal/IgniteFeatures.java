@@ -25,6 +25,10 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Defines supported features and check its on other nodes.
@@ -216,6 +220,15 @@ public enum IgniteFeatures {
 
             // Add only when scheduling is disabled.
             if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
+                continue;
+
+            if (DISTRIBUTED_METASTORAGE == value && !isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+                continue;
+
+            if (CLUSTER_ID_AND_TAG == value && !isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE))
+                continue;
+
+            if (BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
             final int featureId = value.getFeatureId();
