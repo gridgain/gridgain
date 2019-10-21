@@ -587,13 +587,23 @@ public class PlatformContextImpl implements PlatformContext {
 
     /** {@inheritDoc} */
     @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes) {
-        // TODO: Track active caches and avoid unnecessary callbacks
+        assert keyBytes != null;
+
+        // TODO: Track active caches and avoid unnecessary callbacks.
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
+
             out.writeByteArray(keyBytes);
-            out.writeByteArray(valBytes);
+
+            if (valBytes != null) {
+                out.writeBoolean(true);
+                out.writeByteArray(valBytes);
+            } else
+            {
+                out.writeBoolean(false);
+            }
 
             out.synchronize();
 

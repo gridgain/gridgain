@@ -482,8 +482,11 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
         try {
             CacheObjectContext ctx = this.cctx.cacheObjectContext();
+
+            // val is null when entry is removed.
             byte[] keyBytes = this.key.valueBytes(ctx);
             byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+
             proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
