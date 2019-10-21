@@ -23,12 +23,14 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.Test;
 
+import static org.gridgain.utils.AgentObjectMapperFactory.jsonMapper;
+
 /**
  * Test of cluster configuration.
  */
 public class IgniteConfigurationWrapperTest {
     /** Mapper. */
-    private ObjectMapper mapper = new ObjectMapper();
+    private ObjectMapper mapper = jsonMapper();
 
     /**
      * Test serialisation/deserialization of default configuration.

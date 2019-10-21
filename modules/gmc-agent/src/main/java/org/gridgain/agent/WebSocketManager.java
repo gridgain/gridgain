@@ -23,9 +23,7 @@ import java.net.URI;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -57,6 +55,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
+import static org.gridgain.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.gridgain.utils.AgentUtils.EMPTY;
 
 /**
@@ -64,8 +63,7 @@ import static org.gridgain.utils.AgentUtils.EMPTY;
  */
 public class WebSocketManager implements AutoCloseable {
     /** Mapper. */
-    private final ObjectMapper mapper = new ObjectMapper(new SmileFactory())
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = binaryMapper();
 
     /** Ws max buffer size. */
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;
@@ -169,12 +167,16 @@ public class WebSocketManager implements AutoCloseable {
      * @param payload Payload.
      */
     public synchronized boolean send(String dest, Object payload) {
-        boolean connected = ses != null && ses.isConnected();
+        boolean connected = isConnected();
 
         if (connected)
             ses.send(dest, payload);
 
         return connected;
+    }
+
+    public boolean isConnected() {
+        return ses != null && ses.isConnected();
     }
 
     /** {@inheritDoc} */

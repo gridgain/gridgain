@@ -16,14 +16,12 @@
 
 package org.gridgain.dto.action;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import java.util.UUID;
 
 /**
  * DTO for action request.
  */
-@JsonDeserialize(using = RequestDeserializer.class)
 public class Request {
     /** Request id. */
     private UUID id;
