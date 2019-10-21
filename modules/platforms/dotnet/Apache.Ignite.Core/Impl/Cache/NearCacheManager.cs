@@ -31,8 +31,8 @@ namespace Apache.Ignite.Core.Impl.Cache
     internal class NearCacheManager
     {
         /** TODO: Use weak references? Java keeps near cache data forever... */
-        private readonly CopyOnWriteConcurrentDictionary<int, INearCache[]> _nearCaches
-            = new CopyOnWriteConcurrentDictionary<int, INearCache[]>();
+        private readonly CopyOnWriteConcurrentDictionary<int, INearCache> _nearCaches
+            = new CopyOnWriteConcurrentDictionary<int, INearCache>();
 
         /// <summary>
         /// Gets the near cache.
@@ -53,11 +53,10 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
 
-            // TODO: Handle multiple caches with same name.
-            // Don't use CopyOnWriteConcurrentDictionary - we'll need our own locking based on cacheId.
-            var caches = _nearCaches.GetOrAdd(cacheId, id => new INearCache[] { new NearCache<TK, TV>() });
-            
-            return caches[0] as NearCache<TK, TV>;
+            var nearCache = _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
+
+            // TODO: Handle null result caused by generic mismatch.
+            return nearCache as NearCache<TK, TV>;
         }
 
         /// <summary>
@@ -65,23 +64,14 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         public void Invalidate(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
-            INearCache[] nearCaches;
-            if (!_nearCaches.TryGetValue(cacheId, out nearCaches))
+            // TODO: Ignore updates caused by current thread activity
+            INearCache nearCache;
+            if (!_nearCaches.TryGetValue(cacheId, out nearCache))
             {
                 return;
             }
             
-            var keyPos = stream.Position;
-
-            for (var i = 0; i < nearCaches.Length; i++)
-            {
-                if (i > 0)
-                {
-                    stream.Seek(keyPos, SeekOrigin.Begin);
-                }
-
-                nearCaches[i].Invalidate(stream, marshaller);
-            }
+            nearCache.Invalidate(stream, marshaller);
         }
     }
 }
