@@ -43,6 +43,25 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     /// </summary>
     internal sealed class CacheClient<TK, TV> : ICacheClient<TK, TV>, ICacheInternal
     {
+        /// <summary>
+        /// Additional flag values for cache operations.
+        /// </summary>
+        private enum ClientCacheRequestFlag : byte
+        {
+            /// <summary>
+            /// No flags
+            /// </summary>
+            None = 0,
+            /// <summary>
+            /// With keep binary, affects only Java version.
+            /// </summary>
+            WithKeepBinary = 1,
+            /// <summary>
+            /// With expiration policy.
+            /// </summary>
+            WithExpiryPolicy = 1 << 1
+        }
+
         /** Scan query filter platform code: .NET filter. */
         private const byte FilterPlatformDotnet = 2;
 
@@ -719,11 +738,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             var writer = _marsh.StartMarshal(stream);
             if (_expiryPolicy != null)
             {
-                stream.WriteByte(2);
+                stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
                 ExpiryPolicySerializer.WritePolicy(writer, _expiryPolicy);
             }
             else
-                stream.WriteByte(0); // Flags (skipStore, etc).
+                stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
 
             if (writeAction != null)
             {
