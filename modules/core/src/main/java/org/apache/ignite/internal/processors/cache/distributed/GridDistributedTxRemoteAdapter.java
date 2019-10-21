@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -326,7 +325,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
      * @param rolledbackVers Rolled back versions relative to base version.
      * @param pendingVers Pending versions.
      *
-     * @throws GridDhtInvalidPartitionException if entry partition is no longer valid.
+     * @throws GridDhtInvalidPartitionException If entry partition was invalidated.
      */
     private void doneRemote(IgniteTxEntry txEntry,
         GridCacheVersion baseVer,
@@ -539,10 +538,10 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                             GridDhtLocalPartition locPart =
                                     cacheCtx.group().topology().localPartition(txEntry.cached().partition());
 
-                            if (!near() && locPart == null)
-                                continue;
+                            if (!near()) {
+                                if (locPart == null)
+                                    continue;
 
-                            if (!near() && locPart != null ) {
                                 if (!reservedParts.contains(locPart) && locPart.reserve()) {
                                     assert locPart.state() != EVICTED && locPart.reservations() > 0 : locPart;
 

@@ -92,9 +92,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(100000000000L);
-        cfg.setClientFailureDetectionTimeout(100000000000L);
-
         if (customDiscoSpi != null) {
             cfg.setDiscoverySpi(customDiscoSpi);
 
@@ -1001,7 +998,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                         puts.increment();
 
-                        boolean rmv = false; // r.nextFloat() < 0.4;
+                        boolean rmv = r.nextFloat() < 0.4;
                         if (rmv) {
                             key = insertedKeys.get(r.nextInt(insertedKeys.size()));
 
@@ -1113,9 +1110,5 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      */
     @Override protected long getPartitionMapExchangeTimeout() {
         return getTestTimeout();
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000L;
     }
 }
