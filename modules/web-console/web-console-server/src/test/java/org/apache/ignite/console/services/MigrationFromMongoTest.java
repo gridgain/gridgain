@@ -22,12 +22,10 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
-import javax.cache.Cache;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.migration.MigrationFromMongo;
+import org.apache.ignite.console.repositories.AccountsRepository;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.AfterClass;
@@ -73,10 +71,10 @@ public class MigrationFromMongoTest {
 
     /***/
     @Autowired
-    private Ignite ignite;
+    private AccountsRepository accountsRepo;
 
     /** In-memory java based fake MongoDb server. */
-    private static MongoServer mongoServer;
+    private static MongoServer mongoSrv;
 
     /**
      * @throws Exception If failed.
@@ -86,8 +84,8 @@ public class MigrationFromMongoTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        mongoServer = new MongoServer(new MemoryBackend());
-        mongoServer.bind("localhost", 27017);
+        mongoSrv = new MongoServer(new MemoryBackend());
+        mongoSrv.bind("localhost", 27017);
     }
 
     /**
@@ -98,7 +96,7 @@ public class MigrationFromMongoTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        mongoServer.shutdown();
+        mongoSrv.shutdown();
     }
 
     /**
@@ -138,29 +136,21 @@ public class MigrationFromMongoTest {
 
         migration.migrate();
 
-        IgniteCache<Object, Object> wc_accounts = ignite.cache("wc_accounts");
-
         int cnt = 0;
 
-        for (Cache.Entry<Object, Object> e : wc_accounts) {
-            Object val = e.getValue();
+        for (Account acc : accountsRepo.list()) {
+            cnt++;
 
-            if (val instanceof Account) {
-                cnt++;
-
-                Account acc = (Account)val;
-
-                assertEquals("test@test.com", acc.getEmail());
-                assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
-                assertEquals("Test1", acc.getFirstName());
-                assertEquals("Test2", acc.getLastName());
-                assertEquals("222-222", acc.getPhone());
-                assertEquals("Test", acc.getCompany());
-                assertEquals("United States", acc.getCountry());
-                assertEquals("hzFT7347b2Frc2cXOn0W", acc.getToken());
-                assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
-                assertTrue(acc.isAdmin());
-            }
+            assertEquals("test@test.com", acc.getEmail());
+            assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
+            assertEquals("Test1", acc.getFirstName());
+            assertEquals("Test2", acc.getLastName());
+            assertEquals("222-222", acc.getPhone());
+            assertEquals("Test", acc.getCompany());
+            assertEquals("United States", acc.getCountry());
+            assertEquals("hzFT7347b2Frc2cXOn0W", acc.getToken());
+            assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
+            assertTrue(acc.isAdmin());
         }
 
         assertEquals(1, cnt);

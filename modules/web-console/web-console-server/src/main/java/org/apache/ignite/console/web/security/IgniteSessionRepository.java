@@ -25,26 +25,22 @@ import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.tx.TransactionManager;
-import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.support.MessageSourceAccessor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.ignite.console.common.Utils.getPrincipal;
 import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
 public class IgniteSessionRepository implements FindByIndexNameSessionRepository<ExpiringSession> {
-    /** */
-    private static final String SPRING_SECURITY_CONTEXT = "SPRING_SECURITY_CONTEXT";
-
     /** Messages accessor. */
     private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
@@ -102,27 +98,15 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
     @Override public void save(ExpiringSession ses) {
         try {
             txMgr.doInTransaction(() -> {
-                SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
-
-                String email = null;
-
-                if (ctx != null) {
-                    Authentication auth = ctx.getAuthentication();
-
-                    if (auth != null) {
-                        Object p = auth.getPrincipal();
-
-                        if (p instanceof Account) {
-                            email = ((Account)p).getEmail();
-
-                            ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, email);
-                        }
-                    }
-                }
+                Account acc = getPrincipal(ses);
 
                 String sesId = ses.getId();
 
-                if (!F.isEmpty(email)) {
+                if (acc != null) {
+                    String email = acc.getEmail();
+
+                    ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
+
                     accToSesIdx.add(email, sesId);
                     sesToAccIdx.add(sesId, email);
                 }
@@ -183,6 +167,6 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
             .get(idxVal)
             .stream()
             .map(this::getSession)
-            .collect(toMap(Session::getId, ses -> ses));
+            .collect(toMap(Session::getId, identity()));
     }
 }
