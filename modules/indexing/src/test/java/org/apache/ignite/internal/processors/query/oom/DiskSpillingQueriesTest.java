@@ -163,7 +163,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     @Test
     public void simpleSubSelect() {
         assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
-            "FROM person WHERE age = (SELECT MAX(age) FROM (SELECT * FROM Person) WHERE id=age)");
+            "FROM person WHERE age = (SELECT MAX(age) FROM (SELECT * FROM Person WHERE id < 200) WHERE id=age)");
     }
 
     /** */

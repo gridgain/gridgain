@@ -951,8 +951,14 @@ public class Select extends Query {
             return null;
         }
         catch (Throwable e) {
-            if (result != null)
-                result.close();
+            if (result != null) {
+                try {
+                    result.close();
+                }
+                catch (Throwable e0) {
+                    e.addSuppressed(e0);
+                }
+            }
 
             throw e;
         }

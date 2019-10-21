@@ -102,7 +102,14 @@ public class H2ManagedLocalResult implements LocalResult {
         }
     }
 
-    /** */
+    /**
+     * Checks available memory.
+     *
+     * @param distinctRowKey Row key.
+     * @param oldRow Old row.
+     * @param row New row.
+     * @return {@code True} if we have available memory.
+     */
     private boolean hasAvailableMemory(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
 
@@ -118,8 +125,16 @@ public class H2ManagedLocalResult implements LocalResult {
 
             return true;
         }
-        else
-            return memTracker.reserved(memory);
+        else {
+            try {
+                return memTracker.reserved(memory);
+            }
+            catch (Throwable e) {
+                memReserved -= memory;
+
+                throw e;
+            }
+        }
     }
 
     /** {@inheritDoc} */
