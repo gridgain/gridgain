@@ -14,12 +14,36 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
+const base64js = require('base64-js');
+
 export const taskResult = (result) => ({
     data: {result},
     error: null,
     sessionToken: null,
     status: 0
 });
+
+/**
+ * Generate feature set with ids from 0 to 95.
+ *
+ * @param {Array<number>} excluded Array of feature numbers to exclude.
+ * @return {string} Base64 coded string of enabled features.
+ */
+export const generateFeasureSet = (excluded = []) => {
+    const res = new Uint8Array(12);
+
+    for (let i = 0; i < res.length * res.BYTES_PER_ELEMENT * 8; i ++) {
+        if (_.indexOf(excluded, i) < 0) {
+            const idx = Math.floor(i / (res.BYTES_PER_ELEMENT * 8));
+            const shift = i % (res.BYTES_PER_ELEMENT * 8);
+
+            res[idx] = res[idx] ^ (1 << shift);
+        }
+    }
+
+    return base64js.fromByteArray(res);
+};
 
 export const DFLT_FAILURE_RESPONSE = {message: 'Expected error'};
 
@@ -70,7 +94,7 @@ const CLUSTER_1 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: '+/l9',
+    supportedFeatures: generateFeasureSet(),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': {
             address: '10.0.75.1',
@@ -85,7 +109,7 @@ const CLUSTER_2 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: '+/l9',
+    supportedFeatures: generateFeasureSet(),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe4': {
             address: '10.0.75.1',
