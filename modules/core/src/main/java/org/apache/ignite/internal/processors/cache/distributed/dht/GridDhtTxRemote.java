@@ -302,9 +302,9 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
 
     /** {@inheritDoc} */
     @Override public void addInvalidPartition(int cacheId, int part) {
-//        super.addInvalidPartition(cacheId, part);
-//
-//        txState.invalidPartition(cacheId, part);
+        super.addInvalidPartition(cacheId, part);
+
+        txState.invalidPartition(cacheId, part, xidVersion());
     }
 
     /**

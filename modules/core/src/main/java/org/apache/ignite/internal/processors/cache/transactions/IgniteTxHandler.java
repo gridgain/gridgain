@@ -1836,9 +1836,9 @@ public class IgniteTxHandler {
                             }
                         }
                         catch (GridDhtInvalidPartitionException e) {
-//                            tx.addInvalidPartition(cacheCtx.cacheId(), e.partition());
-//
-//                            tx.clearEntry(entry.txKey());
+                            tx.addInvalidPartition(cacheCtx.cacheId(), e.partition());
+
+                            tx.clearEntry(entry.txKey());
                         }
                         finally {
                             locPart.release();

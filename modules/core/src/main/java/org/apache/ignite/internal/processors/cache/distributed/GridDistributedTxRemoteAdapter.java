@@ -273,7 +273,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
      * @param key key to be removed.
      */
     public void clearEntry(IgniteTxKey key) {
-        // txState.clearEntry(key);
+        txState.clearEntry(key);
     }
 
     /**
@@ -281,47 +281,26 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
      * @param committedVers Committed versions.
      * @param rolledbackVers Rolled back versions.
      * @param pendingVers Pending versions.
+     *
+     * @throws GridDhtInvalidPartitionException If partition was invalidated.
      */
     @Override public void doneRemote(GridCacheVersion baseVer,
         Collection<GridCacheVersion> committedVers,
         Collection<GridCacheVersion> rolledbackVers,
-        Collection<GridCacheVersion> pendingVers) {
+        Collection<GridCacheVersion> pendingVers
+    ) throws GridDhtInvalidPartitionException {
         Map<IgniteTxKey, IgniteTxEntry> readMap = txState.readMap();
 
         if (readMap != null && !readMap.isEmpty()) {
-            Iterator<IgniteTxEntry> it = readMap.values().iterator();
-
-            while (it.hasNext()) {
-                IgniteTxEntry txEntry = it.next();
-
-                try {
-                    doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
-                }
-                catch (GridDhtInvalidPartitionException e) {
-                    //addInvalidPartition(txEntry.cacheId(), e.partition());
-
-                    //it.remove();
-                }
-            }
+            for (IgniteTxEntry txEntry : readMap.values())
+                doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
         }
 
         Map<IgniteTxKey, IgniteTxEntry> writeMap = txState.writeMap();
 
         if (writeMap != null && !writeMap.isEmpty()) {
-            Iterator<IgniteTxEntry> it = writeMap.values().iterator();
-
-            while (it.hasNext()) {
-                IgniteTxEntry txEntry = it.next();
-
-                try {
-                    doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
-                }
-                catch (GridDhtInvalidPartitionException e) {
-                    // addInvalidPartition(txEntry.cacheId(), e.partition());
-
-                    //it.remove();
-                }
-            }
+            for (IgniteTxEntry txEntry : writeMap.values())
+                doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
         }
     }
 
@@ -384,7 +363,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
             return false;
 
         try {
-            commitIfLocked(2);
+            commitIfLocked();
 
             return true;
         }
@@ -466,7 +445,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     /**
      * @throws IgniteCheckedException If commit failed.
      */
-    private void commitIfLocked(int mode) throws IgniteCheckedException {
+    private void commitIfLocked() throws IgniteCheckedException {
         if (state() == COMMITTING) {
             for (IgniteTxEntry txEntry : writeEntries()) {
                 assert txEntry != null : "Missing transaction entry for tx: " + this;
@@ -947,7 +926,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
         }
 
         try {
-            commitIfLocked(0);
+            commitIfLocked();
         }
         catch (IgniteTxHeuristicCheckedException e) {
             // Treat heuristic exception as critical.
@@ -963,7 +942,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
      * @throws IgniteCheckedException If commit failed.
      */
     public void forceCommit() throws IgniteCheckedException {
-        commitIfLocked(1);
+        commitIfLocked();
     }
 
     /** {@inheritDoc} */
