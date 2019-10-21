@@ -18,9 +18,9 @@ package org.gridgain.service.event;
 
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.agent.WebSocketManager;
 import org.gridgain.service.sender.GmcSender;
@@ -40,10 +40,10 @@ public class EventsService implements AutoCloseable {
     private GridKernalContext ctx;
 
     /** Worker. */
-    private final RetryableSender<Event> snd;
+    private final RetryableSender<VisorGridEvent> snd;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, List<Event>> lsnr = this::onEvents;
+    private final IgniteBiPredicate<UUID, List<VisorGridEvent>> lsnr = this::onEvents;
 
     /**
      * @param ctx Context.
@@ -68,7 +68,7 @@ public class EventsService implements AutoCloseable {
      * @param nid Node id.
      * @param evts Events.
      */
-    boolean onEvents(UUID nid, List<Event> evts) {
+    boolean onEvents(UUID nid, List<VisorGridEvent> evts) {
         snd.send(evts);
 
         return true;

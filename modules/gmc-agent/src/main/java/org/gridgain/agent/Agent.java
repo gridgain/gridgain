@@ -41,13 +41,13 @@ import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.action.Request;
 import org.gridgain.service.ActionService;
 import org.gridgain.service.ClusterService;
+import org.gridgain.service.MetricsService;
+import org.gridgain.service.config.NodeConfigurationExporter;
+import org.gridgain.service.config.NodeConfigurationService;
 import org.gridgain.service.event.EventsExporter;
 import org.gridgain.service.event.EventsService;
-import org.gridgain.service.config.NodeConfigurationExporter;
-import org.gridgain.service.MetricsService;
-import org.gridgain.service.config.NodeConfigurationService;
-import org.gridgain.service.tracing.TracingService;
 import org.gridgain.service.tracing.GmcSpanExporter;
+import org.gridgain.service.tracing.TracingService;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -57,10 +57,10 @@ import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.gridgain.utils.AgentUtils.monitoringUri;
-import static org.gridgain.utils.AgentUtils.toWsUri;
 import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
+import static org.gridgain.utils.AgentUtils.monitoringUri;
+import static org.gridgain.utils.AgentUtils.toWsUri;
 
 /**
  * Management Agent.

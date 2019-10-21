@@ -22,15 +22,15 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.event.VisorGridDiscoveryEvent;
 import org.apache.ignite.testframework.GridTestNode;
 import org.gridgain.service.AbstractServiceTest;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.gridgain.service.event.EventsExporter.EVENTS_TOPIC;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -60,17 +60,17 @@ public class EventsExporterTest extends AbstractServiceTest {
         
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), evtsCaptor.capture());
 
-        Assert.assertEquals(EVENTS_TOPIC, topicCaptor.getValue());
+        assertEquals(EVENTS_TOPIC, topicCaptor.getValue());
 
-        Collection<DiscoveryEvent> evts = (Collection<DiscoveryEvent>)evtsCaptor.getValue();
+        Collection<VisorGridDiscoveryEvent> evts = (Collection<VisorGridDiscoveryEvent>)evtsCaptor.getValue();
 
-        Assert.assertEquals(1, evts.size());
+        assertEquals(1, evts.size());
 
-        DiscoveryEvent actual = F.first(evts);
+        VisorGridDiscoveryEvent actual = F.first(evts);
         
-        Assert.assertEquals(evt.type(), actual.type());
-        Assert.assertEquals(evt.message(), actual.message());
-        Assert.assertEquals(rmv, actual.node());
+        assertEquals(evt.type(), actual.getTypeId());
+        assertEquals(evt.message(), actual.getMessage());
+        assertEquals(rmv.id(), actual.getNid());
     }
 
     /** {@inheritDoc} */

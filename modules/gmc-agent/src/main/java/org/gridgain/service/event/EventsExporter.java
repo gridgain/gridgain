@@ -17,11 +17,11 @@
 package org.gridgain.service.event;
 
 import org.apache.ignite.events.Event;
-import org.apache.ignite.events.EventAdapter;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.gridgain.dto.event.ClusterNodeBean;
+import org.apache.ignite.internal.visor.event.VisorGridEvent;
+import org.apache.ignite.internal.visor.util.VisorEventMapper;
 import org.gridgain.service.sender.CoordinatorSender;
 import org.gridgain.service.sender.RetryableSender;
 
@@ -37,11 +37,14 @@ public class EventsExporter implements AutoCloseable {
     /** Status description. */
     static final String EVENTS_TOPIC = "gmc-event-topic";
 
+    /** Event mapper. */
+    private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
+
     /** Context. */
     private GridKernalContext ctx;
 
     /** Sender. */
-    private RetryableSender<Event> snd;
+    private RetryableSender<VisorGridEvent> snd;
 
     /** On node traces listener. */
     private final GridLocalEventListener lsnr = this::onEvent;
@@ -69,11 +72,7 @@ public class EventsExporter implements AutoCloseable {
      *
      * @param evt local grid event.
      */
-    void onEvent(Event evt) {
-        EventAdapter evt0 = (EventAdapter)evt;
-
-        evt0.node(new ClusterNodeBean(evt.node()));
-
-        snd.send(evt0);
+    protected void onEvent(Event evt) {
+        snd.send(EVT_MAPPER.apply(evt));
     }
 }

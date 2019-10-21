@@ -21,7 +21,8 @@ import java.util.UUID;
 import com.google.common.collect.Lists;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.visor.event.VisorGridEvent;
+import org.apache.ignite.internal.visor.util.VisorEventMapper;
 import org.apache.ignite.testframework.GridTestNode;
 import org.gridgain.dto.event.ClusterNodeBean;
 import org.gridgain.service.AbstractServiceTest;
@@ -45,7 +46,7 @@ public class EventsServiceTest extends AbstractServiceTest {
     public void shouldSendEventsList() {
         EventsService srvc = new EventsService(getMockContext(), mgr);
 
-        List<Event> evts = getEvents();
+        List<VisorGridEvent> evts = getEvents();
 
         srvc.onEvents(UUID.randomUUID(), evts);
 
@@ -53,19 +54,19 @@ public class EventsServiceTest extends AbstractServiceTest {
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
         verify(mgr, timeout(100).times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
-        List<Event> actualSpans = (List<Event>) payloadCaptor.getValue();
+        List<VisorGridEvent> actualEvts = (List<VisorGridEvent>) payloadCaptor.getValue();
 
         Assert.assertEquals(buildEventsDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
-        Assert.assertEquals(evts.size(), actualSpans.size());
+        Assert.assertEquals(evts.size(), actualEvts.size());
     }
 
     /**
      * @return Events list.
      */
-    private List<Event> getEvents() {
+    private List<VisorGridEvent> getEvents() {
         ClusterNode rmv = new ClusterNodeBean(new GridTestNode(UUID.randomUUID()));
         DiscoveryEvent evt = new DiscoveryEvent(rmv, "msg", EVT_NODE_LEFT, rmv);
 
-        return Lists.newArrayList(evt);
+        return Lists.newArrayList(new VisorEventMapper().apply(evt));
     }
 }
