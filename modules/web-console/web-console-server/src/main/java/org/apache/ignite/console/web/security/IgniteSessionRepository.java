@@ -18,6 +18,7 @@ package org.apache.ignite.console.web.security;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.CacheHolder;
@@ -167,6 +168,7 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
             .get(idxVal)
             .stream()
             .map(this::getSession)
+            .filter(Objects::nonNull)
             .collect(toMap(Session::getId, identity()));
     }
 }
