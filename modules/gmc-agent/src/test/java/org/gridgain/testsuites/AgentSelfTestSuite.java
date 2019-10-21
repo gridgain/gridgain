@@ -26,6 +26,7 @@ import org.gridgain.action.controller.SecurityActionsControllerTest;
 import org.gridgain.action.query.QueryRegistryTest;
 import org.gridgain.agent.AgentSelfTest;
 import org.gridgain.service.MetricProtocolTest;
+import org.gridgain.service.CacheServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -38,6 +39,7 @@ import org.junit.runners.Suite;
     ActionControllerBaseTest.class,
     ActionControllerWithSecurityBaseTest.class,
     BaselineActionsControllerTest.class,
+    CacheServiceSelfTest.class,
     ClusterActionsControllerTest.class,
     MetricProtocolTest.class,
     NodeActionsControllerTest.class,

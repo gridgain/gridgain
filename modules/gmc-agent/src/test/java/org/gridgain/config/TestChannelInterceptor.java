@@ -23,13 +23,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptorAdapter;
 
+import static org.gridgain.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.springframework.messaging.simp.SimpMessageHeaderAccessor.getDestination;
 
 /**
@@ -37,7 +37,7 @@ import static org.springframework.messaging.simp.SimpMessageHeaderAccessor.getDe
  */
 public class TestChannelInterceptor extends ChannelInterceptorAdapter {
     /** Object mapper. */
-    private ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+    private ObjectMapper mapper = binaryMapper();
 
     /** Messages. */
     private Map<String, Object> messages = new ConcurrentHashMap<>();
