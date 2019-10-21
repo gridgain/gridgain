@@ -447,18 +447,21 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear)
+            var near = CanUseNear;
+            if (near)
             {
                 TV val;
                 if (_nearCache.TryGetValue(key, out val))
                 {
                     return val;
                 }
+                
+                // TODO: when near and not found, CacheOp.Get causes double serialization/deserialization - 
+                // once here, once in NearCache.Update callback.
+                // Solutions:
+                // * CacheOp.GetNear - does not pass the result back
             }
 
-            // TODO: put to near, lock near key for the duration of this op
-            // Instead of locking, get or create an entry wrapper. Update it upon op completion.
-            // If it is removed by then - fine, the result is discarded.
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
                 (stream, res) =>
@@ -533,6 +536,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (CanUseNear)
             {
+                // TODO: Is this necessary, will we get an Update callback in this case?
                 _nearCache.Put(key, val);
             }
 
