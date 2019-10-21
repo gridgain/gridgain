@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.metric.IoStatisticsType;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
 
 import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
@@ -57,21 +58,30 @@ public class IoStatisticsMetricsLocalMXBeanImpl implements IoStatisticsMetricsMX
 
     /** {@inheritDoc} */
     @Override public String getCacheGroupStatistics(String cacheGrpName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+
         return formattedStats(IoStatisticsType.CACHE_GROUP, cacheGrpName, null);
     }
 
     /** {@inheritDoc} */
     @Override public Long getCacheGroupPhysicalReads(String cacheGrpName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+
         return statMgr.physicalReads(IoStatisticsType.CACHE_GROUP, cacheGrpName, null);
     }
 
     /** {@inheritDoc} */
     @Override public Long getCacheGroupLogicalReads(String cacheGrpName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+
         return statMgr.logicalReads(IoStatisticsType.CACHE_GROUP, cacheGrpName, null);
     }
 
     /** {@inheritDoc} */
     @Override public String getIndexStatistics(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         return formattedStats(getIndexStatType(idxName), cacheGrpName, idxName);
     }
 
@@ -107,16 +117,25 @@ public class IoStatisticsMetricsLocalMXBeanImpl implements IoStatisticsMetricsMX
 
     /** {@inheritDoc} */
     @Override public Long getIndexPhysicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         return statMgr.physicalReads(getIndexStatType(idxName), cacheGrpName, idxName);
     }
 
     /** {@inheritDoc} */
     @Override public Long getIndexLogicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         return statMgr.logicalReads(getIndexStatType(idxName), cacheGrpName, idxName);
     }
 
     /** {@inheritDoc} */
     @Override public Long getIndexLeafLogicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         Map<String, Long> logicalReads = statMgr.logicalReadsMap(getIndexStatType(idxName), cacheGrpName, idxName);
 
         return logicalReads.get(IoStatisticsHolderIndex.LOGICAL_READS_LEAF);
@@ -124,6 +143,9 @@ public class IoStatisticsMetricsLocalMXBeanImpl implements IoStatisticsMetricsMX
 
     /** {@inheritDoc} */
     @Override public Long getIndexLeafPhysicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         Map<String, Long> logicalReads = statMgr.physicalReadsMap(getIndexStatType(idxName), cacheGrpName, idxName);
 
         return logicalReads.get(IoStatisticsHolderIndex.PHYSICAL_READS_LEAF);
@@ -131,6 +153,9 @@ public class IoStatisticsMetricsLocalMXBeanImpl implements IoStatisticsMetricsMX
 
     /** {@inheritDoc} */
     @Override public Long getIndexInnerLogicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         Map<String, Long> logicalReads = statMgr.logicalReadsMap(getIndexStatType(idxName), cacheGrpName, idxName);
 
         return logicalReads.get(IoStatisticsHolderIndex.LOGICAL_READS_INNER);
@@ -138,9 +163,11 @@ public class IoStatisticsMetricsLocalMXBeanImpl implements IoStatisticsMetricsMX
 
     /** {@inheritDoc} */
     @Override public Long getIndexInnerPhysicalReads(String cacheGrpName, String idxName) {
+        A.notNull(cacheGrpName, "cacheGrpName");
+        A.notNull(idxName, "idxName");
+
         Map<String, Long> logicalReads = statMgr.physicalReadsMap(getIndexStatType(idxName), cacheGrpName, idxName);
 
         return logicalReads.get(IoStatisticsHolderIndex.PHYSICAL_READS_INNER);
     }
-
 }

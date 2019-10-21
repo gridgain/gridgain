@@ -22,6 +22,7 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -29,6 +30,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -227,6 +229,66 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
         assertNull(bean.getIndexInnerPhysicalReads(MEMORY_CACHE_NAME, nonExistingIdx));
         assertNull(bean.getIndexLogicalReads(MEMORY_CACHE_NAME, nonExistingIdx));
         assertNull(bean.getIndexPhysicalReads(MEMORY_CACHE_NAME, nonExistingIdx));
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testNullArguments() throws Exception {
+        IoStatisticsMetricsMXBean bean = ioStatMXBean();
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexLeafLogicalReads(null, HASH_PK_IDX_NAME);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexInnerLogicalReads(null, HASH_PK_IDX_NAME);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexLeafPhysicalReads(null, HASH_PK_IDX_NAME);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexInnerPhysicalReads(null, HASH_PK_IDX_NAME);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexStatistics(null, HASH_PK_IDX_NAME);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexLeafLogicalReads(MEMORY_CACHE_NAME, null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexInnerLogicalReads(MEMORY_CACHE_NAME, null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexLeafPhysicalReads(MEMORY_CACHE_NAME, null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexInnerPhysicalReads(MEMORY_CACHE_NAME, null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getIndexStatistics(MEMORY_CACHE_NAME, null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getCacheGroupLogicalReads(null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getCacheGroupPhysicalReads(null);
+        }, IgniteException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            bean.getCacheGroupStatistics(null);
+        }, IgniteException.class, null);
     }
 
     /**
