@@ -83,6 +83,7 @@ public class Rownum extends Expression {
         case ExpressionVisitor.SET_MAX_DATA_MODIFICATION_ID:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             // if everything else is the same, the rownum is the same
             return true;
         default:

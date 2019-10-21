@@ -1161,8 +1161,12 @@ public class H2Utils {
 
         long memory = newRowSize - oldRowSize;
 
-        if (oldRow == null && distinctRowKey != null)
-            memory += distinctRowKey.getMemory();
+        if (distinctRowKey != null && (oldRow == null || newRow == null)) {
+            if (oldRow == null)
+                memory += distinctRowKey.getMemory();
+            else
+                memory -= distinctRowKey.getMemory();
+        }
 
         return memory;
     }

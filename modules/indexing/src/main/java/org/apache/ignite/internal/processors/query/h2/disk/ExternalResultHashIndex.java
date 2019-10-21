@@ -19,8 +19,8 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -45,7 +45,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private static final long MIN_CAPACITY = 1L << 8; // 256 entries.
 
     /** */
-    private final GridKernalContext ctx;
+    private static final long MAX_CAPACITY = 1L << 59 - 1;
+
+    /** */
+    private static final long REMOVED_FLAG = 1L << 63;
+
+    /** */
+    private final FileIOFactory fileIOFactory;
 
     /** Index file directory. */
     private final String dir;
@@ -63,7 +69,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private FileIO fileIo;
 
     /** Row store. */
-    private final SortedExternalResult rowStore;
+    private final ExternalResultData rowStore;
 
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
     private final ByteBuffer reusableBuff = ByteBuffer.allocate(Entry.ENTRY_BYTES);
@@ -79,8 +85,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param rowStore External result being indexed by this hash index.
      * @param initSize Init hash map size.
      */
-    ExternalResultHashIndex(GridKernalContext ctx, File spillFile, SortedExternalResult rowStore, long initSize) {
-        this.ctx = ctx;
+    ExternalResultHashIndex(FileIOFactory fileIOFactory, File spillFile, ExternalResultData rowStore, long initSize) {
+        this.fileIOFactory = fileIOFactory;
         dir = spillFile.getParent();
         spillFileName = spillFile.getName();
         this.rowStore = rowStore;
@@ -88,9 +94,30 @@ public class ExternalResultHashIndex implements AutoCloseable {
         if (initSize <= MIN_CAPACITY)
             initSize = MIN_CAPACITY;
 
-        long initCap = U.ceilPow2Long(initSize * 2);
+        // We need at least the half of hash map be empty to minimize collisions number.
+        long initCap = Long.highestOneBit(initSize) * 2;
 
         initNewIndexFile(initCap);
+    }
+
+    /**
+     * Shallow copy constructor.
+     * @param parent Parent.
+     */
+    private ExternalResultHashIndex(ExternalResultHashIndex parent) {
+        try {
+            fileIOFactory = parent.fileIOFactory;
+            idxFile = parent.idxFile;
+            fileIo = fileIOFactory.create(idxFile, READ);
+            rowStore = parent.rowStore;
+            cap = parent.cap;
+            entriesCnt = parent.entriesCnt;
+            dir = parent.dir;
+            spillFileName = parent.spillFileName;
+        }
+        catch (IOException e) {
+            throw new IgniteException("Failed to create new hash index.", e);
+        }
     }
 
     /**
@@ -99,7 +126,9 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row distinct key.
      * @param rowAddr Row address in the rows file.
      */
-    public void put(ValueRow key, Long rowAddr) {
+    public void put(ValueRow key, long rowAddr) {
+        assert key != null;
+
         ensureCapacity();
 
         int hashCode = key.hashCode();
@@ -113,10 +142,22 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row distinct key.
      * @return Row address in the rows file.
      */
-    public Long get(ValueRow key) {
+    public long get(ValueRow key) {
         Entry entry = findEntry(key);
 
-        return entry == null ? null : entry.rowAddress();
+        return entry == null ? -1 : entry.rowAddress();
+    }
+
+    /**
+     * Finds row address in the hash index by its key.
+     *
+     * @param key Row distinct key.
+     * @return Whether row is in the file.
+     */
+    public boolean contains(ValueRow key) {
+        Entry entry = findEntry(key);
+
+        return entry != null;
     }
 
     /**
@@ -125,24 +166,17 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param key Row distinct key
      * @return Row address in the rows file.
      */
-    public Long remove(ValueRow key) {
+    public long remove(ValueRow key) {
         Entry entry = findEntry(key);
 
         if (entry == null)
-            return null;
+            return -1;
 
-        writeEntryToIndexFile(entry.slot(), key.hashCode(), -2); // row addr == -2 means removed row.
+        writeEntryToIndexFile(entry.slot(), key.hashCode(),entry.rowAddress() | REMOVED_FLAG);
 
         entriesCnt--;
 
         return entry.rowAddress();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void close() throws Exception {
-        U.closeQuiet(fileIo);
-
-        idxFile.delete();
     }
 
     /**
@@ -151,7 +185,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param hashCode Row key hashcode.
      * @param rowAddr Row address in the main row store.
      */
-    private void putEntryToFreeSlot(int hashCode, Long rowAddr) {
+    private void putEntryToFreeSlot(int hashCode, long rowAddr) {
         long slot = findFreeSlotForInsert(hashCode);
 
         writeEntryToIndexFile(slot, hashCode, rowAddr);
@@ -167,14 +201,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private long findFreeSlotForInsert(int hashCode) {
         long slot = slot(hashCode);
-
+        long startSlot = slot;
         Entry entry;
 
         while ((entry = readEntryFromIndexFile(slot)) != null && !entry.isRemoved() && !entry.isEmpty()) {
-            slot = slot((int)(slot + 1)); // Check next slot.
+            slot = (slot + 1) % cap; // Check next slot.
 
-            if (slot == slot(hashCode))
-                throw new RuntimeException("No free space left in the hash map.");
+            assert slot != startSlot;
         }
 
         return slot;
@@ -186,8 +219,10 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param hashCode Hashcode.
      * @return Ideal slot.
      */
-    private long slot(int hashCode) {
-        return hashCode & (cap - 1);
+    private long slot(long hashCode) {
+        long hc64 = hashCode << 48 ^ hashCode << 32 ^ hashCode << 16 ^ hashCode;
+
+        return hc64 & (cap - 1);
     }
 
     /**
@@ -198,24 +233,25 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private Entry findEntry(ValueRow key) {
         int hashCode = key.hashCode();
         long slot = slot(hashCode);
+        long initialSlot = slot;
 
         Entry entry = readEntryFromIndexFile(slot);
 
         while (!entry.isEmpty()) {
-            if (hashCode == entry.hashCode()) { // 1. Check hashcode equals.
-                Value[] row = rowStore.readRowFromFile(entry.rowAddress());
+            if (!entry.isRemoved() && hashCode == entry.hashCode()) { // 1. Check hashcode equals.
+                Map.Entry<ValueRow, Value[]> row = rowStore.readRowFromFile(entry.rowAddress());
 
-                if (row != null) {
-                    ValueRow keyFromDisk = rowStore.getRowKey(row);
+                assert row != null : "row=" + row;
 
-                    if (key.equals(keyFromDisk)) // 2. Check the actual row equals the given key.
-                        break;
-                }
+                ValueRow keyFromDisk = row.getKey();
+
+                if (key.equals(keyFromDisk)) // 2. Check the actual row equals the given key.
+                    break;
             }
 
-            slot = slot((int)(slot + 1)); // Check the next slot.
+            slot = (slot + 1) % cap; // Check the next slot.
 
-            if (slot == slot(hashCode))
+            if (slot == initialSlot)
                 return null;
 
             entry = readEntryFromIndexFile(slot);
@@ -237,25 +273,20 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /**
      * Reads hash map entry from the underlying file.
      *
-     * @param slot number of the entry to read. {@code Null} means sequential reading.
+     * @param slot number of the entry to read. {@code -1} means sequential reading.
      * @param fileCh File to read from.
      * @return Byte buffer with data.
      */
-    private Entry readEntryFromIndexFile(Long slot, FileIO fileCh) {
+    private Entry readEntryFromIndexFile(long slot, FileIO fileCh) {
         try {
-            if (slot != null)
+            if (slot != -1)
                 gotoSlot(slot);
             else
                 slot = fileCh.position() / Entry.ENTRY_BYTES;
 
             reusableBuff.clear();
 
-            while (reusableBuff.hasRemaining()) {
-                int bytesRead = fileCh.read(reusableBuff);
-
-                if (bytesRead <= 0)
-                    throw new IOException("Can not read data from file: " + idxFile.getAbsolutePath());
-            }
+            fileCh.readFully(reusableBuff);
 
             reusableBuff.flip();
 
@@ -293,12 +324,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             reusableBuff.putLong(addr + 1);
             reusableBuff.flip();
 
-            while (reusableBuff.hasRemaining()) {
-                int bytesWritten = fileIo.write(reusableBuff);
-
-                if (bytesWritten <= 0)
-                    throw new IOException("Can not write data to file: " + idxFile.getAbsolutePath());
-            }
+            fileIo.writeFully(reusableBuff);
         }
         catch (IOException e) {
             U.closeQuiet(this);
@@ -340,7 +366,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     }
 
     /**
-     * Copies data from the ols file to the extended new one.
+     * Copies data from the old file to the extended new one.
      *
      * @param oldFile Old file channel.
      * @param oldIdxFile Old index file.
@@ -353,7 +379,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             oldFile.position(0);
 
             for (long i = 0; i < oldSize; i++) {
-                Entry e = readEntryFromIndexFile(null, oldFile);
+                Entry e = readEntryFromIndexFile(-1, oldFile);
 
                 if (!e.isRemoved() && !e.isEmpty())
                     putEntryToFreeSlot(e.hashCode(), e.rowAddress());
@@ -378,15 +404,18 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private void initNewIndexFile(long cap) {
         try {
-            assert cap > 0 && (cap & (cap - 1)) == 0; // Should be the positive power of 2.
+            assert cap > 0 && (cap & (cap - 1)) == 0 : "cap=" + cap; // Should be the positive power of 2.
+
+            if (cap > MAX_CAPACITY) {
+                throw new IllegalArgumentException("Maximum capacity is exceeded [curCapacity=" + cap +
+                    ", maxCapacity=" + MAX_CAPACITY + ']');
+            }
 
             this.cap = cap;
 
             idxFile = new File(dir, spillFileName + "_idx_" + id++);
 
             idxFile.deleteOnExit();
-
-            FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
             fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
 
@@ -397,6 +426,20 @@ public class ExternalResultHashIndex implements AutoCloseable {
         catch (IOException e) {
             throw new IgniteException("Failed to create an index spill file for the intermediate query results.", e);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() throws Exception {
+        U.closeQuiet(fileIo);
+
+        idxFile.delete();
+    }
+
+    /**
+     * @return Shallow copy.
+     */
+    ExternalResultHashIndex createShallowCopy() {
+        return new ExternalResultHashIndex(this);
     }
 
     /**
@@ -437,7 +480,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
          * @return Address of the row in the rows file.
          */
         public long rowAddress() {
-            return rowAddr;
+            return rowAddr & ~REMOVED_FLAG;
         }
 
         /**
@@ -451,7 +494,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
          * @return Removed flag.
          */
         public boolean isRemoved() {
-            return rowAddr == -2;
+            return (rowAddr & REMOVED_FLAG) != 0L;
         }
 
         /**

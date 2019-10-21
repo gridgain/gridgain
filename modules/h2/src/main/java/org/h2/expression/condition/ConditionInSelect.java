@@ -52,52 +52,60 @@ public class ConditionInSelect extends Condition {
 
     @Override
     public Value getValue(Session session) {
+        ResultInterface lastResult = query.getLastResult();
         query.setSession(session);
         // We need a LocalResult
         query.setNeverLazy(true);
         query.setDistinctIfPossible();
         LocalResult rows = (LocalResult) query.query(0);
-        Value l = left.getValue(session);
-        if (!rows.hasNext()) {
-            return ValueBoolean.get(all);
-        } else if (l.containsNull()) {
-            return ValueNull.INSTANCE;
-        }
-        if (!database.getSettings().optimizeInSelect) {
-            return getValueSlow(rows, l);
-        }
-        if (all || (compareType != Comparison.EQUAL &&
-                compareType != Comparison.EQUAL_NULL_SAFE)) {
-            return getValueSlow(rows, l);
-        }
-        int columnCount = query.getColumnCount();
-        if (columnCount != 1) {
-            l = l.convertTo(Value.ROW);
-            Value[] leftValue = ((ValueRow) l).getList();
-            if (columnCount == leftValue.length && rows.containsDistinct(leftValue)) {
-                return ValueBoolean.TRUE;
+        try {
+            Value l = left.getValue(session);
+            if (!rows.hasNext()) {
+                return ValueBoolean.get(all);
+            } else if (l.containsNull()) {
+                return ValueNull.INSTANCE;
             }
-        } else {
-            TypeInfo colType = rows.getColumnType(0);
-            if (colType.getValueType() == Value.NULL) {
-                return ValueBoolean.FALSE;
+            if (!database.getSettings().optimizeInSelect) {
+                return getValueSlow(rows, l);
             }
-            if (l.getValueType() == Value.ROW) {
-                Value[] leftList = ((ValueRow) l).getList();
-                if (leftList.length != 1) {
-                    throw DbException.get(ErrorCode.COLUMN_COUNT_DOES_NOT_MATCH);
+            if (all || (compareType != Comparison.EQUAL &&
+                    compareType != Comparison.EQUAL_NULL_SAFE)) {
+                return getValueSlow(rows, l);
+            }
+            int columnCount = query.getColumnCount();
+            if (columnCount != 1) {
+                l = l.convertTo(Value.ROW);
+                Value[] leftValue = ((ValueRow) l).getList();
+                if (columnCount == leftValue.length && rows.containsDistinct(leftValue)) {
+                    return ValueBoolean.TRUE;
                 }
-                l = leftList[0];
+            } else {
+                TypeInfo colType = rows.getColumnType(0);
+                if (colType.getValueType() == Value.NULL) {
+                    return ValueBoolean.FALSE;
+                }
+                if (l.getValueType() == Value.ROW) {
+                    Value[] leftList = ((ValueRow) l).getList();
+                    if (leftList.length != 1) {
+                        throw DbException.get(ErrorCode.COLUMN_COUNT_DOES_NOT_MATCH);
+                    }
+                    l = leftList[0];
+                }
+                l = l.convertTo(colType, database.getMode(), null);
+                if (rows.containsDistinct(new Value[] { l })) {
+                    return ValueBoolean.TRUE;
+                }
             }
-            l = l.convertTo(colType, database.getMode(), null);
-            if (rows.containsDistinct(new Value[] { l })) {
-                return ValueBoolean.TRUE;
+            if (rows.containsNull()) {
+                return ValueNull.INSTANCE;
             }
+            return ValueBoolean.FALSE;
         }
-        if (rows.containsNull()) {
-            return ValueNull.INSTANCE;
+        finally {
+            // Do not close the very first lastResult in the case when caching is turned on. Otherwise close all results.
+            if (lastResult != null || query.ignoreCaching())
+                rows.close();
         }
-        return ValueBoolean.FALSE;
     }
 
     private Value getValueSlow(ResultInterface rows, Value l) {

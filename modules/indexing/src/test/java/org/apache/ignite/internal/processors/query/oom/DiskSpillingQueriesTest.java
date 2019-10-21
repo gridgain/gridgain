@@ -131,16 +131,44 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void simpleSubSelect() {
+    public void simpleSubSelectIn() {
         assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
             "FROM person WHERE depId IN (SELECT id FROM department)");
     }
 
     /** */
     @Test
-    public void simpleSubSelectLazy() {
+    public void simpleSubSelectInLazy() {
         assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
             "FROM person WHERE depId IN (SELECT id FROM department) ORDER BY salary DESC");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectExists() {
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department)");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectExistsLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department) ORDER BY salary DESC");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelect() {
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
+            "FROM person WHERE age = (SELECT MAX(age) FROM (SELECT * FROM Person WHERE id < 200) WHERE id=age)");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
+            "FROM person WHERE EXISTS (SELECT * FROM department) ORDER BY salary DESC");
     }
 
     /** */

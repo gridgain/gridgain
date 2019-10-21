@@ -20,13 +20,17 @@ import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.LocalResult;
 import org.h2.result.LocalResultFactory;
+import org.h2.result.LocalResultImpl;
 
 /**
  * Ignite implementation of the H2 local result factory.
  */
 public class H2LocalResultFactory extends LocalResultFactory {
     /** {@inheritDoc} */
-    @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
+    @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
+        if (system)
+            return new LocalResultImpl(ses, expressions, visibleColCnt);
+
         H2QueryContext qCtx = ses.getQueryContext();
 
         H2MemoryTracker memoryTracker = qCtx != null ? qCtx.queryMemoryTracker() : null;

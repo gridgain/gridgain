@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.h2.disk;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -29,20 +31,18 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.engine.Session;
 import org.h2.result.ResultExternal;
 import org.h2.result.SortOrder;
-import org.h2.store.Data;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
 @SuppressWarnings("MissortedModifiers")
-public class SortedExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
+public class SortedExternalResult extends AbstractExternalResult {
     /** Distinct flag. */
     private final boolean distinct;
 
@@ -55,28 +55,17 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     /** Sort order. */
     private final SortOrder sort;
 
-    /** Last written to file position. */
-    private long lastWrittenPos;
-
     /** In-memory buffer for gathering rows before spilling to disk. */
     private TreeMap<ValueRow, Value[]> sortedRowsBuf;
 
     /** In-memory buffer for gathering rows before spilling to disk. */
     private ArrayList<Value[]> unsortedRowsBuf;
 
-    /** Sorted chunks addresses on the disk. */
-    private final Collection<Chunk> chunks;
+    /** Result queue. */
+    private Queue<ExternalResultData.Chunk> resQueue;
 
-    /**
-     * Hash index for fast lookup of the distinct rows.
-     * RowKey -> Row address in the row store.
-     */
-    private ExternalResultHashIndex hashIdx;
-
-    /**
-     * Result queue.
-     */
-    private Queue<Chunk> resQueue;
+    /**  Comparator for {@code sortedRowsBuf}. It is used to prevent duplicated rows keys in {@code sortedRowsBuf}. */
+    private Comparator<Value> cmp;
 
     /**
      * @param ses Session.
@@ -96,16 +85,13 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         SortOrder sort,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, ses.getDatabase().getCompareMode(), "sorted");
+        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize);
 
-        this.distinct = distinct;
+        this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;
         this.visibleColCnt = visibleColCnt;
         this.sort = sort;
-        chunks = new ArrayList<>();
-
-        if (isAnyDistinct())
-            hashIdx = new ExternalResultHashIndex(ctx, file, this, initSize);
+        this.cmp = ses.getDatabase().getCompareMode();
     }
 
     /**
@@ -118,18 +104,17 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         distinctIndexes = parent.distinctIndexes;
         visibleColCnt = parent.visibleColCnt;
         sort = parent.sort;
-        hashIdx = parent.hashIdx;
-        chunks = parent.chunks;
+        cmp = parent.cmp;
     }
 
     /** {@inheritDoc} */
     @Override public Value[] next() {
-        Chunk batch = resQueue.poll();
+        ExternalResultData.Chunk batch = resQueue.poll();
 
         if (batch == null)
             throw new NoSuchElementException();
 
-        Value[] row = batch.currentRow();
+        Value[] row = batch.currentRow().getValue();
 
         if (batch.next())
             resQueue.offer(batch);
@@ -139,41 +124,70 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
     /** {@inheritDoc} */
     @Override public int addRows(Collection<Value[]> rows) {
-        for (Value[] row : rows)
-            addRow(row);
+        for (Value[] row : rows) {
+            if (distinct && containsRowWithOrderCheck(row))
+                continue;
+
+            addRowToBuffer(row);
+
+            size++;
+        }
+
+        if (needToSpill())
+            spillRowsBufferToDisk();
 
         return size;
     }
 
     /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
-        if (isAnyDistinct()) {
-            if (containsRowWithOrderCheck(row))
+        if (distinct && containsRowWithOrderCheck(row))
                 return size;
-        }
 
         addRowToBuffer(row);
 
         if (needToSpill())
             spillRowsBufferToDisk();
 
-        return size++;
+        return ++size;
     }
 
     /**
      * Checks if current result contains given row with sort order check.
      *
      * @param row Row.
-     * @return {@code True} if current result does not contain th given row.
+     * @return {@code True} if current result contains the given row.
      */
     private boolean containsRowWithOrderCheck(Value[] row) {
-        Value[] previous = getPreviousRow(row);
+        assert unsortedRowsBuf == null;
+
+        ValueRow distKey = getRowKey(row);
+
+        Value[] previous = sortedRowsBuf == null ? null : sortedRowsBuf.get(distKey);
+
+        if (previous != null) {
+            if (sort != null && sort.compare(previous, row) > 0) {
+                sortedRowsBuf.remove(distKey); // It is need to replace old row with a new one because of sort order.
+
+                size--;
+
+                return false;
+            }
+
+            return true;
+        }
+
+        Map.Entry<ValueRow, Value[]> prevRow = data.get(distKey);
+
+        previous = prevRow == null ? null : prevRow.getValue();
 
         if (previous == null)
             return false;
 
         if (sort != null && sort.compare(previous, row) > 0) {
-            removeRow(row); // It is need to replace old row with a new one because of sort order.
+            data.remove(distKey); // It is need to replace old row with a new one because of sort order.
+
+            size--;
 
             return false;
         }
@@ -182,35 +196,25 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     }
 
     /**
-     * Returns the previous row.
-     *
-     * @param row Row.
-     * @return Previous row.
+     * @param distinct Distinct flag.
+     * @param distinctIndexes Distinct indexes.
+     * @return {@code True} if this is a distinct result.
      */
-    @Nullable private Value[] getPreviousRow(Value[] row) {
-        assert unsortedRowsBuf == null;
+    private static boolean isDistinct(boolean distinct, int[] distinctIndexes) {
+        return distinct || distinctIndexes != null;
+    }
 
-        ValueRow distKey = getRowKey(row);
 
-        Value[] previous;
+    /** {@inheritDoc} */
+    @Override public boolean contains(Value[] values) {
+        ValueRow key = getRowKey(values);
 
-        // Check in memory - it might not has been spilled yet.
-        if (sortedRowsBuf != null) {
-            previous = sortedRowsBuf.get(distKey);
-
-            if (previous != null)
-                return previous;
+        if (!F.isEmpty(sortedRowsBuf)) {
+            if (sortedRowsBuf.containsKey(key))
+                return true;
         }
 
-        // Check on-disk
-        Long addr = hashIdx.get(distKey);
-
-        if (addr == null)
-            return null;
-
-        previous = readRowFromFile(addr);
-
-        return previous;
+        return data.contains(key);
     }
 
     /** {@inheritDoc} */
@@ -221,42 +225,22 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             Object prev = sortedRowsBuf.remove(key);
 
             if (prev != null)
-                return size--;
+                return --size;
         }
 
         // Check on-disk
-        Long addr = hashIdx.remove(key);
+        if (data.remove(key))
+            --size;
 
-        if (addr == null)
-            return size;
-
-        Value[] res = readRowFromFile(addr);
-
-        if (res == null)
-            return size;
-
-        markRowRemoved(addr);
-
-        return size--;
+        return size;
     }
 
     /**
-     * @return {@code True} if it is need to spill rows to disk.
-     */
-    private boolean needToSpill() {
-        return !memTracker.reserved(0);
-    }
-
-    /**
-     * Adds row in-memory row buffer.
+     * Adds row to in-memory row buffer.
      * @param row Row.
      */
     private void addRowToBuffer(Value[] row) {
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
-
-        memTracker.reserved(delta);
-
-        if (isAnyDistinct()) {
+        if (distinct) {
             assert unsortedRowsBuf == null;
 
             if (sortedRowsBuf == null)
@@ -264,7 +248,11 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             ValueRow key = getRowKey(row);
 
-            sortedRowsBuf.put(key, row);
+            Value[] old = sortedRowsBuf.put(key, row);
+
+            long delta = H2Utils.calculateMemoryDelta(key, old, row);
+
+            memTracker.reserved(delta);
         }
         else {
             assert sortedRowsBuf == null;
@@ -273,6 +261,10 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
                 unsortedRowsBuf = new ArrayList<>();
 
             unsortedRowsBuf.add(row);
+
+            long delta = H2Utils.calculateMemoryDelta(null, null, row);
+
+            memTracker.reserved(delta);
         }
     }
 
@@ -283,53 +275,33 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (F.isEmpty(sortedRowsBuf) && F.isEmpty(unsortedRowsBuf))
             return;
 
-        ArrayList<Value[]> rows = isAnyDistinct() ? new ArrayList<>(sortedRowsBuf.values()) : unsortedRowsBuf;
+        int size = distinct ? sortedRowsBuf.size() : unsortedRowsBuf.size();
+
+        List<Map.Entry<ValueRow, Value[]>> rows = new ArrayList<>(size);
+
+        if (distinct) {
+            for (Map.Entry<ValueRow, Value[]> e : sortedRowsBuf.entrySet())
+                rows.add(new IgniteBiTuple<>(e.getKey(), e.getValue()));
+        }
+        else {
+            for (Value[] row : unsortedRowsBuf)
+                rows.add(new IgniteBiTuple<>(null, row));
+        }
 
         sortedRowsBuf = null;
         unsortedRowsBuf = null;
 
         if (sort != null)
-            sort.sort(rows);
+            rows.sort((o1, o2) -> sort.compare(o1.getValue(), o2.getValue()));
 
-        Data buff = createDataBuffer(rowSize(rows));
+        data.store(rows);
 
-        long initFilePos = lastWrittenPos;
+        long delta = 0;
 
-        for (Value[] row : rows) {
-            if(isAnyDistinct()) {
-                long rowPosInBuff = buff.length();
+        for (Map.Entry<ValueRow, Value[]> row : rows)
+            delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
 
-                addRowToHashIndex(row, initFilePos + rowPosInBuff);
-            }
-
-            addRowToBuffer(row, buff);
-        }
-
-        setFilePosition(initFilePos);
-
-        long written = writeBufferToFile(buff);
-
-        lastWrittenPos = initFilePos + written;
-
-        chunks.add(new Chunk(initFilePos, lastWrittenPos));
-
-        for (Value[] row : rows) {
-            long delta = H2Utils.calculateMemoryDelta(null, row, null);
-
-            memTracker.released(-delta);
-        }
-    }
-
-    /**
-     * Adds row to hash index.
-     *
-     * @param row Row.
-     * @param rowPosInFile Row position in file.
-     */
-    private void addRowToHashIndex(Value[] row, long rowPosInFile) {
-        ValueRow distKey = getRowKey(row);
-
-        hashIdx.put(distKey, rowPosInFile);
+        memTracker.released(-delta);
     }
 
     /** {@inheritDoc} */
@@ -339,59 +311,38 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (resQueue != null) {
             resQueue.clear();
 
-            for (Chunk chunk : chunks)
+            for (ExternalResultData.Chunk chunk : data.chunks())
                 chunk.reset();
         }
         else {
-            resQueue = sort == null ? new LinkedList<>() : new PriorityQueue<>(new Comparator<Chunk>() {
-                @Override public int compare(Chunk o1, Chunk o2) {
-                    int c = sort.compare(o1.currentRow(), o2.currentRow());
+            resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(new Comparator<ExternalResultData.Chunk>() {
+                @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
+                    int c = sort.compare(o1.currentRow().getValue(), o2.currentRow().getValue());
 
                     if (c != 0)
                         return c;
 
                     // Compare batches to ensure they emit rows in the arriving order.
-                    return Long.compare(o1.start, o2.start);
+                    return Long.compare(o1.start(), o2.start());
                 }
             });
         }
 
         // Init chunks.
-        for (Chunk chunk : chunks) {
+        for (ExternalResultData.Chunk chunk : data.chunks()) {
             if (chunk.next())
                 resQueue.offer(chunk);
         }
     }
 
     /** {@inheritDoc} */
-    @Override protected Value[] createEmptyArray(int colCnt) {
-        return new Value[colCnt];
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void onClose() {
-        super.onClose();
-
-        U.closeQuiet(hashIdx);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean contains(Value[] values) {
-        return getPreviousRow(values) != null;
-    }
-
-    /** {@inheritDoc} */
     @Override public synchronized ResultExternal createShallowCopy() {
+        if (parent != null)
+            return parent.createShallowCopy();
+
         onChildCreated();
 
         return new SortedExternalResult(this);
-    }
-
-    /**
-     * @return whether this result is a distinct result
-     */
-    private boolean isAnyDistinct() {
-        return distinct || distinctIndexes != null;
     }
 
     /**
@@ -399,7 +350,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
      * @param row Row.
      * @return Distinct key.
      */
-    public ValueRow getRowKey(Value[] row) {
+    private ValueRow getRowKey(Value[] row) {
         if (distinctIndexes != null) {
             int cnt = distinctIndexes.length;
 
@@ -413,63 +364,5 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             row = Arrays.copyOf(row, visibleColCnt);
 
         return ValueRow.get(row);
-    }
-
-    /**
-     * Sorted rows chunk on the disk.
-     */
-    private class Chunk {
-        /** Start chunk position. */
-        private final long start;
-
-        /** End chunk position. */
-        private final long end;
-
-        /** Current position within the chunk */
-        private long curPos;
-
-        /** Current row. */
-        private Value[] curRow;
-
-        /**
-         * @param start Start position.
-         * @param end End position.
-         */
-        Chunk(long start, long end) {
-            this.start = start;
-            this.curPos = start;
-            this.end = end;
-        }
-
-        /**
-         * @return {@code True} if next row is available within a chunk.
-         */
-        boolean next() {
-            while (curPos < end) {
-                curRow = readRowFromFile(curPos);
-
-                curPos = currentFilePosition();
-
-                if (curRow != null)
-                    return true;
-            }
-
-            return false;
-        }
-
-        /**
-         * Resets position in a chunk to the begin.
-         */
-        void reset() {
-            curPos = start;
-            curRow = null;
-        }
-
-        /**
-         * @return Current row.
-         */
-        Value[] currentRow() {
-            return curRow;
-        }
     }
 }

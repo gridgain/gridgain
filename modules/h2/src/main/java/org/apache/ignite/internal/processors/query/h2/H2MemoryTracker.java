@@ -16,18 +16,10 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-
 /**
  * Memory tracker.
  */
 public abstract class H2MemoryTracker implements AutoCloseable {
-    /** Objects to be closed along with the current tracker. */
-    private Collection<Closeable> closeList;
-
     /**
      * Check allocated size is less than query memory pool threshold.
      *
@@ -45,6 +37,8 @@ public abstract class H2MemoryTracker implements AutoCloseable {
 
     /**
      * Reserved memory.
+     *
+     * @return  Reserved memory in bytes.
      */
     public abstract long memoryReserved();
 
@@ -52,30 +46,4 @@ public abstract class H2MemoryTracker implements AutoCloseable {
      * @return Max memory limit.
      */
     public abstract long memoryLimit();
-
-    /**
-     * Registers closable object being closed along with the tracker.
-     *
-     * @param closeable Closable object
-     */
-    public void registerCloseListener(Closeable closeable) {
-        if (closeList == null)
-            closeList = new ArrayList<>();
-
-        closeList.add(closeable);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void close() {
-        if (closeList != null) {
-            for (Closeable closeable : closeList) {
-                try {
-                    closeable.close();
-                }
-                catch (IOException ignore) {
-                    // No-op.
-                }
-            }
-        }
-    }
 }

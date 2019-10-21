@@ -305,6 +305,7 @@ public class ExpressionColumn extends Expression {
         case ExpressionVisitor.READONLY:
         case ExpressionVisitor.DETERMINISTIC:
         case ExpressionVisitor.QUERY_COMPARABLE:
+        case ExpressionVisitor.CLEANUP:
             return true;
         case ExpressionVisitor.INDEPENDENT:
             return this.queryLevel < visitor.getQueryLevel();

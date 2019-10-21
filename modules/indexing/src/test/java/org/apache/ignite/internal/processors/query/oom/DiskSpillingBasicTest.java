@@ -24,6 +24,7 @@ import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,20 +50,32 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         final AtomicBoolean stop = new AtomicBoolean();
 
         String[] qrys = new String[] {
+            // Union/intersect.
             "(SELECT * FROM person WHERE depId < 40 " +
                 "INTERSECT " +
                 "SELECT * FROM person WHERE depId > 1 )" +
                 "UNION  " +
                 "SELECT * FROM person WHERE age > 50 ORDER BY id LIMIT 1000 OFFSET 50 ",
 
+            // Unsorted.
             "SELECT p.id, p.name, p.depId, d.title " +
                 "FROM person p, department d " +
                 " WHERE p.depId > d.id",
 
+            // Sorted.
             "SELECT  code, depId, salary, id  " +
                 "FROM person ORDER BY code, salary, id",
 
-            "SELECT code, SUM(temperature), AVG(salary) FROM person WHERE age > 5 GROUP BY code"
+            // Aggregate.
+            "SELECT code, SUM(temperature), AVG(salary) FROM person WHERE age > 5 GROUP BY code",
+
+            // Distinct
+            "SELECT  DISTINCT code, salary, id  " +
+                "FROM person ORDER BY code, salary, id",
+
+            // Subquery.
+            "SELECT  code, depId, salary, id  " +
+                "FROM person WHERE depId IN (SELECT id FROM department)"
         };
 
         final int qrysSize = qrys.length;
@@ -90,7 +103,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
                         int qryNum = ThreadLocalRandom.current().nextInt(qrysSize);
 
                         List res = grid(0).cache(DEFAULT_CACHE_NAME)
-                            .query(new SqlFieldsQueryEx(qrys[qryNum], null).setMaxMemory(SMALL_MEM_LIMIT))
+                            .query(new SqlFieldsQueryEx(qrys[qryNum], null).setMaxMemory(SMALL_MEM_LIMIT).setLazy(true))
                             .getAll();
 
                         assertEqualsCollections(results.get(qryNum), res);
@@ -131,7 +144,9 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
 
         for (Thread runner : runners) {
             try {
-                runner.join(5000);
+                runner.join(60_000);
+
+                assertFalse(runner.isAlive());
             }
             catch (InterruptedException e) {
                 throw new RuntimeException("Can not stop thread:" + Arrays.toString(runner.getStackTrace()));
@@ -162,7 +177,8 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         try {
             List res = grid(0).cache(DEFAULT_CACHE_NAME)
                 .query(new SqlFieldsQueryEx(query, null)
-                    .setMaxMemory(SMALL_MEM_LIMIT))
+                    .setMaxMemory(SMALL_MEM_LIMIT)
+                    .setLazy(true))
                 .getAll();
 
             System.out.println("res=" + res);
@@ -172,6 +188,39 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         catch (Exception ignore) {
             // No-op.
         }
+
+        List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
+
+        // Check files have been created but deleted later.
+        assertFalse(dirEvts.isEmpty());
+
+        assertWorkDirClean();
+    }
+
+    /** */
+    @Test
+    public void testNodeStartupDoesNotAffectRunningQueries() throws Exception {
+        String query = "SELECT DISTINCT * " +
+            "FROM person p, department d " +
+            "WHERE p.depId = d.id";
+
+        Path workDir = getWorkDir();
+
+        WatchService watchSvc = FileSystems.getDefault().newWatchService();
+
+        WatchKey watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
+
+        Iterator<List<?>> res = grid(0).cache(DEFAULT_CACHE_NAME)
+            .query(new SqlFieldsQueryEx(query, null)
+                .setMaxMemory(SMALL_MEM_LIMIT)
+            .setLazy(true))
+            .iterator();
+
+        assertFalse(res.next().isEmpty());
+
+        startGrid();
+
+        assertFalse(res.next().isEmpty());
 
         List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 

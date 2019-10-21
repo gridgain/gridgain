@@ -44,6 +44,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.LocalResult;
+import org.h2.result.LocalResultImpl;
 import org.junit.Ignore;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -517,7 +518,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 return null;
             }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
 
-            assertEquals(34, localResults.size());
+            assertEquals(18, localResults.size());
             assertEquals(18, cursors.size());
 
             long globallyReserved = h2.memoryManager().memoryReserved();
@@ -598,7 +599,10 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      */
     public static class TestH2LocalResultFactory extends H2LocalResultFactory {
         /** {@inheritDoc} */
-        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
+        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
+            if (system)
+                return new LocalResultImpl(ses, expressions, visibleColCnt);
+
             H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
 
             if (memoryTracker != null) {

@@ -407,10 +407,17 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected void assertWorkDirClean() {
+        List<String> spillFiles = listOfSpillFiles();
+
+        assertEquals("Files are not deleted: " + spillFiles,  0, spillFiles.size());
+    }
+
+    /** */
+    protected List<String> listOfSpillFiles() {
         Path workDir = getWorkDir();
 
         assertTrue(workDir.toFile().isDirectory());
-        assertEquals("Files are not deleted: " + Arrays.toString(workDir.toFile().list()),  0,
-            workDir.toFile().list().length);
+
+        return Arrays.asList(workDir.toFile().list());
     }
 }

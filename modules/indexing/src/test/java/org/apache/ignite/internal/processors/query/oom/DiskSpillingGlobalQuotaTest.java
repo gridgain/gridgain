@@ -36,7 +36,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
     /** */
     @Test
-    public void testGlobalQuotaCauseDiskSpilling() throws IOException {
+    public void testGlobalQuotaCausesDiskSpilling() throws IOException {
         String qry = "SELECT DISTINCT *  " +
             "FROM person p, department d " +
             " WHERE p.depId = d.id";
