@@ -926,16 +926,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            cacheWithExpiryPolicy.Put(1, 1);
+            cacheWithExpiryPolicy.Put(3, 3);
 
             // Initially added value is the same.
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(3));
 
             // Wait for an expiration.
-            Thread.Sleep(200);
+            Thread.Sleep(300);
 
             // Expiry policies should be applied, no cache item exists.
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(3));
         }
 
         /// <summary>
@@ -947,22 +947,22 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var expiryPolicy = new ExpiryPolicy(null, TimeSpan.FromMilliseconds(200), null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            cacheWithExpiryPolicy.Put(1, 1);
+            cacheWithExpiryPolicy.Put(5, 5);
 
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
-
-            Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
-
-            cacheWithExpiryPolicy.Put(1, 2);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
 
             Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
+
+            cacheWithExpiryPolicy.Put(5, 6);
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
 
             Thread.Sleep(100);
             
             // Expiry policies should be applied, no cache item exists.
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(5));
         }
 
         /// <summary>
