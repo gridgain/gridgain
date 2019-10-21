@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -33,12 +34,14 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -91,6 +94,64 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /**
+     * Verifies that registration of new binary meta does not block discovery thread
+     * and new node can join the cluster when binary metadata is in the process of writing.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
+        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
+        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
+        fileWriteLatchRef.set(fileWriteLatch);
+
+        Ignite ig = startGrid(0);
+        ig.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = ig.cache(DEFAULT_CACHE_NAME);
+        GridTestUtils.runAsync(() -> cache.put(0, new TestAddress(0, "USA", "NYC", "Park Ave")));
+
+        specialFileIOFactory = null;
+
+        startGrid(1);
+
+        fileWriteLatch.countDown();
+
+        waitForTopology(2);
+    }
+
+    /**
+     * Verifies that when me
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBinaryMetadataIsRestoredAfterDeletionOnNodeJoin() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+        IgniteEx ig1 = startGrid(1);
+
+        ig0.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
+
+        int key = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
+
+        cache.put(key, new TestAddress(0, "USA", "NYC", "Park Ave"));
+
+        String ig1ConsId = ig1.localNode().consistentId().toString();
+
+        stopGrid(1);
+
+        cleanBinaryMetaForNode(ig1ConsId);
+    }
+
+    private void cleanBinaryMetaForNode(String consId) throws IgniteCheckedException {
+        String dfltWorkDir = U.defaultWorkDirectory();
+
+        File meta = U.resolveWorkDirectory(dfltWorkDir, "binary_meta", false);
     }
 
     /**
@@ -271,8 +332,11 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             FileIO delegate = delegateFactory.create(file, modes);
 
-            if (isBinaryMetaFile(file))
+            if (isBinaryMetaFile(file)) {
+                System.out.println("-->>-->> " + Thread.currentThread().getName() + " writing new bin meta");
+
                 return new SlowFileIO(delegate, fileWriteLatchRef.get());
+            }
 
             return delegate;
         }
