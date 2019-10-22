@@ -22,15 +22,15 @@ import org.apache.ignite.console.discovery.IsolatedDiscoverySpiSelfTest;
 import org.apache.ignite.console.listener.NotificationEventListenerTest;
 import org.apache.ignite.console.repositories.AccountsRepositoryTest;
 import org.apache.ignite.console.repositories.ConfigurationsRepositoryTest;
-import org.apache.ignite.console.services.AccountServiceTest;
+import org.apache.ignite.console.services.AccountsServiceTest;
 import org.apache.ignite.console.services.ActivitiesServiceTest;
 import org.apache.ignite.console.services.AdminServiceTest;
+import org.apache.ignite.console.services.MigrationFromMongoTest;
 import org.apache.ignite.console.services.NotificationServiceTest;
 import org.apache.ignite.console.web.controller.AgentDownloadControllerTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.apache.ignite.console.web.socket.AgentsServiceSelfTest;
 import org.apache.ignite.console.web.socket.BrowsersServiceTest;
-import org.apache.ignite.console.web.socket.TransitionServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -39,21 +39,22 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    TableSelfTest.class,
-    IsolatedDiscoverySpiSelfTest.class,
-    IsolatedCacheFullApiSelfTest.class,
-    NotificationEventListenerTest.class,
     AccountsRepositoryTest.class,
-    ConfigurationsRepositoryTest.class,
-    AccountServiceTest.class,
+    AccountsServiceTest.class,
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
-    NotificationServiceTest.class,
     AgentDownloadControllerTest.class,
-    PasswordEncoderTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceTest.class,
-    TransitionServiceSelfTest.class
+    ConfigurationsRepositoryTest.class,
+    IsolatedCacheFullApiSelfTest.class,
+    IsolatedDiscoverySpiSelfTest.class,
+    MigrationFromMongoTest.class,
+    NotificationEventListenerTest.class,
+    NotificationServiceTest.class,
+    PasswordEncoderTest.class,
+    TableSelfTest.class
+    // TODO GG-25215 TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {
 }
