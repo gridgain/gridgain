@@ -103,6 +103,10 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanCacheSelfTest.class);
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class);
 
+        // Compatibility metrics
+        ignoredTests.add(IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
+
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));
     }
 }
