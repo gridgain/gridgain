@@ -30,11 +30,13 @@
             <list>
                 <util:constant static-field="org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED"/>
                 <util:constant static-field="org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED"/>
+                <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_STARTED"/>
+                <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_STOPPED"/>
             </list>
         </property>
 
         <property name="tracingSpi">
-            <bean class="org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpi"/>
+            <bean class="org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi"/>
         </property>
 
         <property name="dataStorageConfiguration">

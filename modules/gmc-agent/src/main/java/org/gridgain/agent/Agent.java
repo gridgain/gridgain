@@ -41,6 +41,7 @@ import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.action.Request;
 import org.gridgain.service.ActionService;
 import org.gridgain.service.ClusterService;
+import org.gridgain.service.CacheService;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.config.NodeConfigurationExporter;
 import org.gridgain.service.config.NodeConfigurationService;
@@ -99,6 +100,9 @@ public class Agent extends ManagementConsoleProcessor {
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
 
+    /** Cache service. */
+    private CacheService cacheService;
+
     /** Execute service. */
     private ThreadPoolExecutor connectPool;
 
@@ -143,6 +147,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(this.getClass(), connectPool, log);
 
+        U.closeQuiet(cacheService);
         U.closeQuiet(actSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(evtsExporter);
@@ -257,6 +262,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
+        U.closeQuiet(cacheService);
         U.closeQuiet(actSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
@@ -278,6 +284,7 @@ public class Agent extends ManagementConsoleProcessor {
         evtSrvc = new EventsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actSrvc = new ActionService(ctx, mgr);
+        cacheService = new CacheService(ctx, mgr);
 
         connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
@@ -345,6 +352,7 @@ public class Agent extends ManagementConsoleProcessor {
             U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
 
             clusterSrvc.sendInitialState();
+            cacheService.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {
