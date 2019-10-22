@@ -55,7 +55,7 @@ import org.junit.runners.Suite;
     NotificationServiceTest.class,
     PasswordEncoderTest.class,
     TableSelfTest.class
-//    TransitionServiceSelfTest.class
+    // TODO GG-25215 TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {
 }
