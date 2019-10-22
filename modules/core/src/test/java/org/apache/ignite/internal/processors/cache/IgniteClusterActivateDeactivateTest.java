@@ -168,6 +168,86 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
+    public void testEnableReadOnlyFromActivateSimple_SingleNode() throws Exception {
+        changeActiveClusterStateSimple(1, 0, 0, ACTIVE, READ_ONLY);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testEnableReadOnlyFromActivateSimple_5_Servers() throws Exception {
+        changeActiveClusterStateSimple(5, 0, 0, ACTIVE, READ_ONLY);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testEnableReadOnlyFromActivateSimple_5_Servers2() throws Exception {
+        changeActiveClusterStateSimple(5, 0, 4, ACTIVE, READ_ONLY);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testEnableReadOnlyFromActivateSimple_5_Servers_5_Clients() throws Exception {
+        changeActiveClusterStateSimple(5, 4, 0, ACTIVE, READ_ONLY);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testEnableReadOnlyFromActivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
+        changeActiveClusterStateSimple(5, 4, 6, ACTIVE, READ_ONLY);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableReadOnlyFromActivateSimple_SingleNode() throws Exception {
+        changeActiveClusterStateSimple(1, 0, 0, READ_ONLY, ACTIVE);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableReadOnlyFromActivateSimple_5_Servers() throws Exception {
+        changeActiveClusterStateSimple(5, 0, 0, READ_ONLY, ACTIVE);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableReadOnlyFromActivateSimple_5_Servers2() throws Exception {
+        changeActiveClusterStateSimple(5, 0, 4, READ_ONLY, ACTIVE);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableReadOnlyFromActivateSimple_5_Servers_5_Clients() throws Exception {
+        changeActiveClusterStateSimple(5, 4, 0, READ_ONLY, ACTIVE);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableReadOnlyFromActivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
+        changeActiveClusterStateSimple(5, 4, 6, READ_ONLY, ACTIVE);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testActivateSimple_SingleNode() throws Exception {
         activateSimple(1, 0, 0, ACTIVE);
     }
@@ -255,6 +335,42 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         assertTrue(state.toString(), ClusterState.active(state));
 
         changeStateSimple(srvs, clients, activateFrom, INACTIVE, state);
+    }
+
+    /**
+     * @param srvs Number of servers.
+     * @param clients Number of clients.
+     * @param deactivateFrom Index of node stating deactivation.
+     * @param initialState Initial cluster state.
+     * @throws Exception If failed.
+     */
+    private void deactivateSimple(int srvs, int clients, int deactivateFrom, ClusterState initialState) throws Exception {
+        assertTrue(initialState.toString(), ClusterState.active(initialState));
+
+        changeStateSimple(srvs, clients, deactivateFrom, initialState, INACTIVE);
+    }
+
+    /**
+     * @param srvs Number of servers.
+     * @param clients Number of clients.
+     * @param deactivateFrom Index of node stating deactivation.
+     * @param initialState Initial cluster state.
+     * @param targetState Targer cluster state.
+     * @throws Exception If failed.
+     */
+    private void changeActiveClusterStateSimple(
+        int srvs,
+        int clients,
+        int deactivateFrom,
+        ClusterState initialState,
+        ClusterState targetState
+    ) throws Exception {
+
+        assertTrue(initialState.toString(), ClusterState.active(initialState));
+        assertTrue(initialState.toString(), ClusterState.active(targetState));
+        assertNotSame(initialState, targetState);
+
+        changeStateSimple(srvs, clients, deactivateFrom, initialState, targetState);
     }
 
     /**
@@ -862,19 +978,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @param srvs Number of servers.
      * @param clients Number of clients.
-     * @param deactivateFrom Index of node stating deactivation.
-     * @param initialState Initial cluster state.
-     * @throws Exception If failed.
-     */
-    private void deactivateSimple(int srvs, int clients, int deactivateFrom, ClusterState initialState) throws Exception {
-        assertTrue(initialState + "", ClusterState.active(initialState));
-
-        changeStateSimple(srvs, clients, deactivateFrom, initialState, INACTIVE);
-    }
-
-    /**
-     * @param srvs Number of servers.
-     * @param clients Number of clients.
      * @throws Exception If failed.
      */
     private void startWithCaches1(int srvs, int clients) throws Exception {
@@ -1464,7 +1567,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
     /** */
     protected void doFinalChecks(int startNodes, int nodesCnt) throws Exception {
-        startGrids(startNodes);
+        for (int i=0; i<startNodes; i++)
+            startGrid(i);
 
         checkCaches(nodesCnt);
     }
