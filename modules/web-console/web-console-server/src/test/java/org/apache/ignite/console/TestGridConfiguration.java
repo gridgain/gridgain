@@ -52,8 +52,7 @@ public class TestGridConfiguration {
      */
     @Bean
     public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
-        return new IgniteSessionRepository(ignite, txMgr)
-            .setDefaultMaxInactiveInterval(10_000);
+        return new IgniteSessionRepository(10_000L, ignite, txMgr);
     }
 
     /**

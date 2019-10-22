@@ -23,15 +23,14 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.CacheHolder;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Account;
-import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.tx.TransactionManager;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.getPrincipal;
@@ -40,11 +39,8 @@ import static org.apache.ignite.console.common.Utils.getPrincipal;
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
 public class IgniteSessionRepository implements FindByIndexNameSessionRepository<ExpiringSession> {
-    /** Messages accessor. */
-    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
-
-    /** If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
-    private Integer dfltMaxInactiveInterval;
+    /** This value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
+    private Integer maxInactiveInterval;
 
     /** */
     private final TransactionManager txMgr;
@@ -58,33 +54,21 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
     /**
      * @param ignite Ignite.
      */
-    public IgniteSessionRepository(Ignite ignite, TransactionManager txMgr) {
+    public IgniteSessionRepository(long expirationTimeout, Ignite ignite, TransactionManager txMgr) {
+       this.maxInactiveInterval = (int)MILLISECONDS.toSeconds(expirationTimeout);
        this.txMgr = txMgr;
 
         txMgr.registerStarter(() -> {
-            sessionsCache = new CacheHolder<>(ignite, "wc_sessions");
+            sessionsCache = new CacheHolder<>(ignite, "wc_sessions", expirationTimeout);
             accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx");
         });
-    }
-
-    /**
-     * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
-     *
-     * @param dfltMaxInactiveInterval Number of seconds that the {@link Session} should be kept alive between client
-     * requests.
-     */
-    public IgniteSessionRepository setDefaultMaxInactiveInterval(int dfltMaxInactiveInterval) {
-        this.dfltMaxInactiveInterval = dfltMaxInactiveInterval;
-
-        return this;
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession createSession() {
         ExpiringSession ses = new MapSession();
 
-        if (dfltMaxInactiveInterval != null)
-            ses.setMaxInactiveIntervalInSeconds(dfltMaxInactiveInterval);
+        ses.setMaxInactiveIntervalInSeconds(maxInactiveInterval);
 
         return ses;
     }
@@ -144,9 +128,7 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
         if (!PRINCIPAL_NAME_INDEX_NAME.equals(idxName))
             return Collections.emptyMap();
 
-        return accToSesIdx
-            .get(idxVal)
-            .stream()
+        return accToSesIdx.get(idxVal).stream()
             .map(this::getSession)
             .filter(Objects::nonNull)
             .collect(toMap(Session::getId, identity()));

@@ -24,6 +24,7 @@ import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -61,9 +62,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @EnableSpringHttpSession
 @Profile("!test")
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    /** The number of seconds that the {@link Session} should be kept alive between client requests. */
-    private static final int MAX_INACTIVE_INTERVAL_SECONDS = 60 * 60 * 24 * 30;
-
     /** Sign in route. */
     public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
@@ -94,6 +92,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         SIGN_IN_ROUTE, SIGN_UP_ROUTE,
         FORGOT_PASSWORD_ROUTE, RESET_PASSWORD_ROUTE, ACTIVATION_RESEND
     };
+
+    /** Timeout that the {@link Session} should be kept alive between requests (default: 30 days). */
+    @Value("${server.sessions.expiration.timeout:2592000000}")
+    private long sesExpirationTimeout;
 
     /** */
     private final AccountsService accountsSrv;
@@ -199,8 +201,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Bean
     public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
-        return new IgniteSessionRepository(ignite, txMgr)
-            .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
+        return new IgniteSessionRepository(sesExpirationTimeout, ignite, txMgr);
     }
 
     /**
