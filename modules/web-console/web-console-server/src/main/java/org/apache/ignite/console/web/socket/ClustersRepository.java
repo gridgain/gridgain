@@ -206,7 +206,7 @@ public class ClustersRepository {
     /**
      * Periodically cleanup expired cluster topologies.
      */
-    @Scheduled(initialDelay = 0, fixedRate = 60_000)
+    @Scheduled(initialDelay = 120_000, fixedRate = 300_000)
     public void cleanupClusterHistory() {
         txMgr.doInTransaction(() -> {
             Set<String> clusterIds = stream(clusters.cache().spliterator(), false)

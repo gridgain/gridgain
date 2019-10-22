@@ -86,7 +86,7 @@ public class AgentDownloadControllerTest {
     /** */
     @Before
     public void init() {
-        this.mvc = MockMvcBuilders.webAppContextSetup(ctx).build();
+        mvc = MockMvcBuilders.webAppContextSetup(ctx).build();
 
         cleanup();
     }
@@ -101,7 +101,7 @@ public class AgentDownloadControllerTest {
     @Test
     @WithMockTestUser
     public void shouldReturnNotFoundMessage() throws Exception {
-        this.mvc.perform(get("/api/v1/downloads/agent"))
+        mvc.perform(get("/api/v1/downloads/agent"))
             .andExpect(status().is5xxServerError())
             .andExpect(content().string(containsString(message("err.agent-dist-not-found"))));
     }
@@ -112,7 +112,7 @@ public class AgentDownloadControllerTest {
     public void shouldReturnNotFoundInWorkDir() throws Exception {
         ReflectionTestUtils.setField(agentDownloadController, "agentFolderName", "src/test/resources");
 
-        this.mvc.perform(get("/api/v1/downloads/agent").with(user(TEST_EMAIL)))
+        mvc.perform(get("/api/v1/downloads/agent").with(user(TEST_EMAIL)))
             .andExpect(status().is5xxServerError())
             .andExpect(content().string(containsString(message("err.agent-dist-not-found"))));
     }
@@ -123,7 +123,7 @@ public class AgentDownloadControllerTest {
     public void shouldReturnArchive() throws Exception {
         ReflectionTestUtils.setField(agentDownloadController, "agentFolderName", "modules/web-console/web-console-server/src/test/resources");
 
-        this.mvc.perform(get("/api/v1/downloads/agent"))
+        mvc.perform(get("/api/v1/downloads/agent"))
             .andExpect(status().isOk())
             .andExpect(content().contentType("application/zip"));
     }

@@ -59,6 +59,7 @@ account.activation.sendTimeout=180000 # Activation send email throttle (millisec
 # Embedded server configuration.
 server.address=0.0.0.0 # Network address to which the Web Console should bind.
 server.port=3000 # Web Console HTTP port.
+server.sessions.expiration.timeout=2592000000 # Timeout that the user session should be kept alive (default: 30 days).
 
 # Email (MailProperties)
 spring.mail.default-encoding=UTF-8 # Default MimeMessage encoding.

@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.DataObject;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
@@ -40,7 +41,9 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestWrapper;
+import org.springframework.session.Session;
 import org.springframework.util.StopWatch;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -55,6 +58,9 @@ import static org.springframework.security.web.authentication.switchuser.SwitchU
  * Utilities.
  */
 public class Utils {
+    /** */
+    public static final String SPRING_SECURITY_CONTEXT = "SPRING_SECURITY_CONTEXT";
+
     /** */
     private static final JsonObject EMPTY_OBJ = new JsonObject();
 
@@ -164,6 +170,27 @@ public class Utils {
      */
     public static GrantedAuthority getAuthority(Authentication auth, String role) {
         return auth.getAuthorities().stream().filter(a -> role.equals(a.getAuthority())).findFirst().orElse(null);
+    }
+
+    /**
+     * @param ses Session.
+     * @return Principal from session.
+     */
+    public static Account getPrincipal(Session ses) {
+        SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
+
+        if (ctx != null) {
+            Authentication auth = ctx.getAuthentication();
+
+            if (auth != null) {
+                Object p = auth.getPrincipal();
+
+                if (p instanceof Account)
+                    return (Account)p;
+            }
+        }
+
+        return null;
     }
 
     /**
