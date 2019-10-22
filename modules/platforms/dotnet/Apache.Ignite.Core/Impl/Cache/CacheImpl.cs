@@ -80,7 +80,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="flagNoRetries">No-retries mode flag.</param>
         /// <param name="flagPartitionRecover">Partition recover mode flag.</param>
         /// <param name="flagAllowAtomicOpsInTx">Allow atomic operations in transactions flag.</param>
-        /// <param name="nearCacheConfiguration">Near cache configuration. When null, near caching is disabled.</param>
         public CacheImpl(IPlatformTargetInternal target,
             bool flagSkipStore, bool flagKeepBinary, bool flagNoRetries, bool flagPartitionRecover,
             bool flagAllowAtomicOpsInTx) : base(target)
