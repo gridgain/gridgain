@@ -69,6 +69,8 @@ import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.parseFile;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.specifications;
 
@@ -94,6 +96,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
     private volatile String tag;
+
+    /**
+     * Flag indicates that the feature is disabled.
+     */
+    private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
 
     /**
      * Required by {@link Externalizable}.
@@ -568,6 +575,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public void tag(String tag) throws IgniteCheckedException {
+        if (!clusterIdAndTagSupport)
+            return;
+
         if (tag == null)
             throw new IgniteCheckedException("Tag cannot be null.");
 
