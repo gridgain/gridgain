@@ -923,19 +923,20 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnCreate()
         {
+            const int val = 3;
             var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            cacheWithExpiryPolicy.Put(3, 3);
+            cacheWithExpiryPolicy.Put(val, val);
 
             // Initially added value is the same.
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(3));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             // Wait for an expiration.
             Thread.Sleep(300);
 
             // Expiry policies should be applied, no cache item exists.
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(3));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
         }
 
         /// <summary>
@@ -944,25 +945,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnUpdate()
         {
+            const int val = 5;
             var expiryPolicy = new ExpiryPolicy(null, TimeSpan.FromMilliseconds(200), null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            cacheWithExpiryPolicy.Put(5, 5);
+            cacheWithExpiryPolicy.Put(val, val);
 
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
-
-            Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
-
-            cacheWithExpiryPolicy.Put(5, 6);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(5));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
+
+            cacheWithExpiryPolicy.Put(val, val + 1);
+
+            Thread.Sleep(100);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             Thread.Sleep(100);
             
             // Expiry policies should be applied, no cache item exists.
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(5));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
         }
 
         /// <summary>
@@ -971,25 +973,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnAccess()
         {
+            const int val = 8;
             var expiryPolicy = new ExpiryPolicy(null, null, TimeSpan.FromMilliseconds(200));
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
-            cacheWithExpiryPolicy.Put(1, 1);
+            cacheWithExpiryPolicy.Put(val, val);
 
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
-
-            Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
-
-            cacheWithExpiryPolicy.Get(1);
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             Thread.Sleep(100);
-            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
+
+            cacheWithExpiryPolicy.Get(val);
 
             Thread.Sleep(100);
-            
+            Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
+
+            Thread.Sleep(100);
+
             // Expiry policies should be applied, no cache item exists.
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(1));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
         }
 
         /// <summary>
