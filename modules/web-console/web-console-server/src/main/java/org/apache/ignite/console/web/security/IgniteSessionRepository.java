@@ -35,7 +35,6 @@ import org.springframework.session.SessionRepository;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.getPrincipal;
-import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
@@ -92,31 +91,26 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
 
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
-        try {
-            txMgr.doInTransaction(() -> {
-                Account acc = getPrincipal(ses);
+        txMgr.doInTransaction(() -> {
+            Account acc = getPrincipal(ses);
 
-                String sesId = ses.getId();
+            String sesId = ses.getId();
 
-                if (acc != null) {
-                    String email = acc.getEmail();
+            if (acc != null) {
+                String email = acc.getEmail();
 
-                    ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
+                ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
 
-                    accToSesIdx.add(email, sesId);
-                }
+                accToSesIdx.add(email, sesId);
+            }
 
-                sessionsCache.cache().put(ses.getId(), new MapSession(ses));
-            });
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+            sessionsCache.put(ses.getId(), new MapSession(ses));
+        });
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
-        try {
+        return txMgr.doInTransaction(() -> {
             ExpiringSession ses = sessionsCache.get(id);
 
             if (ses == null)
@@ -129,28 +123,20 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
             }
 
             return ses;
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+        });
     }
 
     /** {@inheritDoc} */
     @Override public void delete(String sesId) {
-        try {
-            txMgr.doInTransaction(() -> {
-                MapSession ses = sessionsCache.cache().getAndRemove(sesId);
+        txMgr.doInTransaction(() -> {
+            MapSession ses = sessionsCache.cache().getAndRemove(sesId);
 
-                if (ses != null) {
-                    String email = ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
+            if (ses != null) {
+                String email = ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
 
-                    accToSesIdx.delete(email);
-                }
-            });
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+                accToSesIdx.delete(email);
+            }
+        });
     }
 
     /** {@inheritDoc} */
