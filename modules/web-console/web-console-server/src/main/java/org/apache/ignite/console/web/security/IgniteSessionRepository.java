@@ -40,7 +40,7 @@ import static org.apache.ignite.console.common.Utils.getPrincipal;
  */
 public class IgniteSessionRepository implements FindByIndexNameSessionRepository<ExpiringSession> {
     /** This value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
-    private Integer maxInactiveInterval;
+    private int maxInactiveInterval;
 
     /** */
     private final TransactionManager txMgr;
@@ -60,7 +60,7 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
 
         txMgr.registerStarter(() -> {
             sessionsCache = new CacheHolder<>(ignite, "wc_sessions", expirationTimeout);
-            accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx");
+            accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx", expirationTimeout);
         });
     }
 
@@ -128,7 +128,9 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
         if (!PRINCIPAL_NAME_INDEX_NAME.equals(idxName))
             return Collections.emptyMap();
 
-        return accToSesIdx.get(idxVal).stream()
+        return accToSesIdx
+            .get(idxVal)
+            .stream()
             .map(this::getSession)
             .filter(Objects::nonNull)
             .collect(toMap(Session::getId, identity()));
