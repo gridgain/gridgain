@@ -198,6 +198,7 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
 
     /**
      * Rechecks if lock should be reassigned.
+     *
      * @param ver Thread chain version.
      *
      * @return {@code True} if thread chain processing must be stopped.
