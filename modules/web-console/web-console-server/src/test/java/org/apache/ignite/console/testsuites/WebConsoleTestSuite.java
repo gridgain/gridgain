@@ -22,7 +22,7 @@ import org.apache.ignite.console.discovery.IsolatedDiscoverySpiSelfTest;
 import org.apache.ignite.console.listener.NotificationEventListenerTest;
 import org.apache.ignite.console.repositories.AccountsRepositoryTest;
 import org.apache.ignite.console.repositories.ConfigurationsRepositoryTest;
-import org.apache.ignite.console.services.AccountServiceTest;
+import org.apache.ignite.console.services.AccountsServiceTest;
 import org.apache.ignite.console.services.ActivitiesServiceTest;
 import org.apache.ignite.console.services.AdminServiceTest;
 import org.apache.ignite.console.services.MigrationFromMongoTest;
@@ -40,8 +40,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    AccountServiceTest.class,
     AccountsRepositoryTest.class,
+    AccountsServiceTest.class,
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
     AgentDownloadControllerTest.class,
