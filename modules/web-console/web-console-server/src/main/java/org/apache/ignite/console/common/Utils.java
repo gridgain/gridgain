@@ -176,7 +176,7 @@ public class Utils {
      * @param ses Session.
      * @return Principal from session.
      */
-    public static Account getPrincipal(ExpiringSession ses) {
+    public static Account getPrincipal(Session ses) {
         SecurityContextImpl ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
 
         if (ctx != null) {
