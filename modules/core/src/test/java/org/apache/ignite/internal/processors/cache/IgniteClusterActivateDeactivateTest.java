@@ -297,7 +297,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @param state Activation state.
      * @throws Exception If failed.
      */
-    public void reactivateSimple(int srvs, int clients, int activateFrom, ClusterState state) throws Exception {
+    private void reactivateSimple(int srvs, int clients, int activateFrom, ClusterState state) throws Exception {
         activateSimple(srvs, clients, activateFrom, state);
 
         if (state == ACTIVE)
@@ -1264,10 +1264,12 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     }
 
     /**
-     * @param activate If {@code true} tests activation, otherwise deactivation.
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
      * @throws Exception If failed.
      */
     private void stateChangeFailover1(ClusterState initialState, ClusterState targetState) throws Exception {
+        assertNotSame(initialState, targetState);
 
         // Nodes 1 and 4 do not reply to coordinator.
         IgniteInternalFuture<?> fut = startNodesAndBlockStatusChange(4, 4, 3, initialState, targetState , 1, 4);
@@ -1281,7 +1283,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             return null;
         }, "start-node");
 
-        U.sleep(500);
+        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == 9, 30000L));
 
         stopGrid(getTestIgniteInstanceName(1), true, false);
         stopGrid(getTestIgniteInstanceName(4), true, false);
@@ -1306,7 +1308,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      */
     @Test
     public void testActivateFailover2() throws Exception {
-        stateChangeFailover2(true);
+        stateChangeFailover2(INACTIVE, ACTIVE);
     }
 
     /**
@@ -1314,16 +1316,17 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      */
     @Test
     public void testDeactivateFailover2() throws Exception {
-        stateChangeFailover2(false);
+        stateChangeFailover2(ACTIVE, INACTIVE);
     }
 
     /**
-     * @param activate If {@code true} tests activation, otherwise deactivation.
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
      * @throws Exception If failed.
      */
-    private void stateChangeFailover2(boolean activate) throws Exception {
-        ClusterState initialState = !activate ? INACTIVE : ACTIVE;
-        ClusterState targetState = initialState == ACTIVE ? INACTIVE : ACTIVE;
+    private void stateChangeFailover2(ClusterState initialState, ClusterState targetState) throws Exception {
+        assertNotSame(initialState, targetState);
+
         // Nodes 1 and 4 do not reply to coordinator.
         IgniteInternalFuture<?> fut = startNodesAndBlockStatusChange(4, 4, 3, initialState, targetState, 1, 4);
 
@@ -1342,7 +1345,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             return null;
         }, "start-node2");
 
-        U.sleep(500);
+        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == 10, 30000L));
 
         // Stop coordinator.
         stopGrid(getTestIgniteInstanceName(0), true, false);
@@ -1364,10 +1367,10 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startGrid(4);
 
-        if (!activate) {
+        if (!ClusterState.active(targetState)) {
             checkNoCaches(10);
 
-            ignite(0).cluster().active(true);
+            ignite(0).cluster().state(initialState);
         }
 
         checkCaches(10);
@@ -1378,7 +1381,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      */
     @Test
     public void testActivateFailover3() throws Exception {
-        stateChangeFailover3(true);
+        stateChangeFailover3(INACTIVE, ACTIVE);
     }
 
     /**
@@ -1386,16 +1389,16 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      */
     @Test
     public void testDeactivateFailover3() throws Exception {
-        stateChangeFailover3(false);
+        stateChangeFailover3(ACTIVE, INACTIVE);
     }
 
     /**
-     * @param activate If {@code true} tests activation, otherwise deactivation.
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
      * @throws Exception If failed.
      */
-    private void stateChangeFailover3(boolean activate) throws Exception {
-        ClusterState initialState = !activate ? INACTIVE : ACTIVE;
-        ClusterState targetState = initialState == ACTIVE ? INACTIVE : ACTIVE;
+    private void stateChangeFailover3(ClusterState initialState, ClusterState targetState) throws Exception {
+        assertNotSame(initialState, targetState);
 
         testReconnectSpi = true;
 
@@ -1427,8 +1430,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         startFut1.get();
         startFut2.get();
 
-        assertFalse(ignite(4).cluster().active());
-        assertFalse(ignite(5).cluster().active());
+        assertEquals(INACTIVE, ignite(4).cluster().state());
+        assertEquals(INACTIVE, ignite(5).cluster().state());
 
         ignite(4).cluster().active(true);
 
