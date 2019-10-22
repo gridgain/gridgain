@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
+    using System;
     using System.Diagnostics;
     using System.IO;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -55,8 +56,15 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var nearCache = _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
 
-            // TODO: Handle null result caused by generic mismatch.
-            return nearCache as NearCache<TK, TV>;
+            var genericNearCache = nearCache as NearCache<TK, TV>;
+
+            if (genericNearCache == null)
+            {
+                // TODO: Downgrade to <object, object> and wrap
+                throw new NotImplementedException();
+            }
+
+            return genericNearCache;
         }
 
         /// <summary>

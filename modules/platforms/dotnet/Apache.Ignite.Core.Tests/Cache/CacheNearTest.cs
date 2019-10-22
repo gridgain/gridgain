@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
+    using System;
     using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -24,8 +25,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     using NUnit.Framework;
 
     /// <summary>
-    /// Java-based (legacy) near cache test.
-    /// See also <see cref="CacheWithNearCacheTest"/>.
+    /// Near cache test.
     /// </summary>
     public class CacheNearTest : IEventListener<CacheEvent>
     {
@@ -37,6 +37,9 @@ namespace Apache.Ignite.Core.Tests.Cache
 
         /** */
         private volatile CacheEvent _lastEvent;
+
+        /** */
+        private IIgnite _client;
 
         /// <summary>
         /// Fixture set up.
@@ -62,6 +65,15 @@ namespace Apache.Ignite.Core.Tests.Cache
             };
 
             _grid = Ignition.Start(cfg);
+
+            var clientCfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                ClientMode = true,
+                IgniteInstanceName = "client",
+                IncludedEventTypes = new[] {EventType.CacheEntryCreated}
+            };
+
+            _client = Ignition.Start(clientCfg);
         }
 
         /// <summary>
@@ -98,8 +110,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// </summary>
         [Test]
         public void TestCreateNearCache(
-            [Values(/* TODO: CacheMode.Local,*/ CacheMode.Partitioned, CacheMode.Replicated)] CacheMode cacheMode,
-            [Values(CacheAtomicityMode.Atomic, CacheAtomicityMode.Transactional)] CacheAtomicityMode atomicityMode)
+            [Values( /* TODO: CacheMode.Local,*/ CacheMode.Partitioned, CacheMode.Replicated)]
+            CacheMode cacheMode,
+            [Values(CacheAtomicityMode.Atomic, CacheAtomicityMode.Transactional)]
+            CacheAtomicityMode atomicityMode)
         {
             var cacheName = string.Format("dyn_cache_{0}_{1}", cacheMode, atomicityMode);
 
@@ -108,40 +122,33 @@ namespace Apache.Ignite.Core.Tests.Cache
                 AtomicityMode = atomicityMode,
                 CacheMode = cacheMode
             };
-            
+
             var cache = _grid.CreateCache<int, string>(cfg);
             cache[1] = "1";
 
-            using (var client = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                ClientMode = true,
-                IgniteInstanceName = "client"
-            }))
-            {
-                var nearCache = client.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration());
-                Assert.AreEqual("1", nearCache[1]);
+            var nearCache = _client.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration());
+            Assert.AreEqual("1", nearCache[1]);
 
-                // Create when exists.
-                nearCache = client.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration());
-                Assert.AreEqual("1", nearCache[1]);
+            // Create when exists.
+            nearCache = _client.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration());
+            Assert.AreEqual("1", nearCache[1]);
 
-                // Update entry.
-                cache[1] = "2";
-                Thread.Sleep(1000);  // TODO: Not good
-                Assert.AreEqual("2", nearCache[1]);
-                
-                // Update through near.
-                nearCache[1] = "3";
-                Assert.AreEqual("3", nearCache[1]);
-                
-                // Remove.
-                cache.Clear(1);
-                Thread.Sleep(1000); // TODO
-                Assert.False(cache.ContainsKey(1));
-                
-                // TODO
-                // Assert.False(nearCache.ContainsKey(1));
-            }
+            // Update entry.
+            cache[1] = "2";
+            Thread.Sleep(1000); // TODO: Not good
+            Assert.AreEqual("2", nearCache[1]);
+
+            // Update through near.
+            nearCache[1] = "3";
+            Assert.AreEqual("3", nearCache[1]);
+
+            // Remove.
+            cache.Clear(1);
+            Thread.Sleep(1000); // TODO
+            Assert.False(cache.ContainsKey(1));
+
+            // TODO
+            // Assert.False(nearCache.ContainsKey(1));
         }
 
         /// <summary>
@@ -152,20 +159,11 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             const string cacheName = "client_cache";
 
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                ClientMode = true,
-                IgniteInstanceName = "clientGrid"
-            };
+            _client.CreateCache<int, string>(cacheName);
 
-            using (var clientGrid = Ignition.Start(cfg))
-            {
-                clientGrid.CreateCache<int, string>(cacheName);
-
-                // Near cache can't be started on client node
-                Assert.Throws<CacheException>(
-                    () => clientGrid.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration()));
-            }
+            // Near cache can't be started on client node
+            Assert.Throws<CacheException>(
+                () => _client.CreateNearCache<int, string>(cacheName, new NearCacheConfiguration()));
         }
 
         /// <summary>
@@ -176,33 +174,23 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             const string cacheName = "client_with_near_cache";
 
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                ClientMode = true,
-                IgniteInstanceName = "clientGrid",
-                IncludedEventTypes = new[] {EventType.CacheEntryCreated}
-            };
+            var cache = _client.CreateCache<int, string>(new CacheConfiguration(cacheName),
+                new NearCacheConfiguration());
 
-            using (var clientGrid = Ignition.Start(cfg))
-            {
-                var cache = clientGrid.CreateCache<int, string>(new CacheConfiguration(cacheName), 
-                    new NearCacheConfiguration());
+            AssertCacheIsNear(cache);
 
-                AssertCacheIsNear(cache);
+            cache[1] = "1";
+            Assert.AreEqual("1", cache[1]);
 
-                cache[1] = "1";
-                Assert.AreEqual("1", cache[1]);
+            var cache2 = _client.GetOrCreateCache<int, string>(new CacheConfiguration(cacheName),
+                new NearCacheConfiguration());
 
-                var cache2 = clientGrid.GetOrCreateCache<int, string>(new CacheConfiguration(cacheName),
-                    new NearCacheConfiguration());
+            Assert.AreEqual("1", cache2[1]);
 
-                Assert.AreEqual("1", cache2[1]);
-
-                cache[1] = "2";
-                Assert.AreEqual("2", cache2[1]);
-            }
+            cache[1] = "2";
+            Assert.AreEqual("2", cache2[1]);
         }
-        
+
         /// <summary>
         /// Tests that near cache returns the same object instance as we put there.
         /// </summary>
@@ -240,6 +228,23 @@ namespace Apache.Ignite.Core.Tests.Cache
         public void TestNearCacheClearFromRemoteNodeAfterLocalPut()
         {
             // TODO
+        }
+
+        /// <summary>
+        /// Tests that same near cache can be used with different sets of generic type parameters.
+        /// </summary>
+        [Test]
+        public void TestSameNearCacheWithDifferentGenericTypeParameters()
+        {
+            var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
+            var cache2 = _grid.GetCache<string, string>(DefaultCacheName);
+            var cache3 = _grid.GetCache<object, object>(DefaultCacheName);
+
+            cache1[1] = 1;
+            cache2["1"] = "1";
+
+            Assert.AreEqual(cache3[1], 1);
+            Assert.AreEqual(cache3["1"], "1");
         }
 
         /// <summary>
