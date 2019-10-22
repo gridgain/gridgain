@@ -17,11 +17,11 @@
 package org.apache.ignite.spi.checkpoint.cache;
 
 import java.util.regex.Pattern;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -56,6 +56,7 @@ public class CheckCheckpointStartLogging extends GridCommonAbstractTest {
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
+                    .setMaxSize(10 * 1024 * 1024)
                     .setPersistenceEnabled(true));
 
         cfg.setDataStorageConfiguration(memCfg);
@@ -69,6 +70,8 @@ public class CheckCheckpointStartLogging extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
+        cleanPersistenceDir();
+
         super.afterTest();
     }
 
@@ -81,7 +84,7 @@ public class CheckCheckpointStartLogging extends GridCommonAbstractTest {
 
         testLogger.registerListener(lsnr);
 
-        IgniteEx ignite = startGrids(2);
+        Ignite ignite = startGrid();
 
         ignite.cluster().active(true);
 
