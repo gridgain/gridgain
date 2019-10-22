@@ -595,20 +595,22 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startWithCaches1(srvs, clients);
 
-        int minorVer = 1;
+        AffinityTopologyVersion affTopVer = new AffinityTopologyVersion(srvs + clients);
 
         if (ClusterState.active(initialState)) {
             ignite(0).cluster().state(initialState);
 
             awaitPartitionMapExchange();
 
-            minorVer++;
+            affTopVer = grid(0).cachex(ccfgs[0].getName()).context().topology().readyTopologyVersion();
+
+            assertEquals(srvs + clients, affTopVer.topologyVersion());
         }
 
         if (blockMsgNodes.length == 0)
             blockMsgNodes = new int[] {1};
 
-        final AffinityTopologyVersion STATE_CHANGE_TOP_VER = new AffinityTopologyVersion(srvs + clients, minorVer);
+        final AffinityTopologyVersion STATE_CHANGE_TOP_VER = affTopVer.nextMinorVersion();
 
         List<TestRecordingCommunicationSpi> spis = new ArrayList<>();
 
