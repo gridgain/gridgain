@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
-    using System;
     using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -91,7 +90,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [TearDown]
         public void TearDown()
         {
-            // TODO: Clear cache.
+            _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
         }
 
         /// <summary>
@@ -229,15 +228,27 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var localCache = _client.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
             var remoteCache = _grid.GetCache<int, int>(DefaultCacheName);
+
+            localCache[1] = 1;
+            remoteCache[1] = 2;
+
+            Assert.AreEqual(2, localCache[1]);
         }
 
         /// <summary>
         /// Tests that near cache is cleared from remote node after being populated with local Put call.
         /// </summary>
         [Test]
-        public void TestNearCacheClearFromRemoteNodeAfterLocalPut()
+        public void TestNearCacheRemoveFromRemoteNodeAfterLocalPut()
         {
-            // TODO
+            var localCache = _client.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
+            var remoteCache = _grid.GetCache<int, int>(DefaultCacheName);
+
+            localCache[1] = 1;
+            remoteCache.Remove(1);
+
+            int unused;
+            Assert.True(TestUtils.WaitForCondition(() => !localCache.TryGet(1, out unused), 300));
         }
 
         /// <summary>

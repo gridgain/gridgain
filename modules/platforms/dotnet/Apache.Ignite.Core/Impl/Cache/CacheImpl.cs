@@ -491,6 +491,11 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
+            if (CanUseNear && _nearCache.TryGetValue(key, out value))
+            {
+                return true;
+            }
+
             var res = DoOutInOpNullable(CacheOp.Get, key);
 
             value = res.Value;
