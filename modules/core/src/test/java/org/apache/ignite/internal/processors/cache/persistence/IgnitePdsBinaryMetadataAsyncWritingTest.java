@@ -19,13 +19,17 @@ package org.apache.ignite.internal.processors.cache.persistence;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -33,7 +37,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
@@ -60,6 +63,12 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        if (igniteInstanceName.contains("client")) {
+            cfg.setClientMode(true);
+
+            return cfg;
+        }
+
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
@@ -77,7 +86,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             .setAffinity(new RendezvousAffinityFunction(false, 16))
         );
 
-        cfg.setFailureHandler(new StopNodeFailureHandler());
+//        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         return cfg;
     }
@@ -124,7 +133,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
-     * Verifies that when me
+     * Verifies that metadata is restored on node join even if it was deleted when the node was down.
      *
      * @throws Exception If failed.
      */
@@ -136,22 +145,20 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         ig0.cluster().active(true);
 
         IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
-
         int key = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
-
         cache.put(key, new TestAddress(0, "USA", "NYC", "Park Ave"));
 
         String ig1ConsId = ig1.localNode().consistentId().toString();
-
         stopGrid(1);
+        cleanBinaryMetaFolderForNode(ig1ConsId);
 
-        cleanBinaryMetaForNode(ig1ConsId);
-    }
+        ig1 = startGrid(1);
+        stopGrid(0);
 
-    private void cleanBinaryMetaForNode(String consId) throws IgniteCheckedException {
-        String dfltWorkDir = U.defaultWorkDirectory();
-
-        File meta = U.resolveWorkDirectory(dfltWorkDir, "binary_meta", false);
+        cache = ig1.cache(DEFAULT_CACHE_NAME);
+        TestAddress addr = (TestAddress)cache.get(key);
+        assertNotNull(addr);
+        assertEquals("USA", addr.country);
     }
 
     /**
@@ -239,11 +246,118 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         waitForTopology(1, 10_000);
     }
 
-    private int findKeyForNode(Affinity aff, ClusterNode targetNode) {
+    /**
+     * Verifies that
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testParallelUpdatesToBinaryMetadata() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
+        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
+        fileWriteLatchRef.set(fileWriteLatch);
+        IgniteEx ig1 = startGrid(1);
+
+        specialFileIOFactory = null;
+        IgniteEx ig2 = startGrid(2);
+
+        ig0.cluster().active(true);
+
+        int key0 = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
+        int key1 = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode(), key0);
+
+        assertTrue(key0 != key1);
+
+        GridTestUtils.runAsync(() -> ig0.cache(DEFAULT_CACHE_NAME).put(key0, new TestAddress(key0, "Russia", "Moscow")));
+        GridTestUtils.runAsync(() -> ig2.cache(DEFAULT_CACHE_NAME).put(key1, new TestAddress(key1, "USA", "NYC", "Park Ave")));
+
+        assertEquals(0, ig0.cache(DEFAULT_CACHE_NAME).size(CachePeekMode.PRIMARY));
+
+        fileWriteLatch.countDown();
+
+        assertTrue(GridTestUtils.
+            waitForCondition(() -> ig0.cache(DEFAULT_CACHE_NAME).size(CachePeekMode.PRIMARY) == 2, 10_000));
+
+        stopGrid(0);
+        stopGrid(2);
+
+        IgniteCache<Object, Object> cache = ig1.cache(DEFAULT_CACHE_NAME);
+        TestAddress addr0 = (TestAddress)cache.get(key0);
+        TestAddress addr1 = (TestAddress)cache.get(key1);
+
+        assertEquals("Russia", addr0.country);
+        assertEquals("USA", addr1.country);
+    }
+
+    /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientIsBlockedOnCachePutIfBinaryMetaWriteIsHanging() throws Exception {
+        String cacheName = "testCache";
+
+        CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
+            .setBackups(2)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+
+        IgniteEx ig0 = startGrid(0);
+
+        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
+        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
+        fileWriteLatchRef.set(fileWriteLatch);
+        IgniteEx ig1 = startGrid(1);
+
+        specialFileIOFactory = null;
+        IgniteEx ig2 = startGrid(2);
+
+        IgniteEx cl0 = startGrid("client0");
+        ig0.cluster().active(true);
+        IgniteCache cache0 = cl0.createCache(testCacheCfg);
+
+        int key0 = findKeyForNode(ig0.affinity(cacheName), ig0.localNode());
+
+        GridTestUtils.runAsync(() -> cache0.put(key0, new TestAddress(key0, "Russia", "Saint-Petersburg")));
+
+        GridTestUtils.waitForCondition(() -> {
+            Object val = cache0.get(key0);
+
+            if (val != null)
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] " + val);
+            else
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] val is null");
+
+            return val != null;
+            }, 50_000);
+
+        fileWriteLatch.countDown();
+    }
+
+    /** Deletes directory with persisted binary metadata for a node with given Consistent ID. */
+    private void cleanBinaryMetaFolderForNode(String consId) throws IgniteCheckedException {
+        String dfltWorkDir = U.defaultWorkDirectory();
+        File metaDir = U.resolveWorkDirectory(dfltWorkDir, "binary_meta", false);
+
+        for (File subDir : metaDir.listFiles()) {
+            if (subDir.getName().contains(consId)) {
+                U.delete(subDir);
+
+                return;
+            }
+        }
+    }
+
+    /** Finds a key that target node is a primary node for. */
+    private int findKeyForNode(Affinity aff, ClusterNode targetNode, Integer... excludeKeys) {
         int key = 0;
 
         while (true) {
-            if (aff.isPrimary(targetNode, key))
+            if (aff.isPrimary(targetNode, key)
+                && (excludeKeys != null ? !Arrays.asList(excludeKeys).contains(Integer.valueOf(key)) : true))
                 return key;
 
             key++;
@@ -283,6 +397,14 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         private final String city;
         /** */
         private final String address;
+
+        /** */
+        TestAddress(int id, String country, String city) {
+            this.id = id;
+            this.country = country;
+            this.city = city;
+            this.address = null;
+        }
 
         /** */
         TestAddress(int id, String country, String city, String street) {
