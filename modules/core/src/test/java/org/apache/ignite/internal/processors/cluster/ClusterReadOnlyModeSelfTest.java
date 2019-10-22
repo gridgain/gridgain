@@ -20,7 +20,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
