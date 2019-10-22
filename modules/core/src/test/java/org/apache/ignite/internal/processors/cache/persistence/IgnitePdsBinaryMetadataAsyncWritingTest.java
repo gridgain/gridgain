@@ -127,10 +127,9 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         specialFileIOFactory = null;
 
         startGrid(1);
+        waitForTopology(2);
 
         fileWriteLatch.countDown();
-
-        waitForTopology(2);
     }
 
     /**
@@ -293,6 +292,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
+     * Verifies that put(key) method called on cache in FULL_SYNC mode returns only when
+     * all affinity nodes for this key finished writing binary metadata.
      *
      * @throws Exception If failed.
      */
