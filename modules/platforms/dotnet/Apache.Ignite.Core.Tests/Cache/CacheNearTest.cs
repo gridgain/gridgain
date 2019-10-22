@@ -208,8 +208,8 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
 
-            var obj1 = new Foo(12);
-            var obj2 = new Foo(42);
+            var obj1 = new Foo();
+            var obj2 = new Foo();
             
             cache[1] = obj1;
             var res1 = cache[1];
@@ -294,12 +294,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         /** */
         private class Foo
         {
-            public Foo(int val)
-            {
-                Val = val;
-            }
-
-            public int Val;
+            // No-op.
         }
     }
 }
