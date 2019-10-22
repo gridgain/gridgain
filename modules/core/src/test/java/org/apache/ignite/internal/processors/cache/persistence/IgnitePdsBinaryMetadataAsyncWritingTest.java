@@ -22,6 +22,7 @@ import java.nio.file.OpenOption;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -321,20 +322,19 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         int key0 = findKeyForNode(ig0.affinity(cacheName), ig0.localNode());
 
-        GridTestUtils.runAsync(() -> cache0.put(key0, new TestAddress(key0, "Russia", "Saint-Petersburg")));
+        AtomicBoolean putFinished = new AtomicBoolean(false);
 
-        GridTestUtils.waitForCondition(() -> {
-            Object val = cache0.get(key0);
+        GridTestUtils.runAsync(() -> {
+            cache0.put(key0, new TestAddress(key0, "Russia", "Saint-Petersburg"));
 
-            if (val != null)
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] " + val);
-            else
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] val is null");
+            putFinished.set(true);
+        });
 
-            return val != null;
-            }, 50_000);
+        assertFalse(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
 
         fileWriteLatch.countDown();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
     }
 
     /** Deletes directory with persisted binary metadata for a node with given Consistent ID. */
@@ -454,11 +454,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             FileIO delegate = delegateFactory.create(file, modes);
 
-            if (isBinaryMetaFile(file)) {
-                System.out.println("-->>-->> " + Thread.currentThread().getName() + " writing new bin meta");
-
+            if (isBinaryMetaFile(file))
                 return new SlowFileIO(delegate, fileWriteLatchRef.get());
-            }
 
             return delegate;
         }

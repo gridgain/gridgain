@@ -653,6 +653,24 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         return meta != null ? meta.wrap(binaryCtx) : null;
     }
 
+    /** */
+    public void waitMetadataWriteIfNeeded(final int typeId) {
+        if (metadataFileStore == null)
+            return;
+
+        BinaryMetadataHolder hldr = metadataLocCache.get(typeId);
+
+        if (hldr != null) {
+            try {
+                metadataFileStore.waitForWriteCompletion(typeId, hldr.acceptedVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + hldr.acceptedVersion() + ']', e);
+            }
+        }
+    }
+
     /**
      * @param typeId Type ID.
      * @return Metadata.

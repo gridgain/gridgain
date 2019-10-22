@@ -187,9 +187,11 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Override public void finishUnmarshal(CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        this.ctx = ((CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects()).binaryContext();
+        CacheObjectBinaryProcessorImpl binaryProc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
 
-        ctx.kernalContext().cacheObjects().metadata(this.typeId());
+        this.ctx = binaryProc.binaryContext();
+
+        binaryProc.waitMetadataWriteIfNeeded(typeId());
     }
 
     /** {@inheritDoc} */
