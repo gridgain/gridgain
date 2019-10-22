@@ -236,6 +236,21 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /// <summary>
+        /// Tests that near cache is updated from another cache instance after being populated with local Put call.
+        /// </summary>
+        [Test]
+        public void TestNearCacheUpdatesAfterLocalPut()
+        {
+            var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
+            var cache2 = _grid.GetCache<int, int>(DefaultCacheName);
+
+            cache1[1] = 1;
+            cache2[1] = 2;
+
+            Assert.AreEqual(2, cache1[1]);
+        }
+
+        /// <summary>
         /// Tests that near cache is cleared from remote node after being populated with local Put call.
         /// </summary>
         [Test]
