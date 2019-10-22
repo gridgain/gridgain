@@ -223,11 +223,6 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             // Check files have been created but deleted later.
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
-            if (checkGroupsSpilled) {
-                assertTrue("No external groups were created.",
-                    dirEvts.stream().anyMatch(e -> e.context().toString().contains("GroupBy")));
-            }
-
             assertWorkDirClean();
 
             if (log.isInfoEnabled()) {

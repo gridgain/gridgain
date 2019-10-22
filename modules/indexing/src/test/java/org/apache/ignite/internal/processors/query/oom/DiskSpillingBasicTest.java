@@ -70,11 +70,11 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
             "SELECT code, SUM(temperature), AVG(salary) FROM person WHERE age > 5 GROUP BY code",
 
             // Distinct
-            "SELECT  DISTINCT code, salary, id  " +
+            "SELECT DISTINCT code, salary, id  " +
                 "FROM person ORDER BY code, salary, id",
 
             // Subquery.
-            "SELECT  code, depId, salary, id  " +
+            "SELECT code, depId, salary, id  " +
                 "FROM person WHERE depId IN (SELECT id FROM department)"
         };
 

@@ -42,7 +42,7 @@ import org.h2.value.ValueRow;
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
 @SuppressWarnings("MissortedModifiers")
-public class SortedExternalResult extends AbstractExternalResult {
+public class SortedExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
     /** Distinct flag. */
     private final boolean distinct;
 
@@ -85,7 +85,8 @@ public class SortedExternalResult extends AbstractExternalResult {
         SortOrder sort,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize);
+        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize, Value.class,
+            ses.getDatabase().getCompareMode());
 
         this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;
@@ -114,7 +115,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         if (batch == null)
             throw new NoSuchElementException();
 
-        Value[] row = batch.currentRow().getValue();
+        Value[] row = (Value[])batch.currentRow().getValue();
 
         if (batch.next())
             resQueue.offer(batch);
@@ -317,7 +318,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         else {
             resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(new Comparator<ExternalResultData.Chunk>() {
                 @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
-                    int c = sort.compare(o1.currentRow().getValue(), o2.currentRow().getValue());
+                    int c = sort.compare((Value[])o1.currentRow().getValue(),(Value[]) o2.currentRow().getValue());
 
                     if (c != 0)
                         return c;
@@ -337,9 +338,6 @@ public class SortedExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public synchronized ResultExternal createShallowCopy() {
-        if (parent != null)
-            return parent.createShallowCopy();
-
         onChildCreated();
 
         return new SortedExternalResult(this);

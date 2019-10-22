@@ -32,7 +32,7 @@ import org.h2.value.ValueRow;
 /**
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
-public class PlainExternalResult extends AbstractExternalResult {
+public class PlainExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
     /** In-memory buffer. */
     private List<Map.Entry<ValueRow, Value[]>> rowBuff;
 
@@ -41,7 +41,7 @@ public class PlainExternalResult extends AbstractExternalResult {
      * @param memTracker Memory tracker.
      */
     public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
-        super(ctx, memTracker, false, 0);
+        super(ctx, memTracker, false, 0, Value.class, null);
     }
 
     /**
@@ -138,9 +138,6 @@ public class PlainExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public synchronized ResultExternal createShallowCopy() {
-        if (parent != null)
-            return parent.createShallowCopy();
-
         onChildCreated();
 
         return new PlainExternalResult(this);

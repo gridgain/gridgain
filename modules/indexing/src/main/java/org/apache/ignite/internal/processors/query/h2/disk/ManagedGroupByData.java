@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
 import org.h2.expression.aggregate.AggregateData;
@@ -50,10 +49,10 @@ public class ManagedGroupByData extends GroupByData {
     private Object[] lastGrpData;
 
     /** */
-    private Iterator<T2<ValueRow, Object[]>> cursor;
+    private Iterator<Map.Entry<ValueRow, Object[]>> cursor;
 
     /** */
-    Map.Entry<ValueRow, Object[]> curEntry;
+    private Map.Entry<ValueRow, Object[]> curEntry;
 
     /** */
     private int size;
@@ -72,8 +71,8 @@ public class ManagedGroupByData extends GroupByData {
 
     /** */
     private void createExtGroupByData() {
-        sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(), ses,
-             tracker,  groupByData.size());
+        sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(),
+             tracker, ses.getDatabase().getCompareMode(), groupByData.size());
     }
 
     /** {@inheritDoc} */
@@ -206,40 +205,13 @@ public class ManagedGroupByData extends GroupByData {
             cursor = new ExternalGroupsIterator(sortedExtRes, ses);
         }
         else
-            cursor = new GroupsIterator(groupByData.entrySet().iterator());
-    }
-
-    /**
-     * Iterator over in-memory groups.
-     */
-    private static class GroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
-        /**  */
-        private final Iterator<Map.Entry<ValueRow, Object[]>> it;
-
-        /**
-         * @param it In-memory groups iterator.
-         */
-        private GroupsIterator(Iterator<Map.Entry<ValueRow, Object[]>> it) {
-            this.it = it;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean hasNext() {
-            return it.hasNext();
-        }
-
-        /** {@inheritDoc} */
-        @Override public T2<ValueRow, Object[]> next() {
-            Map.Entry<ValueRow, Object[]> row = it.next();
-
-            return new T2<>(row.getKey(), row.getValue());
-        }
+            cursor = groupByData.entrySet().iterator();
     }
 
     /**
      * Iterator over offloaded (spilled) groups.
      */
-    private static class ExternalGroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
+    private static class ExternalGroupsIterator implements Iterator<Map.Entry<ValueRow, Object[]>> {
         /** */
         private final GroupedExternalResult sortedExtRes;
 
@@ -253,10 +225,10 @@ public class ManagedGroupByData extends GroupByData {
         private int extSize;
 
         /** */
-        private T2<ValueRow, Object[]> cur;
+        private Map.Entry<ValueRow, Object[]> cur;
 
         /** */
-        private T2<ValueRow, Object[]> next;
+        private Map.Entry<ValueRow, Object[]> next;
 
         /**
          * @param res External result.
@@ -276,11 +248,11 @@ public class ManagedGroupByData extends GroupByData {
         }
 
         /** {@inheritDoc} */
-        @Override public T2<ValueRow, Object[]> next() {
+        @Override public Map.Entry<ValueRow, Object[]> next() {
             if (cur == null)
                 throw new NoSuchElementException();
 
-            T2<ValueRow, Object[]> res = cur;
+            Map.Entry<ValueRow, Object[]> res = cur;
             cur = next;
             next = null;
             advance();
@@ -295,42 +267,33 @@ public class ManagedGroupByData extends GroupByData {
             assert next == null;
 
             while (extSize-- > 0) {
-                Object[] row = sortedExtRes.next();
+                Map.Entry<ValueRow, Object[]> row = sortedExtRes.next();
 
                 if (row == null)
                     break;
 
                 if (cur == null) {
-                    cur = getEntry(row);
+                    cur = row;
 
                     continue;
                 }
 
-                if (cur.getKey().compareTypeSafe((ValueRow)row[0], cmp) == 0) {
+                if (cur.getKey().compareTypeSafe(row.getKey(), cmp) == 0) {
                     Object[] curAggs = cur.getValue();
 
                     for (int i = 0; i < curAggs.length; i++) {
-                        Object newAgg = row[i + 1];
+                        Object newAgg = row.getValue()[i];
                         Object curAgg = curAggs[i];
 
                         mergeAggregates(curAgg, newAgg, ses);
                     }
                 }
                 else {
-                    next = getEntry(row);
+                    next = row;
 
                     break;
                 }
             }
-        }
-
-        /** */
-        T2<ValueRow, Object[]> getEntry(Object[] row) {
-            Object[] aggs = new Object[row.length - 1];
-
-            System.arraycopy(row, 1, aggs, 0, aggs.length);
-
-            return new T2<>((ValueRow)row[0], aggs);
         }
 
         /**  */

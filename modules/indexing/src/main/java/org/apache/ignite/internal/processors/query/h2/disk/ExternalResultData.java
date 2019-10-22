@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.store.Data;
+import org.h2.value.CompareMode;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
@@ -44,7 +46,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * Spill file IO.
  */
 @SuppressWarnings("ForLoopReplaceableByForEach")
-public class ExternalResultData implements AutoCloseable {
+public class ExternalResultData<T> implements AutoCloseable {
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
 
@@ -62,6 +64,9 @@ public class ExternalResultData implements AutoCloseable {
 
     /** */
     private static final byte[] TOMBSTONE_BYTES = ByteBuffer.allocate(4).putInt(-1).array(); // integer -1.
+
+    /** */
+    private final Class<T> cls;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -90,6 +95,9 @@ public class ExternalResultData implements AutoCloseable {
     /** Reusable header buffer. */
     private final ByteBuffer headReadBuff = ByteBuffer.allocate(ROW_HEADER_SIZE);
 
+    /** Compare mode for reading aggregates. */
+    private final CompareMode cmp;
+
     /** Data buffer. */
     private ByteBuffer readBuff;
 
@@ -105,8 +113,12 @@ public class ExternalResultData implements AutoCloseable {
         FileIOFactory fileIOFactory,
         UUID locNodeId,
         boolean useHashIdx,
-        long initSize) {
+        long initSize,
+        Class<T> cls,
+        CompareMode cmp) {
         this.log = log;
+        this.cls = cls;
+        this.cmp = cmp;
         this.fileIOFactory = fileIOFactory;
         String fileName = "spill_" + locNodeId + "_" + idGen.incrementAndGet();
         try {
@@ -134,6 +146,8 @@ public class ExternalResultData implements AutoCloseable {
     private ExternalResultData(ExternalResultData parent) {
         try {
             log = parent.log;
+            cmp = parent.cmp;
+            cls = parent.cls;
             file = parent.file;
             fileIOFactory = parent.fileIOFactory;
             fileIo = fileIOFactory.create(file, READ);
@@ -152,12 +166,12 @@ public class ExternalResultData implements AutoCloseable {
      *
      * @param rows Rows to store.
      */
-    public void store(Collection<Map.Entry<ValueRow, Value[]>> rows) {
+    public void store(Collection<Map.Entry<ValueRow, T[]>> rows) {
         long initFilePos = lastWrittenPos;
 
         setFilePosition(lastWrittenPos);
 
-        for (Map.Entry<ValueRow, Value[]> row : rows)
+        for (Map.Entry<ValueRow, T[]> row : rows)
             writeToFile(row);
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
@@ -168,18 +182,20 @@ public class ExternalResultData implements AutoCloseable {
      *
      * @param row Row.
      */
-    private void writeToFile(Map.Entry<ValueRow, Value[]> row) {
+    private void writeToFile(Map.Entry<ValueRow, T[]> row) {
         writeBuff.reset();
 
         Value rowKey = row.getKey() == null ? ValueNull.INSTANCE : row.getKey();
-        Value[] rowVal = row.getValue();
+        T[] rowVal = row.getValue();
 
         assert rowVal != null;
+
+        int valLen = nonNullsLength(rowVal);
 
         // 1. Write header.
         writeBuff.checkCapacity(ROW_HEADER_SIZE);
         writeBuff.writeInt(0); // Skip int position for row length in bytes.
-        writeBuff.writeInt(rowVal.length + 1); // Skip int position for columns count.
+        writeBuff.writeInt(valLen + 1); // Skip int position for columns count.
 
         // 2. Write row key.
         writeBuff.checkCapacity(writeBuff.getValueLen(rowKey));
@@ -187,12 +203,12 @@ public class ExternalResultData implements AutoCloseable {
 
         // 3. Write row value.
         int len = 0;
-        for (int i = 0; i < rowVal.length; i++)
-            len += writeBuff.getValueLen(rowKey);
+        for (int i = 0; i < valLen; i++)
+            len += writeBuff.getValueLen(rowVal[i]);
 
         writeBuff.checkCapacity(len);
 
-        for (int i = 0; i < rowVal.length; i++)
+        for (int i = 0; i < valLen; i++)
             writeBuff.writeValue(rowVal[i]);
 
         writeBuff.setInt(0, writeBuff.length() - ROW_HEADER_SIZE);
@@ -203,6 +219,19 @@ public class ExternalResultData implements AutoCloseable {
             hashIdx.put(row.getKey(), lastWrittenPos);
 
         lastWrittenPos = currentFilePosition();
+    }
+
+    /**
+     * @param row Row.
+     * @return Length of non-null values.
+     */
+    private int nonNullsLength(T[] row) {
+        for (int i = 0; i < row.length; i++) {
+            if (row[i] == null)
+                return i;
+        }
+
+        return row.length;
     }
 
     /**
@@ -261,7 +290,7 @@ public class ExternalResultData implements AutoCloseable {
      * @param key Row key.
      * @return Row.
      */
-    public Map.Entry<ValueRow, Value[]> get(ValueRow key) {
+    public Map.Entry<ValueRow, T[]> get(ValueRow key) {
         assert hashIdx != null;
         assert key != null;
 
@@ -276,7 +305,7 @@ public class ExternalResultData implements AutoCloseable {
     /**
      * @return Next row.
      */
-    Map.Entry<ValueRow, Value[]> readRowFromFile() {
+    Map.Entry<ValueRow, T[]> readRowFromFile() {
         return readRowFromFile(currentFilePosition());
     }
 
@@ -286,7 +315,7 @@ public class ExternalResultData implements AutoCloseable {
      * @param pos Row position.
      * @return Row.
      */
-    Map.Entry<ValueRow, Value[]> readRowFromFile(long pos) {
+    Map.Entry<ValueRow, T[]> readRowFromFile(long pos) {
         // 1. Read header.
         setFilePosition(pos);
 
@@ -319,24 +348,25 @@ public class ExternalResultData implements AutoCloseable {
 
         Data buff = Data.create(null, readBuff.array(), true);
 
-        IgniteBiTuple<ValueRow, Value[]> row = new IgniteBiTuple<>();
+        buff.setCompareMode(cmp);
 
-        Value rowKey = buff.readValue();
+        IgniteBiTuple<ValueRow, T[]> row = new IgniteBiTuple<>();
+
+        Value rowKey = (Value)buff.readValue();
 
         if (rowKey == ValueNull.INSTANCE)
             row.set1(null);
         else
             row.set1((ValueRow)rowKey);
 
-        Value[] rowVal = new Value[colCnt - 1];
+        T[] rowVal = (T[]) Array.newInstance(cls, colCnt - 1);
 
         for (int i = 0; i < colCnt - 1; i++)
-            rowVal[i] = buff.readValue();
+            rowVal[i] = (T) buff.readValue();
 
         row.set2(rowVal);
 
         return row;
-
     }
 
     /**
@@ -454,7 +484,7 @@ public class ExternalResultData implements AutoCloseable {
         private long curPos;
 
         /** Current row. */
-        private Map.Entry<ValueRow, Value[]> curRow;
+        private Map.Entry<ValueRow, T[]> curRow;
 
         /**
          * @param start Start position.
@@ -493,7 +523,7 @@ public class ExternalResultData implements AutoCloseable {
         /**
          * @return Current row.
          */
-        Map.Entry<ValueRow, Value[]> currentRow() {
+        Map.Entry<ValueRow, T[]> currentRow() {
             return curRow;
         }
 

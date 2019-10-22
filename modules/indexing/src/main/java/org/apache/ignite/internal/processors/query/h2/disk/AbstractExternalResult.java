@@ -19,14 +19,14 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
-import org.h2.result.ResultExternal;
 import org.h2.result.ResultInterface;
+import org.h2.value.CompareMode;
 
 /**
  * Basic class for external result.
  */
 @SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
-public abstract class AbstractExternalResult implements ResultExternal {
+public abstract class AbstractExternalResult<T> implements AutoCloseable {
 
     /** Logger. */
     protected final IgniteLogger log;
@@ -47,16 +47,21 @@ public abstract class AbstractExternalResult implements ResultExternal {
     private boolean closed;
 
     /** File with spilled rows data. */
-    protected final ExternalResultData data;
+    protected final ExternalResultData<T> data;
 
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
      */
-    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, boolean useHashIdx, long initSize) {
+    protected AbstractExternalResult(GridKernalContext ctx,
+        H2MemoryTracker memTracker,
+        boolean useHashIdx,
+        long initSize,
+        Class<T> cls,
+        CompareMode cmp) {
         this.log = ctx.log(AbstractExternalResult.class);
-        this.data = new ExternalResultData(log, ctx.config().getWorkDirectory(), ctx.query().fileIOFactory(),
-            ctx.localNodeId(), useHashIdx, initSize);
+        this.data = new ExternalResultData<>(log, ctx.config().getWorkDirectory(), ctx.query().fileIOFactory(),
+            ctx.localNodeId(), useHashIdx, initSize, cls, cmp);
         this.parent = null;
         this.memTracker = memTracker;
     }
