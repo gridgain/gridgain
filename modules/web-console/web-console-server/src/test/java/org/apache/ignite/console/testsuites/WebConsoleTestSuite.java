@@ -54,8 +54,8 @@ import org.junit.runners.Suite;
     NotificationEventListenerTest.class,
     NotificationServiceTest.class,
     PasswordEncoderTest.class,
-    TableSelfTest.class,
-    TransitionServiceSelfTest.class
+    TableSelfTest.class
+//    TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {
 }
