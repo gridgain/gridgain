@@ -39,6 +39,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         public void Put(TK key, TV val)
         {
             // TODO: Eviction according to limits.
+            // TODO: Is eviction handled by Java side and a callback is going to be fired?
             _map[key] = val;
         }
 
