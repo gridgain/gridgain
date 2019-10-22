@@ -16,7 +16,7 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 /**
- * TODO: Add class description.
+ * Test for indexed data.
  */
 public class DiskSpillingMultipleIndexesTest extends DiskSpillingQueriesTest {
 

@@ -76,7 +76,8 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
         throw new UnsupportedOperationException();
     }
 
-    @Override public long getMemory() {
+    @Override
+    public long getMemory() {
         return memReserved;
     }
 

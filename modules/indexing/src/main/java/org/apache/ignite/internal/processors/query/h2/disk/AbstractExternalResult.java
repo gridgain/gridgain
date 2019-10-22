@@ -52,6 +52,10 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
+     * @param useHashIdx Whether to use hash index.
+     * @param initSize Initial size.
+     * @param cls Class of stored data.
+     * @param cmp Comparator for rows.
      */
     protected AbstractExternalResult(GridKernalContext ctx,
         H2MemoryTracker memTracker,
@@ -78,7 +82,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
         memTracker = null;
     }
 
-
+    /** */
     protected boolean needToSpill() {
         return !memTracker.reserved(0);
     }

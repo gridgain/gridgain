@@ -94,7 +94,8 @@ public abstract class SelectGroups {
             currentGroupRowId++;
         }
 
-        @Override public ValueRow currGroupKey() {
+        @Override
+        public ValueRow currGroupKey() {
             return currentGroupsKey;
         }
 

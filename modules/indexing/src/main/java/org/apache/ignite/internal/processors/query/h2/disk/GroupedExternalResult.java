@@ -38,6 +38,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /**
      * @param ctx Kernel context.
      * @param memTracker MemoryTracker.
+     * @param cmp Compare mode.
      * @param initSize Initial size;
      */
     GroupedExternalResult(GridKernalContext ctx,

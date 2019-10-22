@@ -151,6 +151,7 @@ public class Data {
 
     private final boolean storeLocalTime;
 
+    /** Compare mode for aggregates. */
     private CompareMode cmp;
 
     private Data(DataHandler handler, byte[] data, boolean storeLocalTime) {

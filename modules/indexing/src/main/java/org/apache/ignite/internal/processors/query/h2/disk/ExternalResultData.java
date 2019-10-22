@@ -107,6 +107,9 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param fileIOFactory File io factory.
      * @param locNodeId Node id.
      * @param useHashIdx Whether to use hash index.
+     * @param initSize Initial size.
+     * @param cls Class of stored data.
+     * @param cmp Comparator for rows.
      */
     ExternalResultData(IgniteLogger log,
         String workDir,
