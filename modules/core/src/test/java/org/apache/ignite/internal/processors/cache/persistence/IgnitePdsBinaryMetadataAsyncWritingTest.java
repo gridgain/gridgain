@@ -145,7 +145,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         ig0.cluster().active(true);
 
         IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
-        int key = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
+        int key = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
         cache.put(key, new TestAddress(0, "USA", "NYC", "Park Ave"));
 
         String ig1ConsId = ig1.localNode().consistentId().toString();
@@ -237,7 +237,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         ig0.cluster().active(true);
 
-        int ig1Key = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.cluster().localNode());
+        int ig1Key = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.cluster().localNode());
 
         IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
@@ -265,8 +265,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         ig0.cluster().active(true);
 
-        int key0 = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
-        int key1 = findKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode(), key0);
+        int key0 = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
+        int key1 = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode(), key0);
 
         assertTrue(key0 != key1);
 
@@ -292,7 +292,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
-     * Verifies that put(key) method called on cache in FULL_SYNC mode returns only when
+     * Verifies that put(key) method called from client on cache in FULL_SYNC mode returns only when
      * all affinity nodes for this key finished writing binary metadata.
      *
      * @throws Exception If failed.
@@ -321,7 +321,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         ig0.cluster().active(true);
         IgniteCache cache0 = cl0.createCache(testCacheCfg);
 
-        int key0 = findKeyForNode(ig0.affinity(cacheName), ig0.localNode());
+        int key0 = findAffinityKeyForNode(ig0.affinity(cacheName), ig0.localNode());
 
         AtomicBoolean putFinished = new AtomicBoolean(false);
 
@@ -329,6 +329,64 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             cache0.put(key0, new TestAddress(key0, "Russia", "Saint-Petersburg"));
 
             putFinished.set(true);
+        });
+
+        assertFalse(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+
+        fileWriteLatch.countDown();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+    }
+
+    /**
+     * Verifies that put(key) method called from non-affinity server on cache in FULL_SYNC mode returns only when
+     * all affinity nodes for this key finished writing binary metadata.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPutRequestFromServerIsBlockedIfBinaryMetaWriteIsHanging() throws Exception {
+        String cacheName = "testCache";
+
+        CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
+            .setBackups(2)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+
+        IgniteEx ig0 = startGrid(0);
+
+        startGrid(1);
+        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
+        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
+        fileWriteLatchRef.set(fileWriteLatch);
+        IgniteEx ig2 = startGrid(2);
+
+        specialFileIOFactory = null;
+        startGrid(3);
+
+        ig0.cluster().active(true);
+        IgniteCache cache = ig0.createCache(testCacheCfg);
+
+        int key = 0;
+        Affinity<Object> aff = ig0.affinity(cacheName);
+
+        while (true) {
+            key = findNonAffinityKeyForNode(aff, ig0.localNode(), key);
+
+            if (aff.isBackup(ig2.localNode(), key))
+                break;
+            else
+                key++;
+        }
+
+        AtomicBoolean putFinished = new AtomicBoolean(false);
+
+        int key0 = key;
+        GridTestUtils.runAsync(() -> {
+           cache.put(key0, new TestAddress(key0, "USA", "NYC"));
+
+           putFinished.set(true);
         });
 
         assertFalse(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
@@ -352,8 +410,20 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         }
     }
 
+    /** Finds a key that target node is neither primary or backup. */
+    private int findNonAffinityKeyForNode(Affinity aff, ClusterNode targetNode, int startFrom) {
+        int key = startFrom;
+
+        while (true) {
+            if (!aff.isPrimaryOrBackup(targetNode, key))
+                return key;
+
+            key++;
+        }
+    }
+
     /** Finds a key that target node is a primary node for. */
-    private int findKeyForNode(Affinity aff, ClusterNode targetNode, Integer... excludeKeys) {
+    private int findAffinityKeyForNode(Affinity aff, ClusterNode targetNode, Integer... excludeKeys) {
         int key = 0;
 
         while (true) {
