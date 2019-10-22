@@ -24,7 +24,6 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 import org.apache.ignite.testframework.GridTestNode;
-import org.gridgain.dto.event.ClusterNodeBean;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -64,7 +63,7 @@ public class EventsServiceTest extends AbstractServiceTest {
      * @return Events list.
      */
     private List<VisorGridEvent> getEvents() {
-        ClusterNode rmv = new ClusterNodeBean(new GridTestNode(UUID.randomUUID()));
+        ClusterNode rmv = new GridTestNode(UUID.randomUUID());
         DiscoveryEvent evt = new DiscoveryEvent(rmv, "msg", EVT_NODE_LEFT, rmv);
 
         return Lists.newArrayList(new VisorEventMapper().apply(evt));

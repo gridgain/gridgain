@@ -19,7 +19,12 @@ package org.gridgain.utils;
 import java.io.IOException;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +45,16 @@ public class AgentObjectMapperFactory {
         /** {@inheritDoc} */
         @Override public void serialize(IgniteUuid uid, JsonGenerator gen, SerializerProvider ser) throws IOException {
             gen.writeString(uid.toString());
+        }
+    };
+
+    /** Custom deserializer for {@link IgniteUuid} */
+    private static final JsonDeserializer<IgniteUuid> IGNITE_UUID_DESERIALIZER = new JsonDeserializer<IgniteUuid>() {
+        @Override public IgniteUuid deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            if (p.currentToken() == JsonToken.VALUE_STRING)
+                return IgniteUuid.fromString(p.getText().trim());
+
+            return (IgniteUuid) ctxt.handleUnexpectedToken(IgniteUuid.class, p);
         }
     };
 
@@ -91,6 +106,7 @@ public class AgentObjectMapperFactory {
         return mapper.registerModule(
             new SimpleModule()
                 .addSerializer(IgniteUuid.class, IGNITE_UUID_SERIALIZER)
+                .addDeserializer(IgniteUuid.class, IGNITE_UUID_DESERIALIZER)
                 .addDeserializer(Request.class, new RequestDeserializer())
         );
     }
