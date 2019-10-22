@@ -25,7 +25,10 @@ import org.apache.ignite.internal.visor.util.VisorEventMapper;
 import org.gridgain.service.sender.CoordinatorSender;
 import org.gridgain.service.sender.RetryableSender;
 
+import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
+import static org.apache.ignite.internal.visor.util.VisorTaskUtils.VISOR_ALL_EVTS;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.VISOR_TASK_EVTS;
+import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
 
 /**
  * Events exporter which send events to coordinator.
@@ -36,6 +39,9 @@ public class EventsExporter implements AutoCloseable {
 
     /** Status description. */
     static final String EVENTS_TOPIC = "gmc-event-topic";
+
+    /** Event types. */
+    private static final int[] EVT_TYPES = concat(VISOR_ALL_EVTS, EVTS_DISCOVERY);
 
     /** Event mapper. */
     private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
@@ -57,12 +63,12 @@ public class EventsExporter implements AutoCloseable {
         
         snd = new CoordinatorSender<>(ctx, QUEUE_CAP, EVENTS_TOPIC);
 
-        this.ctx.event().addLocalEventListener(lsnr, VISOR_TASK_EVTS);
+        this.ctx.event().addLocalEventListener(lsnr, EVT_TYPES);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        this.ctx.event().removeLocalEventListener(lsnr, VISOR_TASK_EVTS);
+        this.ctx.event().removeLocalEventListener(lsnr, EVT_TYPES);
 
         U.closeQuiet(snd);
     }
