@@ -245,9 +245,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             var cache2 = _grid.GetCache<int, int>(DefaultCacheName);
 
             cache1[1] = 1;
-            cache2[1] = 2;
+            cache2.Replace(1, 2);
 
-            Assert.AreEqual(2, cache1[1]);
+            Assert.True(TestUtils.WaitForCondition(() => cache1[1] == 2, 300));
         }
 
         /// <summary>
