@@ -17,13 +17,14 @@
 import _ from 'lodash';
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {
-    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
-    FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES, INACTIVE_CLUSTER
+    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery, metadata,
+    FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES, INACTIVE_CLUSTER, FAKE_METADATA
 } from '../../mocks/agentTasks';
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {Paragraph, showQueryDialog, confirmClearQueryDialog} from '../../page-models/pageQueryNotebook';
+import {Paragraph, showQueryDialog, confirmClearQueryDialog, addQueryButton, cacheMetadata} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
+import * as helpMenu from '../../components/helpMenu';
 
 const user = createRegularUser();
 const notebooks = new PageQueriesNotebooksList();
@@ -91,4 +92,39 @@ test('Sending a request', async(t) => {
         .click(paragraph.clearResultButton)
         .click(confirmClearQueryDialog.confirmButton)
         .expect(paragraph.resultsTable._selector.exists).notOk();
+});
+
+test('Check z-indexes', async(t) => {
+    const paragraph2 = new Paragraph('Query1');
+
+    const LONG_CACHE_LIST = {
+        caches: {},
+        groups: []
+    };
+
+    for (let i = 0; i < 25; i++)
+        LONG_CACHE_LIST.caches['Cache' + i] = `${i}`;
+
+    await t.addRequestHooks(
+        t.ctx.ws = new WebSocketHook()
+            .use(
+                agentStat(FAKE_CLUSTERS),
+                cacheNamesCollectorTask(LONG_CACHE_LIST),
+                metadata(FAKE_METADATA)
+            )
+    );
+
+    await t.useRole(user).navigateTo(resolveUrl('/queries/notebooks'));
+    await notebooks.createNotebook('Foo');
+    await t.click(notebooks.getNotebookByName('Foo'));
+
+    await t.click(addQueryButton);
+    await t.expect(paragraph2.cacheList.visible).ok();
+    await t.pressKey('home');
+    await t.click(paragraph.metadataButton);
+    await t.expect(cacheMetadata.panel.visible).ok('Metadata tree should be visible');
+    await t.eval(() => window.scrollBy(0, 600));
+
+    await t.hover(helpMenu.trigger);
+    await t.expect(helpMenu.item('Getting Started').visible).ok('Help menu should not be overlapped by other elements');
 });

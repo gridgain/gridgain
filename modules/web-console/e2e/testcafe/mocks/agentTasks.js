@@ -21,6 +21,13 @@ export const taskResult = (result) => ({
     status: 0
 });
 
+export const restResult = (result) => ({
+    data: result,
+    error: null,
+    sessionToken: null,
+    status: 0
+});
+
 export const DFLT_FAILURE_RESPONSE = {message: 'Expected error'};
 
 export const cacheNamesCollectorTask = (caches) => (ws) => {
@@ -173,8 +180,46 @@ export const FAKE_CACHES = {
     groups: []
 };
 
+export const FAKE_METADATA = [{
+    cacheName: 'Cache1',
+    fields: {
+        Person: {
+            AGE: "java.lang.Integer",
+            DEPID: "java.util.UUID",
+            FIRSTNAME: "java.lang.String",
+            ID: "java.util.UUID",
+            LASTNAME: "java.lang.String",
+            RANK: "java.lang.Integer",
+            SALARY: "java.lang.Long",
+            TITLE: "java.lang.String"
+        }
+    },
+    indexes: {
+        Person: [{
+            descendings: [],
+            fields: ['ID'],
+            name: "PERSON_ID_IDX",
+            unique: false
+        }]
+    },
+    keyClasses: {
+        Person: "java.util.UUID"
+    },
+    types: ["Person"],
+    valClasses: {
+        PersonBonus: "java.lang.Object"
+    }
+}];
+
 export const agentStat = (clusters) => (ws) => {
     ws.emit('agent:status', clusters);
+};
+
+export const metadata = (metadata) => (ws) => {
+    ws.on('node:rest', (e) => {
+        if (e.params.cmd === 'metadata')
+            return restResult(metadata);
+    });
 };
 
 /**
