@@ -104,55 +104,55 @@ public class MigrationFromMongoTest {
      */
     @Test
     public void shouldMigrate() {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/console");
+        try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/console")) {
+            MongoDatabase db = mongoClient.getDatabase("console");
+            MongoCollection<Document> spaces = db.getCollection("spaces");
+            MongoCollection<Document> accounts = db.getCollection("accounts");
 
-        MongoDatabase db = mongoClient.getDatabase("console");
-        MongoCollection<Document> spaces = db.getCollection("spaces");
-        MongoCollection<Document> accounts = db.getCollection("accounts");
+            ObjectId spaceId = ObjectId.get();
+            ObjectId accId = ObjectId.get();
 
-        ObjectId spaceId = ObjectId.get();
-        ObjectId accId = ObjectId.get();
+            Document spaceDoc = new Document("_id", spaceId)
+                .append("owner", accId)
+                .append("demo", false);
 
-        Document spaceDoc = new Document("_id", spaceId)
-            .append("owner", accId)
-            .append("demo", false);
+            spaces.insertOne(spaceDoc);
 
-        spaces.insertOne(spaceDoc);
+            Document accDoc = new Document("_id", accId)
+                .append("email", "test@test.com")
+                .append("salt", TEST_SALT)
+                .append("hash", TEST_HASH)
+                .append("firstName", "Test1")
+                .append("lastName", "Test2")
+                .append("phone", "222-222")
+                .append("company", "Test")
+                .append("country", "United States")
+                .append("token", "hzFT7347b2Frc2cXOn0W")
+                .append("resetPasswordToken", "XMEfM6vlQtze95oapezn")
+                .append("admin", true);
 
-        Document accDoc = new Document("_id", accId)
-            .append("email", "test@test.com")
-            .append("salt", TEST_SALT)
-            .append("hash", TEST_HASH)
-            .append("firstName", "Test1")
-            .append("lastName", "Test2")
-            .append("phone", "222-222")
-            .append("company", "Test")
-            .append("country", "United States")
-            .append("token", "hzFT7347b2Frc2cXOn0W")
-            .append("resetPasswordToken", "XMEfM6vlQtze95oapezn")
-            .append("admin", true);
+            accounts.insertOne(accDoc);
 
-        accounts.insertOne(accDoc);
+            migration.migrate();
 
-        migration.migrate();
+            int cnt = 0;
 
-        int cnt = 0;
+            for (Account acc : accountsRepo.list()) {
+                cnt++;
 
-        for (Account acc : accountsRepo.list()) {
-            cnt++;
+                assertEquals("test@test.com", acc.getEmail());
+                assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
+                assertEquals("Test1", acc.getFirstName());
+                assertEquals("Test2", acc.getLastName());
+                assertEquals("222-222", acc.getPhone());
+                assertEquals("Test", acc.getCompany());
+                assertEquals("United States", acc.getCountry());
+                assertEquals("hzFT7347b2Frc2cXOn0W", acc.getToken());
+                assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
+                assertTrue(acc.isAdmin());
+            }
 
-            assertEquals("test@test.com", acc.getEmail());
-            assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
-            assertEquals("Test1", acc.getFirstName());
-            assertEquals("Test2", acc.getLastName());
-            assertEquals("222-222", acc.getPhone());
-            assertEquals("Test", acc.getCompany());
-            assertEquals("United States", acc.getCountry());
-            assertEquals("hzFT7347b2Frc2cXOn0W", acc.getToken());
-            assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
-            assertTrue(acc.isAdmin());
+            assertEquals(1, cnt);
         }
-
-        assertEquals(1, cnt);
     }
 }
