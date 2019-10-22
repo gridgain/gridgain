@@ -1,0 +1,264 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.gridgain.service;
+
+import java.util.List;
+import java.util.Map;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCluster;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteEx;
+import org.gridgain.AbstractGridWithAgentTest;
+import org.gridgain.dto.cache.CacheInfo;
+import org.gridgain.dto.cache.CacheSqlIndexMetadata;
+import org.gridgain.dto.cache.CacheSqlMetadata;
+import org.junit.Test;
+
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
+
+/**
+ * Cache service self test.
+ */
+public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
+    /**
+     * Should send correct cache info on create and destroy cache events.
+     */
+    @Test
+    public void shouldSendCacheInfoOnCreatedOrDestroyedCache() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "ignite-sys-cache".equals(i.getName()));
+        });
+
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache("test-cache");
+        cache.put(1, 2);
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache".equals(i.getName()));
+        });
+
+        cache.destroy();
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache".equals(i.getName()));
+        });
+    }
+
+    /**
+     * Should send correct cache info on create and destroy cache events on other nodes.
+     */
+    @Test
+    public void shouldSendCacheInfoIfCacheCreatedOnOtherNode() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        IgniteEx ignite_2 = startGrid(0);
+
+        IgniteCache<Object, Object> cache = ignite_2.getOrCreateCache("test-cache-1");
+        cache.put(1, 2);
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
+        });
+
+        cache.destroy();
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
+        });
+    }
+
+    /**
+     * Should send correct cache info on create and destroy cache events triggered by sql.
+     */
+    @Test
+    public void shouldSendCacheInfoOnCreatedOrDestroyedCacheFromSql() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("DROP TABLE gmc_agent_test_table_1;"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
+        });
+    }
+
+    /**
+     * Should send correct sql metadata.
+     */
+    @Test
+    public void shouldSendCacheMetadataOnAlterTableAndCreateIndex() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_2 (id int, value int, PRIMARY KEY (id));"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (metadata == null)
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+
+            return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE");
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("ALTER TABLE gmc_agent_test_table_2 ADD id_2 int;"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (metadata == null)
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+
+            return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE") && fields.containsKey("ID_2");
+        });
+    }
+
+    /**
+     * Should send correct sql metadata on add or drop index.
+     */
+    @Test
+    public void shouldSendCacheMetadataOnAddAndDropdIndex() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_3 (id int, value int, PRIMARY KEY (id));"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (metadata == null)
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+
+            return cacheMeta != null && idxes.isEmpty();
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE INDEX my_index ON gmc_agent_test_table_3 (value)"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (metadata == null)
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+
+            return cacheMeta != null && idxes.size() == 1;
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("DROP INDEX my_index;"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (metadata == null)
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+
+            return cacheMeta != null && idxes.isEmpty();
+        });
+    }
+}

@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import java.util.UUID;
 
+import static org.gridgain.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -28,7 +29,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class RequestDeserializerTest {
     /** Mapper. */
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = binaryMapper();
 
     /**
      * Should set ResponseError to request argument.
@@ -36,7 +37,7 @@ public class RequestDeserializerTest {
     @Test
     public void deserializeWithInvalidAction() throws Exception {
         Request req = new Request().setAction("InvalidAction").setArgument(false).setId(UUID.randomUUID());
-        Request deserializedReq = mapper.readValue(mapper.writeValueAsString(req), Request.class);
+        Request deserializedReq = mapper.readValue(mapper.writeValueAsBytes(req), Request.class);
 
         assertTrue(deserializedReq instanceof InvalidRequest);
     }
@@ -47,7 +48,7 @@ public class RequestDeserializerTest {
     @Test
     public void deserializeWithValidAction() throws Exception {
         Request req = new Request().setAction("ActionControllerForTests.action").setArgument(true).setId(UUID.randomUUID());
-        Request deserializedReq = mapper.readValue(mapper.writeValueAsString(req), Request.class);
+        Request deserializedReq = mapper.readValue(mapper.writeValueAsBytes(req), Request.class);
 
         assertTrue((boolean) deserializedReq.getArgument());
     }
@@ -58,7 +59,7 @@ public class RequestDeserializerTest {
     @Test
     public void deserializeWithInvalidArgument() throws Exception {
         Request req = new Request().setAction("ActionControllerForTests.numberAction").setArgument("number").setId(UUID.randomUUID());
-        Request deserializedReq = mapper.readValue(mapper.writeValueAsString(req), Request.class);
+        Request deserializedReq = mapper.readValue(mapper.writeValueAsBytes(req), Request.class);
 
         assertTrue(deserializedReq instanceof InvalidRequest);
     }

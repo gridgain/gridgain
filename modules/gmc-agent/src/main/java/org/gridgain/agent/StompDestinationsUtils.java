@@ -22,11 +22,17 @@ import java.util.UUID;
  * Stomp destinations utils.
  */
 public class StompDestinationsUtils {
-    /** Cluster topology dest. */
+    /** Cluster topology destination. */
     private static final String CLUSTER_PREFIX_DEST = "/app/agent/cluster";
 
-    /** Cluster topology dest. */
+    /** Cluster topology destination. */
     private static final String CLUSTER_TOPOLOGY_DEST = CLUSTER_PREFIX_DEST + "/topology/";
+
+    /** Cluster caches info destination. */
+    private static final String CLUSTER_CACHES_INFO_DEST = CLUSTER_PREFIX_DEST + "/caches/";
+
+    /** Cluster caches sql meta destination. */
+    private static final String CLUSTER_CACHES_SQL_META_DEST = CLUSTER_CACHES_INFO_DEST + "sql-meta/";
 
     /** Cluster node configuration. */
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s";
@@ -101,5 +107,21 @@ public class StompDestinationsUtils {
      */
     public static String buildClusterDest(UUID clusterId) {
         return "/app/agent/cluster/" + clusterId;
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     * @return Cluster caches information destination.
+     */
+    public static String buildClusterCachesInfoDest(UUID clusterId) {
+        return CLUSTER_CACHES_INFO_DEST + clusterId;
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     * @return Cluster caches sql metadata destination.
+     */
+    public static String buildClusterCachesSqlMetaDest(UUID clusterId) {
+        return CLUSTER_CACHES_SQL_META_DEST + clusterId;
     }
 }
