@@ -73,6 +73,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
     /** Non-persistent data region name. */
     private static final String NO_PERSISTENCE_REGION = "no-persistence-region";
+
     /** */
     private static final int DEFAULT_CACHES_COUNT = 2;
 
@@ -327,27 +328,27 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @param srvs Number of servers.
      * @param clients Number of clients.
-     * @param activateFrom Index of node stating activation.
+     * @param changeFrom Index of node stating activation.
      * @param state Activation state.
      * @throws Exception If failed.
      */
-    private void activateSimple(int srvs, int clients, int activateFrom, ClusterState state) throws Exception {
+    private void activateSimple(int srvs, int clients, int changeFrom, ClusterState state) throws Exception {
         assertTrue(state.toString(), ClusterState.active(state));
 
-        changeStateSimple(srvs, clients, activateFrom, INACTIVE, state);
+        changeStateSimple(srvs, clients, changeFrom, INACTIVE, state);
     }
 
     /**
      * @param srvs Number of servers.
      * @param clients Number of clients.
-     * @param deactivateFrom Index of node stating deactivation.
+     * @param changeFrom Index of node stating deactivation.
      * @param initialState Initial cluster state.
      * @throws Exception If failed.
      */
-    private void deactivateSimple(int srvs, int clients, int deactivateFrom, ClusterState initialState) throws Exception {
+    private void deactivateSimple(int srvs, int clients, int changeFrom, ClusterState initialState) throws Exception {
         assertTrue(initialState.toString(), ClusterState.active(initialState));
 
-        changeStateSimple(srvs, clients, deactivateFrom, initialState, INACTIVE);
+        changeStateSimple(srvs, clients, changeFrom, initialState, INACTIVE);
     }
 
     /**
@@ -526,56 +527,11 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     }
 
     /**
-     * @param startClient If {@code true} joins client node, otherwise server.
-     * @param withNewCache If {@code true} joining node has new cache in configuration.
-     * @param state If {@code true} joining node has new cache in configuration.
-     * @throws Exception If failed.
-     */
-    private void joinWhileActivate1(boolean startClient, boolean withNewCache, ClusterState state) throws Exception {
-        assertTrue(ClusterState.active(state));
-
-        int nodesCnt = 2;
-
-        IgniteInternalFuture<?> activeFut = startNodesAndBlockStatusChange(nodesCnt, 0, 0, INACTIVE, state);
-
-        ccfgs = withNewCache ? cacheConfigurations2() : cacheConfigurations1();
-
-        IgniteInternalFuture<?> startFut = startNodeAsync(nodesCnt++, startClient);
-
-        TestRecordingCommunicationSpi.spi(ignite(1)).stopBlock();
-
-        activeFut.get();
-        startFut.get();
-
-        checkCachesOnNode(nodesCnt - 1, DEFAULT_CACHES_COUNT);
-
-        if (withNewCache) {
-            for (int i = 0; i < nodesCnt; i++)
-                checkCachesOnNode(i, ccfgs.length);
-        }
-
-        awaitPartitionMapExchange();
-
-        if (state == ACTIVE)
-            checkCaches(nodesCnt, ccfgs.length);
-
-        startGrid(nodesCnt++, false);
-
-        if (state == ACTIVE)
-            checkCaches(nodesCnt, ccfgs.length);
-
-        startGrid(nodesCnt++, true);
-
-        if (state == ACTIVE)
-            checkCaches(nodesCnt, ccfgs.length);
-    }
-
-    /**
      * @param srvs Number of servers.
      * @param clients Number of clients.
      * @param stateChangeFrom Index of node initiating changes.
-     * @param initialState  Cluster state on start nodes.
-     * @param targetState  State of started cluster.
+     * @param initialState Cluster state on start nodes.
+     * @param targetState State of started cluster.
      * @param blockMsgNodes Nodes whcis block exchange messages.
      * @return State change future.
      * @throws Exception If failed.
@@ -588,7 +544,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         final ClusterState targetState,
         int... blockMsgNodes
     ) throws Exception {
-        checkStatesAreDifferent(initialState, targetState);
+        assertNotSame(initialState, targetState);
 
         stateOnStart = initialState;
         testSpi = true;
@@ -602,7 +558,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
             awaitPartitionMapExchange();
 
-            affTopVer = grid(0).cachex(ccfgs[0].getName()).context().topology().readyTopologyVersion();
+            affTopVer = grid(0).cachex(CU.UTILITY_CACHE_NAME).context().topology().readyTopologyVersion();
 
             assertEquals(srvs + clients, affTopVer.topologyVersion());
         }
@@ -702,17 +658,45 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @param startClient If {@code true} joins client node, otherwise server.
      * @param withNewCache If {@code true} joining node has new cache in configuration.
+     * @param state Target cluster state.
+     * @throws Exception If failed.
+     */
+    private void joinWhileActivate1(boolean startClient, boolean withNewCache, ClusterState state) throws Exception {
+        joinWhileClusterStateChange(startClient, withNewCache, INACTIVE, state);
+    }
+
+    /**
+     * @param startClient If {@code true} joins client node, otherwise server.
+     * @param withNewCache If {@code true} joining node has new cache in configuration.
      * @param state Initial cluster state.
      * @throws Exception If failed.
      */
     private void joinWhileDeactivate1(boolean startClient, boolean withNewCache, ClusterState state) throws Exception {
-        assertTrue(ClusterState.active(state));
+        joinWhileClusterStateChange(startClient, withNewCache, state, INACTIVE);
+    }
+
+    /**
+     * @param startClient If {@code true} joins client node, otherwise server.
+     * @param withNewCache If {@code true} joining node has new cache in configuration.
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
+     * @throws Exception If failed.
+     */
+    private void joinWhileClusterStateChange(
+        boolean startClient,
+        boolean withNewCache,
+        ClusterState initialState,
+        ClusterState targetState
+    ) throws Exception {
+        checkStatesAreDifferent(initialState, targetState);
 
         int nodesCnt = 2;
 
-        IgniteInternalFuture<?> activeFut = startNodesAndBlockStatusChange(nodesCnt, 0, 0, state, INACTIVE);
+        IgniteInternalFuture<?> activeFut = startNodesAndBlockStatusChange(nodesCnt, 0, 0, initialState, targetState);
 
         ccfgs = withNewCache ? cacheConfigurations2() : cacheConfigurations1();
+
+        final int numberOfCaches = ccfgs.length;
 
         IgniteInternalFuture<?> startFut = startNodeAsync(nodesCnt++, startClient);
 
@@ -721,25 +705,29 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         activeFut.get();
         startFut.get();
 
-        checkNoCaches(nodesCnt);
+        if (ClusterState.active(targetState))
+            checkCachesOnNode(nodesCnt - 1, DEFAULT_CACHES_COUNT);
+        else {
+            checkNoCaches(nodesCnt);
 
-        ignite(nodesCnt - 1).cluster().state(state);
+            ignite(nodesCnt - 1).cluster().state(initialState);
 
-        for (int c = 0; c < DEFAULT_CACHES_COUNT; c++)
-            checkCache(ignite(nodesCnt - 1), CACHE_NAME_PREFIX + c, true);
+            for (int c = 0; c < DEFAULT_CACHES_COUNT; c++)
+                checkCache(ignite(nodesCnt - 1), CACHE_NAME_PREFIX + c, true);
+        }
 
         if (withNewCache) {
             for (int i = 0; i < nodesCnt; i++)
-                checkCachesOnNode(i, ccfgs.length);
+                checkCachesOnNode(i, numberOfCaches);
         }
 
         awaitPartitionMapExchange();
 
-        if (state == ACTIVE)
-            checkCaches(nodesCnt, ccfgs.length);
+        if (ignite(0).cluster().state() == ACTIVE)
+            checkCaches(nodesCnt, numberOfCaches);
 
-        startNodeAndCheckCaches(nodesCnt++, false, ccfgs.length);
-        startNodeAndCheckCaches(nodesCnt++, true, ccfgs.length);
+        startNodeAndCheckCaches(nodesCnt++, false, numberOfCaches);
+        startNodeAndCheckCaches(nodesCnt++, true, numberOfCaches);
     }
 
     /**
@@ -900,7 +888,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         ClusterState initialState,
         ClusterState targetState
     ) throws Exception {
-        checkStatesAreDifferent(initialState, targetState);
+        assertNotSame(initialState, targetState);
 
         stateOnStart = initialState;
 
@@ -971,8 +959,10 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
     /** */
     private void checkCachesOnNode(int nodeNumber, int cachesCnt) throws IgniteCheckedException {
-        for (int c = 0; c < cachesCnt; c++)
-            checkCache(ignite(nodeNumber), CACHE_NAME_PREFIX + c, true);
+        if (!ignite(nodeNumber).configuration().isClientMode()) {
+            for (int c = 0; c < cachesCnt; c++)
+                checkCache(ignite(nodeNumber), CACHE_NAME_PREFIX + c, true);
+        }
 
         checkCache(ignite(nodeNumber), CU.UTILITY_CACHE_NAME, true);
     }
@@ -1345,46 +1335,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     }
 
     /**
-     * @param initialState Initial cluster state.
-     * @param targetState Target cluster state.
-     * @throws Exception If failed.
-     */
-    private void stateChangeFailover1(ClusterState initialState, ClusterState targetState) throws Exception {
-        assertNotSame(initialState, targetState);
-
-        final int servers = 4;
-        final int clients = 4;
-        int nodesCnt = servers + clients;
-
-        // Nodes 1 and 4 do not reply to coordinator.
-        IgniteInternalFuture<?> fut = startNodesAndBlockStatusChange(servers, clients, 3, initialState, targetState, 1, 4);
-
-        // Start one more node while transition is in progress.
-        IgniteInternalFuture<?> startFut = startNodeAsync(nodesCnt++, false);
-
-        final int exceptedNodesCnt = nodesCnt;
-
-        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == exceptedNodesCnt, 30000L));
-
-        stopGrid(getTestIgniteInstanceName(1), true, false);
-        stopGrid(getTestIgniteInstanceName(4), true, false);
-
-        fut.get();
-        startFut.get();
-
-        startGrid(1, false);
-        startGrid(4, true);
-
-        if (!ClusterState.active(targetState)) {
-            checkNoCaches(nodesCnt);
-
-            ignite(0).cluster().state(initialState);
-        }
-
-        checkCaches(nodesCnt);
-    }
-
-    /**
      * @throws Exception If failed.
      */
     @Test
@@ -1430,52 +1380,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     @Test
     public void testDisableReadOnlyFailover2() throws Exception {
         stateChangeFailover2(READ_ONLY, ACTIVE);
-    }
-
-    /**
-     * @param initialState Initial cluster state.
-     * @param targetState Target cluster state.
-     * @throws Exception If failed.
-     */
-    private void stateChangeFailover2(ClusterState initialState, ClusterState targetState) throws Exception {
-        assertNotSame(initialState, targetState);
-
-        final int servers = 4;
-        final int clients = 4;
-        int nodesCnt = servers + clients;
-
-        // Nodes 1 and 4 do not reply to coordinator.
-        IgniteInternalFuture<?> fut = startNodesAndBlockStatusChange(servers, clients, 3, initialState, targetState, 1, 4);
-
-        // Start more nodes while transition is in progress.
-        IgniteInternalFuture<?> startFut1 = startNodeAsync(nodesCnt++, false);
-        IgniteInternalFuture<?> startFut2 = startNodeAsync(nodesCnt++, false);
-
-        final int exceptedNodesCnt = nodesCnt;
-
-        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == exceptedNodesCnt, 30000L));
-
-        // Stop coordinator.
-        stopGrid(getTestIgniteInstanceName(0), true, false);
-        stopGrid(getTestIgniteInstanceName(1), true, false);
-        stopGrid(getTestIgniteInstanceName(4), true, false);
-
-        fut.get();
-
-        startFut1.get();
-        startFut2.get();
-
-        startGrid(0, false);
-        startGrid(1, false);
-        startGrid(4, true);
-
-        if (!ClusterState.active(targetState)) {
-            checkNoCaches(nodesCnt);
-
-            ignite(0).cluster().state(initialState);
-        }
-
-        checkCaches(nodesCnt);
     }
 
     /**
@@ -1531,6 +1435,24 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @param targetState Target cluster state.
      * @throws Exception If failed.
      */
+    private void stateChangeFailover1(ClusterState initialState, ClusterState targetState) throws Exception {
+        stateChangeFailover(initialState, targetState, 1, 1, 4);
+    }
+
+    /**
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
+     * @throws Exception If failed.
+     */
+    private void stateChangeFailover2(ClusterState initialState, ClusterState targetState) throws Exception {
+        stateChangeFailover(initialState, targetState, 2, 0, 1, 4);
+    }
+
+    /**
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
+     * @throws Exception If failed.
+     */
     private void stateChangeFailover3(ClusterState initialState, ClusterState targetState) throws Exception {
         assertNotSame(initialState, targetState);
 
@@ -1559,17 +1481,71 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         startFut1.get();
         startFut2.get();
 
-        for (int i=servers; i < nodesCnt; i++)
+        for (int i = servers; i < nodesCnt; i++)
             assertEquals(ignite(i).name(), INACTIVE, ignite(i).cluster().state());
 
         ignite(servers).cluster().state(ClusterState.active(initialState) ? initialState : targetState);
 
-        doFinalChecks(servers, nodesCnt);
+        if (ignite(servers).cluster().state() == ACTIVE)
+            doFinalChecks(servers, nodesCnt);
+    }
+
+    /**
+     * @param initialState Initial cluster state.
+     * @param targetState Target cluster state.
+     * @param startExtraNodes Number of started server nodes during blocked status change.
+     * @param restartNodes Indexes of ignite instances for restart.
+     * @throws Exception If failed.
+     */
+    private void stateChangeFailover(
+        ClusterState initialState,
+        ClusterState targetState,
+        int startExtraNodes,
+        int... restartNodes
+    ) throws Exception {
+        assertNotSame(initialState, targetState);
+
+        final int servers = 4;
+        final int clients = 4;
+        int nodesCnt = servers + clients;
+
+        // Nodes 1 and 4 do not reply to coordinator.
+        IgniteInternalFuture<?> fut = startNodesAndBlockStatusChange(servers, clients, 3, initialState, targetState, 1, 4);
+
+        List<IgniteInternalFuture<?>> startFuts = new ArrayList<>();
+
+        // Start more nodes while transition is in progress.
+        for (int i = 0; i < startExtraNodes; i++)
+            startFuts.add(startNodeAsync(nodesCnt++, false));
+
+        final int exceptedNodesCnt = nodesCnt;
+
+        assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == exceptedNodesCnt, 30000L));
+
+        for (int idx : restartNodes)
+            stopGrid(getTestIgniteInstanceName(idx), true, false);
+
+        fut.get();
+
+        for (IgniteInternalFuture<?> startFut : startFuts)
+            startFut.get();
+
+        for (int idx : restartNodes)
+            startGrid(idx, idx >= servers & idx < (servers + clients));
+
+        if (!ClusterState.active(targetState)) {
+            checkNoCaches(nodesCnt);
+
+            ignite(0).cluster().state(initialState);
+        }
+
+        if (targetState == ACTIVE)
+            checkCaches(nodesCnt);
     }
 
     /** */
     protected void doFinalChecks(int startNodes, int nodesCnt) throws Exception {
-        for (int i=0; i<startNodes; i++)
+        for (int i = 0; i < startNodes; i++)
             startGrid(i);
 
         checkCaches(nodesCnt);
