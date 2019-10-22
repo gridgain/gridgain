@@ -235,18 +235,13 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
         checkCachesData(cacheData, dsCfg);
     }
 
-    /**
-     * Verifies correctness of BaselineTopology checks when working in persistent mode.
-     */
-    @Override protected void doFinalChecks() {
-        for (int i = 0; i < 4; i++) {
+
+    /** {@inheritDoc} */
+    @Override protected void doFinalChecks(int startNodes, int nodesCnt) {
+        for (int i = 0; i < startNodes; i++) {
             int j = i;
 
-            assertThrowsAnyCause(log, () -> {
-                startGrid(j);
-
-                return null;
-            }, IgniteSpiException.class, "not compatible");
+            assertThrowsAnyCause(log, () -> startGrid(j), IgniteSpiException.class, "not compatible");
         }
     }
 
