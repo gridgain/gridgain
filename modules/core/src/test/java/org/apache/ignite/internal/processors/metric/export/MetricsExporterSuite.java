@@ -24,7 +24,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    MetricProtocolTest.class,
     MetricRegistrySchemaTest.class,
     MetricSchemaTest.class,
     VarIntTest.class
