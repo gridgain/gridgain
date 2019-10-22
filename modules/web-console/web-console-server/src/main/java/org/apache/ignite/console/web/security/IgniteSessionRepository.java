@@ -19,7 +19,6 @@ package org.apache.ignite.console.web.security;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.CacheHolder;
 import org.apache.ignite.console.db.OneToManyIndex;
@@ -57,9 +56,6 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
     /** Account to sessions index. */
     private OneToManyIndex<String, String> accToSesIdx;
 
-    /** Sessions to account index. */
-    private OneToManyIndex<String, String> sesToAccIdx;
-
     /**
      * @param ignite Ignite.
      */
@@ -69,7 +65,6 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
         txMgr.registerStarter(() -> {
             sessionsCache = new CacheHolder<>(ignite, "wc_sessions");
             accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx");
-            sesToAccIdx = new OneToManyIndex<>(ignite, "wc_ses_to_acc_idx");
         });
     }
 
@@ -109,7 +104,6 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
                     ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
 
                     accToSesIdx.add(email, sesId);
-                    sesToAccIdx.add(sesId, email);
                 }
 
                 sessionsCache.cache().put(ses.getId(), new MapSession(ses));
@@ -145,13 +139,13 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
     @Override public void delete(String sesId) {
         try {
             txMgr.doInTransaction(() -> {
-                Set<String> accEmails = sesToAccIdx.get(sesId);
+                MapSession ses = sessionsCache.cache().getAndRemove(sesId);
 
-                sesToAccIdx.delete(sesId);
+                if (ses != null) {
+                    String email = ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
 
-                accEmails.forEach(accToSesIdx::delete);
-
-                sessionsCache.cache().remove(sesId);
+                    accToSesIdx.delete(email);
+                }
             });
         }
         catch (RuntimeException e) {
