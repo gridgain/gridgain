@@ -45,6 +45,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
     /**
      * @param ignite Ignite.
+     * @param txMgr Transaction manager.
      */
     public IgniteSessionRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
