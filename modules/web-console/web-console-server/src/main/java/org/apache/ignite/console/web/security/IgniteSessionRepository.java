@@ -149,7 +149,7 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
 
                 sesToAccIdx.delete(sesId);
 
-                accEmails.forEach(sesToAccIdx::delete);
+                accEmails.forEach(accToSesIdx::delete);
 
                 sessionsCache.cache().remove(sesId);
             });

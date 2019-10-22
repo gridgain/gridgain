@@ -43,7 +43,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestWrapper;
-import org.springframework.session.ExpiringSession;
+import org.springframework.session.Session;
 import org.springframework.util.StopWatch;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
