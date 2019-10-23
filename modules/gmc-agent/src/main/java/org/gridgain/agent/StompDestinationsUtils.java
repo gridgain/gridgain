@@ -47,7 +47,7 @@ public class StompDestinationsUtils {
     private static final String METRICS_DEST = "/app/agent/metrics/%s/add";
 
     /** Events destination. */
-    private static final String EVENTS_DEST = "/app/agent/events/%s/add";
+    private static final String EVENTS_DEST = CLUSTER_PREFIX_DEST + "/events/%s/add";
 
     /**
      * @param clusterId Cluster id.
