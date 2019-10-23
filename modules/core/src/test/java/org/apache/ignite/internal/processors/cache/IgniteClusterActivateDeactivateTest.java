@@ -956,7 +956,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         ClusterState state = grid(0).cluster().state();
 
         if (ClusterState.active(state)) {
-            checkCachesOnNode(nodeIdx, cachesCount);
+            checkCachesOnNode(nodeIdx, cachesCount, !client);
 
             checkCaches(nodeIdx + 1, cachesCount);
         }
@@ -968,10 +968,11 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     private void startWithCaches1(int srvs, int clients) throws Exception {
-        ccfgs = cacheConfigurations1();
+        for (int i = 0; i < srvs + clients; i++) {
+            ccfgs = cacheConfigurations1();
 
-        for (int i = 0; i < srvs + clients; i++)
             startGrid(i, i >= srvs);
+        }
     }
 
     /**
@@ -1699,8 +1700,13 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
     /** */
     private void checkCachesOnNode(int nodeNumber, int cachesCnt) throws IgniteCheckedException {
+        checkCachesOnNode(nodeNumber, cachesCnt, true);
+    }
+
+    /** */
+    private void checkCachesOnNode(int nodeNumber, int cachesCnt, boolean expUserCaches) throws IgniteCheckedException {
         for (int c = 0; c < cachesCnt; c++)
-            checkCache(ignite(nodeNumber), CACHE_NAME_PREFIX + c, true);
+            checkCache(ignite(nodeNumber), CACHE_NAME_PREFIX + c, expUserCaches);
 
         checkCache(ignite(nodeNumber), CU.UTILITY_CACHE_NAME, true);
     }
@@ -1719,6 +1725,14 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
     /** */
     private void startGrid(int nodeNumber, boolean client) throws Exception {
+        startGrid(nodeNumber, client, null);
+    }
+
+    /** */
+    private void startGrid(int nodeNumber, boolean client, CacheConfiguration[] cacheConfigs) throws Exception {
+        if (cacheConfigs != null)
+            this.ccfgs = cacheConfigs;
+
         this.client = client;
 
         startGrid(nodeNumber);
