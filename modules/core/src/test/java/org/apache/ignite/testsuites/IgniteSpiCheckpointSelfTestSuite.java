@@ -20,7 +20,7 @@ import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiSecondCacheSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiStartStopSelfTest;
-import org.apache.ignite.spi.checkpoint.cache.CheckCheckpointStartLogging;
+import org.apache.ignite.spi.checkpoint.cache.CheckCheckpointStartLoggingTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiCustomConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiDefaultConfigSelfTest;
@@ -41,7 +41,7 @@ import org.junit.runners.Suite;
     CacheCheckpointSpiSelfTest.class,
     CacheCheckpointSpiStartStopSelfTest.class,
     CacheCheckpointSpiSecondCacheSelfTest.class,
-    CheckCheckpointStartLogging.class,
+    CheckCheckpointStartLoggingTest.class,
 
     // JDBC.
     JdbcCheckpointSpiConfigSelfTest.class,

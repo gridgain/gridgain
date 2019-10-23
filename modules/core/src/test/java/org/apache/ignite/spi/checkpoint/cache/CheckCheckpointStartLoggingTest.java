@@ -30,7 +30,7 @@ import org.junit.Test;
 /**
  * Checks correct checkpoint times logging
  */
-public class CheckCheckpointStartLogging extends GridCommonAbstractTest {
+public class CheckCheckpointStartLoggingTest extends GridCommonAbstractTest {
     /** */
     private static final String VALID_MS_PATTERN = "[0-9]*ms";
 
