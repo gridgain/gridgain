@@ -53,6 +53,11 @@ public class GridH2JavaObject extends GridH2ValueMessage {
         b = val.getBytesNoCopy();
     }
 
+    /**
+     * Allows detach for binary objects in containers to avoid excessive memory usage.
+     *
+     * @param obj Object to proccess.
+     */
     private void allowDetachForSimpleContainers(Object obj) {
         if (obj instanceof Collection) {
             Collection col = (Collection)obj;
