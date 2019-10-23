@@ -16,14 +16,27 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
+import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientCompute;
+import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientDisconnectedException;
+import org.apache.ignite.internal.client.GridClientException;
+import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
 
@@ -47,7 +60,7 @@ public class DrCacheCommand extends
 
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
-        return "org.gridgain.grid.internal.visor.dr.console.VisorDrCacheTask";
+        throw new UnsupportedOperationException("visorTaskName");
     }
 
     /** {@inheritDoc} */
@@ -57,8 +70,10 @@ public class DrCacheCommand extends
         if (CommandArgIterator.isCommandOrOption(regex))
             throw new IllegalArgumentException("Cache name regex expected.");
 
+        Pattern pattern;
+
         try {
-            Pattern.compile(regex);
+            pattern = Pattern.compile(regex);
         }
         catch (PatternSyntaxException e) {
             throw new IllegalArgumentException("Cache name regex is not valid.", e);
@@ -134,7 +149,7 @@ public class DrCacheCommand extends
             }
         }
 
-        return new DrCacheArguments(regex, cfg, metrics, cacheFilter, sndGrp, sndGrpName, act, (byte)0);
+        return new DrCacheArguments(regex, pattern, cfg, metrics, cacheFilter, sndGrp, sndGrpName, act, (byte)0);
     }
 
     /** {@inheritDoc} */
@@ -146,7 +161,62 @@ public class DrCacheCommand extends
     }
 
     /** {@inheritDoc} */
+    @Override
+    protected VisorDrCacheTaskResult execute0(GridClientConfiguration clientCfg, GridClient client) throws Exception {
+        return execute0(client, arg());
+    }
+
+    /** */
+    public static VisorDrCacheTaskResult execute0(
+        GridClient client,
+        DrCacheArguments arg
+    ) throws GridClientException {
+        GridClientCompute compute = client.compute();
+
+        Collection<GridClientNode> nodes = compute.nodes();
+
+        Pattern cacheNamePattern = arg.pattern;
+
+        List<UUID> nodeIds = nodes.stream()
+            .filter(DrAbstractRemoteSubCommand::drControlUtilitySupported)
+            .map(GridClientNode::nodeId)
+            .collect(Collectors.toList());
+
+        if (F.isEmpty(nodeIds))
+            throw new GridClientDisconnectedException("Connectable nodes not found", null);
+
+        if (arg.remoteDataCenterId == 0 && arg.action != null) {
+            Map<String, UUID> cacheNameToNodeMap = new HashMap<>();
+
+            for (GridClientNode node : nodes) {
+                for (String cacheName : node.caches().keySet()) {
+                    if (cacheNamePattern.matcher(cacheName).matches())
+                        cacheNameToNodeMap.putIfAbsent(cacheName, node.nodeId());
+                }
+            }
+
+            arg.cacheNamesMap = cacheNameToNodeMap;
+        }
+        else if (arg.remoteDataCenterId != 0) {
+            for (GridClientNode node : nodes) {
+                if (node.attribute("plugins.gg.replication.snd.hub") != null) {
+                    arg.actionCoordinator = node.nodeId();
+
+                    break;
+                }
+            }
+        }
+
+        return compute.projection(DrAbstractRemoteSubCommand::drControlUtilitySupported).execute(
+            "org.gridgain.grid.internal.visor.dr.console.VisorDrCacheTask",
+            new VisorTaskArgument<>(nodeIds, arg.toVisorArgs(), false)
+        );
+    }
+
+    /** {@inheritDoc} */
     @Override protected void printResult(VisorDrCacheTaskResult res, Logger log) {
+        printUnrecognizedNodesMessage(log, false);
+
         log.info("Data Center ID: " + res.getDataCenterId());
 
         log.info(DELIM);
@@ -283,6 +353,8 @@ public class DrCacheCommand extends
     public static class DrCacheArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrCacheTaskArgs> {
         /** Regex. */
         private final String regex;
+        /** Pattern. */
+        private final Pattern pattern;
         /** Config. */
         private final boolean config;
         /** Metrics. */
@@ -297,10 +369,15 @@ public class DrCacheCommand extends
         private final Action action;
         /** Remote data center id. */
         private final byte remoteDataCenterId;
+        /** Cache names map. */
+        private Map<String, UUID> cacheNamesMap;
+        /** Action coordinator. */
+        private UUID actionCoordinator;
 
         /** */
         public DrCacheArguments(
             String regex,
+            Pattern pattern,
             boolean config,
             boolean metrics,
             CacheFilter filter,
@@ -310,6 +387,7 @@ public class DrCacheCommand extends
             byte remoteDataCenterId
         ) {
             this.regex = regex;
+            this.pattern = pattern;
             this.config = config;
             this.metrics = metrics;
             this.filter = filter;
@@ -317,6 +395,11 @@ public class DrCacheCommand extends
             this.senderGroupName = senderGroupName;
             this.action = action;
             this.remoteDataCenterId = remoteDataCenterId;
+        }
+
+        /** */
+        public UUID getActionCoordinator() {
+            return actionCoordinator;
         }
 
         /** {@inheritDoc} */
@@ -329,7 +412,9 @@ public class DrCacheCommand extends
                 senderGroup == null ? VisorDrCacheTaskArgs.SENDER_GROUP_NAMED : senderGroup.ordinal(),
                 senderGroupName,
                 action == null ? VisorDrCacheTaskArgs.ACTION_NONE : action.ordinal(),
-                remoteDataCenterId
+                remoteDataCenterId,
+                cacheNamesMap,
+                actionCoordinator
             );
         }
     }
