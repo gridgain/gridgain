@@ -27,10 +27,11 @@ import org.apache.ignite.console.services.ActivitiesServiceTest;
 import org.apache.ignite.console.services.AdminServiceTest;
 import org.apache.ignite.console.services.MigrationFromMongoTest;
 import org.apache.ignite.console.services.NotificationServiceTest;
-import org.apache.ignite.console.web.controller.AgentDownloadControllerTest;
+import org.apache.ignite.console.web.controller.AgentDownloadControllerSelfTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.apache.ignite.console.web.socket.AgentsServiceSelfTest;
 import org.apache.ignite.console.web.socket.BrowsersServiceTest;
+import org.apache.ignite.console.web.socket.TransitionServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -43,7 +44,7 @@ import org.junit.runners.Suite;
     AccountsServiceTest.class,
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
-    AgentDownloadControllerTest.class,
+    AgentDownloadControllerSelfTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceTest.class,
     ConfigurationsRepositoryTest.class,
@@ -53,8 +54,8 @@ import org.junit.runners.Suite;
     NotificationEventListenerTest.class,
     NotificationServiceTest.class,
     PasswordEncoderTest.class,
-    TableSelfTest.class
-    // TODO GG-25215 TransitionServiceSelfTest.class
+    TableSelfTest.class,
+    TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {
 }

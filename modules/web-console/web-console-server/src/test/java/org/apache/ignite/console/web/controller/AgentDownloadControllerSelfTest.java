@@ -53,7 +53,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     classes = {MockUserDetailsServiceConfiguration.class, TestGridConfiguration.class},
     properties = {"agent.file.regexp=empty.zip"}
 )
-public class AgentDownloadControllerTest {
+public class AgentDownloadControllerSelfTest {
     /** Agent download controller. */
     @Autowired
     private AgentDownloadController agentDownloadController;
