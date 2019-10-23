@@ -140,7 +140,7 @@ public class TransitionServiceSelfTest {
 
         transitionSrvc.sendToAgent(key, req);
 
-        verify(agentsRepo, times(1)).remove(eq(key), eq(nid));
+        verify(agentsRepo, times(2)).get(eq(key));
 
         ArgumentCaptor<WebSocketResponse> resCaptor = ArgumentCaptor.forClass(WebSocketResponse.class);
 
