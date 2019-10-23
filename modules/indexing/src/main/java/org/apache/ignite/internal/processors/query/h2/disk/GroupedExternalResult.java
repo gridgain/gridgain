@@ -32,8 +32,8 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /** Result queue. */
     private Queue<ExternalResultData.Chunk> resQueue;
 
-    /**  Comparator for {@code sortedRowsBuf}. It is used to prevent duplicated rows keys in {@code sortedRowsBuf}. */
-    private final CompareMode cmp;
+    /** Chunks comparator. */
+    private final Comparator<ExternalResultData.Chunk> chunkCmp;
 
     /**
      * @param ctx Kernel context.
@@ -46,7 +46,17 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
         CompareMode cmp,
         long initSize) {
         super(ctx, memTracker, false, 0, Object.class, cmp);
-        this.cmp = cmp;
+        this.chunkCmp = new Comparator<ExternalResultData.Chunk>() {
+            @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
+                int c = cmp.compare((Value)o1.currentRow().getKey(), (Value)o2.currentRow().getKey());
+
+                if (c != 0)
+                    return c;
+
+                // Compare batches to ensure they emit rows in the arriving order.
+                return Long.compare(o1.start(), o2.start());
+            }
+        };
     }
 
     /** */
@@ -81,19 +91,8 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
             for (ExternalResultData.Chunk chunk : data.chunks())
                 chunk.reset();
         }
-        else {
-            resQueue =  new PriorityQueue<>(new Comparator<ExternalResultData.Chunk>() {
-                @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
-                    int c = cmp.compare((Value)o1.currentRow().getKey(), (Value)o2.currentRow().getKey());
-
-                    if (c != 0)
-                        return c;
-
-                    // Compare batches to ensure they emit rows in the arriving order.
-                    return Long.compare(o1.start(), o2.start());
-                }
-            });
-        }
+        else
+            resQueue = new PriorityQueue<>(chunkCmp);
 
         // Init chunks.
         for (ExternalResultData.Chunk  chunk : data.chunks()) {

@@ -67,6 +67,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     /**  Comparator for {@code sortedRowsBuf}. It is used to prevent duplicated rows keys in {@code sortedRowsBuf}. */
     private Comparator<Value> cmp;
 
+    /** Chunks comparator. */
+    private final Comparator<ExternalResultData.Chunk> chunkCmp;
+
     /**
      * @param ses Session.
      * @param ctx Kernal context.
@@ -93,6 +96,17 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         this.visibleColCnt = visibleColCnt;
         this.sort = sort;
         this.cmp = ses.getDatabase().getCompareMode();
+        this.chunkCmp = new Comparator<ExternalResultData.Chunk>() {
+            @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
+                int c = sort.compare((Value[])o1.currentRow().getValue(),(Value[]) o2.currentRow().getValue());
+
+                if (c != 0)
+                    return c;
+
+                // Compare batches to ensure they emit rows in the arriving order.
+                return Long.compare(o1.start(), o2.start());
+            }
+        };
     }
 
     /**
@@ -106,6 +120,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         visibleColCnt = parent.visibleColCnt;
         sort = parent.sort;
         cmp = parent.cmp;
+        chunkCmp = parent.chunkCmp;
     }
 
     /** {@inheritDoc} */
@@ -316,17 +331,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
                 chunk.reset();
         }
         else {
-            resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(new Comparator<ExternalResultData.Chunk>() {
-                @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
-                    int c = sort.compare((Value[])o1.currentRow().getValue(),(Value[]) o2.currentRow().getValue());
-
-                    if (c != 0)
-                        return c;
-
-                    // Compare batches to ensure they emit rows in the arriving order.
-                    return Long.compare(o1.start(), o2.start());
-                }
-            });
+            resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(chunkCmp);
         }
 
         // Init chunks.

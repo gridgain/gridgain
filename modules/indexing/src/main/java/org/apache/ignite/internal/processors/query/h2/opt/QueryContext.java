@@ -168,7 +168,7 @@ public class QueryContext implements H2QueryContext {
 
         assert isGrpQry; // isGrpQry == false allowed only for window queries which are not supported yet.
 
-        return  new ManagedGroupByData(ses, grpIdx);
+        return new ManagedGroupByData(ses, grpIdx);
     }
 
     /**

@@ -194,9 +194,7 @@ public class ManagedGroupByData extends GroupByData {
         if (grpIdx == null && sortedExtRes == null && groupByData.isEmpty())
             groupByData.put(ValueRow.getEmpty(), new Object[width]);
 
-
         if (sortedExtRes != null ) {
-
             if (!groupByData.isEmpty())
                 spillGroupsToDisk();
 
