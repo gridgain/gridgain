@@ -16,10 +16,14 @@
 
 package org.apache.ignite.console.web.socket;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,14 +35,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static java.util.Collections.singleton;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
 import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
+import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  *  Transition service test.
@@ -53,6 +62,10 @@ public class TransitionServiceSelfTest {
     /** Browsers service. */
     @MockBean
     private BrowsersService browsersSrvc;
+
+    /** Agents repository. */
+    @MockBean
+    private AgentsRepository agentsRepo;
 
     /** Announcement captor. */
     @Captor
@@ -90,5 +103,53 @@ public class TransitionServiceSelfTest {
         assertNotNull(evt.getRequestId());
         assertEquals(ADMIN_ANNOUNCEMENT, evt.getEventType());
         assertEquals(ann, evt.getPayload());
+    }
+
+    /** */
+    @Test
+    public void sendToNotConnectedCluster() {
+        WebSocketRequest req = new WebSocketRequest();
+
+        req.setRequestId(UUID.randomUUID().toString());
+
+        transitionSrvc.sendToAgent(new AgentKey(UUID.randomUUID(), UUID.randomUUID().toString()), req);
+
+        ArgumentCaptor<WebSocketResponse> resCaptor = ArgumentCaptor.forClass(WebSocketResponse.class);
+
+        verify(browsersSrvc, times(1)).processResponse(resCaptor.capture());
+
+        WebSocketResponse res = resCaptor.getValue();
+
+        assertEquals(req.getRequestId(), res.getRequestId());
+        assertEquals(ERROR, res.getEventType());
+        assertEquals(message("err.agent-not-found"), ((Map<String, String>)res.getPayload()).get("message"));
+    }
+
+    /** */
+    @Test
+    public void sendToClusterWithBrokenIndex() {
+        AgentKey key = new AgentKey(UUID.randomUUID(), UUID.randomUUID().toString());
+
+        UUID nid = UUID.randomUUID();
+
+        when(agentsRepo.get(key)).thenReturn(singleton(nid), Collections.emptySet());
+
+        WebSocketRequest req = new WebSocketRequest();
+
+        req.setRequestId(UUID.randomUUID().toString());
+
+        transitionSrvc.sendToAgent(key, req);
+
+        verify(agentsRepo, times(1)).remove(eq(key), eq(nid));
+
+        ArgumentCaptor<WebSocketResponse> resCaptor = ArgumentCaptor.forClass(WebSocketResponse.class);
+
+        verify(browsersSrvc, times(1)).processResponse(resCaptor.capture());
+
+        WebSocketResponse res = resCaptor.getValue();
+
+        assertEquals(req.getRequestId(), res.getRequestId());
+        assertEquals(ERROR, res.getEventType());
+        assertEquals(message("err.agent-not-found"), ((Map<String, String>)res.getPayload()).get("message"));
     }
 }

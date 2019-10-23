@@ -195,13 +195,12 @@ public class TransitionService {
             return;
         }
 
-        ClusterGroup grp = ignite.cluster().forNodeIds(nids).forRandom();
-
         try {
-            ignite.message(grp).send(SEND_TO_AGENT, req);
+            ignite.message(ignite.cluster().forNodeIds(nids).forRandom()).send(SEND_TO_AGENT, req);
         }
         catch (ClusterGroupEmptyException ignored) {
-            agentsRepo.remove(req.getKey(), grp.node().id());
+            for (UUID nid : nids)
+                agentsRepo.remove(req.getKey(), nid);
 
             resendToOtherBackend(req);
         }
