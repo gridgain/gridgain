@@ -52,10 +52,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             /// No flags
             /// </summary>
             None = 0,
-            /// <summary>
-            /// With keep binary, affects only Java version.
-            /// </summary>
-            WithKeepBinary = 1,
+            // 1 << 0 is reserved for Java thin client.
             /// <summary>
             /// With expiration policy.
             /// </summary>
