@@ -283,6 +283,31 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     }
 
     /**
+     * Check task result with expected failure.
+     *
+     * @param content Content to check.
+     * @return Node with failure result.
+     */
+    protected JsonNode jsonTaskErrorResult(String content) throws IOException {
+        assertNotNull(content);
+        assertFalse(content.isEmpty());
+
+        JsonNode node = JSON_MAPPER.readTree(content);
+
+        assertEquals(STATUS_FAILED, node.get("successStatus").asInt());
+        assertFalse(node.get("error").isNull());
+        assertTrue(node.get("response").isNull());
+
+        assertEquals(securityEnabled(), !node.get("sessionToken").isNull());
+
+        JsonNode error = node.get("error");
+
+        assertTrue(error.isTextual());
+
+        return error;
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
