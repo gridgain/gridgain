@@ -18,9 +18,11 @@ package org.apache.ignite.internal.processors.security;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -66,6 +68,9 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * @param ctx Grid kernal context.
      * @param secPrc Security processor.
@@ -75,6 +80,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         assert secPrc != null;
 
         this.ctx = ctx;
+        this.log = ctx.log(IgniteSecurityProcessor.class);
         this.secPrc = secPrc;
 
         marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
@@ -96,10 +102,23 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         return withContext(
             secCtxs.computeIfAbsent(nodeId,
                 uuid -> nodeSecurityContext(
-                    marsh, U.resolveClassLoader(ctx.config()), ctx.discovery().node(uuid)
+                    marsh, U.resolveClassLoader(ctx.config()), findNode(uuid)
                 )
             )
         );
+    }
+
+    /**
+     * @param nodeId Node id.
+     */
+    private ClusterNode findNode(UUID nodeId) {
+        ClusterNode node = Optional.ofNullable(ctx.discovery().node(nodeId))
+            .orElseGet(() -> ctx.discovery().historicalNode(nodeId));
+
+        if (node == null)
+            U.warn(log, "Cluster node not found for nodeId:" + nodeId);
+
+        return node;
     }
 
     /** {@inheritDoc} */
