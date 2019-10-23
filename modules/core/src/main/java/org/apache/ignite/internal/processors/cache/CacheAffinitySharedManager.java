@@ -2983,7 +2983,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 IdealAffinityAssignment assignment = grpHolder.aff.idealAssignment();
 
                 if (assignment != null) {
-                    int partsNum = assignment.idealPrimaries(cctx.localNode()).size();
+                    int partsNum = assignment.calculatePrimaries(null, assignment.assignment()).size();
 
                     if (partsNum == 0)
                         return;
