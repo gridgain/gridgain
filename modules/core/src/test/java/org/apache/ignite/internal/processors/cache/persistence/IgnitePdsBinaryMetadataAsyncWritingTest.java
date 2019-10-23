@@ -38,6 +38,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
@@ -49,6 +50,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 
 /**
  * Tests for verification of binary metadata async writing to disk.
@@ -87,7 +91,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             .setAffinity(new RendezvousAffinityFunction(false, 16))
         );
 
-//        cfg.setFailureHandler(new StopNodeFailureHandler());
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         return cfg;
     }
@@ -101,6 +105,9 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        if (fileWriteLatchRef != null && fileWriteLatchRef.get() != null)
+            fileWriteLatchRef.get().countDown();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -114,9 +121,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     @Test
     public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
 
         Ignite ig = startGrid(0);
         ig.cluster().active(true);
@@ -169,10 +174,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     @Test
     public void testThreadRequestingUpdateBlockedTillWriteCompletion() throws Exception {
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
 
         Ignite ig = startGrid();
 
@@ -194,10 +196,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     @Test
     public void testDiscoveryIsNotBlockedOnMetadataWrite() throws Exception {
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
 
         IgniteKernal ig = (IgniteKernal)startGrid();
 
@@ -216,9 +215,10 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         assertEquals(0, cache.size(CachePeekMode.PRIMARY));
 
-        Map locCache = GridTestUtils.getFieldValue((CacheObjectBinaryProcessorImpl)ig.context().cacheObjects(), "metadataLocCache");
+        Map locCache = GridTestUtils.getFieldValue(
+            (CacheObjectBinaryProcessorImpl)ig.context().cacheObjects(), "metadataLocCache");
 
-        assertEquals(3, locCache.size());
+        assertTrue(GridTestUtils.waitForCondition(() -> locCache.size() == 3, 5_000));
 
         fileWriteLatch.countDown();
     }
@@ -229,15 +229,15 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     @Test
     public void testNodeIsStoppedOnExceptionDuringStoringMetadata() throws Exception {
-        Ignite ig0 = startGrid(0);
+        IgniteEx ig0 = startGrid(0);
 
         specialFileIOFactory = new FailingFileIOFactory(new RandomAccessFileIOFactory());
 
-        Ignite ig1 = startGrid(1);
+        IgniteEx ig1 = startGrid(1);
 
         ig0.cluster().active(true);
 
-        int ig1Key = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.cluster().localNode());
+        int ig1Key = findAffinityKeyForNode(ig0.affinity(DEFAULT_CACHE_NAME), ig1.localNode());
 
         IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
@@ -255,9 +255,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     public void testParallelUpdatesToBinaryMetadata() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
         IgniteEx ig1 = startGrid(1);
 
         specialFileIOFactory = null;
@@ -298,20 +296,18 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
-    public void testClientIsBlockedOnCachePutIfBinaryMetaWriteIsHanging() throws Exception {
+    public void testPutRequestFromClientIsBlockedIfBinaryMetaWriteIsHanging() throws Exception {
         String cacheName = "testCache";
 
         CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
             .setBackups(2)
             .setAtomicityMode(CacheAtomicityMode.ATOMIC)
             .setCacheMode(CacheMode.PARTITIONED)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+            .setWriteSynchronizationMode(FULL_SYNC);
 
         IgniteEx ig0 = startGrid(0);
 
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
         IgniteEx ig1 = startGrid(1);
 
         specialFileIOFactory = null;
@@ -346,20 +342,83 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     @Test
     public void testPutRequestFromServerIsBlockedIfBinaryMetaWriteIsHanging() throws Exception {
+        putRequestFromServer(true);
+    }
+
+    /**
+     * Verifies that put from client to ATOMIC cache in PRIMARY_SYNC mode is not blocked
+     * if binary metadata async write operation hangs on backup node and not on primary.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPutRequestFromClientCompletesIfMetadataWriteHangOnBackup() throws Exception {
         String cacheName = "testCache";
 
         CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
             .setBackups(2)
             .setAtomicityMode(CacheAtomicityMode.ATOMIC)
             .setCacheMode(CacheMode.PARTITIONED)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+            .setWriteSynchronizationMode(PRIMARY_SYNC);
+
+        IgniteEx ig0 = startGrid(0);
+
+        CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+        IgniteEx ig1 = startGrid(1);
+
+        specialFileIOFactory = null;
+        IgniteEx ig2 = startGrid(2);
+
+        ig0.cluster().active(true);
+
+        IgniteEx cl0 = startGrid("client0");
+
+        IgniteCache cache = cl0.createCache(testCacheCfg);
+        Affinity<Object> aff = cl0.affinity(cacheName);
+
+        AtomicBoolean putCompleted = new AtomicBoolean(false);
+        int key = findAffinityKeyForNode(aff, ig0.localNode());
+        GridTestUtils.runAsync(() -> {
+            cache.put(key, new TestAddress(key, "USA", "NYC"));
+
+            putCompleted.set(true);
+        });
+
+        assertTrue(GridTestUtils.waitForCondition(() -> putCompleted.get(), 5_000));
+
+        fileWriteLatch.countDown();
+    }
+
+    /**
+     * Verifies that put from server to ATOMIC cache in PRIMARY_SYNC mode is not blocked
+     * if binary metadata async write operation hangs on backup node and not on primary.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRutRequestFromServerCompletesIfMetadataWriteHangOnBackup() throws Exception {
+        putRequestFromServer(false);
+    }
+
+    /**
+     * @param expectedBlocked
+     * @throws Exception
+     */
+    private void putRequestFromServer(boolean expectedBlocked) throws Exception {
+        String cacheName = "testCache";
+
+        CacheWriteSynchronizationMode syncMode = expectedBlocked ? FULL_SYNC : PRIMARY_SYNC;
+
+        CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
+            .setBackups(2)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setWriteSynchronizationMode(syncMode);
 
         IgniteEx ig0 = startGrid(0);
 
         startGrid(1);
-        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
-        final CountDownLatch fileWriteLatch = new CountDownLatch(1);
-        fileWriteLatchRef.set(fileWriteLatch);
+        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
         IgniteEx ig2 = startGrid(2);
 
         specialFileIOFactory = null;
@@ -384,19 +443,39 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         int key0 = key;
         GridTestUtils.runAsync(() -> {
-           cache.put(key0, new TestAddress(key0, "USA", "NYC"));
+            cache.put(key0, new TestAddress(key0, "USA", "NYC"));
 
-           putFinished.set(true);
+            putFinished.set(true);
         });
 
-        assertFalse(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+        if (expectedBlocked) {
+            assertFalse(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
 
-        fileWriteLatch.countDown();
+            fileWriteLatch.countDown();
 
-        assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+            assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+        }
+        else
+            assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
     }
 
-    /** Deletes directory with persisted binary metadata for a node with given Consistent ID. */
+    /**
+     * Initializes special FileIOFactory emulating slow write to disk.
+     *
+     * @return Latch to release write operation.
+     */
+    private CountDownLatch initSlowFileIOFactory() {
+        CountDownLatch cdl = new CountDownLatch(1);
+
+        specialFileIOFactory = new SlowFileIOFactory(new RandomAccessFileIOFactory());
+        fileWriteLatchRef.set(cdl);
+
+        return cdl;
+    }
+
+    /**
+     * Deletes directory with persisted binary metadata for a node with given Consistent ID.
+     */
     private void cleanBinaryMetaFolderForNode(String consId) throws IgniteCheckedException {
         String dfltWorkDir = U.defaultWorkDirectory();
         File metaDir = U.resolveWorkDirectory(dfltWorkDir, "binary_meta", false);
@@ -503,6 +582,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         }
     }
 
+    /** */
     private static boolean isBinaryMetaFile(File file) {
         return file.getPath().contains("binary_meta");
     }

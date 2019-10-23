@@ -143,6 +143,10 @@ class BinaryMetadataFileStore {
 
             U.error(log, msg);
 
+            for (GridFutureAdapter fut : writeOpFutures.values()) {
+                fut.onDone(e);
+            }
+
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
             throw new IgniteException(msg, e);
