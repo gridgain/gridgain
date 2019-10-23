@@ -132,6 +132,7 @@ public class IgniteSqlContainerColumnMemoryUsageTest extends AbstractIndexingCom
 
         byte[] columnBytes = extractColumnBytes(msgs);
 
+        // Kind of smoke check to ensure that each container element do not need memory equal to whole container size
         assertTrue(columnBytes.length < sizeLimit);
     }
 
