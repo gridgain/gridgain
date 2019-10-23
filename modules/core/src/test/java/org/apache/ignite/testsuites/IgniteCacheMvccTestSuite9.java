@@ -104,8 +104,8 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class);
 
         // Compatibility metrics
-        ignoredTests.add(IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
-        ignoredTests.add(IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
+        ignoredTests.add(org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
+        ignoredTests.add(org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
 
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));
     }
