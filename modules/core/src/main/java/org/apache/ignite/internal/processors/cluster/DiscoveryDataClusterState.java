@@ -242,7 +242,9 @@ public class DiscoveryDataClusterState implements Serializable {
         return prevState != null ? prevState.baselineTopology() : null;
     }
 
-    /** */
+    /**
+     * @return Previous "active" flag value during transition.
+     */
     public boolean previouslyActive() {
         assert transitionReqId != null;
 
