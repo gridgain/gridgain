@@ -199,9 +199,6 @@ public class TransitionService {
             ignite.message(ignite.cluster().forNodeIds(nids).forRandom()).send(SEND_TO_AGENT, req);
         }
         catch (ClusterGroupEmptyException ignored) {
-            for (UUID nid : nids)
-                agentsRepo.remove(req.getKey(), nid);
-
             resendToOtherBackend(req);
         }
         catch (Exception e) {
