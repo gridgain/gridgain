@@ -19,7 +19,6 @@ package org.apache.ignite.console.web.socket;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
