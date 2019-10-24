@@ -596,11 +596,14 @@ public class PlatformContextImpl implements PlatformContext {
         assert keyBytes != null;
 
         // TODO: Replace keyBytes with what?
+        final boolean[] skip = {false};
+
         nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (key, adder) -> {
             if (adder == null) {
                 return null;
             }
 
+            skip[0] = true;
             adder.decrement();
 
             if (adder.intValue() <= 0) {
@@ -609,6 +612,9 @@ public class PlatformContextImpl implements PlatformContext {
 
             return adder;
         });
+
+        if (skip[0])
+            return;
 
         // TODO: Track active caches and avoid unnecessary callbacks.
         try (PlatformMemory mem0 = mem.allocate()) {
