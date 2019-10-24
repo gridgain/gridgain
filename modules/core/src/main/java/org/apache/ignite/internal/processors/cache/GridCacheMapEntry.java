@@ -78,6 +78,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConfl
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
+import org.apache.ignite.internal.processors.platform.PlatformNoopProcessor;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
@@ -272,6 +274,28 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert lock.isHeldByCurrentThread();
 
         this.val = val;
+
+        // Invoke platform near callback if near is enabled for this cache, even for local entries:
+        // check cacheCfg.getNearConfiguration() instead of isNear().
+        GridCacheAdapter cache = this.cctx.cache();
+        if (cache == null || cache.cacheCfg.getNearConfiguration() == null)
+            return;
+
+        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        if (proc instanceof PlatformNoopProcessor)
+            return;
+
+        try {
+            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+
+            // val is null when entry is removed.
+            byte[] keyBytes = this.key.valueBytes(ctx);
+            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+
+            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
     /** {@inheritDoc} */

@@ -21,17 +21,22 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.*;
+import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
+import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
+import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.platform.PlatformNoopProcessor;
-import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -469,28 +474,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
         throws IgniteCheckedException {
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void value(@Nullable CacheObject val) {
-        super.value(val);
-
-        PlatformProcessor proc = this.cctx.kernalContext().platform();
-        if (proc instanceof PlatformNoopProcessor) {
-            return;
-        }
-
-        try {
-            CacheObjectContext ctx = this.cctx.cacheObjectContext();
-
-            // val is null when entry is removed.
-            byte[] keyBytes = this.key.valueBytes(ctx);
-            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
-
-            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
-        } catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
     }
 
     /** {@inheritDoc} */
