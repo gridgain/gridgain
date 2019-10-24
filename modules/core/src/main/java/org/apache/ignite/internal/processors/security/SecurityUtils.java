@@ -100,7 +100,8 @@ public class SecurityUtils {
      * @return Node's security context.
      */
     public static SecurityContext nodeSecurityContext(Marshaller marsh, ClassLoader ldr, ClusterNode node) {
-        assert node != null;
+        if (node == null)
+            throw new IllegalStateException("Cluster node can't be null.");
 
         byte[] subjBytesV2 = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2);
         byte[] subjBytes = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT);
