@@ -22,6 +22,7 @@ import org.gridgain.action.controller.BaselineActionsControllerTest;
 import org.gridgain.action.controller.ClusterActionsControllerTest;
 import org.gridgain.action.controller.NodeActionsControllerTest;
 import org.gridgain.action.controller.QueryActionsControllerTest;
+import org.gridgain.action.controller.QueryActionsControllerWithParametersTest;
 import org.gridgain.action.controller.SecurityActionsControllerTest;
 import org.gridgain.action.query.QueryRegistryTest;
 import org.gridgain.service.CacheServiceSelfTest;
@@ -45,6 +46,7 @@ import org.junit.runners.Suite;
     MetricsServiceSelfTest.class,
     NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,
+    QueryActionsControllerWithParametersTest.class,
     QueryRegistryTest.class,
     SecurityActionsControllerTest.class,
     TracingServiceSelfTest.class
