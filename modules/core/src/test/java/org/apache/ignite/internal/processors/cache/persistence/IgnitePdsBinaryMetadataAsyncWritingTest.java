@@ -396,8 +396,59 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
-    public void testRutRequestFromServerCompletesIfMetadataWriteHangOnBackup() throws Exception {
+    public void testPutRequestFromServerCompletesIfMetadataWriteHangOnBackup() throws Exception {
         putRequestFromServer(false);
+    }
+
+    /**
+     * Verifies that metadata write hanging on non-affinity node doesn't block on-going put operation.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPutRequestFromClientCompletesIfMetadataWriteHangOnNonAffinityNode() throws Exception {
+        String cacheName = "testCache";
+
+        CacheConfiguration testCacheCfg = new CacheConfiguration(cacheName)
+            .setBackups(1)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setWriteSynchronizationMode(FULL_SYNC);
+
+        IgniteEx ig0 = startGrid(0);
+
+        CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+        IgniteEx ig1 = startGrid(1);
+
+        specialFileIOFactory = null;
+        IgniteEx ig2 = startGrid(2);
+
+        IgniteEx cl0 = startGrid("client0");
+        cl0.cluster().active(true);
+
+        IgniteCache cache = cl0.createCache(testCacheCfg);
+        Affinity<Object> aff = cl0.affinity(cacheName);
+        int nonAffKey = findNonAffinityKeyForNode(aff, ig1.localNode(), 0);
+
+        AtomicBoolean putCompleted = new AtomicBoolean(false);
+
+        GridTestUtils.runAsync(() -> {
+            cache.put(nonAffKey, new TestAddress(nonAffKey, "USA", "NYC"));
+
+            putCompleted.set(true);
+        });
+
+        assertTrue(GridTestUtils.waitForCondition(() -> putCompleted.get(), 5_000));
+
+        //internal map in BinaryMetadataFileStore with futures awaiting write operations
+        Map map = GridTestUtils.getFieldValue(
+            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(), "metadataFileStore", "writeOpFutures");
+
+        assertTrue(!map.isEmpty());
+
+        fileWriteLatch.countDown();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> map.isEmpty(), 5_000));
     }
 
     /**
@@ -538,6 +589,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         }
     }
 
+    /** */
     static final class TestAddress {
         /** */
         private final int id;
@@ -587,9 +639,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         return file.getPath().contains("binary_meta");
     }
 
-    /**
-     *
-     */
+    /** */
     static final class SlowFileIOFactory implements FileIOFactory {
         /** */
         private final FileIOFactory delegateFactory;
@@ -612,9 +662,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         }
     }
 
-    /**
-     *
-     */
+    /** */
     static class SlowFileIO extends FileIODecorator {
         /** */
         private final CountDownLatch fileWriteLatch;
@@ -664,6 +712,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         }
     }
 
+    /** */
     static final class FailingFileIO extends FileIODecorator {
         /**
          * @param delegate File I/O delegate
