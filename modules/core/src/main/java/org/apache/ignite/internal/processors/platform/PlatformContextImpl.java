@@ -66,6 +66,7 @@ import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStrea
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.platform.messaging.PlatformMessageFilterImpl;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
@@ -75,6 +76,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Implementation of platform context.
@@ -101,6 +103,10 @@ public class PlatformContextImpl implements PlatformContext {
 
     /** Node ids that has been sent to native platform. */
     private final Set<UUID> sentNodes = Collections.newSetFromMap(new ConcurrentHashMap<UUID, Boolean>());
+
+    /** Keys that should be skipped during platform near cache update callback. */
+    private final ConcurrentHashMap<IgniteBiTuple<Integer, Object>, LongAdder> nearCacheSkipUpdate
+            = new ConcurrentHashMap<>();
 
     /** Platform name. */
     private final String platform;
@@ -588,6 +594,21 @@ public class PlatformContextImpl implements PlatformContext {
     /** {@inheritDoc} */
     @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes) {
         assert keyBytes != null;
+
+        // TODO: Replace keyBytes with what?
+        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (key, adder) -> {
+            if (adder == null) {
+                return null;
+            }
+
+            adder.decrement();
+
+            if (adder.intValue() <= 0) {
+                return null;
+            }
+
+            return adder;
+        });
 
         // TODO: Track active caches and avoid unnecessary callbacks.
         try (PlatformMemory mem0 = mem.allocate()) {
