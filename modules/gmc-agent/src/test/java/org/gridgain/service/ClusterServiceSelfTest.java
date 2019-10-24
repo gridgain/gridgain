@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package org.gridgain.agent;
+package org.gridgain.service;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
@@ -28,22 +27,17 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.gridgain.AbstractGridWithAgentTest;
 import org.gridgain.dto.cluster.ClusterInfo;
 import org.gridgain.dto.topology.TopologySnapshot;
-import org.gridgain.dto.tracing.Span;
 import org.gridgain.utils.AgentUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
-import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
-import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 
 /**
- * Agent integration tests.
+ * Topology service test.
  */
-public class AgentSelfTest extends AbstractGridWithAgentTest {
+public class ClusterServiceSelfTest extends AbstractGridWithAgentTest {
     /**
      * Should send initial states to backend.
      */
@@ -56,9 +50,6 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildClusterNodeConfigurationDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
-
         assertWithPoll(() -> {
             ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
 
@@ -156,51 +147,6 @@ public class AgentSelfTest extends AbstractGridWithAgentTest {
                 ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
                 return info != null && !info.isActive();
             }
-        );
-    }
-
-    /**
-     * Should send changed baseline topology.
-     */
-    @Test
-    public void
-    shouldSendMetricsOnPoll() throws Exception {
-        IgniteEx ignite_1 = startGrid(0);
-        changeGmcUri(ignite_1);
-
-        IgniteCluster cluster = ignite_1.cluster();
-        cluster.active(true);
-
-        assertWithPoll(
-            () -> interceptor.isSubscribedOn(buildMetricsPullTopic())
-        );
-
-        template.convertAndSend("/topic/agent/metrics/pull", "pull");
-
-        assertWithPoll(
-            () -> {
-                String metrics = new String((byte[]) interceptor.getPayload(buildMetricsDest(cluster.id())));
-                return metrics != null && metrics.contains(cluster.tag());
-            }
-        );
-    }
-
-    /**
-     * Should send changed baseline topology.
-     */
-    @Test
-    public void shouldSendSpans() throws Exception {
-        IgniteEx ignite_1 = startGrid(0);
-        changeGmcUri(ignite_1);
-
-        IgniteCluster cluster = ignite_1.cluster();
-        cluster.active(true);
-
-        assertWithPoll(
-                () -> {
-                    List<Span> spans = interceptor.getPayload(buildSaveSpanDest(cluster.id()), List.class);
-                    return spans != null && !spans.isEmpty();
-                }
         );
     }
 }

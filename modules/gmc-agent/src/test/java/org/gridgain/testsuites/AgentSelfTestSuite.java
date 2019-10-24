@@ -24,8 +24,10 @@ import org.gridgain.action.controller.NodeActionsControllerTest;
 import org.gridgain.action.controller.QueryActionsControllerTest;
 import org.gridgain.action.controller.SecurityActionsControllerTest;
 import org.gridgain.action.query.QueryRegistryTest;
-import org.gridgain.agent.AgentSelfTest;
 import org.gridgain.service.CacheServiceSelfTest;
+import org.gridgain.service.ClusterServiceSelfTest;
+import org.gridgain.service.MetricsServiceSelfTest;
+import org.gridgain.service.tracing.TracingServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -34,16 +36,18 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    AgentSelfTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithSecurityBaseTest.class,
     BaselineActionsControllerTest.class,
     CacheServiceSelfTest.class,
     ClusterActionsControllerTest.class,
+    ClusterServiceSelfTest.class,
+    MetricsServiceSelfTest.class,
     NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,
     QueryRegistryTest.class,
-    SecurityActionsControllerTest.class
+    SecurityActionsControllerTest.class,
+    TracingServiceSelfTest.class
 })
 public class AgentSelfTestSuite {
 }
