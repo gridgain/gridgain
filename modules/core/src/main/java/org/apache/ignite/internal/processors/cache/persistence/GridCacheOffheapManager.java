@@ -2687,63 +2687,68 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (part == null || part.state() != OWNING)
                 return 0;
 
-            cctx.shared().database().checkpointReadLock();
+            if (!part.reserve())
+                return 0;
+
             try {
-                if (!part.reserve())
+                if (part.state() != OWNING)
                     return 0;
 
-                try {
-                    if (part.state() != OWNING)
-                        return 0;
+                long now = U.currentTimeMillis();
 
-                    long now = U.currentTimeMillis();
+                GridCursor<PendingRow> cur;
 
-                    GridCursor<PendingRow> cur;
+                if (grp.sharedGroup())
+                    cur = pendingTree.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
+                else
+                    cur = pendingTree.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
 
-                    if (grp.sharedGroup())
-                        cur = pendingTree.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
-                    else
-                        cur = pendingTree.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
+                if (!cur.next())
+                    return 0;
 
-                    if (!cur.next())
-                        return 0;
+                GridCacheVersion obsoleteVer = null;
 
-                    GridCacheVersion obsoleteVer = null;
+                int cleared = 0;
 
-                    int cleared = 0;
+                do {
+                    PendingRow row = cur.get();
 
-                    do {
-                        PendingRow row = cur.get();
+                    if (amount != -1 && cleared > amount)
+                        return cleared;
 
-                        if (amount != -1 && cleared > amount)
-                            return cleared;
+                    assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
 
-                        assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+                    row.key.partition(partId);
 
-                        row.key.partition(partId);
+                    boolean removed;
 
-                        if (pendingTree.removex(row)) {
-                            if (obsoleteVer == null)
-                                obsoleteVer = ctx.versions().next();
+                    cctx.shared().database().checkpointReadLock();
 
-                            GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
-
-                            if (e1 != null)
-                                c.apply(e1, obsoleteVer);
-                        }
-
-                        cleared++;
+                    try {
+                        removed = pendingTree.removex(row);
                     }
-                    while (cur.next());
+                    finally {
+                        cctx.shared().database().checkpointReadUnlock();
+                    }
 
-                    return cleared;
+                    if (removed){
+                        if (obsoleteVer == null)
+                            obsoleteVer = ctx.versions().next();
+
+                        GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
+
+                        if (e1 != null)
+                            c.apply(e1, obsoleteVer);
+                    }
+
+                    cleared++;
                 }
-                finally {
-                    part.release();
-                }
+                while (cur.next());
+
+                return cleared;
             }
             finally {
-                cctx.shared().database().checkpointReadUnlock();
+                part.release();
             }
         }
 
