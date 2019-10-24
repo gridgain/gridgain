@@ -38,8 +38,8 @@ public class ClusterInfo {
     /** Is active. */
     private boolean isActive;
 
-    /** Is in memory. */
-    private boolean isInMemory;
+    /** Is persistence enabled. */
+    private boolean isPersistenceEnabled;
 
     /** Features. */
     private Set<String> features = Collections.emptySet();
@@ -127,16 +127,16 @@ public class ClusterInfo {
     /**
      * @return @{code True} if cluster running in memory mode.
      */
-    public boolean isInMemory() {
-        return isInMemory;
+    public boolean isPersistenceEnabled() {
+        return isPersistenceEnabled;
     }
 
     /**
-     * @param inMemory In memory.
+     * @param persistenceEnabled Is persistence enabled.
      * @return @{code This} for method chaining.
      */
-    public ClusterInfo setInMemory(boolean inMemory) {
-        isInMemory = inMemory;
+    public ClusterInfo setPersistenceEnabled(boolean persistenceEnabled) {
+        isPersistenceEnabled = persistenceEnabled;
         return this;
     }
 

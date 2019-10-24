@@ -62,7 +62,7 @@ public class ClusterServiceSelfTest extends AbstractGridWithAgentTest {
             Assert.assertEquals(cluster.tag(), info.getTag());
             Assert.assertEquals(cluster.baselineAutoAdjustTimeout(), info.getBaselineParameters().getAutoAdjustAwaitingTime());
             Assert.assertEquals(cluster.isBaselineAutoAdjustEnabled(), info.getBaselineParameters().isAutoAdjustEnabled());
-            Assert.assertEquals(!CU.isPersistenceEnabled(ignite.configuration()), info.isInMemory());
+            Assert.assertEquals(CU.isPersistenceEnabled(ignite.configuration()), info.isPersistenceEnabled());
             Assert.assertEquals(features, info.getFeatures());
 
             return true;

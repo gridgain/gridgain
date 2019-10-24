@@ -161,7 +161,7 @@ public class ClusterService implements AutoCloseable {
 
         ClusterInfo clusterInfo= new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())
-            .setInMemory(!CU.isPersistenceEnabled(ctx.config()))
+            .setPersistenceEnabled(CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
                 new BaselineInfo(
                     cluster.isBaselineAutoAdjustEnabled(),
