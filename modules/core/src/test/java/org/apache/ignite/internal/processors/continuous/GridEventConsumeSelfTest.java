@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.continuous;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -63,6 +64,7 @@ import static org.apache.ignite.events.EventType.EVT_JOB_STARTED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.continuous.GridContinuousProcessor.LocalRoutineInfo;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
  * Event consume test.
@@ -1170,13 +1172,19 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
             IgniteBiTuple<Integer, UUID> t;
 
+            ArrayList<IgniteInternalFuture> stopRemotes = new ArrayList<>();
+
             while ((t = queue.poll()) != null) {
                 int idx = t.get1();
                 UUID consumeId = t.get2();
 
-                grid(idx).events().stopRemoteListenAsync(consumeId).get(3000);
+                stopRemotes.add(runAsync(() -> grid(idx).events().stopRemoteListenAsync(consumeId).get(3000)));
 
                 stopped.add(consumeId);
+            }
+
+            for (IgniteInternalFuture fut : stopRemotes) {
+                fut.get(10_000);
             }
 
             Collection<UUID> notStopped = F.lose(started, true, stopped);
