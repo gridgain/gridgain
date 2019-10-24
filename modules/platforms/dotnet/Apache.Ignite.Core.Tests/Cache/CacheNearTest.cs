@@ -232,7 +232,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             localCache[1] = 1;
             remoteCache[1] = 2;
 
-            Assert.AreEqual(2, localCache[1]);
+            Assert.True(TestUtils.WaitForCondition(() => localCache[1] == 2, 300));
         }
 
         /// <summary>
