@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
+    using System;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -207,12 +208,13 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that near cache returns the same object instance as we put there.
         /// </summary>
         [Test]
-        public void TestNearCachePutGetServerReturnsSameObjectReference([Values(true, false)] bool localKey)
+        public void TestNearCachePutGetReturnsSameObjectReference(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
+            var cache = GetCache<int, Foo>(mode);
 
             var obj1 = new Foo();
-            var key = TestUtils.GetPrimaryKey(localKey ? _grid : _grid2, cache.Name);
+            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
             
             cache[key] = obj1;
             var res1 = cache[key];
@@ -327,6 +329,27 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             events.StopLocalListen(this, EventType.CacheEntryCreated);
         }
+        
+        /// <summary>
+        /// Gets the cache instance.
+        /// </summary>
+        private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = DefaultCacheName)
+        {
+            switch (mode)
+            {
+                case CacheTestMode.ServerLocal:
+                    return _grid.GetCache<TK, TV>(name);
+                
+                case CacheTestMode.ServerRemote:
+                    return _grid2.GetCache<TK, TV>(name);
+                
+                case CacheTestMode.Client:
+                    return _client.GetCache<TK, TV>(name);
+                
+                default:
+                    throw new ArgumentOutOfRangeException("mode", mode, null);
+            }
+        }
 
         /** <inheritdoc /> */
         public bool Invoke(CacheEvent evt)
@@ -339,6 +362,14 @@ namespace Apache.Ignite.Core.Tests.Cache
         private class Foo
         {
             // No-op.
+        }
+        
+        /** */
+        public enum CacheTestMode
+        {
+            ServerLocal,
+            ServerRemote,
+            Client
         }
     }
 }
