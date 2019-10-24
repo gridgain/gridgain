@@ -625,7 +625,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         this.cache = cache;
 
         if (grp.supportsTombstone() && cache.configuration().getAtomicityMode() == TRANSACTIONAL
-                && !conflictNeedResolve() && !store().configured())
+                && !store().configured())
             deferredDel = false;
         else {
             deferredDel = (cache.isDht() || cache.isDhtAtomic() || cache.isColocated() ||
