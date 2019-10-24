@@ -2208,6 +2208,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     cctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(cctx, key, key0, old, old0, keepBinary, 0L));
             }
+
+            updatePlatformNearCache(op == UPDATE ? updated : null);
         }
         finally {
             unlockEntry();
@@ -4284,8 +4286,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.offheap().invoke(cctx, key, localPartition(), c);
 
-        updatePlatformNearCache(val);
-
         return c;
     }
 
@@ -4401,8 +4401,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert lock.isHeldByCurrentThread();
 
         cctx.offheap().remove(cctx, key, partition(), localPartition());
-
-        updatePlatformNearCache(null);
     }
 
     /** {@inheritDoc} */
@@ -6941,6 +6939,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /**
      * Invokes platform near cache callback, if applicable.
+     * @param val Updated value, null on remove.
      */
     private void updatePlatformNearCache(@Nullable CacheObject val) {
         // Invoke platform near callback if near is enabled for this cache, even for local entries:

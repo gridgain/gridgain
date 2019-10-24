@@ -89,7 +89,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [TearDown]
         public void TearDown()
         {
-            _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
+            // _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
         }
 
         /// <summary>
@@ -212,6 +212,13 @@ namespace Apache.Ignite.Core.Tests.Cache
             
             Assert.AreSame(obj1, res1);
             Assert.AreSame(obj2, res2);
+        }
+
+        [Test]
+        public void TestSingle()
+        {
+            var cache = _grid.GetCache<int, int>(DefaultCacheName);
+            cache[1] = 1;
         }
         
         /// <summary>
