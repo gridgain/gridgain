@@ -105,6 +105,10 @@
     </category>
     -->
 
+    <category name="org.apache.zookeeper">
+        <level value="DEBUG"/>
+    </category>
+
     <!-- Disable all open source debugging. -->
     <category name="org">
         <level value="INFO"/>
@@ -117,7 +121,7 @@
     <!-- Default settings. -->
     <root>
         <!-- Print at info by default. -->
-        <level value="INFO"/>
+        <level value="DEBUG"/>
 
         <!-- Append to file and console. -->
         <appender-ref ref="FILE"/>
