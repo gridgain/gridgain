@@ -274,28 +274,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert lock.isHeldByCurrentThread();
 
         this.val = val;
-
-        // Invoke platform near callback if near is enabled for this cache, even for local entries:
-        // check cacheCfg.getNearConfiguration() instead of isNear().
-        GridCacheAdapter cache = this.cctx.cache();
-        if (cache == null || cache.cacheCfg.getNearConfiguration() == null)
-            return;
-
-        PlatformProcessor proc = this.cctx.kernalContext().platform();
-        if (proc instanceof PlatformNoopProcessor)
-            return;
-
-        try {
-            CacheObjectContext ctx = this.cctx.cacheObjectContext();
-
-            // val is null when entry is removed.
-            byte[] keyBytes = this.key.valueBytes(ctx);
-            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
-
-            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
-        } catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
     }
 
     /** {@inheritDoc} */
@@ -4306,6 +4284,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.offheap().invoke(cctx, key, localPartition(), c);
 
+        updatePlatformNearCache(val);
+
         return c;
     }
 
@@ -4421,6 +4401,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert lock.isHeldByCurrentThread();
 
         cctx.offheap().remove(cctx, key, partition(), localPartition());
+
+        updatePlatformNearCache(null);
     }
 
     /** {@inheritDoc} */
@@ -6955,5 +6937,32 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private static IgniteTxSerializationCheckedException serializationError() {
         return new IgniteTxSerializationCheckedException("Cannot serialize transaction due to write conflict (transaction is marked for rollback)");
+    }
+
+    /**
+     * Invokes platform near cache callback, if applicable.
+     */
+    private void updatePlatformNearCache(@Nullable CacheObject val) {
+        // Invoke platform near callback if near is enabled for this cache, even for local entries:
+        // check cacheCfg.getNearConfiguration() instead of isNear().
+        GridCacheAdapter cache = this.cctx.cache();
+        if (cache == null || cache.cacheCfg.getNearConfiguration() == null)
+            return;
+
+        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        if (proc instanceof PlatformNoopProcessor)
+            return;
+
+        try {
+            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+
+            // val is null when entry is removed.
+            byte[] keyBytes = this.key.valueBytes(ctx);
+            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+
+            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 }
