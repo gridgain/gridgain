@@ -287,7 +287,8 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
     private DocumentContext parse(Object obj) {
         try {
             return JsonPath.parse(mapper.writeValueAsString(obj));
-        } catch (JsonProcessingException e) {
+        }
+        catch (JsonProcessingException e) {
             throw new IgniteException(e);
         }
     }
