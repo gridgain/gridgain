@@ -529,7 +529,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                     + (precision == 0 ? "" : ("." + precision))
                     + (scale == 0 ? "" : ("." + scale));
 
-                if (!schemaName.equals(QueryUtils.SCHEMA_SYS))
+                if (!schemaName.equals(QueryUtils.sysSchemaName()))
                     actualUserCols.add(colDefinition);
                 else
                     actualSystemCols.add(colDefinition);

@@ -48,7 +48,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
     public void testBadCacheName() throws Exception {
         IgniteConfiguration cfg = getConfiguration();
 
-        final String invalidCache = QueryUtils.SCHEMA_SYS;
+        final String invalidCache = QueryUtils.sysSchemaName();
 
         cfg.setCacheConfiguration(new CacheConfiguration().setName(invalidCache));
 
@@ -68,7 +68,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testBadCacheNameDynamic() throws Exception {
-        final String invalidCache = QueryUtils.SCHEMA_SYS;
+        final String invalidCache = QueryUtils.sysSchemaName();
 
         doubleConsumerAccept(
             (node)->{
@@ -100,7 +100,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
     public void testBadSchemaLower() throws Exception {
         IgniteConfiguration cfg = getConfiguration();
 
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toLowerCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toLowerCase();
 
         cfg.setCacheConfiguration(new CacheConfiguration().setName("CACHE").setSqlSchema(invalidSchema));
 
@@ -119,7 +119,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testBadSchemaLowerDynamic() throws Exception {
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toLowerCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toLowerCase();
 
         doubleConsumerAccept(
             (node) -> {
@@ -152,7 +152,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
     public void testBadSchemaUpper() throws Exception {
         IgniteConfiguration cfg = getConfiguration();
 
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toUpperCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toUpperCase();
 
         cfg.setCacheConfiguration(new CacheConfiguration().setName("CACHE")
             .setSqlSchema(invalidSchema));
@@ -172,7 +172,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testBadSchemaUpperDynamic() throws Exception {
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toUpperCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toUpperCase();
 
         doubleConsumerAccept(
             (node) -> {
@@ -205,7 +205,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
     public void testBadSchemaQuoted() throws Exception {
         IgniteConfiguration cfg = getConfiguration();
 
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toUpperCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toUpperCase();
 
         cfg.setCacheConfiguration(new CacheConfiguration().setName("CACHE")
             .setSqlSchema("\"" + invalidSchema + "\""));
@@ -225,7 +225,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testBadSchemaQuotedDynamic() throws Exception {
-        final String invalidSchema = QueryUtils.SCHEMA_SYS.toUpperCase();
+        final String invalidSchema = QueryUtils.sysSchemaName().toUpperCase();
 
         doubleConsumerAccept(
             (node) -> {

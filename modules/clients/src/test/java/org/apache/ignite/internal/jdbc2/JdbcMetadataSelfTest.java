@@ -347,7 +347,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
 
                 assertEquals(JdbcUtils.CATALOG_NAME, rs.getString("TABLE_CAT"));
 
-                assertEquals(QueryUtils.SCHEMA_SYS, rs.getString("TABLE_SCHEM"));
+                assertEquals(QueryUtils.sysSchemaName(), rs.getString("TABLE_SCHEM"));
 
                 assertEquals(viewName, rs.getString("TABLE_NAME"));
             }
