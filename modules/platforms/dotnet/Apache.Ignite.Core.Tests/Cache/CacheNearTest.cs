@@ -149,11 +149,8 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual(3, nearCache[1]);
 
             // Remove.
-            cache.Clear(1);
-            Assert.False(cache.ContainsKey(1));
-
-            // TODO
-            // Assert.False(nearCache.ContainsKey(1));
+            cache.Remove(1);
+            Assert.True(TestUtils.WaitForCondition(() => !nearCache.ContainsKey(1), 300));
         }
 
         /// <summary>
