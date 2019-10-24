@@ -159,7 +159,7 @@ public class ClusterService implements AutoCloseable {
         // TODO GG-22191 change on debug level.
         log.info("Sending cluster info to GMC");
 
-        ClusterInfo clusterInfo= new ClusterInfo(cluster.id(), cluster.tag())
+        ClusterInfo clusterInfo = new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())
             .setPersistenceEnabled(CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
