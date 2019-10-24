@@ -49,7 +49,6 @@ import org.junit.Test;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_JOB_STARTED;
 import static org.apache.ignite.internal.processors.continuous.GridContinuousProcessor.LocalRoutineInfo;
-import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
  * Event consume test.
@@ -1077,14 +1076,14 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                                     @Override public boolean apply(UUID uuid, Event evt) {
                                         return true;
                                     }
-                                }, null, EVT_JOB_STARTED).get(9000);
+                                }, null, EVT_JOB_STARTED).get(40_000);
 
                                 started.add(consumeId);
 
                                 queue.add(F.t(idx, consumeId));
                             }
                             catch (ClusterTopologyException ignored) {
-                                // No-op.
+                                log.error("Failed during consume starter", ignored);
                             }
 
                             U.sleep(10);
@@ -1112,12 +1111,12 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                         try {
                             IgniteEvents evts = grid(idx).events();
 
-                            evts.stopRemoteListenAsync(consumeId).get(9000);
+                            evts.stopRemoteListenAsync(consumeId).get(40_000);
 
                             stopped.add(consumeId);
                         }
                         catch (ClusterTopologyException ignored) {
-                            // No-op.
+                            log.error("Failed during consume stopper", ignored);
                         }
                     }
 
@@ -1163,7 +1162,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                 int idx = t.get1();
                 UUID consumeId = t.get2();
 
-                stopRemotes.add(runAsync(() -> grid(idx).events().stopRemoteListenAsync(consumeId).get(3000)));
+                grid(idx).events().stopRemoteListenAsync(consumeId).get(40000);
 
                 stopped.add(consumeId);
             }
