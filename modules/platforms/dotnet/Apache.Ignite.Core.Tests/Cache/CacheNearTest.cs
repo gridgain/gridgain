@@ -207,12 +207,12 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that near cache returns the same object instance as we put there.
         /// </summary>
         [Test]
-        public void TestNearCachePutGetServerLocalReturnsSameObjectReference()
+        public void TestNearCachePutGetServerReturnsSameObjectReference([Values(true, false)] bool localKey)
         {
             var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
 
             var obj1 = new Foo();
-            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
+            var key = TestUtils.GetPrimaryKey(localKey ? _grid : _grid2, cache.Name);
             
             cache[key] = obj1;
             var res1 = cache[key];
