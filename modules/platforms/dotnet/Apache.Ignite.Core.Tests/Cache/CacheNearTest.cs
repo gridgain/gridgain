@@ -202,20 +202,15 @@ namespace Apache.Ignite.Core.Tests.Cache
             var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
 
             var obj1 = new Foo();
-            var obj2 = new Foo();
             
             cache[1] = obj1;
             var res1 = cache[1];
 
-            cache[1] = obj2;
-            var res2 = cache[1];
-            
             Assert.AreSame(obj1, res1);
-            Assert.AreSame(obj2, res2);
         }
 
         /// <summary>
-        /// Tests that near cache returns the same object instance as we put there.
+        /// Tests that near cache returns the same object on every get.
         /// </summary>
         [Test]
         public void TestNearCacheRepeatedGetReturnsSameObjectReference()
