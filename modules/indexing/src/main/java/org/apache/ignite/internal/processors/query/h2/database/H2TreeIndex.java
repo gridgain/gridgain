@@ -94,6 +94,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 import static org.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -382,8 +383,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 return new SingleRowCursor(row);
             }
             else {
-                return new H2Cursor(tree.find((H2Row)lower,
-                    (H2Row)upper, filter(qctx), null));
+                H2Cursor cur = new H2Cursor(tree.find((H2Row)lower, (H2Row)upper, filter(qctx), null));
+
+                if (qctx != null)
+                    qctx.addResource(cur);
+
+                return cur;
             }
         }
         catch (IgniteCheckedException e) {
@@ -843,7 +848,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             GridCursor<H2Row> range = ((BPlusTree)t).find(first, last, filter, null);
 
             if (range == null)
-                range = H2Utils.EMPTY_CURSOR;
+                range = EMPTY_CURSOR;
 
             H2Cursor cur = new H2Cursor(range);
 

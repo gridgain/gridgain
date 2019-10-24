@@ -28,7 +28,7 @@ import org.h2.result.SearchRow;
 /**
  * Cursor.
  */
-public class H2Cursor implements Cursor {
+public class H2Cursor implements Cursor, AutoCloseable {
     /** */
     private final GridCursor<H2Row> cursor;
 
@@ -81,5 +81,10 @@ public class H2Cursor implements Cursor {
     /** {@inheritDoc} */
     @Override public boolean previous() {
         throw DbException.getUnsupportedException("previous");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() throws Exception {
+        cursor.close();
     }
 }
