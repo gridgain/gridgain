@@ -17,14 +17,18 @@
 package org.gridgain.service;
 
 import java.util.Collection;
+import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.gridgain.AbstractGridWithAgentTest;
 import org.gridgain.dto.cluster.ClusterInfo;
 import org.gridgain.dto.topology.TopologySnapshot;
+import org.gridgain.utils.AgentUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
@@ -45,8 +49,24 @@ public class ClusterServiceSelfTest extends AbstractGridWithAgentTest {
         IgniteCluster cluster = ignite.cluster();
         cluster.active(true);
 
-        assertWithPoll(() -> interceptor.getPayload(buildClusterDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
+        assertWithPoll(() -> {
+            ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
+
+            if (info == null)
+                return false;
+
+            Set<String> features = AgentUtils.getClusterFeatures(ignite.context(), cluster.nodes());
+
+            Assert.assertEquals(cluster.id(), info.getId());
+            Assert.assertEquals(cluster.tag(), info.getTag());
+            Assert.assertEquals(cluster.baselineAutoAdjustTimeout(), info.getBaselineParameters().getAutoAdjustAwaitingTime());
+            Assert.assertEquals(cluster.isBaselineAutoAdjustEnabled(), info.getBaselineParameters().isAutoAdjustEnabled());
+            Assert.assertEquals(CU.isPersistenceEnabled(ignite.configuration()), info.isPersistenceEnabled());
+            Assert.assertEquals(features, info.getFeatures());
+
+            return true;
+        });
     }
 
     /**
