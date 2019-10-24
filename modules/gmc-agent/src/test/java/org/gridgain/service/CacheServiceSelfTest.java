@@ -30,11 +30,28 @@ import org.junit.Test;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterDest;
+import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 
 /**
  * Cache service self test.
  */
 public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
+    /**
+     * Should send initial states to backend.
+     */
+    @Test
+    public void shouldSendInitialStates() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+        changeGmcUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+        cluster.active(true);
+
+        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesInfoDest(cluster.id())) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesSqlMetaDest(cluster.id())) != null);
+    }
+
     /**
      * Should send correct cache info on create and destroy cache events.
      */

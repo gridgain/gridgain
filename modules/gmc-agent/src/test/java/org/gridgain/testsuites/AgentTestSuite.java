@@ -21,10 +21,7 @@ import org.gridgain.dto.action.RequestDeserializerTest;
 import org.gridgain.dto.topology.TopologySnapshotTest;
 import org.gridgain.service.MetricExporterTest;
 import org.gridgain.service.sender.RetryableSenderTest;
-import org.gridgain.service.MetricsServiceTest;
-import org.gridgain.service.ClusterServiceTest;
 import org.gridgain.service.tracing.GmcSpanExporterTest;
-import org.gridgain.service.tracing.TracingServiceTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -34,13 +31,10 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     ActionControllerAnnotationProcessorTest.class,
-    ClusterServiceTest.class,
     GmcSpanExporterTest.class,
-    MetricsServiceTest.class,
     MetricExporterTest.class,
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
-    TracingServiceTest.class,
     TopologySnapshotTest.class
 })
 public class AgentTestSuite {
