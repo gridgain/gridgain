@@ -246,22 +246,24 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that near cache is updated from remote node after being populated with local Put call.
         /// </summary>
         [Test]
-        public void TestNearCacheUpdatesFromRemoteNodeAfterLocalPut()
+        public void TestNearCacheUpdatesFromRemoteNode(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode1,
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode2)
         {
-            var localCache = _client.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
-            var remoteCache = _grid.GetCache<int, int>(DefaultCacheName);
+            var cache1 = GetCache<int, int>(mode1);
+            var cache2 = GetCache<int, int>(mode2);
 
-            localCache[1] = 1;
-            remoteCache[1] = 2;
+            cache1[1] = 1;
+            cache2[1] = 2;
 
-            Assert.True(TestUtils.WaitForCondition(() => localCache[1] == 2, 300));
+            Assert.True(TestUtils.WaitForCondition(() => cache1[1] == 2, 300));
         }
 
         /// <summary>
         /// Tests that near cache is updated from another cache instance after being populated with local Put call.
         /// </summary>
         [Test]
-        public void TestNearCacheUpdatesAfterLocalPut()
+        public void TestNearCacheUpdatesFromAnotherLocalInstance()
         {
             var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
             var cache2 = _grid.GetCache<int, int>(DefaultCacheName);
@@ -346,7 +348,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                     return _grid2.GetCache<TK, TV>(name);
                 
                 case CacheTestMode.Client:
-                    return _client.GetCache<TK, TV>(name);
+                    return _client.GetOrCreateNearCache<TK, TV>(name, new NearCacheConfiguration());
                 
                 default:
                     throw new ArgumentOutOfRangeException("mode", mode, null);
