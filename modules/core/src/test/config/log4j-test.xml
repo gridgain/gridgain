@@ -37,11 +37,11 @@
             <param name="ConversionPattern" value="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
         </layout>
 
-        <!-- Do not log beyond INFO level. -->
-        <filter class="org.apache.log4j.varia.LevelRangeFilter">
-            <param name="levelMin" value="DEBUG"/>
-            <param name="levelMax" value="INFO"/>
-        </filter>
+        <!--&lt;!&ndash; Do not log beyond INFO level. &ndash;&gt;-->
+        <!--<filter class="org.apache.log4j.varia.LevelRangeFilter">-->
+            <!--<param name="levelMin" value="DEBUG"/>-->
+            <!--<param name="levelMax" value="INFO"/>-->
+        <!--</filter>-->
     </appender>
 
     <!--
@@ -67,7 +67,7 @@
         <param name="Threshold" value="DEBUG"/>
         <param name="File" value="${IGNITE_HOME}/work/log/ignite.log"/>
         <param name="Append" value="true"/>
-        <param name="MaxFileSize" value="10MB"/>
+        <param name="MaxFileSize" value="100MB"/>
         <param name="MaxBackupIndex" value="10"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
@@ -126,6 +126,6 @@
         <!-- Append to file and console. -->
         <appender-ref ref="FILE"/>
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="CONSOLE_ERR"/>
+        <!--<appender-ref ref="CONSOLE_ERR"/>-->
     </root>
 </log4j:configuration>

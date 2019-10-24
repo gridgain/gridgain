@@ -108,6 +108,8 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         try {
+            log.info("Finishing test");
+
             assertEquals(GRID_CNT, grid(0).cluster().nodes().size());
 
             for (int i = 0; i < GRID_CNT; i++) {
