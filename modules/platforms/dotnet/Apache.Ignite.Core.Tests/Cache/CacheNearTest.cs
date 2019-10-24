@@ -34,6 +34,9 @@ namespace Apache.Ignite.Core.Tests.Cache
         private IIgnite _grid;
 
         /** */
+        private IIgnite _grid2;
+
+        /** */
         private volatile CacheEvent _lastEvent;
 
         /** */
@@ -59,10 +62,17 @@ namespace Apache.Ignite.Core.Tests.Cache
                     }
                 },
                 IncludedEventTypes = new[] { EventType.CacheEntryCreated },
-                IgniteInstanceName = "server"
+                IgniteInstanceName = "server1"
             };
 
             _grid = Ignition.Start(cfg);
+            
+            var cfg2 = new IgniteConfiguration(cfg)
+            {
+                IgniteInstanceName = "server2"
+            };
+
+            _grid2 = Ignition.Start(cfg2);
 
             var clientCfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
@@ -197,14 +207,15 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that near cache returns the same object instance as we put there.
         /// </summary>
         [Test]
-        public void TestNearCachePutGetReturnsSameObjectReference()
+        public void TestNearCachePutGetServerLocalReturnsSameObjectReference()
         {
             var cache = _grid.GetCache<int, Foo>(DefaultCacheName);
 
             var obj1 = new Foo();
+            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
             
-            cache[1] = obj1;
-            var res1 = cache[1];
+            cache[key] = obj1;
+            var res1 = cache[key];
 
             Assert.AreSame(obj1, res1);
         }
