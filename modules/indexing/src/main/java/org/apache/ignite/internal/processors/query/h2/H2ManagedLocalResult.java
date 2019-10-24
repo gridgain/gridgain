@@ -654,6 +654,7 @@ public class H2ManagedLocalResult implements LocalResult {
         distinctRows = null;
         rows = null;
 
-        memTracker.released(memReserved);
+        if (memTracker != null)
+            memTracker.released(memReserved);
     }
 }
