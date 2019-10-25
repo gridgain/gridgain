@@ -19,7 +19,6 @@ package org.apache.ignite.agent.action.controller;
 import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.apache.ignite.agent.utils.AgentUtils;
 
 import static org.apache.ignite.agent.utils.AgentUtils.authorizeIfNeeded;
 
@@ -42,7 +41,7 @@ public class ClusterActionsController {
      * Activate cluster.
      */
     public void activate() {
-        AgentUtils.authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().active(true);
     }
@@ -51,7 +50,7 @@ public class ClusterActionsController {
      * Deactivate cluster.
      */
     public void deactivate() {
-        AgentUtils.authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().active(false);
     }

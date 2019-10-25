@@ -21,15 +21,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.agent.utils.AgentObjectMapperFactory;
 import org.junit.Test;
+
+import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 
 /**
  * Test of cluster configuration.
  */
 public class IgniteConfigurationWrapperTest {
     /** Mapper. */
-    private ObjectMapper mapper = AgentObjectMapperFactory.jsonMapper();
+    private ObjectMapper mapper = jsonMapper();
 
     /**
      * Test serialisation/deserialization of default configuration.

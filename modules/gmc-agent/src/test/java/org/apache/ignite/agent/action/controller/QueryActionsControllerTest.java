@@ -16,13 +16,14 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.dto.action.ActionStatus;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
@@ -30,10 +31,10 @@ import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
 import org.junit.Test;
 
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.RUNNING;
 
 /**
  * Query actions controller test.
@@ -55,7 +56,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 int id = ctx.read("$[2].rows[0][0]");
                 int val = ctx.read("$[2].rows[0][1]");
@@ -84,7 +85,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray arr = ctx.read("$[3].rows[*]");
                 int id = ctx.read("$[3].rows[0][0]");
@@ -114,7 +115,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray arr = ctx.read("$[3].rows[*]");
                 cursorId.set(ctx.read("$[3].cursorId"));
@@ -133,7 +134,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(nextPageReq, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
                 JSONArray arr = ctx.read("$.rows[*]");
@@ -165,7 +166,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 cursorId.set(ctx.read("$[3].cursorId"));
 
@@ -180,7 +181,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 .setId(UUID.randomUUID())
                 .setArgument("qry");
 
-        executeAction(cancelReq, (r) -> r.getStatus() == ActionStatus.COMPLETED);
+        executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
 
         Request nextPageReq = new Request()
                 .setAction("QueryActions.nextPage")
@@ -189,7 +190,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
                 );
 
-        executeAction(nextPageReq, (r) -> r.getStatus() == ActionStatus.FAILED);
+        executeAction(nextPageReq, (r) -> r.getStatus() == FAILED);
     }
 
     /**
@@ -214,19 +215,19 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setPageSize(1_000)
             );
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.RUNNING);
+        executeAction(req, (r) -> r.getStatus() == RUNNING);
 
         Request cancelReq = new Request()
                 .setAction("QueryActions.cancel")
                 .setId(UUID.randomUUID())
                 .setArgument("qry");
 
-        executeAction(cancelReq, (r) -> r.getStatus() == ActionStatus.COMPLETED);
+        executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
 
         assertWithPoll(
                 () -> {
                     Response res = interceptor.getPayload(buildActionResponseDest(cluster.id(), req.getId()), Response.class);
-                    return res != null && res.getStatus() == ActionStatus.FAILED;
+                    return res != null && res.getStatus() == FAILED;
                 }
         );
     }
@@ -251,7 +252,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
                 JSONArray arr = ctx.read("$[0].rows[*]");

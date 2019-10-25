@@ -30,8 +30,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.agent.utils.AgentObjectMapperFactory;
-import org.apache.ignite.agent.utils.AgentUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpProxy;
 import org.eclipse.jetty.client.Origin;
@@ -56,6 +54,8 @@ import static java.net.Proxy.Type.SOCKS;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
+import static org.apache.ignite.agent.utils.AgentUtils.EMPTY;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 
 /**
@@ -63,7 +63,7 @@ import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
  */
 public class WebSocketManager implements AutoCloseable {
     /** Mapper. */
-    private final ObjectMapper mapper = AgentObjectMapperFactory.binaryMapper();
+    private final ObjectMapper mapper = binaryMapper();
 
     /** Ws max buffer size. */
     private static final int WS_MAX_BUFFER_SIZE =  10 * 1024 * 1024;
@@ -326,7 +326,7 @@ public class WebSocketManager implements AutoCloseable {
         }
 
         if (!F.isEmpty(ciphers))
-            sslCtxFactory.setIncludeCipherSuites(ciphers.toArray(AgentUtils.EMPTY));
+            sslCtxFactory.setIncludeCipherSuites(ciphers.toArray(EMPTY));
 
         return sslCtxFactory;
     }

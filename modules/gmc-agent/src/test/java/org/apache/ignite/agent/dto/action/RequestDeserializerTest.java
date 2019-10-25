@@ -16,12 +16,11 @@
 
 package org.apache.ignite.agent.dto.action;
 
+import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.agent.utils.AgentObjectMapperFactory;
 import org.junit.Test;
 
-import java.util.UUID;
-
+import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -29,7 +28,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class RequestDeserializerTest {
     /** Mapper. */
-    private final ObjectMapper mapper = AgentObjectMapperFactory.binaryMapper();
+    private final ObjectMapper mapper = binaryMapper();
 
     /**
      * Should set ResponseError to request argument.

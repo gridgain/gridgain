@@ -25,8 +25,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.agent.service.ActionService;
+import org.apache.ignite.agent.service.CacheService;
+import org.apache.ignite.agent.service.ClusterService;
+import org.apache.ignite.agent.service.MetricsService;
+import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
+import org.apache.ignite.agent.service.config.NodeConfigurationService;
+import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
+import org.apache.ignite.agent.service.tracing.TracingService;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
@@ -37,15 +45,6 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.agent.service.ActionService;
-import org.apache.ignite.agent.service.CacheService;
-import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.MetricsService;
-import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
-import org.apache.ignite.agent.service.config.NodeConfigurationService;
-import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
-import org.apache.ignite.agent.service.tracing.TracingService;
-import org.apache.ignite.agent.utils.AgentUtils;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
@@ -55,6 +54,10 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
+import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
@@ -218,7 +221,7 @@ public class Agent extends ManagementConsoleProcessor {
         curSrvUri = nextUri(cfg.getServerUris(), curSrvUri);
 
         try {
-            mgr.connect(AgentUtils.toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
+            mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
 
             disconnected.set(false);
         }
@@ -332,14 +335,14 @@ public class Agent extends ManagementConsoleProcessor {
 
             U.quietAndInfo(log, "");
             U.quietAndInfo(log, "Open link in browser to monitor your cluster in GMC: " +
-                    AgentUtils.monitoringUri(curSrvUri, cluster.id()));
+                    monitoringUri(curSrvUri, cluster.id()));
 
             U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
 
             clusterSrvc.sendInitialState();
             cacheService.sendInitialState();
 
-            ses.subscribe(StompDestinationsUtils.buildMetricsPullTopic(), new StompFrameHandler() {
+            ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {
                     return String.class;
                 }
@@ -349,7 +352,7 @@ public class Agent extends ManagementConsoleProcessor {
                 }
             });
 
-            ses.subscribe(StompDestinationsUtils.buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
+            ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {
                     return Request.class;
                 }

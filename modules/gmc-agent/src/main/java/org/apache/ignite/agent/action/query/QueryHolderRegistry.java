@@ -16,15 +16,14 @@
 
 package org.apache.ignite.agent.action.query;
 
+import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-
-import java.time.Duration;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Query holder registry.

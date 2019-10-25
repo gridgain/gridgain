@@ -23,11 +23,11 @@ import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.apache.ignite.agent.utils.AgentUtils;
 
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.agent.utils.AgentUtils.authorizeIfNeeded;
+import static org.apache.ignite.agent.utils.AgentUtils.fromNullableCollection;
 
 /**
  * Baseline actions controller.
@@ -48,7 +48,7 @@ public class BaselineActionsController {
      * @param isAutoAdjustEnabled Is auto adjust enabled.
      */
     public void updateAutoAdjustEnabled(boolean isAutoAdjustEnabled) {
-        AgentUtils.authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().baselineAutoAdjustEnabled(isAutoAdjustEnabled);
     }
@@ -57,7 +57,7 @@ public class BaselineActionsController {
      * @param awaitingTime Awaiting time in ms.
      */
     public void updateAutoAdjustAwaitingTime(long awaitingTime) {
-        AgentUtils.authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().baselineAutoAdjustTimeout(awaitingTime);
     }
@@ -66,7 +66,7 @@ public class BaselineActionsController {
      * @param consIds Node consistent ids.
      */
     public void setBaselineTopology(Collection<String> consIds) {
-        AgentUtils.authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
+        authorizeIfNeeded(ctx.security(), SecurityPermission.ADMIN_OPS);
 
         ctx.grid().cluster().setBaselineTopology(baselineNodesForIds(consIds));
     }
@@ -95,7 +95,7 @@ public class BaselineActionsController {
      * @return Current baseline.
      */
     private Map<String, BaselineNode> currentBaseLine() {
-        return AgentUtils.fromNullableCollection(ctx.grid().cluster().currentBaselineTopology())
+        return fromNullableCollection(ctx.grid().cluster().currentBaselineTopology())
             .collect(toMap(n -> n.consistentId().toString(), identity()));
     }
 

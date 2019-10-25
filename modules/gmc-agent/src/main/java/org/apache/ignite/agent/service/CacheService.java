@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.events.Event;
@@ -33,14 +34,13 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaFinishDiscoveryMessage;
-import org.apache.ignite.agent.utils.QueryUtils;
-import org.apache.ignite.agent.WebSocketManager;
 
+import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
+import static org.apache.ignite.agent.utils.QueryUtils.queryTypesToMetadata;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
 
 /**
  * Cache service.
@@ -133,7 +133,7 @@ public class CacheService implements AutoCloseable {
                 Collection<GridQueryTypeDescriptor> types = ctx.query().types(cacheName);
 
                 if (types != null)
-                    cachesMetadata.add(QueryUtils.queryTypesToMetadata(cacheName, types));
+                    cachesMetadata.add(queryTypesToMetadata(cacheName, types));
             }
         }
 

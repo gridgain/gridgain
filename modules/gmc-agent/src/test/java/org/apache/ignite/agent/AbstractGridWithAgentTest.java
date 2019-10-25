@@ -19,6 +19,7 @@ package org.apache.ignite.agent;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCluster;
+import org.apache.ignite.agent.config.TestChannelInterceptor;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -35,7 +36,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.agent.config.TestChannelInterceptor;
 import org.junit.After;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,12 +47,12 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 
 /**
  * Abstract grid with agent test.

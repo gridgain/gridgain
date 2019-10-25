@@ -20,12 +20,12 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;

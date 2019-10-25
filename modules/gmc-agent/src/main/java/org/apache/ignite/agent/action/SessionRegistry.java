@@ -16,18 +16,18 @@
 
 package org.apache.ignite.agent.action;
 
+import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.agent.utils.AgentUtils;
 
-import java.time.Duration;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
 
 /**
  * Session registry.
@@ -113,7 +113,7 @@ public class SessionRegistry {
         }
 
         if (ses.isSessionExpired(sesTokTtl.toMillis())) {
-            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
+            ses.securityContext(authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
             sesId2Ses.put(ses.id(), ses);
         }

@@ -16,13 +16,14 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import java.util.UUID;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.node.VisorNodePingTaskArg;
 import org.junit.Test;
 
-import java.util.UUID;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
 
 /**
  * Cluster actions controller test.
@@ -38,7 +39,7 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
                 .setId(UUID.randomUUID())
                 .setArgument(new VisorNodePingTaskArg(cluster.localNode().id()));
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.COMPLETED);
+        executeAction(req, (r) -> r.getStatus() == COMPLETED);
     }
 
     /**
@@ -51,6 +52,6 @@ public class NodeActionsControllerTest extends AbstractActionControllerTest {
                 .setId(UUID.randomUUID())
                 .setArgument(new VisorNodePingTaskArg(UUID.randomUUID()));
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && !F.isEmpty(r.getError().getMessage()));
+        executeAction(req, (r) -> r.getStatus() == FAILED && !F.isEmpty(r.getError().getMessage()));
     }
 }

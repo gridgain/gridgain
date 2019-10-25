@@ -16,9 +16,12 @@
 
 package org.apache.ignite.agent.service;
 
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import org.apache.ignite.agent.WebSocketManager;
+import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
@@ -27,13 +30,14 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityException;
-import org.apache.ignite.agent.action.ActionDispatcher;
-import org.apache.ignite.agent.WebSocketManager;
-
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.RUNNING;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
 
 /**
  * Action service.
@@ -75,7 +79,7 @@ public class ActionService implements AutoCloseable {
             sendResponse(
                 new Response()
                     .setId(req.getId())
-                    .setStatus(ActionStatus.FAILED)
+                    .setStatus(FAILED)
                     .setError(new ResponseError(ResponseError.PARSE_ERROR_CODE, ex.getMessage(), ex.getStackTrace()))
             );
 
@@ -83,11 +87,11 @@ public class ActionService implements AutoCloseable {
         }
 
         try {
-            sendResponse(new Response().setId(req.getId()).setStatus(ActionStatus.RUNNING));
+            sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
 
             dispatcher.dispatch(req)
                     .thenApply(CompletableFuture::join)
-                    .thenApply(r -> new Response().setId(req.getId()).setStatus(ActionStatus.COMPLETED).setResult(r))
+                    .thenApply(r -> new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r))
                     .exceptionally(e -> convertToErrorResponse(req.getId(), e))
                     .thenAccept(this::sendResponse);
         }
@@ -105,7 +109,7 @@ public class ActionService implements AutoCloseable {
 
         return new Response()
                 .setId(id)
-                .setStatus(ActionStatus.FAILED)
+                .setStatus(FAILED)
                 .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()));
     }
 
@@ -117,11 +121,11 @@ public class ActionService implements AutoCloseable {
         Throwable cause = e.getCause();
 
         if (cause instanceof SecurityException)
-            return ResponseError.AUTHORIZE_ERROR_CODE;
+            return AUTHORIZE_ERROR_CODE;
         else if (cause instanceof IgniteAuthenticationException || cause instanceof IgniteAccessControlException)
-            return ResponseError.AUTHENTICATION_ERROR_CODE;
+            return AUTHENTICATION_ERROR_CODE;
 
-        return ResponseError.INTERNAL_ERROR_CODE;
+        return INTERNAL_ERROR_CODE;
     }
 
     /**

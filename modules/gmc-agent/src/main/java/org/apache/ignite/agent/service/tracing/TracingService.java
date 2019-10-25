@@ -18,16 +18,16 @@ package org.apache.ignite.agent.service.tracing;
 
 import java.util.List;
 import java.util.UUID;
+import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.tracing.Span;
+import org.apache.ignite.agent.service.sender.GmcSender;
+import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.agent.service.sender.GmcSender;
-import org.apache.ignite.agent.service.sender.RetryableSender;
-import org.apache.ignite.agent.WebSocketManager;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
-import static org.apache.ignite.agent.service.tracing.GmcSpanExporter.*;
+import static org.apache.ignite.agent.service.tracing.GmcSpanExporter.TRACING_TOPIC;
 
 /**
  * Tracing service.

@@ -20,14 +20,14 @@ import java.util.Collection;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
+import org.apache.ignite.agent.utils.AgentUtils;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.agent.utils.AgentUtils;
-import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.junit.Assert;
 import org.junit.Test;
 

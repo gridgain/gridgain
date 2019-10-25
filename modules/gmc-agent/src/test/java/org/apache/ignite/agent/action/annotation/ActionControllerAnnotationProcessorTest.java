@@ -16,11 +16,10 @@
 
 package org.apache.ignite.agent.action.annotation;
 
-import org.apache.ignite.agent.action.ActionMethod;
-import org.junit.Test;
-
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import org.apache.ignite.agent.action.ActionMethod;
+import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 

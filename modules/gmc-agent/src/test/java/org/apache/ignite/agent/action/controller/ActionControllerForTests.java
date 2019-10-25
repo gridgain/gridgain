@@ -16,10 +16,9 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.internal.GridKernalContext;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Test action controller for other tests.

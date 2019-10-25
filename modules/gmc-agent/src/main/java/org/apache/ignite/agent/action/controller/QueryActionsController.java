@@ -16,32 +16,34 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.agent.action.query.CursorHolder;
 import org.apache.ignite.agent.action.query.QueryHolder;
 import org.apache.ignite.agent.action.query.QueryHolderRegistry;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryResult;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.agent.utils.QueryUtils;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.ignite.agent.utils.QueryUtils.fetchResult;
+import static org.apache.ignite.agent.utils.QueryUtils.fetchScanQueryResult;
+import static org.apache.ignite.agent.utils.QueryUtils.fetchSqlQueryResult;
+import static org.apache.ignite.agent.utils.QueryUtils.prepareQuery;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
 
 /**
@@ -96,7 +98,7 @@ public class QueryActionsController {
         ctx.closure().runLocalSafe(() -> {
             try {
                 CursorHolder cursorHolder = qryRegistry.findCursor(qryId, cursorId);
-                QueryResult res = QueryUtils.fetchResult(cursorHolder, arg.getPageSize());
+                QueryResult res = fetchResult(cursorHolder, arg.getPageSize());
                 res.setResultNodeId(ctx.localNodeId().toString());
 
                 if (!res.isHasMore())
@@ -129,7 +131,7 @@ public class QueryActionsController {
                 if (log.isDebugEnabled())
                     log.debug("Execute query started with subject: " + ctx.security().securityContext().subject());
 
-                SqlFieldsQuery qry = QueryUtils.prepareQuery(arg);
+                SqlFieldsQuery qry = prepareQuery(arg);
                 GridCacheContext cctx = F.isEmpty(arg.getCacheName())
                         ? null
                         : ctx.cache().cache(arg.getCacheName()).context();
@@ -137,7 +139,7 @@ public class QueryActionsController {
                 List<QueryResult> results = new ArrayList<>();
                 for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.getCancelHook())) {
                     CursorHolder cursorHolder = new CursorHolder(cur);
-                    QueryResult res = QueryUtils.fetchSqlQueryResult(cursorHolder, arg.getPageSize());
+                    QueryResult res = fetchSqlQueryResult(cursorHolder, arg.getPageSize());
                     res.setResultNodeId(ctx.localNodeId().toString());
 
                     if (res.isHasMore())
@@ -179,7 +181,7 @@ public class QueryActionsController {
 
                 IgniteCache<Object, Object> c = ctx.grid().cache(arg.getCacheName());
                 CursorHolder cursorHolder = new CursorHolder(c.withKeepBinary().query(qry), true);
-                QueryResult res = QueryUtils.fetchScanQueryResult(cursorHolder, arg.getPageSize());
+                QueryResult res = fetchScanQueryResult(cursorHolder, arg.getPageSize());
                 res.setResultNodeId(ctx.localNodeId().toString());
 
                 if (res.isHasMore())

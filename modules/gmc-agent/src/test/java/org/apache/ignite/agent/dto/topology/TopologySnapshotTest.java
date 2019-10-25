@@ -16,15 +16,14 @@
 
 package org.apache.ignite.agent.dto.topology;
 
+import java.util.Collections;
+import java.util.UUID;
 import com.google.common.collect.Lists;
+import org.apache.ignite.agent.TestDiscoveryMetricsProvider;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.apache.ignite.agent.TestDiscoveryMetricsProvider;
 import org.junit.Test;
-
-import java.util.Collections;
-import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

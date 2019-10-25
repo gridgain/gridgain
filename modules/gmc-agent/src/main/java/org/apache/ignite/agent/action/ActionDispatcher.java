@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -32,10 +31,11 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.agent.utils.AgentUtils;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.getActions;
+import static org.apache.ignite.agent.utils.AgentUtils.completeFutureWithException;
+import static org.apache.ignite.agent.utils.AgentUtils.completeIgniteFuture;
 
 /**
  * Action dispatcher.
@@ -121,10 +121,10 @@ public class ActionDispatcher implements AutoCloseable {
             return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
         }
         catch (InvocationTargetException e) {
-            return AgentUtils.completeFutureWithException(e.getTargetException());
+            return completeFutureWithException(e.getTargetException());
         }
         catch (Exception e) {
-            return AgentUtils.completeFutureWithException(e);
+            return completeFutureWithException(e);
         }
     }
 
@@ -145,7 +145,7 @@ public class ActionDispatcher implements AutoCloseable {
             return (CompletableFuture) res;
 
         if (res instanceof IgniteFuture)
-           return AgentUtils.completeIgniteFuture((IgniteFuture) res);
+           return completeIgniteFuture((IgniteFuture) res);
 
         return completedFuture(res);
     }

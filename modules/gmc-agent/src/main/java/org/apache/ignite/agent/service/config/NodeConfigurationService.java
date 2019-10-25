@@ -18,15 +18,16 @@ package org.apache.ignite.agent.service.config;
 
 import java.util.List;
 import java.util.UUID;
+import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.NodeConfiguration;
+import org.apache.ignite.agent.service.sender.GmcSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.agent.WebSocketManager;
-import org.apache.ignite.agent.service.sender.GmcSender;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
+import static org.apache.ignite.agent.service.config.NodeConfigurationExporter.NODE_CONFIGURATION_TOPIC;
 
 /**
  * Node configuration service.
@@ -56,12 +57,12 @@ public class NodeConfigurationService implements AutoCloseable {
         this.mgr = mgr;
         this.snd = createSender();
 
-        ctx.grid().message().localListen(NodeConfigurationExporter.NODE_CONFIGURATION_TOPIC, lsnr);
+        ctx.grid().message().localListen(NODE_CONFIGURATION_TOPIC, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.grid().message().stopLocalListen(NodeConfigurationExporter.NODE_CONFIGURATION_TOPIC, lsnr);
+        ctx.grid().message().stopLocalListen(NODE_CONFIGURATION_TOPIC, lsnr);
         U.closeQuiet(snd);
     }
 

@@ -18,9 +18,9 @@ package org.apache.ignite.agent.service.tracing;
 
 import java.util.List;
 import org.apache.ignite.IgniteCluster;
+import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;

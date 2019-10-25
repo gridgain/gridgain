@@ -16,11 +16,11 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import java.util.UUID;
 import org.apache.ignite.agent.dto.action.Request;
 import org.junit.Test;
 
-import java.util.UUID;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
 
 /**
  * Cluster actions controller test.
@@ -35,7 +35,7 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
                 .setId(UUID.randomUUID())
                 .setAction("ClusterActions.activate");
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.COMPLETED && cluster.active());
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.active());
     }
 
     /**
@@ -47,6 +47,6 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
                 .setId(UUID.randomUUID())
                 .setAction("ClusterActions.deactivate");
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.COMPLETED && !cluster.active());
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.active());
     }
 }

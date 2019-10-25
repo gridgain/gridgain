@@ -16,9 +16,8 @@
 
 package org.apache.ignite.agent.dto.action;
 
-import org.apache.ignite.plugin.security.SecurityCredentials;
-
 import java.net.InetSocketAddress;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 
 /**
  * DTO for authenticate credentials.

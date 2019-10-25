@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -40,7 +41,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.apache.ignite.agent.action.Session;
 
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;

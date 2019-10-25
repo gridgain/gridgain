@@ -16,9 +16,8 @@
 
 package org.apache.ignite.agent.service.sender;
 
-import org.apache.ignite.internal.GridKernalContext;
-
 import java.util.List;
+import org.apache.ignite.internal.GridKernalContext;
 
 /**
  * Sender to coordinator.

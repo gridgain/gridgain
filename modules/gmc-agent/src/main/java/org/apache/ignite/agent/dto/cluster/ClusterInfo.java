@@ -16,11 +16,10 @@
 
 package org.apache.ignite.agent.dto.cluster;
 
-import org.apache.ignite.internal.util.typedef.internal.S;
-
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO for cluster info.

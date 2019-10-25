@@ -18,7 +18,6 @@ package org.apache.ignite.agent.dto.topology;
 
 import java.util.Collection;
 import java.util.Map;
-
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;

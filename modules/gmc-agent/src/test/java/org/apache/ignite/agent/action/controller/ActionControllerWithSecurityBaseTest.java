@@ -16,14 +16,15 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import java.util.UUID;
 import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.junit.Test;
 
-import java.util.UUID;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 
 /**
  * Action controller base test with security.
@@ -42,7 +43,7 @@ public class ActionControllerWithSecurityBaseTest extends AbstractActionControll
                 .setArgument(10)
                 .setSessionId(sesId);
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.COMPLETED);
+        executeAction(req, (r) -> r.getStatus() == COMPLETED);
     }
 
     /**
@@ -55,7 +56,7 @@ public class ActionControllerWithSecurityBaseTest extends AbstractActionControll
                 .setAction("ActionControllerForTests.numberAction")
                 .setArgument(10);
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 
     /**
@@ -69,6 +70,6 @@ public class ActionControllerWithSecurityBaseTest extends AbstractActionControll
                 .setArgument(10)
                 .setSessionId(UUID.randomUUID());
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 }

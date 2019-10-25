@@ -16,12 +16,11 @@
 
 package org.apache.ignite.agent.service.sender;
 
+import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.agent.WebSocketManager;
-
-import java.util.List;
+import org.apache.ignite.internal.GridKernalContext;
 
 /**
  * Sender to GMC.

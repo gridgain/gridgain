@@ -16,8 +16,8 @@
 
 package org.apache.ignite.agent.dto.action;
 
-import org.apache.ignite.internal.util.typedef.internal.S;
 import java.util.UUID;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO for action request.

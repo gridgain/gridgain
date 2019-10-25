@@ -16,10 +16,9 @@
 
 package org.apache.ignite.agent.action.query;
 
+import java.util.Iterator;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
-
-import java.util.Iterator;
 
 /**
  * Cursor holder.

@@ -21,12 +21,12 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
+import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
+import org.apache.ignite.agent.utils.AgentUtils;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityCredentials;
-import org.apache.ignite.agent.utils.AgentUtils;
-import org.apache.ignite.agent.action.annotation.ActionController;
 
 /**
  * Controller for security actions.

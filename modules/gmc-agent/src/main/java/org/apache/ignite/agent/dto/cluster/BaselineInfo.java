@@ -16,9 +16,8 @@
 
 package org.apache.ignite.agent.dto.cluster;
 
-import org.apache.ignite.internal.util.typedef.internal.S;
-
 import java.util.Objects;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO for baseline parameters.

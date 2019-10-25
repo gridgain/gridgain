@@ -16,6 +16,8 @@
 
 package org.apache.ignite.agent.service;
 
+import java.util.Arrays;
+import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.agent.WebSocketManager;
@@ -29,9 +31,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cluster.ClusterProcessor;
 import org.apache.ignite.testframework.GridTestNode;
 import org.springframework.messaging.simp.stomp.StompSession;
-
-import java.util.Arrays;
-import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;

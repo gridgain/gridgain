@@ -16,15 +16,14 @@
 
 package org.apache.ignite.agent.action;
 
-import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
-import org.apache.ignite.internal.processors.security.SecurityContext;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.security.SecurityCredentials;
-
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
+import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 
 /**
  * Session.

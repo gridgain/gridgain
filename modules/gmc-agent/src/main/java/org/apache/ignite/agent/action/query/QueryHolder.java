@@ -16,11 +16,10 @@
 
 package org.apache.ignite.agent.action.query;
 
-import org.apache.ignite.internal.processors.query.GridQueryCancel;
-import org.apache.ignite.internal.util.typedef.internal.U;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Query holder.

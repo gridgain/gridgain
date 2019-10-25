@@ -16,14 +16,15 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.agent.dto.action.ActionStatus;
-import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
-import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.testframework.junits.IgniteTestResources;
-
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
+import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.junits.IgniteTestResources;
+
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
 
 /**
  * Abstract action controller with security config.
@@ -49,13 +50,13 @@ public class AbstractActionControllerWithSecurityTest extends AbstractActionCont
                 .setArgument(creds);
 
         executeAction(authReq, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED && r.getResult() != null) {
+            if (r.getStatus() == COMPLETED && r.getResult() != null) {
                 sesId.set((UUID.fromString((String) r.getResult())));
 
                 return true;
             }
 
-            if (r.getStatus() == ActionStatus.FAILED) {
+            if (r.getStatus() == FAILED) {
                 sesId.set(null);
 
                 return true;

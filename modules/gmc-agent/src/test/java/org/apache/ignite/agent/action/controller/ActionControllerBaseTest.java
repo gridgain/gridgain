@@ -16,12 +16,12 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import java.util.UUID;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.ResponseError;
 import org.junit.Test;
 
-import java.util.UUID;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
  * Action controller base test.
@@ -37,7 +37,7 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
                 .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
                 .setArgument("value");
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.PARSE_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }
 
     /**
@@ -50,6 +50,6 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
                 .setAction("InvalidAction.updateAutoAdjustEnabled")
                 .setArgument(true);
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.PARSE_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }
 }

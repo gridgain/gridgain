@@ -20,17 +20,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.IgniteConfigurationWrapper;
+import org.apache.ignite.agent.service.sender.CoordinatorSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.agent.utils.AgentObjectMapperFactory;
-import org.apache.ignite.agent.service.sender.CoordinatorSender;
+
+import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 
 /**
  * Node configuration exporter.
  */
 public class NodeConfigurationExporter implements AutoCloseable {
     /** Mapper. */
-    private final ObjectMapper mapper = AgentObjectMapperFactory.jsonMapper();
+    private final ObjectMapper mapper = jsonMapper();
 
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;

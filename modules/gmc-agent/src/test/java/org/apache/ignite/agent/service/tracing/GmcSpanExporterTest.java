@@ -16,32 +16,32 @@
 
 package org.apache.ignite.agent.service.tracing;
 
-import com.google.common.collect.Lists;
-import io.opencensus.common.Timestamp;
-import io.opencensus.trace.SpanContext;
-import io.opencensus.trace.SpanId;
-import io.opencensus.trace.TraceId;
-import io.opencensus.trace.TraceOptions;
-import io.opencensus.trace.Tracestate;
-import io.opencensus.trace.export.SpanData;
-import org.apache.ignite.cluster.ClusterGroup;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.agent.dto.tracing.Span;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.cluster.IgniteClusterEx;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.agent.service.AbstractServiceTest;
-import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import com.google.common.collect.Lists;
+import io.opencensus.common.Timestamp;
+import io.opencensus.trace.SpanContext;
+import io.opencensus.trace.SpanId;
+import io.opencensus.trace.TraceId;
+import io.opencensus.trace.Tracestate;
+import io.opencensus.trace.export.SpanData;
+import org.apache.ignite.agent.dto.tracing.Span;
+import org.apache.ignite.agent.service.AbstractServiceTest;
+import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
+import static io.opencensus.trace.TraceOptions.DEFAULT;
+import static org.apache.ignite.agent.service.tracing.GmcSpanExporter.TRACING_TOPIC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -68,7 +68,7 @@ public class GmcSpanExporterTest extends AbstractServiceTest {
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
 
-        Assert.assertEquals(GmcSpanExporter.TRACING_TOPIC, topicCaptor.getValue());
+        Assert.assertEquals(TRACING_TOPIC, topicCaptor.getValue());
         Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
     }
 
@@ -96,7 +96,7 @@ public class GmcSpanExporterTest extends AbstractServiceTest {
     private List<SpanData> getSpanData() {
         return Lists.newArrayList(
             SpanData.create(
-                SpanContext.create(TraceId.generateRandomId(new Random()), SpanId.generateRandomId(new Random()), TraceOptions.DEFAULT, Tracestate.builder().build()),
+                SpanContext.create(TraceId.generateRandomId(new Random()), SpanId.generateRandomId(new Random()), DEFAULT, Tracestate.builder().build()),
                 SpanId.generateRandomId(new Random()),
                 false,
                 "name",

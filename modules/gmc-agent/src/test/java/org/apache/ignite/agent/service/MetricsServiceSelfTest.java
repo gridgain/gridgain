@@ -17,8 +17,8 @@
 package org.apache.ignite.agent.service;
 
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.agent.AbstractGridWithAgentTest;
+import org.apache.ignite.internal.IgniteEx;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;

@@ -16,13 +16,12 @@
 
 package org.apache.ignite.agent.action.query;
 
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
-import org.apache.ignite.agent.AbstractGridWithAgentTest;
-import org.junit.Test;
-
 import java.time.Duration;
 import java.util.ArrayList;
+import org.apache.ignite.agent.AbstractGridWithAgentTest;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.junit.Test;
 
 /**
  * Query regixtry test.

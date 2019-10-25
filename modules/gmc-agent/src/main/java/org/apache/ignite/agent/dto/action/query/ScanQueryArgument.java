@@ -16,9 +16,8 @@
 
 package org.apache.ignite.agent.dto.action.query;
 
-import org.apache.ignite.internal.util.typedef.internal.S;
-
 import java.util.UUID;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO fro scan query argument.

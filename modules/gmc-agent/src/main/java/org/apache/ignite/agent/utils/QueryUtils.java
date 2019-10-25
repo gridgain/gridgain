@@ -31,17 +31,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.cache.Cache;
+import org.apache.ignite.agent.action.query.CursorHolder;
+import org.apache.ignite.agent.dto.action.query.QueryArgument;
+import org.apache.ignite.agent.dto.action.query.QueryField;
+import org.apache.ignite.agent.dto.action.query.QueryResult;
+import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
+import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.agent.dto.action.query.QueryArgument;
-import org.apache.ignite.agent.dto.action.query.QueryField;
-import org.apache.ignite.agent.dto.action.query.QueryResult;
-import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
-import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
@@ -52,7 +53,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.agent.action.query.CursorHolder;
 
 /**
  * SQL query utils.

@@ -16,14 +16,15 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import java.util.UUID;
 import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.junit.Test;
 
-import java.util.UUID;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 
 /**
  * Security actions controller test.
@@ -39,7 +40,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithS
                 .setAction("SecurityActions.authenticate")
                 .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.COMPLETED && UUID.fromString((String) r.getResult()) != null);
+        executeAction(req, (r) -> r.getStatus() == COMPLETED && UUID.fromString((String) r.getResult()) != null);
     }
 
     /**
@@ -52,7 +53,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithS
                 .setAction("SecurityActions.authenticate")
                 .setArgument(new AuthenticateCredentials());
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 
     /**
@@ -65,6 +66,6 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithS
                 .setAction("SecurityActions.authenticate")
                 .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite2")));
 
-        executeAction(req, (r) -> r.getStatus() == ActionStatus.FAILED && r.getError().getCode() == ResponseError.AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
 }

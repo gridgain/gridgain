@@ -16,14 +16,13 @@
 
 package org.apache.ignite.agent.action.annotation;
 
-import org.apache.ignite.agent.action.ActionMethod;
-import org.apache.ignite.internal.util.typedef.F;
-import org.reflections.Reflections;
-
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.ignite.agent.action.ActionMethod;
+import org.apache.ignite.internal.util.typedef.F;
+import org.reflections.Reflections;
 
 /**
  * Proccessor for {@link ActionController} annotation.

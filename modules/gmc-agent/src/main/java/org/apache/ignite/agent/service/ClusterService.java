@@ -23,10 +23,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cluster.BaselineNode;
+import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
+import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
@@ -34,16 +35,16 @@ import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.agent.utils.AgentUtils;
-import org.apache.ignite.agent.WebSocketManager;
 
+import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.agent.utils.AgentUtils.fromNullableCollection;
+import static org.apache.ignite.agent.utils.AgentUtils.getClusterFeatures;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
 
 /**
  * Topology service.
@@ -96,7 +97,7 @@ public class ClusterService implements AutoCloseable {
 
         // TODO GG-21449 this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*
         baselineExecSrvc.scheduleWithFixedDelay(() -> {
-            Stream<BaselineNode> stream = AgentUtils.fromNullableCollection(ctx.grid().cluster().currentBaselineTopology());
+            Stream<BaselineNode> stream = fromNullableCollection(ctx.grid().cluster().currentBaselineTopology());
 
             Set<String> baseline = stream
                 .map(BaselineNode::consistentId)
@@ -167,7 +168,7 @@ public class ClusterService implements AutoCloseable {
                     cluster.baselineAutoAdjustTimeout()
                 )
             )
-            .setFeatures(AgentUtils.getClusterFeatures(ctx, ctx.cluster().get().nodes()));
+            .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
         mgr.send(buildClusterDest(cluster.id()), clusterInfo);
     }

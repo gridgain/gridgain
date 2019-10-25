@@ -27,14 +27,14 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.dto.action.ActionStatus;
+import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.agent.dto.action.Request;
 import org.junit.Before;
 import org.junit.Test;
 
 import static java.lang.String.format;
+import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
 
 /**
  * Query actions controller with parameters test.
@@ -89,7 +89,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                     .setPageSize(10)
             );
 
-        executeAction(initReq, (r) -> r.getStatus() == ActionStatus.COMPLETED);
+        executeAction(initReq, (r) -> r.getStatus() == COMPLETED);
     }
 
     /**
@@ -109,7 +109,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             );
 
         executeAction(req, (r) -> {
-            if (r.getStatus() == ActionStatus.COMPLETED) {
+            if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray rows = ctx.read("$[0].rows[*]");
 
@@ -154,7 +154,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                 );
 
             executeAction(req, (r) -> {
-                if (r.getStatus() == ActionStatus.COMPLETED) {
+                if (r.getStatus() == COMPLETED) {
                     DocumentContext ctx = parse(r.getResult());
                     JSONArray rows = ctx.read("$[0].rows[*]");
                     JSONArray row = ctx.read("$[0].rows[0][*]");
