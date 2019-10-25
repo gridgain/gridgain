@@ -16,36 +16,12 @@
 
 package org.gridgain.utils;
 
-import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.binary.BinaryType;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
-import org.apache.ignite.internal.binary.BinaryObjectEx;
-import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
-import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.gridgain.action.query.CursorHolder;
-import org.gridgain.dto.action.query.QueryArgument;
-import org.gridgain.dto.action.query.QueryField;
-import org.gridgain.dto.action.query.QueryResult;
-import org.gridgain.dto.cache.CacheSqlIndexMetadata;
-import org.gridgain.dto.cache.CacheSqlMetadata;
-
-import javax.cache.Cache;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -54,6 +30,29 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.cache.Cache;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.binary.BinaryObjectEx;
+import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
+import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.gridgain.action.query.CursorHolder;
+import org.gridgain.dto.action.query.QueryArgument;
+import org.gridgain.dto.action.query.QueryField;
+import org.gridgain.dto.action.query.QueryResult;
+import org.gridgain.dto.cache.CacheSqlIndexMetadata;
+import org.gridgain.dto.cache.CacheSqlMetadata;
 
 /**
  * SQL query utils.
@@ -155,6 +154,9 @@ public class QueryUtils {
 
         if (!F.isEmpty(arg.getCacheName()))
             qry.setSchema(arg.getCacheName());
+
+        if (!F.isEmpty(arg.getParameters()))
+            qry.setArgs(arg.getParameters());
 
         return qry;
     }

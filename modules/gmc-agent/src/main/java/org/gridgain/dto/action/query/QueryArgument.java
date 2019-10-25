@@ -33,6 +33,9 @@ public class QueryArgument {
     /** Query text. */
     private String qryTxt;
 
+    /** Parameters. */
+    private Object[] parameters;
+
     /** Distributed joins enabled flag. */
     private boolean distributedJoins;
 
@@ -96,6 +99,22 @@ public class QueryArgument {
      */
     public QueryArgument setQueryText(String qryTxt) {
         this.qryTxt = qryTxt;
+        return this;
+    }
+
+    /**
+     * @return Query parameters.
+     */
+    public Object[] getParameters() {
+        return parameters;
+    }
+
+    /**
+     * @param parameters Parameters.
+     * @return This for chaining method calls.
+     */
+    public QueryArgument setParameters(Object[] parameters) {
+        this.parameters = parameters;
         return this;
     }
 

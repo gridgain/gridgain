@@ -70,6 +70,36 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     }
 
     /**
+     * Should execute query with parameters.
+     */
+    @Test
+    public void shouldExecuteQueryWithParameters() {
+        Request req = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQueryWithParameter())
+                    .setPageSize(10)
+                    .setParameters(new Object[]{1})
+            );
+
+        executeAction(req, (r) -> {
+            if (r.getStatus() == COMPLETED) {
+                DocumentContext ctx = parse(r.getResult());
+                JSONArray arr = ctx.read("$[3].rows[*]");
+                int id = ctx.read("$[3].rows[0][0]");
+                int val = ctx.read("$[3].rows[0][1]");
+
+                return arr.size() == 1 && id == 1 && val == 2;
+            }
+
+            return false;
+        });
+    }
+
+    /**
      * Should get next page.
      */
     @Test
@@ -260,6 +290,13 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
      */
     private String getSelectQuery() {
         return "SELECT * FROM gmc_agent_test_table;";
+    }
+
+    /**
+     * @return Select query string.
+     */
+    private String getSelectQueryWithParameter() {
+        return "SELECT * FROM gmc_agent_test_table WHERE id = ?;";
     }
 
     /**

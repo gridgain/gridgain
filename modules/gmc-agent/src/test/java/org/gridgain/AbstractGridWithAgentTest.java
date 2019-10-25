@@ -52,6 +52,7 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
+import static org.gridgain.agent.StompDestinationsUtils.buildActionRequestTopic;
 
 /**
  * Abstract grid with agent test.
@@ -92,6 +93,10 @@ public abstract class AbstractGridWithAgentTest extends GridCommonAbstractTest {
         cfg.setServerUris(F.asList("http://localhost:" + port));
 
         ignite.context().gmc().configuration(cfg);
+
+        assertWithPoll(
+            () -> interceptor.isSubscribedOn(buildActionRequestTopic(ignite.context().cluster().get().id()))
+        );
     }
 
     /**
