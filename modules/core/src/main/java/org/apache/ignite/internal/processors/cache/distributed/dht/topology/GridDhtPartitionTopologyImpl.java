@@ -2429,7 +2429,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                rentingFutures.add(rentFut);
+                if (rentFut != null)
+                    rentingFutures.add(rentFut);
 
                 updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
@@ -2460,7 +2461,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                            rentingFutures.add(rentFut);
+                            if (rentFut != null)
+                                rentingFutures.add(rentFut);
 
                             updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
