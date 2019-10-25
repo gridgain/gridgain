@@ -517,7 +517,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            if (readOnly(discoClusterState.stateOrPreviousState()) || readOnly(globalState.state())) {
+            if (readOnly(discoClusterState.state()) || readOnly(globalState.state())) {
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
 
                 if (readOnly(globalState.state())) {
@@ -893,8 +893,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (state.transition())
                 transitionFuts.put(state.transitionRequestId(), new GridFutureAdapter<>());
 
-            state.setPrevState(globalState);
-
             globalState = state;
 
             if (stateDiscoData.recentHistory != null) {
@@ -902,7 +900,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     bltHist.bufferHistoryItemForStore(item);
             }
 
-            final boolean readOnly = readOnly(globalState.stateOrPreviousState());
+            final boolean readOnly = readOnly(globalState.state());
 
             ctx.cache().context().readOnlyMode(readOnly);
 
@@ -1090,7 +1088,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         List<StoredCacheData> storedCfgs = null;
 
-        if (activate(curState.stateOrPreviousState(), state) && !inMemoryMode) {
+        if (activate(curState.state(), state) && !inMemoryMode) {
             try {
                 Map<String, StoredCacheData> cfgs = ctx.cache().context().pageStore().readCacheConfigurations();
 
