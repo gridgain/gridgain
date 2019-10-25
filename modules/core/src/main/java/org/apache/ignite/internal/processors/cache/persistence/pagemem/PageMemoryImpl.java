@@ -1238,9 +1238,6 @@ public class PageMemoryImpl implements PageMemoryEx {
         seg.readLock().lock();
 
         try {
-/*            if (!isInCheckpoint(fullId))
-                return;*/
-
             relPtr = resolveRelativePointer(seg, fullId, tag = generationTag(seg, fullId));
 
             // Page may have been cleared during eviction. We have nothing to do in this case.
@@ -1253,8 +1250,11 @@ public class PageMemoryImpl implements PageMemoryEx {
                 // Pin the page until page will not be copied. This helpful to prevent page replacement of this page.
                 if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) // место под рейс !!!
                     PageHeader.acquirePage(absPtr);
-                else
+                else {
                     pageSingleAcquire = true;
+                    if (!PageHeader.isAcquired(absPtr))
+                        System.err.println("not aq: " + fullId);
+                }
             }
         }
         finally {
@@ -1700,11 +1700,10 @@ public class PageMemoryImpl implements PageMemoryEx {
             }
 
             // Pin the page until checkpoint is not finished.
+            PageHeader.tempBufferPointer(absPtr, tmpRelPtr);
             PageHeader.acquirePage(absPtr);
 
             long tmpAbsPtr = checkpointPool.absolute(tmpRelPtr);
-
-            //System.err.println("tmpAbsPtr: " + tmpAbsPtr);
 
             GridUnsafe.copyMemory(
                 null,

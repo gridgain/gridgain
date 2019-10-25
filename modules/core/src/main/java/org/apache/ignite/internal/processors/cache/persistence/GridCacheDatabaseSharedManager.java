@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -4897,7 +4898,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             this.doneFut = doneFut;
             this.beforePageWrite = beforePageWrite;
             this.retryWriteExecutor = retryWriteExecutor;
-            this.pagesToRetry = retryPages;
+            pagesToRetry = retryPages;
         }
 
         /** {@inheritDoc} */
@@ -4914,12 +4915,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         LT.warn(log, pagesToRetry0.size() + " checkpoint pages were not written yet due to unsuccessful " +
                             "page write lock acquisition and will be retried");
 
-                        if (retryWriteExecutor == null) {
+                        //if (retryWriteExecutor == null) {
                             while (!pagesToRetry0.isEmpty())
                                 pagesToRetry0 = writePages(new T2<>(dataReg, pagesToRetry0));
 
                             doneFut.onDone((Void) null);
-                        } else {
+/*                        } else {
                             // Submit current retry pages to the end of the queue to avoid starvation.
                             WriteCheckpointPages retryWritesTask = new WriteCheckpointPages(
                                 tracker,
@@ -4931,7 +4932,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                 pagesToRetry0);
 
                             retryWriteExecutor.submit(retryWritesTask);
-                        }
+                        }*/
                     }
                 }
                 catch (Throwable e) {
@@ -4954,8 +4955,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             Collection<FullPageId> pagesToWrite;
 
-            if (pagesToRetryParam != null) {
-                NavigableSet<FullPageId> set = new GridConcurrentSkipListSet<>(new Comparator<FullPageId>() {
+            if (pagesToRetryParam != null && !pagesToRetryParam.isEmpty()) {
+                NavigableSet<FullPageId> set = new TreeSet<>(new Comparator<FullPageId>() {
                     @Override public int compare(FullPageId o1, FullPageId o2) {
                         int cmp = Long.compare(o1.groupId(), o2.groupId());
 
