@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.service;
+package org.apache.ignite.agent.service;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -38,7 +38,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 /**
  *
  */
-public class MetricProtocolTest extends GridCommonAbstractTest {
+public class  MetricProtocolTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.service;
+package org.apache.ignite.agent.service;
 
 import java.util.HashMap;
 import java.util.Map;
