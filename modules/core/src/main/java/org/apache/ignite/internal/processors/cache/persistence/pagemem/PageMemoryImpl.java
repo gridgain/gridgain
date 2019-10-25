@@ -2952,7 +2952,13 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param absPtr Absolute pointer.
          */
         private static int releasePage(long absPtr) {
-            return updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
+            int res = updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
+            if (res < 0) {
+                System.err.println("!!!111");
+                new Exception().printStackTrace();
+            }
+            return res;
+            //return updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
         }
 
         /**
