@@ -79,6 +79,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.FINISHED;
 
 /**
  * Key partition.
@@ -1209,7 +1210,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             if (forceTestCheckpointOnEviction) {
                 if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-                    ctx.database().forceCheckpoint("test").finishFuture().get();
+                    ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
 
                     log.warning("Forced checkpoint by test reasons for partition: " + this);
 
@@ -1299,12 +1300,20 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return id;
+        return 31 * id + grp.groupId();
     }
 
     /** {@inheritDoc} */
-    @Override public boolean equals(Object obj) {
-        return obj instanceof GridDhtLocalPartition && (obj == this || ((GridDhtLocalPartition)obj).id() == id);
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        GridDhtLocalPartition part = (GridDhtLocalPartition)o;
+
+        return id == part.id && grp.groupId() == part.group().groupId();
     }
 
     /** {@inheritDoc} */
