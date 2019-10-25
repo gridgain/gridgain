@@ -4907,7 +4907,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             for (DataRegion dataReg : regions) {
                 try {
-                    List<FullPageId> pagesToRetry0 = writePages(new T2<>(dataReg, pagesToRetry));
+                    List<FullPageId> pagesToRetry0 = writePages(dataReg, pagesToRetry);
 
                     if (pagesToRetry0.isEmpty())
                         doneFut.onDone((Void) null);
@@ -4916,8 +4916,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             "page write lock acquisition and will be retried");
 
                         //if (retryWriteExecutor == null) {
-                            while (!pagesToRetry0.isEmpty())
-                                pagesToRetry0 = writePages(new T2<>(dataReg, pagesToRetry0));
+                            while (!pagesToRetry0.isEmpty()) {
+                                pagesToRetry0 = writePages(dataReg, pagesToRetry0);
+
+                                snapshotMgr.beforeCheckpointPageWritten();
+                            }
 
                             doneFut.onDone((Void) null);
 /*                        } else {
@@ -4945,17 +4948,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @param writePageIds Collections of pages to write.
          * @return pagesToRetry Pages which should be retried.
          */
-        private List<FullPageId> writePages(T2<DataRegion, Collection<FullPageId>> regWithPages) throws
+        private List<FullPageId> writePages(DataRegion dataReg, Collection<FullPageId> pages) throws
             IgniteCheckedException {
             List<FullPageId> pagesToRetry = new ArrayList<>();
 
-            DataRegion dataReg = regWithPages.get1();
-
-            Collection<FullPageId> pagesToRetryParam = regWithPages.get2();
-
             Collection<FullPageId> pagesToWrite;
 
-            if (pagesToRetryParam != null && !pagesToRetryParam.isEmpty()) {
+            if (pages != null && !pages.isEmpty()) {
                 NavigableSet<FullPageId> set = new TreeSet<>(new Comparator<FullPageId>() {
                     @Override public int compare(FullPageId o1, FullPageId o2) {
                         int cmp = Long.compare(o1.groupId(), o2.groupId());
@@ -4964,12 +4963,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     }
                 });
 
-                set.addAll(pagesToRetryParam);
+                set.addAll(pages);
 
                 pagesToWrite = set;
             }
             else
-                pagesToWrite = ((PageMemoryEx) dataReg.pageMemory()).checkpointPages();
+                pagesToWrite = ((PageMemoryEx)dataReg.pageMemory()).checkpointPages();
 
             CheckpointMetricsTracker tracker = persStoreMetrics.metricsEnabled() ? this.tracker : null;
 
