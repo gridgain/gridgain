@@ -133,10 +133,6 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
 
             final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 1_000, 20);
 
-            final LongAdderMetric mm = new LongAdderMetric("total", "");
-
-            long start = System.currentTimeMillis();
-
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
@@ -145,8 +141,7 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         while (run.get()) {
                             System.out.println(
                                 "Put rate over last 10 seconds: " + (putRate10secs.value() / 10) +
-                                    " puts/sec, over last 1 second: " + putRate1sec.value() + " form start: " +
-                                    (System.currentTimeMillis() - start) + " total: " + mm.value());
+                                    " puts/sec, over last 1 second: " + putRate1sec.value());
 
                             if (putRate10secs.value() == 0) {
                                 zeroDropdown.set(true);
@@ -182,8 +177,6 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         putRate10secs.increment();
 
                         putRate1sec.increment();
-
-                        mm.increment();
                     }
 
                     run.set(false);

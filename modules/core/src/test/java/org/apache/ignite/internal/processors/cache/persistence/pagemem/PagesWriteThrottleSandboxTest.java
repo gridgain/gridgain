@@ -60,10 +60,9 @@ public class PagesWriteThrottleSandboxTest extends GridCommonAbstractTest {
                 .setName("dfltDataRegion")
                 .setMetricsEnabled(true)
                 .setPersistenceEnabled(true))
-                .setWalMode(WALMode.LOG_ONLY)
-                .setCheckpointFrequency(5_000)
-                .setCheckpointThreads(4)
-                .setWriteThrottlingEnabled(true);
+            .setWalMode(WALMode.BACKGROUND)
+            .setCheckpointFrequency(20_000)
+            .setWriteThrottlingEnabled(true);
 
         cfg.setDataStorageConfiguration(dbCfg);
 

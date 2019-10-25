@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -3204,9 +3203,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Collection<DataRegion> regions = dataRegions();
 
-        Map<DataRegion, T2<Collection<FullPageId>[], Integer>> res = new HashMap<>();
+        Map<DataRegion, T2<Collection<FullPageId>[], Integer>> res = new HashMap<>(regions.size());
 
-        for (DataRegion dataReg : dataRegions()) {
+        for (DataRegion dataReg : regions) {
             if (!dataReg.config().isPersistenceEnabled())
                 continue;
 
@@ -3221,10 +3220,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 res.put(dataReg, new T2<>(nextCpPagesCol, dirtyPages));
         }
 
-        // Sort and split all dirty pages set to several stripes.
-        Map<DataRegion, Collection<FullPageId>> alignedPages = sortCpPagesIfNeeded(res);
+        // Sort all dirty pages.
+        Map<DataRegion, Collection<FullPageId>> sortedPages = sortCpPagesIfNeeded(res);
 
-        alignedPages.forEach((k, v) -> ((PageMemoryEx)k.pageMemory()).checkpointPages(v));
+        // Now cpPages are common for all segments.
+        sortedPages.forEach((k, v) -> ((PageMemoryEx)k.pageMemory()).checkpointPages(v));
 
         // Identity stores set for future fsync.
         Collection<PageStore> updStores = new GridConcurrentHashSet<>();
@@ -3247,75 +3247,61 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         };
 
-        System.err.println("!!!start");
+        for (Collection<FullPageId> col : sortedPages.values()) {
+            // Calculate stripe index.
+            int stripeIdx = seq++ % exec.stripes();
 
-        for (Collection<FullPageId> col : alignedPages.values()) {
-            //for (FullPageId fullId : col) {
-                // Calculate stripe index.
-                int stripeIdx = seq++ % exec.stripes();
+            NavigableSet<FullPageId> pagesToWrite = (NavigableSet<FullPageId>) col;
 
-                NavigableSet<FullPageId> writePageIds0 = (NavigableSet<FullPageId>) col;
+            // Add number of handled pages.
+            cpPagesCnt.addAndGet(col.size());
 
-                // Add number of handled pages.
-                cpPagesCnt.addAndGet(col.size());
+            exec.execute(stripeIdx, () -> {
+                PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
+                    assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;
 
-                exec.execute(stripeIdx, () -> {
-                    PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
-                        assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;
+                    int groupId = fullPageId.groupId();
+                    long pageId = fullPageId.pageId();
 
-                        int groupId = fullPageId.groupId();
-                        long pageId = fullPageId.pageId();
+                    // Write buf to page store.
+                    PageStore store = storeMgr.writeInternal(groupId, pageId, buf, tag, true);
 
-                        // Write buf to page store.
-                        PageStore store = storeMgr.writeInternal(groupId, pageId, buf, tag, true);
+                    // Save store for future fsync.
+                    updStores.add(store);
+                };
 
-                        // Save store for future fsync.
-                        updStores.add(store);
-                    };
+                // Local buffer for write pages.
+                ByteBuffer writePageBuf = threadBuf.get();
 
-                    // Local buffer for write pages.
-                    //ByteBuffer writePageBuf = threadBuf.get();
+                FullPageId fullPageId = null;
 
-                    // Local buffer for write pages.
-                    ByteBuffer writePageBuf = ByteBuffer.allocateDirect(pageSize());
+                try {
+                    FullPageId fullId = pagesToWrite.pollFirst();
 
-                    writePageBuf.order(ByteOrder.nativeOrder());
+                    while (fullId != null) {
+                        // Fail-fast break if some exception occurred.
+                        if (writePagesError.get() != null)
+                            break;
 
-                    FullPageId fullPageId = null;
+                        // Save pageId to local variable for future using if exception occurred.
+                        fullPageId = fullId;
 
-                    try {
-                        FullPageId fullId = writePageIds0.pollFirst();
+                        PageMemoryEx pageMem = getPageMemoryForCacheGroup(fullId.groupId());
 
-                        //for (FullPageId fullId : col) {
-                        while (fullId != null) {
-                            //writePageBuf.rewind();
+                        // Write page content to page store via pageStoreWriter.
+                        // Tracker is null, because no need to track checkpoint metrics on recovery.
+                        pageMem.checkpointWritePage(fullId, writePageBuf, pageStoreWriter, null);
 
-                            // Fail-fast break if some exception occurred.
-                            if (writePagesError.get() != null)
-                                break;
-
-                            // Save pageId to local variable for future using if exception occurred.
-                            fullPageId = fullId;
-
-                            PageMemoryEx pageMem = getPageMemoryForCacheGroup(fullId.groupId());
-
-                            // Write page content to page store via pageStoreWriter.
-                            // Tracker is null, because no need to track checkpoint metrics on recovery.
-                            pageMem.checkpointWritePage(fullId, writePageBuf, pageStoreWriter, null);
-
-                            fullId = writePageIds0.pollFirst();
-                        }
+                        fullId = pagesToWrite.pollFirst();
                     }
-                    catch (IgniteCheckedException e) {
-                        U.error(log, "Failed to write page to pageStore, pageId=" + fullPageId);
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to write page to pageStore, pageId=" + fullPageId);
 
-                        writePagesError.compareAndSet(null, e);
-                    }
-                });
-            }
-        //}
-
-        System.err.println("!!!end");
+                    writePagesError.compareAndSet(null, e);
+                }
+            });
+        }
 
         // Await completion all write tasks.
         awaitApplyComplete(exec, writePagesError);
@@ -3928,6 +3914,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         // Identity stores set.
                         ConcurrentLinkedHashMap<PageStore, LongAdder> updStores = new ConcurrentLinkedHashMap<>();
 
+                        // All cp thread dump pages sequentially.
                         CountDownFuture doneWriteFut = new CountDownFuture(
                             chp.regions.size() * persistenceCfg.getCheckpointThreads());
 
