@@ -492,7 +492,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     "Switching to inactive state.");
 
                 ChangeGlobalStateFinishMessage msg =
-                    new ChangeGlobalStateFinishMessage(globalState.transitionRequestId(), INACTIVE, true);
+                    new ChangeGlobalStateFinishMessage(globalState.transitionRequestId(), INACTIVE, false);
 
                 onStateFinishMessage(msg);
 
