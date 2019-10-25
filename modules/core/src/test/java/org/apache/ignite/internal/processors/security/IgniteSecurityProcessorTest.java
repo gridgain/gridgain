@@ -26,11 +26,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Unit test for {@link IgniteSecurityProcessor}.
  */
 public class IgniteSecurityProcessorTest {
     /**
-     *
+     * Checks that {@link IgniteSecurityProcessor#withContext(UUID)} throws exception in case node ID is unknown.
      */
     @Test(expected = IllegalStateException.class)
     public void testThrowIllegalStateExceptionIfNodeNotFoundInDiscoCache() {

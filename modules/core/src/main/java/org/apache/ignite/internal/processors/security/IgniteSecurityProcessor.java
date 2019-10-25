@@ -109,14 +109,17 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     }
 
     /**
+     * Resolves cluster node by its ID.
+     *
      * @param nodeId Node id.
+     * @throws IllegalStateException If node with provided ID doesn't exist.
      */
     private ClusterNode findNode(UUID nodeId) {
         ClusterNode node = Optional.ofNullable(ctx.discovery().node(nodeId))
             .orElseGet(() -> ctx.discovery().historicalNode(nodeId));
 
         if (node == null)
-            U.warn(log, "Cluster node not found for nodeId:" + nodeId);
+            throw new IllegalStateException("Failed to find node with given ID for security context setup: " + nodeId);
 
         return node;
     }

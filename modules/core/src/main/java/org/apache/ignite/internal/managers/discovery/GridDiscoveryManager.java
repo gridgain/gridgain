@@ -2514,8 +2514,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /**
+     * Resolves by ID cluster node which is alive or has recently left the cluster.
+     *
      * @param nodeId Node id.
-     * @return null if node not found.
+     * @return resolved node, or <code>null</code> if node not found.
      */
     public ClusterNode historicalNode(UUID nodeId) {
         for (DiscoCache discoCache : discoCacheHist.descendingValues()) {
