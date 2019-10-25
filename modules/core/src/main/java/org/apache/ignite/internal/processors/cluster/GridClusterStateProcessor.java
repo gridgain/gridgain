@@ -279,7 +279,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                         }));
                     }
                     else
-                        return new IgniteFinishedFutureImpl<>(globalState.state());
+                        return new IgniteFinishedFutureImpl<>(globalState.lastState());
                 }
 
                 transitionRes = globalState.transitionResult();
