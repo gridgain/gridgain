@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service;
+package org.apache.ignite.agent.service.metrics;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.dto.metric.MetricRegistrySchema;
+import org.apache.ignite.agent.dto.metric.MetricRequest;
+import org.apache.ignite.agent.dto.metric.MetricResponse;
+import org.apache.ignite.agent.dto.metric.MetricSchema;
+import org.apache.ignite.agent.dto.metric.MetricType;
+import org.apache.ignite.agent.dto.metric.VarIntWriter;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema;
-import org.apache.ignite.internal.processors.metric.export.MetricRequest;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
-import org.apache.ignite.internal.processors.metric.export.MetricSchema;
-import org.apache.ignite.internal.processors.metric.export.MetricType;
-import org.apache.ignite.internal.processors.metric.export.VarIntWriter;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -41,13 +40,13 @@ import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 
+import static org.apache.ignite.agent.dto.metric.MetricType.BOOLEAN;
+import static org.apache.ignite.agent.dto.metric.MetricType.DOUBLE;
+import static org.apache.ignite.agent.dto.metric.MetricType.HISTOGRAM;
+import static org.apache.ignite.agent.dto.metric.MetricType.HIT_RATE;
+import static org.apache.ignite.agent.dto.metric.MetricType.INT;
+import static org.apache.ignite.agent.dto.metric.MetricType.LONG;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.HISTOGRAM;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
-import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
 

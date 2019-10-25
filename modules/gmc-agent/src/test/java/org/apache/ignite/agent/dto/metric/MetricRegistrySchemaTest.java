@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import org.junit.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.NAME_LEN_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.SCHEMA_LEN_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.VALUE_TYPE_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricRegistrySchema.NAME_LEN_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricRegistrySchema.SCHEMA_LEN_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricRegistrySchema.VALUE_TYPE_SIZE;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -152,7 +152,7 @@ public class MetricRegistrySchemaTest {
         byte[] arr = new byte[schema.length() + ARR_EXPANDED_DELTA];
 
         schema.toBytes(arr, ARR_EXPANDED_DELTA + SCHEMA_OFF / 2);
-   }
+    }
 
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaFromBytesInPlaceBoundsViolated() {

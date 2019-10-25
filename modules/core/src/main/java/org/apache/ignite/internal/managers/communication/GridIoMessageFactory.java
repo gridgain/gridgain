@@ -163,8 +163,6 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerResponse;
 import org.apache.ignite.internal.processors.marshaller.MissingMappingRequestMessage;
 import org.apache.ignite.internal.processors.marshaller.MissingMappingResponseMessage;
-import org.apache.ignite.internal.processors.metric.export.MetricRequest;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryCancelRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryFailResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageRequest;
@@ -217,16 +215,6 @@ public class GridIoMessageFactory implements MessageFactory {
         switch (type) {
             // -54 is reserved for SQL.
             // -46 ... -51 - snapshot messages.
-            case -63:
-                msg = new MetricRequest();
-
-                break;
-
-            case -62:
-                msg = new MetricResponse();
-
-                break;
-
             case -61:
                 msg = new IgniteDiagnosticMessage();
 

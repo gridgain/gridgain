@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 /**
  * <p>Provides varint get operations for {@code int} and {@code long} types from backing byte array.</p>

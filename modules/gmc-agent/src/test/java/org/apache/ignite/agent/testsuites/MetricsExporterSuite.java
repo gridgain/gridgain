@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.testsuites;
 
+import org.apache.ignite.agent.dto.metric.MetricProtocolTest;
+import org.apache.ignite.agent.dto.metric.MetricRegistrySchemaTest;
+import org.apache.ignite.agent.dto.metric.MetricSchemaTest;
+import org.apache.ignite.agent.dto.metric.VarIntTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -24,6 +28,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    MetricProtocolTest.class,
     MetricRegistrySchemaTest.class,
     MetricSchemaTest.class,
     VarIntTest.class

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,7 +48,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.putShort;
  * </ul>
  * </p>
  *
- * <p>Metric schema is immutable and can be constructed using {@link MetricSchema.Builder}.</p>
+ * <p>Metric schema is immutable and can be constructed using {@link Builder}.</p>
  *
  * <p>
  *     Metric schema can be converted to binary representation. See {@link #toBytes()} and {@link #toBytes(byte[], int)}
@@ -284,8 +284,8 @@ public class MetricSchema {
          *
          * @return Builder instance.
          */
-        public static MetricSchema.Builder newInstance() {
-            return new MetricSchema.Builder();
+        public static Builder newInstance() {
+            return new Builder();
         }
 
         /**

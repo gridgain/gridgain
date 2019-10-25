@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service;
+package org.apache.ignite.agent.service.metrics;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.dto.metric.MetricResponse;
+import org.apache.ignite.agent.dto.metric.MetricSchema;
+import org.apache.ignite.agent.dto.metric.MetricValueConsumer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
-import org.apache.ignite.internal.processors.metric.export.MetricSchema;
-import org.apache.ignite.internal.processors.metric.export.MetricValueConsumer;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;

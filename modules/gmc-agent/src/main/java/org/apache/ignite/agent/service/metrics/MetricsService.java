@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service;
+package org.apache.ignite.agent.service.metrics;
 
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
+import org.apache.ignite.agent.dto.metric.MetricRequest;
+import org.apache.ignite.agent.dto.metric.MetricResponse;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.metric.export.MetricRequest;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;

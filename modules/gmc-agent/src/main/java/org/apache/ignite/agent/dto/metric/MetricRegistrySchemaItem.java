@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.Objects;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -27,6 +29,7 @@ public class MetricRegistrySchemaItem {
     private final String name;
 
     /** */
+    @GridToStringInclude
     private final MetricType metricType;
 
     /**
@@ -68,5 +71,10 @@ public class MetricRegistrySchemaItem {
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(name, metricType);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(MetricRegistrySchemaItem.class, this);
     }
 }

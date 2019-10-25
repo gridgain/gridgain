@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.HashMap;
 import java.util.Map;

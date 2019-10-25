@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +46,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.putInt;
  * 9 - byte[k] - name bytes
  * ... repeat ...
  */
-//TODO: add version to the metric registry schema (should also contain node version for mixed clusters)
+//TODO GG-25070: add version to the metric registry schema (should also contain node version for mixed clusters)
 public class MetricRegistrySchema {
     /** Schema length in bytes. */
     static final int SCHEMA_LEN_SIZE = Integer.BYTES;

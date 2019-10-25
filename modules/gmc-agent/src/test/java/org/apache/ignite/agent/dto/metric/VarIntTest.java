@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
-
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

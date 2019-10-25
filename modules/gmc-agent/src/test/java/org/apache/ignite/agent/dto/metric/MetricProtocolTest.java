@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service;
+package org.apache.ignite.agent.dto.metric;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.metric.export.MetricRequest;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
-import org.apache.ignite.internal.processors.metric.export.MetricSchema;
-import org.apache.ignite.internal.processors.metric.export.MetricValueConsumer;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 

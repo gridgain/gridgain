@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service;
+package org.apache.ignite.agent.service.metrics;
 
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.AbstractGridWithAgentTest;

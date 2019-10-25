@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metric.export;
+package org.apache.ignite.agent.dto.metric;
 
 import org.junit.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.internal.processors.metric.export.MetricSchema.PREF_BYTES_LEN_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricSchema.REG_SCHEMA_CNT_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricSchema.REG_SCHEMA_IDX_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricSchema.REG_SCHEMA_OFF_SIZE;
-import static org.apache.ignite.internal.processors.metric.export.MetricSchema.SCHEMA_ITEM_CNT_SIZE;
-import static org.junit.Assert.*;
+import static org.apache.ignite.agent.dto.metric.MetricSchema.PREF_BYTES_LEN_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricSchema.REG_SCHEMA_CNT_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricSchema.REG_SCHEMA_IDX_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricSchema.REG_SCHEMA_OFF_SIZE;
+import static org.apache.ignite.agent.dto.metric.MetricSchema.SCHEMA_ITEM_CNT_SIZE;
+import static org.junit.Assert.assertEquals;
 
 /**
  *
