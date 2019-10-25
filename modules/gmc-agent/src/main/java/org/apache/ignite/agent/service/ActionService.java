@@ -38,6 +38,7 @@ import static org.apache.ignite.agent.dto.action.ActionStatus.RUNNING;
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
  * Action service.
@@ -80,7 +81,7 @@ public class ActionService implements AutoCloseable {
                 new Response()
                     .setId(req.getId())
                     .setStatus(FAILED)
-                    .setError(new ResponseError(ResponseError.PARSE_ERROR_CODE, ex.getMessage(), ex.getStackTrace()))
+                    .setError(new ResponseError(PARSE_ERROR_CODE, ex.getMessage(), ex.getStackTrace()))
             );
 
             return;
