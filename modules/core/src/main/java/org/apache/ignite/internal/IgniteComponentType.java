@@ -105,7 +105,7 @@ public enum IgniteComponentType {
     /** Management console agent. */
     MANAGEMENT_CONSOLE_AGENT(
         ManagementConsoleProcessor.class.getName(),
-        "org.gridgain.agent.Agent",
+        "org.apache.ignite.agent.Agent",
         "gridgain-management-console-agent"
     );
 
