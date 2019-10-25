@@ -517,7 +517,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            if (readOnly(discoClusterState.state()) || readOnly(globalState.state())) {
+            if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state())) {
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
 
                 if (readOnly(globalState.state())) {

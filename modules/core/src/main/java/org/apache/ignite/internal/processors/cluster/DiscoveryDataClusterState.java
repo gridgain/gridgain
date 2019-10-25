@@ -129,18 +129,6 @@ public class DiscoveryDataClusterState implements Serializable {
     }
 
     /**
-     * Sets previous cluster state {@code prevState}.
-     *
-     * @param prevState Previous cluster state.
-     */
-    void setPrevState(DiscoveryDataClusterState prevState) {
-        assert prevState != null;
-        assert this.prevState == null : this;
-
-        this.prevState = prevState;
-    }
-
-    /**
      * @param prevState Previous state. May be non-null only for transitional states.
      * @param state New cluster state.
      * @param baselineTopology Baseline topology for new cluster state.
@@ -165,6 +153,16 @@ public class DiscoveryDataClusterState implements Serializable {
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
+    }
+
+    /**
+     * @return Cluster state before transition if cluster in transition and current cluster state otherwise.
+     */
+    public ClusterState lastState() {
+        if (transition())
+            return prevState == null ? null : prevState.state;
+        else
+            return state;
     }
 
     /**
@@ -212,19 +210,6 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     public AffinityTopologyVersion transitionTopologyVersion() {
         return transitionTopVer;
-    }
-
-    /**
-     * @return Previous cluster state if state in transition now and current cluster state otherwise.
-     */
-    public ClusterState stateOrPreviousState() {
-        if (transition()) {
-            assert prevState != null : this.toString();
-
-            return prevState.state;
-        }
-        else
-            return this.state;
     }
 
     /**
