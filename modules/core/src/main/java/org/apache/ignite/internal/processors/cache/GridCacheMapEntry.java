@@ -6960,10 +6960,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             CacheObjectContext ctx = this.cctx.cacheObjectContext();
 
             // val is null when entry is removed.
+            Object key = this.key.value(ctx, false);
             byte[] keyBytes = this.key.valueBytes(ctx);
             byte[] valBytes = val == null ? null : val.valueBytes(ctx);
 
-            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes);
+            proc.context().updateNearCache(this.cctx.cacheId(), key, keyBytes, valBytes);
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }

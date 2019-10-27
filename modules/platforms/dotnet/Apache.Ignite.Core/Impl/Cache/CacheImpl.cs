@@ -544,9 +544,12 @@ namespace Apache.Ignite.Core.Impl.Cache
                 // Need a way to suppress callbacks when we have the data already.
                 // Will be tricky because callbacks happen on striped pool, not on the calling thread.
                 _nearCache.Put(key, val);
+                DoOutOp(CacheOp.NearPut, key, val);
             }
-
-            DoOutOp(CacheOp.Put, key, val);
+            else
+            {
+                DoOutOp(CacheOp.Put, key, val);
+            }
         }
 
         /** <inheritDoc /> */
