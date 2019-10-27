@@ -334,6 +334,15 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /// <summary>
+        /// Tests that error during Put removes near cache value for that key.
+        /// </summary>
+        [Test]
+        public void TestFailedPutRemovesNearCacheValue()
+        {
+            // TODO
+        }
+
+        /// <summary>
         /// Asserts the cache is near.
         /// </summary>
         private void AssertCacheIsNear(ICache<int, int> cache)
