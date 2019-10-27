@@ -1177,7 +1177,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             collections[i] = dirtyPages;
 
-            seg.readLock().lock();
+            seg.writeLock().lock();
 
             for (FullPageId pageId : dirtyPages) {
                 int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
@@ -1198,7 +1198,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 PageHeader.inCp(absPtr, true);
             }
 
-            seg.readLock().unlock();
+            seg.writeLock().unlock();
 
             pagesNum += dirtyPages.size();
 
