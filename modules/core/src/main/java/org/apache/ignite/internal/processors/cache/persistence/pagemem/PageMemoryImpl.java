@@ -1187,7 +1187,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     PageIdUtils.effectivePageId(pageId.pageId()),
                     tag,
                     INVALID_REL_PTR,
-                    OUTDATED_REL_PTR
+                    INVALID_REL_PTR
                 );
 
                 if (relPtr == INVALID_REL_PTR)
