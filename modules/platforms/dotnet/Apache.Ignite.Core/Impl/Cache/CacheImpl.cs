@@ -458,7 +458,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 // TODO: when near and not found, CacheOp.Get causes double serialization/deserialization - 
                 // once here, once in NearCache.Update callback.
                 // Solutions:
-                // * CacheOp.GetNear - does not pass the result back
+                // * CacheOp.NearGet - does not cause a callback. But will this always work?
             }
 
             return DoOutInOpX((int) CacheOp.Get,
