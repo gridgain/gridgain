@@ -592,13 +592,14 @@ public class PlatformContextImpl implements PlatformContext {
     }
 
     /** {@inheritDoc} */
-    @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes) {
+    @Override public void updateNearCache(int cacheId, Object key, byte[] keyBytes, byte[] valBytes) {
+        assert key != null;
         assert keyBytes != null;
 
         // TODO: Replace keyBytes with what?
         final boolean[] skip = {false};
 
-        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (key, adder) -> {
+        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (k, adder) -> {
             if (adder == null) {
                 return null;
             }
@@ -639,10 +640,10 @@ public class PlatformContextImpl implements PlatformContext {
     }
 
     /** {@inheritDoc} */
-    @Override public void skipNearCacheUpdate(int cacheId, byte[] keyBytes) {
-        assert keyBytes != null;
+    @Override public void skipNearCacheUpdate(int cacheId, Object key) {
+        assert key != null;
 
-        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (key, adder) -> {
+        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, key), (k, adder) -> {
             if (adder == null) {
                 adder = new LongAdder();
             }

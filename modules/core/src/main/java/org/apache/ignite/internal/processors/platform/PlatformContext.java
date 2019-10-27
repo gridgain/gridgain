@@ -292,16 +292,17 @@ public interface PlatformContext {
      * Updates the near cache.
      *
      *  @param cacheId Cache id.
+     * @param key Key to update.
      * @param keyBytes Serialized key to update.
      * @param valBytes Serialized value.
      */
-    public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes);
+    public void updateNearCache(int cacheId, Object key, byte[] keyBytes, byte[] valBytes);
 
     /**
-     * Skips near cache update.
+     * Skips next near cache callback for the given key.
      *
      * @param cacheId Cache id.
-     * @param keyBytes Serialized key to update.
+     * @param key Key to skip near cache update for.
      */
-    public void skipNearCacheUpdate(int cacheId, byte[] keyBytes);
+    public void skipNearCacheUpdate(int cacheId, Object key);
 }
