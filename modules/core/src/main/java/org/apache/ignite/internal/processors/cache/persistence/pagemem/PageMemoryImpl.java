@@ -1190,6 +1190,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                     OUTDATED_REL_PTR
                 );
 
+                if (relPtr == INVALID_REL_PTR)
+                    continue;
+
                 long absPtr = seg.absolute(relPtr);
 
                 PageHeader.inCp(absPtr, true);
@@ -2914,6 +2917,10 @@ public class PageMemoryImpl implements PageMemoryEx {
          */
         private static void inCp(long absPtr, boolean cp) {
             long markerAndTs = GridUnsafe.getLong(absPtr) | 0x02;
+            if (cp)
+                markerAndTs |= 0x02;
+            else
+                markerAndTs &= ~0x02;
             GridUnsafe.putLongVolatile(null, absPtr, markerAndTs);
         }
 
