@@ -599,7 +599,7 @@ public class PlatformContextImpl implements PlatformContext {
         // TODO: Replace keyBytes with what?
         final boolean[] skip = {false};
 
-        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (k, adder) -> {
+        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, key), (k, adder) -> {
             if (adder == null) {
                 return null;
             }
