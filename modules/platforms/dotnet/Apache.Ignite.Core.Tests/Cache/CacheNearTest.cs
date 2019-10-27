@@ -243,6 +243,27 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
         
         /// <summary>
+        /// Tests that near cache returns the same object on every get.
+        /// </summary>
+        [Test]
+        public void TestNearCacheRepeatedRemoteGetReturnsSameObjectReference(
+            [Values(CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+        {
+            var remoteCache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            var localCache = GetCache<int, Foo>(mode);
+            var key = TestUtils.GetPrimaryKey(_grid, remoteCache.Name);
+
+            var obj = new Foo();
+            
+            remoteCache[key] = obj;
+            
+            var res1 = localCache[key];
+            var res2 = localCache[key];
+            
+            Assert.AreSame(res1, res2);
+        }
+        
+        /// <summary>
         /// Tests that near cache is updated from remote node after being populated with local Put call.
         /// </summary>
         [Test]
