@@ -540,8 +540,16 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (CanUseNear)
             {
-                _nearCache.Put(key, val);
-                DoOutOp(CacheOp.NearPut, key, val);
+                try
+                {
+                    _nearCache.Put(key, val);
+                    DoOutOp(CacheOp.NearPut, key, val);
+                }
+                catch (Exception)
+                {
+                    _nearCache.Remove(key);
+                    throw;
+                }
             }
             else
             {

@@ -63,5 +63,11 @@ namespace Apache.Ignite.Core.Impl.Cache
                 _map.TryRemove(key, out unused);
             }
         }
+
+        public void Remove(TK key)
+        {
+            TV unused;
+            _map.TryRemove(key, out unused);
+        }
     }
 }
