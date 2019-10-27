@@ -540,9 +540,6 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (CanUseNear)
             {
-                // TODO: We get the callback, which is redundant, and we lose referential equality (wasting memory)
-                // Need a way to suppress callbacks when we have the data already.
-                // Will be tricky because callbacks happen on striped pool, not on the calling thread.
                 _nearCache.Put(key, val);
                 DoOutOp(CacheOp.NearPut, key, val);
             }
