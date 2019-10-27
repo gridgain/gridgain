@@ -1177,6 +1177,26 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             collections[i] = dirtyPages;
 
+            seg.readLock().lock();
+
+            for (FullPageId pageId : dirtyPages) {
+                int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
+
+                long relPtr = seg.loadedPages.get(
+                    pageId.groupId(),
+                    PageIdUtils.effectivePageId(pageId.pageId()),
+                    tag,
+                    INVALID_REL_PTR,
+                    OUTDATED_REL_PTR
+                );
+
+                long absPtr = seg.absolute(relPtr);
+
+                PageHeader.inCp(absPtr, true);
+            }
+
+            seg.readLock().unlock();
+
             pagesNum += dirtyPages.size();
 
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
@@ -2401,7 +2421,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if should be written by a checkpoint.
                 // These pages does not have tmp buffer.
-                if (checkpointPages != null && checkpointPages.markAsSaved(fullPageId)) {
+                if (checkpointPages != null && checkpointPages.contains(fullPageId)) {
                     assert storeMgr != null;
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
@@ -2417,7 +2437,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     setDirty(fullPageId, absPtr, false, true);
 
-                    //checkpointPages.markAsSaved(fullPageId);
+                    checkpointPages.markAsSaved(fullPageId);
 
                     return true;
                 }
@@ -2881,7 +2901,10 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @return Dirty flag.
          */
         private static boolean inCp(long absPtr) {
-            return flag(absPtr, CP_FLAG);
+            long markerAndTs = GridUnsafe.getLong(absPtr);
+
+            // Clear last byte as it is occupied by page marker.
+            return (markerAndTs & 0x02) != 0;
         }
 
         /**
@@ -2889,8 +2912,9 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param dirty Dirty flag.
          * @return Previous value of dirty flag.
          */
-        private static boolean inCp(long absPtr, boolean cp) {
-            return flag(absPtr, CP_FLAG, cp);
+        private static void inCp(long absPtr, boolean cp) {
+            long markerAndTs = GridUnsafe.getLong(absPtr) | 0x02;
+            GridUnsafe.putLongVolatile(null, absPtr, markerAndTs);
         }
 
         /**
