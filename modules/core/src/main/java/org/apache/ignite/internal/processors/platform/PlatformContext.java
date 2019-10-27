@@ -296,4 +296,12 @@ public interface PlatformContext {
      * @param valBytes Serialized value.
      */
     public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes);
+
+    /**
+     * Skips near cache update.
+     *
+     * @param cacheId Cache id.
+     * @param keyBytes Serialized key to update.
+     */
+    public void skipNearCacheUpdate(int cacheId, byte[] keyBytes);
 }

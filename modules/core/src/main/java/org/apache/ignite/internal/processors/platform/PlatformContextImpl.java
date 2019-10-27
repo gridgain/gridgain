@@ -637,4 +637,19 @@ public class PlatformContextImpl implements PlatformContext {
             gateway().nearCacheInvalidate(mem0.pointer());
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public void skipNearCacheUpdate(int cacheId, byte[] keyBytes) {
+        assert keyBytes != null;
+
+        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, keyBytes), (key, adder) -> {
+            if (adder == null) {
+                adder = new LongAdder();
+            }
+
+            adder.increment();
+
+            return adder;
+        });
+    }
 }
