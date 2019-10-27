@@ -253,14 +253,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             var localCache = GetCache<int, Foo>(mode);
             var key = TestUtils.GetPrimaryKey(_grid, remoteCache.Name);
 
-            var obj = new Foo();
-            
-            remoteCache[key] = obj;
-            
-            var res1 = localCache[key];
-            var res2 = localCache[key];
-            
-            Assert.AreSame(res1, res2);
+            remoteCache[key] = new Foo();
+
+            // ReSharper disable once EqualExpressionComparison
+            TestUtils.WaitForCondition(() => ReferenceEquals(localCache.Get(key), localCache.Get(key)), 300);
         }
         
         /// <summary>
