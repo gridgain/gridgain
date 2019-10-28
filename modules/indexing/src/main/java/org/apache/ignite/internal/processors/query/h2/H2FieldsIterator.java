@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 
 /**
@@ -43,9 +44,10 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
      * @throws IgniteCheckedException If failed.
      */
     public H2FieldsIterator(ResultSet data, MvccQueryTracker mvccTracker,
-        H2PooledConnection conn)
+        H2PooledConnection conn,
+        IgniteLogger log, IgniteH2Indexing h2, H2QueryInfo qryInfo)
         throws IgniteCheckedException {
-        super(data);
+        super(data, log, h2, qryInfo);
 
         assert conn != null;
 

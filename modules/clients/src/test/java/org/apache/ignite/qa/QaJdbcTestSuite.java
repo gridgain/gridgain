@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
+package org.apache.ignite.qa;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.apache.ignite.qa.query.WarningOnBigQueryResultsTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
- *
+ * JDBC driver test suite.
  */
-public class GridCacheAtomicClientInvalidPartitionHandlingSelfTest
-    extends GridCacheAtomicInvalidPartitionHandlingSelfTest {
-    /** {@inheritDoc} */
-    @Override protected boolean testClientNode() {
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-25184")
-    @Override public void testPrimaryFullAsync() throws Exception {
-        super.testPrimaryFullAsync();
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    WarningOnBigQueryResultsTest.class,
+})
+public class QaJdbcTestSuite {
 }
