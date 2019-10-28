@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -29,21 +30,21 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  * Test for OOM if case of using large entries. This OOM may be caused by inaccurate results caching on
  * some stage of the query execution.
  */
-public class IgniteCacheQueryLargeRecordsOomTest extends GridCacheAbstractSelfTest{
+public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If error.
      */
     @Test
     public void testMemoryLeak() throws Exception {
+        startGridsMultiThreaded(2);
         IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        long heapMaxSize = Runtime.getRuntime().maxMemory();
 
         for (long i = 0; i < 1000; i++) {
             Person val = new Person(new byte[1024 * 1024]); // 1 MB entry.
@@ -51,10 +52,14 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCacheAbstractSelfTe
             cache.put(i, val);
         }
 
+        Runtime.getRuntime().gc();
+
+        long freeHeapSize = Runtime.getRuntime().freeMemory();
+
         // We expect that each entry size is 1 MB and in PK BPlusTree cursor at least 100 entries may be cached.
         // It means that each cursor may have ~100 MB of cached data. So let's choose the number of open cursors
         // near to the half of available heap to find out if there is any leak here.
-        final int nReaders = (int)(heapMaxSize / 1e8) / 2;
+        final int nReaders = (int)(freeHeapSize / 1e8) / 2;
 
         if (log.isInfoEnabled())
             log.info("Data loaded. Number of readers=" + nReaders);
@@ -64,9 +69,12 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCacheAbstractSelfTe
         Collection<Future> futs = new ArrayList<>(nReaders);
 
         for (int i = 0; i < nReaders; i++) {
-            Future f = ex.submit(new Runnable() {
-                @Override public void run() {
+            Future f = ex.submit(new Callable<Object>() {
+                @Override public Object call() {
                     for (int j = 0; j < 10; j++) {
+                        if (Thread.currentThread().isInterrupted())
+                            return null;
+
                         if (log.isInfoEnabled())
                             log.info("Iteration " + j);
 
@@ -75,17 +83,22 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCacheAbstractSelfTe
                         qry.getAll();
                         qry.close();
                     }
+
+                    return null;
                 }
             });
 
             futs.add(f);
         }
 
-        for (Future  f : futs)
-            f.get(getTestTimeout(), TimeUnit.MILLISECONDS);
-
-        ex.shutdown();
-        ex.awaitTermination(getTestTimeout(), TimeUnit.MILLISECONDS);
+        try {
+            for (Future f : futs)
+                f.get(getTestTimeout(), TimeUnit.MILLISECONDS);
+        }
+        finally {
+            ex.shutdownNow();
+            ex.awaitTermination(getTestTimeout(), TimeUnit.MILLISECONDS);
+        }
     }
 
     /** {@inheritDoc} */
@@ -99,13 +112,13 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCacheAbstractSelfTe
     }
 
     /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 2;
+    @Override protected long getTestTimeout() {
+        return 120 * 1000;
     }
 
     /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 120 * 1000;
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids(true);
     }
 
     /** */
