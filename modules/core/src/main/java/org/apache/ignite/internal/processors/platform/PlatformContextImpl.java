@@ -596,7 +596,7 @@ public class PlatformContextImpl implements PlatformContext {
         assert key != null;
         assert keyBytes != null;
 
-        if (!decrementSkipCount(cacheId, key))
+        if (decrementSkipCount(cacheId, key))
             return;
 
         // TODO: Track active caches and avoid unnecessary callbacks?
@@ -653,23 +653,23 @@ public class PlatformContextImpl implements PlatformContext {
     private boolean decrementSkipCount(int cacheId, Object key) {
         assert key != null;
 
-        final boolean[] skip = {false};
+        final boolean[] decremented = {false};
 
         nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, key), (k, adder) -> {
             if (adder == null) {
                 return null;
             }
 
-            skip[0] = true;
             adder.decrement();
+            decremented[0] = true;
 
-            if (adder.intValue() <= 0) {
+            if (adder.intValue() == 0) {
                 return null;
             }
 
             return adder;
         });
 
-        return skip[0];
+        return decremented[0];
     }
 }
