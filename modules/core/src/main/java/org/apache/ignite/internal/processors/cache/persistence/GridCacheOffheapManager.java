@@ -2720,25 +2720,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     row.key.partition(partId);
 
-                    boolean removed;
-
                     cctx.shared().database().checkpointReadLock();
 
                     try {
-                        removed = pendingTree.removex(row);
+                        if (pendingTree.removex(row)){
+                            if (obsoleteVer == null)
+                                obsoleteVer = ctx.versions().next();
+
+                            GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
+
+                            if (e1 != null)
+                                c.apply(e1, obsoleteVer);
+                        }
+
                     }
                     finally {
                         cctx.shared().database().checkpointReadUnlock();
-                    }
-
-                    if (removed){
-                        if (obsoleteVer == null)
-                            obsoleteVer = ctx.versions().next();
-
-                        GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
-
-                        if (e1 != null)
-                            c.apply(e1, obsoleteVer);
                     }
 
                     cleared++;
