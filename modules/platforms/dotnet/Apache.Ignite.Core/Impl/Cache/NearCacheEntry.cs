@@ -21,7 +21,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// <summary>
     /// <see cref="NearCache{TK, TV}"/> entry.
     /// </summary>
-    internal struct NearCacheEntry<T>
+    internal class NearCacheEntry<T>
     {
         /** */
         private volatile int _hasValue;
@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         public NearCacheEntry(bool hasValue = false, T value = default(T))
         {
-            _hasValue = 0;
+            _hasValue = hasValue ? 1 : 0;
             _value = value;
         }
 
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         public void SetValueIfEmpty(T value)
         {
-            if (Interlocked.CompareExchange(ref _hasValue, 0, 1) == 0)
+            if (Interlocked.CompareExchange(ref _hasValue, 1, 0) == 0)
             {
                 _value = value;
             }
