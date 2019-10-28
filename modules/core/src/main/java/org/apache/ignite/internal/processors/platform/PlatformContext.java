@@ -305,4 +305,12 @@ public interface PlatformContext {
      * @param key Key to skip near cache update for.
      */
     public void skipNearCacheUpdate(int cacheId, Object key);
+
+    /**
+     * Undo the effect of {@link #skipNearCacheUpdate(int, Object)} call.
+     *
+     * @param cacheId Cache id.
+     * @param key Key to enable near cache update for.
+     */
+    public void restoreNearCacheUpdate(int cacheId, Object key);
 }

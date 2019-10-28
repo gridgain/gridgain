@@ -441,9 +441,13 @@ public class PlatformCache extends PlatformAbstractTarget {
                 case OP_PUT_NEAR: {
                     Object key = reader.readObjectDetached();
 
-                    platformCtx.skipNearCacheUpdate(cache.context().cacheId(), key);
-
-                    cache.put(key, reader.readObjectDetached());
+                    try {
+                        platformCtx.skipNearCacheUpdate(cache.context().cacheId(), key);
+                        cache.put(key, reader.readObjectDetached());
+                    } catch (Error e) {
+                        platformCtx.restoreNearCacheUpdate(cache.context().cacheId(), key);
+                        throw e;
+                    }
 
                     return TRUE;
                 }
@@ -454,6 +458,7 @@ public class PlatformCache extends PlatformAbstractTarget {
                 case OP_GET_NEAR: {
                     Object key = reader.readObjectDetached();
 
+                    // TODO: Error handling
                     platformCtx.skipNearCacheUpdate(cache.context().cacheId(), key);
 
                     return writeResult(mem, cache.get(key));
