@@ -33,8 +33,10 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.nio.file.attribute.PosixFilePermission;
+import java.security.AccessController;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.PrivilegedAction;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -63,8 +65,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
+import javax.management.Attribute;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -129,6 +133,15 @@ public final class GridTestUtils {
 
     /** */
     public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;
+
+    /** yyyy-MM-dd. */
+    public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
+
+    /** HH:mm:ss.SSS. */
+    public static final String LOCAL_TIME_REGEXP = "(20|21|22|23|[01]\\d|\\d)((:[0-5]\\d){1,2})\\.\\d{3}";
+
+    /** yyyy-MM-dd'T'HH:mm:ss.SSS. */
+    public static final String LOCAL_DATETIME_REGEXP = LOCAL_DATE_REGEXP + "T" + LOCAL_TIME_REGEXP;
 
     /** */
     static final String ALPHABETH = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890_";
@@ -301,6 +314,46 @@ public final class GridTestUtils {
 //            }
 //        }).start();
 //    }
+
+    /**
+     * Checks that string {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertTrue(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String does not matches regexp: '%s':", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} doesn't match given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if matches.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertNotMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertFalse(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String matches regexp: '%s', but shouldn't:", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
 
     /**
      * Checks that string {@param str} doesn't contains substring {@param substr}. Logs both strings
@@ -1564,6 +1617,28 @@ public final class GridTestUtils {
     }
 
     /**
+     * Change static final fields.
+     * @param field Need to be changed.
+     * @param newVal New value.
+     * @throws Exception If failed.
+     */
+    public static void setFieldValue(Field field, Object newVal) throws Exception {
+        field.setAccessible(true);
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+
+        AccessController.doPrivileged(new PrivilegedAction() {
+            @Override
+            public Object run() {
+                modifiersField.setAccessible(true);
+                return null;
+            }
+        });
+
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(null, newVal);
+    }
+
+    /**
      * Get inner class by its name from the enclosing class.
      *
      * @param parentCls Parent class to resolve inner class for.
@@ -2239,6 +2314,32 @@ public final class GridTestUtils {
         for (File f : dir.listFiles(n -> n.getName().startsWith(IdleVerifyResultV2.IDLE_VERIFY_FILE_PREFIX)))
             f.delete();
     }
+
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @param val Attribute value.
+     * @throws Exception On error.
+     */
+    public static void setJmxAttribute(IgniteEx grid, String grp, String name, String attr, Object val) throws Exception {
+        grid.context().config().getMBeanServer().setAttribute(U.makeMBeanName(grid.name(), grp, name),
+            new Attribute(attr, val));
+    }
+
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @return Attribute's value.
+     * @throws Exception On error.
+     */
+    public static Object getJmxAttribute(IgniteEx grid, String grp, String name, String attr) throws Exception {
+        return grid.context().config().getMBeanServer().getAttribute(U.makeMBeanName(grid.name(), grp, name), attr);
+    }
+
 
     public static class SqlTestFunctions {
         /** Sleep milliseconds. */

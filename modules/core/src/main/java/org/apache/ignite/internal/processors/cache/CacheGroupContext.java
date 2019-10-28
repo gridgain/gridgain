@@ -45,6 +45,8 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCach
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
@@ -84,7 +86,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
 public class CacheGroupContext {
     /**
      * Unique group ID. Currently for shared group it is generated as group name hash,
-     * for non-shared as cache name hash (see {@link ClusterCachesInfo#checkCacheConflict}).
+     * for non-shared as cache name hash (see {@code ClusterCachesInfo#checkCacheConflict(CacheConfiguration)}).
      */
     private final int grpId;
 
@@ -149,6 +151,9 @@ public class CacheGroupContext {
     /** Persistence enabled flag. */
     private final boolean persistenceEnabled;
 
+    /** {@code true} if this group was configured as persistence in despite of data region. */
+    private final boolean persistenceGroup;
+
     /** */
     private final CacheObjectContext cacheObjCtx;
 
@@ -202,6 +207,7 @@ public class CacheGroupContext {
      * @param locStartVer Topology version when group was started on local node.
      * @param persistenceEnabled Persistence enabled flag.
      * @param walEnabled Wal enabled flag.
+     * @param persistenceGroup {@code true} if this group was configured as persistence in despite of data region.
      */
     CacheGroupContext(
         GridCacheSharedContext ctx,
@@ -217,8 +223,8 @@ public class CacheGroupContext {
         AffinityTopologyVersion locStartVer,
         boolean persistenceEnabled,
         boolean walEnabled,
-        boolean recoveryMode
-    ) {
+        boolean recoveryMode,
+        boolean persistenceGroup) {
         assert ccfg != null;
         assert dataRegion != null || !affNode;
         assert grpId != 0 : "Invalid group ID [cache=" + ccfg.getName() + ", grpName=" + ccfg.getGroupName() + ']';
@@ -238,6 +244,7 @@ public class CacheGroupContext {
         this.persistenceEnabled = persistenceEnabled;
         this.localWalEnabled = true;
         this.recoveryMode = new AtomicBoolean(recoveryMode);
+        this.persistenceGroup = persistenceGroup;
 
         ioPlc = cacheType.ioPolicy();
 
@@ -258,9 +265,31 @@ public class CacheGroupContext {
         else {
             GridMetricManager mmgr = ctx.kernalContext().metric();
 
-            statHolderIdx = new IoStatisticsHolderIndex(HASH_INDEX, cacheOrGroupName(), HASH_PK_IDX_NAME, mmgr);
             statHolderData = new IoStatisticsHolderCache(cacheOrGroupName(), grpId, mmgr);
+
+            statHolderIdx = new IoStatisticsHolderIndex(
+                HASH_INDEX,
+                cacheOrGroupName(),
+                HASH_PK_IDX_NAME,
+                mmgr,
+                statHolderData
+            );
+
+            ctx.kernalContext().ioStats().onCacheGroupRegistered(
+                cacheOrGroupName(),
+                grpId,
+                (IoStatisticsHolderCache)statHolderData
+            );
+
+            ctx.kernalContext().ioStats().onIndexRegistered(
+                HASH_INDEX,
+                cacheOrGroupName(),
+                HASH_PK_IDX_NAME,
+                (IoStatisticsHolderIndex)statHolderIdx
+            );
         }
+
+        hasAtomicCaches = ccfg.getAtomicityMode() == ATOMIC;
     }
 
     /**
@@ -1081,11 +1110,15 @@ public class CacheGroupContext {
                 ccfg.getAffinity(),
                 ccfg.getNodeFilter(),
                 ccfg.getBackups(),
-                ccfg.getCacheMode() == LOCAL
+                ccfg.getCacheMode() == LOCAL,
+                persistenceGroup
             );
 
-        if (ccfg.getCacheMode() != LOCAL)
+        if (ccfg.getCacheMode() != LOCAL) {
             top = new GridDhtPartitionTopologyImpl(ctx, this);
+
+            metrics.onTopologyInitialized();
+        }
 
         try {
             offheapMgr = persistenceEnabled
@@ -1290,6 +1323,21 @@ public class CacheGroupContext {
      */
     public boolean hasAtomicCaches() {
         return hasAtomicCaches;
+    }
+
+    /**
+     * @return {@code True} if need create temporary tombstones entries for removed data.
+     */
+    public boolean supportsTombstone() {
+        return !mvccEnabled && !isLocal();
+    }
+
+    /**
+     * @param part Partition.
+     * @return {@code True} if need create tombstone for remove in given partition.
+     */
+    public boolean shouldCreateTombstone(@Nullable GridDhtLocalPartition part) {
+        return part != null && supportsTombstone() && part.state() == GridDhtPartitionState.MOVING;
     }
 
     /**

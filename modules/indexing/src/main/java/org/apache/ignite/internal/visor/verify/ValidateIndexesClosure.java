@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListe
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.verify.GridNotIdleException;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
@@ -63,9 +64,9 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
-import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -626,8 +627,16 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      */
     private Future<Map<String, ValidateIndexesPartitionResult>> processIndexAsync(GridCacheContext ctx, Index idx) {
         return calcExecutor.submit(new Callable<Map<String, ValidateIndexesPartitionResult>>() {
-            @Override public Map<String, ValidateIndexesPartitionResult> call() throws Exception {
-                return processIndex(ctx, idx);
+            /** {@inheritDoc} */
+            @Override public Map<String, ValidateIndexesPartitionResult> call() {
+                BPlusTree.suspendFailureDiagnostic.set(true);
+
+                try {
+                    return processIndex(ctx, idx);
+                }
+                finally {
+                    BPlusTree.suspendFailureDiagnostic.set(false);
+                }
             }
         });
     }
@@ -656,6 +665,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             IndexValidationIssue is = new IndexValidationIssue(null, ctx.name(), idx.getName(), t);
 
             log.error("Find in index failed: " + is.toString());
+
+            idxValidationRes.reportIssue(is);
 
             enoughIssues = true;
         }

@@ -92,6 +92,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -110,6 +111,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Implementation of kernal context.
@@ -382,6 +385,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
+    protected ExecutorService rebalanceExecSvc;
+
+    /** */
+    @GridToStringExclude
     private Map<String, ? extends ExecutorService> customExecSvcs;
 
     /** */
@@ -438,6 +445,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** Recovery mode flag. Flag is set to {@code false} when discovery manager started. */
     private boolean recoveryMode = true;
 
+    /** IO statistics manager. */
+    private IoStatisticsManager ioStatMgr;
+
     /**
      * No-arg constructor is required by externalization.
      */
@@ -465,6 +475,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      * @param plugins Plugin providers.
      * @param workerRegistry Worker registry.
@@ -491,6 +502,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable Map<String, ? extends ExecutorService> customExecSvcs,
         List<PluginProvider> plugins,
         IgnitePredicate<String> clsFilter,
@@ -519,6 +531,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         this.callbackExecSvc = callbackExecSvc;
         this.qryExecSvc = qryExecSvc;
         this.schemaExecSvc = schemaExecSvc;
+        this.rebalanceExecSvc = rebalanceExecSvc;
         this.customExecSvcs = customExecSvcs;
         this.workersRegistry = workerRegistry;
         this.hnd = hnd;
@@ -534,6 +547,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
                 log.debug("Failed to load spring component, will not be able to extract userVersion from " +
                     "META-INF/ignite.xml.");
         }
+
+        ioStatMgr = new IoStatisticsManager();
     }
 
     /** {@inheritDoc} */
@@ -770,6 +785,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public DistributedMetaStorage distributedMetastorage() {
+        if (!isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+            throw new UnsupportedOperationException("Distributed Meta Storage feature is not enabled.");
+
         return distributedMetastorage;
     }
 
@@ -1117,6 +1135,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
+    @Override public ExecutorService getRebalanceExecutorService() {
+        return rebalanceExecSvc;
+    }
+
+    /** {@inheritDoc} */
     @Override public Map<String, ? extends ExecutorService> customExecutors() {
         return customExecSvcs;
     }
@@ -1176,6 +1199,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public GridInternalSubscriptionProcessor internalSubscriptionProcessor() {
         return internalSubscriptionProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IoStatisticsManager ioStats() {
+        return ioStatMgr;
     }
 
     /**

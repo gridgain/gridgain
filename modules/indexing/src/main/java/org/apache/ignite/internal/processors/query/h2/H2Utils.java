@@ -483,6 +483,10 @@ public class H2Utils {
     public static void resetSession(Connection conn) {
         Session s = session(conn);
 
+        // TODO: GG-19120: remove this check.
+        if (s == null) // Connection has been closed concurrently.
+            return;
+
         U.closeQuiet(s.queryMemoryTracker());
         s.setQueryContext(null);
     }
@@ -1030,7 +1034,7 @@ public class H2Utils {
         // Check for joins between system views and normal tables.
         if (!F.isEmpty(tbls)) {
             for (QueryTable tbl : tbls) {
-                if (QueryUtils.SCHEMA_SYS.equals(tbl.schema())) {
+                if (QueryUtils.sysSchemaName().equals(tbl.schema())) {
                     if (!F.isEmpty(cacheIds)) {
                         throw new IgniteSQLException("Normal tables and system views cannot be used in the same query.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);

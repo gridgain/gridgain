@@ -55,8 +55,11 @@ import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmented
 import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateTest;
 import org.apache.ignite.internal.processors.query.LocalQueryLazyTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryTest;
+import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest;
+import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptTxCacheOperationTest;
 import org.apache.ignite.internal.processors.query.SqlLocalQueryConnectionAndStatementTest;
 import org.apache.ignite.internal.processors.query.SqlPartOfComplexPkLookupTest;
+import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
@@ -69,6 +72,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.RetryCauseMessageS
 import org.apache.ignite.internal.processors.query.h2.twostep.TableViewSubquerySelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
+import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -78,6 +82,10 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest.class,
+    SqlIndexConsistencyAfterInterruptTxCacheOperationTest.class,
+    SqlTwoCachesInGroupWithSameEntryTest.class,
+
     // Dynamic index create/drop tests.
     DynamicIndexPartitionedAtomicConcurrentSelfTest.class,
     DynamicIndexPartitionedTransactionalConcurrentSelfTest.class,
@@ -154,8 +162,8 @@ import org.junit.runners.Suite;
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,
 
-
     QueryMemoryTrackerSelfTest.class,
+    QueryMemoryManagerSelfTest.class,
 
     DmlBatchSizeDeadlockTest.class,
 

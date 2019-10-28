@@ -285,6 +285,8 @@ import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.IgniteVersionUtils.REV_HASH_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -873,6 +875,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance excutor service.
      * @param customExecSvcs Custom named executors.
      * @param errHnd Error handler to use for notification about startup problems.
      * @param workerRegistry Worker registry.
@@ -895,6 +898,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
@@ -1017,6 +1021,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 callbackExecSvc,
                 qryExecSvc,
                 schemaExecSvc,
+                rebalanceExecSvc,
                 customExecSvcs,
                 plugins,
                 MarshallerUtils.classNameFilter(this.getClass().getClassLoader()),
@@ -1141,7 +1146,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new DataStructuresProcessor(ctx));
                 startProcessor(createComponent(PlatformProcessor.class, ctx));
                 startProcessor(new GridMarshallerMappingProcessor(ctx));
-                startProcessor(new DistributedMetaStorageImpl(ctx));
+
+                if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+                    startProcessor(new DistributedMetaStorageImpl(ctx));
+
                 startProcessor(new DistributedConfigurationProcessor(ctx));
 
                 // Start transactional data replication processor.
@@ -1168,7 +1176,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ctx.cache().context().database().notifyMetaStorageSubscribersOnReadyForRead();
 
-                ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
+                if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+                    ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
 
                 startTimer.finishGlobalStage("Init metastore");
 
@@ -1289,12 +1298,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             ctx.metric().registerThreadPools(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc,
                 p2pExecSvc, mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc,
-                callbackExecSvc, qryExecSvc, schemaExecSvc, customExecSvcs);
+                callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
 
             // Register MBeans.
             mBeansMgr.registerAllMBeans(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
                 mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
-                qryExecSvc, schemaExecSvc, customExecSvcs, ctx.workersRegistry());
+                qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
 
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
@@ -2727,10 +2736,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 U.warn(log, "Setting the rebalance pool size has no effect on the client mode");
         }
         else {
-            if (cfg.getSystemThreadPoolSize() <= cfg.getRebalanceThreadPoolSize())
-                throw new IgniteCheckedException("Rebalance thread pool size exceed or equals System thread pool size. " +
-                    "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
-
             if (cfg.getRebalanceThreadPoolSize() < 1)
                 throw new IgniteCheckedException("Rebalance thread pool size minimal allowed value is 1. " +
                     "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
@@ -3710,7 +3715,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         guard();
 
         try {
-            ctx.cache().resetCacheState(cacheNames).get();
+            ctx.cache().resetCacheState(cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

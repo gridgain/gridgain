@@ -1091,7 +1091,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT = "IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT";
 
     /**
-     * Sets default {@link CacheConfiguration#setDiskPageCompression disk page compression}.
+     * Sets default isk page compression.
      */
     public static final String IGNITE_DEFAULT_DISK_PAGE_COMPRESSION = "IGNITE_DEFAULT_DISK_PAGE_COMPRESSION";
 
@@ -1159,11 +1159,6 @@ public final class IgniteSystemProperties {
      * Maximum size of history of server nodes (server node IDs) that ever joined to current topology.
      */
     public static final String IGNITE_NODE_IDS_HISTORY_SIZE = "IGNITE_NODE_IDS_HISTORY_SIZE";
-
-    /**
-     * Flag to enable baseline auto-adjust by default.
-     */
-    public static final String IGNITE_BASELINE_AUTO_ADJUST_ENABLED = "IGNITE_BASELINE_AUTO_ADJUST_ENABLED";
 
     /**
      * Maximum number of diagnostic warning messages per category, when waiting for PME.

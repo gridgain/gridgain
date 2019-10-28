@@ -26,6 +26,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -33,27 +34,12 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
  * Vacuum test.
  */
 public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
     /** {@inheritDoc} */
     @Override protected CacheMode cacheMode() {
         return PARTITIONED;
@@ -183,8 +169,9 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
     public void testVacuumNotStartedOnNonBaselineNode() throws Exception {
         persistence = true;
 
-        Ignite node0 = startGrid(0);
+        IgniteEx node0 = startGrid(0);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
         ensureNoVacuum(node0);
 
         node0.cluster().active(true);
@@ -215,9 +202,10 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
     public void testVacuumNotStartedOnNonBaselineNode2() throws Exception {
         persistence = true;
 
-        Ignite node0 = startGrid(0);
+        IgniteEx node0 = startGrid(0);
         Ignite node1 = startGrid(1);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
         node0.cluster().active(true);
 
         IgniteCache<Object, Object> cache = node0.createCache(
@@ -253,8 +241,10 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
     public void testVacuumNotStartedOnNonAffinityNode() throws Exception {
         persistence = true;
 
-        Ignite node0 = startGrid(0);
+        IgniteEx node0 = startGrid(0);
         Ignite node1 = startGrid(1);
+
+        node0.cluster().baselineAutoAdjustEnabled(false);
 
         ensureNoVacuum(node0);
         ensureNoVacuum(node1);

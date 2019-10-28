@@ -16,15 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.ObjectInputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.management.Attribute;
@@ -48,6 +39,15 @@ import javax.management.OperationsException;
 import javax.management.QueryExp;
 import javax.management.ReflectionException;
 import javax.management.loading.ClassLoaderRepository;
+import java.io.ObjectInputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -61,6 +61,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -549,7 +550,9 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
 
             clientCfg.setClientMode(true);
 
-            Ignite clientNode = startGrid(clientName1, clientCfg);
+            IgniteEx clientNode = (IgniteEx)startGrid(clientName1, clientCfg);
+
+            clientNode.cluster().baselineAutoAdjustEnabled(false);
 
             List<BaselineNode> baseline = new ArrayList<>(grid(0).cluster().currentBaselineTopology());
 

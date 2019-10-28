@@ -184,6 +184,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Metric registry creation listeners. */
     private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
 
+    /** Metric registry remove listeners. */
+    private final List<Consumer<MetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
+
     /** Metrics update worker. */
     private GridTimeoutProcessor.CancelableTask metricsUpdateTask;
 
@@ -285,13 +288,21 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         metricRegCreationLsnrs.add(lsnr);
     }
 
+    /** {@inheritDoc} */
+    @Override public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr) {
+        metricRegRemoveLsnrs.add(lsnr);
+    }
+
     /**
-     * Removes group.
+     * Removes metric registry.
      *
-     * @param grpName Group name.
+     * @param regName Metric registry name.
      */
-    public void remove(String grpName) {
-        registries.remove(grpName);
+    public void remove(String regName) {
+        MetricRegistry mreg = registries.remove(regName);
+
+        if (mreg != null)
+            notifyListeners(mreg, metricRegRemoveLsnrs);
     }
 
     /**
@@ -327,6 +338,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      */
     public void registerThreadPools(
@@ -344,6 +356,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         // Executors
@@ -358,6 +371,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
         monitorExecutor("GridQueryExecutor", qryExecSvc);
         monitorExecutor("GridSchemaExecutor", schemaExecSvc);
+        monitorExecutor("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             monitorExecutor("GridIndexingExecutor", idxExecSvc);

@@ -97,9 +97,6 @@ public class QueryUtils {
     /** Default schema. */
     public static final String DFLT_SCHEMA = "PUBLIC";
 
-    /** Schema for system view. */
-    public static final String SCHEMA_SYS = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
-
     /** Schema for monitoring views. */
     public static final String SCHEMA_MONITORING = "MONITORING";
 
@@ -126,6 +123,21 @@ public class QueryUtils {
 
     /** */
     private static final Set<Class<?>> SQL_TYPES = createSqlTypes();
+
+    /** Schema for system view. */
+    private static String schemaSys;
+
+    /**
+     * Schema for system view.
+     *
+     * @return Name of the system schema.
+     */
+    public static String sysSchemaName() {
+        if (schemaSys == null)
+            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, true) ? "IGNITE" : "SYS";
+
+        return schemaSys;
+    }
 
     /**
      * Creates SQL types set.
@@ -1199,7 +1211,7 @@ public class QueryUtils {
      * @param e Original exception.
      * @return Schema exception.
      */
-    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Exception e) {
+    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Throwable e) {
         if (e == null)
             return null;
 

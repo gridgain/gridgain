@@ -17,15 +17,17 @@
 export type ClusterStats = {
 	id: string,
 	name: string,
-	nids: string[],
-	addresses: {[id: string]: string},
-	clients: {[id: string]: boolean},
 	clusterVersion: string,
+	demo: boolean,
 	active: boolean,
 	secured: false,
 	gridgain: boolean,
 	ultimate: boolean,
-	supportedFeatures: string
+	supportedFeatures: string,
+	nodes: {[nodeId: string]: {
+        address: string,
+        client: boolean
+    }}
 }
 
 export type AgentsStatResponse = {
@@ -78,7 +80,8 @@ export enum IgniteFeatures {
 	WC_DR_EVENTS = 20,
 	WC_ROLLING_UPGRADE_STATUS = 21,
 	WC_SNAPSHOT_CHAIN_MODE = 22,
-	WC_BASELINE_AUTO_ADJUSTMENT = 23
+	WC_BASELINE_AUTO_ADJUSTMENT = 23,
+	WC_SCHEDULING_NOT_AVAILABLE = 24
 }
 
 export type WebSocketResponse = {

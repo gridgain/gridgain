@@ -33,12 +33,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestWrapper;
 import org.springframework.util.StopWatch;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_MMAP;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.springframework.boot.Banner.Mode.OFF;
 import static org.springframework.security.web.authentication.switchuser.SwitchUserFilter.ROLE_PREVIOUS_ADMINISTRATOR;
@@ -150,6 +153,15 @@ public class Utils {
     }
 
     /**
+     * @param auth Auth.
+     * @param role Role.
+     * @return Authority by name.
+     */
+    public static GrantedAuthority getAuthority(Authentication auth, String role) {
+        return auth.getAuthorities().stream().filter(a -> role.equals(a.getAuthority())).findFirst().orElse(null);
+    }
+
+    /**
      * Static helper that can be used to run a {@link SpringApplication} from the specified source using default
      * settings.
      *
@@ -165,6 +177,7 @@ public class Utils {
         app.setLogStartupInfo(false);
 
         System.setProperty(IGNITE_UPDATE_NOTIFIER, "false");
+        System.setProperty(IGNITE_WAL_MMAP, "false");
         System.setProperty(IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED, "true)");
 
         StopWatch stopWatch = new StopWatch();

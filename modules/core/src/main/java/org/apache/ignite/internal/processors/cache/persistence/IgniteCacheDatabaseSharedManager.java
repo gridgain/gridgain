@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import javax.management.InstanceNotFoundException;
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.management.InstanceNotFoundException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.DataStorageMetrics;
@@ -47,13 +48,18 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.evict.FairFifoPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.NoOpPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
@@ -135,7 +141,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /** First eviction was warned flag. */
     private volatile boolean firstEvictWarn;
 
-
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         if (cctx.kernalContext().clientNode() && cctx.kernalContext().config().getDataStorageConfiguration() == null)
@@ -150,6 +155,102 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         pageSize = memCfg.getPageSize();
 
         initDataRegions(memCfg);
+    }
+
+    /**
+     * @param row Row.
+     * @return {@code True} if given row is tombstone.
+     * @throws IgniteCheckedException If failed.
+     */
+    public boolean isTombstone(@Nullable CacheDataRow row) throws IgniteCheckedException {
+        if (row == null)
+            return false;
+
+        CacheObject val = row.value();
+
+        assert val != null : row;
+
+        return val.cacheObjectType() == CacheObject.TOMBSTONE;
+    }
+
+    /**
+     * @param buf Buffer.
+     * @param key Row key.
+     * @param incomplete Incomplete object.
+     * @return Tombstone flag or {@code null} if there is no enough data.
+     */
+    public Boolean isTombstone(
+        ByteBuffer buf,
+        @Nullable KeyCacheObject key,
+        @Nullable IncompleteCacheObject incomplete
+    ) {
+        if (key == null) {
+            if (incomplete == null) { // Did not start read key yet.
+                if (buf.remaining() < IncompleteCacheObject.HEAD_LEN)
+                    return null;
+
+                int keySize = buf.getInt(buf.position());
+
+                int headOffset = (IncompleteCacheObject.HEAD_LEN + keySize) /* key */ +
+                    8 /* expire time */;
+
+                int requiredSize = headOffset + IncompleteCacheObject.HEAD_LEN; // Value header.
+
+                if (buf.remaining() < requiredSize)
+                    return  null;
+
+                return isTombstone(buf, headOffset);
+            }
+            else { // Reading key, check if there is enogh data to check value header.
+                byte[] data = incomplete.data();
+
+                if (data == null) // Header is not available yet.
+                    return null;
+
+                int keyRemaining = data.length - incomplete.dataOffset();
+
+                assert keyRemaining > 0 : keyRemaining;
+
+                int headOffset = keyRemaining + 8 /* expire time */;
+
+                int requiredSize = headOffset + IncompleteCacheObject.HEAD_LEN; // Value header.
+
+                if (buf.remaining() < requiredSize)
+                    return  null;
+
+                return isTombstone(buf, headOffset);
+            }
+        }
+
+        if (incomplete == null) { // Did not start read value yet.
+            if (buf.remaining() < IncompleteCacheObject.HEAD_LEN)
+                return null;
+
+            return isTombstone(buf, 0);
+        }
+
+        return incomplete.type() == CacheObject.TOMBSTONE;
+     }
+
+    /**
+     * @param buf Buffer.
+     * @param offset Value offset.
+     * @return Tombstone flag or {@code null} if there is no enough data.
+     */
+     private Boolean isTombstone(ByteBuffer buf, int offset) {
+         byte valType = buf.get(buf.position() + offset + 4);
+
+         return valType == CacheObject.TOMBSTONE;
+     }
+
+    /**
+     * @param addr Row address.
+     * @return {@code True} if stored value is tombstone.
+     */
+    public boolean isTombstone(long addr) {
+        byte type = PageUtils.getByte(addr, 4);
+
+        return type == CacheObject.TOMBSTONE;
     }
 
     /**
@@ -427,6 +528,9 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             private CacheFreeList freeList;
 
             private CacheFreeList getFreeList() {
+                if (freeListMap == null)
+                    return null;
+
                 if (freeList == null)
                     freeList = freeListMap.get(dataRegName);
 
@@ -886,7 +990,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      *
      * @param reason Reason.
      */
-    @Nullable public CheckpointFuture forceCheckpoint(String reason) {
+    @Nullable public CheckpointProgress forceCheckpoint(String reason) {
         return null;
     }
 
@@ -1016,10 +1120,15 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * Therefore, inserting a new entry should be prevented in case of some threshold is exceeded.
      *
      * @param region Data region to be checked.
+     * @param row Data row to be inserted.
      * @throws IgniteOutOfMemoryException In case of the given data region does not have enough free space
      * for putting a new entry.
+     * @throws IgniteCheckedException If size of the given {@code row} cannot be calculated.
      */
-    public void ensureFreeSpaceForInsert(DataRegion region) throws IgniteOutOfMemoryException {
+    public void ensureFreeSpaceForInsert(
+        DataRegion region,
+        CacheDataRow row
+    ) throws IgniteOutOfMemoryException, IgniteCheckedException {
         if (region == null)
             return;
 
@@ -1037,14 +1146,14 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         long nonEmptyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
 
         // The maximum number of pages that can be allocated (memorySize / systemPageSize)
-        // should be greater or equal to the current number of non-empty pages plus
-        // the number of pages that may be required in order to move all pages to a reuse bucket,
-        // that is equal to nonEmptyPages * 8 / pageSize, where 8 is the size of a link.
-        // Note that not the whole page can be used to storing links,
+        // should be greater or equal to pages required for inserting a new entry plus
+        // the current number of non-empty pages plus the number of pages that may be required in order to move
+        // all pages to a reuse bucket, that is equal to nonEmptyPages * 8 / pageSize, where 8 is the size of a link.
+        // Note that the whole page cannot be used to storing links (there is obvious overhead),
         // see PagesListNodeIO and PagesListMetaIO#getCapacity(), so we pessimistically multiply the result on 1.5,
         // in any way, the number of required pages is less than 1 percent.
         boolean oomThreshold = (memorySize / pageMem.systemPageSize()) <
-            (nonEmptyPages * (8.0 / pageMem.pageSize() + 1) * 1.5 + 256 /*one page per bucket*/);
+            ((double)row.size() / pageMem.pageSize() + nonEmptyPages * (8.0 * 1.5 / pageMem.pageSize() + 1) + 256 /*one page per bucket*/);
 
         if (oomThreshold) {
             IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
@@ -1289,7 +1398,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         String igniteHomeStr = U.getIgniteHome();
 
         File workDir = igniteHomeStr == null ? new File(path) : U.resolveWorkDirectory(igniteHomeStr, path, false);
-
 
         return new File(workDir, consId);
     }

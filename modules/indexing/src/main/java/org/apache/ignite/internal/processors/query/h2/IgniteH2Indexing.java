@@ -567,6 +567,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             true
                         );
 
+                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry);
+
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
                             conn0,
@@ -575,10 +577,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
-                            new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry)
+                            qryInfo
                         );
 
-                        return new H2FieldsIterator(rs, mvccTracker, conn);
+                        return new H2FieldsIterator(rs, mvccTracker, conn, log, IgniteH2Indexing.this, qryInfo);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
                         if (conn0 != null)
@@ -906,7 +908,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, "Long running query is finished");
+                qryInfo.printLogMessage(log, "Long running query is finished", null);
 
             return rs;
         }
@@ -915,7 +917,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
                 qryInfo.printLogMessage(log, "Long running query is finished with error: "
-                    + e.getMessage());
+                    + e.getMessage(), null);
             }
 
             throw  e;
@@ -1845,10 +1847,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         if ((allTypes || types.contains(TableType.VIEW.name()))
-            && matches(QueryUtils.SCHEMA_SYS, schemaNamePtrn)) {
+            && matches(QueryUtils.sysSchemaName(), schemaNamePtrn)) {
             schemaMgr.systemViews().stream()
                 .filter(t -> matches(t.getTableName(), tblNamePtrn))
-                .map(v -> new TableInformation(QueryUtils.SCHEMA_SYS, v.getTableName(), TableType.VIEW.name()))
+                .map(v -> new TableInformation(QueryUtils.sysSchemaName(), v.getTableName(), TableType.VIEW.name()))
                 .forEach(infos::add);
         }
 
@@ -1892,7 +1894,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ).forEach(infos::add);
 
         // Gather information about system views.
-        if (matches(QueryUtils.SCHEMA_SYS, schemaNamePtrn)) {
+        if (matches(QueryUtils.sysSchemaName(), schemaNamePtrn)) {
             schemaMgr.systemViews().stream()
                 .filter(v -> matches(v.getTableName(), tblNamePtrn))
                 .flatMap(
@@ -1901,7 +1903,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             .filter(c -> matches(c.getName(), colNamePtrn))
                             .map(c -> new ColumnInformation(
                                 c.getColumnId() + 1,
-                                QueryUtils.SCHEMA_SYS,
+                                QueryUtils.sysSchemaName(),
                                 view.getTableName(),
                                 c.getName(),
                                 IgniteUtils.classForName(
@@ -2099,8 +2101,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
-
-        memoryManager = new QueryMemoryManager(ctx, 0); //TODO: GG-18629: Get global_memory_quota value from configuration.
+        memoryManager = new QueryMemoryManager(ctx);
 
         mapQryExec = new GridMapQueryExecutor();
         rdcQryExec = new GridReduceQueryExecutor();
@@ -2315,18 +2316,27 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (log.isDebugEnabled())
             log.debug("Stopping cache query index...");
 
-        mapQryExec.stop();
+        if (mapQryExec != null)
+            mapQryExec.stop();
 
         qryCtxRegistry.clearSharedOnLocalNodeStop();
 
-        runningQryMgr.stop();
-        schemaMgr.stop();
-        longRunningQryMgr.stop();
-        connMgr.stop();
+        if (runningQryMgr != null)
+            runningQryMgr.stop();
 
-        cmdProc.stop();
+        if (schemaMgr != null)
+            schemaMgr.stop();
 
-        memoryManager.close();
+        if (longRunningQryMgr != null)
+            longRunningQryMgr.stop();
+
+        if (connMgr != null)
+            connMgr.stop();
+
+        if (connMgr != null)
+            cmdProc.stop();
+
+        U.closeQuiet(memoryManager);
 
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");

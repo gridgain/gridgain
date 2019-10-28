@@ -50,11 +50,8 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.ClassRule;
-import org.junit.rules.TestRule;
 
 import static java.lang.String.join;
 import static java.lang.System.lineSeparator;
@@ -62,7 +59,6 @@ import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
@@ -74,12 +70,8 @@ import static org.apache.ignite.testframework.GridTestUtils.cleanIdleVerifyLogFi
  * {@link GridCommandHandlerClusterPerMethodAbstractTest}
  * {@link GridCommandHandlerClusterByClassAbstractTest}
  */
-@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
 public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
-    /** */
-    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
-
     /** */
     protected static final String CLIENT_NODE_NAME_PREFIX = "client";
 

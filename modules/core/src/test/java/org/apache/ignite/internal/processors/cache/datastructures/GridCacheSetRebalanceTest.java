@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteSet;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -29,6 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
@@ -36,13 +36,13 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent
- * in the classpath on the joined node.
+ * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent in the classpath on
+ * the joined node.
  */
 public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
     /** */
@@ -84,12 +84,12 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testCollocatedSet() throws Exception {
         useExtendedClasses = true;
 
-        Ignite ignite0 = startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
 
         IgniteSet set = ignite0.set("test-set", new CollectionConfiguration().setBackups(1).setCollocated(true));
@@ -109,7 +109,7 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         useExtendedClasses = false;
 
-        startGrid(1);
+        GridTestUtils.runAsync(() -> startGrid(1));
 
         ignite0.cluster().setBaselineTopology(ignite0.cluster().forServers().nodes());
 

@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -605,6 +606,11 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     }
 
     /** {@inheritDoc} */
+    @Override public ExecutorService getRebalanceExecutorService() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public IgniteExceptionRegistry exceptionRegistry() {
         return null;
     }
@@ -656,6 +662,11 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** {@inheritDoc} */
     @Override public GridInternalSubscriptionProcessor internalSubscriptionProcessor() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IoStatisticsManager ioStats() {
         return null;
     }
 

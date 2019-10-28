@@ -23,6 +23,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -47,6 +48,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
+import javax.cache.expiry.ExpiryPolicy;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -128,6 +130,7 @@ public class MockConfiguration {
                 IgniteCache<K, V> mockedCache = mock(IgniteCache.class);
 
                 when(mockedCache.spliterator()).thenReturn(Spliterators.emptySpliterator());
+                when(mockedCache.withExpiryPolicy(any(ExpiryPolicy.class))).thenReturn(mockedCache);
 
                 return mockedCache;
             }
@@ -138,6 +141,10 @@ public class MockConfiguration {
 
             @Override public IgniteMessaging message(ClusterGroup prj) {
                 return mock(IgniteMessaging.class);
+            }
+
+            @Override public IgniteLogger log() {
+                return mock(IgniteLogger.class);
             }
         };
     }

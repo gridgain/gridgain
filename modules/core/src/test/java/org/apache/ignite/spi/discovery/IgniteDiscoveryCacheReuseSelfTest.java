@@ -17,7 +17,6 @@
 package org.apache.ignite.spi.discovery;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -29,6 +28,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
  * Tests discovery cache reuse between topology events.
@@ -47,10 +48,11 @@ public class IgniteDiscoveryCacheReuseSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
     public void testDiscoCacheReuseOnNodeJoin() throws Exception {
-        startGridsMultiThreaded(2);
+        IgniteEx ignite1 = (IgniteEx)startGridsMultiThreaded(2);
 
+        ignite1.cluster().baselineAutoAdjustEnabled(false);
         // The final topology version after 2 node joins and one CacheAffinityChange message.
         AffinityTopologyVersion waited = new AffinityTopologyVersion(2, 1);
 

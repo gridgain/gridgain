@@ -26,10 +26,15 @@ import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesLoadTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.CacheRemoveWithTombstonesFailoverTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyVolatileRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsFailAllTest;
@@ -40,6 +45,12 @@ import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCount
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateTwoPrimaryTwoBackupsTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateWithFilterTest;
+import org.apache.ignite.internal.stat.IoStatisticsManagerSelfTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCacheSelfTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImplSelfTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanCacheGroupsTest;
+import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
 
@@ -82,10 +93,27 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(TxPartitionCounterStateWithFilterTest.class);
         ignoredTests.add(TxPartitionCounterStateConsistencyTest.class);
         ignoredTests.add(TxPartitionCounterStateConsistencyHistoryRebalanceTest.class);
+        ignoredTests.add(TxPartitionCounterStateConsistencyVolatileRebalanceTest.class);
+        ignoredTests.add(TxCrossCachePartitionConsistencyTest.class);
 
         // IO statistics.
         ignoredTests.add(IoStatisticsCacheSelfTest.class);
         ignoredTests.add(IoStatisticsCachePersistenceSelfTest.class);
+        ignoredTests.add(IoStatisticsManagerSelfTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMXBeanCacheSelfTest.class);
+        ignoredTests.add(IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class);
+
+        // Compatibility metrics
+        ignoredTests.add(org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMXBeanImplSelfTest.class);
+        ignoredTests.add(org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
+
+        // Tombstones are not created with mvcc.
+        ignoredTests.add(CacheRemoveWithTombstonesTest.class);
+        ignoredTests.add(CacheRemoveWithTombstonesLoadTest.class);
+        ignoredTests.add(CacheRemoveWithTombstonesFailoverTest.class);
 
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));
     }
