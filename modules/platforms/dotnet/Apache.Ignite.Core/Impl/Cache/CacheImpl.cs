@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly Func<IBinaryStream, Exception> _readException;
 
         /** Near cache. */
-        private readonly NearCache<TK, TV> _nearCache;
+        private readonly INearCache<TK, TV> _nearCache;
 
         /// <summary>
         /// Constructor.

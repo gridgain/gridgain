@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// When the use case above is detected, we downgrade near cache map to {object, object}, which will cause
         /// more boxing and casting. 
         /// </summary>
-        public NearCache<TK, TV> GetNearCache<TK, TV>(string cacheName,
+        public INearCache<TK, TV> GetNearCache<TK, TV>(string cacheName,
             NearCacheConfiguration nearCacheConfiguration)
         {
             Debug.Assert(!string.IsNullOrEmpty(cacheName));
@@ -57,14 +57,19 @@ namespace Apache.Ignite.Core.Impl.Cache
             var nearCache = _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
 
             var genericNearCache = nearCache as NearCache<TK, TV>;
-
-            if (genericNearCache == null)
+            if (genericNearCache != null)
             {
-                // TODO: Downgrade to <object, object> and wrap
-                throw new NotImplementedException();
+                return genericNearCache;
             }
 
-            return genericNearCache;
+            var nonGenericNearCache = nearCache as NearCache<object, object>;
+            if (nonGenericNearCache == null)
+            {
+                nonGenericNearCache = new NearCache<object, object>();
+                _nearCaches.Set(cacheId, nonGenericNearCache);
+            }
+
+            return new NearCacheGenericWrapper<TK, TV>(nonGenericNearCache);
         }
 
         /// <summary>

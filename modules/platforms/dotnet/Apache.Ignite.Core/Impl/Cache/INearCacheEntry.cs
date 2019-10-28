@@ -16,28 +16,12 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
-    using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Binary.IO;
-
-    internal interface INearCache<in TK, TV>
+    internal interface INearCacheEntry<T>
     {
-        bool TryGetValue(TK key, out TV val);
+        bool HasValue { get; }
         
-        void Put(TK key, TV val);
+        T Value { get; }
         
-        INearCacheEntry<TV> GetOrCreateEntry(TK key);
-        
-        void Remove(TK key);
-    }
-
-    /// <summary>
-    /// Non-generic near cache facade.
-    /// </summary>
-    internal interface INearCache
-    {
-        /// <summary>
-        /// Reads cache key from a stream and invalidates.
-        /// </summary>
-        void Update(IBinaryStream keyStream, Marshaller marshaller);
+        void SetValueIfEmpty(T value);
     }
 }

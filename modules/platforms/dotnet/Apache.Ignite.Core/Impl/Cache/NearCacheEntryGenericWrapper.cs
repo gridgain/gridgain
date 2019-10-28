@@ -16,28 +16,32 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
-    using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Binary.IO;
+    using System.Diagnostics;
 
-    internal interface INearCache<in TK, TV>
+    internal class NearCacheEntryGenericWrapper<T> : INearCacheEntry<T>
     {
-        bool TryGetValue(TK key, out TV val);
-        
-        void Put(TK key, TV val);
-        
-        INearCacheEntry<TV> GetOrCreateEntry(TK key);
-        
-        void Remove(TK key);
-    }
+        private readonly INearCacheEntry<object> _nearCacheEntry;
 
-    /// <summary>
-    /// Non-generic near cache facade.
-    /// </summary>
-    internal interface INearCache
-    {
-        /// <summary>
-        /// Reads cache key from a stream and invalidates.
-        /// </summary>
-        void Update(IBinaryStream keyStream, Marshaller marshaller);
+        public NearCacheEntryGenericWrapper(INearCacheEntry<object> nearCacheEntry)
+        {
+            Debug.Assert(nearCacheEntry != null);
+            
+            _nearCacheEntry = nearCacheEntry;
+        }
+
+        public bool HasValue
+        {
+            get { return _nearCacheEntry.HasValue; }
+        }
+
+        public T Value
+        {
+            get { return (T) _nearCacheEntry.Value; }
+        }
+
+        public void SetValueIfEmpty(T value)
+        {
+            _nearCacheEntry.SetValueIfEmpty(value);
+        }
     }
 }

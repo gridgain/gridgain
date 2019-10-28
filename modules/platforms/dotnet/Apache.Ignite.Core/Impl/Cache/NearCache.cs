@@ -24,7 +24,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache<TK, TV> : INearCache
+    internal class NearCache<TK, TV> : INearCache, INearCache<TK, TV>
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             _map[key] = new NearCacheEntry<TV>(true, val);
         }
 
-        public NearCacheEntry<TV> GetOrCreateEntry(TK key)
+        public INearCacheEntry<TV> GetOrCreateEntry(TK key)
         {
             return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
         }
