@@ -246,7 +246,7 @@ class BinaryMetadataFileStore {
      */
     private class BinaryMetadataAsyncWriter extends GridWorker {
         /** */
-        private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue();
+        private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue<>();
 
         /** */
         BinaryMetadataAsyncWriter() {
@@ -263,7 +263,8 @@ class BinaryMetadataFileStore {
             writeOpFutures.put(new OperationSyncKey(task.meta.typeId(), task.typeVer), writeOpFuture);
 
             if (stopOnCriticalError) {
-                writeOpFuture.onDone(new Exception("Node is stopping due to critical error. See more details in logs."));
+                writeOpFuture.onDone(new Exception("The node is in invalid state due to a critical error. " +
+                    "See logs for more details."));
 
                 return;
             }
