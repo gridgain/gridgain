@@ -17,7 +17,6 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,6 +33,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2JavaObject;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /** */
@@ -146,15 +146,11 @@ public class IgniteSqlContainerColumnMemoryUsageTest extends AbstractIndexingCom
 
         GridH2JavaObject valMsg = (GridH2JavaObject)msg.values().iterator().next();
 
-        Field fb = valMsg.getClass().getDeclaredField("b");
-
-        fb.setAccessible(true);
-
-        return (byte[])fb.get(valMsg);
+        return GridTestUtils.getFieldValue(valMsg, "b");
     }
 
     /** */
-    static class EntryValue {
+    private static class EntryValue {
         /** */
         @QuerySqlField
         Object payload;
@@ -166,7 +162,7 @@ public class IgniteSqlContainerColumnMemoryUsageTest extends AbstractIndexingCom
     }
 
     /** */
-    static class Holder {
+    private static class Holder {
         /** */
         Object x;
 
