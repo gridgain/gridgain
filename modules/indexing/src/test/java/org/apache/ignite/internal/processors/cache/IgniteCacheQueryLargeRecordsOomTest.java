@@ -59,7 +59,7 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
         // We expect that each entry size is 1 MB and in PK BPlusTree cursor at least 100 entries may be cached.
         // It means that each cursor may have ~100 MB of cached data. So let's choose the number of open cursors
         // near to the half of available heap to find out if there is any leak here.
-        final int nReaders = (int)(freeHeapSize / 1e8) / 2;
+        final int nReaders = (int)(freeHeapSize / 1e8) / 4;
 
         if (log.isInfoEnabled())
             log.info("Data loaded. Number of readers=" + nReaders);

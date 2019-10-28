@@ -35,6 +35,9 @@ public class H2Cursor implements Cursor, AutoCloseable {
     /** */
     private final long time = U.currentTimeMillis();
 
+    /** */
+    private Row cur;
+
     /**
      * @param cursor Cursor.
      */
@@ -46,12 +49,7 @@ public class H2Cursor implements Cursor, AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public Row get() {
-        try {
-            return cursor.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
-        }
+        return cur;
     }
 
     /** {@inheritDoc} */
@@ -68,8 +66,12 @@ public class H2Cursor implements Cursor, AutoCloseable {
                 if (row.expireTime() > 0 && row.expireTime() <= time)
                     continue;
 
+                cur = row;
+
                 return true;
             }
+
+            cur = null;
 
             return false;
         }
