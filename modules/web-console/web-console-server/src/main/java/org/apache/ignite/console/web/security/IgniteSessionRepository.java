@@ -80,10 +80,10 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
 
             String sesId = ses.getId();
 
-            if (acc != null) {
+            if (acc != null && ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME) == null) {
                 String email = acc.getEmail();
 
-                ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
+                ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, email);
 
                 accToSesIdx.add(email, sesId);
             }
