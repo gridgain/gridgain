@@ -16,14 +16,21 @@
 
 package org.apache.ignite.internal.processors.security;
 
+import java.security.AccessController;
+import java.security.AllPermission;
+import java.security.Permissions;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.processors.security.sandbox.SandboxRunnable;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.security.SecurityException;
@@ -33,6 +40,11 @@ import org.apache.ignite.plugin.security.SecurityPermission;
  * Security utilities.
  */
 public class SecurityUtils {
+    /** */
+    public static final String MSG_SEC_PROC_CLS_IS_INVALID = "Local node's grid security processor class " +
+        "is not equal to remote node's grid security processor class " +
+        "[locNodeId=%s, rmtNodeId=%s, locCls=%s, rmtCls=%s]";
+
     /** Default serialization version. */
     private static final int DFLT_SERIALIZE_VERSION = isSecurityCompatibilityMode() ? 1 : 2;
 
@@ -42,6 +54,16 @@ public class SecurityUtils {
             return DFLT_SERIALIZE_VERSION;
         }
     };
+
+    /** Permissions that contain {@code AllPermission}. */
+    public static final Permissions ALL_PERMISSIONS;
+
+    static {
+        ALL_PERMISSIONS = new Permissions();
+
+        ALL_PERMISSIONS.add(new AllPermission());
+        ALL_PERMISSIONS.setReadOnly();
+    }
 
     /**
      * Private constructor.
@@ -112,5 +134,52 @@ public class SecurityUtils {
         catch (IgniteCheckedException e) {
             throw new SecurityException("Failed to get security context.", e);
         }
+    }
+
+    /**
+     * Computes a result in a privileged action.
+     *
+     * @param c Instance of SandboxCallable.
+     * @param <T> Type of result.
+     * @param <E> Type of Exception.
+     * @return Computed result.
+     * @throws E if unable to compute a result.
+     */
+    public static <T, E extends Exception> T doPrivileged(Callable<T> c) throws E {
+        try {
+            return AccessController.doPrivileged((PrivilegedExceptionAction<T>)c::call);
+        }
+        catch (PrivilegedActionException e) {
+            throw (E)e.getException();
+        }
+    }
+
+    /**
+     * Calls the method <code>run</code> of SandboxRunnable in a privileged action.
+     *
+     * @param r Instance of SandboxRunnable.
+     * @param <E> Type of Exception.
+     * @throws E if the run method is failed.
+     */
+    public static <E extends Exception> void doPrivileged(SandboxRunnable<E> r) throws E {
+        try {
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>)
+                () -> {
+                    r.run();
+
+                    return null;
+                }
+            );
+        }
+        catch (PrivilegedActionException e) {
+            throw (E)e.getException();
+        }
+    }
+
+    /**
+     * @return True if SecurityManager is installed.
+     */
+    public static boolean hasSecurityManager() {
+        return System.getSecurityManager() != null;
     }
 }

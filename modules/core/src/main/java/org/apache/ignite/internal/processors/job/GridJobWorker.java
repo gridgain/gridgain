@@ -49,6 +49,8 @@ import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
+import org.apache.ignite.internal.processors.security.sandbox.IgniteSandbox;
 import org.apache.ignite.internal.processors.service.GridServiceNotFoundException;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -447,10 +449,15 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
             }
 
             // Inject resources.
-            ctx.resource().inject(dep, taskCls, job, ses, jobCtx);
+            if (SecurityUtils.hasSecurityManager())
+                SecurityUtils.doPrivileged(() -> ctx.resource().inject(dep, taskCls, job, ses, jobCtx));
+            else
+                ctx.resource().inject(dep, taskCls, job, ses, jobCtx);
 
             if (!internal && ctx.event().isRecordable(EVT_JOB_QUEUED))
                 recordEvent(EVT_JOB_QUEUED, "Job got queued for computation.");
+
+            job = wrap(job);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to initialize job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
@@ -471,6 +478,25 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
         }
 
         return ex == null;
+    }
+
+    /** */
+    private ComputeJob wrap(final ComputeJob job) {
+        final IgniteSandbox sandbox = ctx.security().sandbox();
+
+        if (job != null && sandbox.enabled()) {
+            return new ComputeJob() {
+                @Override public void cancel() {
+                    sandbox.execute(job::cancel);
+                }
+
+                @Override public Object execute() throws IgniteException {
+                    return sandbox.execute(job::execute);
+                }
+            };
+        }
+
+        return job;
     }
 
     /** {@inheritDoc} */

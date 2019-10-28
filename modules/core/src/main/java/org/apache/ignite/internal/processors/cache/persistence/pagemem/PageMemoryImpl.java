@@ -81,6 +81,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingP
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
@@ -881,7 +882,10 @@ public class PageMemoryImpl implements PageMemoryEx {
                 long actualPageId = 0;
 
                 try {
-                    storeMgr.read(grpId, pageId, buf);
+                    if (SecurityUtils.hasSecurityManager())
+                        SecurityUtils.doPrivileged(() -> storeMgr.read(grpId, pageId, buf));
+                    else
+                        storeMgr.read(grpId, pageId, buf);
 
                     statHolder.trackPhysicalAndLogicalRead(pageAddr);
 
