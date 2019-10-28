@@ -61,6 +61,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -2398,6 +2399,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      * @return {@code True} if there are local partitions need to be evicted.
      */
+    @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
         if (!ctx.kernalContext().state().evictionsAllowed())
             return false;
@@ -2484,30 +2486,27 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         // After all rents are finished resend partitions.
         if (!rentingFutures.isEmpty()) {
-            final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
+            GridCompoundFuture fut = new GridCompoundFuture<>();
 
-            for (IgniteInternalFuture<?> rentingFuture : rentingFutures) {
-                rentingFuture.listen(f -> {
-                    int remaining = rentingPartitions.decrementAndGet();
+            rentingFutures.forEach(fut::add);
 
-                    if (remaining == 0) {
-                        lock.writeLock().lock();
+            fut.listen(f -> {
+                lock.writeLock().lock();
 
-                        try {
-                            this.updateSeq.incrementAndGet();
+                try {
+                    this.updateSeq.incrementAndGet();
 
-                            if (log.isDebugEnabled())
-                                log.debug("Partitions have been scheduled to resend [reason=" +
-                                    "Evictions are done [grp=" + grp.cacheOrGroupName() + "]");
+                    if (log.isDebugEnabled())
+                        log.debug("Partitions have been scheduled to resend [reason=" +
+                            "Evictions are done [grp=" + grp.cacheOrGroupName() + "]");
 
-                            ctx.exchange().scheduleResendPartitions();
-                        }
-                        finally {
-                            lock.writeLock().unlock();
-                        }
-                    }
-                });
-            }
+                    ctx.exchange().scheduleResendPartitions();
+                }
+                finally {
+                    lock.writeLock().unlock();
+                }
+            });
+
         }
 
         return hasEvictedPartitions;
