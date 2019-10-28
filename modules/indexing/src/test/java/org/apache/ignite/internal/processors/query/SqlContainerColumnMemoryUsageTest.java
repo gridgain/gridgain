@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
@@ -73,52 +72,62 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
 
     /** */
     @Test
-    public void testCollectionColumnMessageSize() throws Exception {
-        List<Holder> list = Stream.generate(() -> new Holder(new byte[100])).limit(2).collect(Collectors.toList());
+    public void testArrayColumnMessageSize() throws Exception {
+        Object[] arr = Stream.generate(this::testObject).limit(10).toArray();
 
-        checkColumnMessageSize(list, 400);
+        checkColumnMessageSize(arr, 10 * testObjectSize(), 11 * testObjectSize());
     }
 
     /** */
     @Test
-    public void testArrayColumnMessageSize() throws Exception {
-        Object[] arr = Stream.generate(() -> new Holder(new byte[100])).limit(2).toArray();
+    public void testCollectionColumnMessageSize() throws Exception {
+        List<Holder> list = Stream.generate(this::testObject).limit(10).collect(Collectors.toList());
 
-        checkColumnMessageSize(arr, 400);
+        checkColumnMessageSize(list, 10 * testObjectSize(), 11 * testObjectSize());
     }
 
     /** */
     @Test
     public void testMapColumnMessageSize1() throws Exception {
-        Map<Integer, Holder> map = IntStream.of(1, 2)
+        Map<Integer, Holder> map = IntStream.range(0, 10)
             .boxed()
-            .collect(Collectors.toMap(Function.identity(), i -> new Holder(new byte[100])));
+            .collect(Collectors.toMap(Function.identity(), i -> testObject()));
 
-        checkColumnMessageSize(map, 400);
+        checkColumnMessageSize(map, 10 * (testObjectSize() + 5), 11 * (testObjectSize() + 5));
     }
 
     /** */
     @Test
     public void testMapColumnMessageSize2() throws Exception {
-        Map<Holder, Integer> map = IntStream.of(1, 2)
+        Map<Holder, Integer> map = IntStream.range(0, 10)
             .boxed()
             .collect(Collectors.toMap(i -> new Holder(new byte[100 + i]), Function.identity()));
 
-        checkColumnMessageSize(map, 400);
+        int mapEntriesSize = 0;
+
+        for (Holder holder : map.keySet())
+            mapEntriesSize += objectSize(holder) + 5;
+
+        checkColumnMessageSize(map, mapEntriesSize, mapEntriesSize + objectSize(map.keySet().iterator().next()) + 5);
     }
 
     /** */
     @Test
     public void testMapColumnMessageSize3() throws Exception {
-        Map<Holder, Holder> map = IntStream.of(1)
+        Map<Holder, Holder> map = IntStream.range(0, 10)
             .boxed()
-            .collect(Collectors.toMap(i -> new Holder(new byte[100]), i -> new Holder(new byte[100])));
+            .collect(Collectors.toMap(i -> new Holder(new byte[100 + i]), i -> testObject()));
 
-        checkColumnMessageSize(map, 400);
+        int mapEntriesSize = 0;
+
+        for (Holder holder : map.keySet())
+            mapEntriesSize += objectSize(holder) + testObjectSize();
+
+        checkColumnMessageSize(map, mapEntriesSize, mapEntriesSize + objectSize(map.keySet().iterator().next()) + testObjectSize());
     }
 
     /** */
-    private void checkColumnMessageSize(Object container, int sizeLimit) throws Exception {
+    private void checkColumnMessageSize(Object container, int sizeLower, int sizeUpper) throws Exception {
         IgniteCache<Object, Object> cache = clientNode().cache(DEFAULT_CACHE_NAME);
 
         cache.put(1, new EntryValue(container));
@@ -133,7 +142,22 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
         byte[] columnBytes = extractColumnBytes(msgs);
 
         // Kind of smoke check to ensure that each container element do not need memory equal to whole container size
-        assertTrue(columnBytes.length < sizeLimit);
+        assertTrue(sizeLower < columnBytes.length && columnBytes.length < sizeUpper);
+    }
+
+    /** */
+    private Holder testObject() {
+        return new Holder(new byte[100]);
+    }
+
+    /** */
+    private int testObjectSize() throws Exception {
+        return objectSize(testObject());
+    }
+
+    /** */
+    private int objectSize(Object obj) throws Exception {
+        return grid(0).configuration().getMarshaller().marshal(obj).length;
     }
 
     /** */
