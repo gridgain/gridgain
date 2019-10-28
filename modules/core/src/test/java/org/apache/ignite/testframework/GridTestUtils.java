@@ -80,6 +80,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -2230,6 +2231,26 @@ public final class GridTestUtils {
     public static void mergeExchangeWaitVersion(Ignite node, long topVer, List mergedEvts) {
         ((IgniteEx)node).context().cache().context().exchange().mergeExchangesTestWaitVersion(
             new AffinityTopologyVersion(topVer, 0), mergedEvts);
+    }
+
+    /**
+     * Checks that {@code state} is active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertActive(ClusterState state) {
+        assertTrue(state + " isn't active state", ClusterState.active(state));
+    }
+
+    /**
+     * Checks that {@code state} isn't active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertInactive(ClusterState state) {
+        assertFalse(state + " isn't inactive state", ClusterState.active(state));
     }
 
     /** Test parameters scale factor util. */
