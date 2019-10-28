@@ -262,6 +262,17 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 return ReferenceEquals(res1, res2);
             }, 300));
+            
+            // Invalidate after get.
+            remoteCache[key] = new Foo(1);
+            
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                var res1 = localCache.Get(key);
+                var res2 = localCache.Get(key);
+
+                return res1.Bar == 1 && ReferenceEquals(res1, res2);
+            }, 300));
         }
         
         /// <summary>
@@ -405,7 +416,12 @@ namespace Apache.Ignite.Core.Tests.Cache
         /** */
         private class Foo
         {
-            // No-op.
+            public Foo(int bar = 0)
+            {
+                Bar = bar;
+            }
+
+            public int Bar;
         }
         
         /** */
