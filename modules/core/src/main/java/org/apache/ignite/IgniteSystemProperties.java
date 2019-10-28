@@ -16,13 +16,13 @@
 
 package org.apache.ignite;
 
-import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1323,6 +1323,12 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
+
+    /**
+     * Disables BinaryObject in container (collection) detach when marshalling SQL queries results.
+     * Default value is <code>false</code>.
+     */
+    public static final String SQL_DISABLE_OBJECTS_IN_CONTAINER_DETACH = "SQL_DISABLE_OBJECTS_IN_CONTAINER_DETACH";
 
     /**
      * Enforces singleton.

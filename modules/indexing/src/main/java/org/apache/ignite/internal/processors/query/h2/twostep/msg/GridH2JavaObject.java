@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
@@ -32,6 +33,10 @@ import static org.h2.util.StringUtils.convertBytesToHex;
  * H2 Java Object.
  */
 public class GridH2JavaObject extends GridH2ValueMessage {
+    /** Flag to disable container (collection) objects detach. Changed by reflection in tests. */
+    private static final boolean DISABLE_OBJECTS_IN_CONTAINER_DETACH =
+        Boolean.getBoolean(IgniteSystemProperties.SQL_DISABLE_OBJECTS_IN_CONTAINER_DETACH);
+
     /** */
     private byte[] b;
 
@@ -48,7 +53,8 @@ public class GridH2JavaObject extends GridH2ValueMessage {
     public GridH2JavaObject(Value val) {
         assert val.getType().getValueType() == Value.JAVA_OBJECT : val.getType();
 
-        allowDetachForSimpleContainers(val.getObject());
+        if (!DISABLE_OBJECTS_IN_CONTAINER_DETACH)
+            allowDetachForSimpleContainers(val.getObject());
 
         b = val.getBytesNoCopy();
     }
