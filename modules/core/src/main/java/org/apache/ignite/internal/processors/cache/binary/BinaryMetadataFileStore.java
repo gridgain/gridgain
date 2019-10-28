@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.cache.binary;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -67,7 +66,10 @@ class BinaryMetadataFileStore {
     private BinaryMetadataAsyncWriter writer;
 
     /** */
-    private final ConcurrentHashMap<WriteOpSync, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
+    private final ConcurrentMap<OperationSyncKey, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
+
+    /** Flag to indicate that node is stopping due to detected critical error. */
+    private volatile boolean stopOnCriticalError = false;
 
     /**
      * @param metadataLocCache Metadata locale cache.
@@ -113,8 +115,7 @@ class BinaryMetadataFileStore {
      * Stops worker for async writing of binary metadata.
      */
     void stop() {
-        if (writer != null)
-            U.cancel(writer);
+        U.cancel(writer);
     }
 
     /**
@@ -143,9 +144,10 @@ class BinaryMetadataFileStore {
 
             U.error(log, msg);
 
-            for (GridFutureAdapter fut : writeOpFutures.values()) {
+            stopOnCriticalError = true;
+
+            for (GridFutureAdapter fut : writeOpFutures.values())
                 fut.onDone(e);
-            }
 
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
@@ -220,7 +222,7 @@ class BinaryMetadataFileStore {
         if (!CU.isPersistenceEnabled(ctx.config()))
             return;
 
-        writer.submit(new WriteOpTask(meta, typeVer));
+        writer.submit(new WriteOperationTask(meta, typeVer));
     }
 
     /**
@@ -233,7 +235,7 @@ class BinaryMetadataFileStore {
         if (typeVer < 0)
             return;
 
-        GridFutureAdapter fut = writeOpFutures.get(new WriteOpSync(typeId, typeVer));
+        GridFutureAdapter fut = writeOpFutures.get(new OperationSyncKey(typeId, typeVer));
 
         if (fut != null)
             fut.get();
@@ -244,7 +246,7 @@ class BinaryMetadataFileStore {
      */
     private class BinaryMetadataAsyncWriter extends GridWorker {
         /** */
-        private final BlockingQueue<WriteOpTask> queue = new LinkedBlockingQueue();
+        private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue();
 
         /** */
         BinaryMetadataAsyncWriter() {
@@ -252,11 +254,19 @@ class BinaryMetadataFileStore {
         }
 
         /** */
-        void submit(WriteOpTask task) {
+        void submit(WriteOperationTask task) {
             if (isCancelled())
                 return;
 
-            writeOpFutures.put(new WriteOpSync(task.meta.typeId(), task.typeVer), new GridFutureAdapter());
+            GridFutureAdapter writeOpFuture = new GridFutureAdapter();
+
+            writeOpFutures.put(new OperationSyncKey(task.meta.typeId(), task.typeVer), writeOpFuture);
+
+            if (stopOnCriticalError) {
+                writeOpFuture.onDone(new Exception("Node is stopping due to critical error. See more details in logs."));
+
+                return;
+            }
 
             queue.add(task);
         }
@@ -293,7 +303,7 @@ class BinaryMetadataFileStore {
 
         /** */
         private void body0() throws InterruptedException {
-            WriteOpTask task;
+            WriteOperationTask task;
 
             blockingSectionBegin();
 
@@ -306,7 +316,7 @@ class BinaryMetadataFileStore {
                 blockingSectionEnd();
             }
 
-            GridFutureAdapter fut = writeOpFutures.remove(new WriteOpSync(task.meta.typeId(), task.typeVer));
+            GridFutureAdapter fut = writeOpFutures.remove(new OperationSyncKey(task.meta.typeId(), task.typeVer));
 
             if (fut != null)
                 fut.onDone();
@@ -316,14 +326,14 @@ class BinaryMetadataFileStore {
     /**
      *
      */
-    private static final class WriteOpTask {
+    private static final class WriteOperationTask {
         /** */
         private final BinaryMetadata meta;
         /** */
         private final int typeVer;
 
         /** */
-        private WriteOpTask(BinaryMetadata meta, int ver) {
+        private WriteOperationTask(BinaryMetadata meta, int ver) {
             this.meta = meta;
             typeVer = ver;
         }
@@ -332,7 +342,7 @@ class BinaryMetadataFileStore {
     /**
      *
      */
-    private static final class WriteOpSync {
+    private static final class OperationSyncKey {
         /** */
         private final int typeId;
 
@@ -340,32 +350,29 @@ class BinaryMetadataFileStore {
         private final int typeVer;
 
         /** */
-        private WriteOpSync(int typeId, int typeVer) {
+        private OperationSyncKey(int typeId, int typeVer) {
             this.typeId = typeId;
             this.typeVer = typeVer;
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Objects.hash(typeId, typeVer);
+            return 31 * typeId + typeVer;
         }
 
         /** {@inheritDoc} */
         @Override public boolean equals(Object obj) {
-            if (obj == this)
-                return true;
-
-            if (!(obj instanceof WriteOpSync))
+            if (!(obj instanceof OperationSyncKey))
                 return false;
 
-            WriteOpSync that = (WriteOpSync)obj;
+            OperationSyncKey that = (OperationSyncKey)obj;
 
             return (that.typeId == typeId) && (that.typeVer == typeVer);
         }
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(WriteOpSync.class, this);
+            return S.toString(OperationSyncKey.class, this);
         }
     }
 }

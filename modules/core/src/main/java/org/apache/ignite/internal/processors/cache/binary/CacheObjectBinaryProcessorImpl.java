@@ -653,7 +653,13 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         return meta != null ? meta.wrap(binaryCtx) : null;
     }
 
-    /** */
+    /**
+     * Forces caller thread to wait for binary metadata write operation for given type ID.
+     *
+     * In case of in-memory mode this method becomes a No-op as no binary metadata is written to disk in this mode.
+     *
+     * @param typeId ID of binary type to wait for metadata write operation.
+     */
     public void waitMetadataWriteIfNeeded(final int typeId) {
         if (metadataFileStore == null)
             return;

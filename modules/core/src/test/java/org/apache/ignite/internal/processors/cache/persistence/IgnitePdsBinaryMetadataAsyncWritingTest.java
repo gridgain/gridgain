@@ -247,7 +247,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
-     * Verifies that
+     * Verifies that no updates are applied to cache on node until all metadata write operations
+     * for updated type are fully written to disk.
      *
      * @throws Exception If failed.
      */
