@@ -343,6 +343,15 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /// <summary>
+        /// Tests that near cache is updated/invalidated by SQL DML ooperations.
+        /// </summary>
+        [Test]
+        public void TestSqlUpdatesNearCache()
+        {
+            // TODO
+        }
+
+        /// <summary>
         /// Asserts the cache is near.
         /// </summary>
         private void AssertCacheIsNear(ICache<int, int> cache)
