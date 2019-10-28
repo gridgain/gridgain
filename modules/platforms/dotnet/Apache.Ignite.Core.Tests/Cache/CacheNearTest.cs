@@ -255,8 +255,13 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             remoteCache[key] = new Foo();
 
-            // ReSharper disable once EqualExpressionComparison
-            TestUtils.WaitForCondition(() => ReferenceEquals(localCache.Get(key), localCache.Get(key)), 300);
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                var res1 = localCache.Get(key);
+                var res2 = localCache.Get(key);
+
+                return ReferenceEquals(res1, res2);
+            }, 300));
         }
         
         /// <summary>
