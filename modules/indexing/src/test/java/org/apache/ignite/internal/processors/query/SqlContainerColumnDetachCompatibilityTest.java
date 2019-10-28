@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.ignite.internal.processors.query;
 
 import java.util.Arrays;
