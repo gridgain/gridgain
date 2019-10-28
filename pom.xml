@@ -130,12 +130,6 @@
         </profile>
 
         <profile>
-            <id>all-other</id> <!-- Used to update project versions and check all modules compilation. -->
-            <modules> <!-- Sorted alphabetically. -->
-            </modules>
-        </profile>
-
-        <profile>
             <id>test</id>
             <build>
                 <plugins>
