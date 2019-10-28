@@ -446,21 +446,28 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            var near = CanUseNear;
-            if (near)
+            if (!CanUseNear)
             {
-                TV val;
-                if (_nearCache.TryGetValue(key, out val))
-                {
-                    return val;
-                }
-                
-                // TODO: when near and not found, CacheOp.Get causes double serialization/deserialization - 
-                // once here, once in NearCache.Update callback.
-                // Solutions:
-                // * CacheOp.NearGet - does not cause a callback. But will this always work?
+                return GetInternal(key);
             }
 
+            TV val;
+            if (_nearCache.TryGetValue(key, out val))
+            {
+                return val;
+            }
+
+            // TODO: Wrap into _nearCache.GetOrAdd?
+            var entry = _nearCache.GetOrCreateEntry(key);
+
+            val = GetInternal(key);
+            entry.SetValueIfEmpty(val);
+
+            return val;
+        }
+
+        private TV GetInternal(TK key)
+        {
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
                 (stream, res) =>

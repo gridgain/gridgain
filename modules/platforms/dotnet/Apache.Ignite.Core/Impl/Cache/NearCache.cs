@@ -29,18 +29,33 @@ namespace Apache.Ignite.Core.Impl.Cache
         // TODO: Init capacity from settings
         // TODO: Eviction
         // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
-        private readonly ConcurrentDictionary<TK, TV> _map = new ConcurrentDictionary<TK, TV>();
+        private readonly ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
+            new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
         public bool TryGetValue(TK key, out TV val)
         {
-            return _map.TryGetValue(key, out val);
+            NearCacheEntry<TV> entry;
+
+            if (_map.TryGetValue(key, out entry) && entry.HasValue)
+            {
+                val = entry.Value;
+                return true;
+            }
+
+            val = default(TV);
+            return false;
         }
 
         public void Put(TK key, TV val)
         {
             // TODO: Eviction according to limits.
             // TODO: Is eviction handled by Java side and a callback is going to be fired?
-            _map[key] = val;
+            _map[key] = new NearCacheEntry<TV>(true, val);
+        }
+
+        public NearCacheEntry<TV> GetOrCreateEntry(TK key)
+        {
+            return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
         }
 
         public void Update(IBinaryStream keyStream, Marshaller marshaller)
@@ -55,18 +70,18 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (reader.ReadBoolean())
             {
                 var val = reader.Deserialize<TV>();
-                _map[key] = val;
+                _map[key] = new NearCacheEntry<TV>(true, val);
             }
             else
             {
-                TV unused;
+                NearCacheEntry<TV> unused;
                 _map.TryRemove(key, out unused);
             }
         }
 
         public void Remove(TK key)
         {
-            TV unused;
+            NearCacheEntry<TV> unused;
             _map.TryRemove(key, out unused);
         }
     }
