@@ -58,7 +58,8 @@ import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateT
 import org.apache.ignite.internal.processors.query.LocalQueryLazyTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryTest;
 import org.apache.ignite.internal.processors.query.SqlContainerColumnDetachCompatibilityTest;
-import org.apache.ignite.internal.processors.query.SqlContainerColumnMemoryUsageTest;
+import org.apache.ignite.internal.processors.query.SqlContainerColumnMemoryUsageKeyTest;
+import org.apache.ignite.internal.processors.query.SqlContainerColumnMemoryUsageValueTest;
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest;
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptTxCacheOperationTest;
 import org.apache.ignite.internal.processors.query.SqlLocalQueryConnectionAndStatementTest;
@@ -178,7 +179,8 @@ import org.junit.runners.Suite;
 
     SqlDataTypesCoverageTests.class,
 
-    SqlContainerColumnMemoryUsageTest.class,
+    SqlContainerColumnMemoryUsageKeyTest.class,
+    SqlContainerColumnMemoryUsageValueTest.class,
     SqlContainerColumnDetachCompatibilityTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {

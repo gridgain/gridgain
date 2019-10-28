@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -36,9 +38,12 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /** */
-public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTest {
+public abstract class SqlContainerColumnMemoryUsageAbstractTest extends AbstractIndexingCommonTest {
     /** */
     private boolean client;
+
+    /** */
+    public abstract boolean checkCacheKey();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -57,11 +62,20 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
 
         IgniteEx cli = startGrid(42);
 
-        cli.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, EntryValue.class));
+        QueryEntity qe = checkCacheKey()
+            ? new QueryEntity(TestCacheObject.class, Integer.class)
+            : new QueryEntity(Integer.class, TestCacheObject.class);
+
+        qe.setTableName("TestTable");
+
+        cli.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setQueryEntities(Collections.singleton(qe)));
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        clientNode().cache(DEFAULT_CACHE_NAME).removeAll();
+
         super.afterTest();
     }
 
@@ -127,15 +141,18 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
     }
 
     /** */
-    private void checkColumnMessageSize(Object container, int sizeLower, int sizeUpper) throws Exception {
+    private void checkColumnMessageSize(Object container, int sizeLower, int sizeUpper) {
         IgniteCache<Object, Object> cache = clientNode().cache(DEFAULT_CACHE_NAME);
 
-        cache.put(1, new EntryValue(container));
+        if (checkCacheKey())
+            cache.put(new TestCacheObject(container), 1);
+        else
+            cache.put(1, new TestCacheObject(container));
 
         TestRecordingCommunicationSpi comm = (TestRecordingCommunicationSpi)grid(0).configuration().getCommunicationSpi();
         comm.record(GridQueryNextPageResponse.class);
 
-        cache.query(new SqlFieldsQuery("select payload from EntryValue where _key = 1")).getAll();
+        cache.query(new SqlFieldsQuery("select payload from TestTable")).getAll();
 
         List<Object> msgs = comm.recordedMessages(true);
 
@@ -161,7 +178,7 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
     }
 
     /** */
-    private byte[] extractColumnBytes(List<Object> msgs) throws Exception {
+    private byte[] extractColumnBytes(List<Object> msgs) {
         assert msgs.size() == 1;
 
         GridQueryNextPageResponse msg = (GridQueryNextPageResponse)msgs.get(0);
@@ -174,13 +191,13 @@ public class SqlContainerColumnMemoryUsageTest extends AbstractIndexingCommonTes
     }
 
     /** */
-    private static class EntryValue {
+    private static class TestCacheObject {
         /** */
         @QuerySqlField
         Object payload;
 
         /** */
-        public EntryValue(Object payload) {
+        public TestCacheObject(Object payload) {
             this.payload = payload;
         }
     }
