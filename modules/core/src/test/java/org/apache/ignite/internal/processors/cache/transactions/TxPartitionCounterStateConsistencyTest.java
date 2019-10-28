@@ -36,7 +36,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -58,15 +58,16 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -260,7 +261,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-24303")
     public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 
@@ -303,7 +303,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 try {
                     waitForTopology(SERVER_NODES);
 
-                    resetBaselineTopology();
+                    if (persistenceEnabled())
+                        resetBaselineTopology();
 
                     awaitPartitionMapExchange();
 
@@ -311,9 +312,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     startGrid(name);
 
-                    resetBaselineTopology();
+                    if (persistenceEnabled())
+                        resetBaselineTopology();
 
                     awaitPartitionMapExchange();
+                }
+                catch (IllegalStateException e) {
+                    // No-op.
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));
@@ -333,7 +338,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * entries could undo deletion causing inconsistency.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL, value = "1000")
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
         backups = 2;
 
@@ -428,6 +432,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
                 GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
 
+                if (msg0.groupId() != CU.cacheId(DEFAULT_CACHE_NAME))
+                    return false;
+
                 Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
 
                 return infos.keySet().contains(primaryParts[0]); // Delay historical rebalance.
@@ -507,9 +514,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         TestRecordingCommunicationSpi crdSpi = TestRecordingCommunicationSpi.spi(crd);
 
         // Block all rebalance from crd.
-        crdSpi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionSupplyMessage);
+        crdSpi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode node, Message msg) {
+                return msg instanceof GridDhtPartitionSupplyMessage;
+            }
+        });
 
-        crd.cluster().active(true);
+        crd.cluster().active(true); // Rebalancing is triggered on activation.
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
@@ -656,7 +667,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        doSleep(60_000);
+        doSleep(GridTestUtils.SF.applyLB(60_000, 30_000));
 
         done.set(true);
 
@@ -791,9 +802,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         rndAddrsField.set(customDiscoSpi, true);
 
         Ignite crd = startGrid(0); // Start coordinator with custom discovery SPI.
-
-        crd.cluster().baselineAutoAdjustEnabled(false);
-
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
@@ -815,6 +823,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertEquals(consistentId, g3.localNode().consistentId());
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
         resetBaselineTopology();
         awaitPartitionMapExchange();
 
@@ -1054,6 +1063,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
                 GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                if (msg0.groupId() != CU.cacheId(DEFAULT_CACHE_NAME))
+                    return false;
 
                 Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
 

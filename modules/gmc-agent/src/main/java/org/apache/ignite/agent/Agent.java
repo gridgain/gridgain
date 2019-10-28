@@ -29,7 +29,8 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
 import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.MetricsService;
+import org.apache.ignite.agent.service.metrics.MetricExporter;
+import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
 import org.apache.ignite.agent.service.config.NodeConfigurationService;
 import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
@@ -86,6 +87,9 @@ public class Agent extends ManagementConsoleProcessor {
     /** Node configuration exporter. */
     private NodeConfigurationExporter nodeConfigurationExporter;
 
+    /** Metric exporter. */
+    private MetricExporter metricExporter;
+
     /** Metric service. */
     private MetricsService metricSrvc;
 
@@ -121,6 +125,7 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void onKernalStart(boolean active) {
         spanExporter = new GmcSpanExporter(ctx);
         nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
+        metricExporter = new MetricExporter(ctx);
         metaStorage = ctx.distributedMetastorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
@@ -140,6 +145,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.closeQuiet(cacheService);
         U.closeQuiet(actSrvc);
+        U.closeQuiet(metricExporter);
         U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(spanExporter);
