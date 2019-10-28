@@ -1177,7 +1177,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             collections[i] = dirtyPages;
 
-            seg.writeLock().lock();
+            seg.readLock().lock(); // may be enough ?
 
             for (FullPageId pageId : dirtyPages) {
                 int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
@@ -1198,7 +1198,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 PageHeader.inCp(absPtr, true);
             }
 
-            seg.writeLock().unlock();
+            seg.readLock().unlock();
 
             pagesNum += dirtyPages.size();
 
@@ -1356,6 +1356,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
+
+            PageHeader.inCp(absPtr, false);
 
             boolean success = clearCheckpoint(fullId);
 
@@ -1713,7 +1715,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         PageHeader.writeTimestamp(absPtr, U.currentTimeMillis());
 
         // Create a buffer copy if the page is scheduled for a checkpoint.
-        if (isInCheckpoint(fullId) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) {
+        if ((isInCheckpoint(fullId) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) ||
+            PageHeader.inCp(absPtr)) {
             long tmpRelPtr = checkpointPool.borrowOrAllocateFreePage(fullId.pageId());
 
             if (tmpRelPtr == INVALID_REL_PTR) {
@@ -1723,7 +1726,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             }
 
             // Pin the page until checkpoint is not finished.
-            PageHeader.tempBufferPointer(absPtr, tmpRelPtr);
             PageHeader.acquirePage(absPtr);
 
             long tmpAbsPtr = checkpointPool.absolute(tmpRelPtr);
@@ -1739,6 +1741,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert PageIO.getType(tmpAbsPtr + PAGE_OVERHEAD) != 0 : "Invalid state. Type is 0! pageId = " + U.hexLong(fullId.pageId());
             assert PageIO.getVersion(tmpAbsPtr + PAGE_OVERHEAD) != 0 : "Invalid state. Version is 0! pageId = " + U.hexLong(fullId.pageId());
 
+            PageHeader.inCp(absPtr, false);
             PageHeader.dirty(absPtr, false);
             PageHeader.tempBufferPointer(absPtr, tmpRelPtr);
             PageHeader.pageId(tmpAbsPtr, fullId.pageId());
@@ -2337,6 +2340,16 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
 
         /**
+<<<<<<< HEAD
+=======
+         *
+         */
+        private boolean safeToUpdate() {
+            return dirtyPages.size() < maxDirtyPages; // todo something here !!!
+        }
+
+        /**
+>>>>>>> last test fix
          * @param dirtyRatioThreshold Throttle threshold.
          */
         private boolean shouldThrottle(double dirtyRatioThreshold) {
@@ -2424,7 +2437,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if should be written by a checkpoint.
                 // These pages does not have tmp buffer.
-                if (checkpointPages != null && checkpointPages.contains(fullPageId)) {
+                if (checkpointPages != null && (checkpointPages.contains(fullPageId) || PageHeader.inCp(absPtr))) {
                     assert storeMgr != null;
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
@@ -2439,6 +2452,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                     );
 
                     setDirty(fullPageId, absPtr, false, true);
+
+                    PageHeader.inCp(absPtr, false);
 
                     checkpointPages.markAsSaved(fullPageId);
 
@@ -2916,7 +2931,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @return Previous value of dirty flag.
          */
         private static void inCp(long absPtr, boolean cp) {
-            long markerAndTs = GridUnsafe.getLong(absPtr) | 0x02;
+            long markerAndTs = GridUnsafe.getLong(absPtr);
             if (cp)
                 markerAndTs |= 0x02;
             else
