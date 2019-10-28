@@ -33,7 +33,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             object v;
             var res = _nearCache.TryGetValue(key, out v);
-            val = (TV) v;
+            
+            val = res ? (TV) v : default(TV);
+            
             return res;
         }
 
