@@ -1179,26 +1179,29 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.readLock().lock(); // may be enough ?
 
-            for (FullPageId pageId : dirtyPages) {
-                int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
+            try {
+                for (FullPageId pageId : dirtyPages) {
+                    int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
 
-                long relPtr = seg.loadedPages.get(
-                    pageId.groupId(),
-                    PageIdUtils.effectivePageId(pageId.pageId()),
-                    tag,
-                    INVALID_REL_PTR,
-                    INVALID_REL_PTR
-                );
+                    long relPtr = seg.loadedPages.get(
+                        pageId.groupId(),
+                        PageIdUtils.effectivePageId(pageId.pageId()),
+                        tag,
+                        INVALID_REL_PTR,
+                        INVALID_REL_PTR
+                    );
 
-                if (relPtr == INVALID_REL_PTR)
-                    continue;
+                    if (relPtr == INVALID_REL_PTR)
+                        continue;
 
-                long absPtr = seg.absolute(relPtr);
+                    long absPtr = seg.absolute(relPtr);
 
-                PageHeader.inCp(absPtr, true);
+                    PageHeader.inCp(absPtr, true);
+                }
             }
-
-            seg.readLock().unlock();
+            finally {
+                seg.readLock().unlock();
+            }
 
             pagesNum += dirtyPages.size();
 

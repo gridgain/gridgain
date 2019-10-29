@@ -4814,7 +4814,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
     }
 
-
+    /**
+     * @param pagesPerRegion
+     * @return
+     */
     private Map<DataRegion, Collection<FullPageId>> sortCpPagesIfNeeded(
         Map<DataRegion, T2<Collection<FullPageId>[], Integer>> pagesPerRegion) {
         Map<DataRegion, Collection<FullPageId>> res = new HashMap<>(pagesPerRegion.size());
@@ -4832,14 +4835,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             Collection<FullPageId>[] collections = entry.getValue().get1();
             Integer size = entry.getValue().get2();
 
-            if (persistenceCfg.getCheckpointWriteOrder() == CheckpointWriteOrder.SEQUENTIAL) {
-                if (size >= parallelSortThreshold)
-                    sortPages(collections, checkpointPages, true);
-                else
-                    sortPages(collections, checkpointPages, false);
-            } else {
-                //checkpointPages may be another impl of checkpointPages?
-
+            if (persistenceCfg.getCheckpointWriteOrder() == CheckpointWriteOrder.SEQUENTIAL)
+                sortPages(collections, checkpointPages, size >= parallelSortThreshold);
+            else {
                 for (Collection coll : collections)
                     checkpointPages.addAll(coll);
             }
