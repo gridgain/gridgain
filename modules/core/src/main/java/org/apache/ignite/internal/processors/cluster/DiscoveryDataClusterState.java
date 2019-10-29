@@ -60,6 +60,9 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     private final UUID transitionReqId;
 
+    /** Previous cluster state. May not null only if cluster in transition. */
+    private final ClusterState prevClusterState;
+
     /**
      * Topology version in the cluster when state change request was received by the coordinator.
      * The exchange fired for the cluster state change will be on version {@code transitionTopVer.nextMinorVersion()}.
@@ -93,7 +96,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return State instance.
      */
     static DiscoveryDataClusterState createState(ClusterState state, @Nullable BaselineTopology baselineTopology) {
-        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, null);
+        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, null, null);
     }
 
     /**
@@ -124,7 +127,8 @@ public class DiscoveryDataClusterState implements Serializable {
             baselineTopology,
             transitionReqId,
             transitionTopVer,
-            transitionNodes
+            transitionNodes,
+            prevState.state
         );
     }
 
@@ -135,6 +139,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
      * @param transitionNodes Nodes participating in state change exchange.
+     * @param prevClusterState Nodes participating in state change exchange.
      */
     private DiscoveryDataClusterState(
         DiscoveryDataClusterState prevState,
@@ -142,7 +147,8 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
-        @Nullable Set<UUID> transitionNodes
+        @Nullable Set<UUID> transitionNodes,
+        @Nullable ClusterState prevClusterState
     ) {
         assert state != null;
 
@@ -153,6 +159,7 @@ public class DiscoveryDataClusterState implements Serializable {
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
+        this.prevClusterState = prevClusterState;
     }
 
     /**
@@ -160,7 +167,7 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     public ClusterState lastState() {
         if (transition())
-            return prevState == null ? null : prevState.state;
+            return prevClusterState;
         else
             return state;
     }

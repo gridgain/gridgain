@@ -1180,7 +1180,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             assertTrue(client.context().state().clusterState().transition());
 
             // Public API method would block forever because we blocked the exchange message.
-            assertEquals(targetState, client.context().state().publicApiState(false));
+            assertEquals(initialState, client.context().state().publicApiState(false));
 
             spi1.waitForBlocked();
 
