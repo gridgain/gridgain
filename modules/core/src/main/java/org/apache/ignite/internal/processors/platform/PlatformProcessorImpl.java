@@ -353,7 +353,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** {@inheritDoc} */
     @Override public PlatformCacheManager cacheManager() {
-        return new PlatformCacheManager(this);
+        return new PlatformCacheManager(this.context().gateway());
     }
 
     /** {@inheritDoc} */

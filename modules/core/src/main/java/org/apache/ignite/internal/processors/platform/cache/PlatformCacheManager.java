@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheManager;
 import org.apache.ignite.internal.processors.platform.PlatformProcessor;
+import org.apache.ignite.internal.processors.platform.callback.PlatformCallbackGateway;
 import org.apache.ignite.lang.IgniteFuture;
 
 /**
@@ -27,15 +28,15 @@ import org.apache.ignite.lang.IgniteFuture;
  */
 public class PlatformCacheManager implements GridCacheManager {
     /** */
-    private final PlatformProcessor proc;
+    private final PlatformCallbackGateway gate;
 
     /** */
     private GridCacheContext cctx;
 
-    public PlatformCacheManager(PlatformProcessor proc) {
-        assert proc != null;
+    public PlatformCacheManager(PlatformCallbackGateway gate) {
+        assert gate != null;
 
-        this.proc = proc;
+        this.gate = gate;
     }
 
     /** {@inheritDoc} */
@@ -47,7 +48,7 @@ public class PlatformCacheManager implements GridCacheManager {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel, boolean destroy) {
-        proc.context().gateway().onCacheStopped(cctx.cacheId());
+        gate.onCacheStopped(cctx.cacheId());
     }
 
     /** {@inheritDoc} */
