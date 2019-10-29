@@ -57,9 +57,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var genericNearCache = nearCache as NearCache<TK, TV>;
             if (genericNearCache != null)
             {
+                // Normal case: there is only one set of generic parameters for a given cache.
                 return genericNearCache;
             }
 
+            // Non-recommended usage: multiple generic parameters for the same cache.
+            // Downgrade to {object, object} - near cache works, but causes more boxing and casting.
             var nonGenericNearCache = nearCache as NearCache<object, object>;
             if (nonGenericNearCache == null)
             {
