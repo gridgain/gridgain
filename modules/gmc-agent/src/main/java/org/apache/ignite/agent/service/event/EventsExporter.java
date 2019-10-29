@@ -27,6 +27,7 @@ import org.apache.ignite.internal.visor.util.VisorEventMapper;
 
 import static org.apache.ignite.events.EventType.EVTS_CACHE_LIFECYCLE;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
+import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
 import static org.apache.ignite.events.EventType.EVTS_ERROR;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
 
@@ -40,8 +41,11 @@ public class EventsExporter implements AutoCloseable {
     /** Status description. */
     static final String EVENTS_TOPIC = "gmc-event-topic";
 
-    /** Event types. */
-    private static final int[] EVT_TYPES = concat(EVTS_CACHE_LIFECYCLE, EVTS_CLUSTER_ACTIVATION, EVTS_ERROR);
+    /** Global event types. */
+    private static final int[] GLOBAL_EVT_TYPES = concat(EVTS_DISCOVERY, EVTS_CACHE_LIFECYCLE, EVTS_CLUSTER_ACTIVATION);
+
+    /** Local event types. */
+    private static final int[] LOCAL_EVT_TYPES = EVTS_ERROR;
 
     /** Event mapper. */
     private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
@@ -62,13 +66,25 @@ public class EventsExporter implements AutoCloseable {
         this.ctx = ctx;
         
         snd = new CoordinatorSender<>(ctx, QUEUE_CAP, EVENTS_TOPIC);
+    }
 
-        this.ctx.event().addLocalEventListener(lsnr, EVT_TYPES);
+    /**
+     * Adds local event listener.
+     */
+    public void addLocalEventListener() {
+        this.ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
+    }
+
+    /**
+     * Adds global event listener.
+     */
+    public void addGlobalEventListener() {
+        this.ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        this.ctx.event().removeLocalEventListener(lsnr, EVT_TYPES);
+        this.ctx.event().removeLocalEventListener(lsnr, concat(LOCAL_EVT_TYPES, GLOBAL_EVT_TYPES));
 
         U.closeQuiet(snd);
     }
@@ -78,7 +94,10 @@ public class EventsExporter implements AutoCloseable {
      *
      * @param evt local grid event.
      */
-    protected void onEvent(Event evt) {
-        snd.send(EVT_MAPPER.apply(evt));
+    void onEvent(Event evt) {
+        VisorGridEvent evt0 = EVT_MAPPER.apply(evt);
+
+        if (evt0 != null)
+            snd.send(EVT_MAPPER.apply(evt));
     }
 }

@@ -63,6 +63,7 @@ import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 
 /**
  * Management Agent.
@@ -72,7 +73,7 @@ public class Agent extends ManagementConsoleProcessor {
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "gmc-cfg";
 
     /** Discovery event on restart agent. */
-    private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT};
+    private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -133,14 +134,17 @@ public class Agent extends ManagementConsoleProcessor {
 
         metaStorage = ctx.distributedMetastorage();
 
+        evtsExporter = new EventsExporter(ctx);
+        spanExporter = new GmcSpanExporter(ctx);
+        metricExporter = new MetricExporter(ctx);
+
         launchAgentListener(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
         ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        spanExporter = new GmcSpanExporter(ctx);
-        metricExporter = new MetricExporter(ctx);
-        evtsExporter = new EventsExporter(ctx);
+        evtsExporter.addLocalEventListener();
+        metricExporter.addMetricListener();
 
         try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
             exporter.export();
@@ -293,6 +297,8 @@ public class Agent extends ManagementConsoleProcessor {
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actSrvc = new ActionService(ctx, mgr);
         cacheSrvc = new CacheService(ctx, mgr);
+
+        evtsExporter.addGlobalEventListener();
 
         connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 

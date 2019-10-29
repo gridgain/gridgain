@@ -20,7 +20,6 @@ import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProce
 import org.apache.ignite.agent.dto.action.RequestDeserializerTest;
 import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.service.event.EventsExporterTest;
-import org.apache.ignite.agent.service.event.EventsServiceTest;
 import org.apache.ignite.agent.service.sender.RetryableSenderTest;
 import org.apache.ignite.agent.service.tracing.GmcSpanExporterTest;
 import org.junit.runner.RunWith;
@@ -34,7 +33,6 @@ import org.junit.runners.Suite;
     ActionControllerAnnotationProcessorTest.class,
     GmcSpanExporterTest.class,
     EventsExporterTest.class,
-    EventsServiceTest.class,
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
     TopologySnapshotTest.class
