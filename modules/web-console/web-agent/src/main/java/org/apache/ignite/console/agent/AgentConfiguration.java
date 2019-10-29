@@ -22,7 +22,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -31,6 +30,7 @@ import org.apache.ignite.internal.util.typedef.F;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
+import static org.apache.ignite.console.agent.AgentUtils.split;
 import static org.apache.ignite.console.agent.AgentUtils.trim;
 
 /**
@@ -500,86 +500,85 @@ public class AgentConfiguration {
             props.load(reader);
         }
 
-        String val = props.getProperty("tokens");
+        List<String> items = split(props.getProperty("tokens"));
 
-        if (val != null)
-            tokens(new ArrayList<>(Arrays.asList(val.split(","))));
+        if (!F.isEmpty(items))
+            tokens(new ArrayList<>(items)); // Intentionally wrapped by ArrayList, for further manipulations.
 
-        val = props.getProperty("server-uri");
+        String val = props.getProperty("server-uri");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             serverUri(val);
 
-        val = props.getProperty("node-uri");
+        items = split(props.getProperty("node-uri"));
 
-        // Intentionally wrapped by ArrayList, for further manipulations.
-        if (val != null)
-            nodeURIs(new ArrayList<>(Arrays.asList(val.split(","))));
+        if (!F.isEmpty(items))
+            nodeURIs(new ArrayList<>(items)); // Intentionally wrapped by ArrayList, for further manipulations.
 
         val = props.getProperty("node-login");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodeLogin(val);
 
         val = props.getProperty("node-password");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodePassword(val);
 
         val = props.getProperty("driver-folder");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             driversFolder(val);
 
         val = props.getProperty("node-key-store");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodeKeyStore(val);
 
         val = props.getProperty("node-key-store-password");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodeKeyStorePassword(val);
 
         val = props.getProperty("node-trust-store");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodeTrustStore(val);
 
         val = props.getProperty("node-trust-store-password");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             nodeTrustStorePassword(val);
 
         val = props.getProperty("server-key-store");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             serverKeyStore(val);
 
         val = props.getProperty("server-key-store-password");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             serverKeyStorePassword(val);
 
         val = props.getProperty("server-trust-store");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             serverTrustStore(val);
 
         val = props.getProperty("server-trust-store-password");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             serverTrustStorePassword(val);
 
         val = props.getProperty("passwords-key-store");
 
-        if (val != null)
+        if (!F.isEmpty(val))
             passwordsStore(val);
 
-        val = props.getProperty("cipher-suites");
+        items = split(props.getProperty("cipher-suites"));
 
-        if (val != null)
-            cipherSuites(Arrays.asList(val.split(",")));
+        if (!F.isEmpty(items))
+            cipherSuites(items);
     }
 
     /**

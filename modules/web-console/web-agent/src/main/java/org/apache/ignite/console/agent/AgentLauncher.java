@@ -32,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
+import static org.apache.ignite.console.agent.AgentUtils.split;
+
 /**
  * Ignite Web Console Agent launcher.
  */
@@ -146,7 +148,7 @@ public class AgentLauncher {
 
             String tokens = String.valueOf(readPassword("Enter security tokens separated by comma: "));
 
-            cfg.tokens(new ArrayList<>(Arrays.asList(tokens.trim().split(","))));
+            cfg.tokens(new ArrayList<>(split(tokens)));
         }
 
         if (!F.isEmpty(cfg.passwordsStore()) && F.isEmpty(cfg.passwordsStorePassword())) {

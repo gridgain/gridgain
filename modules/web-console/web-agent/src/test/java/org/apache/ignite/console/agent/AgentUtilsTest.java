@@ -22,6 +22,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static org.apache.ignite.console.agent.AgentUtils.getPasswordFromKeyStore;
+import static org.apache.ignite.console.agent.AgentUtils.secured;
+import static org.apache.ignite.console.agent.AgentUtils.split;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -97,5 +99,33 @@ public class AgentUtilsTest {
         ruleForExpEx.expectMessage("Empty path to key store with passwords");
 
         getPasswordFromKeyStore("node-password", "", "123456");
+    }
+
+    /**
+     * Should correctly generate secured string.
+     */
+    @Test
+    public void shouldGenerateSecureString() {
+        assertEquals("", secured((String)null));
+        assertEquals("", secured(""));
+        assertEquals("1", secured("1"));
+        assertEquals("*2", secured("12"));
+        assertEquals("**3", secured("123"));
+        assertEquals("***4", secured("1234"));
+        assertEquals("*2345", secured("12345"));
+        assertEquals("**3456", secured("123456"));
+    }
+
+    /**
+     * Should correctly split comma-separated string.
+     */
+    @Test
+    public void shouldSplitCorrectly() {
+        assertEquals(0, split(null).size());
+        assertEquals(0, split("").size());
+        assertEquals(0, split(",,,").size());
+        assertEquals(0, split(", ,   , ").size());
+        assertEquals(3, split("1,2,3, ").size());
+        assertEquals(4, split(" 1, 2, 3, 4 ").size());
     }
 }

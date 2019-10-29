@@ -28,6 +28,7 @@ import java.security.KeyStore;
 import java.security.ProtectionDomain;
 import java.security.UnrecoverableKeyException;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,7 @@ import javax.crypto.SecretKey;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
@@ -194,9 +196,12 @@ public class AgentUtils {
 
     /**
      * @param s String with sensitive data.
-     * @return Secured string.
+     * @return Secured string (sensitive part replaced with asterics symbols).
      */
     public static String secured(String s) {
+        if (F.isEmpty(s))
+            return "";
+
         int len = s.length();
         int toShow = len > 4 ? 4 : 1;
 
@@ -321,6 +326,20 @@ public class AgentUtils {
 
             throw e;
         }
+    }
+
+    /**
+     * @param s String to split.
+     * @return List of not empty items.
+     */
+    public static List<String> split(String s) {
+        if (F.isEmpty(s))
+            return emptyList();
+
+        return Arrays.stream(s.trim().split(","))
+            .map(String::trim)
+            .filter(item -> !F.isEmpty(item))
+            .collect(toList());
     }
 
     /**
