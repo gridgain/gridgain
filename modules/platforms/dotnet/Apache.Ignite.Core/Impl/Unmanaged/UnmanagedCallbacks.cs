@@ -213,6 +213,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
             AddHandler(UnmanagedCallbackOp.NearCacheInvalidate, NearCacheUpdate);
+            AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
         }
 
         /// <summary>
@@ -434,6 +435,17 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 _ignite.NearCacheManager.Update(cacheId, stream, _ignite.Marshaller);
             }
 
+            return 0;
+        }
+        
+        /// <summary>
+        /// Called on cache stop.
+        /// </summary>
+        /// <param name="cacheId">Cache id.</param>
+        private long OnCacheStopped(long cacheId)
+        {
+            _ignite.NearCacheManager.Stop((int) cacheId);
+            
             return 0;
         }
 

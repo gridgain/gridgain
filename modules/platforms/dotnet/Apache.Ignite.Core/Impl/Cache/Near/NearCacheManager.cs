@@ -67,6 +67,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (nonGenericNearCache == null)
             {
                 nonGenericNearCache = new NearCache<object, object>();
+                
+                // TODO: Bug - old ICache instances still use old near caches, data will go stale.
                 _nearCaches.Set(cacheId, nonGenericNearCache);
             }
 
@@ -85,6 +87,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
             
             nearCache.Update(stream, marshaller);
+        }
+
+        /// <summary>
+        /// Stops near cache.
+        /// </summary>
+        public void Stop(int cacheId)
+        {
+            _nearCaches.Remove(cacheId);
         }
     }
 }
