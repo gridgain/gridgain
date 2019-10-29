@@ -23,8 +23,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal class NearCacheGenericWrapper<TK, TV> : INearCache<TK, TV>
     {
+        /** */
         private readonly NearCache<object, object> _nearCache;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="NearCacheGenericWrapper{K, V}"/> class.
+        /// </summary>
+        /// <param name="nearCache">Near cache to wrap.</param>
         public NearCacheGenericWrapper(NearCache<object, object> nearCache)
         {
             Debug.Assert(nearCache != null);
@@ -32,6 +37,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             _nearCache = nearCache;
         }
 
+        /** <inheritdoc /> */
         public bool TryGetValue(TK key, out TV val)
         {
             object v;
@@ -42,16 +48,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return res;
         }
 
+        /** <inheritdoc /> */
         public void Put(TK key, TV val)
         {
             _nearCache.Put(key, val);
         }
 
+        /** <inheritdoc /> */
         public INearCacheEntry<TV> GetOrCreateEntry(TK key)
         {
             return new NearCacheEntryGenericWrapper<TV>(_nearCache.GetOrCreateEntry(key)); 
         }
 
+        /** <inheritdoc /> */
         public void Remove(TK key)
         {
             _nearCache.Remove(key);
