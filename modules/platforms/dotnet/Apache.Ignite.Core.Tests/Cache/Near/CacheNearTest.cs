@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache
+namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
     using Apache.Ignite.Core.Cache;
