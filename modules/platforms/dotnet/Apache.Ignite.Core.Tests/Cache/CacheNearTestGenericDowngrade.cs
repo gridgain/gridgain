@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
+    using System.Linq;
     using Apache.Ignite.Core.Impl.Cache.Near;
 
     /// <summary>
@@ -31,7 +32,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             base.FixtureSetUp();
             
             // Downgrade near cache on all nodes by using it with different generic parameters.
-            foreach (var ignite in Ignition.GetAll())
+            foreach (var ignite in Ignition.GetAll().Where(i => !i.GetConfiguration().ClientMode))
             {
                 var cache1 = ignite.GetCache<int, int>(DefaultCacheName);
                 cache1[0] = 0;
