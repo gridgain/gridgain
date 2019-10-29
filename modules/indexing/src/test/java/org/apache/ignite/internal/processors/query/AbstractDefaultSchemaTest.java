@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Abstract test to verify default sql schema. */
@@ -55,26 +56,30 @@ public abstract class AbstractDefaultSchemaTest extends AbstractIndexingCommonTe
         startGrid(0);
     }
 
+    /** */
     @Test
-    public void test1() {
+    public void testBasicOpsExplicitPublicSchema() {
         executeStmtsAndVerify(() -> true);
     }
 
+    /** */
     @Test
-    public void test2() {
+    public void testBasicOpsImplicitPublicSchema() {
         executeStmtsAndVerify(() -> false);
     }
 
+    /** */
     @Test
-    public void test3() {
+    public void testBasicOpsMixedPublicSchema() {
         AtomicInteger i = new AtomicInteger();
 
         executeStmtsAndVerify(() -> (i.incrementAndGet() & 1) == 0);
     }
 
+    /** */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
-    public void test4() {
+    public void testCreateDropNonExistingSchema() {
         GridTestUtils.assertThrowsWithCause(
             () -> sql("CREATE TABLE UNKNOWN_SCHEMA." + TBL_NAME + "(id INT PRIMARY KEY, val INT)"),
             SQLException.class
@@ -86,13 +91,11 @@ public abstract class AbstractDefaultSchemaTest extends AbstractIndexingCommonTe
         );
     }
 
+    /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-25387")
     @Test
-    @SuppressWarnings("ThrowableNotThrown")
-    public void test5() {
-        GridTestUtils.assertThrowsWithCause(
-            () -> sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TBL_NAME),
-            SQLException.class
-        );
+    public void testDropIfExistsNonExistingSchema() {
+        sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TBL_NAME);
     }
 
     /** */
