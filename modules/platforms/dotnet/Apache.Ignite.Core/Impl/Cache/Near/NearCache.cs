@@ -69,6 +69,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             if (reader.ReadBoolean())
             {
+                // TODO: This throws when new type parameters come into play
+                // Catch exception?
                 var val = reader.Deserialize<TV>();
                 _map[key] = new NearCacheEntry<TV>(true, val);
             }
