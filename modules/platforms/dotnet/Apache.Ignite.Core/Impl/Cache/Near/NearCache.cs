@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
@@ -40,7 +39,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_map.TryGetValue(key, out entry) && entry.HasValue)
             {
                 val = entry.Value;
-                Console.WriteLine("TryGetValue: {0}={1}", key, val);
                 return true;
             }
 
@@ -52,13 +50,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             // TODO: Eviction according to limits.
             // TODO: Is eviction handled by Java side and a callback is going to be fired?
-            Console.WriteLine("Put: {0}={1}", key, val);
             _map[key] = new NearCacheEntry<TV>(true, val);
         }
 
         public INearCacheEntry<TV> GetOrCreateEntry(TK key)
         {
-            Console.WriteLine("GetOrCreateEntry: {0}", key);
             return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
         }
 
@@ -74,7 +70,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (reader.ReadBoolean())
             {
                 var val = reader.Deserialize<TV>();
-                Console.WriteLine("Update: {0}={1}", key, val);
                 _map[key] = new NearCacheEntry<TV>(true, val);
             }
             else
