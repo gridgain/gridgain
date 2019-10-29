@@ -50,6 +50,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 
+import static java.util.Objects.isNull;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
@@ -485,6 +486,9 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             req.writeVersion(tx.writeVersion() != null ? tx.writeVersion() : tx.xidVersion());
 
             try {
+                if (isNull(cctx.discovery().node(n.id())))
+                    throw new IgniteCheckedException("Failed to send message (node left topology): " + n);
+
                 cctx.io().send(n, req, tx.ioPolicy());
 
                 if (msgLog.isDebugEnabled()) {
