@@ -22,10 +22,10 @@ import {successNotification} from '../components/notifications';
 export class PageConfigurationOverview {
     constructor() {
         this.createClusterConfigButton = Selector('.btn-ignite').withText('Create Cluster Configuration');
-        this.importFromDBButton = Selector('.btn-ignite').withText('Import from Database');
         this.clustersTable = new Table(Selector('pc-items-table'));
         this.pageHeader = Selector('.pc-page-header');
     }
+
     async removeAllItems() {
         await t.click(this.clustersTable.allItemsCheckbox);
         await this.clustersTable.performAction('Delete');

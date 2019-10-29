@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.repositories;
 
+import java.util.UUID;
+import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -24,13 +26,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.UUID;
-
 /**
  * Configurations repository test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(classes = {MockConfiguration.class})
 public class ConfigurationsRepositoryTest {
     /** Configurations repository. */
     @Autowired

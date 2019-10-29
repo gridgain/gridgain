@@ -17,7 +17,7 @@
 export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
     {
         name: 'name',
-        displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.name'),
+        displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.tag'),
         field: 'name',
         cellTemplate: `
             <div class='ui-grid-cell-contents'>
@@ -27,16 +27,25 @@ export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
                 {{ COL_FIELD }}
             </div>
         `,
-        width: 240,
-        minWidth: 240
+        width: 200,
+        minWidth: 120
+    },
+    {
+        name: 'id',
+        displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.id'),
+        field: 'id',
+        cellFilter: 'id8',
+        cellClass: 'ui-grid-number-cell',
+        width: 160,
+        minWidth: 110
     },
     {
         name: 'nids',
         displayName: $translate.instant('connectedClustersDialog.gridColumnTitles.nids'),
         field: 'size',
         cellClass: 'ui-grid-number-cell',
-        width: 180,
-        minWidth: 180
+        width: 160,
+        minWidth: 160
     },
     {
         name: 'status',
@@ -53,6 +62,6 @@ export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
                 ></connected-clusters-cell-logout>
             </div>
         `,
-        minWidth: 140
+        minWidth: 90
     }
 ];

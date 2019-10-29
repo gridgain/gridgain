@@ -301,7 +301,8 @@
             "noClustersMessage": "You have no connected clusters."
         },
         "gridColumnTitles": {
-            "name": "Cluster",
+            "tag": "Cluster Tag",
+            "id": "Cluster ID",
             "nids": "Number of Nodes",
             "status": "Status"
         },
@@ -330,7 +331,9 @@
                 "placeholder": "Exclude by company name..."
             },
             "noData": {
-                "nonEmptyFilterMessage": "Nothing to display. Check your filters."
+                "nonEmptyFilterMessage": "Nothing to display. Check your filters.",
+                "valueNotAvailable": "Not Available",
+                "valueNotAvailableShort": "N/A"
             },
             "actions": {
                 "becomeThisUser": "Become this user",

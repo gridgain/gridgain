@@ -1045,6 +1045,11 @@ export class ModalImportModels {
                     $scope.ui.selectedJdbcDriverJar = -1;
 
                     return agentMgr.drivers()
+                        .catch((err) => {
+                            Messages.showError(err);
+
+                            return [];
+                        })
                         .then((drivers) => {
                             $scope.ui.packageName = $scope.ui.packageNameUserInput;
 

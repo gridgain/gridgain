@@ -110,6 +110,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Implementation of kernal context.
@@ -777,6 +779,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public DistributedMetaStorage distributedMetastorage() {
+        if (!isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+            throw new UnsupportedOperationException("Distributed Meta Storage feature is not enabled.");
+
         return distributedMetastorage;
     }
 
