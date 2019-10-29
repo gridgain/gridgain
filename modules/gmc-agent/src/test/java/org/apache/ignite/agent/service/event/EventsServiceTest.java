@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package org.gridgain.service.event;
+package org.apache.ignite.agent.service.event;
 
 import java.util.List;
 import java.util.UUID;
 import com.google.common.collect.Lists;
+import org.apache.ignite.agent.service.AbstractServiceTest;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 import org.apache.ignite.testframework.GridTestNode;
-import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.gridgain.agent.StompDestinationsUtils.buildEventsDest;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 

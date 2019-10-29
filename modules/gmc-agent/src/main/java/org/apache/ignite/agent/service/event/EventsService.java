@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.gridgain.service.event;
+package org.apache.ignite.agent.service.event;
 
 import java.util.List;
 import java.util.UUID;
+import org.apache.ignite.agent.WebSocketManager;
+import org.apache.ignite.agent.service.sender.GmcSender;
+import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.gridgain.agent.WebSocketManager;
-import org.gridgain.service.sender.GmcSender;
-import org.gridgain.service.sender.RetryableSender;
 
-import static org.gridgain.agent.StompDestinationsUtils.buildEventsDest;
-import static org.gridgain.service.event.EventsExporter.EVENTS_TOPIC;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
+import static org.apache.ignite.agent.service.event.EventsExporter.EVENTS_TOPIC;
 
 /**
  * Events service.

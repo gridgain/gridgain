@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.RequestDeserializer;
+import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
@@ -116,6 +117,7 @@ public class AgentObjectMapperFactory {
      */
     private static ObjectMapper applyConfig(ObjectMapper mapper) {
         return mapper
+            .addMixIn(VisorGridEvent.class, VisorGridEventMixIn.class)
             .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }

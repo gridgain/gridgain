@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.gridgain.service.event;
+package org.apache.ignite.agent.service.event;
 
+import org.apache.ignite.agent.service.sender.CoordinatorSender;
+import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
-import org.gridgain.service.sender.CoordinatorSender;
-import org.gridgain.service.sender.RetryableSender;
 
-import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
-import static org.apache.ignite.internal.visor.util.VisorTaskUtils.VISOR_ALL_EVTS;
-import static org.apache.ignite.internal.visor.util.VisorTaskUtils.VISOR_TASK_EVTS;
+import static org.apache.ignite.events.EventType.EVTS_CACHE_LIFECYCLE;
+import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
+import static org.apache.ignite.events.EventType.EVTS_ERROR;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
 
 /**
@@ -41,7 +41,7 @@ public class EventsExporter implements AutoCloseable {
     static final String EVENTS_TOPIC = "gmc-event-topic";
 
     /** Event types. */
-    private static final int[] EVT_TYPES = concat(VISOR_ALL_EVTS, EVTS_DISCOVERY);
+    private static final int[] EVT_TYPES = concat(EVTS_CACHE_LIFECYCLE, EVTS_CLUSTER_ACTIVATION, EVTS_ERROR);
 
     /** Event mapper. */
     private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
