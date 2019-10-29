@@ -289,8 +289,8 @@ public abstract class PageIO {
      * @param ver Page format version.
      */
     protected PageIO(int type, int ver) {
-        assert ver > 0 && ver < 65535 : ver;
-        assert type > 0 && type < 65535 : type;
+        assert ver > 0 && ver < 0xFFFF : ver;
+        assert type > 0 && type < 0XFFFF : type;
 
         this.type = type;
         this.ver = ver;

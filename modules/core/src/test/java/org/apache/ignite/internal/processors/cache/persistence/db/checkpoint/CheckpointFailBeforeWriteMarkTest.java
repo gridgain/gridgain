@@ -43,7 +43,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 /**
  *
  */
-public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
+    public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
     /** */
     private InterceptorIOFactory interceptorIOFactory = new InterceptorIOFactory();
 
@@ -83,7 +83,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(true)
-            .setMaxSize((isCompression ? 70 : 10) * 1024 * 1024);
+            .setMaxSize((isCompression ? 70 : 20) * 1024 * 1024);
 
         cfg.setDataStorageConfiguration(storageCfg)
             .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME)

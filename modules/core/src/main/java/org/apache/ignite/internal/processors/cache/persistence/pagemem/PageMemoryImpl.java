@@ -123,11 +123,11 @@ import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
  * <p/>
  * When page is allocated and is in use:
  * <pre>
- * +------------------+--------+--------+--------+----+--------+--------+----------------------+
- * |     8 bytes      |8 bytes |8 bytes |   4 b  |4 b |8 bytes |8 bytes |       PAGE_SIZE      |
- * +------------------+--------+--------+--------+----+--------+--------+----------------------+
- * | Marker/Timestamp |Rel ptr |Page ID |GROUP ID|PIN | LOCK   |TMP BUF |       Page data      |
- * +------------------+--------+--------+--------+----+--------+--------+----------------------+
+ * +-------------------+--------+--------+--------+----+--------+--------+----------------------+
+ * |     8 bytes       |8 bytes |8 bytes |   4 b  |4 b |8 bytes |8 bytes |       PAGE_SIZE      |
+ * +-------------------+--------+--------+--------+----+--------+--------+----------------------+
+ * | Marker/Timestamp  |Rel ptr |Page ID |GROUP ID|PIN | LOCK   |TMP BUF |       Page data      |
+ * +-------------------+--------+--------+--------+----+--------+--------+----------------------+
  * </pre>
  *
  * Note that first 8 bytes of page header are used either for page marker or for next relative pointer depending
@@ -1273,6 +1273,9 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (relPtr != OUTDATED_REL_PTR) {
                 absPtr = seg.absolute(relPtr);
 
+                if (!PageHeader.inCp(absPtr))
+                    return;
+
                 // Pin the page until page will not be copied. This helpful to prevent page replacement of this page.
                 if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) // место под рейс !!!
                     PageHeader.acquirePage(absPtr);
@@ -1359,6 +1362,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
+
+            assert PageHeader.inCp(absPtr);
 
             PageHeader.inCp(absPtr, false);
 
@@ -1718,8 +1723,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         PageHeader.writeTimestamp(absPtr, U.currentTimeMillis());
 
         // Create a buffer copy if the page is scheduled for a checkpoint.
-        if ((isInCheckpoint(fullId) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) ||
-            PageHeader.inCp(absPtr)) {
+        if ((isInCheckpoint(fullId) || PageHeader.inCp(absPtr)) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) {
             long tmpRelPtr = checkpointPool.borrowOrAllocateFreePage(fullId.pageId());
 
             if (tmpRelPtr == INVALID_REL_PTR) {
@@ -1744,19 +1748,10 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert PageIO.getType(tmpAbsPtr + PAGE_OVERHEAD) != 0 : "Invalid state. Type is 0! pageId = " + U.hexLong(fullId.pageId());
             assert PageIO.getVersion(tmpAbsPtr + PAGE_OVERHEAD) != 0 : "Invalid state. Version is 0! pageId = " + U.hexLong(fullId.pageId());
 
-            PageHeader.inCp(absPtr, false);
             PageHeader.dirty(absPtr, false);
             PageHeader.tempBufferPointer(absPtr, tmpRelPtr);
             PageHeader.pageId(tmpAbsPtr, fullId.pageId());
             PageHeader.pageGroupId(tmpAbsPtr, fullId.groupId());
-
-            if (PageIO.getType(tmpAbsPtr) == 0) {
-                System.err.println("tmpAbsPtr0: " + tmpAbsPtr);
-
-                System.err.println("tmpAbsPtr0: " + PageIO.getType(absPtr));
-            }
-
-            //System.err.println("set fullId: " + fullId + " " + fullId.pageId());
 
             assert PageIO.getCrc(absPtr + PAGE_OVERHEAD) == 0; //TODO GG-11480
             assert PageIO.getCrc(tmpAbsPtr + PAGE_OVERHEAD) == 0; //TODO GG-11480
@@ -2440,7 +2435,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if should be written by a checkpoint.
                 // These pages does not have tmp buffer.
-                if (checkpointPages != null && (checkpointPages.contains(fullPageId) || PageHeader.inCp(absPtr))) {
+                if (checkpointPages != null && checkpointPages.contains(fullPageId)) {
                     assert storeMgr != null;
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
@@ -2454,11 +2449,13 @@ public class PageMemoryImpl implements PageMemoryEx {
                         )
                     );
 
-                    setDirty(fullPageId, absPtr, false, true);
-
                     PageHeader.inCp(absPtr, false);
 
-                    checkpointPages.markAsSaved(fullPageId);
+                    setDirty(fullPageId, absPtr, false, true);
+
+                    boolean success = checkpointPages.markAsSaved(fullPageId);
+
+                    assert success;
 
                     return true;
                 }
@@ -2922,10 +2919,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @return Dirty flag.
          */
         private static boolean inCp(long absPtr) {
-            long markerAndTs = GridUnsafe.getLong(absPtr);
-
-            // Clear last byte as it is occupied by page marker.
-            return (markerAndTs & 0x02) != 0;
+            return flag(absPtr, CP_FLAG);
         }
 
         /**
@@ -2933,13 +2927,8 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param dirty Dirty flag.
          * @return Previous value of dirty flag.
          */
-        private static void inCp(long absPtr, boolean cp) {
-            long markerAndTs = GridUnsafe.getLong(absPtr);
-            if (cp)
-                markerAndTs |= 0x02;
-            else
-                markerAndTs &= ~0x02;
-            GridUnsafe.putLongVolatile(null, absPtr, markerAndTs);
+        private static boolean inCp(long absPtr, boolean cp) {
+            return flag(absPtr, CP_FLAG, cp);
         }
 
         /**

@@ -3883,7 +3883,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          */
         private void doCheckpoint() {
             Checkpoint chp = null;
-
             try {
                 CheckpointMetricsTracker tracker = new CheckpointMetricsTracker();
 
