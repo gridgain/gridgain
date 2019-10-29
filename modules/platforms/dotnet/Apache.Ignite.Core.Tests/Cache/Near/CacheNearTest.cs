@@ -212,9 +212,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             var cache = GetCache<int, Foo>(mode);
-            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
+            var key = (int) mode;
 
-            var obj1 = new Foo((int) mode);
+            var obj1 = new Foo(key);
             
             cache[key] = obj1;
             var res1 = cache[key];
