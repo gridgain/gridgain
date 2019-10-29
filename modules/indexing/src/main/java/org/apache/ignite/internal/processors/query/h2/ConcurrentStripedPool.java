@@ -70,10 +70,10 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      * @return {@code true} if the element is returned to the pool, {@code false} if the is no space at the pool.
      */
     public boolean recycle(E e) {
-        if (stripeSize[(int)(Thread.currentThread().getId() % stripes)].get() > maxPoolSize)
-            return false;
-
         int idx = (int)(Thread.currentThread().getId() % stripes);
+
+        if (stripeSize[idx].get() > maxPoolSize)
+            return false;
 
         stripePools[idx].add(e);
 
