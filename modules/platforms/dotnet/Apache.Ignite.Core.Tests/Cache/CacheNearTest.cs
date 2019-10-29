@@ -358,14 +358,23 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestFailedPutRemovesNearCacheValue()
         {
+            // TODO: use store to cause error during put
+        }
+
+        /// <summary>
+        /// Tests that near cache is updated/invalidated by SQL DML operations.
+        /// </summary>
+        [Test]
+        public void TestSqlUpdatesNearCache()
+        {
             // TODO
         }
 
         /// <summary>
-        /// Tests that near cache is updated/invalidated by SQL DML ooperations.
+        /// Tests that eviction policy removes near cache data for the key. 
         /// </summary>
         [Test]
-        public void TestSqlUpdatesNearCache()
+        public void TestEvictionPolicyRemovesNearCacheValue()
         {
             // TODO
         }
