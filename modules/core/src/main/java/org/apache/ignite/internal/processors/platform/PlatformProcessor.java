@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.GridProcessor;
+import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.platform.cache.store.PlatformCacheStore;
 
 /**
@@ -48,6 +49,13 @@ public interface PlatformProcessor extends GridProcessor {
     public PlatformContext context();
 
     /**
+     * Returns a value indicating whether {@link #context()} is available.
+     *
+     * @return value indicating whether {@link #context()} is available.
+     */
+    public boolean hasContext();
+
+    /**
      * Notify processor that it is safe to use.
      */
     public void releaseStart();
@@ -67,4 +75,11 @@ public interface PlatformProcessor extends GridProcessor {
      * @throws IgniteCheckedException If failed.
      */
     public void registerStore(PlatformCacheStore store, boolean convertBinary) throws IgniteCheckedException;
+
+    /**
+     * Gets the cache manager.
+     *
+     * @return Cache manager.
+     */
+    PlatformCacheManager cacheManager();
 }

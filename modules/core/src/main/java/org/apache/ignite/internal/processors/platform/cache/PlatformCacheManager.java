@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.cache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheManager;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.lang.IgniteFuture;
 
 /**
@@ -26,7 +27,16 @@ import org.apache.ignite.lang.IgniteFuture;
  */
 public class PlatformCacheManager implements GridCacheManager {
     /** */
+    private final PlatformProcessor proc;
+
+    /** */
     private GridCacheContext cctx;
+
+    public PlatformCacheManager(PlatformProcessor proc) {
+        assert proc != null;
+
+        this.proc = proc;
+    }
 
     /** {@inheritDoc} */
     @Override public void start(GridCacheContext cctx) throws IgniteCheckedException {
