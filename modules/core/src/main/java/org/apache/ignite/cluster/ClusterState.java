@@ -51,4 +51,22 @@ public enum ClusterState {
     public static boolean active(ClusterState state) {
         return state != INACTIVE;
     }
+
+    /**
+     * @param state1 First given state.
+     * @param state2 Second given state.
+     * @return Lesser of given states. The order: {@link #ACTIVE} > {@link #READ_ONLY} > {@link #INACTIVE}.
+     */
+    public static ClusterState lesserOf(ClusterState state1, ClusterState state2) {
+        if (state1 == state2)
+            return state1;
+
+        if (state1 == INACTIVE || state2 == INACTIVE)
+            return INACTIVE;
+
+        if (state1 == READ_ONLY || state2 == READ_ONLY)
+            return READ_ONLY;
+
+        throw new IllegalArgumentException("Unknown cluster states. state1: " + state1 + ", state2: " + state2);
+    }
 }

@@ -101,6 +101,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -279,7 +280,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                         }));
                     }
                     else
-                        return new IgniteFinishedFutureImpl<>(globalState.lastState());
+                        return new IgniteFinishedFutureImpl<>(lesserOf(globalState.lastState(), globalState.state()));
                 }
 
                 transitionRes = globalState.transitionResult();
