@@ -214,7 +214,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             var cache = GetCache<int, Foo>(mode);
             var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
 
-            var obj1 = new Foo();
+            var obj1 = new Foo((int) mode);
             
             cache[key] = obj1;
             var res1 = cache[key];
@@ -455,7 +455,14 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Bar = bar;
             }
 
-            public int Bar;
+            public readonly int Bar;
+
+            public readonly string TestName = TestContext.CurrentContext.Test.Name;
+
+            public override string ToString()
+            {
+                return string.Format("Foo [Bar={0}, TestName={1}]", Bar, TestName);
+            }
         }
         
         /** */
