@@ -243,7 +243,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         cache.put(ig1Key, new TestAddress(0, "USA", "NYC", "6th Ave"));
 
-        waitForTopology(1, 10_000);
+        waitForTopology(1);
     }
 
     /**
