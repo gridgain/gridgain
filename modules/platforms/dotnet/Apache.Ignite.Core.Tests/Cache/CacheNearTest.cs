@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     public class CacheNearTest : IEventListener<CacheEvent>
     {
         /** */
-        private const string DefaultCacheName = "default";
+        protected const string DefaultCacheName = "default";
 
         /** */
         private IIgnite _grid;
@@ -38,16 +38,16 @@ namespace Apache.Ignite.Core.Tests.Cache
         private IIgnite _grid2;
 
         /** */
-        private volatile CacheEvent _lastEvent;
-
-        /** */
         private IIgnite _client;
+        
+        /** */
+        private volatile CacheEvent _lastEvent;
 
         /// <summary>
         /// Fixture set up.
         /// </summary>
         [TestFixtureSetUp]
-        public void FixtureSetUp()
+        public virtual void FixtureSetUp()
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
