@@ -14,51 +14,45 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache
+namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System.Threading;
+    using System.Diagnostics;
 
     /// <summary>
-    /// <see cref="NearCache{TK, TV}"/> entry.
+    /// Generic wrapper over object-based entry.
     /// </summary>
-    internal class NearCacheEntry<T> : INearCacheEntry<T>
+    internal class NearCacheEntryGenericWrapper<T> : INearCacheEntry<T>
     {
         /** */
-        private volatile int _hasValue;
-        
-        /** */
-        private T _value;
+        private readonly INearCacheEntry<object> _nearCacheEntry;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NearCacheEntry{T}"/> class.
+        /// Initializes a new instance of <see cref="NearCacheEntryGenericWrapper{T}"/> class.
         /// </summary>
-        /// <param name="hasValue">Whether this entry has a value.</param>
-        /// <param name="value">Value.</param>
-        public NearCacheEntry(bool hasValue = false, T value = default(T))
+        /// <param name="nearCacheEntry">Entry to wrap.</param>
+        public NearCacheEntryGenericWrapper(INearCacheEntry<object> nearCacheEntry)
         {
-            _hasValue = hasValue ? 1 : 0;
-            _value = value;
+            Debug.Assert(nearCacheEntry != null);
+            
+            _nearCacheEntry = nearCacheEntry;
         }
 
         /** <inheritdoc /> */
         public bool HasValue
         {
-            get { return _hasValue > 0; }
+            get { return _nearCacheEntry.HasValue; }
         }
 
         /** <inheritdoc /> */
         public T Value
         {
-            get { return _value; }
+            get { return (T) _nearCacheEntry.Value; }
         }
 
         /** <inheritdoc /> */
         public void SetValueIfEmpty(T value)
         {
-            if (Interlocked.CompareExchange(ref _hasValue, 1, 0) == 0)
-            {
-                _value = value;
-            }
+            _nearCacheEntry.SetValueIfEmpty(value);
         }
     }
 }

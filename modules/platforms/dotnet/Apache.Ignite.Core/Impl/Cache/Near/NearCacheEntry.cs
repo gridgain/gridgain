@@ -14,45 +14,51 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache
+namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System.Diagnostics;
+    using System.Threading;
 
     /// <summary>
-    /// Generic wrapper over object-based entry.
+    /// <see cref="NearCache{TK, TV}"/> entry.
     /// </summary>
-    internal class NearCacheEntryGenericWrapper<T> : INearCacheEntry<T>
+    internal class NearCacheEntry<T> : INearCacheEntry<T>
     {
         /** */
-        private readonly INearCacheEntry<object> _nearCacheEntry;
+        private volatile int _hasValue;
+        
+        /** */
+        private T _value;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="NearCacheEntryGenericWrapper{T}"/> class.
+        /// Initializes a new instance of the <see cref="NearCacheEntry{T}"/> class.
         /// </summary>
-        /// <param name="nearCacheEntry">Entry to wrap.</param>
-        public NearCacheEntryGenericWrapper(INearCacheEntry<object> nearCacheEntry)
+        /// <param name="hasValue">Whether this entry has a value.</param>
+        /// <param name="value">Value.</param>
+        public NearCacheEntry(bool hasValue = false, T value = default(T))
         {
-            Debug.Assert(nearCacheEntry != null);
-            
-            _nearCacheEntry = nearCacheEntry;
+            _hasValue = hasValue ? 1 : 0;
+            _value = value;
         }
 
         /** <inheritdoc /> */
         public bool HasValue
         {
-            get { return _nearCacheEntry.HasValue; }
+            get { return _hasValue > 0; }
         }
 
         /** <inheritdoc /> */
         public T Value
         {
-            get { return (T) _nearCacheEntry.Value; }
+            get { return _value; }
         }
 
         /** <inheritdoc /> */
         public void SetValueIfEmpty(T value)
         {
-            _nearCacheEntry.SetValueIfEmpty(value);
+            if (Interlocked.CompareExchange(ref _hasValue, 1, 0) == 0)
+            {
+                _value = value;
+            }
         }
     }
 }

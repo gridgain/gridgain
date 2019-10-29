@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache
+namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
