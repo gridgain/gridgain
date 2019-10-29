@@ -25,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -225,7 +226,8 @@ class BinaryMetadataFileStore {
     }
 
     /**
-     *
+     * @param meta Binary metadata to be written.
+     * @param typeVer Type version.
      */
     void writeMetadataAsync(BinaryMetadata meta, int typeVer) {
         if (!CU.isPersistenceEnabled(ctx.config()))
@@ -243,13 +245,20 @@ class BinaryMetadataFileStore {
     }
 
     /**
+     * typeVer parameter is always non-negative except one special case
+     * (see {@link CacheObjectBinaryProcessorImpl#addMeta(int, BinaryType, boolean)} for context):
+     * if request for bin meta update arrives right at the moment when node is stopping
+     * {@link MetadataUpdateResult} of special type is generated: UPDATE_DISABLED.
      *
-     * @param typeId
-     * @param typeVer
-     * @throws IgniteCheckedException
+     * At this moment type version is unknown and blocking thread adds risk of deadlock so wait is skipped.
+     *
+     * @param typeId Type ID.
+     * @param typeVer Type version.
+     * @throws IgniteCheckedException If write operation failed.
      */
     void waitForWriteCompletion(int typeId, int typeVer) throws IgniteCheckedException {
-        if (typeVer < 0) {
+        //special case, see javadoc
+        if (typeVer == -1) {
             if (log.isDebugEnabled())
                 log.debug("No need to wait for " + typeId + ", negative typeVer was passed.");
 
@@ -282,7 +291,9 @@ class BinaryMetadataFileStore {
             super(ctx.igniteInstanceName(), "binary-metadata-writer", BinaryMetadataFileStore.this.log, ctx.workersRegistry());
         }
 
-        /** */
+        /**
+         * @param task Write operation task.
+         */
         void submit(WriteOperationTask task) {
             if (isCancelled())
                 return;
@@ -395,7 +406,10 @@ class BinaryMetadataFileStore {
         /** */
         private final int typeVer;
 
-        /** */
+        /**
+         * @param meta Metadata for binary type.
+         * @param ver Version of type.
+         */
         private WriteOperationTask(BinaryMetadata meta, int ver) {
             this.meta = meta;
             typeVer = ver;
@@ -412,7 +426,10 @@ class BinaryMetadataFileStore {
         /** */
         private final int typeVer;
 
-        /** */
+        /**
+         * @param typeId Type Id.
+         * @param typeVer Type version.
+         */
         private OperationSyncKey(int typeId, int typeVer) {
             this.typeId = typeId;
             this.typeVer = typeVer;
