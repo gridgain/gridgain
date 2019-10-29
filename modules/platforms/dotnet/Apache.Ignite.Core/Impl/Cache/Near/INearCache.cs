@@ -39,5 +39,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Reads cache key from a stream and invalidates.
         /// </summary>
         void Update(IBinaryStream keyStream, Marshaller marshaller);
+
+        /// <summary>
+        /// Clears the cache.
+        /// </summary>
+        void Clear();
     }
 }

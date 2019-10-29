@@ -79,6 +79,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
+        public void Clear()
+        {
+            _map.Clear();
+        }
+
         public void Remove(TK key)
         {
             NearCacheEntry<TV> unused;

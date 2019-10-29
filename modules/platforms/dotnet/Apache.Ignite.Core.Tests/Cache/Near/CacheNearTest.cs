@@ -363,7 +363,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
 
-            Assert.Throws<Exception>(() => cache.Get(1));
+            var ex = Assert.Throws<InvalidOperationException>(() => cache.Get(1));
+            
+            // TODO: why does message start with class o.a.i...?
+            StringAssert.EndsWith(
+                "Failed to perform cache operation (cache is stopped): destroy-test", 
+                ex.Message);
         }
 
         /// <summary>

@@ -94,7 +94,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void Stop(int cacheId)
         {
-            _nearCaches.Remove(cacheId);
+            INearCache cache;
+            if (_nearCaches.TryGetValue(cacheId, out cache))
+            {
+                cache.Clear();
+                _nearCaches.Remove(cacheId);
+            }
         }
     }
 }
