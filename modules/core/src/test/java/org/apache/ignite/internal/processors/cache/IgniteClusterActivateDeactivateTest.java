@@ -915,9 +915,10 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         if (!ClusterState.active(initialState))
             checkNoCaches(nodesCnt);
 
+        ignite(changeFrom).cluster().state(initialState); // Should be no-op.
+
         checkClusterState(nodesCnt, initialState);
 
-        ignite(changeFrom).cluster().state(initialState); // Should be no-op.
         ignite(changeFrom).cluster().state(targetState);
 
         checkClusterState(nodesCnt, targetState);
