@@ -54,9 +54,7 @@ class CheckpointPages {
         //Uninterruptibly is important because otherwise in case of interrupt of client thread node would be stopped.
         allowToReplace.getUninterruptibly();
 
-        //System.err.println("remove: " + fullPageId);
-
-        return checkpointPages.remove(fullPageId);
+        return checkpointPages.contains(fullPageId);
     }
 
     /**
@@ -65,13 +63,6 @@ class CheckpointPages {
      */
     public boolean contains(FullPageId fullPageId) {
         Collection<FullPageId> checkpointPages = segCheckpointPages;
-
-        assert checkpointPages != null;
-
-/*        if (checkpointPages == null)
-            return getClo.apply(fullPageId);
-
-        return checkpointPages != null && (getClo.apply(fullPageId) || checkpointPages.contains(fullPageId));*/
 
         return checkpointPages != null && checkpointPages.contains(fullPageId);
     }

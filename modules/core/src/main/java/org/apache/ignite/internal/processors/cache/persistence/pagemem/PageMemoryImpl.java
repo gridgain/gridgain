@@ -2435,7 +2435,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if should be written by a checkpoint.
                 // These pages does not have tmp buffer.
-                if (checkpointPages != null && checkpointPages.contains(fullPageId)) {
+                if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
                     assert storeMgr != null;
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));

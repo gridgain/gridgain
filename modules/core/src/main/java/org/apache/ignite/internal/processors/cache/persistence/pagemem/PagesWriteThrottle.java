@@ -175,8 +175,6 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         inCheckpointBackoffCntr.set(0);
 
         notInCheckpointBackoffCntr.set(0);
-
-        cpBufThrottledThreads.values().forEach(LockSupport::unpark);
     }
 
     /**
