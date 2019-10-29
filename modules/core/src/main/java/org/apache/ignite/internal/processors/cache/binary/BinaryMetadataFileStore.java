@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.binary;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -146,8 +147,16 @@ class BinaryMetadataFileStore {
 
             stopOnCriticalError = true;
 
-            for (GridFutureAdapter fut : writeOpFutures.values())
-                fut.onDone(e);
+            for (Map.Entry<OperationSyncKey, GridFutureAdapter> entry : writeOpFutures.entrySet()) {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Cancelling future for write operation for" +
+                        " [typeId=" + entry.getKey().typeId +
+                        ", typeVer=" + entry.getKey().typeVer + ']'
+                    );
+
+                entry.getValue().onDone(entry);
+            }
 
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
@@ -222,6 +231,14 @@ class BinaryMetadataFileStore {
         if (!CU.isPersistenceEnabled(ctx.config()))
             return;
 
+        if (log.isDebugEnabled())
+            log.debug(
+                "Submitting task for async write for" +
+                " [typeName=" + meta.typeName() +
+                ", typeId=" + meta.typeId() +
+                ", typeVersion=" + typeVer + ']'
+            );
+
         writer.submit(new WriteOperationTask(meta, typeVer));
     }
 
@@ -232,13 +249,25 @@ class BinaryMetadataFileStore {
      * @throws IgniteCheckedException
      */
     void waitForWriteCompletion(int typeId, int typeVer) throws IgniteCheckedException {
-        if (typeVer < 0)
+        if (typeVer < 0) {
+            if (log.isDebugEnabled())
+                log.debug("No need to wait for " + typeId + ", negative typeVer was passed.");
+
             return;
+        }
 
         GridFutureAdapter fut = writeOpFutures.get(new OperationSyncKey(typeId, typeVer));
 
-        if (fut != null)
+        if (fut != null) {
+            if (log.isDebugEnabled())
+                log.debug(
+                    "Waiting for write completion of" +
+                    " [typeId=" + typeId +
+                    ", typeVer=" + typeVer + ']'
+                );
+
             fut.get();
+        }
     }
 
     /**
@@ -280,8 +309,16 @@ class BinaryMetadataFileStore {
 
             IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled (node is stopping).");
 
-            for (GridFutureAdapter fut : writeOpFutures.values())
-                fut.onDone(err);
+            for (Map.Entry<OperationSyncKey, GridFutureAdapter> e : writeOpFutures.entrySet()) {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Cancelling future for write operation for" +
+                        " [typeId=" + e.getKey().typeId +
+                        ", typeVer=" + e.getKey().typeVer + ']'
+                    );
+
+                e.getValue().onDone(err);
+            }
 
             writeOpFutures.clear();
         }
@@ -311,6 +348,13 @@ class BinaryMetadataFileStore {
             try {
                 task = queue.take();
 
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Starting write operation for" +
+                        " [typeId=" + task.meta.typeId() +
+                        ", typeVer=" + task.typeVer + ']'
+                    );
+
                 writeMetadata(task.meta);
             }
             finally {
@@ -319,8 +363,26 @@ class BinaryMetadataFileStore {
 
             GridFutureAdapter fut = writeOpFutures.remove(new OperationSyncKey(task.meta.typeId(), task.typeVer));
 
-            if (fut != null)
+            if (fut != null) {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Future for write operation for" +
+                        " [typeId=" + task.meta.typeId() +
+                        ", typeVer=" + task.typeVer + ']' +
+                        " completed."
+                    );
+
                 fut.onDone();
+            }
+            else {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Future for write operation for" +
+                        " [typeId=" + task.meta.typeId() +
+                        ", typeVer=" + task.typeVer + ']' +
+                        " not found."
+                    );
+            }
         }
     }
 
