@@ -331,13 +331,16 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
             var cache2 = _grid.GetCache<string, string>(DefaultCacheName);
-            var cache3 = _grid.GetCache<object, object>(DefaultCacheName);
+            var cache3 = _grid.GetCache<int, Foo>(DefaultCacheName);
+            var cache4 = _grid.GetCache<object, object>(DefaultCacheName);
 
             cache1[1] = 1;
             cache2["1"] = "1";
+            cache3[2] = new Foo(5);
 
-            Assert.AreEqual(cache3[1], 1);
-            Assert.AreEqual(cache3["1"], "1");
+            Assert.AreEqual(cache4[1], 1);
+            Assert.AreEqual(cache4["1"], "1");
+            Assert.AreSame(cache4[2], cache3[2]);
         }
 
         /// <summary>
