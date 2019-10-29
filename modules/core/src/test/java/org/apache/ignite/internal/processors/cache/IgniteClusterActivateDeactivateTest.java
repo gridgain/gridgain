@@ -1129,8 +1129,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         testSpi = transition;
         stateOnStart = initialState;
 
-        final int SRVS = 2;
-        final int CLIENTS = 1;
+        final int SRVS = 3;
+        final int CLIENTS = 3;
         int nodesCnt = SRVS + CLIENTS;
 
         startWithCaches1(SRVS, CLIENTS);
