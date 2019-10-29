@@ -18,6 +18,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 {
     using System.Diagnostics;
 
+    /// <summary>
+    /// Generic wrapper over object-based near cache.
+    /// </summary>
     internal class NearCacheGenericWrapper<TK, TV> : INearCache<TK, TV>
     {
         private readonly NearCache<object, object> _nearCache;
@@ -51,7 +54,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         public void Remove(TK key)
         {
-            throw new System.NotImplementedException();
+            _nearCache.Remove(key);
         }
     }
 }

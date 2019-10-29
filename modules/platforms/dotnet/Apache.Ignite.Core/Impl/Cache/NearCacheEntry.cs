@@ -29,22 +29,30 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** */
         private T _value;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NearCacheEntry{T}"/> class.
+        /// </summary>
+        /// <param name="hasValue">Whether this entry has a value.</param>
+        /// <param name="value">Value.</param>
         public NearCacheEntry(bool hasValue = false, T value = default(T))
         {
             _hasValue = hasValue ? 1 : 0;
             _value = value;
         }
 
+        /** <inheritdoc /> */
         public bool HasValue
         {
             get { return _hasValue > 0; }
         }
 
+        /** <inheritdoc /> */
         public T Value
         {
             get { return _value; }
         }
 
+        /** <inheritdoc /> */
         public void SetValueIfEmpty(T value)
         {
             if (Interlocked.CompareExchange(ref _hasValue, 1, 0) == 0)

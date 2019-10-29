@@ -16,12 +16,26 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
+    /// <summary>
+    /// Near cache entry.
+    /// </summary>
+    /// <typeparam name="T">Type of the value.</typeparam>
     internal interface INearCacheEntry<T>
     {
+        /// <summary>
+        /// Gets a value indicating whether this entry has a value.
+        /// </summary>
         bool HasValue { get; }
         
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         T Value { get; }
         
+        /// <summary>
+        /// Sets value atomically only if it has not been set before.
+        /// </summary>
+        /// <param name="value">Value.</param>
         void SetValueIfEmpty(T value);
     }
 }

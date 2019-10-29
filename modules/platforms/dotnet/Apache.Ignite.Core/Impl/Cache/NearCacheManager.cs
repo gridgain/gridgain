@@ -16,9 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache
 {
-    using System;
     using System.Diagnostics;
-    using System.IO;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;

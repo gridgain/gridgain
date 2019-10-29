@@ -18,10 +18,18 @@ namespace Apache.Ignite.Core.Impl.Cache
 {
     using System.Diagnostics;
 
+    /// <summary>
+    /// Generic wrapper over object-based entry.
+    /// </summary>
     internal class NearCacheEntryGenericWrapper<T> : INearCacheEntry<T>
     {
+        /** */
         private readonly INearCacheEntry<object> _nearCacheEntry;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="NearCacheEntryGenericWrapper{T}"/> class.
+        /// </summary>
+        /// <param name="nearCacheEntry">Entry to wrap.</param>
         public NearCacheEntryGenericWrapper(INearCacheEntry<object> nearCacheEntry)
         {
             Debug.Assert(nearCacheEntry != null);
@@ -29,16 +37,19 @@ namespace Apache.Ignite.Core.Impl.Cache
             _nearCacheEntry = nearCacheEntry;
         }
 
+        /** <inheritdoc /> */
         public bool HasValue
         {
             get { return _nearCacheEntry.HasValue; }
         }
 
+        /** <inheritdoc /> */
         public T Value
         {
             get { return (T) _nearCacheEntry.Value; }
         }
 
+        /** <inheritdoc /> */
         public void SetValueIfEmpty(T value)
         {
             _nearCacheEntry.SetValueIfEmpty(value);
