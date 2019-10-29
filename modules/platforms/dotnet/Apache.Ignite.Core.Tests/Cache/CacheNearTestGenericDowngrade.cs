@@ -18,10 +18,12 @@ namespace Apache.Ignite.Core.Tests.Cache
 {
     using System.Linq;
     using Apache.Ignite.Core.Impl.Cache.Near;
+    using NUnit.Framework;
 
     /// <summary>
     /// Tests <see cref="NearCache" /> in generic downgrade mode (see comments in <see cref="NearCacheManager"/>).
     /// </summary>
+    [TestFixture]
     public class CacheNearTestGenericDowngrade : CacheNearTest
     {
         /// <summary>
