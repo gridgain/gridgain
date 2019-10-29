@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.processors.continuous;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -44,6 +46,9 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -1055,6 +1060,15 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMultithreadedWithNodeRestart() throws Exception {
+        Enumeration iter = ((GridTestLog4jLogger)log).impl.getAllAppenders();
+        while (iter.hasMoreElements()) {
+            Appender appender = (Appender)iter.nextElement();
+            log.info("APPENDER : " + appender.getName());
+            if(appender.getName().contains("FILE"))
+                log.info("LOG FILE : " + new File(((FileAppender)appender).getFile()).getAbsolutePath());
+        }
+
+
         final AtomicBoolean stop = new AtomicBoolean();
         final BlockingQueue<IgniteBiTuple<Integer, UUID>> queue = new LinkedBlockingQueue<>();
         final Collection<UUID> started = new GridConcurrentHashSet<>();
