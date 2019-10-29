@@ -1207,6 +1207,22 @@ public class PlatformCallbackGateway {
     }
 
     /**
+     * Notifies about cache stop.
+     *
+     * @param cacheId Cache id.
+     */
+    public void onCacheStopped(int cacheId) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.OnCacheStopped, cacheId);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
      * Enter gateway.
      */
     protected void enter() {

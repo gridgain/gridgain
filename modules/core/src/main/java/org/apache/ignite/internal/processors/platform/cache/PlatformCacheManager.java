@@ -47,8 +47,7 @@ public class PlatformCacheManager implements GridCacheManager {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel, boolean destroy) {
-        // TODO: Drop near cache data.
-        System.out.println("PlatformCacheManager.stop: " + cctx.name());
+        proc.context().gateway().onCacheStopped(cctx.cacheId());
     }
 
     /** {@inheritDoc} */
@@ -58,8 +57,7 @@ public class PlatformCacheManager implements GridCacheManager {
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        // TODO: Drop near cache data? Which method is actually called?
-        System.out.println("PlatformCacheManager.onKernalStop: " + cctx.name());
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -69,7 +67,7 @@ public class PlatformCacheManager implements GridCacheManager {
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture reconnectFut) {
-        // TODO: Drop near cache data.
-        System.out.println("PlatformCacheManager.onDisconnected: " + cctx.name());
+        // No-op.
+        // Disconnect is handled from PlatformProcessor.onDisconnected.
     }
 }

@@ -229,4 +229,7 @@ class PlatformCallbackOp {
 
     /** */
     public static final int NearCacheInvalidate = 70;
+
+    /** */
+    public static final int OnCacheStopped = 71;
 }
