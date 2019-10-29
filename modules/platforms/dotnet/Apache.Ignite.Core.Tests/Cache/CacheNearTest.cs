@@ -358,9 +358,9 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             var ignite = GetIgnite(mode);
             
-            var cache = ignite.CreateCache<int, int>(cfg);
-            cache[1] = 1;
+            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
             
+            cache[1] = 1;
             ignite.DestroyCache(cache.Name);
 
             Assert.Throws<Exception>(() => cache.Get(1));
