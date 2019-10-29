@@ -529,6 +529,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     log.info("Read-only mode is disabled");
             }
 
+            if (!ClusterState.active(globalState.state()))
+                ctx.cache().context().readOnlyMode(false);
+
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)
