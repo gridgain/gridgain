@@ -347,9 +347,23 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that near cache data is cleared when underlying cache is destroyed.
         /// </summary>
         [Test]
-        public void TestDestroyCacheClearsNearCacheData()
+        public void TestDestroyCacheClearsNearCacheData(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO
+            var cfg = new CacheConfiguration
+            {
+                Name = "destroy-test",
+                NearConfiguration = new NearCacheConfiguration()
+            };
+
+            var ignite = GetIgnite(mode);
+            
+            var cache = ignite.CreateCache<int, int>(cfg);
+            cache[1] = 1;
+            
+            ignite.DestroyCache(cache.Name);
+
+            Assert.Throws<Exception>(() => cache.Get(1));
         }
 
         /// <summary>
@@ -416,6 +430,14 @@ namespace Apache.Ignite.Core.Tests.Cache
                 default:
                     throw new ArgumentOutOfRangeException("mode", mode, null);
             }
+        }
+
+        /// <summary>
+        /// Gets Ignite instance for mode.
+        /// </summary>
+        private IIgnite GetIgnite(CacheTestMode mode)
+        {
+            return new[] {_grid, _grid2, _client}[(int) mode];
         }
 
         /** <inheritdoc /> */
