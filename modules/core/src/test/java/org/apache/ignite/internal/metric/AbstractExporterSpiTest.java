@@ -66,13 +66,13 @@ public abstract class AbstractExporterSpiTest extends GridCommonAbstractTest {
 
         mreg.longMetric("test", "").add(2);
 
-        mreg = new MetricRegistry("other.prefix", "other.prefix", log);
+        mreg = mmgr.registry("other.prefix");
 
         mreg.longMetric("test", "").add(42);
 
         mreg.longMetric("test2", "").add(43);
 
-        mreg = new MetricRegistry("other.prefix2", "other.prefix2", log);
+        mreg = mmgr.registry("other.prefix2");
 
         mreg.longMetric("test3", "").add(44);
     }
