@@ -1212,7 +1212,9 @@ public class PlatformCallbackGateway {
      * @param cacheId Cache id.
      */
     public void onCacheStopped(int cacheId) {
-        enter();
+        // Ignore cache stop during grid stop.
+        if (!tryEnter())
+            return;
 
         try {
             PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.OnCacheStopped, cacheId);
