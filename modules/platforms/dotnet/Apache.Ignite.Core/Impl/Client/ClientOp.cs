@@ -73,6 +73,7 @@ namespace Apache.Ignite.Core.Impl.Client
         ClusterIsActive = 4000,
         ClusterChangeState = 4001,
         ClusterChangeWalState = 4002,
-        ClusterGetWalState = 4003
+        ClusterGetWalState = 4003,
+        ClusterGroupGetNodes = 4100
     }
 }
