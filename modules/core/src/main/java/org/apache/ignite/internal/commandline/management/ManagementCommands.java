@@ -107,7 +107,8 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
                 throw e;
             }
-        } else {
+        }
+        else {
             log.warning(String.format("For use experimental command add %s=true to JVM_OPTS in %s",
                 IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME));
         }
