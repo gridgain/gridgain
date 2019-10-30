@@ -59,7 +59,7 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {MockConfiguration.class})
-public class AccountServiceTest {
+public class AccountsServiceTest {
     /** Account repository. */
     @Mock
     private AccountsRepository accountsRepo;

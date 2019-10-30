@@ -16,8 +16,11 @@
 
 package org.apache.ignite.console;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.console.web.security.IgniteSessionRepository;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +29,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
 
 /**
  * Grid config.
@@ -39,6 +44,15 @@ public class TestGridConfiguration {
     @Primary
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
+    }
+
+    /**
+     * @param ignite Ignite.
+     * @param txMgr Transaction manager.
+     */
+    @Bean
+    public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
+        return new IgniteSessionRepository(10_000L, ignite, txMgr);
     }
 
     /**

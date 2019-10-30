@@ -16,89 +16,86 @@
 
 package org.apache.ignite.console.web.security;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.console.messages.WebConsoleMessageSource;
-import org.springframework.context.support.MessageSourceAccessor;
+import org.apache.ignite.console.db.CacheHolder;
+import org.apache.ignite.console.db.OneToManyIndex;
+import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
-import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+import static org.apache.ignite.console.common.Utils.getPrincipal;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
-public class IgniteSessionRepository implements SessionRepository<ExpiringSession> {
+public class IgniteSessionRepository implements FindByIndexNameSessionRepository<ExpiringSession> {
+    /** This value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
+    private int maxInactiveInterval;
+
     /** */
-    private final Ignite ignite;
+    private final TransactionManager txMgr;
 
-    /** Messages accessor. */
-    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+    /** Sessions collection. */
+    private CacheHolder<String, MapSession> sessionsCache;
 
-    /** If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
-    private Integer dfltMaxInactiveInterval;
-
-    /** Session cache configuration. */
-    private final CacheConfiguration<String, MapSession> cfg;
+    /** Account to sessions index. */
+    private OneToManyIndex<String, String> accToSesIdx;
 
     /**
      * @param ignite Ignite.
      */
-    public IgniteSessionRepository(Ignite ignite) {
-       this.ignite = ignite;
+    public IgniteSessionRepository(long expirationTimeout, Ignite ignite, TransactionManager txMgr) {
+       this.maxInactiveInterval = (int)MILLISECONDS.toSeconds(expirationTimeout);
+       this.txMgr = txMgr;
 
-        cfg = new CacheConfiguration<String, MapSession>()
-            .setName("wc_sessions")
-            .setCacheMode(CacheMode.REPLICATED);
-    }
-
-    /**
-     * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
-     *
-     * @param dfltMaxInactiveInterval Number of seconds that the {@link Session} should be kept alive between client
-     * requests.
-     */
-    public IgniteSessionRepository setDefaultMaxInactiveInterval(int dfltMaxInactiveInterval) {
-        this.dfltMaxInactiveInterval = dfltMaxInactiveInterval;
-
-        return this;
+        txMgr.registerStarter(() -> {
+            sessionsCache = new CacheHolder<>(ignite, "wc_sessions", expirationTimeout);
+            accToSesIdx = new OneToManyIndex<>(ignite, "wc_acc_to_ses_idx", expirationTimeout);
+        });
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession createSession() {
         ExpiringSession ses = new MapSession();
 
-        if (dfltMaxInactiveInterval != null)
-            ses.setMaxInactiveIntervalInSeconds(dfltMaxInactiveInterval);
+        ses.setMaxInactiveIntervalInSeconds(maxInactiveInterval);
 
         return ses;
     }
 
-    /**
-     * @return Cache with sessions.
-     */
-    private IgniteCache<String, MapSession> cache() {
-            return ignite.getOrCreateCache(cfg);
-    }
-
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
-        try {
-            cache().put(ses.getId(), new MapSession(ses));
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+        txMgr.doInTransaction(() -> {
+            Account acc = getPrincipal(ses);
+
+            String sesId = ses.getId();
+
+            if (acc != null) {
+                String email = acc.getEmail();
+
+                ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
+
+                accToSesIdx.add(email, sesId);
+            }
+
+            sessionsCache.put(ses.getId(), new MapSession(ses));
+        });
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
-        try {
-            ExpiringSession ses = cache().get(id);
+        return txMgr.doInTransaction(() -> {
+            ExpiringSession ses = sessionsCache.get(id);
 
             if (ses == null)
                 return null;
@@ -110,19 +107,32 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
             }
 
             return ses;
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+        });
     }
 
     /** {@inheritDoc} */
-    @Override public void delete(String id) {
-        try {
-            cache().remove(id);
-        }
-        catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
-        }
+    @Override public void delete(String sesId) {
+        txMgr.doInTransaction(() -> {
+            MapSession ses = sessionsCache.cache().getAndRemove(sesId);
+
+            if (ses != null) {
+                String email = ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
+
+                accToSesIdx.delete(email);
+            }
+        });
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<String, ExpiringSession> findByIndexNameAndIndexValue(String idxName, String idxVal) {
+        if (!PRINCIPAL_NAME_INDEX_NAME.equals(idxName))
+            return Collections.emptyMap();
+
+        return accToSesIdx
+            .get(idxVal)
+            .stream()
+            .map(this::getSession)
+            .filter(Objects::nonNull)
+            .collect(toMap(Session::getId, identity()));
     }
 }

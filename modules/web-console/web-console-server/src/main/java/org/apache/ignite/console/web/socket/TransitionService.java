@@ -26,7 +26,6 @@ import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.messaging.MessagingListenActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -195,14 +194,10 @@ public class TransitionService {
             return;
         }
 
-        UUID targetNid = F.rand(nids);
-
         try {
-            ignite.message(ignite.cluster().forNodeId(targetNid)).send(SEND_TO_AGENT, req);
+            ignite.message(ignite.cluster().forNodeIds(nids).forRandom()).send(SEND_TO_AGENT, req);
         }
         catch (ClusterGroupEmptyException ignored) {
-            agentsRepo.remove(req.getKey(), targetNid);
-
             resendToOtherBackend(req);
         }
         catch (Exception e) {

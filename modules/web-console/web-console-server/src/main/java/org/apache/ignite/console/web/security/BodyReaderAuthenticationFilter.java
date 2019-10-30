@@ -42,8 +42,10 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
     protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** {@inheritDoc} */
-    @Override public Authentication attemptAuthentication(HttpServletRequest req,
-        HttpServletResponse res) throws AuthenticationException {
+    @Override public Authentication attemptAuthentication(
+        HttpServletRequest req,
+        HttpServletResponse res
+    ) throws AuthenticationException {
         try {
             SignInRequest params = objMapper.readValue(req.getReader(), SignInRequest.class);
 
