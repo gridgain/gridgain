@@ -28,6 +28,7 @@ import java.security.KeyStore;
 import java.security.ProtectionDomain;
 import java.security.UnrecoverableKeyException;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -56,7 +57,6 @@ import javax.crypto.SecretKey;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
@@ -196,7 +196,7 @@ public class AgentUtils {
 
     /**
      * @param s String with sensitive data.
-     * @return Secured string (sensitive part replaced with asterics symbols).
+     * @return Secured string (sensitive part replaced with asterisks).
      */
     public static String secured(String s) {
         if (F.isEmpty(s))
@@ -333,13 +333,16 @@ public class AgentUtils {
      * @return List of not empty items.
      */
     public static List<String> split(String s) {
-        if (F.isEmpty(s))
-            return emptyList();
+        List<String> res = new ArrayList<>();
 
-        return Arrays.stream(s.trim().split(","))
-            .map(String::trim)
-            .filter(item -> !F.isEmpty(item))
-            .collect(toList());
+        if (!F.isEmpty(s)) {
+            res.addAll(Arrays.stream(s.trim().split(","))
+                .map(String::trim)
+                .filter(item -> !F.isEmpty(item))
+                .collect(toList()));
+        }
+
+        return res;
     }
 
     /**

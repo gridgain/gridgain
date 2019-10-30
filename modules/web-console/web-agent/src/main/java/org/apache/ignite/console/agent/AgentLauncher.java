@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -148,7 +147,7 @@ public class AgentLauncher {
 
             String tokens = String.valueOf(readPassword("Enter security tokens separated by comma: "));
 
-            cfg.tokens(new ArrayList<>(split(tokens)));
+            cfg.tokens(split(tokens));
         }
 
         if (!F.isEmpty(cfg.passwordsStore()) && F.isEmpty(cfg.passwordsStorePassword())) {

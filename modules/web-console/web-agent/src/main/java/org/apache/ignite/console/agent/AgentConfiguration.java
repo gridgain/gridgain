@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -503,7 +502,7 @@ public class AgentConfiguration {
         List<String> items = split(props.getProperty("tokens"));
 
         if (!F.isEmpty(items))
-            tokens(new ArrayList<>(items)); // Intentionally wrapped by ArrayList, for further manipulations.
+            tokens(items);
 
         String val = props.getProperty("server-uri");
 
@@ -513,7 +512,7 @@ public class AgentConfiguration {
         items = split(props.getProperty("node-uri"));
 
         if (!F.isEmpty(items))
-            nodeURIs(new ArrayList<>(items)); // Intentionally wrapped by ArrayList, for further manipulations.
+            nodeURIs(items);
 
         val = props.getProperty("node-login");
 
