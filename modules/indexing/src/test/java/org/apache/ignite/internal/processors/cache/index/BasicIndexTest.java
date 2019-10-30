@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
@@ -48,6 +49,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.junit.Assert;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2PrimaryScanIndex.SCAN_INDEX_NAME_SUFFIX;
 
@@ -323,6 +325,28 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         return idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
     }
 
+
+    /**
+     * Checks index usage instead of full scan, and whether the expected scan count matches the analyze output.
+     * @param res Result set.
+     * @return {@code True} if index usage found.
+     */
+    private void checkIdxUsageForAnalyze(List<List<?>> res, String idx, int expScanCount) {
+        String plan = res.get(0).get(0).toString();
+
+        boolean idxUsed = idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
+        Assert.assertTrue(idxUsed);
+
+        Matcher m = Pattern.compile("/\\* scanCount: (\\d+) \\*/").matcher(plan);
+        Assert.assertTrue(m.find());
+
+        System.out.println(">>> Plan:\n" + plan);
+
+        int scanCount = Integer.parseInt(m.group(1));
+        System.out.println(">>> scanCount: " + scanCount);
+        Assert.assertEquals(expScanCount, scanCount);
+    }
+
     /**
      * Tests IN with EQUALS index usage .
      */
@@ -370,6 +394,32 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsage(res, idxName));
 
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (select ADDRESS from " + TEST_TBL_NAME + " where ADDRESS in(?1, ?2)) " +
+                "and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?3)").setArgs(3, 4, 5).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and ADDRESS = ?3").setArgs(3, 4, 5).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (3, 4) and ADDRESS = 5").setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
         res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
             " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?4) ORDER BY LAST_NAME")
             .setArgs(3, 4, 5, 6), true).getAll();
@@ -392,6 +442,107 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
             " where LANG in (4, 5) and (ADDRESS = 3 or ADDRESS = 4) ORDER BY LAST_NAME"), true).getAll();
+
+        assertEquals(res.size(), 2);
+    }
+
+    /**
+     * Tests IN with EQUALS index usage .
+     */
+    public void testInWithEqualsIdxUsageCompoundIndex() throws Exception {
+        inlineSize = 10;
+
+        isPersistenceEnabled = false;
+
+        String idxName = "idx2";
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
+                "ADDRESS", "LANG");
+
+        String sqlIdx2 = String.format("create index \"%s\" on %s(LANG, ADDRESS)", idxName, TEST_TBL_NAME);
+
+        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
+
+        List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+                " where LANG in (select ADDRESS from " + TEST_TBL_NAME + " where ADDRESS in(?1, ?2)) " +
+                "and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?3)").setArgs(3, 4, 5), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and ADDRESS = ?3").setArgs(3, 4, 5), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+                " where LANG in (3, 4) and ADDRESS = 5"), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (select ADDRESS from " + TEST_TBL_NAME + " where ADDRESS in(?1, ?2)) " +
+                "and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?3)").setArgs(3, 4, 5).setLocal(true), true).getAll();
+
+        checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and ADDRESS = ?3").setArgs(3, 4, 5).setLocal(true), true).getAll();
+
+        // TODO - this fails, scanCount = 11 (full scan)
+        //checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain analyze select * from " + TEST_TBL_NAME +
+                " where LANG in (3, 4) and ADDRESS = 5").setLocal(true), true).getAll();
+
+        // TODO - this fails, scanCount = 11 (full scan)
+        //checkIdxUsageForAnalyze(res, idxName, 3);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
+                " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?4) ORDER BY LAST_NAME")
+                .setArgs(3, 4, 5, 6), true).getAll();
+
+        assertEquals(res.size(), 0);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
+                " where LANG in (?3, ?4) and (ADDRESS = ?1 or ADDRESS = ?2) ORDER BY LAST_NAME")
+                .setArgs(3, 4, 5, 6), true).getAll();
+
+        assertEquals(res.size(), 1);
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
+                " where LANG in (?2, ?3) and (ADDRESS = ?1 or ADDRESS = ?2) ORDER BY LAST_NAME")
+                .setArgs(3, 4, 5), true).getAll();
+
+        assertEquals(res.size(), 2);
+
+        assertEquals(res.get(0).get(0), "1");
+
+        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
+                " where LANG in (4, 5) and (ADDRESS = 3 or ADDRESS = 4) ORDER BY LAST_NAME"), true).getAll();
 
         assertEquals(res.size(), 2);
     }
