@@ -62,7 +62,7 @@ public class GridChangeReadOnlyModeCommandHandler extends GridRestCommandHandler
         try {
             switch (req.command()) {
                 case CLUSTER_CURRENT_READ_ONLY_MODE:
-                    res.setResponse(ctx.grid().cluster().readOnly());
+                    //res.setResponse(ctx.grid().cluster().readOnly());
 
                     break;
 
@@ -72,7 +72,7 @@ public class GridChangeReadOnlyModeCommandHandler extends GridRestCommandHandler
                     else
                         U.log(log, "Received disable read-only mode request from client node with ID: " + req.clientId());
 
-                    ctx.grid().cluster().readOnly(req.readOnly());
+                    // ctx.grid().cluster().readOnly(req.readOnly());
 
                     res.setResponse(req.command().key() + " done");
 
