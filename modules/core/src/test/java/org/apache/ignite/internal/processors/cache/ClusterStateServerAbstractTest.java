@@ -30,6 +30,7 @@ import org.junit.Test;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.ENTRY_CNT;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 
 /**

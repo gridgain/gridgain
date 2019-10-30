@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
@@ -62,6 +63,7 @@ import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.ClusterStateTestUtils;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
@@ -404,43 +406,67 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testSetState() throws Exception {
+        final String partCacheName = "part_cache";
+        final String replCacheName = "repl_cache";
         Ignite ignite = startGrids(2);
+
+        ignite.cluster().state(ACTIVE);
+
+        ignite.createCache(ClusterStateTestUtils.partitionedCache(partCacheName));
+        ignite.createCache(ClusterStateTestUtils.replicatedCache(replCacheName));
+
+        ignite.cluster().state(INACTIVE);
+
+        injectTestSystemOut();
 
         assertEquals(INACTIVE, ignite.cluster().state());
 
         // INACTIVE -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE");
+        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
 
         // INACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY");
+        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
 
         // READ_ONLY -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY");
+        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
 
         // READ_ONLY -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE");
+        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
 
         // ACTIVE -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE");
+        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
 
         // ACTIVE -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE");
+        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
 
         // INACTIVE -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE");
+        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
 
         // ACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY");
+        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
 
         // READ_ONLY -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE");
+        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
     }
 
     /** */
-    private void setState(Ignite ignite, ClusterState state, String strState) {
+    private void setState(Ignite ignite, ClusterState state, String strState, String... cacheNames) {
         assertEquals(EXIT_CODE_OK, execute("--set-state", strState));
 
         assertEquals(state, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Cluster state changed to " + strState);
+
+        List<IgniteEx> nodes = IntStream.range(0, 2)
+            .mapToObj(this::grid)
+            .collect(Collectors.toList());
+
+        ClusterStateTestUtils.putSomeDataAndCheck(log, nodes, cacheNames);
+
+        if (state == ACTIVE) {
+            for (String cacheName : cacheNames)
+                grid(0).cache(cacheName).clear();
+        }
     }
 
     /**
