@@ -2434,7 +2434,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
                     assert storeMgr != null;
 
-                    assert hasTempCopy(absPtr) : "Page already in checkpoint buffer.";
+                    assert !hasTempCopy(absPtr) : "Page already in checkpoint buffer.";
 
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
 
