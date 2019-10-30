@@ -58,7 +58,7 @@ public class IgniteSqlSchemasDiffConfigurationsTest extends AbstractIndexingComm
     @Ignore("https://ggsystems.atlassian.net/browse/GG-25468")
     @Test
     @SuppressWarnings("ThrowableNotThrown")
-    public void test1() throws Exception {
+    public void testNodeFailWhenJoinWithDiffCacheConfig() throws Exception {
         final String cacheName = "test_cache";
 
         startGrid(createTestConf("ign1", SCHEMA_NAME_1, cacheName));
