@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -30,6 +31,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     {
         /** */
         protected const string DefaultCacheName = "default";
+        /** */
+        private const int NearCacheMaxSize = 3;
 
         /** */
         private IIgnite _grid;
@@ -57,7 +60,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     {
                         NearConfiguration = new NearCacheConfiguration
                         {
-                            EvictionPolicy = new FifoEvictionPolicy {MaxSize = 5}
+                            EvictionPolicy = new FifoEvictionPolicy {MaxSize = NearCacheMaxSize}
                         },
                         Name = DefaultCacheName
                     }
@@ -100,7 +103,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [TearDown]
         public void TearDown()
         {
-            // _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
+            _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
         }
 
         /// <summary>
@@ -393,7 +396,39 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that eviction policy removes near cache data for the key. 
         /// </summary>
         [Test]
-        public void TestEvictionPolicyRemovesNearCacheValue()
+        public void TestFifoEvictionPolicyRemovesNearCacheValue(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+        {
+            var cache = GetCache<int, Foo>(mode);
+            
+            Assert.AreEqual(0, cache.GetSize());
+
+            var items = Enumerable.Range(0, 4).Select(x => new Foo(x)).ToArray();
+
+            for (var i = 0; i < 4; i++)
+            {
+                cache[i] = items[i];
+            }
+
+            // Last 3 items are in near cache:
+            for (var i = 1; i < 4; i++)
+            {
+                Assert.AreSame(items[i], cache[i]);
+            }
+            
+            // First item is deserialized on get:
+            var fromCache = cache[0];
+            Assert.AreNotEqual(items[0], fromCache);
+            
+            // And now it is near again:
+            Assert.AreEqual(fromCache, cache[0]);
+        }
+
+        /// <summary>
+        /// Tests that eviction policy removes near cache data for the key. 
+        /// </summary>
+        [Test]
+        public void TestLruEvictionPolicyRemovesNearCacheValue()
         {
             // TODO
         }
