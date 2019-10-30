@@ -18,12 +18,15 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.Arrays;
 import java.util.List;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Verifies custom sql schema within different configurations. */
@@ -51,19 +54,20 @@ public class IgniteSqlSchemasDiffConfigurationsTest extends AbstractIndexingComm
         stopAllGrids();
     }
 
-//    /** */
-////    @Ignore("")
-//    @Test
-//    @SuppressWarnings("ThrowableNotThrown")
-//    public void test1() throws Exception {
-//        final String cacheName = "test_cache";
-//
-//        startGrid(createTestConf("ign1", SCHEMA_NAME_1, cacheName));
-//
-//        startGrid(createTestConf("ign2", SCHEMA_NAME_2, cacheName));
-//
-//        assertTrue(false);
-//    }
+    /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-25468")
+    @Test
+    @SuppressWarnings("ThrowableNotThrown")
+    public void test1() throws Exception {
+        final String cacheName = "test_cache";
+
+        startGrid(createTestConf("ign1", SCHEMA_NAME_1, cacheName));
+
+        GridTestUtils.assertThrowsWithCause(
+            () -> startGrid(createTestConf("ign2", SCHEMA_NAME_2, cacheName)),
+            IgniteException.class
+        );
+    }
 
     /** */
     @Test
@@ -88,6 +92,7 @@ public class IgniteSqlSchemasDiffConfigurationsTest extends AbstractIndexingComm
         Assert.assertEquals(exp, res);
     }
 
+    /** */
     private IgniteConfiguration createTestConf(String nodeName, String schemaName, String cacheName) throws Exception {
         return getConfiguration(nodeName)
             .setCacheConfiguration(new CacheConfiguration(cacheName).setSqlSchema(schemaName));
