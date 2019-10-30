@@ -46,11 +46,12 @@ public class RequestDeserializer extends StdDeserializer<Request> {
 
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
         UUID sesId = p.getCodec().treeToValue(node.get("sessionId"), UUID.class);
+        UUID nid = p.getCodec().treeToValue(node.get("nodeId"), UUID.class);
         String act = node.get("action").asText();
         ActionMethod actMtd = getActions().get(act);
 
         try {
-            req = new Request().setId(id).setAction(act).setSessionId(sesId);
+            req = new Request().setId(id).setNodeId(nid).setAction(act).setSessionId(sesId);
             Parameter[] parameters = actMtd.getMethod().getParameters();
 
             if (parameters.length == 1) {
@@ -61,7 +62,7 @@ public class RequestDeserializer extends StdDeserializer<Request> {
             }
         }
         catch (Exception e) {
-            req = new InvalidRequest().setCause(e).setId(id).setAction(act);
+            req = new InvalidRequest().setCause(new IllegalArgumentException(e)).setId(id).setAction(act);
         }
 
         return req;

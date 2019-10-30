@@ -29,7 +29,7 @@ import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
 /**
  * Abstract action controller with security config.
  */
-public class AbstractActionControllerWithSecurityTest extends AbstractActionControllerTest {
+public abstract class AbstractActionControllerWithSecurityTest extends AbstractActionControllerTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName, IgniteTestResources rsrcs) {
         IgniteConfiguration configuration = super.getConfiguration(igniteInstanceName, rsrcs);

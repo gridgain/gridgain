@@ -16,8 +16,6 @@
 
 package org.apache.ignite.agent.testsuites;
 
-import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
-import org.apache.ignite.agent.action.controller.ActionControllerWithSecurityBaseTest;
 import org.apache.ignite.agent.action.controller.BaselineActionsControllerTest;
 import org.apache.ignite.agent.action.controller.ClusterActionsControllerTest;
 import org.apache.ignite.agent.action.controller.NodeActionsControllerTest;
@@ -27,6 +25,8 @@ import org.apache.ignite.agent.action.controller.SecurityActionsControllerTest;
 import org.apache.ignite.agent.action.query.QueryRegistryTest;
 import org.apache.ignite.agent.service.CacheServiceSelfTest;
 import org.apache.ignite.agent.service.ClusterServiceSelfTest;
+import org.apache.ignite.agent.service.action.DistributedActionServiceSelfTest;
+import org.apache.ignite.agent.service.action.DistributedActionServiceWithSecuritySelfTest;
 import org.apache.ignite.agent.service.metrics.MetricsServiceSelfTest;
 import org.apache.ignite.agent.service.tracing.TracingServiceSelfTest;
 import org.junit.runner.RunWith;
@@ -37,12 +37,12 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    ActionControllerBaseTest.class,
-    ActionControllerWithSecurityBaseTest.class,
     BaselineActionsControllerTest.class,
     CacheServiceSelfTest.class,
     ClusterActionsControllerTest.class,
     ClusterServiceSelfTest.class,
+    DistributedActionServiceSelfTest.class,
+    DistributedActionServiceWithSecuritySelfTest.class,
     MetricsServiceSelfTest.class,
     NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,

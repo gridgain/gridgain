@@ -34,14 +34,20 @@ import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.AuthenticationContext;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
@@ -256,5 +262,20 @@ public class AgentUtils {
      */
     public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
         return col == null ? Stream.empty() : col.stream();
+    }
+
+    /**
+     * @param e Exception.
+     * @return Integer error code.
+     */
+    public static int getErrorCode(Throwable e) {
+        if (e instanceof SecurityException)
+            return AUTHORIZE_ERROR_CODE;
+        else if (e instanceof IgniteAuthenticationException || e instanceof IgniteAccessControlException)
+            return AUTHENTICATION_ERROR_CODE;
+        else if (e instanceof IllegalArgumentException)
+            return PARSE_ERROR_CODE;
+
+        return INTERNAL_ERROR_CODE;
     }
 }

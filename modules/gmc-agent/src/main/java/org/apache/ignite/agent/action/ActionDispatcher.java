@@ -44,12 +44,6 @@ public class ActionDispatcher implements AutoCloseable {
     /** Context. */
     private final GridKernalContext ctx;
 
-    /** Session registry. */
-    private SessionRegistry sesRegistry;
-
-    /** Logger. */
-    private IgniteLogger log;
-
     /** Controllers. */
     private final Map<Class, Object> controllers = new ConcurrentHashMap<>();
 
@@ -61,9 +55,6 @@ public class ActionDispatcher implements AutoCloseable {
      */
     public ActionDispatcher(GridKernalContext ctx) {
         this.ctx = ctx;
-
-        log = ctx.log(ActionDispatcher.class);
-        sesRegistry = SessionRegistry.getInstance(ctx);
     }
 
     /**
@@ -92,31 +83,8 @@ public class ActionDispatcher implements AutoCloseable {
     private CompletableFuture handleRequest(ActionMethod mtd, Request req) {
         try {
             Class<?> ctrlCls = mtd.getControllerClass();
-            boolean securityEnabled = ctx.security().enabled();
-            boolean authenticationEnabled = ctx.authentication().enabled();
-
             if (!controllers.containsKey(ctrlCls))
                 controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
-
-            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
-            if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
-                UUID sesId = req.getSessionId();
-                Session ses = sesRegistry.getSession(sesId);
-
-                if (ses == null)
-                    throw new IgniteAuthenticationException(
-                        "Failed to authenticate, the session with provided sessionId: " + sesId
-                    );
-
-                if (log.isDebugEnabled())
-                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + "]");
-
-                if (ses.securityContext() != null) {
-                    try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {
-                        return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
-                    }
-                }
-            }
 
             return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
         }

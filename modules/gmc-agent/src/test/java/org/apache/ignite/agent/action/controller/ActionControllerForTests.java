@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.agent.action.annotation.ActionController;
 import org.apache.ignite.internal.GridKernalContext;
 
@@ -38,14 +37,21 @@ public class ActionControllerForTests {
     /**
      * @param flag Flag.
      */
-    public CompletableFuture<Boolean> action(boolean flag) {
-        return CompletableFuture.completedFuture(flag);
+    public boolean action(boolean flag) {
+        return flag;
     }
 
     /**
      * @param num Number.
      */
-    public CompletableFuture<Boolean> numberAction(long num) {
-        return CompletableFuture.completedFuture(true);
+    public boolean numberAction(long num) {
+        return true;
+    }
+
+    /**
+     * @return Node ID.
+     */
+    public String nodeIdAction() {
+        return ctx.grid().cluster().localNode().id().toString();
     }
 }

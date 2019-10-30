@@ -50,7 +50,7 @@ import static org.awaitility.Awaitility.with;
 /**
  * Abstract test for action controllers.
  */
-abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
+public abstract class AbstractActionControllerTest extends AbstractGridWithAgentTest {
     /** Mapper. */
     protected final ObjectMapper mapper = jsonMapper();
 

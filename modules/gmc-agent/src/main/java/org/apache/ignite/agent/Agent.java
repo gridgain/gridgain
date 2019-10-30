@@ -25,14 +25,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
 import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.metrics.MetricExporter;
-import org.apache.ignite.agent.service.metrics.MetricsService;
+import org.apache.ignite.agent.service.action.DistributedActionService;
 import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
 import org.apache.ignite.agent.service.config.NodeConfigurationService;
+import org.apache.ignite.agent.service.metrics.MetricExporter;
+import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
 import org.apache.ignite.cluster.ClusterNode;
@@ -94,7 +95,10 @@ public class Agent extends ManagementConsoleProcessor {
     private MetricsService metricSrvc;
 
     /** Action service. */
-    private ActionService actSrvc;
+    private ActionDispatcher actDispatcher;
+
+    /** Distributed action service. */
+    private DistributedActionService distributedActSrvc;
 
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
@@ -126,6 +130,7 @@ public class Agent extends ManagementConsoleProcessor {
         spanExporter = new GmcSpanExporter(ctx);
         nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
         metricExporter = new MetricExporter(ctx);
+        actDispatcher = new ActionDispatcher(ctx);
         metaStorage = ctx.distributedMetastorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
@@ -144,7 +149,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.shutdownNow(this.getClass(), connectPool, log);
 
         U.closeQuiet(cacheService);
-        U.closeQuiet(actSrvc);
+        U.closeQuiet(actDispatcher);
         U.closeQuiet(metricExporter);
         U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
@@ -172,6 +177,13 @@ public class Agent extends ManagementConsoleProcessor {
             toggleAgentState(cfg.isEnable());
         else
             submitConnectTask();
+    }
+
+    /**
+     * @return Action dispatcher.
+     */
+    public ActionDispatcher actionDispatcher() {
+        return actDispatcher;
     }
 
     /**
@@ -259,7 +271,6 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Starting GMC agent on coordinator");
 
         U.closeQuiet(cacheService);
-        U.closeQuiet(actSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(tracingSrvc);
@@ -277,8 +288,8 @@ public class Agent extends ManagementConsoleProcessor {
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
-        actSrvc = new ActionService(ctx, mgr);
         cacheService = new CacheService(ctx, mgr);
+        distributedActSrvc = new DistributedActionService(ctx, mgr);
 
         connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
@@ -364,7 +375,7 @@ public class Agent extends ManagementConsoleProcessor {
                 }
 
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actSrvc.onActionRequest((Request) payload);
+                    distributedActSrvc.onActionRequest((Request) payload);
                 }
             });
         }

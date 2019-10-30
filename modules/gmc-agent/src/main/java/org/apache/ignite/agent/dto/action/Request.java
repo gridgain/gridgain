@@ -38,6 +38,9 @@ public class Request {
     /** Session ID. */
     private UUID sesId;
 
+    /** Node ID. */
+    private UUID nid;
+
     /**
      * @return Request id.
      */
@@ -95,6 +98,7 @@ public class Request {
 
     /**
      * @param ts Timestamp.
+     * @return This for chaining method calls.
      */
     public Request setTimestamp(long ts) {
         this.ts = ts;
@@ -110,9 +114,26 @@ public class Request {
 
     /**
      * @param sesId Session id.
+     * @return This for chaining method calls.
      */
     public Request setSessionId(UUID sesId) {
         this.sesId = sesId;
+        return this;
+    }
+
+    /**
+     * @return Node ID.
+     */
+    public UUID getNodeId() {
+        return nid;
+    }
+
+    /**
+     * @param nid Nid.
+     * @return This for chaining method calls.
+     */
+    public Request setNodeId(UUID nid) {
+        this.nid = nid;
         return this;
     }
 
