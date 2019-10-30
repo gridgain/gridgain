@@ -98,6 +98,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
             
+            // TODO: Evict is called on replace, update and other things like that -
+            // unnecessary callback that will happen anyway.
+            // Can we get rid of it? Is it possible to miss updates if we don't use evict calls?
+            // E.g.: entry is evicted from Near in Java and we no longer get updates for it, making it stale.
+            // TODO: Investigate tests for this in Java.
             nearCache.Evict(stream, marshaller);
         }
 
