@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -405,13 +406,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var items = Enumerable.Range(0, 4).Select(x => new Foo(x)).ToArray();
 
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < NearCacheMaxSize + 1; i++)
             {
                 cache[i] = items[i];
             }
-
-            // Last 3 items are in near cache:
-            for (var i = 1; i < 4; i++)
+            
+            // Recent items are in near cache:
+            for (var i = 1; i < NearCacheMaxSize + 1; i++)
             {
                 Assert.AreSame(items[i], cache[i]);
             }
