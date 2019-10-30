@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import {Selector} from 'testcafe';
+import {Selector, t} from 'testcafe';
 import {FormField} from '../components/FormField';
 import {isVisible} from '../helpers';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 
 export const createModelButton = Selector('pc-items-table footer-slot .link-success').filter(isVisible);
 export const createModelTitle = Selector('h2').withText('Create model');
+export const editModelTitle = Selector('h2').withText('Edit model');
 export const popoverErrorNotification = Selector('.popover.validation-error');
 
 export const general = {
@@ -28,7 +29,18 @@ export const general = {
     queryMetadata: new FormField({id: 'queryMetadataInput'}),
     keyType: new FormField({id: 'keyTypeInput'}),
     valueType: new FormField({id: 'valueTypeInput'}),
-    panel: new PanelCollapsible('General')
+    panel: new PanelCollapsible('General'),
+    selectCaches: async(...cacheNames) => {
+        const caches = new FormField({id: 'cachesInput'});
+        const cacheSelector = Selector('li').find('button');
+
+        await t.click(caches.control);
+
+        for (let i = 0; i < cacheNames.length; i++)
+            await t.click(cacheSelector);
+
+        await t.pressKey('esc');
+    }
 };
 
 const _sqlFieldsPanel = Selector('label').withText('Fields:').parent('.ignite-form-field');

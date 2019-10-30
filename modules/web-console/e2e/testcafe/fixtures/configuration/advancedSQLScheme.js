@@ -20,11 +20,13 @@ import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfigurat
 import {
     createModelButton,
     createModelTitle,
+    editModelTitle,
     popoverErrorNotification,
     general,
     sqlQuery,
     cacheStore
 } from '../../page-models/pageConfigurationAdvancedModels';
+import {createCacheButton} from '../../page-models/pageConfigurationAdvancedCaches'
 import {successNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();
@@ -68,21 +70,29 @@ test('Base required fields checked on save.', async(t) => {
         .expect(successNotification.withText(`Model "${VALUE_CLS}" saved`).visible).ok('Notification about saved SQL scheme should be shown');
 });
 
-// Cover 4-12 testcases of https://ggsystems.atlassian.net/browse/GG-25370
-test.only('Check validation of required fields.', async(t) => {
-    const INVALID_TYPE = '1.type';
+const INVALID_TYPE = '1.type';
 
-    // Configure base data for invalid SQL scheme save
-    await t.click(createModelButton)
-        .typeText(general.keyType.control, 'test.cls.name.Key')
-        .click(sqlQuery.fields.addFirstField)
+const _createCache = async(t) => {
+    await t.click(pageAdvancedConfiguration.cachesNavButton)
+        .click(createCacheButton);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.click(pageAdvancedConfiguration.modelsNavButton);
+};
+
+const _configureMinimalQueryFields = async(t) => {
+    await t.click(sqlQuery.fields.addFirstField)
         .typeText(sqlQuery.fields.fieldName.control, 'id')
         .typeText(sqlQuery.fields.fieldClass.control, 'Integer')
         .click(sqlQuery.fields.addNextField)
         .click(sqlQuery.fields.addNextField)
         .typeText(sqlQuery.fields.fieldName.control, 'data')
         .typeText(sqlQuery.fields.fieldClass.control, 'String')
-        .click(cacheStore.panel.heading)
+};
+
+const _configureMinimalCacheStore = async(t) => {
+    await t.click(cacheStore.panel.heading)
         .typeText(cacheStore.dbSchema.control, 'schema')
         .typeText(cacheStore.dbTable.control, 'table')
         .click(cacheStore.keyFields.addField)
@@ -98,83 +108,280 @@ test.only('Check validation of required fields.', async(t) => {
 
     await cacheStore.valueFields.dbType.selectOption('VARCHAR');
     await cacheStore.valueFields.javaType.selectOption('String');
+};
 
-    await t.click(general.valueType.control);
-    await t.eval(() => window.scrollTo(0, 300));
+// Cover 1 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Save valid SQL scheme with empty cache', async(t) => {
+    await t.click(createModelButton);
 
-    // Save with empty value type.
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.keyType.control, KEY_CLS)
+        .typeText(general.valueType.control, VALUE_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(successNotification.withText(`Model "${VALUE_CLS}" saved`)).ok('Success notification on save should be visible')
+        .expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+});
+
+// Cover 2 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Save valid SQL scheme with selected cache', async(t) => {
+    await _createCache(t);
+
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await general.selectCaches('CacheNames');
+
+    await t.typeText(general.keyType.control, KEY_CLS)
+        .typeText(general.valueType.control, VALUE_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(successNotification.withText(`Model "${VALUE_CLS}" saved`)).ok('Success notification on save should be visible')
+        .expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+});
+
+// Cover 3 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Save valid SQL scheme with selected cache and annotations type of metadata', async(t) => {
+    await _createCache(t);
+
+    await t.click(createModelButton);
+
+    await _configureMinimalCacheStore(t);
+
+    await general.selectCaches('CacheNames');
+    await general.queryMetadata.selectOption('Annotations');
+
+    await t.typeText(general.keyType.control, KEY_CLS)
+        .typeText(general.valueType.control, VALUE_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(successNotification.withText(`Model "${VALUE_CLS}" saved`)).ok('Success notification on save should be visible')
+        .expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+});
+
+// Cover 4 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with empty value type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.keyType.control, KEY_CLS);
+
     await pageAdvancedConfiguration.save();
 
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.valueType.getError('required').visible).ok('Validation error message for required field shold be visible')
-        .typeText(general.valueType.control, INVALID_TYPE)
-        .pressKey('esc');
+        .expect(general.valueType.getError('required').visible).ok('Validation error message for required field shold be visible');
 
-    // Save with invalid value type.
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 5 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with invalid value type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, INVALID_TYPE)
+        .typeText(general.keyType.control, KEY_CLS);
+
     await pageAdvancedConfiguration.save();
 
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
-        .selectText(general.valueType.control).pressKey("delete")
-        .pressKey('esc')
-        .typeText(general.valueType.control, VALUE_CLS)
-        .pressKey('esc')
-        .selectText(general.keyType.control).pressKey("delete")
-        .pressKey('esc');
+        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible');
 
-    // Save with empty key type.
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 6 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with empty key type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, VALUE_CLS);
+
     await pageAdvancedConfiguration.save();
 
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.keyType.getError('required').visible).ok('Validation error message for required field shold be visible')
-        .typeText(general.keyType.control, INVALID_TYPE)
-        .pressKey('esc');
+        .expect(general.keyType.getError('required').visible).ok('Validation error message for required field shold be visible');
 
-    // Save with invalid key type.
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 7 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with invalid key type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, VALUE_CLS)
+        .typeText(general.keyType.control, INVALID_TYPE);
+
     await pageAdvancedConfiguration.save();
 
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.keyType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
-        .selectText(general.keyType.control).pressKey("delete")
-        .pressKey('esc')
-        .selectText(general.valueType.control).pressKey("delete")
-        .pressKey('esc');
-
-    // Save with empty key type and value type.
-    await pageAdvancedConfiguration.save();
-
-    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.valueType.getError('required').visible).ok('Validation error message for required field shold be visible')
-        .expect(general.keyType.getError('required').visible).ok('Validation error message for required field shold be visible')
-        .typeText(general.valueType.control, INVALID_TYPE)
-        .pressKey('esc');
-
-    // Save with empty key type and invalid value type.
-    await pageAdvancedConfiguration.save();
-
-    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
-        .typeText(general.keyType.control, INVALID_TYPE)
-        .pressKey('esc')
-        .selectText(general.valueType.control).pressKey("delete")
-        .pressKey('esc');
-
-    // Save with invalid key type and empty value type.
-    await pageAdvancedConfiguration.save();
-
-    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.keyType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
-        .pressKey('esc')
-        .typeText(general.valueType.control, INVALID_TYPE)
-        .pressKey('esc');
-
-    // Save with invalid key type and value type.
-    await pageAdvancedConfiguration.save();
-
-    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
-        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
         .expect(general.keyType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible');
 
     await t.eval(() => window.location.reload());
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 8 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with empty key and value types', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.click(cacheStore.dbTable.control);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
+        .expect(general.keyType.getError('required').visible).ok('Validation error message for required field shold be visible');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 9 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with empty key type and invalid value type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, INVALID_TYPE);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
+        .expect(general.keyType.getError('required').visible).ok('Validation error message for required field shold be visible')
+        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 10 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with invalid key type and empty value type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.keyType.control, INVALID_TYPE);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
+        .expect(general.keyType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
+        .expect(general.valueType.getError('required').visible).ok('Validation error message for required field shold be visible');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 11 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with invalid key and value types', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, INVALID_TYPE)
+        .typeText(general.keyType.control, INVALID_TYPE);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
+        .expect(general.keyType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible')
+        .expect(general.valueType.getError('javaIdentifier').visible).ok('Validation error message for required field shold be visible');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 12 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Validation with value Java built-in type', async(t) => {
+    await t.click(createModelButton);
+
+    await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
+
+    await t.typeText(general.valueType.control, 'java.lang.Long')
+        .typeText(general.keyType.control, KEY_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode')
+        .expect(general.valueType.getError('javaBuiltInClass').visible).ok('Validation error message for required field shold be visible');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
+});
+
+// Cover 13 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test.only('Save SQL scheme with value Java built-in like type', async(t) => {
+    await _createCache(t);
+
+    await t.click(createModelButton)
+        .click(general.generatePOJOClasses.control);
+
+    await _configureMinimalQueryFields(t);
+
+    await t.typeText(general.valueType.control, 'foo.bar.Long')
+        .typeText(general.keyType.control, KEY_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(successNotification.withText(`Model "${VALUE_CLS}" saved`)).ok('Success notification on save should be visible')
+        .expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+});
+
+// Cover 14 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+test('Save SQL scheme with value Java built-in type', async(t) => {
+    await _createCache(t);
+
+    await t.click(createModelButton)
+        .click(general.generatePOJOClasses.control);
+
+    await _configureMinimalQueryFields(t);
+
+    await t.typeText(general.valueType.control, 'java.lang.Long')
+        .typeText(general.keyType.control, KEY_CLS);
+
+    await pageAdvancedConfiguration.save();
+
+    await t.expect(successNotification.withText(`Model "${VALUE_CLS}" saved`)).ok('Success notification on save should be visible')
+        .expect(editModelTitle.visible).ok('Page mode should be changed to edit');
+
+    await t.eval(() => window.location.reload());
+    await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
 });
