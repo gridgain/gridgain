@@ -431,7 +431,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestLruEvictionPolicyRemovesNearCacheValue()
         {
-            // TODO
+            // TODO: Fix this test, use different modes
+            var cfg = new CacheConfiguration
+            {
+                Name = "lru-test",
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    EvictionPolicy = new LruEvictionPolicy
+                    {
+                        MaxSize = 1000,
+                        BatchSize = 1
+                    }
+                }
+            };
+
+            var cache = _client.CreateCache<int, Foo>(cfg, cfg.NearConfiguration);
+
+            for (var i = 0; i < 10000; i++)
+            {
+                cache.Put(i, new Foo(i));
+                Assert.AreEqual(i, cache.GetAndPut(i, new Foo(i)).Value.Bar);
+            }
         }
 
         /// <summary>
