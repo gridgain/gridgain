@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
@@ -89,6 +90,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             var key = marshaller.Unmarshal<TK>(stream);
             
+            Console.WriteLine("Evict: " + key);
             NearCacheEntry<TV> unused;
             _map.TryRemove(key, out unused);
         }

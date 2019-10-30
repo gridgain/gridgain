@@ -470,12 +470,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /// <summary>
         /// Tests that evicted entry is reloaded from Java after update from another node.
-        /// This test verifies that eviction on Java side causes eviction on .NET side.
+        /// Eviction on Java side for non-local entry (not a primary key for this node) disconnects near cache notifier.
+        /// This test verifies that eviction on Java side causes eviction on .NET side, and does not cause stale data.
         /// </summary>
         [Test]
         public void TestCacheGetFromEvictedEntryAfterUpdateFromAnotherNode()
         {
-            // TODO: Add other modes.
+            // TODO: Add other modes, especially:
+            // * Local keys on server nodes
+            // * Non-local keys on server nodes
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name,
