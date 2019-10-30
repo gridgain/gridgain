@@ -404,7 +404,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.AreEqual(0, cache.GetSize());
 
-            var items = Enumerable.Range(0, 4).Select(x => new Foo(x)).ToArray();
+            var items = Enumerable.Range(0, NearCacheMaxSize + 1).Select(x => new Foo(x)).ToArray();
 
             for (var i = 0; i < NearCacheMaxSize + 1; i++)
             {
