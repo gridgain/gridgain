@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System.Collections.Generic;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
@@ -78,7 +79,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             get { return new ClientClusterGroupProjection(new Dictionary<int, object>()); }
         }
 
-        public void Marshall(BinaryWriter writer)
+        public void Marshall(IBinaryRawWriter writer)
         {
             if (_filter.Count == 0)
             {

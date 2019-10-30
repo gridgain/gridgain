@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
     using System.Diagnostics;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -27,26 +28,16 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     /// <summary>
     /// Ignite client cluster implementation.
     /// </summary>
-    internal class ClientCluster : IClientCluster
+    internal class ClientCluster : ClientClusterGroup, IClientCluster
     {
-        /** Ignite. */
-        private readonly IgniteClient _ignite;
-
-        /** Marshaller. */
-        private readonly Marshaller _marsh;
-
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="marsh">Marshaller.</param>
         public ClientCluster(IgniteClient ignite, Marshaller marsh)
+            : base(ignite, marsh)
         {
-            Debug.Assert(ignite != null);
-            Debug.Assert(marsh != null);
-
-            _ignite = ignite;
-            _marsh = marsh;
         }
 
         /** <inheritdoc /> */
@@ -58,7 +49,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public bool IsActive()
         {
-            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBool());
+            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBoolean());
         }
 
         /** <inheritdoc /> */
@@ -66,12 +57,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<BinaryWriter> action = w =>
+            Action<IBinaryRawWriter> action = w =>
             {
                 w.WriteString(cacheName);
                 w.WriteBoolean(false);
             };
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBool());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
         }
 
         /** <inheritdoc /> */
@@ -79,12 +70,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<BinaryWriter> action = w =>
+            Action<IBinaryRawWriter> action = w =>
             {
                 w.WriteString(cacheName);
                 w.WriteBoolean(true);
             };
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBool());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
         }
 
         /** <inheritdoc /> */
@@ -92,39 +83,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBool());
-        }
-
-        /// <summary>
-        /// Does the out in op.
-        /// </summary>
-        private T DoOutInOp<T>(ClientOp opId, Action<BinaryWriter> writeAction, Func<IBinaryStream, T> readFunc)
-        {
-            return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
-                readFunc, HandleError<T>);
-        }
-
-        /// <summary>
-        /// Writes the request.
-        /// </summary>
-        private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
-        {
-            if (writeAction != null)
-            {
-                var writer = _marsh.StartMarshal(stream);
-
-                writeAction(writer);
-
-                _marsh.FinishMarshal(writer);
-            }
-        }
-
-        /// <summary>
-        /// Handles the error.
-        /// </summary>
-        private static T HandleError<T>(ClientStatusCode status, string msg)
-        {
-            throw new IgniteClientException(msg, null, status);
+            return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBoolean());
         }
     }
 }

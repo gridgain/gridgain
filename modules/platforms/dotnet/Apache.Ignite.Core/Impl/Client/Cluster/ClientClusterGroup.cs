@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     /// <summary>
     /// Ignite client projection implementation.
     /// </summary>
-    public class ClientClusterGroup : IClientClusterGroup
+    internal class ClientClusterGroup : IClientClusterGroup
     {
         /** Attribute: platform. */
         private const string AttrPlatform = "org.apache.ignite.platform";
@@ -45,10 +45,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private const int TopVerInit = 0;
 
         /** Ignite. */
-        private IgniteClient _ignite;
+        private readonly IgniteClient _ignite;
 
         /** Marshaller. */
-        private Marshaller _marsh;
+        private readonly Marshaller _marsh;
 
         /** Topology version. */
         private long _topVer = TopVerInit;
@@ -141,13 +141,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             long oldTopVer = Interlocked.Read(ref _topVer);
 
-            Action<BinaryWriter> action = w =>
+            Action<IBinaryRawWriter> action = w =>
             {
                 w.WriteLong(oldTopVer);
                 _projection.Marshall(w);
             };
-            var res = DoOutInOp(ClientOp.ClusterGroupGetNodes, w => action(w),
-                r => ReadNodes(r.GetRawReader()));
+            var res = DoOutInOp(ClientOp.ClusterGroupGetNodes, action, ReadNodes);
 
             if (res != null)
             {
@@ -162,6 +161,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             return _nodes;
         }
 
+        /// <summary>
+        /// Refresh projection nodes.
+        /// </summary>
+        /// <returns>Topology version with nodes collection.</returns>rns>
         private Tuple<long, List<IClusterNode>> ReadNodes(IBinaryRawReader reader)
         {
             if (reader.ReadBoolean())
@@ -199,7 +202,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        private T DoOutInOp<T>(ClientOp opId, Action<BinaryWriter> writeAction, Func<IBinaryReader, T> readFunc)
+        protected T DoOutInOp<T>(ClientOp opId, Action<IBinaryRawWriter> writeAction, Func<IBinaryRawReader, T> readFunc)
         {
             return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
                 stream => ReadRequest(readFunc, stream), HandleError<T>);
@@ -208,13 +211,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Writes the request.
         /// </summary>
-        private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
+        protected void WriteRequest(Action<IBinaryRawWriter> writeAction, IBinaryStream stream)
         {
             if (writeAction != null)
             {
                 var writer = _marsh.StartMarshal(stream);
 
-                writeAction(writer);
+                writeAction(writer.GetRawWriter());
 
                 _marsh.FinishMarshal(writer);
             }
@@ -223,13 +226,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Reads the request.
         /// </summary>
-        private TRes ReadRequest<TRes>(Func<BinaryReader, TRes> readFunc, IBinaryStream stream)
+        private TRes ReadRequest<TRes>(Func<IBinaryRawReader, TRes> readFunc, IBinaryStream stream)
         {
             if (readFunc != null)
             {
                 var reader = _marsh.StartUnmarshal(stream);
 
-                return readFunc(reader);
+                return readFunc(reader.GetRawReader());
             }
 
             return default(TRes);

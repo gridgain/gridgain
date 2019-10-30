@@ -197,24 +197,11 @@ public class PlatformContextImpl implements PlatformContext {
         // Send node info to the native platform
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
-
             BinaryRawWriterEx w = writer(out);
 
-            w.writeUuid(node.id());
-            PlatformUtils.writeNodeAttributes(w, node.attributes());
-            w.writeCollection(node.addresses());
-            w.writeCollection(node.hostNames());
-            w.writeLong(node.order());
-            w.writeBoolean(node.isLocal());
-            w.writeBoolean(node.isDaemon());
-            w.writeBoolean(node.isClient());
-            w.writeObjectDetached(node.consistentId());
-            PlatformUtils.writeNodeVersion(w, node.version());
-
-            writeClusterMetrics(w, node.metrics());
+            PlatformUtils.writeNodeInfo(w, node);
 
             out.synchronize();
-
             gateway().nodeInfo(mem0.pointer());
         }
 

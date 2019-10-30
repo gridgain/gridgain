@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Client
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
@@ -53,6 +54,10 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** Configuration. */
         private readonly IgniteClientConfiguration _configuration;
+
+        /** Node info cache. */
+        private readonly ConcurrentDictionary<Guid, ClusterNodeImpl> _nodes =
+            new ConcurrentDictionary<Guid, ClusterNodeImpl>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IgniteClient"/> class.
@@ -214,7 +219,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         public ClusterNodeImpl GetNode(Guid? id)
         {
-            throw GetClientNotSupportedException();
+            return id == null ? null : _nodes[id.Value];
         }
 
         /** <inheritDoc /> */
