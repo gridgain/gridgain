@@ -82,7 +82,6 @@ public class IgniteSqlCustomSchemaWithPdsEnabled extends AbstractIndexingCommonT
 
     /** */
     @Test
-    @SuppressWarnings("ThrowableNotThrown")
     public void testSimpleRestart() throws Exception {
         startAndActivate().createCache(new CacheConfiguration<>(CACHE_NAME).setSqlSchema(SCHEMA_NAME_4));
 
@@ -140,7 +139,7 @@ public class IgniteSqlCustomSchemaWithPdsEnabled extends AbstractIndexingCommonT
     }
 
     /** */
-    protected List<List<?>> execSql(String qry) {
+    private List<List<?>> execSql(String qry) {
         return grid(0).context().query()
             .querySqlFields(new SqlFieldsQuery(qry).setLazy(true), false)
             .getAll();
