@@ -429,29 +429,43 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that eviction policy removes near cache data for the key. 
         /// </summary>
         [Test]
-        public void TestLruEvictionPolicyRemovesNearCacheValue()
+        public void TestLruEvictionPolicyRemovesNearCacheValue(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: Fix this test, use different modes
             var cfg = new CacheConfiguration
             {
-                Name = "lru-test",
+                Name = "lru-test-" + mode,
                 NearConfiguration = new NearCacheConfiguration
                 {
                     EvictionPolicy = new LruEvictionPolicy
                     {
-                        MaxSize = 1000,
+                        MaxSize = NearCacheMaxSize,
                         BatchSize = 1
                     }
                 }
             };
 
-            var cache = _client.CreateCache<int, Foo>(cfg, cfg.NearConfiguration);
+            var ignite = GetIgnite(mode);
+            var cache = ignite.CreateCache<int, Foo>(cfg, cfg.NearConfiguration);
+            var items = Enumerable.Range(0, NearCacheMaxSize + 1).Select(x => new Foo(x)).ToArray();
 
-            for (var i = 0; i < 10000; i++)
+            for (var i = 0; i < NearCacheMaxSize + 1; i++)
             {
-                cache.Put(i, new Foo(i));
-                Assert.AreEqual(i, cache.GetAndPut(i, new Foo(i)).Value.Bar);
+                cache.Put(i, items[i]);
             }
+            
+            // Recent items are in near cache:
+            for (var i = 1; i < NearCacheMaxSize + 1; i++)
+            {
+                Assert.AreSame(items[i], cache[i]);
+            }
+            
+            // First item is deserialized on get:
+            var fromCache = cache[0];
+            Assert.AreNotEqual(items[0], fromCache);
+            
+            // And now it is near again:
+            Assert.AreEqual(fromCache, cache[0]);
         }
 
         /// <summary>
