@@ -1055,6 +1055,10 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 //        assertEquals(GRID_CNT * 2 + 1, consumeCnt.get());
 //    }
 
+    @Override protected long getTestTimeout() {
+        return 15 * 60 * 1000;
+    }
+
     /**
      * @throws Exception If failed.
      */
