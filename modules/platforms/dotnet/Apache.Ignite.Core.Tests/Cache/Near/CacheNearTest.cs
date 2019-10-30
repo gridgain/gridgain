@@ -470,6 +470,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /// <summary>
         /// Tests that evicted entry is reloaded from Java after update from another node.
+        /// This test verifies that eviction on Java side causes eviction on .NET side.
         /// </summary>
         [Test]
         public void TestCacheGetFromEvictedEntryAfterUpdateFromAnotherNode()
