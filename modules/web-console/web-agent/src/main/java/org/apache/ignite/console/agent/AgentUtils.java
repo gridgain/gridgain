@@ -333,16 +333,13 @@ public class AgentUtils {
      * @return List of not empty items.
      */
     public static List<String> split(String s) {
-        List<String> res = new ArrayList<>();
+        if (F.isEmpty(s))
+            return new ArrayList<>();
 
-        if (!F.isEmpty(s)) {
-            res.addAll(Arrays.stream(s.trim().split(","))
+        return Arrays.stream(s.trim().split(","))
                 .map(String::trim)
                 .filter(item -> !F.isEmpty(item))
-                .collect(toList()));
-        }
-
-        return res;
+                .collect(toList());
     }
 
     /**
