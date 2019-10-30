@@ -334,7 +334,7 @@ public class AgentUtils {
      */
     public static List<String> split(String s) {
         if (F.isEmpty(s))
-            return new ArrayList<>();
+            return Collections.emptyList();
 
         return Arrays.stream(s.trim().split(","))
                 .map(String::trim)
