@@ -177,11 +177,15 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testActivate() throws Exception {
         Ignite ignite = startGrids(1);
 
+        injectTestSystemOut();
+
         assertEquals(INACTIVE, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
         assertEquals(ACTIVE, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
     }
 
     /**
@@ -251,14 +255,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         Ignite ignite = startGrids(1);
 
         assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertTrue(ignite.cluster().active());
+        assertEquals(ACTIVE, ignite.cluster().state());
+
+        injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
 
         assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
     }
 
     /**
