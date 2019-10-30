@@ -2486,27 +2486,30 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         // After all rents are finished resend partitions.
         if (!rentingFutures.isEmpty()) {
-            GridCompoundFuture fut = new GridCompoundFuture<>();
+            final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
 
-            rentingFutures.forEach(fut::add);
+            for (IgniteInternalFuture<?> rentingFuture : rentingFutures) {
+                rentingFuture.listen(f -> {
+                    int remaining = rentingPartitions.decrementAndGet();
 
-            fut.listen(f -> {
-                lock.writeLock().lock();
+                    if (remaining == 0) {
+                        lock.writeLock().lock();
 
-                try {
-                    this.updateSeq.incrementAndGet();
+                        try {
+                            this.updateSeq.incrementAndGet();
 
-                    if (log.isDebugEnabled())
-                        log.debug("Partitions have been scheduled to resend [reason=" +
-                            "Evictions are done [grp=" + grp.cacheOrGroupName() + "]");
+                            if (log.isDebugEnabled())
+                                log.debug("Partitions have been scheduled to resend [reason=" +
+                                    "Evictions are done [grp=" + grp.cacheOrGroupName() + "]");
 
-                    ctx.exchange().scheduleResendPartitions();
-                }
-                finally {
-                    lock.writeLock().unlock();
-                }
-            });
-
+                            ctx.exchange().scheduleResendPartitions();
+                        }
+                        finally {
+                            lock.writeLock().unlock();
+                        }
+                    }
+                });
+            }
         }
 
         return hasEvictedPartitions;
