@@ -469,6 +469,35 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that evicted entry is reloaded from Java after update from another node.
+        /// </summary>
+        [Test]
+        public void TestCacheGetFromEvictedEntryAfterUpdateFromAnotherNode()
+        {
+            // TODO: Add other modes.
+            var cfg = new CacheConfiguration
+            {
+                Name = TestContext.CurrentContext.Test.Name,
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    EvictionPolicy = new FifoEvictionPolicy
+                    {
+                        MaxSize = 1
+                    }
+                }
+            };
+
+            var serverCache = _grid.CreateCache<int, int>(cfg);
+            var clientCache = _client.GetOrCreateNearCache<int, int>(cfg.Name, cfg.NearConfiguration);
+            
+            clientCache[1] = 1;
+            clientCache[2] = 2;
+            serverCache[1] = 11;
+            
+            Assert.AreEqual(11, clientCache[1]);
+        }
+
+        /// <summary>
         /// Asserts the cache is near.
         /// </summary>
         private void AssertCacheIsNear(ICache<int, int> cache)
