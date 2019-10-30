@@ -33,7 +33,7 @@ public class IgniteSqlCustomSchemaTest extends AbstractCustomSchemaTest {
     /** {@inheritDoc} */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
-    @Override public void test3() {
+    @Override public void testCreateTblsInDiffSchemasForSameCache() {
         final String testCache = "cache1";
 
         execSql("CREATE TABLE " + t(SCHEMA_NAME_1, TBL_NAME)

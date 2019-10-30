@@ -150,7 +150,7 @@ public abstract class AbstractCustomSchemaTest extends AbstractIndexingCommonTes
     /** */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
-    public void test3() {
+    public void testCreateTblsInDiffSchemasForSameCache() {
         final String testCache = "cache1";
 
         execSql("CREATE TABLE " + t(SCHEMA_NAME_1, TBL_NAME)
