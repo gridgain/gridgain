@@ -1364,7 +1364,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             PageHeader.inCp(absPtr, false);
 
-            //clearCheckpoint(fullId);
+            // Now this line need only for test purpose.
+            clearCheckpoint(fullId);
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
