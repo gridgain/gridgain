@@ -56,12 +56,8 @@ public class StateCommand implements Command<Void> {
                 log.info(CommandHandler.DELIM);
             }
 
-            if (state.active()) {
-                if (state.readOnly())
-                    log.info("Cluster is active (read-only)");
-                else
-                    log.info("Cluster is active");
-            }
+            if (state.active())
+                log.info("Cluster is active");
             else
                 log.info("Cluster is inactive");
         }
