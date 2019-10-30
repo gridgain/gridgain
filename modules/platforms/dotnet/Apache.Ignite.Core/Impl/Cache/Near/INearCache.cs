@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Memory;
 
     internal interface INearCache<in TK, TV>
     {
@@ -36,13 +37,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     internal interface INearCache
     {
         /// <summary>
-        /// Reads cache key from a stream and invalidates.
+        /// Reads cache key and value from a stream and updates near cache.
         /// </summary>
-        void Update(IBinaryStream keyStream, Marshaller marshaller);
+        void Update(IBinaryStream stream, Marshaller marshaller);
 
         /// <summary>
         /// Clears the cache.
         /// </summary>
         void Clear();
+
+        /// <summary>
+        /// Reads cache key and evicts corresponding entry.
+        /// </summary>
+        void Evict(PlatformMemoryStream stream, Marshaller marshaller);
     }
 }

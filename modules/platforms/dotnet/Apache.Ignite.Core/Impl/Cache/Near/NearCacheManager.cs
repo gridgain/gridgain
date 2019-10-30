@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
     /// Manages <see cref="NearCache{TK,TV}"/> instances.
@@ -87,6 +88,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
             
             nearCache.Update(stream, marshaller);
+        }
+
+        public void Evict(int cacheId, PlatformMemoryStream stream, Marshaller marshaller)
+        {
+            INearCache nearCache;
+            if (!_nearCaches.TryGetValue(cacheId, out nearCache))
+            {
+                return;
+            }
+            
+            nearCache.Evict(stream, marshaller);
         }
 
         /// <summary>

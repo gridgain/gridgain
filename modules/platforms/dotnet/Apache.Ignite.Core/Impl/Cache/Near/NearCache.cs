@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
@@ -58,12 +59,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
         }
 
-        public void Update(IBinaryStream keyStream, Marshaller marshaller)
+        public void Update(IBinaryStream stream, Marshaller marshaller)
         {
-            Debug.Assert(keyStream != null);
+            Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
-            var reader = marshaller.StartUnmarshal(keyStream);
+            var reader = marshaller.StartUnmarshal(stream);
             
             var key = reader.Deserialize<TK>();
 
@@ -79,6 +80,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 NearCacheEntry<TV> unused;
                 _map.TryRemove(key, out unused);
             }
+        }
+
+        public void Evict(PlatformMemoryStream stream, Marshaller marshaller)
+        {
+            Debug.Assert(stream != null);
+            Debug.Assert(marshaller != null);
+
+            var key = marshaller.Unmarshal<TK>(stream);
+            
+            NearCacheEntry<TV> unused;
+            _map.TryRemove(key, out unused);
         }
 
         public void Clear()
