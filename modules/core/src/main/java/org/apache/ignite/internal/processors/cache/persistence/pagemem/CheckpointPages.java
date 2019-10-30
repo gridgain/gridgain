@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -46,7 +45,7 @@ class CheckpointPages {
      * @return {@code true} If fullPageId is allowable to store to disk.
      */
     public boolean allowToSave(FullPageId fullPageId) throws IgniteCheckedException {
-        Collection<FullPageId> checkpointPages = segCheckpointPages; // change this  markAsSaved move
+        Collection<FullPageId> checkpointPages = segCheckpointPages;
 
         if (checkpointPages == null || allowToReplace == null)
             return false;
@@ -86,6 +85,10 @@ class CheckpointPages {
         return checkpointPages == null ? 0 : checkpointPages.size();
     }
 
+    /**
+     *
+     * @param pages
+     */
     public void cpPages(Collection<FullPageId> pages) {
         segCheckpointPages = pages;
     }

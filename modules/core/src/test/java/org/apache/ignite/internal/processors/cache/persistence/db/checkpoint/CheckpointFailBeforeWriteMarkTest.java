@@ -43,7 +43,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 /**
  *
  */
-    public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
+public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
     /** */
     private InterceptorIOFactory interceptorIOFactory = new InterceptorIOFactory();
 

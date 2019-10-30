@@ -1273,17 +1273,15 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (relPtr != OUTDATED_REL_PTR) {
                 absPtr = seg.absolute(relPtr);
 
+                //Already dumped by replace process.
                 if (!PageHeader.inCp(absPtr))
                     return;
 
                 // Pin the page until page will not be copied. This helpful to prevent page replacement of this page.
                 if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) // место под рейс !!!
                     PageHeader.acquirePage(absPtr);
-                else {
+                else
                     pageSingleAcquire = true;
-                    if (!PageHeader.isAcquired(absPtr))
-                        System.err.println("not aq: " + fullId);
-                }
             }
         }
         finally {
@@ -1345,6 +1343,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         // No need to write if exception occurred.
         boolean canWrite = false;
 
+        // Page possibly loked by checkpoint buffer copy process: postWriteLockPage.
         boolean locked = rwLock.tryWriteLock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
         if (!locked) {
@@ -1363,13 +1362,9 @@ public class PageMemoryImpl implements PageMemoryEx {
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
 
-            assert PageHeader.inCp(absPtr);
-
             PageHeader.inCp(absPtr, false);
 
-            boolean success = clearCheckpoint(fullId);
-
-            //assert success : "Page was pin when we resolve abs pointer, it can not be evicted";
+            //clearCheckpoint(fullId);
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
@@ -1750,6 +1745,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             PageHeader.dirty(absPtr, false);
             PageHeader.tempBufferPointer(absPtr, tmpRelPtr);
+            // info for checkpoint buffer cleaner.
             PageHeader.pageId(tmpAbsPtr, fullId.pageId());
             PageHeader.pageGroupId(tmpAbsPtr, fullId.groupId());
 
@@ -2429,7 +2425,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (PageHeader.isAcquired(absPtr))
                 return false;
 
-            clearRowCache(fullPageId, absPtr);
+            clearRowCache(fullPageId, absPtr); // try to refactor here ! no need to run so frequently.
 
             if (isDirty(absPtr)) {
                 CheckpointPages checkpointPages = this.checkpointPages;
@@ -2438,7 +2434,11 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
                     assert storeMgr != null;
 
+                    assert hasTempCopy(absPtr) : "Page already in checkpoint buffer.";
+
                     memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
+
+                    PageHeader.inCp(absPtr, false);
 
                     saveDirtyPage.writePage(
                         fullPageId,
@@ -2449,13 +2449,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                         )
                     );
 
-                    PageHeader.inCp(absPtr, false);
-
                     setDirty(fullPageId, absPtr, false, true);
 
-                    boolean success = checkpointPages.markAsSaved(fullPageId);
-
-                    assert success;
+                    checkpointPages.markAsSaved(fullPageId);
 
                     return true;
                 }
