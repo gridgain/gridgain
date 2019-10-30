@@ -313,4 +313,12 @@ public interface PlatformContext {
      * @param key Key to enable near cache update for.
      */
     public void restoreNearCacheUpdate(int cacheId, Object key);
+
+    /**
+     * Evicts near cache entry with specified key.
+     *
+     * @param cacheId Cache id.
+     * @param keyBytes Serialized key.
+     */
+    public void evictFromNearCache(int cacheId,byte[] keyBytes);
 }

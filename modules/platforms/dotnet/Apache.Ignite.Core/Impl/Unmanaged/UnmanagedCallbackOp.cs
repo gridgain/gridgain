@@ -86,6 +86,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         PluginCallbackInLongLongOutLong = 68,
         EventLocalListenerApply = 69,
         NearCacheInvalidate = 70,
-        OnCacheStopped = 71
+        NearCacheEvict = 71,
+        OnCacheStopped = 72
     }
 }

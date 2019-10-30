@@ -1193,13 +1193,29 @@ public class PlatformCallbackGateway {
     /**
      * Invalidates near cache data.
      *
-     * @param memPtr Ptr to a stream with serialized cache id and key to invalidate.
+     * @param memPtr Ptr to a stream with serialized data.
      */
-    public void nearCacheInvalidate(long memPtr) {
+    public void nearCacheUpdate(long memPtr) {
         enter();
 
         try {
-            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.NearCacheInvalidate, memPtr);
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.NearCacheUpdate, memPtr);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
+     * Evicts near cache entry with specified key.
+     *
+     * @param memPtr Ptr to a stream with serialized data.
+     */
+    public void nearCacheEvict(long memPtr) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.NearCacheEvict, memPtr);
         }
         finally {
             leave();

@@ -78,7 +78,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConfl
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
-import org.apache.ignite.internal.processors.platform.PlatformNoopProcessor;
 import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -2882,8 +2881,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
-        // No-op.
-        // TODO: Notify platform
+        evictFromPlatformNearCache();
     }
 
     /** {@inheritDoc} */
@@ -6944,13 +6942,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /**
      * Invokes platform near cache callback, if applicable.
+     *
      * @param val Updated value, null on remove.
      */
     private void updatePlatformNearCache(@Nullable CacheObject val) {
-        // Invoke platform near callback if near is enabled for this cache, even for local entries:
-        // check cacheCfg.getNearConfiguration() instead of isNear().
-        GridCacheAdapter cache = this.cctx.cache();
-        if (cache == null || cache.cacheCfg.getNearConfiguration() == null)
+        if (!hasPlatformNearCache())
             return;
 
         PlatformProcessor proc = this.cctx.kernalContext().platform();
@@ -6969,5 +6965,40 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }
+    }
+
+    /**
+     * Evicts corresponding platform near cache entry, if applicable.
+     */
+    private void evictFromPlatformNearCache() {
+        if (!hasPlatformNearCache())
+            return;
+
+        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        if (!proc.hasContext())
+            return;
+
+        try {
+            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+
+            byte[] keyBytes = this.key.valueBytes(ctx);
+
+            proc.context().evictFromNearCache(this.cctx.cacheId(), keyBytes);
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+    }
+
+    /**
+     * Gets a value indicating whether platform near cache exists for current cache.
+     *
+     * @return True when Platform Near Cache exists for this cache; false otherwise.
+     */
+    private boolean hasPlatformNearCache() {
+        // Invoke platform near callback if near is enabled for this cache, even for local entries:
+        // check cacheCfg.getNearConfiguration() instead of isNear().
+        GridCacheAdapter cache = this.cctx.cache();
+
+        return cache != null && cache.cacheCfg.getNearConfiguration() != null;
     }
 }
