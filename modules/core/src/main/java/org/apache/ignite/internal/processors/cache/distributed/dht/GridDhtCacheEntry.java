@@ -165,6 +165,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
+        super.onMarkedObsolete();
+
         assert !lockedByCurrentThread();
 
         // Remove this entry from partition mapping.

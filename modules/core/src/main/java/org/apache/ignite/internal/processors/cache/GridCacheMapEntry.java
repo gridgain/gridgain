@@ -2883,6 +2883,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
         // No-op.
+        // TODO: Notify platform
     }
 
     /** {@inheritDoc} */
