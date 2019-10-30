@@ -85,10 +85,12 @@ const _configureMinimalQueryFields = async(t) => {
     await t.click(sqlQuery.fields.addFirstField)
         .typeText(sqlQuery.fields.fieldName.control, 'id')
         .typeText(sqlQuery.fields.fieldClass.control, 'Integer')
-        .click(sqlQuery.fields.addNextField)
+        .click(sqlQuery.table.control)
         .click(sqlQuery.fields.addNextField)
         .typeText(sqlQuery.fields.fieldName.control, 'data')
+        .pressKey('tab')
         .typeText(sqlQuery.fields.fieldClass.control, 'String')
+        .click(sqlQuery.table.control);
 };
 
 const _configureMinimalCacheStore = async(t) => {
@@ -138,7 +140,7 @@ test('Save valid SQL scheme with selected cache', async(t) => {
     await _configureMinimalQueryFields(t);
     await _configureMinimalCacheStore(t);
 
-    await general.selectCaches('CacheNames');
+    await general.selectCaches('Cache');
 
     await t.typeText(general.keyType.control, KEY_CLS)
         .typeText(general.valueType.control, VALUE_CLS);
@@ -160,7 +162,7 @@ test('Save valid SQL scheme with selected cache and annotations type of metadata
 
     await _configureMinimalCacheStore(t);
 
-    await general.selectCaches('CacheNames');
+    await general.selectCaches('Cache');
     await general.queryMetadata.selectOption('Annotations');
 
     await t.typeText(general.keyType.control, KEY_CLS)
@@ -345,13 +347,15 @@ test('Validation with value Java built-in type', async(t) => {
 });
 
 // Cover 13 testcase of https://ggsystems.atlassian.net/browse/GG-25370
-test.only('Save SQL scheme with value Java built-in like type', async(t) => {
+test('Save SQL scheme with value Java built-in like type', async(t) => {
     await _createCache(t);
 
-    await t.click(createModelButton)
-        .click(general.generatePOJOClasses.control);
+    await t.click(createModelButton);
+
+    await general.selectCaches('Cache');
 
     await _configureMinimalQueryFields(t);
+    await _configureMinimalCacheStore(t);
 
     await t.typeText(general.valueType.control, 'foo.bar.Long')
         .typeText(general.keyType.control, KEY_CLS);
@@ -371,6 +375,8 @@ test('Save SQL scheme with value Java built-in type', async(t) => {
 
     await t.click(createModelButton)
         .click(general.generatePOJOClasses.control);
+
+    await general.selectCaches('Cache');
 
     await _configureMinimalQueryFields(t);
 
