@@ -22,6 +22,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.migration.MigrationFromMongo;
@@ -51,6 +52,9 @@ import static org.junit.Assert.assertTrue;
 )
 public class MigrationFromMongoTest {
     /** */
+    private static final String MONGO_DB_URL = "mongodb://localhost:27017/console";
+
+    /** */
     private static final String TEST_SALT = "d466d9c40905a4c9a7a31836e68162e6074bb3ba13f528e63939f75cedc6158c";
 
     /** */
@@ -64,6 +68,10 @@ public class MigrationFromMongoTest {
         "f734408bcf3d388b8de809ddfa445e9a82bdfd3157209e2fcb2bc074ed89c320190bd68f35f6c49816e5e82f8f044a5859a6d1a46ef" +
         "e9b32502410190d44c19b74a91c826191cd5e81572d9e23c87c97555d1d7dee4f28075118a7d9903b8888e15d957970123b8c81fd8c" +
         "2b54d2a203347e48df080c89c663d25f5d932ea0cd4a40830cd287cb4fbe3c70fb6cbdb1b7714e891dfb26336b8c964a5";
+
+    /***/
+    @Autowired
+    private Ignite ignite;
 
     /** Migration service. */
     @Autowired
@@ -100,38 +108,79 @@ public class MigrationFromMongoTest {
     }
 
     /**
-     * Should migrate correctly from MongoDb to Ignite.
+     * Initialize Ignite and MongoDB.
+     *
+     * @param mongoClient Mongo client.
+     * @return Fresh db.
+     */
+    private MongoDatabase initDb(MongoClient mongoClient) {
+        ignite.cache("wc_accounts").clear();
+
+        MongoDatabase db = mongoClient.getDatabase("console");
+        db.drop();
+
+        return mongoClient.getDatabase("console");
+    }
+
+    /**
+     * @param db Mongo DB.
+     * @param email Account's email.
+     * @return Account ID.
+     */
+    private ObjectId createAccount(MongoDatabase db, String email) {
+        MongoCollection<Document> accounts = db.getCollection("accounts");
+
+        ObjectId accId = ObjectId.get();
+
+        Document accDoc = new Document("_id", accId)
+            .append("email", email)
+            .append("salt", TEST_SALT)
+            .append("hash", TEST_HASH)
+            .append("firstName", "Test1")
+            .append("lastName", "Test2")
+            .append("phone", "222-222")
+            .append("company", "Test")
+            .append("country", "United States")
+            .append("token", "hzFT7347b2Frc2cXOn0W")
+            .append("resetPasswordToken", "XMEfM6vlQtze95oapezn")
+            .append("admin", true);
+
+        accounts.insertOne(accDoc);
+
+        return accId;
+    }
+
+    /**
+     * @param db Mongo DB.
+     * @param accId Account ID.
+     * @return Space ID.
+     */
+    private ObjectId createSpace(MongoDatabase db, ObjectId accId) {
+        MongoCollection<Document> spaces = db.getCollection("spaces");
+
+        ObjectId spaceId = ObjectId.get();
+        Document spaceDoc = new Document("_id", spaceId)
+            .append("owner", accId)
+            .append("demo", false);
+
+        spaces.insertOne(spaceDoc);
+
+        return spaceId;
+    }
+
+    /**
+     * Should migrate single admin account correctly from MongoDb to Ignite.
+     *
+     * See test case #1 in GG-25440.
      */
     @Test
-    public void shouldMigrate() {
-        try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017/console")) {
-            MongoDatabase db = mongoClient.getDatabase("console");
-            MongoCollection<Document> spaces = db.getCollection("spaces");
-            MongoCollection<Document> accounts = db.getCollection("accounts");
+    public void shouldMigrateSingleAdmin() {
+        try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
+            MongoDatabase db = initDb(mongoClient);
 
-            ObjectId spaceId = ObjectId.get();
-            ObjectId accId = ObjectId.get();
+            ObjectId accId = createAccount(db, "test@test.com");
 
-            Document spaceDoc = new Document("_id", spaceId)
-                .append("owner", accId)
-                .append("demo", false);
-
-            spaces.insertOne(spaceDoc);
-
-            Document accDoc = new Document("_id", accId)
-                .append("email", "test@test.com")
-                .append("salt", TEST_SALT)
-                .append("hash", TEST_HASH)
-                .append("firstName", "Test1")
-                .append("lastName", "Test2")
-                .append("phone", "222-222")
-                .append("company", "Test")
-                .append("country", "United States")
-                .append("token", "hzFT7347b2Frc2cXOn0W")
-                .append("resetPasswordToken", "XMEfM6vlQtze95oapezn")
-                .append("admin", true);
-
-            accounts.insertOne(accDoc);
+            createSpace(db, accId);
 
             migration.migrate();
 
@@ -153,6 +202,46 @@ public class MigrationFromMongoTest {
             }
 
             assertEquals(1, cnt);
+        }
+    }
+
+    /**
+     * Should migrate one admin account and one non-admin account.
+     * See test case #2 in GG-25440.
+     */
+    @Test
+    public void shouldMigrateOneAdminAndOneNotAdmin() {
+    }
+
+    /**
+     * Should migrate three admin accounts
+     * See test case #3 in GG-25440.
+     */
+    @Test
+    public void shouldMigrateThreeAdmin() {
+    }
+
+    /**
+     * Should migrate three admin accounts and one non-admin account.
+     * See test case #4 in GG-25440.
+     */
+    @Test
+    public void shouldMigrateThreeAdminAndOneNotAdmin() {
+    }
+
+    /**
+     * Should migrate empty Mongo database.
+     *
+     * See test case #5 in GG-25440.
+     */
+    @Test
+    public void shouldMigrateEmptyDb() {
+        try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
+            initDb(mongoClient);
+
+            migration.migrate();
+
+            assertEquals(0, accountsRepo.list().size());
         }
     }
 }

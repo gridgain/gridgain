@@ -92,7 +92,6 @@ public class MigrationFromMongo {
     /**
      * Initialize migration service.
      *
-     * @param ignite Ignite.
      * @param txMgr Transaction manager.
      * @param accRepo Repository to work with accounts.
      * @param notebooksRepo Repository to work with notebooks.
@@ -100,7 +99,6 @@ public class MigrationFromMongo {
      * @param activitiesRepo Repository to work with activities.
      */
     public MigrationFromMongo(
-        Ignite ignite,
         TransactionManager txMgr,
         AccountsRepository accRepo,
         NotebooksRepository notebooksRepo,
@@ -184,38 +182,49 @@ public class MigrationFromMongo {
         MongoCollection<Document> accountsCol = mongoDb.getCollection("accounts");
         MongoCollection<Document> spacesCol = mongoDb.getCollection("spaces");
 
-        log.info("Accounts to migrate: {}", accountsCol.countDocuments());
+        long accountsCnt = accountsCol.countDocuments();
 
-        try (MongoCursor<Document> cursor = accountsCol.find().iterator()) {
-            while (cursor.hasNext()) {
-                Document accMongo = cursor.next();
+        log.info("Accounts to migrate: {}", accountsCnt);
 
-                ObjectId mongoAccId = accMongo.getObjectId("_id");
-                String email = accMongo.getString("email");
+        if (accountsCnt > 0) {
+            try (MongoCursor<Document> cursor = accountsCol.find().iterator()) {
+                while (cursor.hasNext()) {
+                    Document accMongo = cursor.next();
 
-                Document space = spacesCol.find(
-                    Filters.and(
-                        Filters.eq("owner", mongoAccId),
-                        Filters.eq("demo", false)
-                    )
-                ).first();
+                    ObjectId mongoAccId = accMongo.getObjectId("_id");
+                    String email = accMongo.getString("email");
 
-                if (space == null) {
-                    log.warn("Space not found [owner=" + mongoAccId + ", email=" + email + "]");
+                    Document space = spacesCol.find(
+                        Filters.and(
+                            Filters.eq("owner", mongoAccId),
+                            Filters.eq("demo", false)
+                        )
+                    ).first();
 
-                    continue;
+                    if (space == null) {
+                        log.warn("Space not found [owner=" + mongoAccId + ", email=" + email + "]");
+
+                        continue;
+                    }
+
+                    log.info("Migrating account [_id={}, email={}]", mongoAccId, email);
+
+                    txMgr.doInTransaction(() -> {
+                        Account acc = createAccount(accMongo);
+
+                        accRepo.save(acc);
+
+                        migrateAccountObjects(accMongo, space, acc.getId());
+                    });
+
+                    accountsCnt--;
                 }
-
-                log.info("Migrating account [_id={}, email={}]", mongoAccId, email);
-
-                txMgr.doInTransaction(() -> {
-                    Account acc = createAccount(accMongo);
-
-                    accRepo.create(acc);
-
-                    migrateAccountObjects(accMongo, space, acc.getId());
-                });
             }
+
+            txMgr.doInTransaction(accRepo::putFirstUserMarker);
+
+            if (accountsCnt > 0)
+                log.warn("Number of not migrated accounts: " + accountsCnt);
         }
     }
 
