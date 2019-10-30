@@ -500,7 +500,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     return _grid2.GetCache<TK, TV>(name);
                 
                 case CacheTestMode.Client:
-                    return _client.GetOrCreateNearCache<TK, TV>(name, new NearCacheConfiguration());
+                    return _client.GetOrCreateNearCache<TK, TV>(name,
+                        _grid.GetCache<TK, TV>(name).GetConfiguration().NearConfiguration);
                 
                 default:
                     throw new ArgumentOutOfRangeException("mode", mode, null);
