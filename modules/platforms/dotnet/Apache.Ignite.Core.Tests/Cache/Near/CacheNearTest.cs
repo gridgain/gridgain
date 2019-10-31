@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
     using System.Linq;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -31,7 +30,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     public class CacheNearTest : IEventListener<CacheEvent>
     {
         /** */
-        protected const string DefaultCacheName = "default";
+        protected const string CacheName = "default";
+
         /** */
         private const int NearCacheMaxSize = 3;
 
@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         {
                             EvictionPolicy = new FifoEvictionPolicy {MaxSize = NearCacheMaxSize}
                         },
-                        Name = DefaultCacheName
+                        Name = CacheName
                     }
                 },
                 IncludedEventTypes = new[] { EventType.CacheEntryCreated },
@@ -104,7 +104,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [TearDown]
         public void TearDown()
         {
-            _grid.GetCache<int, int>(DefaultCacheName).RemoveAll();
+            _grid.GetCache<int, int>(CacheName).RemoveAll();
         }
 
         /// <summary>
@@ -113,14 +113,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestExistingNearCache()
         {
-            var cache = _grid.GetCache<int, int>(DefaultCacheName);
+            var cache = _grid.GetCache<int, int>(CacheName);
             cache[1] = 1;
 
-            var nearCache = _grid.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
+            var nearCache = _grid.GetOrCreateNearCache<int, int>(CacheName, new NearCacheConfiguration());
             Assert.AreEqual(1, nearCache[1]);
 
             // GetOrCreate when exists
-            nearCache = _grid.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
+            nearCache = _grid.GetOrCreateNearCache<int, int>(CacheName, new NearCacheConfiguration());
             Assert.AreEqual(1, nearCache[1]);
 
             cache[1] = 2;
@@ -302,8 +302,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestNearCacheUpdatesFromAnotherLocalInstance()
         {
-            var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
-            var cache2 = _grid.GetCache<int, int>(DefaultCacheName);
+            var cache1 = _grid.GetCache<int, int>(CacheName);
+            var cache2 = _grid.GetCache<int, int>(CacheName);
 
             cache1[1] = 1;
             cache2.Replace(1, 2);
@@ -317,8 +317,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestNearCacheRemoveFromRemoteNodeAfterLocalPut()
         {
-            var localCache = _client.GetOrCreateNearCache<int, int>(DefaultCacheName, new NearCacheConfiguration());
-            var remoteCache = _grid.GetCache<int, int>(DefaultCacheName);
+            var localCache = _client.GetOrCreateNearCache<int, int>(CacheName, new NearCacheConfiguration());
+            var remoteCache = _grid.GetCache<int, int>(CacheName);
 
             localCache[1] = 1;
             remoteCache.Remove(1);
@@ -333,10 +333,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestSameNearCacheWithDifferentGenericTypeParameters()
         {
-            var cache1 = _grid.GetCache<int, int>(DefaultCacheName);
-            var cache2 = _grid.GetCache<string, string>(DefaultCacheName);
-            var cache3 = _grid.GetCache<int, Foo>(DefaultCacheName);
-            var cache4 = _grid.GetCache<object, object>(DefaultCacheName);
+            var cache1 = _grid.GetCache<int, int>(CacheName);
+            var cache2 = _grid.GetCache<string, string>(CacheName);
+            var cache3 = _grid.GetCache<int, Foo>(CacheName);
+            var cache4 = _grid.GetCache<object, object>(CacheName);
 
             cache1[1] = 1;
             cache2["1"] = "1";
@@ -522,7 +522,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// <summary>
         /// Gets the cache instance.
         /// </summary>
-        private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = DefaultCacheName)
+        private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = CacheName)
         {
             switch (mode)
             {

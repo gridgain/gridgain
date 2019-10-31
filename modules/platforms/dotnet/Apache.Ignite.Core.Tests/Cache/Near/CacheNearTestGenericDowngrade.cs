@@ -21,7 +21,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests <see cref="NearCache" /> in generic downgrade mode (see comments in <see cref="NearCacheManager"/>).
+    /// Tests <see cref="NearCache{TK, TV}" /> in generic downgrade mode
+    /// (see comments in <see cref="NearCacheManager"/>).
     /// </summary>
     [TestFixture]
     public class CacheNearTestGenericDowngrade : CacheNearTest
@@ -36,10 +37,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Downgrade near cache on all nodes by using it with different generic parameters.
             foreach (var ignite in Ignition.GetAll().Where(i => !i.GetConfiguration().ClientMode))
             {
-                var cache1 = ignite.GetCache<int, int>(DefaultCacheName);
+                var cache1 = ignite.GetCache<int, int>(CacheName);
                 cache1[0] = 0;
 
-                var cache2 = ignite.GetCache<string, string>(DefaultCacheName);
+                var cache2 = ignite.GetCache<string, string>(CacheName);
                 cache2["0"] = "0";
                 
                 cache2.RemoveAll();
