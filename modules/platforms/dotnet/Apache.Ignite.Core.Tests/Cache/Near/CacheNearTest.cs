@@ -348,6 +348,28 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that cache data is invalidated in the existing cache instance after generic downgrade.
+        /// </summary>
+        [Test]
+        public void TestDataInvalidationAfterGenericDowngrade()
+        {
+            var cacheName = TestContext.CurrentContext.Test.Name;
+            var cfg = new CacheConfiguration
+            {
+                Name = cacheName,
+                NearConfiguration = new NearCacheConfiguration()
+            };
+
+            var cache = _client.CreateCache<int, int>(cfg, cfg.NearConfiguration);
+            cache[1] = 1;
+
+            var newCache = _client.GetOrCreateNearCache<int, object>(cacheName, cfg.NearConfiguration);
+            newCache[1] = 2;
+
+            Assert.AreEqual(2, cache[1]);
+        }
+
+        /// <summary>
         /// Tests that near cache data is cleared when underlying cache is destroyed.
         /// </summary>
         [Test]
