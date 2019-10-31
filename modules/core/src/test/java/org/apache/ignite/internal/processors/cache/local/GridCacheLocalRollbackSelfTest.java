@@ -78,7 +78,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
  */
 public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     /** Logger for listen log messages. */
-    private static final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
+    private static ListeningTestLogger listeningLog;
 
     /** Number of nodes. */
     private static final int NODES = 4;
@@ -90,12 +90,19 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     private boolean clientNode;
 
     /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);
+
+        super.beforeTestsStarted();
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
-        log.clearListeners();
+        listeningLog.clearListeners();
 
         super.afterTest();
     }
@@ -109,7 +116,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
                     .setAtomicityMode(TRANSACTIONAL)
                     .setBackups(3)
             )
-            .setGridLogger(log)
+            .setGridLogger(listeningLog)
             .setConnectorConfiguration(new ConnectorConfiguration());
     }
 
@@ -148,7 +155,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
         LogListener logLsnr = new LogListener();
 
-        log.registerListener(logLsnr);
+        listeningLog.registerListener(logLsnr);
 
         for (Transaction tx : txs)
             tx.rollback();
@@ -204,7 +211,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
         LogListener logLsnr = new LogListener();
 
-        log.registerListener(logLsnr);
+        listeningLog.registerListener(logLsnr);
 
         latch.await();
 
@@ -241,6 +248,8 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
         Boolean correctEx = logLsnr.correctEx.get();
         assertTrue(nonNull(correctEx) && correctEx);
 
+        clientNode = false;
+
         startGrid(stoppedNodeId);
 
         awaitPartitionMapExchange();
@@ -256,7 +265,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
         stream(cmdLog.getHandlers()).forEach(Handler::flush);
 
-        assertContains(log, baos.toString(), "no conflicts have been found");
+        assertContains(listeningLog, baos.toString(), "no conflicts have been found");
     }
 
     /**
@@ -342,14 +351,12 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
         final AtomicReference<Boolean> correctEx = new AtomicReference<>();
 
         /**
-         * Class to search for an exception "node left topology" in the log
-         * with no TcpCommunicationSpi on the stack.
+         * Class to search for an exception "node left topology" in the log with no TcpCommunicationSpi on the stack.
          */
         final String PREFIX_EX_MSG = "Unable to send message (node left topology):";
 
         /**
-         * Search an exception in log message with a check for presence of
-         * TcpCommunicationSpi in it.
+         * Search an exception in log message with a check for presence of TcpCommunicationSpi in it.
          *
          * @param logStr Line from the log.
          */
