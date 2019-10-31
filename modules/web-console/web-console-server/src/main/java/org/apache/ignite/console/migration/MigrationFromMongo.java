@@ -28,7 +28,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
