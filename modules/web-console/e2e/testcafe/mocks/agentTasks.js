@@ -26,6 +26,7 @@ export const taskResult = (result) => ({
 
 /**
  * Generate feature set with ids from 0 to 95.
+ * NOTE! 24-th feature disable scheduling functionality (WC_SCHEDULING_NOT_AVAILABLE).
  *
  * @param {Array<number>} excluded Array of feature numbers to exclude.
  * @return {string} Base64 coded string of enabled features.
@@ -94,7 +95,7 @@ const CLUSTER_1 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: generateFeasureSet(),
+    supportedFeatures: generateFeasureSet([24]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': {
             address: '10.0.75.1',
@@ -109,7 +110,7 @@ const CLUSTER_2 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: generateFeasureSet(),
+    supportedFeatures: generateFeasureSet([24]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe4': {
             address: '10.0.75.1',
