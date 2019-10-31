@@ -23,9 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -97,16 +94,7 @@ public abstract class AbstractActionControllerTest extends AbstractGridWithAgent
             .setFailureDetectionTimeout(10000)
             .setClientFailureDetectionTimeout(10000)
             .setNetworkTimeout(10000)
-            .setCacheConfiguration(
-                new CacheConfiguration()
-                    .setName("*")
-                    .setCacheMode(CacheMode.PARTITIONED)
-                    .setBackups(1)
-                    .setAffinity(
-                        new RendezvousAffinityFunction()
-                            .setPartitions(256)
-                    )
-            )
+            .setConnectorConfiguration(null)
             .setClientConnectorConfiguration(null)
             .setTransactionConfiguration(
                 new TransactionConfiguration()

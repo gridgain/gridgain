@@ -27,6 +27,7 @@ import org.apache.ignite.agent.service.CacheServiceSelfTest;
 import org.apache.ignite.agent.service.ClusterServiceSelfTest;
 import org.apache.ignite.agent.service.action.DistributedActionServiceSelfTest;
 import org.apache.ignite.agent.service.action.DistributedActionServiceWithSecuritySelfTest;
+import org.apache.ignite.agent.service.event.EventsServiceSelfTest;
 import org.apache.ignite.agent.service.metrics.MetricsServiceSelfTest;
 import org.apache.ignite.agent.service.tracing.TracingServiceSelfTest;
 import org.junit.runner.RunWith;
@@ -43,6 +44,7 @@ import org.junit.runners.Suite;
     ClusterServiceSelfTest.class,
     DistributedActionServiceSelfTest.class,
     DistributedActionServiceWithSecuritySelfTest.class,
+    EventsServiceSelfTest.class,
     MetricsServiceSelfTest.class,
     NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,

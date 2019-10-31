@@ -19,7 +19,12 @@ package org.apache.ignite.agent.utils;
 import java.io.IOException;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +34,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.RequestDeserializer;
+import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
@@ -40,6 +46,16 @@ public class AgentObjectMapperFactory {
         /** {@inheritDoc} */
         @Override public void serialize(IgniteUuid uid, JsonGenerator gen, SerializerProvider ser) throws IOException {
             gen.writeString(uid.toString());
+        }
+    };
+
+    /** Custom deserializer for {@link IgniteUuid} */
+    private static final JsonDeserializer<IgniteUuid> IGNITE_UUID_DESERIALIZER = new JsonDeserializer<IgniteUuid>() {
+        @Override public IgniteUuid deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            if (p.currentToken() == JsonToken.VALUE_STRING)
+                return IgniteUuid.fromString(p.getText().trim());
+
+            return (IgniteUuid) ctxt.handleUnexpectedToken(IgniteUuid.class, p);
         }
     };
 
@@ -91,6 +107,7 @@ public class AgentObjectMapperFactory {
         return mapper.registerModule(
             new SimpleModule()
                 .addSerializer(IgniteUuid.class, IGNITE_UUID_SERIALIZER)
+                .addDeserializer(IgniteUuid.class, IGNITE_UUID_DESERIALIZER)
                 .addDeserializer(Request.class, new RequestDeserializer())
         );
     }
@@ -100,6 +117,7 @@ public class AgentObjectMapperFactory {
      */
     private static ObjectMapper applyConfig(ObjectMapper mapper) {
         return mapper
+            .addMixIn(VisorGridEvent.class, VisorGridEventMixIn.class)
             .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }

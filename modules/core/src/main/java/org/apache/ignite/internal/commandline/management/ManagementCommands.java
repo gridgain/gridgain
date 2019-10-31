@@ -36,6 +36,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.management.ChangeManagementConfigurationTask;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -77,33 +78,39 @@ public class ManagementCommands implements Command<ManagementArguments> {
      * @throws GridClientException If failed to activate.
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
-            UUID crdId = client.compute().nodes().stream()
-                .min(Comparator.comparingLong(GridClientNode::order))
-                .map(GridClientNode::nodeId)
-                .orElse(null);
+        if (enableExperimental()) {
+            try (GridClient client = Command.startClient(clientCfg)) {
+                UUID crdId = client.compute().nodes().stream()
+                    .min(Comparator.comparingLong(GridClientNode::order))
+                    .map(GridClientNode::nodeId)
+                    .orElse(null);
 
-            if (args.command() == HELP) {
-                printHelp(log);
-                
-                return null;
+                if (args.command() == HELP) {
+                    printHelp(log);
+
+                    return null;
+                }
+
+                ManagementConfiguration cfg = executeTaskByNameOnNode(
+                    client,
+                    ChangeManagementConfigurationTask.class.getName(),
+                    toVisorArguments(args),
+                    crdId,
+                    clientCfg
+                );
+
+                print(log, cfg);
             }
+            catch (Throwable e) {
+                log.severe("Failed to execute management command='" + args.command().text() + "'");
+                log.severe(CommandLogger.errorMessage(e));
 
-            ManagementConfiguration cfg = executeTaskByNameOnNode(
-                client,
-                ChangeManagementConfigurationTask.class.getName(),
-                toVisorArguments(args),
-                crdId,
-                clientCfg
-            );
-
-            print(log, cfg);
+                throw e;
+            }
         }
-        catch (Throwable e) {
-            log.severe("Failed to execute management command='" + args.command().text() + "'");
-            log.severe(CommandLogger.errorMessage(e));
-
-            throw e;
+        else {
+            log.warning(String.format("For use experimental command add %s=true to JVM_OPTS in %s",
+                IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME));
         }
 
         return null;

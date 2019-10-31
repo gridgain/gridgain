@@ -43,7 +43,7 @@ public class MetricsServiceSelfTest extends AbstractGridWithAgentTest {
             () -> interceptor.isSubscribedOn(buildMetricsPullTopic())
         );
 
-        template.convertAndSend("/topic/agent/metrics/pull", "pull");
+        template.convertAndSend(buildMetricsPullTopic(), "pull");
 
         assertWithPoll(
             () -> {

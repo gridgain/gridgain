@@ -114,7 +114,7 @@ public class WebSocketManager implements AutoCloseable {
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
         if (isStopped)
-            throw new IgniteCheckedException("Web socket manager was stopped.");
+            throw new InterruptedException("Web socket manager was stopped.");
 
         if (client != null)
             client.stop();
@@ -175,6 +175,9 @@ public class WebSocketManager implements AutoCloseable {
         return connected;
     }
 
+    /**
+     * @return {@code True} if agent connected to backend.
+     */
     public boolean isConnected() {
         return ses != null && ses.isConnected();
     }
@@ -182,7 +185,9 @@ public class WebSocketManager implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         isStopped = true;
-        client.stop();
+
+        if (client != null)
+            client.stop();
     }
 
     /**

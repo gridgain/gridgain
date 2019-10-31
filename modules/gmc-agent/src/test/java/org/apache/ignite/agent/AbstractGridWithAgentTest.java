@@ -116,16 +116,7 @@ public abstract class AbstractGridWithAgentTest extends GridCommonAbstractTest {
             .setFailureDetectionTimeout(10000)
             .setClientFailureDetectionTimeout(10000)
             .setNetworkTimeout(10000)
-            .setCacheConfiguration(
-                new CacheConfiguration()
-                    .setName("*")
-                    .setCacheMode(CacheMode.PARTITIONED)
-                    .setBackups(1)
-                    .setAffinity(
-                        new RendezvousAffinityFunction()
-                            .setPartitions(256)
-                    )
-            )
+            .setConnectorConfiguration(null)
             .setClientConnectorConfiguration(null)
             .setTransactionConfiguration(
                 new TransactionConfiguration()

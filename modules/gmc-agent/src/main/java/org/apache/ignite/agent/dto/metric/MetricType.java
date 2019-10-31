@@ -18,7 +18,6 @@ package org.apache.ignite.agent.dto.metric;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.spi.metric.BooleanMetric;
