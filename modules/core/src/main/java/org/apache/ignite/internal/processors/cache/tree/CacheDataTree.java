@@ -298,7 +298,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             }
 
             /** {@inheritDoc} */
-            @Override public void close() throws Exception {
+            @Override public void close() {
                 rows = null;
             }
         }

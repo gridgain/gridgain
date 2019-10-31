@@ -40,7 +40,6 @@ import org.junit.Test;
 /**
  * Test for OOM if case of using large entries. This OOM may be caused by inaccurate results caching on
  * some stage of the query execution.
- * // TODO not lazy result.
  */
 public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest {
     /** */
@@ -214,9 +213,6 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
             for (int i = 0; i < runners; i++) {
                 Future f = exec.submit(new Callable<Object>() {
                     @Override public Object call() {
-
-                        try {
-
                             for (int j = 0; j < iterations; j++) {
                                 if (Thread.currentThread().isInterrupted())
                                     return null;
@@ -231,16 +227,9 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
                                 qry.getAll();
                                 qry.close();
                             }
-                        }
-                        catch (Throwable e) {
-                            System.out.printf("E");
 
-                            throw e;
-                        }
                         return null;
                     }
-
-
                 });
 
                 futs.add(f);
