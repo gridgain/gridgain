@@ -3367,72 +3367,43 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             final boolean unswapped = (flags & IS_UNSWAPPED_MASK) != 0;
 
-            boolean update;
+            boolean update = false;
 
-            IgniteBiPredicate<CacheObject, GridCacheVersion> p = (val0, ver0) -> {
-                boolean update0;
+            IgniteBiPredicate<CacheObject, GridCacheVersion> p = new IgniteBiPredicate<CacheObject, GridCacheVersion>() {
+                @Override public boolean apply(@Nullable CacheObject val, GridCacheVersion currVer) {
+                    boolean update0;
 
-                GridCacheVersion currVer = ver0 != null ? ver0 : this.ver;
+                    boolean isStartVer = cctx.shared().versions().isStartVersion(currVer);
 
-                boolean isStartVer = cctx.shared().versions().isStartVersion(currVer);
-
-                if (cctx.group().persistenceEnabled()) {
-                    if (!isStartVer) {
-                        if (cctx.atomic())
-                            update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
+                    if (cctx.group().persistenceEnabled()) {
+                        if (!isStartVer) {
+                            if (cctx.atomic())
+                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
+                            else
+                                update0 = currVer.compareTo(ver) < 0;
+                        }
                         else
-                            update0 = currVer.compareTo(ver) < 0;
+                            update0 = true;
                     }
                     else
-                        update0 = true;
+                        update0 = isStartVer;
+
+                    // Such combination may exist during datastreamer first update.
+                    update0 |= (!preload && val == null);
+
+                    return update0;
                 }
-                else
-                    update0 = isStartVer;
-
-                // Such combination may exist during datastreamer first update.
-                update0 |= (!preload && val0 == null);
-
-                return update0;
             };
 
             if (unswapped) {
-                update = p.apply(this.val, this.ver);
+                if (!preload) {
+                    update = p.apply(this.val, this.ver);
 
-                if (update) {
-                    // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
-                    long oldExpTime = expireTimeUnlocked();
-
-                    if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
-                        if (onExpired(this.val, null)) {
-                            if (cctx.deferredDelete()) {
-                                deferred = true;
-                                oldVer = this.ver;
-                            }
-                            else if (val == null)
-                                obsolete = true;
-                        }
-                    }
-
-                    if (cctx.mvccEnabled()) {
-                        assert !preload;
-
-                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
-                    }
-                    else
-                        storeValue(val, expTime, ver, null, row);
-                }
-            }
-            else {
-                if (cctx.mvccEnabled()) {
-                    // cannot identify whether the entry is exist on the fly
-                    unswap(false);
-
-                    if (update = p.apply(this.val, this.ver)) {
+                    if (update) {
                         // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
                         long oldExpTime = expireTimeUnlocked();
-                        long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
 
-                        if (delta < 0) {
+                        if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
                             if (onExpired(this.val, null)) {
                                 if (cctx.deferredDelete()) {
                                     deferred = true;
@@ -3443,10 +3414,43 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             }
                         }
 
-                        assert !preload;
+                        if (cctx.mvccEnabled()) {
+                            assert !preload;
 
-                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
+                            cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
+                        }
+                        else
+                            storeValue(val, expTime, ver, null, row);
                     }
+                }
+            }
+            else {
+                if (cctx.mvccEnabled()) {
+                    throw new AssertionError();
+
+                    // cannot identify whether the entry is exist on the fly
+//                    unswap(false);
+//
+//                    if (update = p.apply(this.val, this.ver)) {
+//                        // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
+//                        long oldExpTime = expireTimeUnlocked();
+//                        long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
+//
+//                        if (delta < 0) {
+//                            if (onExpired(this.val, null)) {
+//                                if (cctx.deferredDelete()) {
+//                                    deferred = true;
+//                                    oldVer = this.ver;
+//                                }
+//                                else if (val == null)
+//                                    obsolete = true;
+//                            }
+//                        }
+//
+//                        assert !preload;
+//
+//                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
+//                    }
                 }
                 else {
                     // Optimization to access storage only once.
@@ -5923,8 +5927,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
             }
 
+            IgniteCacheOffheapManager.CacheDataStore store = entry.cctx.offheap().dataStore(entry.localPartition());
+
             if (val != null) {
-                newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(
+                newRow = store.createRow(
                     entry.cctx,
                     entry.key,
                     val,
@@ -5935,8 +5941,42 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 treeOp = oldRow != null && oldRow.link() == newRow.link() ?
                     IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
             }
-            else
-                treeOp = oldRow != null ? IgniteTree.OperationType.REMOVE : IgniteTree.OperationType.NOOP;
+            else {
+                newRow = store.createRow(
+                            entry.cctx,
+                            entry.key,
+                            TombstoneCacheObject.INSTANCE,
+                            ver,
+                            0,
+                            oldRow);
+
+                if (oldRow != null && oldRow.link() == newRow.link())
+                    treeOp = IgniteTree.OperationType.IN_PLACE;
+
+                // Default: PUT.
+
+//                if (oldRow != null)
+//                    treeOp = IgniteTree.OperationType.REMOVE;
+//                else {
+//                    if (!entry.cctx.deferredDelete()) {
+//                        // Write a tombstone if trying to remove non existent entry.
+//                        // Required to fix reordering issues during historical rebalancing.
+//                        newRow = store.createRow(
+//                            entry.cctx,
+//                            entry.key,
+//                            TombstoneCacheObject.INSTANCE,
+//                            ver,
+//                            0,
+//                            null);
+//
+//                        store.tombstoneCreated();
+//
+//                        // Default op is PUT.
+//                    }
+//                    else // Keep old behavior.
+                        //treeOp = IgniteTree.OperationType.NOOP;
+//                }
+            }
         }
 
         /** {@inheritDoc} */

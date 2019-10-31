@@ -1694,7 +1694,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case IN_PLACE:
-                    assert !isTombstone(c.newRow());
+                    //assert !isTombstone(c.newRow());
 
                     if (isTombstone(c.oldRow())) {
                         tombstoneRemoved();
@@ -2582,7 +2582,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
             throws IgniteCheckedException {
-            assert !isTombstone(newRow);
+            //assert !isTombstone(newRow) || oldRow == null;
 
             boolean oldTombstone = isTombstone(oldRow);
             boolean oldNull = oldRow == null || oldTombstone;
@@ -3225,7 +3225,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /**
          * Called when tombstone has created in partition.
          */
-        private void tombstoneCreated() {
+        public void tombstoneCreated() {
             tombstonesCnt.incrementAndGet();
         }
 
