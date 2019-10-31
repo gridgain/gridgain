@@ -92,7 +92,7 @@ public class GridTestLog4jLogger implements IgniteLogger, LoggerNodeIdAware {
     /** Logger implementation. */
     @GridToStringExclude
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
-    public Logger impl;
+    private Logger impl;
 
     /** Path to configuration file. */
     @GridToStringExclude

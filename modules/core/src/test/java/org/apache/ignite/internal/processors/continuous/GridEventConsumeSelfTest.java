@@ -16,10 +16,7 @@
 
 package org.apache.ignite.internal.processors.continuous;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -46,9 +43,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
-import org.apache.log4j.Appender;
-import org.apache.log4j.FileAppender;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -69,7 +63,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     private static final int GRID_CNT = 3;
 
     /** Number of created consumes per thread in multithreaded test. */
-    private static final int CONSUME_CNT = 500;
+    private static final int CONSUME_CNT = GridTestUtils.SF.applyLB(500, 200);
 
     /** Consume latch. */
     private static volatile CountDownLatch consumeLatch;
@@ -1055,24 +1049,11 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 //        assertEquals(GRID_CNT * 2 + 1, consumeCnt.get());
 //    }
 
-    @Override protected long getTestTimeout() {
-        return 15 * 60 * 1000;
-    }
-
     /**
      * @throws Exception If failed.
      */
     @Test
     public void testMultithreadedWithNodeRestart() throws Exception {
-        Enumeration iter = ((GridTestLog4jLogger)log).impl.getAllAppenders();
-        while (iter.hasMoreElements()) {
-            Appender appender = (Appender)iter.nextElement();
-            log.info("APPENDER : " + appender.getName());
-            if(appender.getName().contains("FILE"))
-                log.info("LOG FILE : " + new File(((FileAppender)appender).getFile()).getAbsolutePath());
-        }
-
-
         final AtomicBoolean stop = new AtomicBoolean();
         final BlockingQueue<IgniteBiTuple<Integer, UUID>> queue = new LinkedBlockingQueue<>();
         final Collection<UUID> started = new GridConcurrentHashSet<>();
@@ -1096,14 +1077,14 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                                     @Override public boolean apply(UUID uuid, Event evt) {
                                         return true;
                                     }
-                                }, null, EVT_JOB_STARTED).get(40_000);
+                                }, null, EVT_JOB_STARTED).get(10_000);
 
                                 started.add(consumeId);
 
                                 queue.add(F.t(idx, consumeId));
                             }
-                            catch (ClusterTopologyException ignored) {
-                                log.error("Failed during consume starter", ignored);
+                            catch (ClusterTopologyException e) {
+                                log.error("Failed during consume starter", e);
                             }
 
                             U.sleep(10);
@@ -1131,12 +1112,12 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                         try {
                             IgniteEvents evts = grid(idx).events();
 
-                            evts.stopRemoteListenAsync(consumeId).get(40_000);
+                            evts.stopRemoteListenAsync(consumeId).get(10_000);
 
                             stopped.add(consumeId);
                         }
-                        catch (ClusterTopologyException ignored) {
-                            log.error("Failed during consume stopper", ignored);
+                        catch (ClusterTopologyException e) {
+                            log.error("Failed during consume stopper", e);
                         }
                     }
 
@@ -1161,7 +1142,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                         int idx = rnd.nextInt(GRID_CNT);
 
                         try {
-                            grid(idx).compute().runAsync(F.noop()).get(3000);
+                            grid(idx).compute().runAsync(F.noop()).get(10_000);
                         }
                         catch (IgniteException ignored) {
                             // Ignore all job execution related errors.
@@ -1176,19 +1157,13 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
             IgniteBiTuple<Integer, UUID> t;
 
-            ArrayList<IgniteInternalFuture> stopRemotes = new ArrayList<>();
-
             while ((t = queue.poll()) != null) {
                 int idx = t.get1();
                 UUID consumeId = t.get2();
 
-                grid(idx).events().stopRemoteListenAsync(consumeId).get(40000);
+                grid(idx).events().stopRemoteListenAsync(consumeId).get(20_000);
 
                 stopped.add(consumeId);
-            }
-
-            for (IgniteInternalFuture fut : stopRemotes) {
-                fut.get(10_000);
             }
 
             Collection<UUID> notStopped = F.lose(started, true, stopped);
@@ -1198,5 +1173,10 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
         finally {
             stop.set(true);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return GridTestUtils.SF.applyLB(15, 5) * 60 * 1000;
     }
 }
