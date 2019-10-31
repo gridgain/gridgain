@@ -1859,6 +1859,14 @@ public class Select extends Query {
                 resetJoinBatchAfterQuery();
 
                 clearHashJoinIndexAfterQuery();
+
+                cleanupResources();
+            }
+        }
+
+        private void cleanupResources() {
+            for (TableFilter f : filters) {
+                f.cleanup();
             }
         }
 

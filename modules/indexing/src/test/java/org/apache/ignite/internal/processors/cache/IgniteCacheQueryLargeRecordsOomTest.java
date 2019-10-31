@@ -15,13 +15,14 @@
  */
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -30,20 +31,70 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.GridDebug;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
  * Test for OOM if case of using large entries. This OOM may be caused by inaccurate results caching on
  * some stage of the query execution.
+ * // TODO not lazy result.
  */
 public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest {
+    /** */
+    private static final int READERS = 2;
+
+    /** */
+    private static final int ITERATIONS = 10;
+
+    /** Heap dump file name. */
+    private static final String HEAP_DUMP_FILE_NAME = "test.hprof";
+
+    /** Allowed leak size in MB. */
+    private static final float MAX_LEAK = 30;
+
     /**
-     * @throws Exception If error.
+     * @throws Exception If failed.
      */
     @Test
-    public void testMemoryLeak() throws Exception {
+    public void testMemoryLeakDistributed() throws Exception {
+        checkMemoryLeak(false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMemoryLeakDistributedLazy() throws Exception {
+        checkMemoryLeak(false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMemoryLeakLocal() throws Exception {
+        checkMemoryLeak(true, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMemoryLeakLocalLazy() throws Exception {
+        checkMemoryLeak(true, true);
+    }
+
+    /**
+     * @param loc Local.
+     * @param lazy Lazy.
+     * @throws Exception If failed.
+     */
+    private void checkMemoryLeak(boolean loc, boolean lazy) throws Exception {
         startGridsMultiThreaded(2);
+
         IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         for (long i = 0; i < 1000; i++) {
@@ -52,53 +103,36 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
             cache.put(i, val);
         }
 
-        Runtime.getRuntime().gc();
+        if (log.isInfoEnabled())
+            log.info("Data loaded");
 
-        long freeHeapSize = Runtime.getRuntime().freeMemory();
+        QueriesRunner runner = new QueriesRunner(cache, READERS, getTestTimeout());
 
-        // We expect that each entry size is 1 MB and in PK BPlusTree cursor at least 100 entries may be cached.
-        // It means that each cursor may have ~100 MB of cached data. So let's choose the number of open cursors
-        // near to the half of available heap to find out if there is any leak here.
-        final int nReaders = (int)(freeHeapSize / 1e8) / 4;
+        // Warm up run.
+        runner.runQueries(3, loc, lazy);
+
+        GridDebug.dumpHeap(HEAP_DUMP_FILE_NAME, true);
+
+        File dumpFile = new File(HEAP_DUMP_FILE_NAME);
+
+        final long size0 = dumpFile.length();
+
+        runner.runQueries(ITERATIONS, loc, lazy);
+
+        GridDebug.dumpHeap(HEAP_DUMP_FILE_NAME, true);
+
+        final float leakSize = (float)(dumpFile.length() - size0) / 1024 / 1024;
 
         if (log.isInfoEnabled())
-            log.info("Data loaded. Number of readers=" + nReaders);
+            log.info("Current leak size=" + leakSize + "MB, heap size after warm up=" + (size0 / 1024 / 1024) + "MB.");
 
-        ExecutorService ex = Executors.newFixedThreadPool(nReaders);
+        assertTrue("The memory leak detected : " + leakSize + "MB. See heap dump '" + dumpFile.getAbsolutePath() + "'",
+            leakSize < MAX_LEAK);
 
-        Collection<Future> futs = new ArrayList<>(nReaders);
+        // Remove dump if successful.
+        dumpFile.delete();
 
-        for (int i = 0; i < nReaders; i++) {
-            Future f = ex.submit(new Callable<Object>() {
-                @Override public Object call() {
-                    for (int j = 0; j < 10; j++) {
-                        if (Thread.currentThread().isInterrupted())
-                            return null;
-
-                        if (log.isInfoEnabled())
-                            log.info("Iteration " + j);
-
-                        FieldsQueryCursor<List<?>> qry =
-                            cache.query(new SqlFieldsQuery("select * from Person limit 10").setLazy(true));
-                        qry.getAll();
-                        qry.close();
-                    }
-
-                    return null;
-                }
-            });
-
-            futs.add(f);
-        }
-
-        try {
-            for (Future f : futs)
-                f.get(getTestTimeout(), TimeUnit.MILLISECONDS);
-        }
-        finally {
-            ex.shutdownNow();
-            ex.awaitTermination(getTestTimeout(), TimeUnit.MILLISECONDS);
-        }
+        runner.shutdown();
     }
 
     /** {@inheritDoc} */
@@ -108,6 +142,9 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
             new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Long.class, Person.class));
         cfg.setDataStorageConfiguration(new DataStorageConfiguration().setMetricsEnabled(true)
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMetricsEnabled(true)));
+
+        TcpCommunicationSpi communicationSpi = (TcpCommunicationSpi)cfg.getCommunicationSpi();
+        communicationSpi.setAckSendThreshold(1);
         return cfg;
     }
 
@@ -129,6 +166,97 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
         /** */
         Person(byte[] b) {
             this.b = b;
+        }
+    }
+
+    /**
+     * Query runner. We need to run queries using the same threads (due to thread local statements caching),
+     * so let's encapsulate this logic in the dedicated class.
+     */
+    private static class QueriesRunner {
+        /** */
+        private final ExecutorService exec;
+
+        /** */
+        private final int runners;
+
+        /** */
+        private final long timeout;
+
+        /** */
+        private final IgniteCache<Object, Object> cache;
+
+        /**
+         * @param cache Cache.
+         * @param runners Runners number.
+         * @param timeout Timeout.
+         */
+        private QueriesRunner(IgniteCache<Object, Object> cache, int runners, long timeout) {
+            this.cache = cache;
+            this.timeout = timeout;
+            this.exec = Executors.newFixedThreadPool(runners, new ThreadFactory() {
+                @Override public Thread newThread(@NotNull Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setName("test-async-query-runner-" + t.hashCode());
+                    return t;
+                }
+            });
+            this.runners = runners;
+        }
+
+        /**
+         * Runs queries.
+         * @throws Exception If failed.
+         */
+        void runQueries(final int iterations, boolean loc, boolean lazy) throws Exception {
+            List<Future> futs = new ArrayList<>(runners);
+
+            for (int i = 0; i < runners; i++) {
+                Future f = exec.submit(new Callable<Object>() {
+                    @Override public Object call() {
+
+                        try {
+
+                            for (int j = 0; j < iterations; j++) {
+                                if (Thread.currentThread().isInterrupted())
+                                    return null;
+
+                                if (log.isInfoEnabled())
+                                    log.info("Iteration " + j);
+
+                                FieldsQueryCursor<List<?>> qry =
+                                    cache.query(new SqlFieldsQuery("select * from Person limit " + (j + 1))
+                                        .setLazy(lazy).setLocal(loc));
+
+                                qry.getAll();
+                                qry.close();
+                            }
+                        }
+                        catch (Throwable e) {
+                            System.out.printf("E");
+
+                            throw e;
+                        }
+                        return null;
+                    }
+
+
+                });
+
+                futs.add(f);
+            }
+
+            for (Future f : futs)
+                f.get();
+        }
+
+        /**
+         * Terminates runner.
+         * @throws InterruptedException If failed.
+         */
+        public void shutdown() throws InterruptedException {
+            exec.shutdownNow();
+            exec.awaitTermination(timeout, TimeUnit.MILLISECONDS);
         }
     }
 }

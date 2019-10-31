@@ -383,12 +383,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 return new SingleRowCursor(row);
             }
             else {
-                H2Cursor cur = new H2Cursor(tree.find((H2Row)lower, (H2Row)upper, filter(qctx), null));
-
-                if (qctx != null)
-                    qctx.addResource(cur);
-
-                return cur;
+                return new H2Cursor(tree.find((H2Row)lower,
+                    (H2Row)upper, filter(qctx), null));
             }
         }
         catch (IgniteCheckedException e) {

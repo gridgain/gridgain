@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
@@ -25,7 +23,6 @@ import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,9 +50,6 @@ public class QueryContext implements H2QueryContext {
 
     /** {@code True} for local queries, {@code false} for distributed ones. */
     private final boolean loc;
-
-    /** Dependent resources. */
-    private List<AutoCloseable> resources;
 
     /**
      * Constructor.
@@ -133,11 +127,6 @@ public class QueryContext implements H2QueryContext {
 
         if (!nodeStop && reservations != null)
             reservations.release();
-
-        if (resources != null) {
-            for (AutoCloseable res : resources)
-                U.closeQuiet(res);
-        }
     }
 
     /**
@@ -159,16 +148,6 @@ public class QueryContext implements H2QueryContext {
      */
     public boolean local() {
         return loc;
-    }
-
-    /**
-     * @param res Resource.
-     */
-    public void addResource(AutoCloseable res) {
-        if (resources == null)
-            resources = new ArrayList<>(1);
-
-        resources.add(res);
     }
 
     /** {@inheritDoc} */

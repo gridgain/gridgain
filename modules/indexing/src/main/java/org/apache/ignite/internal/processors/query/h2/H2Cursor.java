@@ -88,5 +88,6 @@ public class H2Cursor implements Cursor, AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
         cursor.close();
+        cur = null;
     }
 }
