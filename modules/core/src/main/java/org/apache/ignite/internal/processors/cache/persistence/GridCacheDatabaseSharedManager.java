@@ -3204,7 +3204,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Collection<DataRegion> regions = dataRegions();
 
-        Map<DataRegion, T2<Collection<FullPageId>[], Integer>> res = new HashMap<>(regions.size());
+        List<T3<DataRegion, Collection<FullPageId>[], Integer>> res = new ArrayList<>(regions.size());
 
         for (DataRegion dataReg : regions) {
             if (!dataReg.config().isPersistenceEnabled())
@@ -3218,14 +3218,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             Integer dirtyPages = nextCpPages.get3();
 
             if (dirtyPages != 0)
-                res.put(dataReg, new T2<>(nextCpPagesCol, dirtyPages));
+                res.add(new T3<>(dataReg, nextCpPagesCol, dirtyPages));
         }
 
         // Sort all dirty pages.
-        Map<DataRegion, Collection<FullPageId>> sortedPages = sortCpPagesIfNeeded(res);
+        List<T2<DataRegion, Collection<FullPageId>>> sortedPages = sortCpPagesIfNeeded(res);
 
         // Now cpPages are common for all segments.
-        sortedPages.forEach((k, v) -> ((PageMemoryEx)k.pageMemory()).checkpointPages(v));
+        sortedPages.forEach(k -> ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2()));
 
         // Identity stores set for future fsync.
         Collection<PageStore> updStores = new GridConcurrentHashSet<>();
@@ -3248,14 +3248,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         };
 
-        for (Collection<FullPageId> col : sortedPages.values()) {
+        for (T2<DataRegion, Collection<FullPageId>> pagesPerRegion : sortedPages) {
             // Calculate stripe index.
             int stripeIdx = seq++ % exec.stripes();
 
-            NavigableSet<FullPageId> pagesToWrite = (NavigableSet<FullPageId>) col;
+            NavigableSet<FullPageId> pagesToWrite = (NavigableSet<FullPageId>)pagesPerRegion.get2();
 
             // Add number of handled pages.
-            cpPagesCnt.addAndGet(col.size());
+            cpPagesCnt.addAndGet(pagesToWrite.size());
 
             exec.execute(stripeIdx, () -> {
                 PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
@@ -4253,7 +4253,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             IgniteFuture snapFut = null;
 
-            T2<Map<DataRegion, T2<Collection<FullPageId>[], Integer>>, Integer> cpPagesTuple;
+            T2<List<T3<DataRegion, Collection<FullPageId>[], Integer>>, Integer> cpPagesTuple;
 
             boolean hasPages, hasUserPages, hasPartitionsToDestroy;
 
@@ -4274,7 +4274,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             tracker.onLockWaitStart();
 
             checkpointLock.writeLock().lock();
-
             try {
                 updateCurrentCheckpointProgress();
 
@@ -4296,14 +4295,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 fillCacheGroupState(cpRec);
 
                 //There are allowable to replace pages only after checkpoint entry was stored to disk.
-                T3<Map<DataRegion, T2<Collection<FullPageId>[], Integer>>, Integer, Boolean> cpPagesTriple =
+                T3<List<T3<DataRegion, Collection<FullPageId>[], Integer>>, Integer, Boolean> cpPagesTriple =
                     beginAllCheckpoints(curr.futureFor(MARKER_STORED_TO_DISK));
 
                 cpPagesTuple = new T2<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
                 hasUserPages = cpPagesTriple.get3();
 
-                hasPages = hasUserPages || hasPageForWrite(cpPagesTuple.get1());
+                hasPages = hasUserPages || hasPageForWrite(cpPagesTriple.get1());
 
                 hasPartitionsToDestroy = !curr.destroyQueue.pendingReqs.isEmpty();
 
@@ -4336,9 +4335,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
 
             //
-            Map<DataRegion, Collection<FullPageId>> alignedPages = sortCpPagesIfNeeded(cpPagesTuple.get1());
+            List<T2<DataRegion, Collection<FullPageId>>> alignedPages = sortCpPagesIfNeeded(cpPagesTuple.get1());
 
-            alignedPages.forEach((k, v) -> ((PageMemoryEx)k.pageMemory()).checkpointPages(v));
+            ArrayList<DataRegion> regsForCheckpointing = new ArrayList<>(alignedPages.size());
+
+            alignedPages.forEach(k -> {
+                    ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2());
+
+                    regsForCheckpointing.add(k.get1());
+                }
+            );
             //
 
             DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, hasPages, hasUserPages);
@@ -4398,7 +4404,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         );
                 }
 
-                return new Checkpoint(cp, cpPagesTuple.get1().keySet(), curr, currCheckpointPagesCnt);
+                return new Checkpoint(cp, regsForCheckpointing, curr, currCheckpointPagesCnt);
             }
             else {
                 if (curr.nextSnapshot)
@@ -4608,11 +4614,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          *
          * @param cpPagesCollWrapper Collection of {@link GridMultiCollectionWrapper} checkpoint pages.
          */
-        private boolean hasPageForWrite(Map<DataRegion, T2<Collection<FullPageId>[], Integer>> cpPagesCollWrapper) {
+        private boolean hasPageForWrite(List<T3<DataRegion, Collection<FullPageId>[], Integer>> cpPagesCollWrapper) {
             boolean hasPages = false;
 
-            for (Map.Entry<DataRegion, T2<Collection<FullPageId>[], Integer>> c : cpPagesCollWrapper.entrySet())
-                if (c.getValue().get2() != 0) {
+            for (T3<DataRegion, Collection<FullPageId>[], Integer> c : cpPagesCollWrapper)
+                if (c.get3() != 0) {
                     hasPages = true;
 
                     break;
@@ -4626,10 +4632,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * pages, and flag defines at least one user page became a dirty since last checkpoint.
          * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
          */
-        private T3<Map<DataRegion, T2<Collection<FullPageId>[], Integer>>, Integer, Boolean> beginAllCheckpoints(
+        private T3<List<T3<DataRegion, Collection<FullPageId>[], Integer>>, Integer, Boolean> beginAllCheckpoints(
             GridFutureAdapter allowToReplace
         ) {
-            Map<DataRegion, T2<Collection<FullPageId>[], Integer>> res = new HashMap<>();
+            List<T3<DataRegion, Collection<FullPageId>[], Integer>> res = new ArrayList<>(dataRegions().size());
 
             int pagesNum = 0;
 
@@ -4649,7 +4655,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 pagesNum += dirtyPages;
 
                 if (dirtyPages != 0) {
-                    res.put(dataReg, new T2<>(nextCpPagesCol, dirtyPages));
+                    res.add(new T3<>(dataReg, nextCpPagesCol, dirtyPages));
 
                     if (nextCpPages.get2())
                         hasUserDirtyPages = true;
@@ -4817,11 +4823,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param pagesPerRegion
      * @return
      */
-    private Map<DataRegion, Collection<FullPageId>> sortCpPagesIfNeeded(
-        Map<DataRegion, T2<Collection<FullPageId>[], Integer>> pagesPerRegion) {
-        Map<DataRegion, Collection<FullPageId>> res = new HashMap<>(pagesPerRegion.size());
+    private List<T2<DataRegion, Collection<FullPageId>>> sortCpPagesIfNeeded(
+        List<T3<DataRegion, Collection<FullPageId>[], Integer>> pagesPerRegion) {
+        List<T2<DataRegion, Collection<FullPageId>>> res = new ArrayList<>(pagesPerRegion.size());
 
-        for (Map.Entry<DataRegion, T2<Collection<FullPageId>[], Integer>> entry : pagesPerRegion.entrySet()) {
+        for (T3<DataRegion, Collection<FullPageId>[], Integer> entry : pagesPerRegion) {
             Collection<FullPageId> checkpointPages = new GridConcurrentSkipListSet<>(new Comparator<FullPageId>() {
                 @Override public int compare(FullPageId o1, FullPageId o2) {
                     int cmp = Long.compare(o1.groupId(), o2.groupId());
@@ -4830,9 +4836,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             });
 
-            DataRegion dataReg = entry.getKey();
-            Collection<FullPageId>[] collections = entry.getValue().get1();
-            Integer size = entry.getValue().get2();
+            DataRegion dataReg = entry.get1();
+            Collection<FullPageId>[] collections = entry.get2();
+            Integer size = entry.get3();
 
             if (persistenceCfg.getCheckpointWriteOrder() == CheckpointWriteOrder.SEQUENTIAL)
                 sortPages(collections, checkpointPages, size >= parallelSortThreshold);
@@ -4841,7 +4847,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     checkpointPages.addAll(coll);
             }
 
-            res.put(dataReg, checkpointPages);
+            res.add(new T2<>(dataReg, checkpointPages));
         }
 
         return res;
@@ -4853,7 +4859,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private final CheckpointMetricsTracker tracker;
 
         /** Collection of page IDs to write under this task. Overall pages to write may be greater than this collection */
-        private final Set<DataRegion> regions;
+        private final List<DataRegion> regions;
 
         /** */
         private final ConcurrentLinkedHashMap<PageStore, LongAdder> updStores;
@@ -4882,7 +4888,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          */
         private WriteCheckpointPages(
             final CheckpointMetricsTracker tracker,
-            final Set<DataRegion> regions,
+            final List<DataRegion> regions,
             final ConcurrentLinkedHashMap<PageStore, LongAdder> updStores,
             final CountDownFuture doneFut,
             final Runnable beforePageWrite,
@@ -5076,7 +5082,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         @Nullable private final CheckpointEntry cpEntry;
 
         /** Checkpoint pages. */
-        private final Set<DataRegion> regions;
+        private final List<DataRegion> regions;
 
         /** */
         private final CheckpointProgress progress;
@@ -5097,7 +5103,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          */
         private Checkpoint(
             @Nullable CheckpointEntry cpEntry,
-            Set<DataRegion> regions,
+            List<DataRegion> regions,
             CheckpointProgress progress,
             int pagesCount
         ) {
