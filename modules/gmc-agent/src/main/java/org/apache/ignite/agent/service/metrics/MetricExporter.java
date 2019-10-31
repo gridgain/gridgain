@@ -93,7 +93,12 @@ public class MetricExporter implements AutoCloseable {
                 }
             }
         };
+    }
 
+    /**
+     * Add metric listener.
+     */
+    public void addMetricListener() {
         ctx.io().addMessageListener(TOPIC_METRICS, lsnr);
     }
 
