@@ -220,9 +220,11 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
                                 if (log.isInfoEnabled())
                                     log.info("Iteration " + j);
 
-                                FieldsQueryCursor<List<?>> qry =
-                                    cache.query(new SqlFieldsQuery("select * from Person limit " + (j + 1))
-                                        .setLazy(lazy).setLocal(loc));
+                                String sql = "select * from Person limit " + (j + 1) + (j % 2 == 0 ? "" : " offset 1");
+
+                                FieldsQueryCursor<List<?>> qry = cache.query(new SqlFieldsQuery(sql)
+                                        .setLazy(lazy)
+                                        .setLocal(loc));
 
                                 qry.getAll();
                                 qry.close();
