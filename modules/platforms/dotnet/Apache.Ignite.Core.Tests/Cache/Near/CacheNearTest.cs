@@ -231,10 +231,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         [Test]
         public void TestNearCacheRepeatedGetReturnsSameObjectReference(
-            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
+            [Values(true, false)] bool primaryKey)
         {
             var cache = GetCache<int, Foo>(mode);
-            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
+            var key = TestUtils.GetKey(_grid, cache.Name, primaryKey: primaryKey);
 
             var obj = new Foo();
             
@@ -251,11 +252,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         [Test]
         public void TestNearCacheRepeatedRemoteGetReturnsSameObjectReference(
-            [Values(CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+            [Values(CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
+            [Values(true, false)] bool primaryKey)
         {
             var remoteCache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
             var localCache = GetCache<int, Foo>(mode);
-            var key = TestUtils.GetPrimaryKey(_grid, remoteCache.Name);
+            var key = TestUtils.GetKey(_grid, remoteCache.Name, primaryKey: primaryKey);
 
             remoteCache[key] = new Foo();
 
@@ -422,6 +424,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestFifoEvictionPolicyRemovesNearCacheValue(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
+            // TODO: Test local and non-local entries
             var cache = GetCache<int, Foo>(mode);
             
             Assert.AreEqual(0, cache.GetSize());

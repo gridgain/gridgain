@@ -274,10 +274,10 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// Gets the primary keys.
+        /// Gets cache keys.
         /// </summary>
-        public static IEnumerable<int> GetPrimaryKeys(IIgnite ignite, string cacheName,
-            IClusterNode node = null)
+        public static IEnumerable<int> GetKeys(IIgnite ignite, string cacheName,
+            IClusterNode node = null, bool primary = true)
         {
             var aff = ignite.GetAffinity(cacheName);
             node = node ?? ignite.GetCluster().GetLocalNode();
@@ -286,11 +286,28 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Gets the primary keys.
+        /// </summary>
+        public static IEnumerable<int> GetPrimaryKeys(IIgnite ignite, string cacheName,
+            IClusterNode node = null)
+        {
+            return GetKeys(ignite, cacheName, node);
+        }
+
+        /// <summary>
         /// Gets the primary key.
         /// </summary>
         public static int GetPrimaryKey(IIgnite ignite, string cacheName, IClusterNode node = null)
         {
             return GetPrimaryKeys(ignite, cacheName, node).First();
+        }
+
+        /// <summary>
+        /// Gets the primary key.
+        /// </summary>
+        public static int GetKey(IIgnite ignite, string cacheName, IClusterNode node = null, bool primaryKey = false)
+        {
+            return GetKeys(ignite, cacheName, node, primaryKey).First();
         }
 
         /// <summary>
