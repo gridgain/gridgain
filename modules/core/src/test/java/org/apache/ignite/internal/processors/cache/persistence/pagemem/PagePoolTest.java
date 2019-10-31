@@ -30,6 +30,7 @@ import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.util.OffheapReadWriteLock;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
@@ -62,7 +63,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
     public int sysPageSize;
 
     /** */
-    private static final int PAGES = 4096;
+    private static final int PAGES = 100;
 
     /** */
     private OffheapReadWriteLock rwLock = new OffheapReadWriteLock(Runtime.getRuntime().availableProcessors());;
@@ -105,6 +106,8 @@ public class PagePoolTest extends GridCommonAbstractTest {
         Set<Long> allocated = new LinkedHashSet<>();
         LinkedList<Long> allocatedQueue = new LinkedList<>();
 
+        info("Region start: " + U.hexLong(region.address()));
+
         int tag = 1;
 
         for (int i = 0; i < PAGES; i++) {
@@ -112,13 +115,19 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
             assertTrue("Failed for i=" + i, relPtr != PageMemoryImpl.INVALID_REL_PTR);
 
+            info("Allocated: " + U.hexLong(relPtr) + ", absolute: " + U.hexLong(pool.absolute(relPtr)));
+
             assertTrue(allocated.add(relPtr));
             allocatedQueue.add(relPtr);
 
             PageHeader.writeTimestamp(pool.absolute(relPtr), 0xFFFFFFFFFFFFFFFFL);
 
+            info("Absolute after timestamp write: " + U.hexLong(pool.absolute(relPtr)));
+
             assertEquals(i + 1, pool.size());
         }
+
+        info("Done allocating");
 
         assertEquals(PageMemoryImpl.INVALID_REL_PTR, pool.borrowOrAllocateFreePage(tag));
 
@@ -128,6 +137,8 @@ public class PagePoolTest extends GridCommonAbstractTest {
             int i = 0;
 
             for (Long relPtr : allocated) {
+                info("About to release: " + U.hexLong(relPtr));
+
                 pool.releaseFreePage(relPtr);
 
                 i++;
@@ -135,6 +146,8 @@ public class PagePoolTest extends GridCommonAbstractTest {
                 assertEquals(PAGES - i, pool.size());
             }
         }
+
+        info("Done releasing");
 
         assertEquals(0, pool.size());
 
@@ -147,6 +160,8 @@ public class PagePoolTest extends GridCommonAbstractTest {
                 long relPtr = it.next();
 
                 long fromPool = pool.borrowOrAllocateFreePage(tag);
+
+                info("Borrowed page: " + U.hexLong(fromPool));
 
                 assertEquals(relPtr, fromPool);
 
@@ -162,7 +177,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
     /**
      * @throws Exception if failed.
      */
-    @Test
+    //@Test
     public void testMultithreadedConsistency() throws Exception {
         assertEquals(PAGES, pool.pages());
         assertEquals(0, pool.size());
