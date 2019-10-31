@@ -158,7 +158,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (metadata.isEmpty())
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -166,7 +166,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+            Map<String, String> fields = cacheMeta.getFields();
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE");
         });
@@ -180,7 +180,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (metadata.isEmpty())
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -188,7 +188,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+            Map<String, String> fields = cacheMeta.getFields();
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE") && fields.containsKey("ID_2");
         });
@@ -214,7 +214,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (metadata.isEmpty())
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -222,7 +222,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.isEmpty();
         });
@@ -236,7 +236,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (metadata.isEmpty())
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -244,7 +244,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.size() == 1;
         });
@@ -258,7 +258,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (metadata.isEmpty())
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -266,7 +266,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.isEmpty();
         });

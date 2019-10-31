@@ -17,8 +17,8 @@
 package org.apache.ignite.agent.dto.cache;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,23 +37,39 @@ public class CacheSqlMetadata {
     /** Table name. */
     private String tblName;
 
-    /** Types. */
-    private Collection<String> types = new ArrayList<>();
+    /** Type name. */
+    private String typeName;
 
-    /** Key classes. */
-    private Map<String, String> keyClasses = new LinkedHashMap<>();
+    /** Key class. */
+    private String keyCls;
 
-    /** Value classes. */
-    private Map<String, String> valClasses = new LinkedHashMap<>();
+    /** Value class. */
+    private String valCls;
 
     /** Fields. */
-    private Map<String, Map<String, String>> fields = new LinkedHashMap<>();
+    private Map<String, String> fields = new LinkedHashMap<>();
 
     /** Not null fields. */
-    private Map<String, Set<String>> notNullFields = new LinkedHashMap<>();
+    private Set<String> notNullFields = new LinkedHashSet<>();
 
     /** Indexes. */
-    private Map<String, List<CacheSqlIndexMetadata>> indexes = new LinkedHashMap<>();
+    private List<CacheSqlIndexMetadata> indexes = new ArrayList<>();
+
+    /**
+     * @return Type name.
+     */
+    public String getTypeName() {
+        return typeName;
+    }
+
+    /**
+     * @param typeName Type name.
+     * @return @{code This} for method chaining.
+     */
+    public CacheSqlMetadata setTypeName(String typeName) {
+        this.typeName = typeName;
+        return this;
+    }
 
     /**
      * @return Cache name.
@@ -104,64 +120,57 @@ public class CacheSqlMetadata {
     }
 
     /**
-     * @return Types.
+     * @return Key class.
      */
-    public Collection<String> getTypes() {
-        return types;
+    public String getKeyClass() {
+        return keyCls;
     }
 
     /**
-     * @param types Types.
+     * @param keyCls Key classe.
      * @return @{code This} for method chaining.
      */
-    public CacheSqlMetadata setTypes(Collection<String> types) {
-        this.types = types;
+    public CacheSqlMetadata setKeyClass(String keyCls) {
+        this.keyCls = keyCls;
         return this;
     }
 
     /**
-     * @return Key classes.
+     * @return Value class.
      */
-    public Map<String, String> getKeyClasses() {
-        return keyClasses;
+    public String getValueClass() {
+        return valCls;
     }
 
     /**
-     * @param keyClasses Key classes.
+     * @param valCls Value class.
      * @return @{code This} for method chaining.
      */
-    public CacheSqlMetadata setKeyClasses(Map<String, String> keyClasses) {
-        this.keyClasses = keyClasses;
-        return this;
-    }
-
-    /**
-     * @return Value classes.
-     */
-    public Map<String, String> getValueClasses() {
-        return valClasses;
-    }
-
-    /**
-     * @param valClasses Value classes.
-     * @return @{code This} for method chaining.
-     */
-    public CacheSqlMetadata setValueClasses(Map<String, String> valClasses) {
-        this.valClasses = valClasses;
+    public CacheSqlMetadata setValueClass(String valCls) {
+        this.valCls = valCls;
         return this;
     }
 
     /**
      * @return Fields.
      */
-    public Map<String, Map<String, String>> getFields() {
+    public Map<String, String> getFields() {
         return fields;
+    }
+
+    /**
+     * @param fields Fields.
+     * @return @{code This} for method chaining.
+     */
+    public CacheSqlMetadata setFields(Map<String, String> fields) {
+        this.fields = fields;
+        return this;
     }
 
     /**
      * @return Not null fields.
      */
-    public Map<String, Set<String>> getNotNullFields() {
+    public Set<String> getNotNullFields() {
         return notNullFields;
     }
 
@@ -169,24 +178,15 @@ public class CacheSqlMetadata {
      * @param notNullFields Not null fields.
      * @return @{code This} for method chaining.
      */
-    public CacheSqlMetadata setNotNullFields(Map<String, Set<String>> notNullFields) {
+    public CacheSqlMetadata setNotNullFields(Set<String> notNullFields) {
         this.notNullFields = notNullFields;
-        return this;
-    }
-
-    /**
-     * @param fields Fields.
-     * @return @{code This} for method chaining.
-     */
-    public CacheSqlMetadata setFields(Map<String, Map<String, String>> fields) {
-        this.fields = fields;
         return this;
     }
 
     /**
      * @return Indexes.
      */
-    public Map<String, List<CacheSqlIndexMetadata>> getIndexes() {
+    public List<CacheSqlIndexMetadata> getIndexes() {
         return indexes;
     }
 
@@ -194,7 +194,7 @@ public class CacheSqlMetadata {
      * @param indexes Indexes.
      * @return @{code This} for method chaining.
      */
-    public CacheSqlMetadata setIndexes(Map<String, List<CacheSqlIndexMetadata>> indexes) {
+    public CacheSqlMetadata setIndexes(List<CacheSqlIndexMetadata> indexes) {
         this.indexes = indexes;
         return this;
     }

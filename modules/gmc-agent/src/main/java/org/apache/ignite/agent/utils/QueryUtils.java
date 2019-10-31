@@ -392,25 +392,28 @@ public class QueryUtils {
      * @param types Types.
      * @return Cache sql metadata
      */
-    public static CacheSqlMetadata queryTypesToMetadata(String cacheName, Collection<GridQueryTypeDescriptor> types) {
-        CacheSqlMetadata metadata = new CacheSqlMetadata().setCacheName(cacheName);
+    public static List<CacheSqlMetadata> queryTypesToMetadataList(String cacheName, Collection<GridQueryTypeDescriptor> types) {
+        List<CacheSqlMetadata> metadataList = new ArrayList<>();
 
         for (GridQueryTypeDescriptor type : types) {
+            CacheSqlMetadata metadata = new CacheSqlMetadata().setCacheName(cacheName);
             // Filter internal types (e.g., data structures).
             if (type.name().startsWith("GridCache"))
                 continue;
 
+            metadata.setTypeName(type.name());
             metadata.setTableName(type.tableName());
             metadata.setSchemaName(type.schemaName());
-            metadata.getTypes().add(type.name());
-            metadata.getKeyClasses().put(type.name(), type.keyClass().getName());
-            metadata.getValueClasses().put(type.name(), type.valueClass().getName());
-            metadata.getFields().put(type.name(), getFields(type));
-            metadata.getNotNullFields().put(type.name(), getNotNullFields(type));
-            metadata.getIndexes().put(type.name(), getIndexes(type));
+            metadata.setKeyClass(type.keyClass().getName());
+            metadata.setValueClass(type.valueClass().getName());
+            metadata.setFields(getFields(type));
+            metadata.setNotNullFields(getNotNullFields(type));
+            metadata.setIndexes(getIndexes(type));
+
+            metadataList.add(metadata);
         }
 
-        return metadata;
+        return metadataList;
     }
 
     /**
