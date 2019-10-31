@@ -16,13 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache.eviction;
 
+import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.eviction.EvictableEntry;
+import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -54,7 +57,7 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private AtomicBoolean oom = new AtomicBoolean(false);
+    private boolean oom = false;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -66,14 +69,7 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
             return false;
         });
 
-        SortedEvictionPolicy<String, String> plc = new SortedEvictionPolicy<String, String>() {
-            @Override public void onEntryAccessed(boolean rmv, EvictableEntry<String, String> entry) {
-                if (oom.get())
-                    throw new OutOfMemoryError("Test");
-
-                super.onEntryAccessed(rmv, entry);
-            }
-        }
+        SortedEvictionPolicy<String, String> plc = new SortedEvictionPolicy<String, String>()
             .setMaxSize(3)
             .setBatchSize(10)
             .setMaxMemorySize(10);
@@ -81,11 +77,18 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
         cfg.setGridLogger(log);
 
         cfg.setCacheConfiguration(new CacheConfiguration<Integer, Integer>(DEFAULT_CACHE_NAME)
-            .setEvictionPolicy(plc)
+            .setEvictionPolicy(oom ? new ThrowableEvictionPolicy() : plc)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setOnheapCacheEnabled(true));
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
     }
 
     /**
@@ -158,15 +161,24 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
      */
     @Test
     public void testErrorShouldCallErrorHandler() throws Exception {
-        IgniteEx node = startGrid(0);
+        oom = true;
 
-        IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+        IgniteEx node1 = startGrid(0);
 
-        cache.put(1, 1);
+        IgniteEx node2 = startGrid(1);
 
-        oom.set(true);
+        IgniteCache<Object, Object> cache = node2.cache(DEFAULT_CACHE_NAME);
 
-        cache.put(2.1, 2.4);
+        Affinity<Object> affinity = affinity(cache);
+
+        try {
+            for (int i = 0; i < 1000; i++) {
+                if (affinity.isPrimary(node1.localNode(), i))
+                    cache.put(i, 1);
+            }
+        }
+        catch (Throwable ignore) {
+        }
 
         assertTrue(nodeFailure.get());
     }
@@ -176,14 +188,36 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFailureHandlerShouldNotCallOnRuntimeException() throws Exception {
-        IgniteEx node = startGrid(0);
+        IgniteEx node1 = startGrid(0);
 
-        IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+        IgniteEx node2 = startGrid(1);
 
-        cache.put(1, 1);
+        IgniteCache<Object, Object> cache = node2.cache(DEFAULT_CACHE_NAME);
 
-        cache.put(2.1, 2.4);
+        Affinity<Object> affinity = affinity(cache);
+
+        for (int i = 0; i < 1000; i++) {
+            if (affinity.isPrimary(node1.localNode(), i))
+                cache.put(i, 1);
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            double d = (double)i;
+
+            if (affinity.isPrimary(node1.localNode(), d))
+                cache.put(d, 1);
+        }
 
         assertFalse(nodeFailure.get());
+    }
+
+    /**
+     *
+     */
+    private static class ThrowableEvictionPolicy implements EvictionPolicy<Integer, Integer>, Serializable {
+        /** {@inheritDoc} */
+        @Override public synchronized void onEntryAccessed(boolean rmv, EvictableEntry<Integer, Integer> e) {
+            throw new OutOfMemoryError("Test");
+        }
     }
 }
