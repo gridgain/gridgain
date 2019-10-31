@@ -1722,7 +1722,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         PageHeader.writeTimestamp(absPtr, U.currentTimeMillis());
 
         // Create a buffer copy if the page is scheduled for a checkpoint.
-        if ((isInCheckpoint(fullId) /*|| PageHeader.inCp(absPtr)*/) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) {
+        if ((isInCheckpoint(fullId) || PageHeader.inCp(absPtr)) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) {
             long tmpRelPtr = checkpointPool.borrowOrAllocateFreePage(fullId.pageId());
 
             if (tmpRelPtr == INVALID_REL_PTR) {
