@@ -71,6 +71,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 
                 // TODO: Bug - old ICache instances still use old near caches, data will go stale.
                 // Instead, we should perform downgrade within NearCache implementation by catching cast exceptions.
+                // Keep two maps inside, one generic and one objects, switch dynamically
                 _nearCaches.Set(cacheId, nonGenericNearCache);
             }
 
