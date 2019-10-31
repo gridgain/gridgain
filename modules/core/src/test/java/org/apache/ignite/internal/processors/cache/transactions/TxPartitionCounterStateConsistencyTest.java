@@ -163,16 +163,16 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
 
-        //long stop = U.currentTimeMillis() + 60_000;
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
-        AtomicBoolean stop = new AtomicBoolean();
-
-        BooleanSupplier stopClo = stop::get;
+        BooleanSupplier stopClo = () -> U.currentTimeMillis() >= stop;
 
         Random r = new Random();
 
+        log.info("Seed: " + U.field(r, "seed"));
+
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
-            //while (U.currentTimeMillis() < stop) {
+            while (!stopClo.getAsBoolean()) {
                 doSleep(5000);
 
                 stopGrid(true, prim.name());
@@ -184,22 +184,12 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     awaitPartitionMapExchange();
 
-                    doSleep(5000);
-
-                    stopGrid(true, prim.name());
-
-                    awaitPartitionMapExchange();
-
-                    startGrid(prim.name());
-
-                    awaitPartitionMapExchange();
+                    doSleep(3000);
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));
                 }
-
-                stop.set(true);
-            //}
+            }
         }, 1, "node-restarter");
 
         doRandomUpdates(r, client, primaryKeys, cache, stopClo).get();

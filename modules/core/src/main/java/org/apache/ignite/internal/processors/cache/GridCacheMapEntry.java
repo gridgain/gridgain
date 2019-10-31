@@ -3414,11 +3414,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             }
                         }
 
-                        if (cctx.mvccEnabled()) {
-                            assert !preload;
-
+                        if (cctx.mvccEnabled())
                             cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
-                        }
                         else
                             storeValue(val, expTime, ver, null, row);
                     }
@@ -3426,31 +3423,29 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else {
                 if (cctx.mvccEnabled()) {
-                    throw new AssertionError();
-
                     // cannot identify whether the entry is exist on the fly
-//                    unswap(false);
-//
-//                    if (update = p.apply(this.val, this.ver)) {
-//                        // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
-//                        long oldExpTime = expireTimeUnlocked();
-//                        long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
-//
-//                        if (delta < 0) {
-//                            if (onExpired(this.val, null)) {
-//                                if (cctx.deferredDelete()) {
-//                                    deferred = true;
-//                                    oldVer = this.ver;
-//                                }
-//                                else if (val == null)
-//                                    obsolete = true;
-//                            }
-//                        }
-//
-//                        assert !preload;
-//
-//                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
-//                    }
+                    unswap(false);
+
+                    if (update = p.apply(this.val, this.ver)) {
+                        // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
+                        long oldExpTime = expireTimeUnlocked();
+                        long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
+
+                        if (delta < 0) {
+                            if (onExpired(this.val, null)) {
+                                if (cctx.deferredDelete()) {
+                                    deferred = true;
+                                    oldVer = this.ver;
+                                }
+                                else if (val == null)
+                                    obsolete = true;
+                            }
+                        }
+
+                        assert !preload;
+
+                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
+                    }
                 }
                 else {
                     // Optimization to access storage only once.
