@@ -55,10 +55,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         public void SetValueIfEmpty(T value)
         {
+            // Disable "a reference to a volatile field will not be treated as volatile": not an issue with Interlocked.
+            #pragma warning disable 0420
             if (Interlocked.CompareExchange(ref _hasValue, 1, 0) == 0)
             {
                 _value = value;
             }
+            #pragma warning restore 0420
         }
     }
 }
