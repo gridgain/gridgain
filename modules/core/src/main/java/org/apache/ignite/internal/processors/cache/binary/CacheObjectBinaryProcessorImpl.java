@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
-import javax.cache.CacheException;
 import java.io.File;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArrayImpl;
@@ -318,6 +319,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Override public void stop(boolean cancel) {
         if (transport != null)
             transport.stop();
+
+        if (metadataFileStore != null)
+            metadataFileStore.stop();
     }
 
     /** {@inheritDoc} */
@@ -569,6 +573,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             if (res.rejected())
                 throw res.error();
+            else if (!ctx.clientNode())
+                metadataFileStore.waitForWriteCompletion(typeId, res.typeVersion());
         }
         catch (IgniteCheckedException e) {
             IgniteCheckedException ex = e;
@@ -643,6 +649,30 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /**
+     * Forces caller thread to wait for binary metadata write operation for given type ID.
+     *
+     * In case of in-memory mode this method becomes a No-op as no binary metadata is written to disk in this mode.
+     *
+     * @param typeId ID of binary type to wait for metadata write operation.
+     */
+    public void waitMetadataWriteIfNeeded(final int typeId) {
+        if (metadataFileStore == null)
+            return;
+
+        BinaryMetadataHolder hldr = metadataLocCache.get(typeId);
+
+        if (hldr != null) {
+            try {
+                metadataFileStore.waitForWriteCompletion(typeId, hldr.acceptedVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + hldr.acceptedVersion() + ']', e);
+            }
+        }
+    }
+
+    /**
      * @param typeId Type ID.
      * @return Metadata.
      * @throws IgniteException In case of error.
@@ -683,6 +713,17 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 }
                 catch (IgniteCheckedException ignored) {
                     // No-op.
+                }
+            }
+            else if (metadataFileStore != null) {
+                try {
+                    metadataFileStore.waitForWriteCompletion(typeId, holder.acceptedVersion());
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                        ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                    return null;
                 }
             }
 
@@ -796,6 +837,18 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + holder.pendingVersion()
                         + ", acceptedVer=" + holder.acceptedVersion() + ']');
+            }
+        }
+
+        if (holder != null && metadataFileStore != null) {
+            try {
+                metadataFileStore.waitForWriteCompletion(typeId, holder.acceptedVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                return null;
             }
         }
 
@@ -1138,6 +1191,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new CacheObjectImpl(null, bytes);
+
+            case CacheObject.TOMBSTONE:
+                return TombstoneCacheObject.INSTANCE;
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
