@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -96,6 +97,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -952,8 +954,10 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         Collection<FullPageId> dirtyPages = seg.dirtyPages;
 
-        if (dirtyPages != null)
-            dirtyPages.remove(new FullPageId(pageId, grpId));
+        if (dirtyPages != null) {
+            if (dirtyPages.remove(new FullPageId(pageId, grpId)))
+                seg.dirtyPagesCntr.decrement();
+        }
 
         return relPtr;
     }
@@ -1163,6 +1167,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
             seg.dirtyPages = new GridConcurrentHashSet<>();
+            seg.dirtyPagesCntr.reset();
         }
 
         memMetrics.resetDirtyPages();
@@ -1851,20 +1856,26 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert stateChecker.checkpointLockIsHeldByThread();
 
             if (!wasDirty || forceAdd) {
-                boolean added = segment(pageId.groupId(), pageId.pageId()).dirtyPages.add(pageId);
+                Segment seg = segment(pageId.groupId(), pageId.pageId());
 
-                if (added)
+                if (seg.dirtyPages.add(pageId)) {
+                    seg.dirtyPagesCntr.increment();
+
                     memMetrics.incrementDirtyPages();
+                }
             }
 
             if (pageId.groupId() != CU.UTILITY_CACHE_GROUP_ID && !dirtyUserPagesPresent.get())
                 dirtyUserPagesPresent.set(true);
         }
         else {
-            boolean rmv = segment(pageId.groupId(), pageId.pageId()).dirtyPages.remove(pageId);
+            Segment seg = segment(pageId.groupId(), pageId.pageId());
 
-            if (rmv)
+            if (seg.dirtyPages.remove(pageId)) {
+                seg.dirtyPagesCntr.decrement();
+
                 memMetrics.decrementDirtyPages();
+            }
         }
     }
 
@@ -2091,9 +2102,10 @@ public class PageMemoryImpl implements PageMemoryEx {
      *
      * @return Collection of all page IDs marked as dirty.
      */
+    @TestOnly
     public Collection<FullPageId> dirtyPages() {
         if (segments == null)
-            return Collections.EMPTY_SET;
+            return Collections.emptySet();
 
         Collection<FullPageId> res = new HashSet<>((int)loadedPages());
 
@@ -2133,6 +2145,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         /** Pages marked as dirty since the last checkpoint. */
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
+
+        /** */
+        private final LongAdder dirtyPagesCntr = new LongAdder();
 
         /** Wrapper of pages of current checkpoint. */
         private volatile CheckpointPages checkpointPages;
@@ -2201,7 +2216,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          *
          */
         private boolean safeToUpdate() {
-            return dirtyPages.size() < maxDirtyPages;
+            return dirtyPagesCntr.intValue() < maxDirtyPages;
         }
 
         /**
@@ -2215,7 +2230,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @return dirtyRatio to be compared with Throttle threshold.
          */
         private double getDirtyPagesRatio() {
-            return ((double)dirtyPages.size()) / pages();
+            return dirtyPagesCntr.doubleValue() / pages();
         }
 
         /**
@@ -2606,7 +2621,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             throw new IgniteOutOfMemoryException("Failed to find a page for eviction [segmentCapacity=" + cap +
                 ", loaded=" + loadedPages.size() +
                 ", maxDirtyPages=" + maxDirtyPages +
-                ", dirtyPages=" + dirtyPages.size() +
+                ", dirtyPages=" + dirtyPagesCntr +
                 ", cpPages=" + (checkpointPages == null ? 0 : checkpointPages.size()) +
                 ", pinnedInSegment=" + pinnedCnt +
                 ", failedToPrepare=" + failToPrepare +
@@ -3023,7 +3038,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                         if (rmvDirty) {
                             FullPageId fullId = PageHeader.fullPageId(absPtr);
 
-                            seg.dirtyPages.remove(fullId);
+                            if (seg.dirtyPages.remove(fullId))
+                                seg.dirtyPagesCntr.decrement();
                         }
 
                         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, pageSize, (byte)0);
