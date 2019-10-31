@@ -51,7 +51,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void Put(TK key, TV val)
         {
             // TODO: Eviction according to limits.
-            // TODO: Is eviction handled by Java side and a callback is going to be fired?
+            // Eviction callbacks from Java work for 2 out of 3 cases:
+            // + Client node (all keys)
+            // + Server node (non-primary keys)
+            // - Server node (primary keys) - because there is no need to store primary keys in near cache
             _map[key] = new NearCacheEntry<TV>(true, val);
         }
 
