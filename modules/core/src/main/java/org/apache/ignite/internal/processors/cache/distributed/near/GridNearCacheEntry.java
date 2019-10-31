@@ -750,6 +750,11 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         return evictReservations > 0;
     }
 
+    /** {@inheritDoc} */
+    @Override public void onMarkedObsolete() {
+        evictFromPlatformNearCache();
+    }
+
     /**
      * @param nodeId Primary node ID.
      * @param topVer Topology version.

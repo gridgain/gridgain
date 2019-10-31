@@ -2881,7 +2881,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
-        evictFromPlatformNearCache();
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -6970,7 +6970,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * Evicts corresponding platform near cache entry, if applicable.
      */
-    private void evictFromPlatformNearCache() {
+    protected void evictFromPlatformNearCache() {
         if (!hasPlatformNearCache())
             return;
 
