@@ -35,7 +35,7 @@ public class ClientClusterWalChangeStateRequest extends ClientRequest {
     /**
      * Constructor.
      *
-     * @param reader Reader/
+     * @param reader Reader.
      */
     public ClientClusterWalChangeStateRequest(BinaryRawReader reader) {
         super(reader);

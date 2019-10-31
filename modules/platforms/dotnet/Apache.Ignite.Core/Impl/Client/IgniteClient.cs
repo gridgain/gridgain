@@ -219,7 +219,18 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         public ClusterNodeImpl GetNode(Guid? id)
         {
-            return id == null ? null : _nodes[id.Value];
+            if (id == null)
+            {
+                return null;
+            }
+
+            ClusterNodeImpl clusterNode;
+            if (!_nodes.TryGetValue(id.Value, out clusterNode))
+            {
+                return null;
+            }
+
+            return clusterNode;
         }
 
         /** <inheritDoc /> */
@@ -246,6 +257,16 @@ namespace Apache.Ignite.Core.Impl.Client
         public ClientProtocolVersion ServerVersion
         {
             get { return _socket.ServerVersion; }
+        }
+
+        /// <summary>
+        /// Updates the node information from stream.
+        /// </summary>
+        /// <param name="reader">Reader.</param>
+        public void UpdateNodeInfo(IBinaryRawReader reader)
+        {
+            var node = new ClusterNodeImpl(reader);
+            _nodes[node.Id] = node;
         }
 
         /// <summary>

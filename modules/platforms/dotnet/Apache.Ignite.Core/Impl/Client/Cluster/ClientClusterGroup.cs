@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
@@ -60,7 +61,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly Func<IClusterNode, bool> _predicate;
 
         /** Nodes collection. */
-        private IList<IClusterNode> _nodes;
+        private IList<IClusterNode> _nodes = new List<IClusterNode>();
 
         /// <summary>
         /// Constructor.
@@ -146,13 +147,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 w.WriteLong(oldTopVer);
                 _projection.Marshall(w);
             };
-            var res = DoOutInOp(ClientOp.ClusterGroupGetNodes, action, ReadNodes);
+            var res = DoOutInOp(ClientOp.ClusterGroupGetNodeIds, action, ReadNodeIds);
 
             if (res != null)
             {
-                UpdateTopology(res.Item1, res.Item2);
+                UpdateTopology(res.Item1);
 
-                return res.Item2;
+                return FindNodes(res.Item2);
             }
 
             // No topology changes.
@@ -161,19 +162,57 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             return _nodes;
         }
 
+
+        private IList<IClusterNode> FindNodes(Guid?[] nodeIds)
+        {
+            if (nodeIds.Any(nodeId => nodeId == null))
+            {
+                // Need more concrete exception message or explicit cast on previous steps.
+                throw new ArgumentException("NodeId could not be null.");
+            }
+
+            var nodesInfo = nodeIds
+                .Select(id => new {id, node = _ignite.GetNode(id)})
+                .Select(nodeWithId => new {data = nodeWithId, hasNode = nodeWithId.node != null})
+                .GroupBy(data => data.hasNode)
+                .SelectMany(group => group.Key
+                    ? group.Select(nodeWithId => nodeWithId.data.node)
+                    : GetNodeInfo(group.Select(nodeWithId => nodeWithId.data.id))).ToArray();
+
+            //todo: should be thread-safe call.
+            _nodes = nodesInfo;
+            return _nodes;
+        }
+
+        /// <summary>
+        /// Make remote API call to fetch node information.
+        /// </summary>
+        /// <param name="ids">Node identifiers.</param>
+        /// <returns>Nodes collection.</returns>
+        private IEnumerable<IClusterNode> GetNodeInfo(IEnumerable<Guid?> ids)
+        {
+            Action<IBinaryRawWriter> action = w => { w.WriteGuidArray(ids.ToArray()); };
+
+            Func<IBinaryRawReader, IEnumerable<IClusterNode>> readFunc = r => 
+                IgniteUtils.ReadNodesForThinClient(_ignite, r, _predicate);
+
+            return DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, action, readFunc);
+        }
+
         /// <summary>
         /// Refresh projection nodes.
         /// </summary>
-        /// <returns>Topology version with nodes collection.</returns>rns>
-        private Tuple<long, List<IClusterNode>> ReadNodes(IBinaryRawReader reader)
+        /// <returns>Topology version with nodes identifiers.</returns>rns>
+        private Tuple<long, Guid?[]> ReadNodeIds(IBinaryRawReader reader)
         {
             if (reader.ReadBoolean())
             {
                 // Topology has been updated.
                 long newTopVer = reader.ReadLong();
-                var newNodes = IgniteUtils.ReadNodes((BinaryReader) reader, _predicate);
 
-                return Tuple.Create(newTopVer, newNodes);
+                Guid?[] nodeIds = reader.ReadGuidArray();
+
+                return Tuple.Create(newTopVer, nodeIds);
             }
 
             return null;
@@ -183,8 +222,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// Update topology.
         /// </summary>
         /// <param name="newTopVer">New topology version.</param>
-        /// <param name="newNodes">New nodes.</param>
-        internal void UpdateTopology(long newTopVer, List<IClusterNode> newNodes)
+        internal void UpdateTopology(long newTopVer)
         {
             lock (this)
             {
@@ -193,8 +231,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 if (_topVer < newTopVer)
                 {
                     Interlocked.Exchange(ref _topVer, newTopVer);
-
-                    _nodes = newNodes.AsReadOnly();
                 }
             }
         }

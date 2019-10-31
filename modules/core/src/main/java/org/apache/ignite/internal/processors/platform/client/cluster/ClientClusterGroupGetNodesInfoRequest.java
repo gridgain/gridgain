@@ -17,42 +17,37 @@
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
-import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
-import java.util.Collection;
+import java.util.Arrays;
+import java.util.UUID;
 
 /**
- * Cluster group get nodes collection request.
+ * Cluster group get nodes information request.
  */
-public class ClientClusterGroupGetNodesRequest extends ClientRequest {
-    /** Topology version. */
-    private final long topVer;
+public class ClientClusterGroupGetNodesInfoRequest extends ClientRequest {
+    /** Node ids. */
+    private final UUID[] nodeIds;
 
     /**
      * Constructor.
      *
      * @param reader Reader.
      */
-    public ClientClusterGroupGetNodesRequest(BinaryRawReader reader) {
+    public ClientClusterGroupGetNodesInfoRequest(BinaryRawReader reader) {
         super(reader);
-        topVer = reader.readLong();
+        nodeIds = reader.readUuidArray();
     }
 
-    /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
+        // todo: is it ok to re-use cluster API?
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
-        long curTopVer = cluster.topologyVersion();
-
-        if (curTopVer <= topVer)
-            return new ClientBooleanResponse(requestId(), false);
-
-        Collection<ClusterNode> nodes = cluster.nodes();
-        return new ClientClusterGroupGetNodesResponse(requestId(), topVer, nodes);
+        ClusterGroup clusterGroup = cluster.forNodeIds(Arrays.asList(nodeIds));
+        return new ClientClusterGroupGetNodesInfoResponse(requestId(), clusterGroup.nodes());
     }
 }

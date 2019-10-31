@@ -92,6 +92,7 @@
     <Compile Include="Impl\Client\ClientFlags.cs" />
     <Compile Include="Impl\Client\Cluster\ClientClusterGroup.cs" />
     <Compile Include="Impl\Client\Cluster\ClientClusterGroupProjection.cs" />
+    <Compile Include="Impl\Client\Cluster\ClientClusterNode.cs" />
     <Compile Include="Impl\Client\Endpoint.cs" />
     <Compile Include="Impl\Client\SocketEndpoint.cs" />
     <Compile Include="Impl\Common\TaskRunner.cs" />

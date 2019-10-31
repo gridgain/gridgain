@@ -25,45 +25,25 @@ import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import java.util.Collection;
 
 /**
- *
+ * Cluster group get nodes information response.
  */
-public class ClientClusterGroupGetNodesResponse extends ClientResponse {
-    /** Topology version. */
-    private final long topVer;
+public class ClientClusterGroupGetNodesInfoResponse extends ClientResponse {
     /** Nodes collection. */
     private final Collection<ClusterNode> nodes;
 
     /**
      * Constructor.
      *
-     * @param reqId Request id.
-     * @param topVer Topology version.
-     * @param nodes Nodes.
+     * @param reqId Request identifier.
      */
-    public ClientClusterGroupGetNodesResponse(long reqId, long topVer, Collection<ClusterNode> nodes) {
+    public ClientClusterGroupGetNodesInfoResponse(long reqId, Collection<ClusterNode> nodes) {
         super(reqId);
-        this.topVer = topVer;
         this.nodes = nodes;
     }
 
     @Override
     public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         super.encode(ctx, writer);
-
-        writer.writeBoolean(true);
-
-        writer.writeLong(topVer);
-
-        // At this moment topology version might have advanced, and due to this race
-        // we return outdated top ver to the callee. But this race is benign, the only
-        // possible side effect is that the user will re-request nodes and we will return
-        // the same set of nodes but with more recent topology version.
-
-        if (nodes == null) {
-            writer.writeInt(-1);
-
-            return;
-        }
 
         writer.writeInt(nodes.size());
 

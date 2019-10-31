@@ -21,10 +21,12 @@ namespace Apache.Ignite.Core.Impl
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Text;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
@@ -197,6 +199,44 @@ namespace Apache.Ignite.Core.Impl
                 {
                     var node = ignite.GetNode(reader.ReadGuid());
                     
+                    if (pred(node))
+                        res.Add(node);
+                }
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// Reads node collection from stream.
+        /// </summary>
+        /// <param name="reader">Reader.</param>
+        /// <param name="pred">The predicate.</param>
+        /// <returns> Nodes list or null. </returns>
+        public static List<IClusterNode> ReadNodesForThinClient(IgniteClient igniteClient, IBinaryRawReader reader, Func<ClusterNodeImpl, bool> pred = null)
+        {
+            var cnt = reader.ReadInt();
+
+            if (cnt < 0)
+                return null;
+
+            var res = new List<IClusterNode>(cnt);
+
+            if (pred == null)
+            {
+                for (var i = 0; i < cnt; i++)
+                {
+                    igniteClient.UpdateNodeInfo(reader);
+                    //res.Add(igniteClient.GetNode(reader.ReadGuid()));
+                }
+            }
+            else
+            {
+                for (var i = 0; i < cnt; i++)
+                {
+                    igniteClient.UpdateNodeInfo(reader);
+                    var node = igniteClient.GetNode(reader.ReadGuid());
+
                     if (pred(node))
                         res.Add(node);
                 }

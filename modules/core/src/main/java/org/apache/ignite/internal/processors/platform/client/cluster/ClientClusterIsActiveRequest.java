@@ -30,7 +30,7 @@ public class ClientClusterIsActiveRequest extends ClientRequest {
     /**
      * Constructor.
      *
-     * @param reader Reader/
+     * @param reader Reader.
      */
     public ClientClusterIsActiveRequest(BinaryRawReader reader) {
         super(reader);

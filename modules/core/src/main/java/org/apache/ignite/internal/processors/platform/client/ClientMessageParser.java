@@ -220,7 +220,10 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     private static final short OP_CLUSTER_GET_WAL_STATE = 4003;
 
     /** */
-    private static final short OP_CLUSTER_GROUP_GET_NODES = 4100;
+    private static final short OP_CLUSTER_GROUP_GET_NODE_IDS = 4100;
+
+    /** */
+    private static final short OP_CLUSTER_GROUP_GET_NODE_INFO = 4101;
 
     /* Custom queries working through processors registry. */
     /** */
@@ -412,8 +415,11 @@ public class ClientMessageParser implements ClientListenerMessageParser {
             case OP_CLUSTER_GET_WAL_STATE:
                 return new ClientClusterWalGetStateRequest(reader);
 
-            case OP_CLUSTER_GROUP_GET_NODES:
-                return new ClientClusterGroupGetNodesRequest(reader);
+            case OP_CLUSTER_GROUP_GET_NODE_IDS:
+                return new ClientClusterGroupGetNodeIdsRequest(reader);
+
+            case OP_CLUSTER_GROUP_GET_NODE_INFO:
+                return new ClientClusterGroupGetNodesInfoRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);
