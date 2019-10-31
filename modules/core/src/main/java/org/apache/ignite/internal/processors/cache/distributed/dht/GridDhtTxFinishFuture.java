@@ -487,7 +487,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
 
             try {
                 if (isNull(cctx.discovery().node(n.id())))
-                    throw new ClusterTopologyCheckedException("Failed to send message (node left topology): " + n);
+                    throw new ClusterTopologyCheckedException("Unable to send message (node left topology): " + n);
 
                 cctx.io().send(n, req, tx.ioPolicy());
 
@@ -504,8 +504,11 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             }
             catch (IgniteCheckedException e) {
                 // Fail the whole thing.
-                if (e instanceof ClusterTopologyCheckedException)
-                    fut.onDone(e);
+                if (e instanceof ClusterTopologyCheckedException) {
+                    log.error("Error sending message to remote node [node=" + n + ']', e);
+
+                    fut.onNodeLeft((ClusterTopologyCheckedException)e);
+                }
                 else {
                     if (msgLog.isDebugEnabled()) {
                         msgLog.debug("DHT finish fut, failed to send request dht [txId=" + tx.nearXidVersion() +

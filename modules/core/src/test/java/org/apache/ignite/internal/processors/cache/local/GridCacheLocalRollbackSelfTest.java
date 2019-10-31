@@ -78,7 +78,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
  */
 public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     /** Logger for listen log messages. */
-    private final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
+    private static final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
 
     /** Number of nodes. */
     private static final int NODES = 4;
@@ -94,6 +94,8 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        log.clearListeners();
 
         super.afterTest();
     }
@@ -343,7 +345,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
          * Class to search for an exception "node left topology" in the log
          * with no TcpCommunicationSpi on the stack.
          */
-        final String PREFIX_EX_MSG = "Failed to send message (node left topology):";
+        final String PREFIX_EX_MSG = "Unable to send message (node left topology):";
 
         /**
          * Search an exception in log message with a check for presence of
