@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.List;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -40,7 +41,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
 import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test migration from MongoDB.
@@ -124,10 +125,11 @@ public class MigrationFromMongoTest {
 
     /**
      * @param db Mongo DB.
-     * @param email Account's email.
-     * @return Account ID.
+     * @param email Account email.
+     * @param token Account token.
+     * @param isAdmin Admin flag.
      */
-    private ObjectId createAccount(MongoDatabase db, String email) {
+    private void createAccount(MongoDatabase db, String email, String token, boolean isAdmin) {
         MongoCollection<Document> accounts = db.getCollection("accounts");
 
         ObjectId accId = ObjectId.get();
@@ -141,21 +143,12 @@ public class MigrationFromMongoTest {
             .append("phone", "222-222")
             .append("company", "Test")
             .append("country", "United States")
-            .append("token", "hzFT7347b2Frc2cXOn0W")
+            .append("token", token)
             .append("resetPasswordToken", "XMEfM6vlQtze95oapezn")
-            .append("admin", true);
+            .append("admin", isAdmin);
 
         accounts.insertOne(accDoc);
 
-        return accId;
-    }
-
-    /**
-     * @param db Mongo DB.
-     * @param accId Account ID.
-     * @return Space ID.
-     */
-    private ObjectId createSpace(MongoDatabase db, ObjectId accId) {
         MongoCollection<Document> spaces = db.getCollection("spaces");
 
         ObjectId spaceId = ObjectId.get();
@@ -164,9 +157,32 @@ public class MigrationFromMongoTest {
             .append("demo", false);
 
         spaces.insertOne(spaceDoc);
-
-        return spaceId;
     }
+
+    /**
+     * Check account after migration.
+     *
+     * @param accounts List of migrated accounts.
+     * @param email Account email.
+     * @param token Account token.
+     * @param isAdmin Admin flag.
+     */
+    private void checkAccount(List<Account> accounts, String email, String token, boolean isAdmin) {
+        Account acc = accounts.stream().filter(item -> email.equals(item.getEmail())).findAny().orElse(null);
+
+        assertNotNull(acc);
+        assertEquals(email, acc.getEmail());
+        assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
+        assertEquals("Test1", acc.getFirstName());
+        assertEquals("Test2", acc.getLastName());
+        assertEquals("222-222", acc.getPhone());
+        assertEquals("Test", acc.getCompany());
+        assertEquals("United States", acc.getCountry());
+        assertEquals(token, acc.getToken());
+        assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
+        assertEquals(isAdmin, acc.isAdmin());
+    }
+
 
     /**
      * Should migrate single admin account correctly from MongoDb to Ignite.
@@ -178,30 +194,15 @@ public class MigrationFromMongoTest {
         try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
             MongoDatabase db = initDb(mongoClient);
 
-            ObjectId accId = createAccount(db, "test@test.com");
-
-            createSpace(db, accId);
+            createAccount(db, "admin1@test.com", "token1", true);
 
             migration.migrate();
 
-            int cnt = 0;
+            List<Account> accounts = accountsRepo.list();
 
-            for (Account acc : accountsRepo.list()) {
-                cnt++;
+            assertEquals(1, accounts.size());
 
-                assertEquals("test@test.com", acc.getEmail());
-                assertEquals("{pbkdf2}" + TEST_SALT + TEST_HASH, acc.getPassword());
-                assertEquals("Test1", acc.getFirstName());
-                assertEquals("Test2", acc.getLastName());
-                assertEquals("222-222", acc.getPhone());
-                assertEquals("Test", acc.getCompany());
-                assertEquals("United States", acc.getCountry());
-                assertEquals("hzFT7347b2Frc2cXOn0W", acc.getToken());
-                assertEquals("XMEfM6vlQtze95oapezn", acc.getResetPasswordToken());
-                assertTrue(acc.isAdmin());
-            }
-
-            assertEquals(1, cnt);
+            checkAccount(accounts, "admin1@test.com", "token1", true);
         }
     }
 
@@ -211,14 +212,46 @@ public class MigrationFromMongoTest {
      */
     @Test
     public void shouldMigrateOneAdminAndOneNotAdmin() {
+        try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
+            MongoDatabase db = initDb(mongoClient);
+
+            createAccount(db, "admin1@test.com", "token1", true);
+            createAccount(db, "user1@test.com", "token2", false);
+
+            migration.migrate();
+
+            List<Account> accounts = accountsRepo.list();
+
+            assertEquals(2, accounts.size());
+
+            checkAccount(accounts, "admin1@test.com", "token1", true);
+            checkAccount(accounts, "user1@test.com", "token2", false);
+        }
     }
 
     /**
-     * Should migrate three admin accounts
+     * Should migrate three admin accounts.
      * See test case #3 in GG-25440.
      */
     @Test
     public void shouldMigrateThreeAdmin() {
+        try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
+            MongoDatabase db = initDb(mongoClient);
+
+            createAccount(db, "admin1@test.com", "token1", true);
+            createAccount(db, "admin2@test.com", "token2", true);
+            createAccount(db, "admin3@test.com", "token3", true);
+
+            migration.migrate();
+
+            List<Account> accounts = accountsRepo.list();
+
+            assertEquals(3, accounts.size());
+
+            checkAccount(accounts, "admin1@test.com", "token1", true);
+            checkAccount(accounts, "admin2@test.com", "token2", true);
+            checkAccount(accounts, "admin3@test.com", "token3", true);
+        }
     }
 
     /**
@@ -227,6 +260,25 @@ public class MigrationFromMongoTest {
      */
     @Test
     public void shouldMigrateThreeAdminAndOneNotAdmin() {
+        try (MongoClient mongoClient = MongoClients.create(MONGO_DB_URL)) {
+            MongoDatabase db = initDb(mongoClient);
+
+            createAccount(db, "admin1@test.com", "token1", true);
+            createAccount(db, "admin2@test.com", "token2", true);
+            createAccount(db, "admin3@test.com", "token3", true);
+            createAccount(db, "user1@test.com", "token4", false);
+
+            migration.migrate();
+
+            List<Account> accounts = accountsRepo.list();
+
+            assertEquals(4, accounts.size());
+
+            checkAccount(accounts, "admin1@test.com", "token1", true);
+            checkAccount(accounts, "admin2@test.com", "token2", true);
+            checkAccount(accounts, "admin3@test.com", "token3", true);
+            checkAccount(accounts, "user1@test.com", "token4", false);
+        }
     }
 
     /**
