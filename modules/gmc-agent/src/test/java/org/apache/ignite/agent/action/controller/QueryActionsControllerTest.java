@@ -118,9 +118,11 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray arr = ctx.read("$[3].rows[*]");
+                boolean hasMore = ctx.read("$[3].hasMore");
+                
                 cursorId.set(ctx.read("$[3].cursorId"));
 
-                return arr.size() == 1;
+                return hasMore && arr.size() == 1;
             }
 
             return false;

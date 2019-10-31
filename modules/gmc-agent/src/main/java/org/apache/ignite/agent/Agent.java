@@ -29,10 +29,10 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
 import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.metrics.MetricExporter;
-import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
 import org.apache.ignite.agent.service.config.NodeConfigurationService;
+import org.apache.ignite.agent.service.metrics.MetricExporter;
+import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
 import org.apache.ignite.cluster.ClusterNode;
@@ -55,6 +55,7 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
+import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
@@ -135,20 +136,17 @@ public class Agent extends ManagementConsoleProcessor {
         nodeConfigurationExporter.export();
     }
 
-    /** {@inheritDoc} */
-    @Override public void onKernalStop(boolean cancel) {
+    /**
+     *  Stop agent.
+     */
+    private void disconnect() {
         log.info("Stopping GMC agent.");
-
-        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         U.shutdownNow(this.getClass(), connectPool, log);
 
         U.closeQuiet(cacheService);
         U.closeQuiet(actSrvc);
-        U.closeQuiet(metricExporter);
-        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
-        U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
@@ -159,40 +157,32 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /** {@inheritDoc} */
+    @Override public void onKernalStop(boolean cancel) {
+        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+
+        U.closeQuiet(metricExporter);
+        U.closeQuiet(nodeConfigurationExporter);
+        U.closeQuiet(spanExporter);
+
+        disconnect();
+    }
+
+    /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
-        if (cfg.hasServerUris()) {
-            writeToMetaStorage(cfg);
-
-            super.configuration(cfg);
-        }
-
         ManagementConfiguration oldCfg = configuration();
 
         if (oldCfg.isEnable() != cfg.isEnable())
-            toggleAgentState(cfg.isEnable());
-        else
-            submitConnectTask();
-    }
-
-    /**
-     * Toggle agent state.
-     *
-     * @param enable Enable flag.
-     */
-    private void toggleAgentState(boolean enable) {
-        ManagementConfiguration cfg = configuration()
-            .setEnable(enable);
+            cfg = oldCfg.setEnable(cfg.isEnable());
 
         super.configuration(cfg);
 
         writeToMetaStorage(cfg);
 
-        if (enable)
-            onKernalStart(ctx.cluster().get().active());
-        else
-            onKernalStop(true);
+        disconnect();
+
+        launchAgentListener(null, ctx.discovery().discoCache());
     }
-    
+
     /**
      * Start agent on local node if this is coordinator node.
      */
@@ -256,21 +246,13 @@ public class Agent extends ManagementConsoleProcessor {
      * Connect to backend.
      */
     private void connect() {
-        log.info("Starting GMC agent on coordinator");
-
-        U.closeQuiet(cacheService);
-        U.closeQuiet(actSrvc);
-        U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(metricSrvc);
-        U.closeQuiet(tracingSrvc);
-        U.closeQuiet(clusterSrvc);
-        U.closeQuiet(mgr);
-
         if (!cfg.isEnable()) {
             log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
 
             return;
         }
+
+        log.info("Starting GMC agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
         clusterSrvc = new ClusterService(ctx, mgr);
@@ -297,7 +279,7 @@ public class Agent extends ManagementConsoleProcessor {
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            cfg = (ManagementConfiguration) metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
+            cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Can't read agent configuration from meta storage!");
@@ -367,6 +349,10 @@ public class Agent extends ManagementConsoleProcessor {
                     actSrvc.onActionRequest((Request) payload);
                 }
             });
+
+            cfg.setServerUris(singletonList(curSrvUri));
+
+            writeToMetaStorage(cfg);
         }
 
         /** {@inheritDoc} */
