@@ -228,7 +228,7 @@ public class Agent extends ManagementConsoleProcessor {
             connect0();
         }
         catch (ExecutionException e) {
-            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class)) {
+            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
 
