@@ -1555,8 +1555,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override public void onCacheGroupsStopped(
         Collection<IgniteBiTuple<CacheGroupContext, Boolean>> stoppedGrps
     ) {
-        long st = System.currentTimeMillis();
-
         Map<PageMemoryEx, Collection<Integer>> destroyed = new HashMap<>();
 
         for (IgniteBiTuple<CacheGroupContext, Boolean> tup : stoppedGrps) {
@@ -1579,8 +1577,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.kernalContext().encryption().onCacheGroupDestroyed(gctx.groupId());
         }
 
-        System.out.println("onDone p1 for " + (System.currentTimeMillis() - st));
-
         Collection<IgniteInternalFuture<Void>> clearFuts = new ArrayList<>(destroyed.size());
 
         for (Map.Entry<PageMemoryEx, Collection<Integer>> entry : destroyed.entrySet()) {
@@ -1588,8 +1584,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             clearFuts.add(entry.getKey().clearAsync((grpId, pageIdg) -> grpIds.contains(grpId), false));
         }
-
-        System.out.println("onDone p2 for " + (System.currentTimeMillis() - st));
 
         for (IgniteInternalFuture<Void> clearFut : clearFuts) {
             try {
@@ -1599,8 +1593,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 log.error("Failed to clear page memory", e);
             }
         }
-
-        System.out.println("onDone p3 for " + (System.currentTimeMillis() - st));
 
         if (cctx.pageStore() != null) {
             for (IgniteBiTuple<CacheGroupContext, Boolean> tup : stoppedGrps) {
@@ -1615,8 +1607,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             }
         }
-
-        System.out.println("onDone p4 for " + (System.currentTimeMillis() - st));
     }
 
     /**
