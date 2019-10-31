@@ -34,6 +34,7 @@ import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.CLOSED;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.EXECUTION;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.IDLE;
+import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.NO_DATA;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.RESULT_READY;
 
 /**
@@ -127,6 +128,9 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 all.add(iter.next());
         }
         finally {
+            // Update state if the results is read to end
+            STATE_UPDATER.compareAndSet(this, RESULT_READY, NO_DATA);
+
             close();
         }
 
@@ -142,6 +146,9 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 clo.consume(iter.next());
         }
         finally {
+            // Update state if the results is read to end
+            STATE_UPDATER.compareAndSet(this, RESULT_READY, NO_DATA);
+
             close();
         }
     }
@@ -149,7 +156,16 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
     /** {@inheritDoc} */
     @Override public void close() {
         while (state != CLOSED) {
+            if (STATE_UPDATER.compareAndSet(this, NO_DATA, CLOSED) || (iter != null && !iter.hasNext())) {
+                closeIter();
+
+                return;
+            }
+
             if (STATE_UPDATER.compareAndSet(this, RESULT_READY, CLOSED)) {
+                if (cancel != null)
+                    cancel.cancel();
+
                 closeIter();
 
                 return;
@@ -158,6 +174,8 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
             if (STATE_UPDATER.compareAndSet(this, EXECUTION, CLOSED)) {
                 if (cancel != null)
                     cancel.cancel();
+
+                closeIter();
 
                 return;
             }
@@ -224,6 +242,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         /** Idle. */IDLE,
         /** Executing. */EXECUTION,
         /** Result ready. */RESULT_READY,
+        /** No data or read to end. */NO_DATA,
         /** Closed. */CLOSED,
     }
 

@@ -521,7 +521,7 @@ public class GridH2Table extends TableBase {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
-            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock.ver + ']';
+            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock == null ? "null" : sesLock.ver + ']';
 
         if (!sesLock.locked) {
             lock(false);
