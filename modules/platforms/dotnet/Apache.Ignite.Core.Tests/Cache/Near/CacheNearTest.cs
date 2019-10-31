@@ -526,6 +526,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(11, clientCache[1]);
         }
 
+        [Test]
+        public void TestScanQueryUsesValueFromNearCache()
+        {
+            // TODO: Can we pass only the key to scan query filter, and pass value only when needed?
+            // TODO: When receiving scan query results, can we also use existing values from near cache?
+        }
+
         /// <summary>
         /// Asserts the cache is near.
         /// </summary>
