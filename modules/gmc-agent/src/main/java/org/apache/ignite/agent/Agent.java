@@ -57,6 +57,7 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
+import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
@@ -151,23 +152,26 @@ public class Agent extends ManagementConsoleProcessor {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void stop(boolean cancel) {
+    /**
+     *  Stop agent.
+     */
+    private void disconnect() {
+        log.info("Stopping GMC agent.");
+
+        U.shutdownNow(this.getClass(), connectPool, log);
+
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
-        U.closeQuiet(metricExporter);
         U.closeQuiet(metricSrvc);
         U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(evtsExporter);
         U.closeQuiet(evtSrvc);
-        U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
 
-        U.shutdownNow(this.getClass(), connectPool, log);
-
         disconnected.set(false);
+
+        U.quietAndInfo(log, "GMC agent stopped.");
     }
 
     /** {@inheritDoc} */
@@ -175,50 +179,31 @@ public class Agent extends ManagementConsoleProcessor {
         if (ctx.clientNode())
             return;
 
-        log.info("Stopping GMC agent.");
-
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        stop(cancel);
+        U.closeQuiet(metricExporter);
+        U.closeQuiet(evtsExporter);
+        U.closeQuiet(spanExporter);
 
-        U.quietAndInfo(log, "GMC agent stopped.");
+        disconnect();
     }
 
     /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
-        if (cfg.hasServerUris()) {
-            writeToMetaStorage(cfg);
-
-            super.configuration(cfg);
-        }
-
         ManagementConfiguration oldCfg = configuration();
 
         if (oldCfg.isEnable() != cfg.isEnable())
-            toggleAgentState(cfg.isEnable());
-        else
-            submitConnectTask();
-    }
-
-    /**
-     * Toggle agent state.
-     *
-     * @param enable Enable flag.
-     */
-    private void toggleAgentState(boolean enable) {
-        ManagementConfiguration cfg = configuration()
-            .setEnable(enable);
+            cfg = oldCfg.setEnable(cfg.isEnable());
 
         super.configuration(cfg);
 
         writeToMetaStorage(cfg);
 
-        if (enable)
-            onKernalStart(ctx.cluster().get().active());
-        else
-            onKernalStop(true);
+        disconnect();
+
+        launchAgentListener(null, ctx.discovery().discoCache());
     }
-    
+
     /**
      * Start agent on local node if this is coordinator node.
      */
@@ -261,7 +246,7 @@ public class Agent extends ManagementConsoleProcessor {
             connect0();
         }
         catch (ExecutionException e) {
-            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class)) {
+            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
 
@@ -279,15 +264,13 @@ public class Agent extends ManagementConsoleProcessor {
      * Connect to backend.
      */
     private void connect() {
-        log.info("Starting GMC agent on coordinator");
-
-        stop(true);
-
         if (!cfg.isEnable()) {
             log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
 
             return;
         }
+
+        log.info("Starting GMC agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
         clusterSrvc = new ClusterService(ctx, mgr);
@@ -317,7 +300,7 @@ public class Agent extends ManagementConsoleProcessor {
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            cfg = (ManagementConfiguration) metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
+            cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Can't read agent configuration from meta storage!");
@@ -387,6 +370,10 @@ public class Agent extends ManagementConsoleProcessor {
                     actSrvc.onActionRequest((Request) payload);
                 }
             });
+
+            cfg.setServerUris(singletonList(curSrvUri));
+
+            writeToMetaStorage(cfg);
         }
 
         /** {@inheritDoc} */

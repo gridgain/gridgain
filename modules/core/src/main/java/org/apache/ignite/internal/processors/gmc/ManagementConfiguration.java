@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.gmc;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -219,13 +218,6 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     public ManagementConfiguration setSessionExpirationTimeout(long sesExpirationTimeout) {
         this.sesExpirationTimeout = sesExpirationTimeout;
         return this;
-    }
-
-    /**
-     * @return {@code True} if contains server endpoints.
-     */
-    public boolean hasServerUris() {
-        return !F.isEmpty(srvUris);
     }
 
     /** {@inheritDoc} */

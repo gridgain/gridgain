@@ -19,6 +19,7 @@ package org.apache.ignite.agent.action.query;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
@@ -83,7 +84,7 @@ public class QueryHolderRegistry {
         });
 
         if (log.isDebugEnabled())
-            log.debug("Cursor was addes to query holder [queryId=" + qryId + ", cursorId=" + cursorId + "]");
+            log.debug("Cursor was added to query holder [queryId=" + qryId + ", cursorId=" + cursorId + "]");
 
         return cursorId;
     }
@@ -94,7 +95,7 @@ public class QueryHolderRegistry {
      */
     public CursorHolder findCursor(String qryId, String cursorId) {
         if (!qryHolders.containsKey(qryId))
-            return null;
+            throw new IgniteException("Query results are expired.");
 
         QueryHolder qryHolder = qryHolders.get(qryId);
         qryHolder.setAccessed(true);

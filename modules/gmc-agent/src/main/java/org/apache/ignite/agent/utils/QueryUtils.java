@@ -175,7 +175,7 @@ public class QueryUtils {
 
         Iterator<List<?>> sqlItr = (Iterator<List<?>>)itr;
 
-        while (itr.hasNext() && cnt < pageSize) {
+        while (sqlItr.hasNext() && cnt < pageSize) {
             List<?> next = sqlItr.next();
 
             int sz = next.size();

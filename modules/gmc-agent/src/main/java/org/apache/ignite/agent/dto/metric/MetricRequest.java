@@ -16,12 +16,11 @@
 
 package org.apache.ignite.agent.dto.metric;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-
-import java.nio.ByteBuffer;
 
 /**
  * Metrics request message. Sent from GMC agent to any arbitrary node to request latest metrics.

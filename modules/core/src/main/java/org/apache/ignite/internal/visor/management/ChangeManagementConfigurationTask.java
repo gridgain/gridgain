@@ -60,8 +60,6 @@ public class ChangeManagementConfigurationTask extends VisorOneNodeTask<Manageme
         @Override protected ManagementConfiguration run(ManagementConfiguration cfg) throws IgniteException {
             ManagementConsoleProcessor processor = ignite.context().gmc();
 
-            ManagementConfiguration oldCfg = processor.configuration();
-
             if (cfg != null && !cfg.equals(processor.configuration()))
                 processor.configuration(cfg);
 

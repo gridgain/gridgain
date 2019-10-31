@@ -43,7 +43,6 @@ public class EventsServiceSelfTest extends AbstractGridWithAgentTest {
         startGrid(1);
 
         IgniteCluster cluster = ignite.cluster();
-        cluster.active(true);
 
         assertWithPoll(() -> {
             List<JsonNode> evts = interceptor.getListPayload(buildEventsDest(cluster.id()), JsonNode.class);

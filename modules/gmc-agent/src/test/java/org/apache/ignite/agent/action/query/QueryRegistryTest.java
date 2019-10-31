@@ -18,13 +18,15 @@ package org.apache.ignite.agent.action.query;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.agent.AbstractGridWithAgentTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
- * Query regixtry test.
+ * Query registry test.
  */
 public class QueryRegistryTest extends AbstractGridWithAgentTest {
     /**
@@ -41,7 +43,11 @@ public class QueryRegistryTest extends AbstractGridWithAgentTest {
 
         Thread.sleep(3000);
 
-        assertNull(registry.findCursor(qryId, cursorId));
+        GridTestUtils.assertThrows(null, () -> {
+            registry.findCursor(qryId, cursorId);
+
+            return null;
+        }, IgniteException.class, "Query results are expired.");
     }
 
     /**
@@ -58,11 +64,15 @@ public class QueryRegistryTest extends AbstractGridWithAgentTest {
 
         for (int i = 0; i < 5; i++) {
             Thread.sleep(1000);
-            assertNotNull(registry.findCursor(qryId, curId));
+            registry.findCursor(qryId, curId);
         }
 
         Thread.sleep(6000);
 
-        assertNull(registry.findCursor(qryId, curId));
+        GridTestUtils.assertThrows(null, () -> {
+            registry.findCursor(qryId, curId);
+
+            return null;
+        }, IgniteException.class, "Query results are expired.");
     }
 }
