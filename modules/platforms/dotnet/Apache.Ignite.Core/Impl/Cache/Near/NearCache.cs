@@ -55,6 +55,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // + Client node (all keys)
             // + Server node (non-primary keys)
             // - Server node (primary keys) - because there is no need to store primary keys in near cache
+            // We can just ignore the third case and never evict primary keys - after all, we are on a server node,
+            // and it is fine to keep primary keys in memory.
             _map[key] = new NearCacheEntry<TV>(true, val);
         }
 
