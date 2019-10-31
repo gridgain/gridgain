@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
@@ -273,12 +272,5 @@ public class WalCommands implements Command<T2<String, String>> {
     /** {@inheritDoc} */
     @Override public String name() {
         return WAL.toCommandName();
-    }
-
-    /**
-     * @return Value of {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND}
-     */
-    private boolean enableExperimental() {
-        return IgniteSystemProperties.getBoolean(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, false);
     }
 }
