@@ -1040,9 +1040,15 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         @Nullable IgniteCheckedException aggr) {
         aggr = shutdown(holder.idxStore, cleanFile, aggr);
 
+        System.out.println("Shutdown store (clean=" + cleanFile + ")");
+        int part = 0;
         for (PageStore store : holder.partStores) {
+            long st = System.currentTimeMillis();
+
             if (store != null)
                 aggr = shutdown(store, cleanFile, aggr);
+
+            System.out.println("\tpart " + (++part) + ": " + (System.currentTimeMillis() - st));
         }
 
         return aggr;
