@@ -92,7 +92,7 @@ public class PagePool {
         pagesBase = base;
 
         GridUnsafe.putLong(freePageListPtr, PageMemoryImpl.INVALID_REL_PTR);
-        GridUnsafe.putLong(lastAllocatedIdxPtr, 1L);
+        GridUnsafe.putLong(lastAllocatedIdxPtr, 0L);
     }
 
     /**
@@ -153,7 +153,7 @@ public class PagePool {
             long lastIdx = GridUnsafe.getLong(lastAllocatedIdxPtr);
 
             // Check if we have enough space to allocate a page.
-            if (pagesBase + lastIdx * sysPageSize > limit)
+            if (pagesBase + (lastIdx + 1) * sysPageSize > limit)
                 return PageMemoryImpl.INVALID_REL_PTR;
 
             if (GridUnsafe.compareAndSwapLong(null, lastAllocatedIdxPtr, lastIdx, lastIdx + 1)) {
