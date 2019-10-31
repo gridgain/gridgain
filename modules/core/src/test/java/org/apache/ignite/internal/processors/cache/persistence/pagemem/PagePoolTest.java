@@ -161,7 +161,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
                 long fromPool = pool.borrowOrAllocateFreePage(tag);
 
-                info("Borrowed page: " + U.hexLong(fromPool));
+                info("Borrowed page: " + U.hexLong(fromPool) + ", absPtr=" + U.hexLong(pool.absolute(fromPool)));
 
                 assertEquals(relPtr, fromPool);
 
