@@ -29,10 +29,12 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
 import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.metrics.MetricExporter;
-import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
 import org.apache.ignite.agent.service.config.NodeConfigurationService;
+import org.apache.ignite.agent.service.event.EventsExporter;
+import org.apache.ignite.agent.service.event.EventsService;
+import org.apache.ignite.agent.service.metrics.MetricExporter;
+import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.tracing.GmcSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
 import org.apache.ignite.cluster.ClusterNode;
@@ -61,6 +63,7 @@ import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 
 /**
  * Management Agent.
@@ -70,7 +73,7 @@ public class Agent extends ManagementConsoleProcessor {
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "gmc-cfg";
 
     /** Discovery event on restart agent. */
-    private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT};
+    private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -84,8 +87,8 @@ public class Agent extends ManagementConsoleProcessor {
     /** Span exporter. */
     private GmcSpanExporter spanExporter;
 
-    /** Node configuration exporter. */
-    private NodeConfigurationExporter nodeConfigurationExporter;
+    /** Events exporter. */
+    private EventsExporter evtsExporter;
 
     /** Metric exporter. */
     private MetricExporter metricExporter;
@@ -96,11 +99,14 @@ public class Agent extends ManagementConsoleProcessor {
     /** Action service. */
     private ActionService actSrvc;
 
+    /** Event service. */
+    private EventsService evtSrvc;
+
     /** Node configuration service. */
     private NodeConfigurationService nodeConfigurationSrvc;
 
     /** Cache service. */
-    private CacheService cacheService;
+    private CacheService cacheSrvc;
 
     /** Execute service. */
     private ThreadPoolExecutor connectPool;
@@ -123,37 +129,57 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        spanExporter = new GmcSpanExporter(ctx);
-        nodeConfigurationExporter = new NodeConfigurationExporter(ctx);
-        metricExporter = new MetricExporter(ctx);
+        if (ctx.clientNode())
+            return;
+
         metaStorage = ctx.distributedMetastorage();
+
+        evtsExporter = new EventsExporter(ctx);
+        spanExporter = new GmcSpanExporter(ctx);
+        metricExporter = new MetricExporter(ctx);
 
         launchAgentListener(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
         ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
-        nodeConfigurationExporter.export();
+
+        evtsExporter.addLocalEventListener();
+        metricExporter.addMetricListener();
+
+        try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
+            exporter.export();
+        }
     }
 
     /** {@inheritDoc} */
-    @Override public void onKernalStop(boolean cancel) {
-        log.info("Stopping GMC agent.");
-
-        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
-
-        U.shutdownNow(this.getClass(), connectPool, log);
-
-        U.closeQuiet(cacheService);
+    @Override public void stop(boolean cancel) {
+        U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
         U.closeQuiet(metricExporter);
-        U.closeQuiet(nodeConfigurationExporter);
         U.closeQuiet(metricSrvc);
+        U.closeQuiet(nodeConfigurationSrvc);
+        U.closeQuiet(evtsExporter);
+        U.closeQuiet(evtSrvc);
         U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
         U.closeQuiet(mgr);
 
+        U.shutdownNow(this.getClass(), connectPool, log);
+
         disconnected.set(false);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStop(boolean cancel) {
+        if (ctx.clientNode())
+            return;
+
+        log.info("Stopping GMC agent.");
+
+        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+
+        stop(cancel);
 
         U.quietAndInfo(log, "GMC agent stopped.");
     }
@@ -197,9 +223,6 @@ public class Agent extends ManagementConsoleProcessor {
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (ctx.clientNode())
-            return;
-
         ClusterNode crdNode = F.first(discoCache.serverNodes());
 
         if (crdNode != null && crdNode.isLocal()) {
@@ -258,13 +281,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect() {
         log.info("Starting GMC agent on coordinator");
 
-        U.closeQuiet(cacheService);
-        U.closeQuiet(actSrvc);
-        U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(metricSrvc);
-        U.closeQuiet(tracingSrvc);
-        U.closeQuiet(clusterSrvc);
-        U.closeQuiet(mgr);
+        stop(true);
 
         if (!cfg.isEnable()) {
             log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
@@ -276,9 +293,12 @@ public class Agent extends ManagementConsoleProcessor {
         clusterSrvc = new ClusterService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
+        evtSrvc = new EventsService(ctx, mgr);
         nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
         actSrvc = new ActionService(ctx, mgr);
-        cacheService = new CacheService(ctx, mgr);
+        cacheSrvc = new CacheService(ctx, mgr);
+
+        evtsExporter.addGlobalEventListener();
 
         connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
@@ -346,7 +366,7 @@ public class Agent extends ManagementConsoleProcessor {
             U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
 
             clusterSrvc.sendInitialState();
-            cacheService.sendInitialState();
+            cacheSrvc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {
