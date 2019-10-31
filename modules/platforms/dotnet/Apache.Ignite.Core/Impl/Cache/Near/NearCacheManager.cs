@@ -70,6 +70,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 nonGenericNearCache = new NearCache<object, object>();
                 
                 // TODO: Bug - old ICache instances still use old near caches, data will go stale.
+                // Should we go back to multiple cache approach?
+                // It makes invalidation hard, causing multiple deserialization.
                 _nearCaches.Set(cacheId, nonGenericNearCache);
             }
 
