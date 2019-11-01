@@ -55,7 +55,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private long _topVer = TopVerInit;
 
         /** Current projection. */
-        private ClientClusterGroupProjection _projection;
+        private readonly ClientClusterGroupProjection _projection;
 
         /** Predicate. */
         private readonly Func<IClusterNode, bool> _predicate;
@@ -153,7 +153,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             {
                 UpdateTopology(res.Item1);
 
-                return FindNodes(res.Item2);
+                return GetNodesInfo(res.Item2);
             }
 
             // No topology changes.
@@ -162,8 +162,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             return _nodes;
         }
 
-
-        private IList<IClusterNode> FindNodes(Guid?[] nodeIds)
+        /// <summary>
+        /// Gets nodes information.
+        /// </summary>
+        /// <param name="nodeIds">Node ids collection.</param>
+        /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
+        private IList<IClusterNode> GetNodesInfo(Guid?[] nodeIds)
         {
             if (nodeIds.Any(nodeId => nodeId == null))
             {
@@ -193,9 +197,24 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             Action<IBinaryRawWriter> action = w => { w.WriteGuidArray(ids.ToArray()); };
 
-            Func<IBinaryRawReader, IEnumerable<IClusterNode>> readFunc = r => 
-                IgniteUtils.ReadNodesForThinClient(_ignite, r, _predicate);
 
+
+            Func<IBinaryRawReader, IEnumerable<IClusterNode>> readFunc = r =>
+            {
+                var cnt = r.ReadInt();
+
+                if (cnt < 0)
+                    return null;
+
+                var res = new List<IClusterNode>(cnt);
+
+                for (var i = 0; i < cnt; i++)
+                {
+                    res.Add(_ignite.UpdateNodeInfo(r));
+                }
+
+                return _predicate == null ? res : res.Where(_predicate);
+            };
             return DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, action, readFunc);
         }
 
