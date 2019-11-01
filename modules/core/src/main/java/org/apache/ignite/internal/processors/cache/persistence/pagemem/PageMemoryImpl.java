@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -101,7 +100,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
 
-
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DELAYED_REPLACED_PAGE_WRITE;
@@ -147,6 +145,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Dirty flag. */
     private static final long DIRTY_FLAG = 0x0100000000000000L;
 
+    /** Page in cp flag. */
     private static final long CP_FLAG = 0x0200000000000000L;
 
     /** Invalid relative pointer value. */
@@ -1177,26 +1176,19 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             collections[i] = dirtyPages;
 
-            seg.readLock().lock(); // may be enough ?
+            seg.readLock().lock();
 
             try {
-                for (FullPageId pageId : dirtyPages) {
-                    int tag = seg.partGeneration(pageId.groupId(), PageIdUtils.partId(pageId.pageId()));
+                for (FullPageId fullId : dirtyPages) {
+                    long relPtr = resolveRelativePointer(seg, fullId, /*tag = */generationTag(seg, fullId)); // tag
+                    // may be cached ?
 
-                    long relPtr = seg.loadedPages.get(
-                        pageId.groupId(),
-                        PageIdUtils.effectivePageId(pageId.pageId()),
-                        tag,
-                        INVALID_REL_PTR,
-                        INVALID_REL_PTR
-                    );
-
-                    if (relPtr == INVALID_REL_PTR)
+                    if (relPtr == INVALID_REL_PTR || relPtr == OUTDATED_REL_PTR) // assert here !
                         continue;
 
                     long absPtr = seg.absolute(relPtr);
 
-                    PageHeader.inCp(absPtr, true);
+                    PageHeader.inCp(absPtr, true); // no need under cp write lock here ?
                 }
             }
             finally {
@@ -1287,7 +1279,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     return;
 
                 // Pin the page until page will not be copied. This helpful to prevent page replacement of this page.
-                if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) // место под рейс !!!
+                if (PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR)
                     PageHeader.acquirePage(absPtr);
                 else
                     pageSingleAcquire = true;
@@ -1492,8 +1484,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             int tag = 0;
 
             for (Segment seg : segments) {
-                /*IgniteUtils.ReentrantReadWriteLockTracer tr =
-                    new U.ReentrantReadWriteLockTracer(seg, ctx.kernalContext(), 5000);*/
                 seg.writeLock().lock();
 
                 try {
@@ -2779,8 +2769,6 @@ public class PageMemoryImpl implements PageMemoryEx {
                         fullPageId.effectivePageId()
                     );
 
-                    System.err.println("evicted: " + addr);
-
                     return addr;
                 }
                 else
@@ -3027,13 +3015,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param absPtr Absolute pointer.
          */
         private static int releasePage(long absPtr) {
-            int res = updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
-            if (res < 0) {
-                System.err.println("!!!111");
-                new Exception().printStackTrace();
-            }
-            return res;
-            //return updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
+            return updateAtomicInt(absPtr + PAGE_PIN_CNT_OFFSET, -1);
         }
 
         /**

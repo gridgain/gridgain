@@ -129,7 +129,7 @@ public class FullPageId {
     public long effectivePageId() {
         return effectivePageId;
     }
-    
+
     /**
      * @return Cache group ID.
      */

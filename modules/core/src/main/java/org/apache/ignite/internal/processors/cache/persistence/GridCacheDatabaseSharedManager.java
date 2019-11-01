@@ -238,10 +238,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** MemoryPolicyConfiguration name reserved for meta store. */
     public static final String METASTORE_DATA_REGION_NAME = "metastoreMemPlc";
 
-    /**
-     * Starting from this number of dirty pages in checkpoint, array will be sorted with
-     * {@link Arrays#parallelSort(Comparable[])} in case of {@link CheckpointWriteOrder#SEQUENTIAL}.
-     */
+    /** Threshold for sorting cp pages, if {@link CheckpointWriteOrder#SEQUENTIAL} enabled. */
     private final int parallelSortThreshold = IgniteSystemProperties.getInteger(
         IgniteSystemProperties.CHECKPOINT_PARALLEL_SORT_THRESHOLD, 512 * 1024);
 
@@ -3237,17 +3234,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         int seq = 0;
 
-        threadBuf = new ThreadLocal<ByteBuffer>() {
-            /** {@inheritDoc} */
-            @Override protected ByteBuffer initialValue() {
-                ByteBuffer tmpWriteBuf = ByteBuffer.allocateDirect(pageSize());
-
-                tmpWriteBuf.order(ByteOrder.nativeOrder());
-
-                return tmpWriteBuf;
-            }
-        };
-
         for (T2<DataRegion, Collection<FullPageId>> pagesPerRegion : sortedPages) {
             // Calculate stripe index.
             int stripeIdx = seq++ % exec.stripes();
@@ -3883,6 +3869,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          */
         private void doCheckpoint() {
             Checkpoint chp = null;
+
             try {
                 CheckpointMetricsTracker tracker = new CheckpointMetricsTracker();
 
@@ -4274,6 +4261,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             tracker.onLockWaitStart();
 
             checkpointLock.writeLock().lock();
+
             try {
                 updateCurrentCheckpointProgress();
 
@@ -4334,19 +4322,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onLockRelease();
             }
 
-            //
-            List<T2<DataRegion, Collection<FullPageId>>> alignedPages = sortCpPagesIfNeeded(cpPagesTuple.get1());
-
-            ArrayList<DataRegion> regsForCheckpointing = new ArrayList<>(alignedPages.size());
-
-            alignedPages.forEach(k -> {
-                    ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2());
-
-                    regsForCheckpointing.add(k.get1());
-                }
-            );
-            //
-
             DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, hasPages, hasUserPages);
 
             curr.transitTo(LOCK_RELEASED);
@@ -4380,6 +4355,17 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 curr.transitTo(MARKER_STORED_TO_DISK);
 
                 tracker.onSplitAndSortCpPagesStart();
+
+                List<T2<DataRegion, Collection<FullPageId>>> alignedPages = sortCpPagesIfNeeded(cpPagesTuple.get1());
+
+                ArrayList<DataRegion> regsForCheckpointing = new ArrayList<>(alignedPages.size());
+
+                alignedPages.forEach(k -> {
+                        ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2());
+
+                        regsForCheckpointing.add(k.get1());
+                    }
+                );
 
                 if (printCheckpointStats && log.isInfoEnabled()) {
                     long possibleJvmPauseDur = possibleLongJvmPauseDuration(tracker);
