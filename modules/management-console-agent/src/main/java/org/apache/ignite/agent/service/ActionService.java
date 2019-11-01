@@ -69,7 +69,7 @@ public class ActionService implements AutoCloseable {
     }
 
     /**
-     * Handle action requests from GMC.
+     * Handle action requests from Management Console.
      *
      * @param req Request.
      */
@@ -106,7 +106,7 @@ public class ActionService implements AutoCloseable {
      * @param e Throwable.
      */
     private Response convertToErrorResponse(UUID id, Throwable e) {
-        log.error(String.format("Failed to execute action, send error response to GMC: [reqId=%s]", id), e);
+        log.error(String.format("Failed to execute action, send error response to Management Console: [reqId=%s]", id), e);
 
         return new Response()
                 .setId(id)
@@ -130,7 +130,7 @@ public class ActionService implements AutoCloseable {
     }
 
     /**
-     * Send action response to GMC.
+     * Send action response to Management Console.
      *
      * @param res Response.
      */

@@ -34,7 +34,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Hosted console UrI. */
+    /** Hosted console URI. */
     private static final String HOSTED_CONSOLE_URI = "https://gmc.gridgain.com";
 
     /** Local console URI. */

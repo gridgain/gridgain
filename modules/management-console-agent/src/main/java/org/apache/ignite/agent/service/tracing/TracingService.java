@@ -77,7 +77,7 @@ public class TracingService implements AutoCloseable {
     }
 
     /**
-     * @return Sender which send messages from queue to gmc.
+     * @return Sender which send messages from queue to Management Console.
      */
     private RetryableSender<Span> createSender() {
         return new ManagementConsoleSender<>(ctx, mgr, buildSaveSpanDest(ctx.cluster().get().id()), QUEUE_CAP);

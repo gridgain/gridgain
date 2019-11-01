@@ -103,7 +103,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             .setArgument(
                 new QueryArgument()
                     .setQueryId("qry")
-                    .setQueryText("SELECT * FROM gmc_agent_all_types_table WHERE id IN (?, ?)")
+                    .setQueryText("SELECT * FROM mc_agent_all_types_table WHERE id IN (?, ?)")
                     .setPageSize(10)
                     .setParameters(new Object[]{"1", "2"})
             );
@@ -148,7 +148,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                 .setArgument(
                     new QueryArgument()
                         .setQueryId("qry")
-                        .setQueryText(format("SELECT * FROM gmc_agent_all_types_table WHERE %s = ?", fieldName))
+                        .setQueryText(format("SELECT * FROM mc_agent_all_types_table WHERE %s = ?", fieldName))
                         .setPageSize(10)
                         .setParameters(new Object[]{t.getValue()})
                 );
@@ -212,7 +212,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
      * @return Create table query string with all types.
      */
     private String getAllTypeCreateQueryTable() {
-        return "CREATE TABLE gmc_agent_all_types_table (" +
+        return "CREATE TABLE mc_agent_all_types_table (" +
                 " id INT, " +
                 " value_bool BOOLEAN," +
                 " value_tiny_int TINYINT," +
@@ -263,7 +263,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         char cVal,
         UUID uuidVal
     ) {
-        return "INSERT INTO gmc_agent_all_types_table VALUES("
+        return "INSERT INTO mc_agent_all_types_table VALUES("
                 + id + ", "
                 + boolVal + ", "
                 + tinyIntVal + ", "

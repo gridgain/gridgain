@@ -273,7 +273,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
      * @return Create table query string.
      */
     private String getCreateQuery() {
-        return "CREATE TABLE gmc_agent_test_table (id int, value int, PRIMARY KEY (id));";
+        return "CREATE TABLE mc_agent_test_table (id int, value int, PRIMARY KEY (id));";
     }
 
     /**
@@ -283,21 +283,21 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
      * @return Insert query string.
      */
     private String getInsertQuery(int id, int val) {
-        return String.format("INSERT INTO gmc_agent_test_table VALUES(%s, %s);", id, val);
+        return String.format("INSERT INTO mc_agent_test_table VALUES(%s, %s);", id, val);
     }
 
     /**
      * @return Select query string.
      */
     private String getSelectQuery() {
-        return "SELECT * FROM gmc_agent_test_table;";
+        return "SELECT * FROM mc_agent_test_table;";
     }
 
     /**
      * @return Select query string.
      */
     private String getSelectQueryWithParameter() {
-        return "SELECT * FROM gmc_agent_test_table WHERE id = ?;";
+        return "SELECT * FROM mc_agent_test_table WHERE id = ?;";
     }
 
     /**

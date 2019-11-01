@@ -84,7 +84,7 @@ public class NodeConfigurationService implements AutoCloseable {
     }
 
     /**
-     * @return Sender which send messages from queue to gmc.
+     * @return Sender which send messages from queue to Management Console.
      */
     private ManagementConsoleSender<NodeConfiguration> createSender() {
         UUID clusterId = ctx.cluster().get().id();

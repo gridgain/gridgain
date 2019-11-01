@@ -65,7 +65,7 @@ public class EventsExporter implements AutoCloseable {
     public EventsExporter(GridKernalContext ctx) {
         this.ctx = ctx;
         
-        snd = new CoordinatorSender<>(ctx, QUEUE_CAP, EVENTS_TOPIC);
+        snd = new CoordinatorSender<>(ctx, EVENTS_TOPIC, QUEUE_CAP);
     }
 
     /**

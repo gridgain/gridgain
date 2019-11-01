@@ -132,11 +132,11 @@ public class ClusterService implements AutoCloseable {
     }
 
     /**
-     * Send full topology to GMC.
+     * Send full topology to Management Console.
      */
     void sendTopologyUpdate(DiscoveryEvent evt, DiscoCache discoCache) {
         if (log.isDebugEnabled())
-            log.debug("Sending full topology to GMC");
+            log.debug("Sending full topology to Management Console");
 
         Object crdId = cluster.localNode().consistentId();
         mgr.send(
@@ -153,7 +153,7 @@ public class ClusterService implements AutoCloseable {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to GMC");
+            log.debug("Sending cluster info to Management Console");
 
         ClusterInfo clusterInfo = new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())

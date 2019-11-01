@@ -17,7 +17,7 @@
 package org.apache.ignite.agent.service.metrics;
 
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.junit.Test;
 
@@ -27,7 +27,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTop
 /**
  * Metric service test.
  */
-public class MetricsServiceSelfTest extends AgentCommonAbstractTest {
+public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
     /**
      * Should send cluster metrics.
      */

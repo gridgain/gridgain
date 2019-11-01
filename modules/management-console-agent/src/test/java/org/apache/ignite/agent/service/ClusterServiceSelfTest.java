@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
 import org.apache.ignite.agent.utils.AgentUtils;
@@ -37,7 +37,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopolog
 /**
  * Cluster service test.
  */
-public class ClusterServiceSelfTest extends AgentCommonAbstractTest {
+public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
     /**
      * Should send initial states to backend.
      */

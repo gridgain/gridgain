@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.config.TestChannelInterceptor;
+import org.apache.ignite.agent.config.WebSocketConfig;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -55,9 +56,9 @@ import static org.awaitility.Awaitility.with;
  * Base class for test with agent.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = WebSocketConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
+public abstract class AgentCommonAbstractSelfTest extends GridCommonAbstractTest {
     /** Template. */
     @Autowired
     protected SimpMessagingTemplate template;
@@ -127,8 +128,6 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
                     )
             )
             .setTracingSpi(new OpenCensusTracingSpi())
-            // TODO temporary fix for GG-22214
-            .setIncludeEventTypes(EVT_CLUSTER_ACTIVATED, EVT_CLUSTER_DEACTIVATED, EVT_CACHE_STARTED, EVT_CACHE_STOPPED)
             .setFailureHandler(new NoOpFailureHandler())
             .setDiscoverySpi(
                 new TcpDiscoverySpi()

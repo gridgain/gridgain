@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
@@ -35,7 +35,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesS
 /**
  * Cache service self test.
  */
-public class CacheServiceSelfTest extends AgentCommonAbstractTest {
+public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     /**
      * Should send initial states to backend.
      */
@@ -119,23 +119,23 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE mc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("DROP TABLE gmc_agent_test_table_1;"),
+            new SqlFieldsQuery("DROP TABLE mc_agent_test_table_1;"),
             true
         );
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
     }
 
@@ -151,7 +151,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_2 (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE mc_agent_test_table_2 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
@@ -163,7 +163,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
-                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .filter(m -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
                 .findFirst()
                 .get();
 
@@ -173,7 +173,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("ALTER TABLE gmc_agent_test_table_2 ADD id_2 int;"),
+            new SqlFieldsQuery("ALTER TABLE mc_agent_test_table_2 ADD id_2 int;"),
             true
         );
 
@@ -185,7 +185,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
-                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
+                .filter(m -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_2".equals(m.getCacheName()))
                 .findFirst()
                 .get();
 
@@ -207,7 +207,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE TABLE gmc_agent_test_table_3 (id int, value int, PRIMARY KEY (id));"),
+            new SqlFieldsQuery("CREATE TABLE mc_agent_test_table_3 (id int, value int, PRIMARY KEY (id));"),
             true
         );
 
@@ -219,7 +219,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
-                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .filter(m -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
                 .findFirst()
                 .get();
 
@@ -229,7 +229,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
         });
 
         ignite.context().query().querySqlFields(
-            new SqlFieldsQuery("CREATE INDEX my_index ON gmc_agent_test_table_3 (value)"),
+            new SqlFieldsQuery("CREATE INDEX my_index ON mc_agent_test_table_3 (value)"),
             true
         );
 
@@ -241,7 +241,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
-                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .filter(m -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
                 .findFirst()
                 .get();
 
@@ -263,7 +263,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractTest {
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
-                .filter(m -> "SQL_PUBLIC_GMC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
+                .filter(m -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_3".equals(m.getCacheName()))
                 .findFirst()
                 .get();
 

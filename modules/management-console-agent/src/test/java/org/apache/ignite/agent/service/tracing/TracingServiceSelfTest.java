@@ -18,7 +18,7 @@ package org.apache.ignite.agent.service.tracing;
 
 import java.util.List;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.internal.IgniteEx;
 import org.junit.Test;
@@ -28,7 +28,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 /**
  * Tracing service test.
  */
-public class TracingServiceSelfTest extends AgentCommonAbstractTest {
+public class TracingServiceSelfTest extends AgentCommonAbstractSelfTest {
     /**
      * Should send initial states to backend.
      */

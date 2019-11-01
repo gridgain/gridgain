@@ -62,6 +62,10 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestT
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
+import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
+import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
@@ -70,11 +74,19 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
  * Management Agent.
  */
 public class Agent extends ManagementConsoleProcessor {
-    /** GMC configuration meta storage prefix. */
+    /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
+
+    /** Not enabled events by default. */
+    private static final int[] NOT_ENABLED_EVTS = new int[] {
+        EVT_CLUSTER_ACTIVATED,
+        EVT_CLUSTER_DEACTIVATED,
+        EVT_CACHE_STARTED,
+        EVT_CACHE_STOPPED
+    };
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -212,7 +224,7 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
-     * @param uris GMC Server URIs.
+     * @param uris Management Console Server URIs.
      */
     private String nextUri(List<String> uris, String cur) {
         int idx = uris.indexOf(cur);
@@ -240,15 +252,15 @@ public class Agent extends ManagementConsoleProcessor {
         catch (ExecutionException e) {
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
-                    log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
+                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
 
                 connect0();
             }
             else
-                log.error("Failed to establish websocket connection with GMC server: " + curSrvUri, e);
+                log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
         }
         catch (Exception e) {
-            log.error("Failed to establish websocket connection with GMC server: " + curSrvUri, e);
+            log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
         }
     }
 
@@ -257,12 +269,12 @@ public class Agent extends ManagementConsoleProcessor {
      */
     private void connect() {
         if (!cfg.isEnabled()) {
-            log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
+            log.info("Skip start Management Console agent on coordinator, because it was disabled in configuration");
 
             return;
         }
 
-        log.info("Starting GMC agent on coordinator");
+        log.info("Starting Management Console agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
         clusterSrvc = new ClusterService(ctx, mgr);
@@ -276,6 +288,8 @@ public class Agent extends ManagementConsoleProcessor {
         evtsExporter.addGlobalEventListener();
 
         connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+
+        ctx.event().enableEvents(NOT_ENABLED_EVTS);
 
         submitConnectTask();
     }

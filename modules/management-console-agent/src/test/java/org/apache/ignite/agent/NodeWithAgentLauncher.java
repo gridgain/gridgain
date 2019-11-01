@@ -61,7 +61,7 @@ public class NodeWithAgentLauncher {
      */
     private static Ignite startFromCode() {
         IgniteConfiguration cfg = new IgniteConfiguration()
-            .setIgniteInstanceName("node-with-gmc-agent")
+            .setIgniteInstanceName("node-with-management-console-agent")
             .setAuthenticationEnabled(false)
             .setMetricsLogFrequency(0)
             .setQueryThreadPoolSize(16)
@@ -91,8 +91,6 @@ public class NodeWithAgentLauncher {
                             .setMaxSize(256 * 1024 * 1024)
                     )
             )
-            // TODO temporary fix for GG-22214
-            .setIncludeEventTypes(EVT_CLUSTER_ACTIVATED, EVT_CLUSTER_DEACTIVATED, EVT_CACHE_STARTED, EVT_CACHE_STOPPED)
             .setTracingSpi(new OpenCensusTracingSpi())
             .setFailureHandler(new NoOpFailureHandler())
             .setDiscoverySpi(

@@ -16,23 +16,13 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.TransactionConfiguration;
-import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
-import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.junit.Before;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -40,14 +30,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.awaitility.Awaitility.with;
 
 /**
  * Abstract test for action controllers.
  */
-abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
+abstract class AbstractActionControllerTest extends AgentCommonAbstractSelfTest {
     /** Mapper. */
     protected final ObjectMapper mapper = jsonMapper();
 

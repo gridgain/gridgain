@@ -19,7 +19,7 @@ package org.apache.ignite.agent.action.query;
 import java.time.Duration;
 import java.util.ArrayList;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -28,14 +28,14 @@ import org.junit.Test;
 /**
  * Query registry test.
  */
-public class QueryRegistryTest extends AgentCommonAbstractTest {
+public class QueryRegistryTest extends AgentCommonAbstractSelfTest {
     /**
      * Should remove expired holders.
      */
     @Test
     public void shouldRemoveExpiredHolders() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
-        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofSeconds(1));
+        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofMillis(100));
 
         String qryId = "qry";
         registry.createQueryHolder(qryId);
@@ -56,7 +56,7 @@ public class QueryRegistryTest extends AgentCommonAbstractTest {
     @Test
     public void shouldNotRemoveExpiredHoldersIfTheyWasFetched() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
-        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofSeconds(2));
+        QueryHolderRegistry registry = new QueryHolderRegistry(ignite.context(), Duration.ofMillis(200));
 
         String qryId = "qry";
         registry.createQueryHolder(qryId);
