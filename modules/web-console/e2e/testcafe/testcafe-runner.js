@@ -34,7 +34,6 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .screenshots('/home/vsisko/s', true)
                     .run({ skipJsErrors: true });
             }
             catch (err) {
