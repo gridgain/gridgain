@@ -90,7 +90,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
 
         BPlusTree.destroyClosure = () -> {
-            //doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+            doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
             if (blockDestroy.get())
                 throw new RuntimeException("Aborting destroy.");
@@ -206,5 +206,22 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
         testLongIndexDeletion(true);
+    }
+
+    @Test
+    public void testLongIndexDeletion1() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        cache.query(new SqlFieldsQuery("create table t (id integer primary key, p integer)")).getAll();
+        cache.query(new SqlFieldsQuery("create index t_idx on t (p)")).getAll();
+
+        for (int i = 0; i < 2000; i++)
+            cache.query(new SqlFieldsQuery("insert into t (id, p) values (" + i + ", " + i + ")")).getAll();
+
+        cache.query(new SqlFieldsQuery("select count(*) from t")).getAll();
     }
 }

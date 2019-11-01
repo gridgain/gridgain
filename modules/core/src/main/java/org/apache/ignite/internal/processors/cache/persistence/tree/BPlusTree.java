@@ -878,6 +878,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     protected final void initTree(boolean initNew, int inlineSize) throws IgniteCheckedException {
+        initTree(initNew, inlineSize, false);
+    }
+
+    /**
+     * Initialize new tree.
+     *
+     * @param initNew {@code True} if new tree should be created.
+     * @param inlineSize Inline size.
+     * @param destroy Whether tree should begin destroy process after init.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected final void initTree(
+        boolean initNew,
+        int inlineSize,
+        boolean destroy
+    ) throws IgniteCheckedException {
         if (initNew) {
             // Allocate the first leaf page, it will be our root.
             long rootId = allocatePage(null);
@@ -891,6 +907,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             assert res == TRUE: res;
 
             assert treeMeta != null;
+        }
+
+        if (destroy) {
+            destroy();
         }
     }
 
@@ -949,7 +969,19 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Page ID.
      */
     private long getFirstPageId(long metaId, long metaPage, int lvl) {
-        long pageAddr = readLock(metaId, metaPage); // Meta can't be removed.
+        return getFirstPageId(metaId, metaPage, lvl, 0L);
+    }
+
+    /**
+     * @param metaId Meta page ID.
+     * @param metaPage Meta page pointer.
+     * @param lvl Level, if {@code 0} then it is a bottom level, if negative then root.
+     * @param metaPageAddr Meta page address. If equals {@code 0}, it means that we should do read lock on
+     * meta page and get meta page address. Otherwise we will not do the lock and will use the given address.
+     * @return Page ID.
+     */
+    private long getFirstPageId(long metaId, long metaPage, int lvl, long metaPageAddr) {
+        long pageAddr = metaPageAddr != 0L ? metaPageAddr : readLock(metaId, metaPage); // Meta can't be removed.
 
         try {
             BPlusMetaIO io = BPlusMetaIO.VERSIONS.forPage(pageAddr);
@@ -963,7 +995,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return io.getFirstPageId(pageAddr, lvl);
         }
         finally {
-            readUnlock(metaId, metaPage, pageAddr);
+            if (metaPageAddr == 0L)
+                readUnlock(metaId, metaPage, pageAddr);
         }
     }
 
@@ -2243,6 +2276,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             long cnt = 0;
 
             long curPage = acquirePage(curPageId);
+
             try {
                 long curPageAddr = readLock(curPageId, curPage);
 
@@ -2437,8 +2471,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.
      * @throws IgniteCheckedException If failed.
      */
-    public final long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
-        if (!markDestroyed())
+    public long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
+        /*if (!markDestroyed())
             return 0;
 
         if (reuseList == null)
@@ -2534,6 +2568,129 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         reuseList.addForRecycle(bag);
 
         assert bag.isEmpty() : bag.size();
+
+        return pagesCnt;*/
+        if (!markDestroyed())
+            return 0;
+
+        if (reuseList == null)
+            return -1;
+
+        LongListReuseBag bag = new LongListReuseBag();
+
+        long rootPageId;
+        int rootLvl;
+
+        long pagesCnt = 0;
+
+        long metaPage = acquirePage(metaPageId);
+
+        try  {
+            long metaPageAddr = writeLock(metaPageId, metaPage); // No checks, we must be out of use.
+
+            try {
+                assert metaPageAddr != 0L;
+
+                rootLvl = getRootLevel();
+
+                if (rootLvl < 0)
+                    fail("Root level: " + rootLvl);
+
+                rootPageId = getFirstPageId(metaPageId, metaPage, rootLvl, metaPageAddr);
+
+                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c);
+
+                bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
+
+                pagesCnt++;
+            }
+            finally {
+                writeUnlock(metaPageId, metaPage, metaPageAddr, true);
+            }
+        }
+        finally {
+            releasePage(metaPageId, metaPage);
+        }
+
+        reuseList.addForRecycle(bag);
+
+        assert bag.isEmpty() : bag.size();
+
+        return pagesCnt;
+    }
+
+    private long destroyDownPages(LongListReuseBag bag, long pageId, long fwdId, int lvl, IgniteInClosure<L> c) throws IgniteCheckedException {
+        long pagesCnt = 0;
+
+        long page = acquirePage(pageId);
+
+        try {
+            long pageAddr = writeLock(pageId, page);
+
+            try {
+                BPlusIO<L> io = io(pageAddr);
+
+                if (io.isLeaf() != (lvl == 0)) // Leaf pages only at the level 0.
+                    fail("Leaf level mismatch: " + lvl);
+
+                int cnt = io.getCount(pageAddr);
+
+                if (cnt < 0)
+                    fail("Negative count: " + cnt);
+
+                if (!io.isLeaf()) {
+                    // Recursively go down if we are on inner level.
+                    for (int i = 0; i < cnt; i++)
+                        pagesCnt += destroyDownPages(bag, inner(io).getLeft(pageAddr, i), inner(io).getRight(pageAddr, i), lvl - 1, c);
+
+                    if (fwdId != 0) {
+                        // For the rightmost child ask neighbor.
+                        long fwdId0 = fwdId;
+                        long fwdPage = acquirePage(fwdId0);
+
+                        try {
+                            long fwdPageAddr = readLock(fwdId0, fwdPage);
+
+                            try {
+                                fwdId = inner(io).getLeft(fwdPageAddr, 0);
+                            }
+                            finally {
+                                readUnlock(fwdId0, fwdPage, fwdPageAddr);
+                            }
+                        }
+                        finally {
+                            releasePage(fwdId0, fwdPage);
+                        }
+                    }
+
+                    long leftId = inner(io).getLeft(pageAddr, cnt); // The same as io.getRight(cnt - 1) but works for routing pages.
+
+                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c);
+                }
+
+                if (c != null && io.isLeaf())
+                    io.visit(pageAddr, c);
+
+                if (destroyClosure != null)
+                    destroyClosure.run();
+
+                bag.addFreePage(recyclePage(pageId, page, pageAddr, null));
+
+                pagesCnt++;
+            }
+            finally {
+                writeUnlock(pageId, page, pageAddr, true);
+            }
+        }
+        finally {
+            releasePage(pageId, page);
+        }
+
+        if (bag.size() == 128) {
+            reuseList.addForRecycle(bag);
+
+            assert bag.isEmpty() : bag.size();
+        }
 
         return pagesCnt;
     }
@@ -5209,6 +5366,16 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         assert !io.isLeaf();
 
         return (BPlusInnerIO<L>)io;
+    }
+
+    /**
+     * @param io IO.
+     * @return Leaf page IO.
+     */
+    private static <L> BPlusLeafIO<L> leaf(BPlusIO<L> io) {
+        assert io.isLeaf();
+
+        return (BPlusLeafIO<L>)io;
     }
 
     /**

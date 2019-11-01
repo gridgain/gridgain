@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import javax.management.MBeanServer;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -95,6 +97,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
@@ -125,6 +128,7 @@ import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.InitializationProtector;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -185,10 +189,12 @@ import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
  * Cache processor.
  */
 @SuppressWarnings({"unchecked", "TypeMayBeWeakened", "deprecation"})
-public class GridCacheProcessor extends GridProcessorAdapter {
+public class GridCacheProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
     /** */
     private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
         "Cannot start/stop cache within lock or transaction [cacheNames=%s, operation=%s]";
+
+    private static final String STORE_PENDING_DELETE_PREFIX = "metastorage-pending-delete-";
 
     /** Enables start caches in parallel. */
     private final boolean IGNITE_ALLOW_START_CACHES_IN_PARALLEL =
@@ -260,6 +266,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** Caches configured on local node but not presented in a cluster during node local join. */
     private volatile List<CacheData> onlyLocallyConfiguredCaches = Collections.emptyList();
+
+    /** Metastorage. */
+    private volatile ReadWriteMetastorage metastorage;
+
+    /** Metastorage synchronization mutex. */
+    private final Object metaStorageMux = new Object();
+
+    /** */
+    private final ConcurrentHashMap<String, PendingDeleteObject> pendingDeleteObjects = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -552,6 +567,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         ctx.state().cacheProcessorStarted();
         ctx.authentication().cacheProcessorStarted();
+
+        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
     }
 
     /**
@@ -5114,6 +5131,93 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public CacheConfigurationEnricher enricher() {
         return enricher;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            if (pendingDeleteObjects.isEmpty()) {
+                try {
+                    metastorage.iterate(
+                        STORE_PENDING_DELETE_PREFIX,
+                        (key, val) -> pendingDeleteObjects.put(key, (PendingDeleteObject)val),
+                        true
+                    );
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException("Failed to iterate pending objects storage.", e);
+                }
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            try {
+                for (Map.Entry<String, PendingDeleteObject> entry : pendingDeleteObjects.entrySet()) {
+                    if (metastorage.readRaw(entry.getKey()) == null)
+                        metastorage.write(entry.getKey(), entry.getValue());
+                }
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException("Failed to read key from pending objects storage.", e);
+            }
+        }
+
+        this.metastorage = metastorage;
+    }
+
+    private String pendingDeleteObjectName(PendingDeleteObjectType type, String name) {
+        return new GridStringBuilder(STORE_PENDING_DELETE_PREFIX)
+            .a(type).a("-").a(name).toString();
+    }
+
+    public void addPendingDeleteObject(PendingDeleteObjectType type, String name) throws IgniteCheckedException {
+        PendingDeleteObject obj = new PendingDeleteObject();
+
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null) {
+                    pendingDeleteObjects.put(pendingDeleteObjectName(type, name), obj);
+
+                    return;
+                }
+            }
+        }
+
+        ctx.cache().context().database().checkpointReadLock();
+
+        try {
+            metastorage.write(STORE_PENDING_DELETE_PREFIX, obj);
+        }
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
+        }
+    }
+
+    public PendingDeleteObject getPendingDeleteObject(PendingDeleteObjectType type, String name) {
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null)
+                    return pendingDeleteObjects.get(pendingDeleteObjectName(type, name));
+            }
+        }
+
+        try {
+            return (PendingDeleteObject) metastorage.read(STORE_PENDING_DELETE_PREFIX + name);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to read value from pending objects storage.", e);
+        }
+    }
+
+    public enum PendingDeleteObjectType {
+        SQL_INDEX
+    }
+
+    private static class PendingDeleteObject implements Serializable {
+
     }
 
     /**

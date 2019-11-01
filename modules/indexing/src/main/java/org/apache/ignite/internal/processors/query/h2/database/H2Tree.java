@@ -34,6 +34,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -53,6 +54,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.h2.result.SearchRow;
@@ -244,7 +246,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
                 H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled));
 
-            initTree(initNew, inlineSize);
+            boolean destroy = cctx.kernalContext().cache().getPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, name) != null;
+
+            initTree(initNew, inlineSize, destroy);
         }
 
         cols = unwrappedPk ? unwrappedColsInfo.cols() : wrappedColsInfo.cols();
@@ -816,5 +820,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** {@inheritDoc} */
     @Override protected long maxLockHoldTime() {
         return cctx.kernalContext().workersRegistry().getSystemWorkerBlockedTimeout() / 10;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long destroy(IgniteInClosure<H2Row> c) throws IgniteCheckedException {
+        cctx.kernalContext().cache().addPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, getName());
+
+        return super.destroy(c);
     }
 }
