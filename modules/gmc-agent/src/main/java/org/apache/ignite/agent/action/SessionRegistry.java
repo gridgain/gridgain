@@ -30,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
 
 /**
- * Session registry.
+ * Security session registry.
  */
 public class SessionRegistry {
     /** Instance. */
@@ -58,10 +58,10 @@ public class SessionRegistry {
         this.ctx = ctx;
         this.log = ctx.log(SessionRegistry.class);
 
-        ManagementConfiguration cfg = ctx.gmc().configuration();
+        ManagementConfiguration cfg = ctx.managementConsole().configuration();
 
-        sesTtl = Duration.ofMillis(cfg.getSessionTimeout());
-        sesTokTtl = Duration.ofMillis(cfg.getSessionExpirationTimeout());
+        sesTtl = Duration.ofMillis(cfg.getSecuritySessionTimeout());
+        sesTokTtl = Duration.ofMillis(cfg.getSecuritySessionExpirationTimeout());
     }
 
     /**

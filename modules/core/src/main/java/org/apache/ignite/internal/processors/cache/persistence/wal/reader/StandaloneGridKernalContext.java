@@ -711,7 +711,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     }
 
     /** {@inheritDoc} */
-    @Override public ManagementConsoleProcessor gmc() {
+    @Override public ManagementConsoleProcessor managementConsole() {
         return null;
     }
 }

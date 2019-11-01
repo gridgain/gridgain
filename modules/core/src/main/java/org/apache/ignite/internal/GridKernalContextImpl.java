@@ -327,7 +327,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    private ManagementConsoleProcessor gmcProc;
+    private ManagementConsoleProcessor mgmtConsoleProc;
 
     /** */
     @GridToStringExclude
@@ -684,7 +684,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
         else if (comp instanceof ManagementConsoleProcessor)
-            gmcProc = (ManagementConsoleProcessor)comp;
+            mgmtConsoleProc = (ManagementConsoleProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -1260,8 +1260,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public ManagementConsoleProcessor gmc() {
-        return gmcProc;
+    @Override public ManagementConsoleProcessor managementConsole() {
+        return mgmtConsoleProc;
     }
 
     /** {@inheritDoc} */

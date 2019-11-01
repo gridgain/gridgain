@@ -22,11 +22,12 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 
 /**
- * Session.
+ * Session with security subject.
  */
 public class Session {
     /** Expiration STATE. It's a final state of lastTouchTime. */
@@ -53,7 +54,8 @@ public class Session {
     /** Authorization context. */
     private volatile AuthorizationContext authCtx;
 
-    /** Credentials that can be used for security context invalidation.*/
+    /** Credentials that can be used for security context invalidation. */
+    @GridToStringExclude
     private volatile SecurityCredentials creds;
 
     /**

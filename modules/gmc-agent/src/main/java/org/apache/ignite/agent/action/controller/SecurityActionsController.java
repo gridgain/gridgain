@@ -85,7 +85,8 @@ public class SecurityActionsController {
         if (securityEnabled) {
             ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
-        } else if (authenticationEnabled) {
+        }
+        else if (authenticationEnabled) {
             SecurityCredentials creds = ses.credentials();
 
             String login = null;

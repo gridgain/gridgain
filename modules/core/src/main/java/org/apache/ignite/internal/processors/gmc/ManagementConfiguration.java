@@ -34,56 +34,56 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Gmc server uri. */
-    private static final String GMC_SERVER_URI = "https://gmc.gridgain.com";
+    /** Hosted console UrI. */
+    private static final String HOSTED_CONSOLE_URI = "https://gmc.gridgain.com";
 
-    /** Default server uri. */
-    private static final String DFLT_SERVER_URI = "http://localhost:3000";
-
-    /** */
-    private boolean enable = true;
+    /** Local console URI. */
+    private static final String LOCAL_CONSOLE_URI = "http://localhost:3000";
 
     /** */
-    private List<String> srvUris = F.asList(DFLT_SERVER_URI, GMC_SERVER_URI);
+    private boolean enabled = true;
 
     /** */
-    @GridToStringExclude
-    private String srvKeyStore;
+    private List<String> consoleUris = F.asList(LOCAL_CONSOLE_URI, HOSTED_CONSOLE_URI);
 
     /** */
     @GridToStringExclude
-    private String srvKeyStorePass;
+    private String consoleKeyStore;
 
     /** */
     @GridToStringExclude
-    private String srvTrustStore;
+    private String consoleKeyStorePass;
 
     /** */
     @GridToStringExclude
-    private String srvTrustStorePass;
+    private String consoleTrustStore;
+
+    /** */
+    @GridToStringExclude
+    private String consoleTrustStorePass;
 
     /** */
     private List<String> cipherSuites;
 
-    /** Session timeout, in milliseconds. */
-    private long sesTimeout = 5 * 60 * 1000;
+    /** Security session timeout, in milliseconds. */
+    private long securitySesTimeout = 5 * 60 * 1000;
 
-    /** Session expiration timeout, in milliseconds. */
-    private long sesExpirationTimeout = 30 * 1000;
+    /** Security session expiration timeout, in milliseconds. */
+    private long securitySesExpirationTimeout = 30 * 1000;
 
     /**
-     * @return value of enable
+     * @return Value of enabled flag.
      */
-    public boolean isEnable() {
-        return enable;
+    public boolean isEnabled() {
+        return enabled;
     }
 
     /**
-     * @param enable Enable.
+     * @param enabled Enabled.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setEnable(boolean enable) {
-        this.enable = enable;
+    public ManagementConfiguration setEnabled(boolean enabled) {
+        this.enabled = enabled;
 
         return this;
     }
@@ -91,16 +91,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Server URI.
      */
-    public List<String> getServerUris() {
-        return srvUris;
+    public List<String> getConsoleUris() {
+        return consoleUris;
     }
 
     /**
      * @param srvUri URI.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setServerUris(List<String> srvUri) {
-        this.srvUris = srvUri;
+    public ManagementConfiguration setConsoleUris(List<String> srvUri) {
+        this.consoleUris = srvUri;
 
         return this;
     }
@@ -108,16 +108,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Server key store.
      */
-    public String getServerKeyStore() {
-        return srvKeyStore;
+    public String getConsoleKeyStore() {
+        return consoleKeyStore;
     }
 
     /**
      * @param srvKeyStore Server key store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setServerKeyStore(String srvKeyStore) {
-        this.srvKeyStore = srvKeyStore;
+    public ManagementConfiguration setConsoleKeyStore(String srvKeyStore) {
+        this.consoleKeyStore = srvKeyStore;
 
         return this;
     }
@@ -125,16 +125,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Server key store password.
      */
-    public String getServerKeyStorePassword() {
-        return srvKeyStorePass;
+    public String getConsoleKeyStorePassword() {
+        return consoleKeyStorePass;
     }
 
     /**
      * @param srvKeyStorePass Server key store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setServerKeyStorePassword(String srvKeyStorePass) {
-        this.srvKeyStorePass = srvKeyStorePass;
+    public ManagementConfiguration setConsoleKeyStorePassword(String srvKeyStorePass) {
+        this.consoleKeyStorePass = srvKeyStorePass;
 
         return this;
     }
@@ -142,16 +142,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Server trust store.
      */
-    public String getServerTrustStore() {
-        return srvTrustStore;
+    public String getConsoleTrustStore() {
+        return consoleTrustStore;
     }
 
     /**
      * @param srvTrustStore Path to server trust store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setServerTrustStore(String srvTrustStore) {
-        this.srvTrustStore = srvTrustStore;
+    public ManagementConfiguration setConsoleTrustStore(String srvTrustStore) {
+        this.consoleTrustStore = srvTrustStore;
 
         return this;
     }
@@ -159,16 +159,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Server trust store password.
      */
-    public String getServerTrustStorePassword() {
-        return srvTrustStorePass;
+    public String getConsoleTrustStorePassword() {
+        return consoleTrustStorePass;
     }
 
     /**
      * @param srvTrustStorePass Server trust store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setServerTrustStorePassword(String srvTrustStorePass) {
-        this.srvTrustStorePass = srvTrustStorePass;
+    public ManagementConfiguration setConsoleTrustStorePassword(String srvTrustStorePass) {
+        this.consoleTrustStorePass = srvTrustStorePass;
 
         return this;
     }
@@ -191,32 +191,32 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Session timeout.
+     * @return Security session timeout.
      */
-    public long getSessionTimeout() {
-        return sesTimeout;
+    public long getSecuritySessionTimeout() {
+        return securitySesTimeout;
     }
 
     /**
      * @param sesTimeout Session timeout in milliseconds.
      */
-    public ManagementConfiguration setSessionTimeout(long sesTimeout) {
-        this.sesTimeout = sesTimeout;
+    public ManagementConfiguration setSecuritySessionTimeout(long sesTimeout) {
+        this.securitySesTimeout = sesTimeout;
         return this;
     }
 
     /**
-     * @return Session expiration timeout in milliseconds after which we are try to re-authenticate.
+     * @return Security session expiration timeout in milliseconds after which we are try to re-authenticate.
      */
-    public long getSessionExpirationTimeout() {
-        return sesExpirationTimeout;
+    public long getSecuritySessionExpirationTimeout() {
+        return securitySesExpirationTimeout;
     }
 
     /**
      * @param sesExpirationTimeout Session expiration timeout.
      */
-    public ManagementConfiguration setSessionExpirationTimeout(long sesExpirationTimeout) {
-        this.sesExpirationTimeout = sesExpirationTimeout;
+    public ManagementConfiguration setSecuritySessionExpirationTimeout(long sesExpirationTimeout) {
+        this.securitySesExpirationTimeout = sesExpirationTimeout;
         return this;
     }
 
@@ -230,52 +230,56 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
         ManagementConfiguration that = (ManagementConfiguration)o;
         
-        return enable == that.enable &&
-            Objects.equals(srvUris, that.srvUris) &&
-            Objects.equals(srvKeyStore, that.srvKeyStore) &&
-            Objects.equals(srvKeyStorePass, that.srvKeyStorePass) &&
-            Objects.equals(srvTrustStore, that.srvTrustStore) &&
-            Objects.equals(srvTrustStorePass, that.srvTrustStorePass) &&
+        return enabled == that.enabled &&
+            Objects.equals(consoleUris, that.consoleUris) &&
+            Objects.equals(consoleKeyStore, that.consoleKeyStore) &&
+            Objects.equals(consoleKeyStorePass, that.consoleKeyStorePass) &&
+            Objects.equals(consoleTrustStore, that.consoleTrustStore) &&
+            Objects.equals(consoleTrustStorePass, that.consoleTrustStorePass) &&
             Objects.equals(cipherSuites, that.cipherSuites) &&
-            Objects.equals(sesTimeout, that.sesTimeout) &&
-            Objects.equals(sesExpirationTimeout, that.sesExpirationTimeout);
+            Objects.equals(securitySesTimeout, that.securitySesTimeout) &&
+            Objects.equals(securitySesExpirationTimeout, that.securitySesExpirationTimeout);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(
-            enable,
-            srvUris,
-            srvKeyStore,
-            srvKeyStorePass,
-            srvTrustStore,
-            srvTrustStorePass,
+            enabled,
+            consoleUris,
+            consoleKeyStore,
+            consoleKeyStorePass,
+            consoleTrustStore,
+            consoleTrustStorePass,
             cipherSuites,
-            sesTimeout,
-            sesExpirationTimeout
+            securitySesTimeout,
+            securitySesExpirationTimeout
         );
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.writeBoolean(enable);
-        U.writeCollection(out, srvUris);
-        U.writeString(out, srvKeyStore);
-        U.writeString(out, srvKeyStorePass);
-        U.writeString(out, srvTrustStore);
-        U.writeString(out, srvTrustStorePass);
+        out.writeBoolean(enabled);
+        U.writeCollection(out, consoleUris);
+        U.writeString(out, consoleKeyStore);
+        U.writeString(out, consoleKeyStorePass);
+        U.writeString(out, consoleTrustStore);
+        U.writeString(out, consoleTrustStorePass);
         U.writeCollection(out, cipherSuites);
+        out.writeLong(securitySesTimeout);
+        out.writeLong(securitySesExpirationTimeout);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        enable = in.readBoolean();
-        srvUris = U.readList(in);
-        srvKeyStore = U.readString(in);
-        srvKeyStorePass = U.readString(in);
-        srvTrustStore = U.readString(in);
-        srvTrustStorePass = U.readString(in);
+        enabled = in.readBoolean();
+        consoleUris = U.readList(in);
+        consoleKeyStore = U.readString(in);
+        consoleKeyStorePass = U.readString(in);
+        consoleTrustStore = U.readString(in);
+        consoleTrustStorePass = U.readString(in);
         cipherSuites = U.readList(in);
+        securitySesTimeout = in.readLong();
+        securitySesExpirationTimeout = in.readLong();
     }
 
     /** {@inheritDoc} */

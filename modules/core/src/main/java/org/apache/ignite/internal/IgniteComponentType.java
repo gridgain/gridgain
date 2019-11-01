@@ -102,11 +102,11 @@ public enum IgniteComponentType {
         "ignite-compress"
     ),
 
-    /** Management console agent. */
-    MANAGEMENT_CONSOLE_AGENT(
+    /** Management console. */
+    MANAGEMENT_CONSOLE(
         ManagementConsoleProcessor.class.getName(),
         "org.apache.ignite.agent.Agent",
-        "gridgain-management-console-agent",
+        "ignite-management-console-agent",
         "org.apache.ignite.agent.service.exporter.MetricExporterMessageFactory"
     );
 

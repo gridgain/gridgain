@@ -50,6 +50,9 @@ public class RequestDeserializer extends StdDeserializer<Request> {
         ActionMethod actMtd = getActions().get(act);
 
         try {
+            if (actMtd == null)
+                throw new IllegalArgumentException("The action method not found for action: " + act);
+
             req = new Request().setId(id).setAction(act).setSessionId(sesId);
             Parameter[] parameters = actMtd.getMethod().getParameters();
 

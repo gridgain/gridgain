@@ -17,9 +17,10 @@
 package org.apache.ignite.agent.action;
 
 import java.lang.reflect.Method;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * ACtion method structure.
+ * Action method structure.
  */
 public class ActionMethod {
     /** Action name. */
@@ -60,5 +61,10 @@ public class ActionMethod {
      */
     public String getActionName() {
         return actName;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ActionMethod.class, this);
     }
 }

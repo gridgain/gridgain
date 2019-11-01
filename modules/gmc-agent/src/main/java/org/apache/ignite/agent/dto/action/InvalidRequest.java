@@ -16,6 +16,8 @@
 
 package org.apache.ignite.agent.dto.action;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * DTO for invalid request.
  */
@@ -36,5 +38,10 @@ public class InvalidRequest extends Request {
     public InvalidRequest setCause(Throwable cause) {
         this.cause = cause;
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(InvalidRequest.class, this);
     }
 }

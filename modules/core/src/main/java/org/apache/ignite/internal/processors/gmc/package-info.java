@@ -16,6 +16,6 @@
 
 /**
  * <!-- Package description. -->
- * Contains <b>GridGain Managment Console</b> functionality.
+ * Contains <b>Managment Console</b> functionality.
  */
 package org.apache.ignite.internal.processors.gmc;

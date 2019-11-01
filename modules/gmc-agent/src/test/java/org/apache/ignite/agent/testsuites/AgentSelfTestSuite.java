@@ -20,7 +20,6 @@ import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
 import org.apache.ignite.agent.action.controller.ActionControllerWithSecurityBaseTest;
 import org.apache.ignite.agent.action.controller.BaselineActionsControllerTest;
 import org.apache.ignite.agent.action.controller.ClusterActionsControllerTest;
-import org.apache.ignite.agent.action.controller.NodeActionsControllerTest;
 import org.apache.ignite.agent.action.controller.QueryActionsControllerTest;
 import org.apache.ignite.agent.action.controller.QueryActionsControllerWithParametersTest;
 import org.apache.ignite.agent.action.controller.SecurityActionsControllerTest;
@@ -46,7 +45,6 @@ import org.junit.runners.Suite;
     ClusterServiceSelfTest.class,
     EventsServiceSelfTest.class,
     MetricsServiceSelfTest.class,
-    NodeActionsControllerTest.class,
     QueryActionsControllerTest.class,
     QueryActionsControllerWithParametersTest.class,
     QueryRegistryTest.class,

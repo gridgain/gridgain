@@ -32,11 +32,11 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_JVM_PID;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 
 /**
- * Data transfer object with node info.
+ * DTO for node info.
  */
 public class Node {
-    /** Set of attributes required by GMC. */
-    private static final Set<String> GMC_ATTRS = Stream.of(
+    /** Set of attributes required by management console. */
+    private static final Set<String> ATTRS = Stream.of(
         ATTR_IPS,
         ATTR_MACS,
         ATTR_JVM_PID,
@@ -91,7 +91,7 @@ public class Node {
         this.attrs = attrs
             .entrySet()
             .stream()
-            .filter(e -> GMC_ATTRS.contains(e.getKey()))
+            .filter(e -> ATTRS.contains(e.getKey()))
             .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 

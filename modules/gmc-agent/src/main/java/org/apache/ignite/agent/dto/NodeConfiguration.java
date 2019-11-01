@@ -17,6 +17,7 @@
 package org.apache.ignite.agent.dto;
 
 import java.util.Objects;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO for node configuration.
@@ -92,5 +93,10 @@ public class NodeConfiguration {
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(consistentId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(NodeConfiguration.class, this);
     }
 }

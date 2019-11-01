@@ -75,9 +75,9 @@ public class WebSocketManager implements AutoCloseable {
     private static final String CLUSTER_ID_HDR = "Cluster-Id";
 
     /** Current version. */
-    private static final String CURR_VER = "9.0.0";
+    private static final String CURR_VER = "1.0.0";
 
-    /** Max sleep time seconds. */
+    /** Max sleep time seconds between reconnects. */
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
     /** Context. */
@@ -140,7 +140,7 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
-     * TODO: Remove synchronized and make the send method non-blocking https://ggsystems.atlassian.net/browse/GG-24630.
+     * TODO GG-24630: Remove synchronized and make the send method non-blocking.
      *
      * @param dest Destination.
      * @param payload Payload.
@@ -161,7 +161,7 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
-     * TODO: Remove synchronized and make the send method non-blocking https://ggsystems.atlassian.net/browse/GG-24630.
+     * TODO GG-24630: Remove synchronized and make the send method non-blocking.
      *
      * @param dest Destination.
      * @param payload Payload.
@@ -253,24 +253,24 @@ public class WebSocketManager implements AutoCloseable {
     private SslContextFactory createServerSslFactory(IgniteLogger log, ManagementConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
-        if (trustAll && !F.isEmpty(cfg.getServerTrustStore())) {
-            log.warning("Options contains both '--server-trust-store' and '-Dtrust.all=true'. " +
-                    "Option '-Dtrust.all=true' will be ignored on connect to Web server.");
+        if (trustAll && !F.isEmpty(cfg.getConsoleTrustStore())) {
+            log.warning("Management configuration contains 'server-trust-store' property and node has system" +
+                    " property '-Dtrust.all=true'. Option '-Dtrust.all=true' will be ignored.");
 
             trustAll = false;
         }
 
-        boolean ssl = trustAll || !F.isEmpty(cfg.getServerTrustStore()) || !F.isEmpty(cfg.getServerKeyStore());
+        boolean ssl = trustAll || !F.isEmpty(cfg.getConsoleTrustStore()) || !F.isEmpty(cfg.getConsoleKeyStore());
 
         if (!ssl)
             return new SslContextFactory();
 
         return sslContextFactory(
-                cfg.getServerKeyStore(),
-                cfg.getServerKeyStorePassword(),
+                cfg.getConsoleKeyStore(),
+                cfg.getConsoleKeyStorePassword(),
                 trustAll,
-                cfg.getServerTrustStore(),
-                cfg.getServerTrustStorePassword(),
+                cfg.getConsoleTrustStore(),
+                cfg.getConsoleTrustStorePassword(),
                 cfg.getCipherSuites()
         );
     }
@@ -318,8 +318,8 @@ public class WebSocketManager implements AutoCloseable {
         }
 
         if (trustAll) {
+            // TODO GG-25519: sslCtxFactory.setHostnameVerifier((hostname, session) -> true); available in Jetty >= 9.4.15.x
             sslCtxFactory.setTrustAll(true);
-            // Available in Jetty >= 9.4.15.x sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
         }
         else if (!F.isEmpty(trustStore)) {
             try {

@@ -162,7 +162,6 @@ public class CacheService implements AutoCloseable {
         return cachesInfo;
     }
 
-
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
         events.stopLocalListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);

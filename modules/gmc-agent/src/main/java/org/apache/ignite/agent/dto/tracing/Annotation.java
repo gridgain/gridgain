@@ -19,7 +19,7 @@ package org.apache.ignite.agent.dto.tracing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * DTO for annotation.
+ * DTO for span annotation.
  */
 public class Annotation {
     /** Timestamp. */

@@ -20,9 +20,6 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.config.TestChannelInterceptor;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -89,10 +86,10 @@ public abstract class AbstractGridWithAgentTest extends GridCommonAbstractTest {
      * @param ignite Ignite.
      */
     protected void changeGmcUri(IgniteEx ignite) {
-        ManagementConfiguration cfg = ignite.context().gmc().configuration();
-        cfg.setServerUris(F.asList("http://localhost:" + port));
+        ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
+        cfg.setConsoleUris(F.asList("http://localhost:" + port));
 
-        ignite.context().gmc().configuration(cfg);
+        ignite.context().managementConsole().configuration(cfg);
 
         assertWithPoll(
             () -> interceptor.isSubscribedOn(buildActionRequestTopic(ignite.context().cluster().get().id()))

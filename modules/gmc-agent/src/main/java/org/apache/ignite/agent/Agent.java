@@ -71,7 +71,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
  */
 public class Agent extends ManagementConsoleProcessor {
     /** GMC configuration meta storage prefix. */
-    private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "gmc-cfg";
+    private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
@@ -192,8 +192,8 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void configuration(ManagementConfiguration cfg) {
         ManagementConfiguration oldCfg = configuration();
 
-        if (oldCfg.isEnable() != cfg.isEnable())
-            cfg = oldCfg.setEnable(cfg.isEnable());
+        if (oldCfg.isEnabled() != cfg.isEnabled())
+            cfg = oldCfg.setEnabled(cfg.isEnabled());
 
         super.configuration(cfg);
 
@@ -226,13 +226,11 @@ public class Agent extends ManagementConsoleProcessor {
         return uris.get((idx + 1) % uris.size());
     }
 
-    // TODO: GG-21357 implement CLUSTER_ACTION.
-
     /**
      * Connect to backend in same thread.
      */
     private void connect0() {
-        curSrvUri = nextUri(cfg.getServerUris(), curSrvUri);
+        curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
         try {
             mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
@@ -264,7 +262,7 @@ public class Agent extends ManagementConsoleProcessor {
      * Connect to backend.
      */
     private void connect() {
-        if (!cfg.isEnable()) {
+        if (!cfg.isEnabled()) {
             log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
 
             return;
@@ -303,7 +301,7 @@ public class Agent extends ManagementConsoleProcessor {
             cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
-            log.warning("Can't read agent configuration from meta storage!");
+            log.warning("Failed to read management configuration from meta storage!");
         }
         finally {
             ctx.cache().context().database().checkpointReadUnlock();
@@ -322,7 +320,7 @@ public class Agent extends ManagementConsoleProcessor {
             metaStorage.write(MANAGEMENT_CFG_META_STORAGE_PREFIX, cfg);
         }
         catch (IgniteCheckedException e) {
-            log.warning("Can't save management configuration to meta storage!");
+            log.warning("Failed to save management configuration to meta storage!");
 
             throw U.convertException(e);
         }
@@ -340,38 +338,42 @@ public class Agent extends ManagementConsoleProcessor {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
-            U.quietAndInfo(log, "Found GMC server that can be used to monitor your cluster: " + curSrvUri);
+            U.quietAndInfo(log, "Found management console that can be used to monitor your cluster:: " + curSrvUri);
 
             U.quietAndInfo(log, "");
-            U.quietAndInfo(log, "Open link in browser to monitor your cluster in GMC: " +
+            U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
+            U.quietAndInfo(log, "If you already using management console, you can add cluster manually by it's ID: " + cluster.id());
 
             clusterSrvc.sendInitialState();
             cacheSrvc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
+                /** {@inheritDoc} */
                 @Override public Type getPayloadType(StompHeaders headers) {
                     return String.class;
                 }
 
+                /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
                     metricSrvc.broadcastPullMetrics();
                 }
             });
 
             ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
+                /** {@inheritDoc} */
                 @Override public Type getPayloadType(StompHeaders headers) {
                     return Request.class;
                 }
 
+                /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
                     actSrvc.onActionRequest((Request) payload);
                 }
             });
 
-            cfg.setServerUris(singletonList(curSrvUri));
+            cfg.setConsoleUris(singletonList(curSrvUri));
 
             writeToMetaStorage(cfg);
         }

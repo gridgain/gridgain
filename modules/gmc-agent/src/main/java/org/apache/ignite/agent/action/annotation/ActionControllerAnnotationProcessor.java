@@ -34,7 +34,7 @@ public class ActionControllerAnnotationProcessor {
     );
 
     /**
-     * @return Founded methods
+     * @return Action controllers methods.
      */
     public static Map<String, ActionMethod> getActions() {
         return methods;
@@ -44,6 +44,7 @@ public class ActionControllerAnnotationProcessor {
      * Find the action methods by specific package.
      *
      * @param basePkgs Base packages.
+     * @return Action controllers methods.
      */
     static Map<String, ActionMethod> findActionMethods(String... basePkgs) {
         Map<String, ActionMethod> methods = new HashMap<>();
