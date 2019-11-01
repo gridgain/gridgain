@@ -130,7 +130,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
-//        cleanPersistenceDir();
+        cleanPersistenceDir();
     }
 
     /**
