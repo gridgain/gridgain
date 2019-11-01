@@ -1288,7 +1288,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (fut != null) {
             IgniteCheckedException e = new IgniteCheckedException(
-                "Failed to " + prettyStr(req.activate()) + " activate",
+                "Failed to " + prettyStr(req.activate()) + " cluster",
                 null,
                 false
             );
