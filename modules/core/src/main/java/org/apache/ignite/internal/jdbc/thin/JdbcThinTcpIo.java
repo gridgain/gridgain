@@ -63,15 +63,6 @@ public class JdbcThinTcpIo {
     /** Version 2.1.0. */
     private static final ClientListenerProtocolVersion VER_2_1_0 = ClientListenerProtocolVersion.create(2, 1, 0);
 
-    /** Version 2.1.5: added "lazy" flag. */
-    private static final ClientListenerProtocolVersion VER_2_1_5 = ClientListenerProtocolVersion.create(2, 1, 5);
-
-    /** Version 2.3.1. */
-    private static final ClientListenerProtocolVersion VER_2_3_0 = ClientListenerProtocolVersion.create(2, 3, 0);
-
-    /** Version 2.4.0. */
-    private static final ClientListenerProtocolVersion VER_2_4_0 = ClientListenerProtocolVersion.create(2, 4, 0);
-
     /** Version 2.5.0. */
     private static final ClientListenerProtocolVersion VER_2_5_0 = ClientListenerProtocolVersion.create(2, 5, 0);
 
@@ -250,7 +241,7 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_7_0) >= 0)
             writer.writeString(connProps.nestedTxMode());
 
-        if (ver.compareTo(VER_2_8_0) >= 0) {
+        if (ver.compareTo(VER_2_8_0) > 0 || (ver.compareTo(VER_2_8_0) == 0 && !connProps.isLimitedV2_8_0Enabled())) {
             writer.writeByte(nullableBooleanToByte(connProps.isDataPageScanEnabled()));
 
             JdbcUtils.writeNullableInteger(writer, connProps.getUpdateBatchSize());
@@ -286,7 +277,7 @@ public class JdbcThinTcpIo {
                 long ts = reader.readLong();
                 byte[] hash = reader.readByteArray();
 
-                if (ver.compareTo(VER_2_8_0) >= 0)
+                if (ver.compareTo(VER_2_8_0) > 0 || (ver.compareTo(VER_2_8_0) == 0 && !connProps.isLimitedV2_8_0Enabled()))
                     handshakeRes.nodeId(reader.readUuid());
 
                 handshakeRes.igniteVersion(new IgniteProductVersion(maj, min, maintenance, stage, ts, hash));
@@ -315,14 +306,10 @@ public class JdbcThinTcpIo {
                     + ", url=" + connProps.getUrl() + " address=" + sockAddr + ']', SqlStateCode.CONNECTION_REJECTED);
             }
 
-            if (VER_2_7_0.equals(srvProtoVer0)
-                || VER_2_5_0.equals(srvProtoVer0)
-                || VER_2_4_0.equals(srvProtoVer0)
-                || VER_2_3_0.equals(srvProtoVer0)
-                || VER_2_1_5.equals(srvProtoVer0))
-                return handshake(srvProtoVer0);
-            else if (VER_2_1_0.equals(srvProtoVer0))
+            if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();
+            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0)
+                return handshake(srvProtoVer0);
             else {
                 throw new SQLException("Handshake failed [driverProtocolVer=" + CURRENT_VER +
                     ", remoteNodeProtocolVer=" + srvProtoVer0 + ", err=" + err + ']',
