@@ -142,6 +142,13 @@ public interface PageMemoryEx extends PageMemory {
 
     /**
      * Finishes checkpoint operation.
+     *
+     * @param clearCpFlags Clear cp flags, use for test purpose only.
+     */
+    public void finishCheckpoint(boolean clearCpFlags);
+
+    /**
+     * Finishes checkpoint operation.
      */
     public void finishCheckpoint();
 
@@ -191,4 +198,6 @@ public interface PageMemoryEx extends PageMemory {
     public void checkpointPages(Collection<FullPageId> pages);
 
     public Collection<FullPageId> checkpointPages();
+
+    public void clearCpFlags(Collection<FullPageId> pages);
 }

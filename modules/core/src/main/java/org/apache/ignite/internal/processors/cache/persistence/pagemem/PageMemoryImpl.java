@@ -1232,13 +1232,19 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public void finishCheckpoint() {
+        finishCheckpoint(false);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishCheckpoint(boolean clearCpFlags) {
         if (segments == null)
             return;
 
         for (Segment seg : segments) {
-            seg.checkpointPages = null;
+            if (clearCpFlags)
+                clearCpFlags(seg.checkpointPages.cpPages());
 
-            // PageHeader.inCp( почистить все ?
+            seg.checkpointPages = null;
         }
 
         if (throttlingPlc != ThrottlingPolicy.DISABLED)
@@ -1556,6 +1562,37 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     @Override public Collection<FullPageId> checkpointPages() {
         return cpPages;
+    }
+
+    @Override public void clearCpFlags(Collection<FullPageId> pages) {
+        if (pages != null) {
+            for (FullPageId page : pages) {
+                Segment seg = segment(page.groupId(), page.pageId());
+
+                seg.readLock().lock();
+
+                try {
+                    int tag = seg.partGeneration(page.groupId(), PageIdUtils.partId(page.pageId()));
+
+                    long relPtr = seg.loadedPages.get(
+                        page.groupId(),
+                        PageIdUtils.effectivePageId(page.pageId()),
+                        tag,
+                        INVALID_REL_PTR,
+                        INVALID_REL_PTR
+                    );
+
+                    if (relPtr == INVALID_REL_PTR)
+                        continue;
+
+                    long absPtr = seg.absolute(relPtr);
+
+                    PageHeader.inCp(absPtr, false);
+                } finally {
+                    seg.readLock().unlock();
+                }
+            }
+        }
     }
 
     /** {@inheritDoc} */

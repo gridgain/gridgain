@@ -140,7 +140,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             assertTrue(ex.getMessage().startsWith(CHECKPOINT_POOL_OVERFLOW_ERROR_MSG));
         }
 
-        memory.finishCheckpoint();
+        memory.finishCheckpoint(true);
 
         GridTestUtils.runAsync(new Runnable() {
             @Override public void run() {
@@ -301,9 +301,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
                 try {
                     // Try force page replacement.
-                    while (true) {
+                    while (true)
                         memory.allocatePage(1, INDEX_PARTITION, FLAG_IDX);
-                    }
                 }
                 catch (IgniteOutOfMemoryException ex) {
                     oom = true;

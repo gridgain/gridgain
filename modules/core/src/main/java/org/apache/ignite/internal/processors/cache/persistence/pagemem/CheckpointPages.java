@@ -92,4 +92,12 @@ class CheckpointPages {
     public void cpPages(Collection<FullPageId> pages) {
         segCheckpointPages = pages;
     }
+
+    /**
+     *
+     * @param pages
+     */
+    public Collection<FullPageId> cpPages() {
+        return segCheckpointPages;
+    }
 }
