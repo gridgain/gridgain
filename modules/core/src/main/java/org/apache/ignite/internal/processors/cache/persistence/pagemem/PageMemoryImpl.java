@@ -2150,7 +2150,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         /** Pages marked as dirty since the last checkpoint. */
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
 
-        /** */
+        /** Atomic size counter for {@link #dirtyPages}. Used for {@link PageMemoryImpl#safeToUpdate()} calculation. */
         private final AtomicInteger dirtyPagesCntr = new AtomicInteger();
 
         /** Wrapper of pages of current checkpoint. */
