@@ -802,7 +802,7 @@ public interface GridCacheEntryEx {
         AffinityTopologyVersion topVer,
         GridDrType drType,
         boolean fromStore) throws IgniteCheckedException, GridCacheEntryRemovedException {
-        return initialValue(val, ver, null, null, TxState.NA, TxState.NA,
+        return initialValue(val, ver, mvccVer, newMvccVer, mvccTxState, newMvccTxState,
             ttl, expireTime, preload, topVer, drType, fromStore, null);
     }
 
