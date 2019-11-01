@@ -19,7 +19,7 @@ package org.apache.ignite.internal;
 import java.lang.reflect.Constructor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
-import org.apache.ignite.internal.processors.gmc.ManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
@@ -96,17 +96,25 @@ public enum IgniteComponentType {
         "ignite-schedule"
     ),
 
+    /** */
     COMPRESSION(
         CompressionProcessor.class.getName(),
         "org.apache.ignite.internal.processors.compress.CompressionProcessorImpl",
         "ignite-compress"
     ),
 
-    /** Management console agent. */
-    MANAGEMENT_CONSOLE_AGENT(
+    /** OpenCensus tracing implementation. */
+    TRACING(
+        null,
+        "org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi",
+        "ignite-opencensus"
+    ),
+
+    /** Management console. */
+    MANAGEMENT_CONSOLE(
         ManagementConsoleProcessor.class.getName(),
         "org.apache.ignite.agent.Agent",
-        "gridgain-management-console-agent",
+        "ignite-management-console-agent",
         "org.apache.ignite.agent.service.exporter.MetricExporterMessageFactory"
     );
 

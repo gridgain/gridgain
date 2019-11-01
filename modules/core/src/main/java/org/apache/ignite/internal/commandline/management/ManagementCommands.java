@@ -31,7 +31,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
-import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
+import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.management.ChangeManagementConfigurationTask;
@@ -232,15 +232,15 @@ public class ManagementCommands implements Command<ManagementArguments> {
             return null;
 
         return new ManagementConfiguration()
-            .setEnable(args.isEnable())
-            .setServerUris(args.getServerUris())
+            .setEnabled(args.isEnable())
+            .setConsoleUris(args.getServerUris())
             .setCipherSuites(args.getCipherSuites())
-            .setServerKeyStore(args.getKeyStore())
-            .setServerKeyStorePassword(args.getKeyStorePassword())
-            .setServerTrustStore(args.getTrustStore())
-            .setServerTrustStorePassword(args.getTrustStorePassword())
-            .setSessionTimeout(args.getSessionTimeout())
-            .setSessionExpirationTimeout(args.getSessionExpirationTimeout());
+            .setConsoleKeyStore(args.getKeyStore())
+            .setConsoleKeyStorePassword(args.getKeyStorePassword())
+            .setConsoleTrustStore(args.getTrustStore())
+            .setConsoleTrustStorePassword(args.getTrustStorePassword())
+            .setSecuritySessionTimeout(args.getSessionTimeout())
+            .setSecuritySessionExpirationTimeout(args.getSessionExpirationTimeout());
     }
 
     /**
@@ -275,16 +275,16 @@ public class ManagementCommands implements Command<ManagementArguments> {
      */
     private void print(Logger log, ManagementConfiguration cfg) {
         log.info("");
-        log.info("Management: " + flag(cfg.isEnable()));
-        log.info("URIs to management: " + cfg.getServerUris());
+        log.info("Management: " + flag(cfg.isEnabled()));
+        log.info("URIs to management: " + cfg.getConsoleUris());
 
         if (!F.isEmpty(cfg.getCipherSuites()))
             log.info("Cipher suites: " + cfg.getCipherSuites());
 
-        log.info("Management key store: " + flag(!F.isEmpty(cfg.getServerKeyStore())));
-        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getServerTrustStore())));
-        log.info("Management session timeout: " + cfg.getSessionTimeout());
-        log.info("Management session expiration timeout: " + cfg.getSessionExpirationTimeout());
+        log.info("Management key store: " + flag(!F.isEmpty(cfg.getConsoleKeyStore())));
+        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getConsoleTrustStore())));
+        log.info("Management session timeout: " + cfg.getSecuritySessionTimeout());
+        log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());
         log.info("");
     }
 }
