@@ -18,11 +18,9 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>

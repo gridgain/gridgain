@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
@@ -110,18 +111,24 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
+        public IClientClusterGroup ForPredicate(Func<IClusterNode, bool> p)
+        {
+            var newPredicate = _predicate == null ? p : node => _predicate(node) && p(node);
+            return new ClientClusterGroup(_ignite, _marsh, _projection, newPredicate);
+        }
+
+        /** <inheritDoc /> */
         public ICollection<IClusterNode> GetNodes()
         {
             return RefreshNodes();
-        }      
+        }
 
         /** <inheritDoc /> */
         public IClusterNode GetNode(Guid id)
         {
-
             if (id == Guid.Empty)
             {
-                throw new ArgumentException("id should not be empty");
+                throw new ArgumentException("Node id should not be empty.");
             }
 
             return GetNodes().FirstOrDefault(node => node.Id == id);
@@ -140,7 +147,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private IList<IClusterNode> RefreshNodes()
         {
             long oldTopVer = Interlocked.Read(ref _topVer);
-            
+
             var topology = RequestTopologyInformation(oldTopVer);
             if (topology != null)
             {
@@ -233,7 +240,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             {
                 writer.WriteGuidArray(ids.Select(id => new Guid?(id)).ToArray());
             };
-            
+
             Func<IBinaryRawReader, bool> readFunc = reader =>
             {
                 var cnt = reader.ReadInt();
@@ -251,7 +258,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        protected T DoOutInOp<T>(ClientOp opId, Action<IBinaryRawWriter> writeAction, Func<IBinaryRawReader, T> readFunc)
+        protected T DoOutInOp<T>(ClientOp opId, Action<IBinaryRawWriter> writeAction,
+            Func<IBinaryRawReader, T> readFunc)
         {
             return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
                 stream => ReadRequest(readFunc, stream), HandleError<T>);
@@ -275,12 +283,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Reads the request.
         /// </summary>
+        [ExcludeFromCodeCoverage]
         private TRes ReadRequest<TRes>(Func<IBinaryRawReader, TRes> readFunc, IBinaryStream stream)
         {
             if (readFunc != null)
             {
                 var reader = _marsh.StartUnmarshal(stream);
-
                 return readFunc(reader.GetRawReader());
             }
 

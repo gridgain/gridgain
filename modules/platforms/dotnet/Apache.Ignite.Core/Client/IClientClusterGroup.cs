@@ -45,6 +45,13 @@ namespace Apache.Ignite.Core.Client
         IClientClusterGroup ForServers();
 
         /// <summary>
+        /// Creates a grid projection which includes all nodes that pass the given predicate filter.
+        /// </summary>
+        /// <param name="p">Predicate filter for nodes to include into this projection.</param>
+        /// <returns>Grid projection for nodes that passed the predicate filter.</returns>
+        IClientClusterGroup ForPredicate(Func<IClusterNode, bool> p);
+
+        /// <summary>
         /// Gets read-only collections of nodes in this projection.
         /// </summary>
         /// <returns>All nodes in this projection.</returns>

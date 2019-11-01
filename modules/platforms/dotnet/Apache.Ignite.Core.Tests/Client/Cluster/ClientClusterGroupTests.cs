@@ -71,6 +71,31 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test cluster returns node by id.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupReturnsNodeById()
+        {
+            var node = Ignition.GetIgnite().GetCluster().GetNode();
+
+            var clientNode = Client.GetCluster().GetNode(node.Id);
+
+            AssertExtensions.ReflectionEqual(node, clientNode);
+        }
+
+        /// <summary>
+        /// Test cluster throws exception when node is accessed with empty Guid.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupGetNodeChecksNodeId()
+        {
+            TestDelegate action = () => Client.GetCluster().GetNode(Guid.Empty);
+
+            var ex = Assert.Throws<ArgumentException>(action);
+            Assert.AreEqual("Node id should not be empty.", ex.Message);
+        }
+
+        /// <summary>
         /// Test cluster group reflects new nodes changes.
         /// </summary>
         [Test]
@@ -131,6 +156,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             clusterGroup.UpdateTopology(1L, invalidNodeIds);
 
             Assert.AreSame(node, clusterGroup.GetNode());
+        }
+
+        /// <summary>
+        /// Test cluster group applies a native predicate to nodes result set.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupAppliesPredicate()
+        {
+            var node = Ignition.GetIgnite().GetCluster().GetNode();
+
+            var clientNode = Client
+                .GetCluster()
+                .ForPredicate(x => x.Id != Guid.Empty)
+                .ForPredicate(x => x.Id != node.Id)
+                .GetNode();
+
+            Assert.IsNull(clientNode);
         }
     }
 }
