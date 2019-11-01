@@ -37,7 +37,7 @@ import org.apache.ignite.internal.processors.query.schema.message.SchemaFinishDi
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
-import static org.apache.ignite.agent.utils.QueryUtils.queryTypesToMetadata;
+import static org.apache.ignite.agent.utils.QueryUtils.queryTypesToMetadataList;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
@@ -133,7 +133,7 @@ public class CacheService implements AutoCloseable {
                 Collection<GridQueryTypeDescriptor> types = ctx.query().types(cacheName);
 
                 if (types != null)
-                    cachesMetadata.add(queryTypesToMetadata(cacheName, types));
+                    cachesMetadata.addAll(queryTypesToMetadataList(cacheName, types));
             }
         }
 
