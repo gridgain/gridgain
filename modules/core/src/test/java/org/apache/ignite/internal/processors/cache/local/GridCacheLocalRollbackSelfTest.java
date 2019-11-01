@@ -52,6 +52,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishFuture;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -72,6 +73,7 @@ import static java.util.stream.IntStream.range;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.internal.commandline.CommandHandler.initLogger;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 
 /**
  * Class for testing rollback transaction with local cache.
@@ -91,9 +93,16 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);
-
         super.beforeTestsStarted();
+
+        listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        setFieldValue(GridDhtTxFinishFuture.class, "log", null);
     }
 
     /** {@inheritDoc} */
