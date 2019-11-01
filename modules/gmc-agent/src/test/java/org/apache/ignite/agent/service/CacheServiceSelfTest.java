@@ -26,6 +26,7 @@ import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
@@ -158,7 +159,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata.isEmpty())
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -180,7 +181,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata.isEmpty())
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -214,7 +215,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata.isEmpty())
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -236,7 +237,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata.isEmpty())
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -258,7 +259,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata.isEmpty())
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
