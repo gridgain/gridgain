@@ -167,9 +167,9 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
 
         IgniteEx node2 = startGrid(1);
 
-        IgniteCache<Object, Object> cache = node2.cache(DEFAULT_CACHE_NAME);
+        GridCacheAdapter<Object, Object> cache = ((IgniteKernal)node2).internalCache(DEFAULT_CACHE_NAME);
 
-        Affinity<Object> affinity = affinity(cache);
+        Affinity<Object> affinity = cache.affinity();
 
         try {
             for (int i = 0; i < 1000; i++) {
@@ -179,6 +179,8 @@ public class EvictionPolicyFailureHandlerTest extends GridCommonAbstractTest {
         }
         catch (Throwable ignore) {
         }
+
+        assertTrue(cache.map().entrySet(cache.context().cacheId()).isEmpty());
 
         assertTrue(nodeFailure.get());
     }
