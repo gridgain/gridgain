@@ -51,6 +51,7 @@ public class ClientClusterGroupGetNodeIdsResponse extends ClientResponse {
     public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         super.encode(ctx, writer);
 
+        writer.writeBoolean(true);
         writer.writeLong(topVer);
 
         // At this moment topology version might have advanced, and due to this race

@@ -175,6 +175,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 
             Func<IBinaryRawReader, Tuple<long, List<Guid>>> readFunc = reader =>
             {
+                if (!reader.ReadBoolean())
+                {
+                    // No topology changes.
+                    return null;
+                }
+
                 long remoteTopVer = reader.ReadLong();
 
                 List<Guid> nodeIds = reader.ReadGuidArray().Cast<Guid>().ToList();
@@ -210,12 +216,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
         private void UpdateNodesInfo(IEnumerable<Guid> nodeIds)
         {
-            var unknownNodes = nodeIds
-                .Select(id => new {id, info = _ignite.GetNode(id)})
-                .Where(node => node.info == null)
-                .Select(node => node.id)
-                .ToList();
-
+            var unknownNodes = nodeIds.Where(nodeId => !_ignite.ContainsNode(nodeId)).ToList();
             if (unknownNodes.Count > 0)
             {
                 RequestRemoteNodesInfo(unknownNodes);
@@ -236,14 +237,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Func<IBinaryRawReader, bool> readFunc = reader =>
             {
                 var cnt = reader.ReadInt();
-
-                if (cnt < 0 || cnt != ids.Count)
-                {
-                    throw new IgniteClientException(
-                        string.Format("The cluster is unable to find some of the specified nodes: [{0}]",
-                            String.Join(";", ids)));
-                }
-
                 for (var i = 0; i < cnt; i++)
                 {
                     _ignite.UpdateNodeInfo(reader);

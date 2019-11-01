@@ -219,18 +219,17 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         public ClusterNodeImpl GetNode(Guid? id)
         {
-            if (id == null)
-            {
-                return null;
-            }
+            return id == null ? null : _nodes[id.Value];
+        }
 
-            ClusterNodeImpl clusterNode;
-            if (!_nodes.TryGetValue(id.Value, out clusterNode))
-            {
-                return null;
-            }
-
-            return clusterNode;
+        /// <summary>
+        /// Check whether <see cref="IgniteClient">Ignite Client</see> contains a node. />
+        /// </summary>
+        /// <param name="id">Node id.</param>
+        /// <returns>True if contains, False otherwise.</returns>
+        public bool ContainsNode(Guid id)
+        {
+            return _nodes.ContainsKey(id);
         }
 
         /** <inheritDoc /> */
