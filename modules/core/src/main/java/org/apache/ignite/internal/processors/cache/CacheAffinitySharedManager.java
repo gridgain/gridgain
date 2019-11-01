@@ -1034,7 +1034,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 fut.timeBag().finishLocalStage("Affinity initialization on cache group start " +
                     "[grp=" + grpDesc.cacheOrGroupName() + "]");
 
-                validator.validateCacheGroup(grpDesc);
+                validator.validateCacheGroup(grpDesc, false);
 
                 return null;
             }
@@ -1991,7 +1991,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 fut.timeBag().finishLocalStage("Affinity centralized initialization (crd) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");
 
-                validator.validateCacheGroup(desc);
+                validator.validateCacheGroup(desc, true);
             }
         });
 
@@ -2969,8 +2969,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * Validates cache group configuration and prints warning if it violates 15% overhead limit.
          *
          * @param grpDesc Descriptor of cache group to validate.
+         * @param useIdealAssignment Flag indicating that ideal assignment should be used for validation.
          */
-        void validateCacheGroup(CacheGroupDescriptor grpDesc) {
+        void validateCacheGroup(CacheGroupDescriptor grpDesc, boolean useIdealAssignment) {
             DataStorageConfiguration dsCfg = cctx.gridConfig().getDataStorageConfiguration();
             CacheConfiguration<?, ?> grpCfg = grpDesc.config();
 
@@ -2980,19 +2981,36 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             CacheGroupHolder grpHolder = grpHolders.get(grpDesc.groupId());
 
             if (grpHolder != null) {
-                IdealAffinityAssignment assignment = grpHolder.aff.idealAssignment();
+                int partsNum = 0;
+                UUID locNodeId = cctx.localNodeId();
 
-                if (assignment != null) {
-                    int partsNum = assignment.calculatePrimaries(null, assignment.assignment()).size();
+                if (useIdealAssignment) {
+                    List<List<ClusterNode>> assignment = grpHolder.aff.idealAssignment().assignment();
 
-                    if (partsNum == 0)
-                        return;
-
-                    DataRegionConfiguration drCfg = findDataRegion(dsCfg, grpCfg.getDataRegionName());
-
-                    if ((1.0 * partsNum * dsCfg.getPageSize()) / drCfg.getMaxSize() > MEMORY_OVERHEAD_THRESHOLD)
-                        log.warning(buildWarningMessage(grpDesc, drCfg, dsCfg.getPageSize(), partsNum));
+                    for (List<ClusterNode> nodes : assignment) {
+                        if (nodes.stream().anyMatch(n -> n.id().equals(locNodeId)))
+                            partsNum++;
+                    }
                 }
+                else {
+                    GridCacheContext<K, V> cacheCtx = cctx.cacheContext(grpHolder.groupId());
+                    GridAffinityAssignmentCache affCache = grpHolder.aff;
+
+                    if (cacheCtx != null) {
+                        AffinityTopologyVersion topVer = cacheCtx.affinity().affinityTopologyVersion();
+
+                        partsNum = affCache.primaryPartitions(locNodeId, topVer).size() +
+                            affCache.backupPartitions(locNodeId, topVer).size();
+                    }
+                }
+
+                if (partsNum == 0)
+                    return;
+
+                DataRegionConfiguration drCfg = findDataRegion(dsCfg, grpCfg.getDataRegionName());
+
+                if ((1.0 * partsNum * dsCfg.getPageSize()) / drCfg.getMaxSize() > MEMORY_OVERHEAD_THRESHOLD)
+                    log.warning(buildWarningMessage(grpDesc, drCfg, dsCfg.getPageSize(), partsNum));
             }
         }
 
