@@ -26,6 +26,7 @@ import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
@@ -158,7 +159,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -166,7 +167,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+            Map<String, String> fields = cacheMeta.getFields();
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE");
         });
@@ -180,7 +181,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -188,7 +189,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            Map<String, String> fields = cacheMeta.getFields().get(cacheMeta.getTypes().iterator().next());
+            Map<String, String> fields = cacheMeta.getFields();
 
             return cacheMeta != null && fields.containsKey("ID") && fields.containsKey("VALUE") && fields.containsKey("ID_2");
         });
@@ -214,7 +215,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -222,7 +223,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.isEmpty();
         });
@@ -236,7 +237,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -244,7 +245,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.size() == 1;
         });
@@ -258,7 +259,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
             List<CacheSqlMetadata> metadata =
                 interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
 
-            if (metadata == null)
+            if (F.isEmpty(metadata))
                 return false;
 
             CacheSqlMetadata cacheMeta = metadata.stream()
@@ -266,7 +267,7 @@ public class CacheServiceSelfTest extends AbstractGridWithAgentTest {
                 .findFirst()
                 .get();
 
-            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes().get(cacheMeta.getTypes().iterator().next());
+            List<CacheSqlIndexMetadata> idxes = cacheMeta.getIndexes();
 
             return cacheMeta != null && idxes.isEmpty();
         });
