@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -247,6 +246,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** Segments array. */
     private volatile Segment[] segments;
+
+    /** @see #safeToUpdate() */
+    private final AtomicBoolean safeToUpdate = new AtomicBoolean(true);
 
     /** Lock for segments changes. */
     private Object segmentsLock = new Object();
@@ -956,7 +958,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         if (dirtyPages != null) {
             if (dirtyPages.remove(new FullPageId(pageId, grpId)))
-                seg.dirtyPagesCntr.decrement();
+                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
         }
 
         return relPtr;
@@ -1084,11 +1086,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public boolean safeToUpdate() {
-        if (segments != null) {
-            for (Segment segment : segments)
-                if (!segment.safeToUpdate())
-                    return false;
-        }
+        if (segments != null)
+            return safeToUpdate.get();
 
         return true;
     }
@@ -1167,8 +1166,10 @@ public class PageMemoryImpl implements PageMemoryEx {
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
             seg.dirtyPages = new GridConcurrentHashSet<>();
-            seg.dirtyPagesCntr.reset();
+            seg.dirtyPagesCntr.set(0);
         }
+
+        safeToUpdate.set(true);
 
         memMetrics.resetDirtyPages();
 
@@ -1716,7 +1717,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert PageIO.getCrc(page + PAGE_OVERHEAD) == 0; //TODO GG-11480
 
             if (markDirty)
-                setDirty(fullId, page, markDirty, false);
+                setDirty(fullId, page, true, false);
 
             beforeReleaseWrite(fullId, page + PAGE_OVERHEAD, pageWalRec);
         }
@@ -1859,7 +1860,10 @@ public class PageMemoryImpl implements PageMemoryEx {
                 Segment seg = segment(pageId.groupId(), pageId.pageId());
 
                 if (seg.dirtyPages.add(pageId)) {
-                    seg.dirtyPagesCntr.increment();
+                    int dirtyPagesCnt = seg.dirtyPagesCntr.updateAndGet(c -> c + 1);
+
+                    if (dirtyPagesCnt >= seg.maxDirtyPages)
+                        safeToUpdate.set(false);
 
                     memMetrics.incrementDirtyPages();
                 }
@@ -1872,7 +1876,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             Segment seg = segment(pageId.groupId(), pageId.pageId());
 
             if (seg.dirtyPages.remove(pageId)) {
-                seg.dirtyPagesCntr.decrement();
+                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
 
                 memMetrics.decrementDirtyPages();
             }
@@ -2147,7 +2151,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
 
         /** */
-        private final LongAdder dirtyPagesCntr = new LongAdder();
+        private final AtomicInteger dirtyPagesCntr = new AtomicInteger();
 
         /** Wrapper of pages of current checkpoint. */
         private volatile CheckpointPages checkpointPages;
@@ -2210,13 +2214,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             finally {
                 writeLock().unlock();
             }
-        }
-
-        /**
-         *
-         */
-        private boolean safeToUpdate() {
-            return dirtyPagesCntr.intValue() < maxDirtyPages;
         }
 
         /**
@@ -3039,7 +3036,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                             FullPageId fullId = PageHeader.fullPageId(absPtr);
 
                             if (seg.dirtyPages.remove(fullId))
-                                seg.dirtyPagesCntr.decrement();
+                                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
                         }
 
                         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, pageSize, (byte)0);
