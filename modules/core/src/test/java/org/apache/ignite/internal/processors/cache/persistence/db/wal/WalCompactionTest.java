@@ -457,6 +457,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
 
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
@@ -492,6 +493,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         // WAL archive segment is allowed to be compressed when it's at least one checkpoint away from current WAL head.
+        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
         ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
 
         File nodeArchiveDir = dbDir.toPath().resolve(Paths.get("wal", "archive", nodeFolderName)).toFile();
