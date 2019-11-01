@@ -15,7 +15,6 @@
  */
 
 import _ from 'lodash';
-import base64js from 'base64-js';
 
 export const taskResult = (result) => ({
     data: {result},
@@ -32,9 +31,9 @@ export const taskResult = (result) => ({
  * @return {string} Base64 coded string of enabled features.
  */
 export const generateFeasureSet = (excluded = []) => {
-    const res = new Uint8Array(12);
+    const res = Buffer.alloc(12);
 
-    for (let i = 0; i < res.length * res.BYTES_PER_ELEMENT * 8; i ++) {
+    for (let i = 0; i < res.length * 8; i ++) {
         if (_.indexOf(excluded, i) < 0) {
             const idx = Math.floor(i / (res.BYTES_PER_ELEMENT * 8));
             const shift = i % (res.BYTES_PER_ELEMENT * 8);
@@ -43,7 +42,7 @@ export const generateFeasureSet = (excluded = []) => {
         }
     }
 
-    return base64js.fromByteArray(res);
+    return res.toString('base64');
 };
 
 export const DFLT_FAILURE_RESPONSE = {message: 'Expected error'};
