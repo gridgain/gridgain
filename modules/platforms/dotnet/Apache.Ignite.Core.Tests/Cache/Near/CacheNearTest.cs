@@ -263,6 +263,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.IsTrue(TestUtils.WaitForCondition(() =>
             {
+                // TODO: Get may fail - we should wait for key to be propagated?
                 var res1 = localCache.Get(key);
                 var res2 = localCache.Get(key);
 
