@@ -26,18 +26,57 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     public class ClientClusterGroupTests : ClientTestBase
     {
         /// <summary>
-        /// Test thin client returns the same node as thick one.
+        /// Test thin client cluster returns the same nodes as thick one.
         /// </summary>
         [Test]
         public void TestThinAndThickClientsReturnTheSameNode()
         {
-            var node = Ignition.GetIgnite().GetCluster().GetNodes().SingleOrDefault();
-
-            var clientNode = Client.GetCluster().GetNodes().SingleOrDefault();
+            var nodes = Ignition.GetIgnite().GetCluster().GetNodes();
+            var clientNodes = Client.GetCluster().GetNodes();
             
-            Assert.IsNotNull(node);
-            Assert.IsNotNull(clientNode);
-            AssertExtensions.ReflectionEqual(node, clientNode);
+            Assert.IsNotEmpty(nodes);
+            Assert.IsNotEmpty(clientNodes);
+            AssertExtensions.ReflectionEqual(nodes, clientNodes);
+        }
+
+        /// <summary>
+        /// Test cluster returns the same node instance over
+        /// the different calls when no topology changes have been made.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupsReturnsTheSameNodeWithSameTopology()
+        {
+            var clientNode = Client.GetCluster().GetNodes().SingleOrDefault();
+            var clientNode2 = Client.GetCluster().GetNodes().SingleOrDefault();
+
+            Assert.AreSame(clientNode, clientNode2);
+        }
+
+        /// <summary>
+        /// Test cluster group reflects new nodes changes.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupDetectsNewTopologyChanges()
+        {
+            var nodes = Ignition.GetIgnite().GetCluster().GetNodes();
+            var clientNodes = Client.GetCluster().GetNodes();
+
+            var cfg = GetIgniteConfiguration();
+            cfg.AutoGenerateIgniteInstanceName = true;
+
+            using (Ignition.Start(cfg))
+            {
+                var nodesNew = Ignition.GetIgnite().GetCluster().GetNodes();
+                var clientNodesNew = Client.GetCluster().GetNodes();
+
+                Assert.AreEqual(2, clientNodesNew.Count);
+                AssertExtensions.ReflectionEqual(nodesNew, clientNodesNew);
+
+                var newNode = nodesNew.Single(x => x.Id == nodes.Single().Id);
+                var newClientNode = clientNodesNew.Single(x => x.Id == clientNodes.Single().Id);
+
+                AssertExtensions.ReflectionEqual(newNode, newClientNode);
+            }
         }
     }
 }
