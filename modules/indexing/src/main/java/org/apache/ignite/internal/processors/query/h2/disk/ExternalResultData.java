@@ -425,9 +425,9 @@ public class ExternalResultData implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         U.closeQuiet(fileIo);
-        file.delete();
-
         U.closeQuiet(hashIdx);
+
+        file.delete();
 
         if (log.isDebugEnabled())
             log.debug("Deleted spill file "+ file.getName());

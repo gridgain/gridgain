@@ -52,6 +52,8 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
+     * @param useHashIdx Flag whether to use hash index.
+     * @param initSize Initial result set size.
      */
     protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, boolean useHashIdx, long initSize) {
         this.log = ctx.log(AbstractExternalResult.class);

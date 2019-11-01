@@ -54,7 +54,8 @@ public class Subquery extends Expression {
             return v;
         }
         finally {
-            // Do not the very first last result in the case when caching is turned on. Otherwise close all results.
+            // Do not close the very first lastResult in the case when caching is turned on.
+            // Otherwise close all lastResults.
             if (lastResult != null || query.ignoreCaching())
                 result.close();
         }

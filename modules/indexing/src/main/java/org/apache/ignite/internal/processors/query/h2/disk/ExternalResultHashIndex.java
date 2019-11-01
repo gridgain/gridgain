@@ -95,7 +95,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             initSize = MIN_CAPACITY;
 
         // We need at least the half of hash map be empty to minimize collisions number.
-        long initCap = Long.highestOneBit(initSize) * 2;
+        long initCap = Long.highestOneBit(initSize) * 4;
 
         initNewIndexFile(initCap);
     }

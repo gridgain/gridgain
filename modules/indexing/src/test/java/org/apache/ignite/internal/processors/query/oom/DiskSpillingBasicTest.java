@@ -161,7 +161,8 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
     /** */
     @Test
     public void testFilesDeletedOnError() throws IOException {
-        String query = "SELECT DISTINCT *, 1 / (p.id - 800) " + // Query should throw NPE during execution.
+        // Query should throw "Division by zero exception" during execution.
+        String qry = "SELECT DISTINCT *, 1 / (p.id - 800) " +
             "FROM person p, department d " +
             " WHERE p.depId = d.id";
 
@@ -173,7 +174,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
 
         try {
             List res = grid(0).cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQueryEx(query, null)
+                .query(new SqlFieldsQueryEx(qry, null)
                     .setMaxMemory(SMALL_MEM_LIMIT)
                     .setLazy(true))
                 .getAll();

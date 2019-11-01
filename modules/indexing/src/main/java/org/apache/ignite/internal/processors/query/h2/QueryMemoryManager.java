@@ -179,7 +179,8 @@ public class QueryMemoryManager extends H2MemoryTracker {
             maxQueryMemory = globalQuota;
         }
 
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory, Math.min(maxQueryMemory, blockSize));
+        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory,
+            Math.min(maxQueryMemory, blockSize), failOnMemLimitExceed);
     }
 
     /** {@inheritDoc} */

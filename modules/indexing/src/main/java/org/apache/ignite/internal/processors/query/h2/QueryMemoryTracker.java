@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -62,12 +61,12 @@ public class QueryMemoryTracker extends H2MemoryTracker {
      * @param parent Parent memory tracker.
      * @param maxMem Query memory limit in bytes.
      * @param blockSize Reservation block size.
+     * @param failOnMemLimitExceed Flag whether to fail when memory limit is exceeded.
      */
-    QueryMemoryTracker(H2MemoryTracker parent, long maxMem, long blockSize) {
+    QueryMemoryTracker(H2MemoryTracker parent, long maxMem, long blockSize, boolean failOnMemLimitExceed) {
         assert maxMem > 0;
 
-        // TODO GG-18629 - get from configuration.
-        failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
+        this.failOnMemLimitExceed = failOnMemLimitExceed;
         this.parent = parent;
         this.maxMem = maxMem;
         this.blockSize = blockSize;
