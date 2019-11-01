@@ -47,20 +47,58 @@ public class PagePoolTest extends GridCommonAbstractTest {
     /**
      * @return Test parameters.
      */
-    @Parameterized.Parameters(name = "PageSize={0}")
+    @Parameterized.Parameters(name = "PageSize={0}, segment={1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
-            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD},
-            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD},
-            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD},
-            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD},
-            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD}
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 0},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 1},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 2},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 4},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 8},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 16},
+            new Object[] {1024 + PageMemoryImpl.PAGE_OVERHEAD, 31},
+
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 0},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 1},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 2},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 4},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 8},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 16},
+            new Object[] {2048 + PageMemoryImpl.PAGE_OVERHEAD, 31},
+
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 0},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 1},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 2},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 4},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 8},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 16},
+            new Object[] {4096 + PageMemoryImpl.PAGE_OVERHEAD, 31},
+
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 0},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 1},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 2},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 4},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 8},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 16},
+            new Object[] {8192 + PageMemoryImpl.PAGE_OVERHEAD, 31},
+
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 0},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 1},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 2},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 4},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 8},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 16},
+            new Object[] {16384 + PageMemoryImpl.PAGE_OVERHEAD, 31}
         );
     }
 
     /** */
     @Parameterized.Parameter
     public int sysPageSize;
+
+    /** */
+    @Parameterized.Parameter(1)
+    public int segment;
 
     /** */
     private static final int PAGES = 100;
@@ -86,7 +124,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
         region = provider.nextRegion();
 
-        pool = new PagePool(26, region, sysPageSize, rwLock);
+        pool = new PagePool(segment, region, sysPageSize, rwLock, log);
     }
 
     /**
@@ -177,7 +215,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
     /**
      * @throws Exception if failed.
      */
-    //@Test
+    @Test
     public void testMultithreadedConsistency() throws Exception {
         assertEquals(PAGES, pool.pages());
         assertEquals(0, pool.size());
@@ -189,6 +227,8 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
             while ((relPtr = pool.borrowOrAllocateFreePage(1)) != PageMemoryImpl.INVALID_REL_PTR) {
                 assertNull(allocated.put(relPtr, relPtr));
+
+                info("Allocated=" + U.hexLong(relPtr) + ", absolute=" + pool.absolute(relPtr));
 
                 PageHeader.writeTimestamp(pool.absolute(relPtr), 0xFFFFFFFFFFFFFFFFL);
             }
@@ -253,9 +293,9 @@ public class PagePoolTest extends GridCommonAbstractTest {
                     long polled = pool.borrowOrAllocateFreePage(1);
 
                     if (polled != PageMemoryImpl.INVALID_REL_PTR) {
-                        assertNull(allocated.put(polled, polled));
-
                         PageHeader.writeTimestamp(pool.absolute(polled), 0xFFFFFFFFFFFFFFFFL);
+
+                        assertNull(allocated.put(polled, polled));
                     }
                 }
             }
@@ -277,7 +317,12 @@ public class PagePoolTest extends GridCommonAbstractTest {
      * @return Random page polled from the map.
      */
     private Long pollRandom(ConcurrentMap<Long, Long> allocated) {
-        int cnt = ThreadLocalRandom.current().nextInt(allocated.size());
+        int size = allocated.size();
+
+        if (size == 0)
+            return null;
+
+        int cnt = ThreadLocalRandom.current().nextInt(size);
 
         Iterator<Long> it = allocated.keySet().iterator();
 

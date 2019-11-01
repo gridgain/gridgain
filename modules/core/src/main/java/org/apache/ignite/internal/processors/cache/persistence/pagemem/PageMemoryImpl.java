@@ -350,7 +350,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             DirectMemoryRegion cpReg = regions.get(regs - 1);
 
-            checkpointPool = new PagePool(regs - 1, cpReg, sysPageSize, rwLock);
+            checkpointPool = new PagePool(regs - 1, cpReg, sysPageSize, rwLock, log);
 
             long checkpointBuf = cpReg.size();
 
@@ -1955,7 +1955,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             DirectMemoryRegion poolRegion = region.slice(memPerTbl + ldPagesMapOffInRegion);
 
-            pool = new PagePool(idx, poolRegion, sysPageSize, rwLock);
+            pool = new PagePool(idx, poolRegion, sysPageSize, rwLock, log);
 
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
                 ? pool.pages() * 3 / 4
