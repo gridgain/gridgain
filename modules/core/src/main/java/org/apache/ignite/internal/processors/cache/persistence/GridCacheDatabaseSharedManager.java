@@ -1651,7 +1651,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         throw new IgniteException(new NodeStoppingException("Failed to perform cache update: node is stopping."));
                     }
 
-                    if (checkpointLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || checkpointerThread == null)
+                    if (checkpointLock.getReadHoldCount() > 1 || checkpointerThread == null || safeToUpdatePageMemories())
                         break;
                     else {
                         checkpointLock.readLock().unlock();
@@ -1744,24 +1744,24 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         checkpointLock.readLock().unlock();
 
-        if (checkpointer != null) {
-            Collection<DataRegion> dataRegs = context().database().dataRegions();
-
-            if (dataRegs != null) {
-                for (DataRegion dataReg : dataRegs) {
-                    if (!dataReg.config().isPersistenceEnabled())
-                        continue;
-
-                    PageMemoryEx mem = (PageMemoryEx)dataReg.pageMemory();
-
-                    if (mem != null && !mem.safeToUpdate()) {
-                        checkpointer.wakeupForCheckpoint(0, "too many dirty pages");
-
-                        break;
-                    }
-                }
-            }
-        }
+//        if (checkpointer != null) {
+//            Collection<DataRegion> dataRegs = context().database().dataRegions();
+//
+//            if (dataRegs != null) {
+//                for (DataRegion dataReg : dataRegs) {
+//                    if (!dataReg.config().isPersistenceEnabled())
+//                        continue;
+//
+//                    PageMemoryEx mem = (PageMemoryEx)dataReg.pageMemory();
+//
+//                    if (mem != null && !mem.safeToUpdate()) {
+//                        checkpointer.wakeupForCheckpoint(0, "too many dirty pages");
+//
+//                        break;
+//                    }
+//                }
+//            }
+//        }
 
         if (ASSERTION_ENABLED)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() - 1);
@@ -4430,7 +4430,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             curr.reason));
                 }
 
-                return new Checkpoint(null, new GridMultiCollectionWrapper<>(new Collection[0]), curr);
+                return new Checkpoint(null, new GridMultiCollectionWrapper<>(), curr);
             }
         }
 
