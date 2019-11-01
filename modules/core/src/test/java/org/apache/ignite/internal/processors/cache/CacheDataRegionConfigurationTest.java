@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -33,9 +34,13 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
 
 /**
  *
@@ -258,6 +263,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         smallRegionCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
         smallRegionCfg.setMaxSize(DFLT_MEM_PLC_SIZE);
         smallRegionCfg.setPersistenceEnabled(true);
+        smallRegionCfg.setName("smallRegion");
 
         memCfg = new DataStorageConfiguration();
         memCfg.setDefaultDataRegionConfiguration(smallRegionCfg);
@@ -266,22 +272,36 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
 
         CacheConfiguration<Object, Object> manyPartitionsCache = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        manyPartitionsCache.setAffinity(new RendezvousAffinityFunction(false, 4096));
+        //512 partitions are enough only if primary and backups count
+        manyPartitionsCache.setAffinity(new RendezvousAffinityFunction(false, 512));
         manyPartitionsCache.setNodeFilter(new NodeNameNodeFilter(filteredSrvName));
+        manyPartitionsCache.setBackups(1);
 
         ccfg = manyPartitionsCache;
 
-        GridStringLogger srv0Logger = getStringLogger();
+        ListeningTestLogger srv0Logger = new ListeningTestLogger(false, null);
+        LogListener cacheGrpLsnr0 = LogListener.matches("Cache group 'default' brings high overhead").build();
+        LogListener dataRegLsnr0 = LogListener.matches("metainformation in data region 'smallRegion'").build();
+        LogListener partsInfoLsnr0 = LogListener.matches(
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+        srv0Logger.registerAllListeners(cacheGrpLsnr0, dataRegLsnr0, partsInfoLsnr0);
         logger = srv0Logger;
 
         IgniteEx ignite0 = startGrid("srv0");
 
-        GridStringLogger srv1Logger = getStringLogger();
+        ListeningTestLogger srv1Logger = new ListeningTestLogger(false, null);
+        LogListener cacheGrpLsnr1 = LogListener.matches("Cache group 'default' brings high overhead").build();
+        LogListener dataRegLsnr1 = LogListener.matches("metainformation in data region 'smallRegion'").build();
+        LogListener partsInfoLsnr1 = LogListener.matches(
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+        srv1Logger.registerAllListeners(cacheGrpLsnr1, dataRegLsnr1, partsInfoLsnr1);
         logger = srv1Logger;
 
         startGrid("srv1");
 
-        GridStringLogger srv2Logger = getStringLogger();
+        ListeningTestLogger srv2Logger = new ListeningTestLogger(false, null);
+        LogListener cacheGrpLsnr2 = LogListener.matches("Cache group 'default' brings high overhead").build();
+        srv2Logger.registerListener(cacheGrpLsnr2);
         logger = srv2Logger;
 
         startGrid(filteredSrvName);
@@ -289,11 +309,16 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         ignite0.cluster().active(true);
 
         //srv0 and srv1 print warning into the log as the threshold for cache in default cache group is broken
-        GridTestUtils.assertContains(null, srv0Logger.toString(), "Cache group 'default' brings high overhead");
-        GridTestUtils.assertContains(null, srv1Logger.toString(), "Cache group 'default' brings high overhead");
+        assertTrue(cacheGrpLsnr0.check());
+        assertTrue(dataRegLsnr0.check());
+        assertTrue(partsInfoLsnr0.check());
+
+        assertTrue(cacheGrpLsnr1.check());
+        assertTrue(dataRegLsnr1.check());
+        assertTrue(partsInfoLsnr1.check());
 
         //srv2 doesn't print the warning as it is filtered by node filter from affinity nodes
-        GridTestUtils.assertNotContains(null, srv2Logger.toString(), "Cache group 'default' brings high overhead");
+        assertFalse(cacheGrpLsnr2.check());
     }
 
     /**

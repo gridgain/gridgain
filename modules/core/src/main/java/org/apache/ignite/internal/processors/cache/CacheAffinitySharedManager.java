@@ -52,7 +52,6 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
-import org.apache.ignite.internal.processors.affinity.IdealAffinityAssignment;
 import org.apache.ignite.internal.processors.cache.distributed.dht.ClientCacheDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAssignmentFetchFuture;
@@ -1034,7 +1033,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 fut.timeBag().finishLocalStage("Affinity initialization on cache group start " +
                     "[grp=" + grpDesc.cacheOrGroupName() + "]");
 
-                validator.validateCacheGroup(grpDesc, false);
+                validator.validateCacheGroup(grpDesc);
 
                 return null;
             }
@@ -1991,7 +1990,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 fut.timeBag().finishLocalStage("Affinity centralized initialization (crd) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");
 
-                validator.validateCacheGroup(desc, true);
+                validator.validateCacheGroup(desc);
             }
         });
 
@@ -2969,9 +2968,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * Validates cache group configuration and prints warning if it violates 15% overhead limit.
          *
          * @param grpDesc Descriptor of cache group to validate.
-         * @param useIdealAssignment Flag indicating that ideal assignment should be used for validation.
          */
-        void validateCacheGroup(CacheGroupDescriptor grpDesc, boolean useIdealAssignment) {
+        void validateCacheGroup(CacheGroupDescriptor grpDesc) {
             DataStorageConfiguration dsCfg = cctx.gridConfig().getDataStorageConfiguration();
             CacheConfiguration<?, ?> grpCfg = grpDesc.config();
 
@@ -2984,24 +2982,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 int partsNum = 0;
                 UUID locNodeId = cctx.localNodeId();
 
-                if (useIdealAssignment) {
-                    List<List<ClusterNode>> assignment = grpHolder.aff.idealAssignment().assignment();
+                List<List<ClusterNode>> assignment = grpHolder.aff.idealAssignment().assignment();
 
-                    for (List<ClusterNode> nodes : assignment) {
-                        if (nodes.stream().anyMatch(n -> n.id().equals(locNodeId)))
-                            partsNum++;
-                    }
-                }
-                else {
-                    GridCacheContext<K, V> cacheCtx = cctx.cacheContext(grpHolder.groupId());
-                    GridAffinityAssignmentCache affCache = grpHolder.aff;
-
-                    if (cacheCtx != null) {
-                        AffinityTopologyVersion topVer = cacheCtx.affinity().affinityTopologyVersion();
-
-                        partsNum = affCache.primaryPartitions(locNodeId, topVer).size() +
-                            affCache.backupPartitions(locNodeId, topVer).size();
-                    }
+                for (List<ClusterNode> nodes : assignment) {
+                    if (nodes.stream().anyMatch(n -> n.id().equals(locNodeId)))
+                        partsNum++;
                 }
 
                 if (partsNum == 0)
@@ -3025,24 +3010,22 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             int pageSize,
             int partsNum
             ) {
-            StringBuilder sb = new StringBuilder("Cache group '");
+            String res = "Cache group '%s'" +
+                " brings high overhead for its metainformation in data region '%s'."  +
+                " Metainformation required for its partitions (%d partitions, %d bytes per partition)" +
+                " will consume more than 15%% of data region memory (%d MBs)." +
+                " It may lead to critical errors on the node and cluster instability." +
+                " Please reduce number of partitions, add more memory to the data region" +
+                " or add more server nodes for this cache group.";
 
-            sb.append(grpDesc.cacheOrGroupName())
-                .append("' brings high overhead for its metainformation in data region '")
-                .append(drCfg.getName())
-                .append("'.")
-                .append(" Metainformation required for its partitions (")
-                .append(partsNum)
-                .append(" partitions, ")
-                .append(pageSize)
-                .append(" bytes per partition) will consume more than 15% of data region memory (")
-                .append(U.sizeInMegabytes(drCfg.getMaxSize()))
-                .append(" MBs). ")
-                .append("It may lead to critical errors on the node and cluster instability.")
-                .append("Please reduce number of partitions, add more memory to the data region ")
-                .append("or add more server nodes for this cache group.");
-
-            return sb.toString();
+            return String.format(
+                    res,
+                    grpDesc.cacheOrGroupName(),
+                    drCfg.getName(),
+                    partsNum,
+                    pageSize,
+                    U.sizeInMegabytes(drCfg.getMaxSize())
+                );
         }
 
         /**
