@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+    <bean id="placeholderConfig" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"/>
+
+    <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+
+<!--        <property name="localHost" value="127.0.0.1"/>-->
+
+        <property name="peerClassLoadingEnabled" value="true"/>
+
+<!--        <property name="pluginConfigurations">-->
+<!--            <list>-->
+<!--                <bean class="org.gridgain.grid.configuration.GridGainConfiguration">-->
+<!--                    <property name="rollingUpdatesEnabled" value="true"/>-->
+<!--                    <property name="snapshotConfiguration">-->
+<!--                        <bean class="org.gridgain.grid.configuration.SnapshotConfiguration">-->
+<!--                            <property name="pointInTimeRecoveryEnabled" value="true"/>-->
+<!--                        </bean>-->
+<!--                    </property>-->
+<!--                </bean>-->
+<!--            </list>-->
+<!--        </property>-->
+
+        <property name="clientMode" value="true"/>
+        <property name="activeOnStart" value="false"/>
+<!--        <property name="consistentId" value="${CONSISTENT_ID}"/>-->
+
+
+        <property name="communicationSpi">
+            <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
+                <property name="sharedMemoryPort" value="-1"/>
+            </bean>
+        </property>
+
+        <property name="dataStorageConfiguration">
+            <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
+                <property name="defaultDataRegionConfiguration">
+                    <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                        <property name="name" value="default_data_region"/>
+                        <property name="persistenceEnabled" value="true"/>
+<!--                        <property name="initialSize" value="#{12L * 1024 * 1024 * 1024}"/>-->
+<!--                        <property name="maxSize" value="#{20L * 1024 * 1024 * 1024}"/>-->
+                    </bean>
+                </property>
+                <property name="walCompactionEnabled" value="false"/>
+                <property name="walSegmentSize" value="5000000"/>
+                <property name="walSegments" value="5"/>
+                <property name="checkpointFrequency" value="1000"/>
+            </bean>
+        </property>
+
+
+        <property name="discoverySpi">
+            <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+                <property name="ackTimeout" value="60000"/>
+                <property name="maxAckTimeout" value="300000"/>
+                <property name="reconnectCount" value="2"/>
+                <property name="socketTimeout" value="30000"/>
+                <property name="ipFinder">
+                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
+                        <property name="addresses">
+                            <list>
+                                <value>127.0.0.1:47500..47510</value>
+                            </list>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+</beans>

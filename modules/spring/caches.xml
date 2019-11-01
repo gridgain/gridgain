@@ -1,0 +1,1714 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util-2.0.xsd">
+
+    <util:list id="caches">
+        <!-- ATOMIC PARTITIONED -->
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_001"/>
+            <property name="groupName" value="cache_group_1"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_002"/>
+            <property name="groupName" value="cache_group_1"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_003"/>
+            <property name="groupName" value="cache_group_1"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_004"/>
+            <property name="groupName" value="cache_group_1"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_005"/>
+            <property name="groupName" value="cache_group_1"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_006"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_007"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+            <property name="name" value="cache_group_1_008"/>
+            <property name="groupName" value="cache_group_2"/>
+            <property name="atomicityMode" value="ATOMIC"/>
+            <property name="backups" value="2"/>
+            <property name="cacheMode" value="PARTITIONED"/>
+            <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+            <property name="onheapCacheEnabled" value="true"/>
+            <property name="affinity">
+                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+                    <constructor-arg value="false"/>
+                    <constructor-arg value="128"/>
+                </bean>
+            </property>
+        </bean>
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_009"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_010"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_011"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_012"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_013"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_014"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_015"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_016"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_017"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_018"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_019"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_020"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_021"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_022"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_023"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_024"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_025"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_026"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            &lt;!&ndash;<property name="memoryPolicyName" value="mem_plc_ev_random_lru"/>&ndash;&gt;-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_027"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_028"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_029"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_1_030"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+
+<!--        &lt;!&ndash; ATOMIC REPLICATED &ndash;&gt;-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_031"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_032"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_033"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_034"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_035"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_036"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_037"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_038"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_039"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_040"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_041"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_042"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_043"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_044"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_045"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_046"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_047"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_048"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_049"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_050"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_051"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_052"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_053"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_054"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_055"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_056"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_057"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            &lt;!&ndash;<property name="memoryPolicyName" value="mem_plc_ev_random_lru_swap"/>&ndash;&gt;-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_058"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_059"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_2_060"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+
+
+<!--        &lt;!&ndash; TX PARTITIONED &ndash;&gt;-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_061"/>-->
+<!--            <property name="groupName" value="cache_group_1"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_062"/>-->
+<!--            <property name="groupName" value="cache_group_1"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_063"/>-->
+<!--            <property name="groupName" value="cache_group_1"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_064"/>-->
+<!--            <property name="groupName" value="cache_group_1"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_065"/>-->
+<!--            <property name="groupName" value="cache_group_1"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_066"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_067"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_068"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_069"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_070"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_071"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_072"/>-->
+<!--            <property name="groupName" value="cache_group_2"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_073"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_074"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_075"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_076"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_077"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_078"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_079"/>-->
+<!--            <property name="groupName" value="cache_group_3"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_080"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_081"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_082"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_083"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_084"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_085"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_086"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            &lt;!&ndash;<property name="memoryPolicyName" value="mem_plc_ev_random_lru"/>&ndash;&gt;-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_087"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="2"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_088"/>-->
+<!--            <property name="atomicityMode" value="TRANSACTIONAL"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_089"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_3_090"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="backups" value="1"/>-->
+<!--            <property name="cacheMode" value="PARTITIONED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+
+<!--        &lt;!&ndash; TX REPLICATED &ndash;&gt;-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_091"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_092"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_093"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_094"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_095"/>-->
+<!--            <property name="groupName" value="cache_group_4"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_096"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_097"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_098"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_099"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_100"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_101"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_102"/>-->
+<!--            <property name="groupName" value="cache_group_5"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_103"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_104"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="128"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_105"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_106"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_107"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_108"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_109"/>-->
+<!--            <property name="groupName" value="cache_group_6"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_110"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_111"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_112"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_113"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_114"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_115"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_116"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_117"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            &lt;!&ndash;<property name="memoryPolicyName" value="mem_plc_ev_random_lru_swap"/>&ndash;&gt;-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="64"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_118"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_119"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.lru.LruEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+<!--        <bean class="org.apache.ignite.configuration.CacheConfiguration">-->
+<!--            <property name="name" value="cache_group_4_120"/>-->
+<!--            <property name="atomicityMode" value="ATOMIC"/>-->
+<!--            <property name="cacheMode" value="REPLICATED"/>-->
+<!--            <property name="writeSynchronizationMode" value="FULL_SYNC"/>-->
+<!--            <property name="evictionPolicy">-->
+<!--                <bean class="org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicy">-->
+<!--                    <property name="maxSize" value="1000"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--            <property name="onheapCacheEnabled" value="true"/>-->
+<!--            <property name="affinity">-->
+<!--                <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">-->
+<!--                    <constructor-arg value="false"/>-->
+<!--                    <constructor-arg value="32"/>-->
+<!--                </bean>-->
+<!--            </property>-->
+<!--        </bean>-->
+    </util:list>
+</beans>
