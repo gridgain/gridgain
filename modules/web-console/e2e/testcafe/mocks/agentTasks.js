@@ -15,7 +15,7 @@
  */
 
 import _ from 'lodash';
-const base64js = require('base64-js');
+import base64js from 'base64-js';
 
 export const taskResult = (result) => ({
     data: {result},
