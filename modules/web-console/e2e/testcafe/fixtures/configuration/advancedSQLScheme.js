@@ -33,6 +33,7 @@ const regularUser = createRegularUser();
 
 const KEY_CLS = 'test.cls.name.Key';
 const VALUE_CLS = 'test.cls.name.Value';
+const INVALID_TYPE = '1.type';
 
 fixture('Advanced SQL scheme configuration')
     .before(async() => {
@@ -70,8 +71,6 @@ test('Base required fields checked on save.', async(t) => {
         .expect(successNotification.withText(`Model "${VALUE_CLS}" saved`).visible).ok('Notification about saved SQL scheme should be shown');
 });
 
-const INVALID_TYPE = '1.type';
-
 const _createCache = async(t) => {
     await t.click(pageAdvancedConfiguration.cachesNavButton)
         .click(createCacheButton);
@@ -83,9 +82,11 @@ const _createCache = async(t) => {
 
 const _configureMinimalQueryFields = async(t) => {
     await t.click(sqlQuery.fields.addFirstField)
-        .typeText(sqlQuery.fields.fieldName.control, 'id')
+        .eval(() => window.scrollTo(0, 1000));
+
+    await t.typeText(sqlQuery.fields.fieldName.control, 'id')
         .typeText(sqlQuery.fields.fieldClass.control, 'Integer')
-        .click(sqlQuery.table.control)
+        .pressKey('enter')
         .click(sqlQuery.fields.addNextField)
         .typeText(sqlQuery.fields.fieldName.control, 'data')
         .pressKey('tab')
@@ -112,8 +113,8 @@ const _configureMinimalCacheStore = async(t) => {
     await cacheStore.valueFields.javaType.selectOption('String');
 };
 
-// Cover 1 testcase of https://ggsystems.atlassian.net/browse/GG-25370
-test('Save valid SQL scheme with empty cache', async(t) => {
+// Testcafe #1 for https://ggsystems.atlassian.net/browse/GG-25370
+test.only('Save valid SQL scheme with empty cache', async(t) => {
     await t.click(createModelButton);
 
     await _configureMinimalQueryFields(t);
@@ -131,7 +132,7 @@ test('Save valid SQL scheme with empty cache', async(t) => {
     await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
 });
 
-// Cover 2 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #2 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Save valid SQL scheme with selected cache', async(t) => {
     await _createCache(t);
 
@@ -154,7 +155,7 @@ test('Save valid SQL scheme with selected cache', async(t) => {
     await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
 });
 
-// Cover 3 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #3 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Save valid SQL scheme with selected cache and annotations type of metadata', async(t) => {
     await _createCache(t);
 
@@ -177,7 +178,7 @@ test('Save valid SQL scheme with selected cache and annotations type of metadata
     await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
 });
 
-// Cover 4 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #4 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with empty value type', async(t) => {
     await t.click(createModelButton);
 
@@ -195,7 +196,7 @@ test('Validation with empty value type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 5 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #5 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with invalid value type', async(t) => {
     await t.click(createModelButton);
 
@@ -214,7 +215,7 @@ test('Validation with invalid value type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 6 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #6 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with empty key type', async(t) => {
     await t.click(createModelButton);
 
@@ -232,7 +233,7 @@ test('Validation with empty key type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 7 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #7 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with invalid key type', async(t) => {
     await t.click(createModelButton);
 
@@ -251,7 +252,7 @@ test('Validation with invalid key type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 8 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #8 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with empty key and value types', async(t) => {
     await t.click(createModelButton);
 
@@ -269,7 +270,7 @@ test('Validation with empty key and value types', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 9 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #9 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with empty key type and invalid value type', async(t) => {
     await t.click(createModelButton);
 
@@ -288,7 +289,7 @@ test('Validation with empty key type and invalid value type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 10 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #10 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with invalid key type and empty value type', async(t) => {
     await t.click(createModelButton);
 
@@ -307,7 +308,7 @@ test('Validation with invalid key type and empty value type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 11 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #11 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with invalid key and value types', async(t) => {
     await t.click(createModelButton);
 
@@ -327,7 +328,7 @@ test('Validation with invalid key and value types', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 12 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #12 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Validation with value Java built-in type', async(t) => {
     await t.click(createModelButton);
 
@@ -346,7 +347,7 @@ test('Validation with value Java built-in type', async(t) => {
     await t.expect(createModelTitle.visible).ok('Page should stay in creation mode');
 });
 
-// Cover 13 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #13 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Save SQL scheme with value Java built-in like type', async(t) => {
     await _createCache(t);
 
@@ -369,7 +370,7 @@ test('Save SQL scheme with value Java built-in like type', async(t) => {
     await t.expect(editModelTitle.visible).ok('Page mode should be changed to edit');
 });
 
-// Cover 14 testcase of https://ggsystems.atlassian.net/browse/GG-25370
+// Testcafe #14 for https://ggsystems.atlassian.net/browse/GG-25370
 test('Save SQL scheme with value Java built-in type', async(t) => {
     await _createCache(t);
 
