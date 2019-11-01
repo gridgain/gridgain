@@ -425,6 +425,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().active(true);
 
+        U.sleep(5_000);
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
