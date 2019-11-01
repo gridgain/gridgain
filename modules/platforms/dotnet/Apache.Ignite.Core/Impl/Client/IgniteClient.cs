@@ -263,11 +263,10 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Updates the node information from stream.
         /// </summary>
         /// <param name="reader">Reader.</param>
-        public ClusterNodeImpl UpdateNodeInfo(IBinaryRawReader reader)
+        public void UpdateNodeInfo(IBinaryRawReader reader)
         {
             var node = new ClusterNodeImpl(reader);
             _nodes[node.Id] = node;
-            return node;
         }
 
         /// <summary>

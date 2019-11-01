@@ -54,6 +54,6 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
             return new ClientBooleanResponse(requestId(), false);
 
         UUID[] nodeIds = cluster.nodes().stream().map(ClusterNode::id).toArray(UUID[]::new);
-        return new ClientClusterGroupGetNodeIdsResponse(requestId(), topVer, nodeIds);
+        return new ClientClusterGroupGetNodeIdsResponse(requestId(), curTopVer, nodeIds);
     }
 }
