@@ -14,8 +14,17 @@
  * limitations under the License.
  */
 
-/**
- * <!-- Package description. -->
- * Contains Opencensus based implementation of MetricExporterSpi.
- */
-package org.apache.ignite.spi.metric.opencensus;
+package org.apache.ignite.internal.processors.query;
+
+import java.util.List;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+
+/** Verifies default sql schema through SqlFieldsQuery API. */
+public class IgniteSqlDefaultSchemaTest extends AbstractDefaultSchemaTest {
+    /** {@inheritDoc} */
+    @Override protected List<List<?>> execSql(String qry) {
+        return grid(0).context().query()
+            .querySqlFields(new SqlFieldsQuery(qry).setLazy(true), false)
+            .getAll();
+    }
+}

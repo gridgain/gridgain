@@ -96,10 +96,18 @@ public enum IgniteComponentType {
         "ignite-schedule"
     ),
 
+    /** */
     COMPRESSION(
         CompressionProcessor.class.getName(),
         "org.apache.ignite.internal.processors.compress.CompressionProcessorImpl",
         "ignite-compress"
+    ),
+
+    /** OpenCensus tracing implementation. */
+    TRACING(
+        null,
+        "org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi",
+        "ignite-opencensus"
     ),
 
     /** Management console. */
