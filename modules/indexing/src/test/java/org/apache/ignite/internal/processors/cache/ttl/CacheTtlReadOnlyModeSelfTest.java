@@ -24,15 +24,19 @@ import java.util.stream.Stream;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.client.GridClientClusterState;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.cacheConfigurations;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Checks that enabled read-only mode doesn't affect data expiration.
@@ -65,6 +69,20 @@ public class CacheTtlReadOnlyModeSelfTest extends GridCommonAbstractTest {
         super.afterTest();
 
         stopAllGrids();
+    }
+
+    /**
+     * Test must be deleted after https://ggsystems.atlassian.net/browse/GG-25084
+     */
+    @Test
+    public void testOldReadOnlyPublicApiIsNotAvailable() throws Exception {
+        // TODO: Remove me after https://ggsystems.atlassian.net/browse/GG-25084
+
+        assertThrows(log,() -> IgniteCluster.class.getMethod("readOnly", boolean.class), NoSuchMethodException.class, null);
+        assertThrows(log,() -> IgniteCluster.class.getMethod("readOnly"), NoSuchMethodException.class, null);
+
+        assertThrows(log,() -> GridClientClusterState.class.getMethod("readOnly", boolean.class), NoSuchMethodException.class, null);
+        assertThrows(log,() -> GridClientClusterState.class.getMethod("readOnly"), NoSuchMethodException.class, null);
     }
 
     /** */
