@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
+    using System.Linq;
     using NUnit.Framework;
 
     /// <summary>
@@ -25,13 +26,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     public class ClientClusterGroupTests : ClientTestBase
     {
         /// <summary>
-        /// Test get nodes.
+        /// Test thin client returns the same node as thick one.
         /// </summary>
         [Test]
-        public void TestGetNodes()
+        public void TestThinAndThickClientsReturnTheSameNode()
         {
-            var nodes = Client.GetCluster().GetNodes();
-            Assert.IsNotEmpty(nodes);
+            var node = Ignition.GetIgnite().GetCluster().GetNodes().SingleOrDefault();
+
+            var clientNode = Client.GetCluster().GetNodes().SingleOrDefault();
+            
+            Assert.IsNotNull(node);
+            Assert.IsNotNull(clientNode);
+            AssertExtensions.ReflectionEqual(node, clientNode);
         }
     }
 }
