@@ -15,19 +15,62 @@
 # limitations under the License.
 #
 
-# Path to CA certificate.
-ca_cert=/usr/ssl/ca/ca.pem
+set -e
+
+pwd="123456"
+
+function createCa {
+    ca_name=$1
+
+    openssl req -new -newkey rsa:2048 -nodes -out ${ca_name}.csr -keyout ${ca_name}.key \
+        -subj "/emailAddress=${ca_name}@ignite.apache.org/CN=${ca_name}/OU=Dev/O=Ignite/L=SPb/ST=SPb/C=RU"
+
+    openssl x509 -trustout -signkey ${ca_name}.key -days 7305 -req -in ${ca_name}.csr -out ${ca_name}.pem
+
+    rm ${ca_name}.csr
+
+    touch ${ca_name}-index.txt
+    echo 01 > ${ca_name}-serial
+    echo "[ ca ]
+default_ca = ${ca_name}
+
+[ ${ca_name} ]
+dir=ca
+certificate = \$dir/${ca_name}.pem
+database = \$dir/${ca_name}-index.txt
+private_key = \$dir/${ca_name}.key
+new_certs_dir = \$dir/certs
+default_md = sha1
+policy = policy_match
+serial = \$dir/${ca_name}-serial
+default_days = 365
+
+[policy_match]
+commonName = supplied" > ${ca_name}.cnf
+}
 
 #
 # Create artifacts for specified name: key pair-> cert request -> ca-signed certificate.
 # Save private key and CA-signed certificate into key storages: PEM, JKS, PFX (PKCS12).
 #
 # param $1 Artifact name.
-# param $2 Password for all keys and storages.
+# param $2 Name of a certificate authority.
+# param $3 Password for all keys and storages.
 #
 function createStore {
 	artifact=$1
-	pwd=$2
+	ca_name=$2
+	expired=$3
+
+	if [[ "$expired" = true ]]; then
+        startdate=`date -d '2 days ago' '+%y%m%d%H%M%SZ'`
+        enddate=`date -d 'yesterday' '+%y%m%d%H%M%SZ'`
+    else
+        startdate=`date -d 'today 00:00:00' '+%y%m%d%H%M%SZ'`
+        enddate=`date -d 'today + 7305 days' '+%y%m%d%H%M%SZ'`
+    fi
+
+	ca_cert=ca/${ca_name}.pem
 
 	echo
 	echo Clean up all old artifacts: ${artifact}.*
@@ -35,15 +78,19 @@ function createStore {
 
 	echo
 	echo Generate a certificate and private key pair for ${artifact}.
-	keytool -genkey -keyalg RSA -keysize 1024 -dname "emailAddress=${artifact}@ignite.com, CN=${artifact}, OU=Dev, O=Ignite, L=SPb, ST=SPb, C=RU" -validity 7305 -alias ${artifact} -keypass ${pwd} -keystore ${artifact}.jks -storepass ${pwd}
+	keytool -genkey -keyalg RSA -keysize 1024 \
+	        -dname "emailAddress=${artifact}@ignite.apache.org, CN=${artifact}, OU=Dev, O=Ignite, L=SPb, ST=SPb, C=RU" \
+	        -alias ${artifact} -keypass ${pwd} -keystore ${artifact}.jks -storepass ${pwd}
 
 	echo
 	echo Create a certificate signing request for ${artifact}.
 	keytool -certreq -alias ${artifact} -file ${artifact}.csr -keypass ${pwd} -keystore ${artifact}.jks -storepass ${pwd}
 
 	echo
-	echo "Sign the CSR using CA (default SSL configuration)."
-	openssl ca -days 7305 -in ${artifact}.csr -out ${artifact}.pem
+	echo "Sign the CSR using ${ca_name}."
+	openssl ca -config ca/${ca_name}.cnf \
+	        -startdate ${startdate} -enddate ${enddate} \
+	        -batch -out ${artifact}.pem -infiles ${artifact}.csr
 
 	echo
 	echo Convert to PEM format.
@@ -55,7 +102,7 @@ function createStore {
 
 	echo
 	echo Update the keystore, ${artifact}.jks, by importing the CA certificate.
-	keytool -import -alias ca          -file ${ca_cert} -keypass ${pwd} -noprompt -trustcacerts -keystore ${artifact}.jks -storepass ${pwd}
+	keytool -import -alias ${ca_name} -file ${ca_cert} -keypass ${pwd} -noprompt -trustcacerts -keystore ${artifact}.jks -storepass ${pwd}
 
 	echo
 	echo Update the keystore, ${artifact}.jks, by importing the full certificate chain for the ${artifact}.
@@ -77,18 +124,35 @@ function createStore {
 		-in ${artifact}.pfx -out ${artifact}.pem \
 		-passin pass:${pwd} -passout pass:${pwd}
 
-	rm -f ${artifact}.chain ${artifact}.csr
+	rm -f ${artifact}.chain ${artifact}.csr ${artifact}.pfx ${artifact}.pem
 }
 
-pwd="123456"
+mkdir -p ca/certs
 
-createStore "client" ${pwd}
-createStore "server" ${pwd}
+cd ca
 
-echo
-echo Update trust store with certificates: CA, client, server.
-keytool -import -alias ca -file ${ca_cert} -keypass ${pwd} -noprompt -trustcacerts -keystore trust.jks -storepass ${pwd}
-#keytool -importkeystore -srckeystore client.jks -destkeystore trust.jks -srcstorepass ${pwd} -deststorepass ${pwd} -alias client -noprompt
-#keytool -importkeystore -srckeystore server.jks -destkeystore trust.jks -srcstorepass ${pwd} -deststorepass ${pwd} -alias server -noprompt
-keytool -export -alias client -keystore client.jks -storepass ${pwd} | keytool -importcert -alias client -noprompt -keystore trust.jks -storepass ${pwd}
-keytool -export -alias server -keystore server.jks -storepass ${pwd} | keytool -importcert -alias server -noprompt -keystore trust.jks -storepass ${pwd}
+createCa oneca
+createCa twoca
+createCa threeca
+
+cd ..
+
+keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-one.jks
+keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-two.jks
+keytool -import -noprompt -file ca/threeca.pem -alias threeca -keypass ${pwd} -storepass ${pwd} -keystore trust-three.jks
+
+keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks
+keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks
+
+createStore cluster oneca
+createStore thinClient twoca
+createStore thinServer twoca
+createStore connectorClient threeca
+createStore connectorServer threeca
+
+createStore node01 oneca
+createStore node02 twoca
+createStore node03 twoca
+createStore node02old twoca true
+
+rm -rf ca
