@@ -2005,8 +2005,11 @@ public final class GridTestUtils {
     }
 
     @NotNull public static String keyStorePath(String keyStore) {
-        return U.resolveIgnitePath(GridTestProperties.getProperty(
-            "ssl.keystore." + keyStore + ".path")).getAbsolutePath();
+        String path = "ssl.keystore." + keyStore + ".path";
+        String prop = GridTestProperties.getProperty(path);
+
+        U.error(null, "GG-24341 path: " + path + " property value: " + prop);
+        return U.resolveIgnitePath(prop).getAbsolutePath();
     }
 
     /**
