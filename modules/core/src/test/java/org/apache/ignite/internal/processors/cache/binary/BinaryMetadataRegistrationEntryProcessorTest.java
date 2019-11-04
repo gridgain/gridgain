@@ -32,16 +32,16 @@ public class BinaryMetadataRegistrationEntryProcessorTest extends AbstractBinary
         cache.invoke(key, new CustomProcessor<>(val));
     }
 
+    /** {@inheritDoc} */
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-25554")
-    /** {@inheritDoc} */
     @Override public void testMetadataRegisteredOnceForUserClass() {
         super.testMetadataRegisteredOnceForUserClass();
     }
 
+    /** {@inheritDoc} */
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-25554")
-    /** {@inheritDoc} */
     @Override public void testMetadataRegisteredOnceForBinarylizable() {
         super.testMetadataRegisteredOnceForBinarylizable();
     }
