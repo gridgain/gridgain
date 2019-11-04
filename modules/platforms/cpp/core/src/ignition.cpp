@@ -268,14 +268,20 @@ namespace ignite
 
         JniErrorInfo jniErr;
 
-        SP_IgniteEnvironment* penv = IgniteEnvironment::Create(cfg0);
-        SP_IgniteEnvironment env(*penv);
-
         JvmOptions opts;
         opts.FromConfiguration(cfg, home, cp);
 
+        // This is the instance that allows us keep IgniteEnvironment alive
+        // till the end of the method call
+        SharedPointer<IgniteEnvironment> env = SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg0));
+
+        // This is the instance with manual control over lifetime which is we
+        // going to pass to Java if Java object is constructed and initialized
+        // successfully.
+        std::auto_ptr< SharedPointer<IgniteEnvironment> > envGuard(new SharedPointer<IgniteEnvironment>(env));
+
         SharedPointer<JniContext> ctx(
-            JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(penv), &jniErr));
+            JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(envGuard.get()), &jniErr));
 
         if (!ctx.Get())
         {
@@ -320,6 +326,11 @@ namespace ignite
         started = true;
 
         guard.Reset();
+
+        // We successfully created Java Ignite instance by this point, so we
+        // give control over C++ instance to Java. Still, we keep holding env
+        // instance so it will keep living till the end of the scope.
+        envGuard.release();
 
         env.Get()->ProcessorReleaseStart();
 

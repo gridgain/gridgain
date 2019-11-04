@@ -68,12 +68,11 @@ namespace ignite
             enum { DEFAULT_SLOW_PATH_CONTAINERS_CAP = 16 };
 
             /**
-             * Factory method. Create new instance of the class.
+             * Constructor.
              *
              * @param cfg Node configuration.
-             * @return Pointer to shared pointer to new instance.
              */
-            static SP_IgniteEnvironment* Create(const IgniteConfiguration& cfg);
+            IgniteEnvironment(const IgniteConfiguration& cfg);
 
             /**
              * Destructor.
@@ -322,13 +321,6 @@ namespace ignite
             friend long long IGNITE_CALL InLongOutLong(void* target, int type, long long val);
 
         private:
-            /**
-             * Constructor.
-             *
-             * @param cfg Node configuration.
-             */
-            IgniteEnvironment(const IgniteConfiguration& cfg);
-
             /** Node configuration. */
             IgniteConfiguration* cfg;
 
