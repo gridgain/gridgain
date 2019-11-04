@@ -60,6 +60,7 @@
     <ClCompile Include="..\..\src\affinity_test.cpp" />
     <ClCompile Include="..\..\src\binary_object_test.cpp" />
     <ClCompile Include="..\..\src\binary_identity_resolver_test.cpp" />
+    <ClCompile Include="..\..\src\cache_query_schema_test.cpp" />
     <ClCompile Include="..\..\src\cache_store_test.cpp" />
     <ClCompile Include="..\..\src\cache_test.cpp" />
     <ClCompile Include="..\..\src\cache_invoke_test.cpp" />

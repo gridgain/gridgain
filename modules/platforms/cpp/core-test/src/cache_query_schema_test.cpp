@@ -43,37 +43,14 @@ using namespace ignite::common;
 using ignite::impl::binary::BinaryUtils;
 
 /**
- * Ensure that HasNext() fails.
- *
- * @param cur Cursor.
- */
-template<typename Cursor>
-void CheckHasNextFail(Cursor& cur)
-{
-    BOOST_CHECK_EXCEPTION(cur.HasNext(), IgniteError, ignite_test::IsGenericError);
-}
-
-/**
  * Ensure that GetNext() fails.
  *
  * @param cur Cursor.
  */
 template<typename Cursor>
-void CheckGetNextFail(Cursor& cur)
+void CheckGetNextRowFail(Cursor& cur)
 {
     BOOST_CHECK_EXCEPTION(cur.GetNext(), IgniteError, ignite_test::IsGenericError);
-}
-
-/**
-* Check empty result through iteration.
-*
-* @param cur Cursor.
-*/
-void CheckEmpty(QueryFieldsCursor& cur)
-{
-    BOOST_REQUIRE(!cur.HasNext());
-
-    CheckGetNextFail(cur);
 }
 
 /**
@@ -94,7 +71,7 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1)
     BOOST_REQUIRE(!row.HasNext());
     BOOST_REQUIRE(!cur.HasNext());
 
-    CheckGetNextFail(cur);
+    CheckGetNextRowFail(cur);
 }
 
 /**
@@ -116,11 +93,10 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
     BOOST_REQUIRE(!row.HasNext());
     BOOST_REQUIRE(!cur.HasNext());
 
-    CheckGetNextFail(cur);
+    CheckGetNextRowFail(cur);
 }
 
 static const std::string TABLE_NAME = "T1";
-
 
 /**
  * Test setup fixture.
@@ -167,7 +143,7 @@ struct CacheQuerySchemaTestSuiteFixture
     }
 
     template<typename Predicate>
-    void ExecuteStatementsAndVerify(Predicate pred)
+    void ExecuteStatementsAndVerify(Predicate& pred)
     {
         Sql("CREATE TABLE " + TableName(pred()) + " (id INT PRIMARY KEY, val INT)");
 
@@ -176,19 +152,19 @@ struct CacheQuerySchemaTestSuiteFixture
         Sql("INSERT INTO " + TableName(pred()) + " (id, val) VALUES(1, 2)");
 
         QueryFieldsCursor cursor = Sql("SELECT * FROM " + TableName(pred()));
-        CheckSingleRow(cursor, 1, 2);
+        CheckSingleRow<int32_t, int32_t>(cursor, 1, 2);
 
         Sql("UPDATE " + TableName(pred()) + " SET val = 5");
         cursor = Sql("SELECT * FROM " + TableName(pred()));
-        CheckSingleRow(cursor, 1, 5);
+        CheckSingleRow<int32_t, int32_t>(cursor, 1, 5);
 
         Sql("DELETE FROM " + TableName(pred()) + " WHERE id = 1");
         cursor = Sql("SELECT COUNT(*) FROM " + TableName(pred()));
-        CheckSingleRow(cursor, 0);
+        CheckSingleRow<int64_t>(cursor, 0);
 
         cursor = Sql("SELECT COUNT(*) FROM SYS.TABLES WHERE schema_name = 'PUBLIC' "
             "AND table_name = \'" + TABLE_NAME + "\'");
-        CheckSingleRow(cursor, 1);
+        CheckSingleRow<int64_t>(cursor, 1);
 
         Sql("DROP TABLE " + TableName(pred()));
     }
@@ -199,7 +175,6 @@ struct CacheQuerySchemaTestSuiteFixture
 
 BOOST_FIXTURE_TEST_SUITE(CacheQuerySchemaTestSuite, CacheQuerySchemaTestSuiteFixture)
 
-
 bool TruePred()
 {
     return true;
@@ -207,7 +182,39 @@ bool TruePred()
 
 BOOST_AUTO_TEST_CASE(TestBasicOpsExplicitPublicSchema)
 {
-    ExecuteStatementsAndVerify(&TruePred);
+    ExecuteStatementsAndVerify(TruePred);
+}
+
+bool FalsePred()
+{
+    return false;
+}
+
+BOOST_AUTO_TEST_CASE(TestBasicOpsImplicitPublicSchema)
+{
+    ExecuteStatementsAndVerify(FalsePred);
+}
+
+struct MixedPred
+{
+    int i;
+
+    MixedPred() : i(0)
+    {
+        // No-op.
+    }
+
+    bool operator()()
+    {
+        return (++i & 1) == 0;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(TestBasicOpsMixedPublicSchema)
+{
+    MixedPred pred;
+
+    ExecuteStatementsAndVerify(pred);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
