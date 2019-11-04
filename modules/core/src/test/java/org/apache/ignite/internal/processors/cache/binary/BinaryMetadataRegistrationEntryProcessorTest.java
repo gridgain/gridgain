@@ -24,7 +24,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Test for discovery message exchange, that is performed upon binary type registration.
+ * Tests for discovery message exchange, that is performed upon binary type
+ * registration when using Entry Processor API.
  */
 public class BinaryMetadataRegistrationEntryProcessorTest extends AbstractBinaryMetadataRegistrationTest {
     /** {@inheritDoc} */

@@ -40,7 +40,8 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * Test for discovery message exchange, that is performed upon binary type registration.
+ * Abstract tests for discovery message exchange, that is performed
+ * upon binary type registration.
  */
 public abstract class AbstractBinaryMetadataRegistrationTest extends GridCommonAbstractTest {
     /** */

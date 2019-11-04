@@ -19,7 +19,8 @@ package org.apache.ignite.internal.processors.cache.binary;
 import org.apache.ignite.IgniteCache;
 
 /**
- * Test for discovery message exchange, that is performed upon binary type registration.
+ * Tests for discovery message exchange, that is performed upon binary type
+ * registration when using Cache API.
  */
 public class BinaryMetadataRegistrationCacheApiTest extends AbstractBinaryMetadataRegistrationTest {
     /** {@inheritDoc} */

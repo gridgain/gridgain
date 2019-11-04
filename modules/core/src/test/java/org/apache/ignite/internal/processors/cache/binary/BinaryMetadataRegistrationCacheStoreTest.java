@@ -30,7 +30,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.lang.IgniteBiInClosure;
 
 /**
- * Test for discovery message exchange, that is performed upon binary type registration.
+ * Tests for discovery message exchange, that is performed upon binary type
+ * registration when using Cache Store API.
  */
 public class BinaryMetadataRegistrationCacheStoreTest extends AbstractBinaryMetadataRegistrationTest {
     /** */
