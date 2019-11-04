@@ -217,4 +217,22 @@ BOOST_AUTO_TEST_CASE(TestBasicOpsMixedPublicSchema)
     ExecuteStatementsAndVerify(pred);
 }
 
+BOOST_AUTO_TEST_CASE(TestCreateDropNonExistingSchema)
+{
+    BOOST_CHECK_THROW(
+        Sql("CREATE TABLE UNKNOWN_SCHEMA." + TABLE_NAME + "(id INT PRIMARY KEY, val INT)"),
+        IgniteError
+    );
+
+    BOOST_CHECK_THROW(
+        Sql("DROP TABLE UNKNOWN_SCHEMA." + TABLE_NAME),
+        IgniteError
+    );
+}
+
+BOOST_AUTO_TEST_CASE(TestDropIfExistsNonExistingSchema)
+{
+    Sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TABLE_NAME);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
