@@ -43,6 +43,8 @@ namespace ignite
             class ClusterNodeImpl;
         }
 
+        typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
+
         /**
          * Defines environment in which Ignite operates.
          */
