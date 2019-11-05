@@ -494,4 +494,16 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
                 "FROM person GROUP BY temperature HAVING temperature > 38"
         );
     }
+
+    /** */
+    @Test
+    public void simpleAggregate() {
+        checkGroupsSpilled = true;
+
+        listAggs = Arrays.asList(1);
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT count(*), LISTAGG(name) FROM person"
+        );
+    }
 }
