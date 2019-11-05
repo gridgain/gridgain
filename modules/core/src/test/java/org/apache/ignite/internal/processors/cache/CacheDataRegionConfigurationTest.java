@@ -65,14 +65,20 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        if (logger != null)
+            cfg.setGridLogger(logger);
+
+        if (gridName.contains("client")) {
+            cfg.setClientMode(true);
+
+            return cfg;
+        }
+
         if (memCfg != null)
             cfg.setDataStorageConfiguration(memCfg);
 
         if (ccfg != null)
             cfg.setCacheConfiguration(ccfg);
-
-        if (logger != null)
-            cfg.setGridLogger(logger);
 
         return cfg;
     }
@@ -255,8 +261,6 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWarningIfStaticCacheOverheadExceedsThreshold() throws Exception {
-        String filteredSrvName = "srv2";
-
         DataRegionConfiguration smallRegionCfg = new DataRegionConfiguration();
 
         smallRegionCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
@@ -273,7 +277,6 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
 
         //512 partitions are enough only if primary and backups count
         manyPartitionsCache.setAffinity(new RendezvousAffinityFunction(false, 512));
-        manyPartitionsCache.setNodeFilter(new NodeNameNodeFilter(filteredSrvName));
         manyPartitionsCache.setBackups(1);
 
         ccfg = manyPartitionsCache;
@@ -282,7 +285,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         LogListener cacheGrpLsnr0 = LogListener.matches("Cache group 'default' brings high overhead").build();
         LogListener dataRegLsnr0 = LogListener.matches("metainformation in data region 'smallRegion'").build();
         LogListener partsInfoLsnr0 = LogListener.matches(
-            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition, \\d+ MBs total")).build();
         srv0Logger.registerAllListeners(cacheGrpLsnr0, dataRegLsnr0, partsInfoLsnr0);
         logger = srv0Logger;
 
@@ -292,18 +295,11 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         LogListener cacheGrpLsnr1 = LogListener.matches("Cache group 'default' brings high overhead").build();
         LogListener dataRegLsnr1 = LogListener.matches("metainformation in data region 'smallRegion'").build();
         LogListener partsInfoLsnr1 = LogListener.matches(
-            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition, \\d+ MBs total")).build();
         srv1Logger.registerAllListeners(cacheGrpLsnr1, dataRegLsnr1, partsInfoLsnr1);
         logger = srv1Logger;
 
         startGrid("srv1");
-
-        ListeningTestLogger srv2Logger = new ListeningTestLogger(false, null);
-        LogListener cacheGrpLsnr2 = LogListener.matches("Cache group 'default' brings high overhead").build();
-        srv2Logger.registerListener(cacheGrpLsnr2);
-        logger = srv2Logger;
-
-        startGrid(filteredSrvName);
 
         ignite0.cluster().active(true);
 
@@ -315,9 +311,6 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         assertTrue(cacheGrpLsnr1.check());
         assertTrue(dataRegLsnr1.check());
         assertTrue(partsInfoLsnr1.check());
-
-        //srv2 doesn't print the warning as it is filtered by node filter from affinity nodes
-        assertFalse(cacheGrpLsnr2.check());
     }
 
     /**
@@ -328,6 +321,8 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWarningIfDynamicCacheOverheadExceedsThreshold() throws Exception {
+        String filteredSrvName = "srv2";
+
         DataRegionConfiguration smallRegionCfg = new DataRegionConfiguration();
 
         smallRegionCfg.setName("smallRegion");
@@ -352,7 +347,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         LogListener cacheGrpLsnr0 = LogListener.matches("Cache group 'default' brings high overhead").build();
         LogListener dataRegLsnr0 = LogListener.matches("metainformation in data region 'defaultRegion'").build();
         LogListener partsInfoLsnr0 = LogListener.matches(
-            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition, \\d+ MBs total")).build();
         srv0Logger.registerAllListeners(cacheGrpLsnr0, dataRegLsnr0, partsInfoLsnr0);
         logger = srv0Logger;
 
@@ -362,21 +357,30 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         LogListener cacheGrpLsnr1 = LogListener.matches("Cache group 'default' brings high overhead").build();
         LogListener dataRegLsnr1 = LogListener.matches("metainformation in data region 'defaultRegion'").build();
         LogListener partsInfoLsnr1 = LogListener.matches(
-            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition")).build();
+            Pattern.compile("\\d+ partitions, " + DFLT_PAGE_SIZE + " bytes per partition, \\d+ MBs total")).build();
         srv1Logger.registerAllListeners(cacheGrpLsnr1, dataRegLsnr1, partsInfoLsnr1);
         logger = srv1Logger;
 
         startGrid("srv1");
 
+        ListeningTestLogger srv2Logger = new ListeningTestLogger(false, null);
+        LogListener cacheGrpLsnr2 = LogListener.matches("Cache group 'default' brings high overhead").build();
+        srv2Logger.registerListener(cacheGrpLsnr2);
+        logger = srv2Logger;
+
+        startGrid("srv2");
+
         ignite0.cluster().active(true);
 
-        ignite0.createCache(
-            new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-                .setDataRegionName(defaultRegionCfg.getName())
-                .setCacheMode(CacheMode.PARTITIONED)
-                .setBackups(1)
-                .setAffinity(new RendezvousAffinityFunction(false, 512))
-        );
+        IgniteEx cl = startGrid("client01");
+
+        CacheConfiguration<Object, Object> manyPartitionsCache = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+
+        manyPartitionsCache.setAffinity(new RendezvousAffinityFunction(false, 512));
+        manyPartitionsCache.setNodeFilter(new NodeNameNodeFilter(filteredSrvName));
+        manyPartitionsCache.setBackups(1);
+
+        cl.createCache(manyPartitionsCache);
 
         //srv0 and srv1 print warning into the log as the threshold for cache in default cache group is broken
         assertTrue(cacheGrpLsnr0.check());
@@ -386,6 +390,9 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         assertTrue(cacheGrpLsnr1.check());
         assertTrue(dataRegLsnr1.check());
         assertTrue(partsInfoLsnr1.check());
+
+        //srv2 doesn't print the warning as it is filtered by node filter from affinity nodes
+        assertFalse(cacheGrpLsnr2.check());
     }
 
     /**
