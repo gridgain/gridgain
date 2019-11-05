@@ -192,7 +192,6 @@ public class TestKafkaBroker {
         props.put("log.dir", createTmpDir("_cfg").getAbsolutePath());
         props.put("log.flush.interval.messages", "1");
         props.put("log.flush.interval.ms", "10");
-        props.put("replica.lag.time.max.ms", "5000");
 
         return props;
     }
