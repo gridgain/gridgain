@@ -50,7 +50,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
      * Should send error response when user don't provide session id for executing secure action.
      */
     @Test
-    public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAthentication() {
+    public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAuthentication() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
                 .setAction("ActionControllerForTests.numberAction")

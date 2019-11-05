@@ -84,7 +84,7 @@ public class NextPageQueryArgument {
     }
 
     /**
-     * @return Node ID on which next page query will be executute.
+     * @return Node ID on which next page query will be executed.
      */
     public UUID getTargetNodeId() {
         return targetNodeId;

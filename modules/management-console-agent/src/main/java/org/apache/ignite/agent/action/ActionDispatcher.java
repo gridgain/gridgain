@@ -92,6 +92,7 @@ public class ActionDispatcher implements AutoCloseable {
     private CompletableFuture handleRequest(ActionMethod mtd, Request req) {
         try {
             Class<?> ctrlCls = mtd.getControllerClass();
+
             boolean securityEnabled = ctx.security().enabled();
             boolean authenticationEnabled = ctx.authentication().enabled();
 
@@ -99,20 +100,22 @@ public class ActionDispatcher implements AutoCloseable {
                 controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
 
             boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
+
             if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
                 UUID sesId = req.getSessionId();
                 Session ses = sesRegistry.getSession(sesId);
 
-                if (ses == null)
+                if (ses == null) {
                     throw new IgniteAuthenticationException(
                         "Failed to authenticate, the session with provided sessionId: " + sesId
                     );
+                }
 
                 if (log.isDebugEnabled())
                     log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + "]");
 
                 if (ses.securityContext() != null) {
-                    try (OperationSecurityContext s = ctx.security().withContext(ses.securityContext())) {
+                    try (OperationSecurityContext ignored = ctx.security().withContext(ses.securityContext())) {
                         return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
                     }
                 }
@@ -135,6 +138,7 @@ public class ActionDispatcher implements AutoCloseable {
      * @param controller Controller.
      * @param arg Argument.
      */
+    @SuppressWarnings("unchecked")
     private CompletableFuture invoke(Method mtd, Object controller, Object arg) throws Exception {
         Object res = arg == null ? mtd.invoke(controller) : mtd.invoke(controller, arg);
 

@@ -43,6 +43,7 @@ public class MetricRegistrySchemaTest {
     /** */
     private static final int SCHEMA_OFF = 64;
 
+    /** */
     @Test
     public void testBuild() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -66,6 +67,7 @@ public class MetricRegistrySchemaTest {
         assertEquals(CNT, schema.items().size());
     }
 
+    /** */
     @Test(expected = IllegalStateException.class)
     public void testAddAfterBuild() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -78,6 +80,7 @@ public class MetricRegistrySchemaTest {
         bldr.add(DISALLOWED, MetricType.findByType((byte)0));
     }
 
+    /** */
     @Test(expected = IllegalStateException.class)
     public void testBuildAfterBuild() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -90,6 +93,7 @@ public class MetricRegistrySchemaTest {
         bldr.build();
     }
 
+    /** */
     @Test(expected = UnsupportedOperationException.class)
     public void testSchemaItemsImmutable() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -102,6 +106,7 @@ public class MetricRegistrySchemaTest {
         schema.items().add(new MetricRegistrySchemaItem(DISALLOWED, MetricType.findByType((byte)0)));
     }
 
+    /** */
     @Test
     public void testSchemaToBytesFromBytes() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -121,6 +126,7 @@ public class MetricRegistrySchemaTest {
         assertEquals(schema.items(), schema1.items());
     }
 
+    /** */
     @Test
     public void testSchemaToBytesFromBytesInPlace() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -140,6 +146,7 @@ public class MetricRegistrySchemaTest {
         assertEquals(schema.items(), schema1.items());
     }
 
+    /** */
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaToBytesInPlaceBoundsViolated() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
@@ -154,6 +161,7 @@ public class MetricRegistrySchemaTest {
         schema.toBytes(arr, ARR_EXPANDED_DELTA + SCHEMA_OFF / 2);
     }
 
+    /** */
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaFromBytesInPlaceBoundsViolated() {
         MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();

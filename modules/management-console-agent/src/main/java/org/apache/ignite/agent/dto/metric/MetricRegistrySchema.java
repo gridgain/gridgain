@@ -205,6 +205,9 @@ public class MetricRegistrySchema {
         /** Size of schema in binary representation. */
         private int len;
 
+        /**
+         * @return Builder.
+         */
         public static Builder newInstance() {
             return new Builder();
         }

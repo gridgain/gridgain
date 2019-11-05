@@ -62,11 +62,11 @@ public class Request {
     }
 
     /**
-     * @param actName Action name.
+     * @param act Action name.
      * @return This for chaining method calls.
      */
-    public Request setAction(String actName) {
-        this.act = actName;
+    public Request setAction(String act) {
+        this.act = act;
         return this;
     }
 

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
@@ -52,11 +51,8 @@ public class CacheService implements AutoCloseable {
     /** Context. */
     private final GridKernalContext ctx;
 
-    /** Logger. */
-    private final IgniteLogger log;
-
     /** Events. */
-    private final IgniteEvents events;
+    private final IgniteEvents evts;
 
     /** Websocket manager. */
     private final WebSocketManager mgr;
@@ -68,12 +64,11 @@ public class CacheService implements AutoCloseable {
     public CacheService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
-        this.log = ctx.log(CacheService.class);
-        this.events = ctx.grid().events();
+        this.evts = ctx.grid().events();
 
         // Listener for cache metadata change.
-        events.localListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
-        events.localListen(this::onCacheEvents, EVTS_CACHE);
+        evts.localListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
+        evts.localListen(this::onCacheEvents, EVTS_CACHE);
     }
 
     /**
@@ -163,8 +158,8 @@ public class CacheService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() throws Exception {
-        events.stopLocalListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
-        events.stopLocalListen(this::onCacheEvents, EVTS_CACHE);
+    @Override public void close() {
+        evts.stopLocalListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
+        evts.stopLocalListen(this::onCacheEvents, EVTS_CACHE);
     }
 }

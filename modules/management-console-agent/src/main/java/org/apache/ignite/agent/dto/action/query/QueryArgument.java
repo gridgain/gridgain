@@ -134,7 +134,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if enforse join order should be used.
+     * @return @{code true} if enforce join order should be used.
      */
     public boolean isEnforceJoinOrder() {
         return enforceJoinOrder;
@@ -150,7 +150,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return Node ID on which query will be executute local.
+     * @return Node ID on which query will be executed.
      */
     public UUID getTargetNodeId() {
         return targetNodeId;

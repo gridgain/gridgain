@@ -55,7 +55,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.putShort;
  * 14 - int - version of schema.
  * 18 - int - offset of schema frame (0xFFFFFFFF if no schema frame in message).
  * 22 - int - size of schema frame in bytes (0 if no schema frame in message).
- * 26 - int - offset of data frame (0xFFFFFFFF if no data farame in message).
+ * 26 - int - offset of data frame (0xFFFFFFFF if no data frame in message).
  * 30 - int - size of data frame in bytes (0 if no data in message).
  * 34 - UUID - cluster ID (two long values: most significant bits, then least significant bits).
  * 50 - int - size of user tag in bytes (0 if user tag isn't defined).

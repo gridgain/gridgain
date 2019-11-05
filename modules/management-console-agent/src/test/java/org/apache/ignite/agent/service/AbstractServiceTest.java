@@ -16,7 +16,7 @@
 
 package org.apache.ignite.agent.service;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
@@ -85,7 +85,7 @@ public abstract class AbstractServiceTest {
         DiscoCache discoCache = mock(DiscoCache.class);
 
         when(discoCache.version()).thenReturn(new AffinityTopologyVersion(1L));
-        when(discoCache.allNodes()).thenReturn(Arrays.asList(new GridTestNode(UUID.fromString("b-b-b-b-b"))));
+        when(discoCache.allNodes()).thenReturn(Collections.singletonList(new GridTestNode(UUID.fromString("b-b-b-b-b"))));
         when(disco.discoCache()).thenReturn(discoCache);
         when(ctx.discovery()).thenReturn(disco);
 

@@ -32,11 +32,6 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 
-import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
-
 /**
  * Node launcher with agent (as it will be in classpath).
  */

@@ -23,12 +23,12 @@ public enum ActionStatus {
     /** Action is running. */
     RUNNING,
 
-    /** Action is completed. */
+    /** Action completed. */
     COMPLETED,
 
-    /** Action is Canceled. */
+    /** Action canceled. */
     CANCELED,
 
-    /** Action is completed with error. */
+    /** Action failed with error. */
     FAILED
 }

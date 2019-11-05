@@ -178,7 +178,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void disconnect() {
         log.info("Stopping Management Console agent.");
 
-        U.shutdownNow(this.getClass(), connectPool, log);
+        U.shutdownNow(getClass(), connectPool, log);
 
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
@@ -301,9 +301,9 @@ public class Agent extends ManagementConsoleProcessor {
         if (metaStorage == null)
             return new ManagementConfiguration();
 
-        ManagementConfiguration cfg = null;
-
         ctx.cache().context().database().checkpointReadLock();
+
+        ManagementConfiguration cfg = null;
 
         try {
             cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);

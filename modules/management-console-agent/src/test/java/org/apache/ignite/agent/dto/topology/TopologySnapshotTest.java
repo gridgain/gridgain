@@ -70,7 +70,7 @@ public class TopologySnapshotTest {
         );
 
         String consistentNodeIdOffline = UUID.fromString("a-a-a-a-a").toString();
-        DetachedClusterNode oflineBaselineNode = new DetachedClusterNode(
+        DetachedClusterNode offlineBaselineNode = new DetachedClusterNode(
             consistentNodeIdOffline,
             Collections.emptyMap()
         );
@@ -80,7 +80,7 @@ public class TopologySnapshotTest {
             1,
             crdId,
             Lists.newArrayList(clusterNode_1, clusterNode_2),
-            Lists.newArrayList(onlineBaselineNode, oflineBaselineNode)
+            Lists.newArrayList(onlineBaselineNode, offlineBaselineNode)
         );
 
         assertEquals(1, top.getTopologyVersion());

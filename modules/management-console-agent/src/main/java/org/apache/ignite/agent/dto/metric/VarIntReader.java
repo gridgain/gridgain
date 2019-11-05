@@ -17,7 +17,7 @@
 package org.apache.ignite.agent.dto.metric;
 
 /**
- * <p>Provides varint get operations for {@code int} and {@code long} types from backing byte array.</p>
+ * <p>Provides varInt get operations for {@code int} and {@code long} types from backing byte array.</p>
  * <p>Each get operation moves position forward accordingly to the read type size.</p>
  */
 public class VarIntReader {
@@ -73,7 +73,7 @@ public class VarIntReader {
     }
 
     /**
-     * Reads integer value in varint format.
+     * Reads integer value in varInt format.
      *
      * @return Integer value.
      */
@@ -91,7 +91,7 @@ public class VarIntReader {
     }
 
     /**
-     * Reads long value in varint format.
+     * Reads long value in varInt format.
      *
      * @return Long value.
      */

@@ -25,7 +25,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.reflections.Reflections;
 
 /**
- * Proccessor for {@link ActionController} annotation.
+ * Processor for {@link ActionController} annotation.
  */
 public class ActionControllerAnnotationProcessor {
     /** Methods. */

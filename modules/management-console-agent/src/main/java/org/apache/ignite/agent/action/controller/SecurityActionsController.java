@@ -53,7 +53,7 @@ public class SecurityActionsController {
 
     /**
      * @param reqCreds Request credentials.
-     * @return Completeble feature with token.
+     * @return Completable feature with token.
      */
     public String authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
         Session ses = authenticate0(reqCreds);
@@ -76,7 +76,7 @@ public class SecurityActionsController {
         boolean securityEnabled = ctx.security().enabled();
 
         if (reqCreds.getCredentials() == null)
-            throw new IgniteAuthenticationException("Authetication failed, credentials not found");
+            throw new IgniteAuthenticationException("Authentication failed, credentials not found");
 
         Session ses = Session.random();
         ses.credentials(reqCreds.getCredentials());

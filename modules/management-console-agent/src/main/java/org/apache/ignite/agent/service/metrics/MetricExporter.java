@@ -60,7 +60,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
  * Data
  */
 public class MetricExporter implements AutoCloseable {
-    /** Default varint byte buffer capacity. */
+    /** Default varInt byte buffer capacity. */
     private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;
 
     /** Context. */
@@ -127,7 +127,7 @@ public class MetricExporter implements AutoCloseable {
 
 
     /** {@inheritDoc} */
-    @Override public void close() throws Exception {
+    @Override public void close() {
         ctx.io().removeMessageListener(TOPIC_METRICS, lsnr);
     }
 

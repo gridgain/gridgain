@@ -66,7 +66,7 @@ public class QueryHolder implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() throws Exception {
+    @Override public void close() {
         cancelHook.cancel();
         cursors.keySet().forEach(this::closeCursor);
     }

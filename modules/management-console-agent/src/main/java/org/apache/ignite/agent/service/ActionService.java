@@ -141,7 +141,7 @@ public class ActionService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() throws Exception {
+    @Override public void close() {
         U.closeQuiet(dispatcher);
     }
 }

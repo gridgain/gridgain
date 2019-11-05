@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -39,9 +38,6 @@ public class SessionRegistry {
     /** Context. */
     private final GridKernalContext ctx;
 
-    /** Logger. */
-    private final IgniteLogger log;
-
     /** SessionId-Session map. */
     private final ConcurrentMap<UUID, Session> sesId2Ses = new ConcurrentHashMap<>();
 
@@ -56,7 +52,6 @@ public class SessionRegistry {
      */
     private SessionRegistry(GridKernalContext ctx) {
         this.ctx = ctx;
-        this.log = ctx.log(SessionRegistry.class);
 
         ManagementConfiguration cfg = ctx.managementConsole().configuration();
 

@@ -37,8 +37,14 @@ public class CoordinatorSender<T> extends RetryableSender<T> {
         this(ctx, topicName, DEFAULT_QUEUE_CAP);
     }
 
+    /**
+     * @param ctx Context.
+     * @param topicName Topic name.
+     * @param cap Capacity.
+     */
     public CoordinatorSender(GridKernalContext ctx, String topicName, int cap) {
         super(cap);
+
         this.ctx = ctx;
         this.topicName = topicName;
     }

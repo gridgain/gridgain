@@ -238,7 +238,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
      * Should execute scan query.
      */
     @Test
-    public void shouldExecuteScanQurey() {
+    public void shouldExecuteScanQuery() {
         IgniteCache<Object, Object> cache = cluster.ignite().createCache("test_cache");
         cache.put("key_1", "value_1");
         cache.put("key_2", "value_2");

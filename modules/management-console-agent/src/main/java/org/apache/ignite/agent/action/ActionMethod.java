@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class ActionMethod {
     /** Action name. */
     private final String actName;
+
     /** Method. */
     private final Method mtd;
 

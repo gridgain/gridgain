@@ -166,15 +166,15 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                     String actVal = row.get(fieldIdx).toString();
 
                     if ("VALUE_DATE".equals(fieldName))
-                        actVal = new Date(Long.valueOf(actVal)).toString();
+                        actVal = new Date(Long.parseLong(actVal)).toString();
                     else if ("VALUE_TIMESTAMP".equals(fieldName))
-                        actVal = new Timestamp(Long.valueOf(actVal)).toString();
+                        actVal = new Timestamp(Long.parseLong(actVal)).toString();
 
                     if (rows.size() == 1 && actVal.equals(expVal))
                         return true;
                     else
                         throw new RuntimeException(
-                            format("Recieved bad result [field=%s, actVal=%s, expVal=%s]", fieldName, actVal, expVal)
+                            format("Received bad result [field=%s, actVal=%s, expVal=%s]", fieldName, actVal, expVal)
                         );
                 }
 

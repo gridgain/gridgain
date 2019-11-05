@@ -127,7 +127,7 @@ public class CacheSqlMetadata {
     }
 
     /**
-     * @param keyCls Key classe.
+     * @param keyCls Key class.
      * @return @{code This} for method chaining.
      */
     public CacheSqlMetadata setKeyClass(String keyCls) {

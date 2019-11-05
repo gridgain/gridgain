@@ -56,9 +56,7 @@ public class MetricExporterTest {
         exporter = new MetricExporter(new StandaloneGridKernalContext(LOG, null, null));
     }
 
-    /**
-     * @throws Exception if failed.
-     */
+    /** */
     @Test
     public void testResponse() {
         String userTag = "testUserTag";
@@ -66,6 +64,7 @@ public class MetricExporterTest {
         doTestResponse(userTag);
     }
 
+    /** */
     @Test
     public void testResponseWithoutUserTag() {
         String userTag = null;
@@ -73,6 +72,7 @@ public class MetricExporterTest {
         doTestResponse(userTag);
     }
 
+    /** */
     private void doTestResponse(String userTag) {
         UUID clusterId = UUID.randomUUID();
 
@@ -133,6 +133,9 @@ public class MetricExporterTest {
         assertTrue(map.isEmpty());
     }
 
+    /**
+     * @return Metrics.
+     */
     private Map<String, MetricRegistry> generateMetrics() {
         Map<String, MetricRegistry> metrics = new TreeMap<>();
 

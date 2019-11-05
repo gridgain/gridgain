@@ -78,7 +78,7 @@ public class QueryActionsController {
      * Cancel query by query ID.
      *
      * @param qryId Query id.
-     * @return Completeble feature.
+     * @return Completable feature.
      */
     public CompletableFuture<Void> cancel(String qryId) {
         qryRegistry.cancelQuery(qryId);

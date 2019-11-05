@@ -83,7 +83,6 @@ public class BaselineActionsController {
         for (String consistentId : consIds) {
             if (srvrs.containsKey(consistentId))
                 baselineTop.add(srvrs.get(consistentId));
-
             else if (baseline.containsKey(consistentId))
                 baselineTop.add(baseline.get(consistentId));
         }

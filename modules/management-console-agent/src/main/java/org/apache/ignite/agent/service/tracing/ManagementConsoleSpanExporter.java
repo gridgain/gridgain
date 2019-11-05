@@ -34,7 +34,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.tracing.Annotation;
 import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.agent.service.sender.CoordinatorSender;
-import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpiException;

@@ -48,6 +48,7 @@ public class MetricSchemaTest {
     /** */
     private static final int SCHEMA_OFF = 64;
 
+    /** */
     @Test
     public void testBuild() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
@@ -87,6 +88,7 @@ public class MetricSchemaTest {
         assertEquals(CNT, schema.items().size());
     }
 
+    /** */
     @Test(expected = IllegalStateException.class)
     public void testAddAfterBuild() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
@@ -107,6 +109,7 @@ public class MetricSchemaTest {
         bldr.add("regType", DISALLOWED, MetricRegistrySchema.Builder.newInstance().build());
     }
 
+    /** */
     @Test(expected = IllegalStateException.class)
     public void testBuildAfterBuild() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
@@ -127,6 +130,7 @@ public class MetricSchemaTest {
         bldr.build();
     }
 
+    /** */
     @Test(expected = UnsupportedOperationException.class)
     public void testSchemaItemsImmutable() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
@@ -147,6 +151,7 @@ public class MetricSchemaTest {
         schema.items().add(new MetricSchemaItem((short)0, DISALLOWED));
     }
 
+    /** */
     @Test
     public void testSchemaToBytesFromBytes() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
@@ -175,6 +180,7 @@ public class MetricSchemaTest {
         assertEquals(schema.items(), schema1.items());
     }
 
+    /** */
     @Test
     public void testSchemaToBytesFromBytesInPlace() {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();

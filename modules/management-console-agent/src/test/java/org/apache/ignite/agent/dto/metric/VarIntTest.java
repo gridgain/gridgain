@@ -52,7 +52,7 @@ public class VarIntTest {
     }
 
     /**
-     * Tests writing of integer values in varint format.
+     * Tests writing of integer values in varInt format.
      */
     @Test
     public void testPutVarInt() {
@@ -68,7 +68,7 @@ public class VarIntTest {
     }
 
     /**
-     * Tests writing of long values in varint format.
+     * Tests writing of long values in varInt format.
      */
     @Test
     public void testPutVarLong() {

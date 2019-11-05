@@ -34,7 +34,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
      * Should authenticate with login and password.
      */
     @Test
-    public void shouldSeccesfullyAuthenticate() {
+    public void shouldSuccessfullyAuthenticate() {
         Request req = new Request()
                 .setId(UUID.randomUUID())
                 .setAction("SecurityActions.authenticate")

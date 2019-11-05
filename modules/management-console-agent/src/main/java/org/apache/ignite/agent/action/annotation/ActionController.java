@@ -27,8 +27,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ActionController {
-    /**
-     * Action name.
-     */
+    /** Action name. */
     String value() default "";
 }

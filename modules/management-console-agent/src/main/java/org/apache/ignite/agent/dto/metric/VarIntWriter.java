@@ -17,7 +17,7 @@
 package org.apache.ignite.agent.dto.metric;
 
 /**
- * <p>Supports expandable byte buffer with varint put operations for {@code int} and {@code long} types.</p> Varint
+ * <p>Supports expandable byte buffer with varInt put operations for {@code int} and {@code long} types.</p> VarInt
  * encoding allows to write integer values with large number of leading zeros in less than 4 bytes.
  * See https://en.wikipedia.org/wiki/Variable-length_quantity
  * <p>Each put operation moves position forward accordingly to the written type size.</p>
@@ -84,7 +84,7 @@ public class VarIntWriter {
     }
 
     /**
-     * Puts integer value in varint format. It can consume from 1 to 5 bytes.
+     * Puts integer value in varInt format. It can consume from 1 to 5 bytes.
      *
      * @param val Value.
      */
@@ -137,7 +137,7 @@ public class VarIntWriter {
     }
 
     /**
-     * Puts long value in varint format. It can consume form 1 to 10 bytes.
+     * Puts long value in varInt format. It can consume form 1 to 10 bytes.
      *
      * @param val Value.
      */
@@ -285,10 +285,10 @@ public class VarIntWriter {
     }
 
     /**
-     * Copies data from backing byte array to target array from begining of backing array to the current position.
+     * Copies data from backing byte array to target array from beaning of backing array to the current position.
      *
      * @param arr Target byte array.
-     * @param off Traget byte array offset.
+     * @param off Target byte array offset.
      */
     public void toBytes(byte[] arr, int off) {
         System.arraycopy(this.arr, 0, arr, off, pos);

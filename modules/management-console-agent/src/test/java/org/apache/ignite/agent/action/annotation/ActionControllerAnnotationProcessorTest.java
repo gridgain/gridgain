@@ -39,7 +39,7 @@ public class ActionControllerAnnotationProcessorTest {
     }
 
     /**
-     * Test actiona controller
+     * Test action controller.
      */
     @ActionController
     private static class TestActionController {
@@ -52,7 +52,7 @@ public class ActionControllerAnnotationProcessorTest {
     }
 
     /**
-     * Test actiona controller with name.
+     * Test action controller with name.
      */
     @ActionController("TestAction")
     private static class TestActionControllerWithName {

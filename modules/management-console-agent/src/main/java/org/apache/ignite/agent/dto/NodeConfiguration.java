@@ -38,11 +38,11 @@ public class NodeConfiguration {
 
     /**
      * @param consistentId Node consistent id.
-     * @param cfg Config.
+     * @param json Config in JSON format.
      */
-    public NodeConfiguration(String consistentId, String cfg) {
+    public NodeConfiguration(String consistentId, String json) {
         this.consistentId = consistentId;
-        this.json = cfg;
+        this.json = json;
     }
 
     /**
@@ -53,11 +53,11 @@ public class NodeConfiguration {
     }
 
     /**
-     * @param cfg Config.
+     * @param json Config in JSON format.
      * @return This for chaining method calls.
      */
-    public NodeConfiguration setJson(String cfg) {
-        this.json = cfg;
+    public NodeConfiguration setJson(String json) {
+        this.json = json;
         return this;
     }
 

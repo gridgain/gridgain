@@ -196,10 +196,10 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     }
 
     /**
-     * Should send correct sql metadata on add or drop index.
+     * Should send correct sql metadata on create and drop index.
      */
     @Test
-    public void shouldSendCacheMetadataOnAddAndDropdIndex() throws Exception {
+    public void shouldSendCacheMetadataOnCreateAndDropIndex() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
         changeManagementConsoleUri(ignite);
 
