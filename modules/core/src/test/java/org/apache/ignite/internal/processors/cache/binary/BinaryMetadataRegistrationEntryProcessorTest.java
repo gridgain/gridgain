@@ -49,7 +49,6 @@ public class BinaryMetadataRegistrationEntryProcessorTest extends AbstractBinary
 
     /** */
     private static class CustomProcessor<Key, Val> implements EntryProcessor<Key, Val, Val> {
-
         /** */
         private final Val val;
 
