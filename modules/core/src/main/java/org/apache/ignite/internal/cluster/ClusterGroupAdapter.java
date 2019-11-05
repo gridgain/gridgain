@@ -704,7 +704,12 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
     protected final ClusterGroupState ensureLastTopologyState() {
         ClusterGroupState state = this.state;
 
-        if (state == null || ctx.discovery().topologyVersion() != state.lastTopVer)
+        GridDiscoveryManager discoMgr = ctx.discovery();
+
+        long lastTopVer = discoMgr.topologyVersion();
+        long startTime = discoMgr.gridStartTime();
+
+        if (state == null || state.lastTopVer != lastTopVer || state.startTime != startTime)
             return reset(state);
 
         return state;
@@ -715,9 +720,12 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         guard();
 
         try {
-            long lastTopVer = ctx.discovery().topologyVersion();
+            GridDiscoveryManager discoMgr = ctx.discovery();
 
-            if (state != null && state.lastTopVer == lastTopVer)
+            long lastTopVer = discoMgr.topologyVersion();
+            long startTime = discoMgr.gridStartTime();
+
+            if (state != null && state.lastTopVer == lastTopVer && state.startTime == startTime)
                 return state;
 
             Collection<ClusterNode> nodes = resolveCurrentNodes();
@@ -733,7 +741,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             else
                 nodeIds = nodes.stream().map(ClusterNode::id).collect(Collectors.toSet());
 
-            return this.state = new ClusterGroupState(nodeIds, nodes, lastTopVer);
+            return this.state = new ClusterGroupState(nodeIds, nodes, lastTopVer, startTime);
         }
         finally {
             unguard();
@@ -792,16 +800,26 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         public final Collection<ClusterNode> nodes;
         /** Last topology version. */
         public final long lastTopVer;
+        /**
+         * Start time of first node in grid. Required for cases like in
+         * {@code GridServiceProxyClientReconnectSelfTest#testClientReconnect()} test. In that scenario we have one
+         * server and one client. Topology version is {@code 2} and after server restart and client reconnect we have
+         * basically new server but with the same topology version. This situation can be caught if we have additional
+         * counter.
+         */
+        public final long startTime;
 
         /**
          * @param nodeIds Calculated node ids.
          * @param nodes Calculated nodes.
          * @param lastTopVer Last topology version.
+         * @param startTime Start time of first node in grid.
          */
-        public ClusterGroupState(Set<UUID> nodeIds, Collection<ClusterNode> nodes, long lastTopVer) {
+        public ClusterGroupState(Set<UUID> nodeIds, Collection<ClusterNode> nodes, long lastTopVer, long startTime) {
             this.nodeIds = nodeIds;
             this.nodes = nodes;
             this.lastTopVer = lastTopVer;
+            this.startTime = startTime;
         }
     }
 
