@@ -44,7 +44,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration());
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                SqlSchemas = new List<string>
+                {
+                    SCHEMA_NAME_1,
+                    SCHEMA_NAME_2,
+                    SCHEMA_NAME_3,
+                    SCHEMA_NAME_4
+                }
+            };
 
             Ignition.Start(cfg);
         }
@@ -213,7 +222,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                 .Query(new SqlFieldsQuery(qry))
                 .GetAll();
 
-            validator?.Invoke(res);
+            if (validator != null)
+                validator.Invoke(res);
 
             throw new NotImplementedException();
         }
