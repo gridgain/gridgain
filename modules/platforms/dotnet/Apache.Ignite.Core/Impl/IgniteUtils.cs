@@ -21,12 +21,10 @@ namespace Apache.Ignite.Core.Impl
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Text;
-    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;

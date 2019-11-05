@@ -16,9 +16,9 @@
 
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
+    using System;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Binary;
-    using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
     /// Projection builder that is used for remote nodes filtering.
@@ -29,8 +29,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private const int Attribute = 1;
 
         /** */
-        private const int ServerNode = 1;
+        private const int ServerNode = 2;
 
+        /** Filter value mappings. */
         private readonly Dictionary<int, object> _filter;
 
         private ClientClusterGroupProjection(Dictionary<int, object> filter)
@@ -48,15 +49,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             var filter = new Dictionary<int, object>(_filter);
             object attributes;
-            if(filter.TryGetValue(Attribute, out attributes))
+            if (filter.TryGetValue(Attribute, out attributes))
             {
-                ((Dictionary<string, string>)attributes)[name] = value;
+                ((Dictionary<string, string>) attributes)[name] = value;
             }
             else
             {
-                filter[Attribute] = new Dictionary<string, string> { { name, value } };
+                filter[Attribute] = new Dictionary<string, string> {{name, value}};
             }
-            
+
             return new ClientClusterGroupProjection(filter);
         }
 
@@ -70,7 +71,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             filter[ServerNode] = true;
             return new ClientClusterGroupProjection(filter);
         }
-        
+
         /// <summary>
         /// Initializes an empty projection instance.
         /// </summary>
@@ -79,7 +80,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             get { return new ClientClusterGroupProjection(new Dictionary<int, object>()); }
         }
 
-        public void Marshall(IBinaryRawWriter writer)
+        /// <summary>
+        /// Writes the projection to output buffer.
+        /// </summary>
+        /// <param name="writer">Binary writer.</param>
+        public void Write(IBinaryRawWriter writer)
         {
             if (_filter.Count == 0)
             {
@@ -88,8 +93,34 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             }
 
             writer.WriteBoolean(true);
+            writer.WriteInt(_filter.Count);
 
-            // parameters serialization goes here ...
+            foreach (var item in _filter)
+            {
+                switch (item.Key)
+                {
+                    case Attribute:
+                    {
+                        writer.WriteShort(Attribute);
+                        var attributes = (Dictionary<string, string>) item.Value;
+                        writer.WriteInt(attributes.Count);
+                        foreach (var attr in attributes)
+                        {
+                            writer.WriteString(attr.Key);
+                            writer.WriteString(attr.Value);
+                        }
+
+                        break;
+                    }
+                    case ServerNode:
+                    {
+                        writer.WriteShort(ServerNode);
+                        break;
+                    }
+                    default:
+                        throw new NotSupportedException(string.Format("Unknown filter code: {0}", item.Key));
+                }
+            }
         }
     }
 }

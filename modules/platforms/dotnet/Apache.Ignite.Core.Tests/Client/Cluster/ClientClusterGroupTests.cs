@@ -174,5 +174,51 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             Assert.IsNull(clientNode);
         }
+
+        /// <summary>
+        /// Test cluster group applies simple filters.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupAppliesFilters()
+        {
+            var node = Ignition.GetIgnite().GetCluster().ForDotNet().GetNode();
+            var clientNode = Client.GetCluster().ForDotNet().GetNode();
+
+            AssertExtensions.ReflectionEqual(node, clientNode);
+
+            const string attrName = "unknownAttr";
+            var unknownNode = Ignition.GetIgnite().GetCluster().ForAttribute(attrName, null).GetNode();
+            var unknownClientNode = Client.GetCluster().ForDotNet().ForAttribute(attrName, null).GetNode();
+
+            Assert.IsNull(unknownNode);
+            Assert.IsNull(unknownClientNode);
+        }
+
+        /// <summary>
+        /// Test cluster group <see cref="IClientClusterGroup.ForAttribute"/>
+        /// does not allow empty attribute names.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupThrownExceptionForNullAttributeName()
+        {
+            TestDelegate action = () => Client.GetCluster().ForAttribute(null, null);
+
+            var ex = Assert.Throws<ArgumentNullException>(action);
+            Assert.AreEqual("Value cannot be null.\r\nParameter name: name", ex.Message);
+        }
+
+
+        /// <summary>
+        /// Test cluster group <see cref="IClientClusterGroup.ForAttribute"/>
+        /// does not allow empty attribute names.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupThrownExceptionForEmptyAttributeName()
+        {
+            TestDelegate action = () => Client.GetCluster().ForAttribute(string.Empty, null);
+
+            var ex = Assert.Throws<ArgumentNullException>(action);
+            Assert.AreEqual("Value cannot be null.\r\nParameter name: name", ex.Message);
+        }
     }
 }

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.binary.BinaryRawReader;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
@@ -32,6 +33,8 @@ import java.util.UUID;
 public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
     /** Topology version. */
     private final long topVer;
+    /** Client cluster group projection. */
+    private ClientClusterGroupProjection prj;
 
     /**
      * Constructor.
@@ -41,19 +44,21 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
     public ClientClusterGroupGetNodeIdsRequest(BinaryRawReader reader) {
         super(reader);
         topVer = reader.readLong();
+        prj = ClientClusterGroupProjection.read(reader);
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientResponse process(ClientConnectionContext ctx) {
-        // todo: a filter should be applied before.
+
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
         long curTopVer = cluster.topologyVersion();
 
         if (curTopVer <= topVer)
             return new ClientBooleanResponse(requestId(), false);
 
-        UUID[] nodeIds = cluster.nodes().stream().map(ClusterNode::id).toArray(UUID[]::new);
+        ClusterGroup clusterGrp = prj.Apply(cluster);
+        UUID[] nodeIds = clusterGrp.nodes().stream().map(ClusterNode::id).toArray(UUID[]::new);
         return new ClientClusterGroupGetNodeIdsResponse(requestId(), curTopVer, nodeIds);
     }
 }

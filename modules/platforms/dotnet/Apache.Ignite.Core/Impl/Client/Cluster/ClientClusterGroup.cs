@@ -27,6 +27,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using System.Linq;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Ignite client projection implementation.
@@ -95,6 +96,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritDoc /> */
         public IClientClusterGroup ForAttribute(string name, string val)
         {
+            IgniteArgumentCheck.NotNullOrEmpty(name, "name");
+
             return new ClientClusterGroup(_ignite, _marsh, _projection.ForAttribute(name, val));
         }
 
@@ -177,7 +180,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Action<IBinaryRawWriter> writeAction = writer =>
             {
                 writer.WriteLong(oldTopVer);
-                _projection.Marshall(writer);
+                _projection.Write(writer);
             };
 
             Func<IBinaryRawReader, Tuple<long, List<Guid>>> readFunc = reader =>
