@@ -60,7 +60,7 @@ default_days = 365
 commonName = supplied" > ${ca_name}.cnf
 }
 
-mkdir -p ca
+mkdir ca
 
 cd ca
 
