@@ -1329,7 +1329,7 @@ public class CacheGroupContext {
      * @return {@code True} if need create temporary tombstones entries for removed data.
      */
     public boolean supportsTombstone() {
-        // TODO check for store.configured
+        // TODO check for store.configured. Remove calculation.
         return !mvccEnabled && !isLocal() && !hasAtomicCaches();
     }
 
