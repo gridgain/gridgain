@@ -127,6 +127,12 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * If you not necessary create nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
 public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAbstractTest {
+    /** Partitioned cache name. */
+    protected static final String PARTITIONED_CACHE_NAME = "part_cache";
+
+    /** Replicated cache name. */
+    protected static final String REPLICATED_CACHE_NAME = "repl_cache";
+
     /** */
     protected static File defaultDiagnosticDir;
 
@@ -417,14 +423,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testSetState() throws Exception {
-        final String partCacheName = "part_cache";
-        final String replCacheName = "repl_cache";
         Ignite ignite = startGrids(2);
 
         ignite.cluster().state(ACTIVE);
 
-        ignite.createCache(ClusterStateTestUtils.partitionedCache(partCacheName));
-        ignite.createCache(ClusterStateTestUtils.replicatedCache(replCacheName));
+        ignite.createCache(ClusterStateTestUtils.partitionedCache(PARTITIONED_CACHE_NAME));
+        ignite.createCache(ClusterStateTestUtils.replicatedCache(REPLICATED_CACHE_NAME));
 
         ignite.cluster().state(INACTIVE);
 
@@ -433,31 +437,31 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(INACTIVE, ignite.cluster().state());
 
         // INACTIVE -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // INACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
+        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // READ_ONLY -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
+        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // READ_ONLY -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // ACTIVE -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // ACTIVE -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // INACTIVE -> ACTIVE.
-        setState(ignite, ACTIVE, "ACTIVE", partCacheName, replCacheName);
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // ACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", partCacheName, replCacheName);
+        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // READ_ONLY -> INACTIVE.
-        setState(ignite, INACTIVE, "INACTIVE", partCacheName, replCacheName);
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
     }
 
     /** */
