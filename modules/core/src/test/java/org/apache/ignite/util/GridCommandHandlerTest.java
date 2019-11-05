@@ -183,7 +183,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
         assertTrue(ignite.cluster().active());
-       // assertFalse(ignite.cluster().readOnly());
     }
 
     /**
@@ -369,16 +368,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
-
-        //ignite.cluster().readOnly(true);
-
-        // awaitPartitionMapExchange();
-
-        // assertTrue(ignite.cluster().readOnly());
-
-        // assertEquals(EXIT_CODE_OK, execute("--state"));
-
-        // assertContains(log, testOut.toString(), "Cluster is active (read-only)");
     }
 
     /**
