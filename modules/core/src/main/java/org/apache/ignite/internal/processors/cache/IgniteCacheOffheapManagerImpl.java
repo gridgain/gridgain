@@ -1701,6 +1701,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         incrementSize(cctx.cacheId());
                     }
+                    else if (isTombstone(c.newRow()))
+                        tombstoneCreated();
 
                     break;
 
@@ -2608,6 +2610,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (oldTombstone)
                 tombstoneRemoved();
+            else if (isTombstone(newRow))
+                tombstoneCreated();
         }
 
         /**

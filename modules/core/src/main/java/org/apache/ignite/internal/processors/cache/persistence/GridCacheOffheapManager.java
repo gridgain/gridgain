@@ -2875,20 +2875,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 throw new IgniteException(e);
             }
         }
-
-        @Override public void tombstoneCreated() {
-            try {
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 == null)
-                    return;
-
-                delegate0.tombstoneCreated();
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
     }
 
     /**

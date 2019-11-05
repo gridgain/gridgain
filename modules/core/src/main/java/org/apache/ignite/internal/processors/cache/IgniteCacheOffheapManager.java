@@ -1129,7 +1129,5 @@ public interface IgniteCacheOffheapManager {
          * @return Number of tombstone entries.
          */
         public long tombstonesCount();
-
-        public void tombstoneCreated();
     }
 }

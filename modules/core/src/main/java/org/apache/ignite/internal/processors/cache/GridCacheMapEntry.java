@@ -1719,9 +1719,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (cctx.group().shouldCreateTombstone(localPartition())) {
                 cctx.offheap().removeWithTombstone(cctx, key, newVer, localPartition());
 
-                // Partition may change his state during remove.
-                if (!cctx.group().shouldCreateTombstone(localPartition()))
-                    removeTombstone0(newVer);
+                // TODO FIXME leak of tombstones is possible.
+                // Need to check if tombstones count is not null periodically and start cleaning if yes.
             }
             else
                 removeValue();
@@ -3367,7 +3366,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             final boolean unswapped = (flags & IS_UNSWAPPED_MASK) != 0;
 
-            boolean update = false;
+            boolean update;
 
             IgniteBiPredicate<CacheObject, GridCacheVersion> p = new IgniteBiPredicate<CacheObject, GridCacheVersion>() {
                 @Override public boolean apply(@Nullable CacheObject val, GridCacheVersion currVer) {
@@ -3396,29 +3395,27 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             };
 
             if (unswapped) {
-                if (!preload) {
-                    update = p.apply(this.val, this.ver);
+                update = p.apply(this.val, this.ver);
 
-                    if (update) {
-                        // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
-                        long oldExpTime = expireTimeUnlocked();
+                if (update) {
+                    // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
+                    long oldExpTime = expireTimeUnlocked();
 
-                        if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
-                            if (onExpired(this.val, null)) {
-                                if (cctx.deferredDelete()) {
-                                    deferred = true;
-                                    oldVer = this.ver;
-                                }
-                                else if (val == null)
-                                    obsolete = true;
+                    if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
+                        if (onExpired(this.val, null)) {
+                            if (cctx.deferredDelete()) {
+                                deferred = true;
+                                oldVer = this.ver;
                             }
+                            else if (val == null)
+                                obsolete = true;
                         }
-
-                        if (cctx.mvccEnabled())
-                            cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
-                        else
-                            storeValue(val, expTime, ver, null, row);
                     }
+
+                    if (cctx.mvccEnabled())
+                        cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
+                    else
+                        storeValue(val, expTime, ver, null, row);
                 }
             }
             else {
@@ -3447,14 +3444,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                 }
-                else {
-                    // Optimization to access storage only once.
-                    UpdateClosure c = storeValue(val, expTime, ver, p, row);
-
-                    // Update if tree is changed or removal is replicated from supplier node and is absent locally.
-                    update = c.operationType() != IgniteTree.OperationType.NOOP ||
-                        preload && val == null && !c.filtered() && c.oldRow() == null;
-                }
+                else
+                    update = !storeValue(val, expTime, ver, p, row).filtered();
             }
 
             if (update) {
@@ -4598,7 +4589,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return true;
 
                     // TODO IGNITE-5286: need keep removed entries in heap map, otherwise removes can be lost.
-                    if (cctx.deferredDelete() && deletedUnlocked())
+                    if (cctx.deferredDelete() && deletedUnlocked() && !cctx.group().shouldCreateTombstone(localPartition()))
                         return false;
 
                     if (!hasReaders() && markObsolete0(obsoleteVer, false, null)) {
@@ -5937,40 +5928,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
             }
             else {
-                newRow = store.createRow(
-                            entry.cctx,
-                            entry.key,
-                            TombstoneCacheObject.INSTANCE,
-                            ver,
-                            0,
-                            oldRow);
+                if (entry.cctx.group().shouldCreateTombstone(entry.localPartition())) {
+                    newRow = store.createRow(
+                        entry.cctx,
+                        entry.key,
+                        TombstoneCacheObject.INSTANCE,
+                        ver,
+                        0,
+                        oldRow);
 
-                if (oldRow != null && oldRow.link() == newRow.link())
-                    treeOp = IgniteTree.OperationType.IN_PLACE;
+                    if (oldRow != null && oldRow.link() == newRow.link())
+                        treeOp = IgniteTree.OperationType.IN_PLACE;
 
-                // Default: PUT.
-
-//                if (oldRow != null)
-//                    treeOp = IgniteTree.OperationType.REMOVE;
-//                else {
-//                    if (!entry.cctx.deferredDelete()) {
-//                        // Write a tombstone if trying to remove non existent entry.
-//                        // Required to fix reordering issues during historical rebalancing.
-//                        newRow = store.createRow(
-//                            entry.cctx,
-//                            entry.key,
-//                            TombstoneCacheObject.INSTANCE,
-//                            ver,
-//                            0,
-//                            null);
-//
-//                        store.tombstoneCreated();
-//
-//                        // Default op is PUT.
-//                    }
-//                    else // Keep old behavior.
-                        //treeOp = IgniteTree.OperationType.NOOP;
-//                }
+                    // Default op is PUT.
+                }
+                else
+                    treeOp = oldRow != null ? IgniteTree.OperationType.REMOVE : IgniteTree.OperationType.NOOP;
             }
         }
 
