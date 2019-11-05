@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         {
             Ignition.StopAll(true);
         }
- 
+
         /// <summary>
         /// Schema explicitly defined.
         /// </summary>
@@ -102,7 +102,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         [Test]
         public void TestCreateDropNonExistingSchema()
         {
-            Assert.Throws<IgniteException>(() => 
+            Assert.Throws<IgniteException>(() =>
                 Sql("CREATE TABLE UNKNOWN_SCHEMA." + TableName + "(id INT PRIMARY KEY, val INT)"));
 
             Assert.Throws<IgniteException>(() => Sql("DROP TABLE UNKNOWN_SCHEMA." + TableName));
@@ -121,7 +121,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 
             Assert.Throws<IgniteException>(
                 () => Sql("CREATE TABLE " + SchemaName2 + '.' + TableName
-                    + " (s1_key INT PRIMARY KEY, s2_val INT) WITH \"cache_name=" + testCache + "\"")
+                          + " (s1_key INT PRIMARY KEY, s2_val INT) WITH \"cache_name=" + testCache + "\"")
             );
 
             Sql("DROP TABLE " + SchemaName1 + '.' + TableName);
@@ -179,14 +179,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         /// <summary>
         /// Verify tables.
         /// </summary>
-        private void VerifyTables()
+        private static void VerifyTables()
         {
-            Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME", res => {
-                Assert.AreEqual(new List<List<object>> {
-                    new List<object>{ SchemaName1, "S1_KEY" },
-                    new List<object>{ SchemaName2, "S2_KEY" },
-                    new List<object>{ SchemaName4, "S4_KEY" },
-                    new List<object>{ SchemaName3, "S3_KEY" }
+            Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME", res =>
+            {
+                Assert.AreEqual(new List<List<object>>
+                {
+                    new List<object> {SchemaName1, "S1_KEY"},
+                    new List<object> {SchemaName2, "S2_KEY"},
+                    new List<object> {SchemaName4, "S4_KEY"},
+                    new List<object> {SchemaName3, "S3_KEY"}
                 }, res);
             });
         }
@@ -194,50 +196,39 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         /// <summary>
         /// Get test table name.
         /// </summary>
-        private string GetTableName(bool withSchema) {
-            string prefix = "";
-
-            if (withSchema)
-                prefix += "PUBLIC.";
-
-            return prefix + TableName;
+        private static string GetTableName(bool withSchema)
+        {
+            return withSchema ? "PUBLIC." + TableName : TableName;
         }
 
         /// <summary>
         /// Perform SQL query.
         /// </summary>
-        private void Sql(string qry)
+        private static void Sql(string qry, Action<IList<IList<object>>> validator = null)
         {
-            Sql(qry, null);
-        }
-
-        /// <summary>
-        /// Perform SQL query.
-        /// </summary>
-        private void Sql(string qry, Action<IList<IList<object>>> validator)
-        {
-            IList<IList<object>> res = Ignition
+            var res = Ignition
                 .GetIgnite()
-                .GetOrCreateCache<int,int>("TestCache")
+                .GetOrCreateCache<int, int>("TestCache")
                 .Query(new SqlFieldsQuery(qry))
                 .GetAll();
 
             if (validator != null)
                 validator.Invoke(res);
         }
- 
+
         /// <summary>
         /// Generate one-row result set.
         /// </summary>
         private static List<List<object>> OneRowList(params object[] vals)
         {
-            return new List<List<object>>{ vals.ToList() };
+            return new List<List<object>> {vals.ToList()};
         }
 
         /// <summary>
         /// Create/insert/update/delete/drop table in PUBLIC schema.
         /// </summary>
-        private void ExecuteStmtsAndVerify(Func<bool> withSchemaDecisionSup) {
+        private static void ExecuteStmtsAndVerify(Func<bool> withSchemaDecisionSup)
+        {
             Sql("CREATE TABLE " + GetTableName(withSchemaDecisionSup()) + " (id INT PRIMARY KEY, val INT)");
 
             Sql("CREATE INDEX t1_idx_1 ON " + GetTableName(withSchemaDecisionSup()) + "(val)");
