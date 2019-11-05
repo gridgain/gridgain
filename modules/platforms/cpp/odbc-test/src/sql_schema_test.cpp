@@ -45,7 +45,7 @@ using namespace ignite_test;
  *
  * @param stmt Statement.
  */
-void CheckCursorEmpty(SQLHSTMT stmt)
+void ChechEmptyCursorGetNextThrowsException(SQLHSTMT stmt)
 {
     SQLRETURN ret = SQLFetch(stmt);
 
@@ -72,7 +72,7 @@ void CheckSingleLongRow1(SQLHSTMT stmt, const int64_t c1)
 
     BOOST_REQUIRE_EQUAL(val1, c1);
 
-    CheckCursorEmpty(stmt);
+    ChechEmptyCursorGetNextThrowsException(stmt);
 }
 
 /**
@@ -132,7 +132,7 @@ void CheckSingleIntRow2(SQLHSTMT stmt, int32_t c1, int32_t c2)
     BOOST_REQUIRE_EQUAL(val1, c1);
     BOOST_REQUIRE_EQUAL(val2, c2);
 
-    CheckCursorEmpty(stmt);
+    ChechEmptyCursorGetNextThrowsException(stmt);
 }
 
 static const std::string TABLE_NAME = "T1";
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE(TestBasicOpsDiffSchemas)
     CheckStringRow2(stmt, SCHEMA_NAME_4, "S4_KEY");
     CheckStringRow2(stmt, SCHEMA_NAME_3, "S3_KEY");
 
-    CheckCursorEmpty(stmt);
+    ChechEmptyCursorGetNextThrowsException(stmt);
 
     Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
     Sql("DROP TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME);

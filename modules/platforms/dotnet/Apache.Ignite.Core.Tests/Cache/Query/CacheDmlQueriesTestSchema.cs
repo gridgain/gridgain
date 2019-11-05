@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Common;
     using NUnit.Framework;
@@ -28,14 +29,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
     public class CacheDmlQueriesTestSchema
     {
         /// Table name
-        private const string TBL_NAME = "T1";
+        private const string TableName = "T1";
 
-        private const string SCHEMA_NAME_1 = "SCHEMA_1";
-        private const string SCHEMA_NAME_2 = "SCHEMA_2";
-        private const string SCHEMA_NAME_3 = "ScHeMa3";
-        private const string SCHEMA_NAME_4 = "SCHEMA_4";
+        private const string SchemaName1 = "SCHEMA_1";
+        private const string SchemaName2 = "SCHEMA_2";
+        private const string SchemaName3 = "ScHeMa3";
+        private const string SchemaName4 = "SCHEMA_4";
 
-        private const string Q_SCHEMA_NAME_3 = "\"" + SCHEMA_NAME_3 + "\"";
+        private const string QSchemaName4 = "\"" + SchemaName3 + "\"";
 
         /// <summary>
         /// Sets up test fixture.
@@ -47,10 +48,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
             {
                 SqlSchemas = new List<string>
                 {
-                    SCHEMA_NAME_1,
-                    SCHEMA_NAME_2,
-                    Q_SCHEMA_NAME_3,
-                    SCHEMA_NAME_4
+                    SchemaName1,
+                    SchemaName2,
+                    QSchemaName4,
+                    SchemaName4
                 }
             };
 
@@ -102,9 +103,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         public void TestCreateDropNonExistingSchema()
         {
             Assert.Throws<IgniteException>(() => 
-                Sql("CREATE TABLE UNKNOWN_SCHEMA." + TBL_NAME + "(id INT PRIMARY KEY, val INT)"));
+                Sql("CREATE TABLE UNKNOWN_SCHEMA." + TableName + "(id INT PRIMARY KEY, val INT)"));
 
-            Assert.Throws<IgniteException>(() => Sql("DROP TABLE UNKNOWN_SCHEMA." + TBL_NAME));
+            Assert.Throws<IgniteException>(() => Sql("DROP TABLE UNKNOWN_SCHEMA." + TableName));
         }
 
         /// <summary>
@@ -115,15 +116,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         {
             const string testCache = "cache1";
 
-            Sql("CREATE TABLE " + SCHEMA_NAME_1 + '.' + TBL_NAME
+            Sql("CREATE TABLE " + SchemaName1 + '.' + TableName
                 + " (s1_key INT PRIMARY KEY, s1_val INT) WITH \"cache_name=" + testCache + "\"");
 
             Assert.Throws<IgniteException>(
-                () => Sql("CREATE TABLE " + SCHEMA_NAME_2 + '.' + TBL_NAME
+                () => Sql("CREATE TABLE " + SchemaName2 + '.' + TableName
                     + " (s1_key INT PRIMARY KEY, s2_val INT) WITH \"cache_name=" + testCache + "\"")
             );
 
-            Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TBL_NAME);
+            Sql("DROP TABLE " + SchemaName1 + '.' + TableName);
         }
 
         /// <summary>
@@ -132,47 +133,47 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         [Test]
         public void TestBasicOpsDiffSchemas()
         {
-            Sql("CREATE TABLE " + SCHEMA_NAME_1 + '.' + TBL_NAME + " (s1_key INT PRIMARY KEY, s1_val INT)");
-            Sql("CREATE TABLE " + SCHEMA_NAME_2 + '.' + TBL_NAME + " (s2_key INT PRIMARY KEY, s2_val INT)");
-            Sql("CREATE TABLE " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME + " (s3_key INT PRIMARY KEY, s3_val INT)");
-            Sql("CREATE TABLE " + SCHEMA_NAME_4 + '.' + TBL_NAME + " (s4_key INT PRIMARY KEY, s4_val INT)");
+            Sql("CREATE TABLE " + SchemaName1 + '.' + TableName + " (s1_key INT PRIMARY KEY, s1_val INT)");
+            Sql("CREATE TABLE " + SchemaName2 + '.' + TableName + " (s2_key INT PRIMARY KEY, s2_val INT)");
+            Sql("CREATE TABLE " + QSchemaName4 + '.' + TableName + " (s3_key INT PRIMARY KEY, s3_val INT)");
+            Sql("CREATE TABLE " + SchemaName4 + '.' + TableName + " (s4_key INT PRIMARY KEY, s4_val INT)");
 
-            Sql("INSERT INTO " + SCHEMA_NAME_1 + '.' + TBL_NAME + " (s1_key, s1_val) VALUES (1, 2)");
-            Sql("INSERT INTO " + SCHEMA_NAME_2 + '.' + TBL_NAME + " (s2_key, s2_val) VALUES (1, 2)");
-            Sql("INSERT INTO " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME + " (s3_key, s3_val) VALUES (1, 2)");
-            Sql("INSERT INTO " + SCHEMA_NAME_4 + '.' + TBL_NAME + " (s4_key, s4_val) VALUES (1, 2)");
+            Sql("INSERT INTO " + SchemaName1 + '.' + TableName + " (s1_key, s1_val) VALUES (1, 2)");
+            Sql("INSERT INTO " + SchemaName2 + '.' + TableName + " (s2_key, s2_val) VALUES (1, 2)");
+            Sql("INSERT INTO " + QSchemaName4 + '.' + TableName + " (s3_key, s3_val) VALUES (1, 2)");
+            Sql("INSERT INTO " + SchemaName4 + '.' + TableName + " (s4_key, s4_val) VALUES (1, 2)");
 
-            Sql("UPDATE " + SCHEMA_NAME_1 + '.' + TBL_NAME + " SET s1_val = 5");
-            Sql("UPDATE " + SCHEMA_NAME_2 + '.' + TBL_NAME + " SET s2_val = 5");
-            Sql("UPDATE " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME + " SET s3_val = 5");
-            Sql("UPDATE " + SCHEMA_NAME_4 + '.' + TBL_NAME + " SET s4_val = 5");
+            Sql("UPDATE " + SchemaName1 + '.' + TableName + " SET s1_val = 5");
+            Sql("UPDATE " + SchemaName2 + '.' + TableName + " SET s2_val = 5");
+            Sql("UPDATE " + QSchemaName4 + '.' + TableName + " SET s3_val = 5");
+            Sql("UPDATE " + SchemaName4 + '.' + TableName + " SET s4_val = 5");
 
-            Sql("DELETE FROM " + SCHEMA_NAME_1 + '.' + TBL_NAME);
-            Sql("DELETE FROM " + SCHEMA_NAME_2 + '.' + TBL_NAME);
-            Sql("DELETE FROM " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME);
-            Sql("DELETE FROM " + SCHEMA_NAME_4 + '.' + TBL_NAME);
+            Sql("DELETE FROM " + SchemaName1 + '.' + TableName);
+            Sql("DELETE FROM " + SchemaName2 + '.' + TableName);
+            Sql("DELETE FROM " + QSchemaName4 + '.' + TableName);
+            Sql("DELETE FROM " + SchemaName4 + '.' + TableName);
 
-            Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_1 + '.' + TBL_NAME + "(s1_val)");
-            Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_2 + '.' + TBL_NAME + "(s2_val)");
-            Sql("CREATE INDEX t1_idx_1 ON " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME + "(s3_val)");
-            Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_4 + '.' + TBL_NAME + "(s4_val)");
+            Sql("CREATE INDEX t1_idx_1 ON " + SchemaName1 + '.' + TableName + "(s1_val)");
+            Sql("CREATE INDEX t1_idx_1 ON " + SchemaName2 + '.' + TableName + "(s2_val)");
+            Sql("CREATE INDEX t1_idx_1 ON " + QSchemaName4 + '.' + TableName + "(s3_val)");
+            Sql("CREATE INDEX t1_idx_1 ON " + SchemaName4 + '.' + TableName + "(s4_val)");
 
-            Sql("SELECT * FROM " + SCHEMA_NAME_1 + '.' + TBL_NAME);
-            Sql("SELECT * FROM " + SCHEMA_NAME_2 + '.' + TBL_NAME);
-            Sql("SELECT * FROM " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME);
-            Sql("SELECT * FROM " + SCHEMA_NAME_4 + '.' + TBL_NAME);
+            Sql("SELECT * FROM " + SchemaName1 + '.' + TableName);
+            Sql("SELECT * FROM " + SchemaName2 + '.' + TableName);
+            Sql("SELECT * FROM " + QSchemaName4 + '.' + TableName);
+            Sql("SELECT * FROM " + SchemaName4 + '.' + TableName);
 
-            Sql("SELECT * FROM " + SCHEMA_NAME_1 + '.' + TBL_NAME
-                + " JOIN " + SCHEMA_NAME_2 + '.' + TBL_NAME
-                + " JOIN " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME
-                + " JOIN " + SCHEMA_NAME_4 + '.' + TBL_NAME);
+            Sql("SELECT * FROM " + SchemaName1 + '.' + TableName
+                + " JOIN " + SchemaName2 + '.' + TableName
+                + " JOIN " + QSchemaName4 + '.' + TableName
+                + " JOIN " + SchemaName4 + '.' + TableName);
 
             VerifyTables();
 
-            Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TBL_NAME);
-            Sql("DROP TABLE " + SCHEMA_NAME_2 + '.' + TBL_NAME);
-            Sql("DROP TABLE " + Q_SCHEMA_NAME_3 + '.' + TBL_NAME);
-            Sql("DROP TABLE " + SCHEMA_NAME_4 + '.' + TBL_NAME);
+            Sql("DROP TABLE " + SchemaName1 + '.' + TableName);
+            Sql("DROP TABLE " + SchemaName2 + '.' + TableName);
+            Sql("DROP TABLE " + QSchemaName4 + '.' + TableName);
+            Sql("DROP TABLE " + SchemaName4 + '.' + TableName);
         }
 
         /// <summary>
@@ -181,12 +182,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         private void VerifyTables()
         {
             Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME", res => {
-                res.Equals(new List<List<object>> {
-                    new List<object>{ SCHEMA_NAME_1, "S1_KEY" },
-                    new List<object>{ SCHEMA_NAME_2, "S2_KEY" },
-                    new List<object>{ SCHEMA_NAME_4, "S4_KEY" },
-                    new List<object>{ SCHEMA_NAME_3, "S3_KEY" }
-                });
+                Assert.AreEqual(new List<List<object>> {
+                    new List<object>{ SchemaName1, "S1_KEY" },
+                    new List<object>{ SchemaName2, "S2_KEY" },
+                    new List<object>{ SchemaName4, "S4_KEY" },
+                    new List<object>{ SchemaName3, "S3_KEY" }
+                }, res);
             });
         }
 
@@ -199,7 +200,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
             if (withSchema)
                 prefix += "PUBLIC.";
 
-            return prefix + TBL_NAME;
+            return prefix + TableName;
         }
 
         /// <summary>
@@ -230,7 +231,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         /// </summary>
         private static List<List<object>> OneRowList(params object[] vals)
         {
-            return new List<List<object>>{ new List<object>{ vals } };
+            return new List<List<object>>{ vals.ToList() };
         }
 
         /// <summary>
@@ -242,16 +243,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
             Sql("CREATE INDEX t1_idx_1 ON " + GetTableName(withSchemaDecisionSup()) + "(val)");
 
             Sql("INSERT INTO " + GetTableName(withSchemaDecisionSup()) + " (id, val) VALUES(1, 2)");
-            Sql("SELECT * FROM " + GetTableName(withSchemaDecisionSup()), res => OneRowList(1, 2).Equals(res));
+            Sql("SELECT * FROM " + GetTableName(withSchemaDecisionSup()),
+                res => Assert.AreEqual(OneRowList(1, 2), res));
 
             Sql("UPDATE " + GetTableName(withSchemaDecisionSup()) + " SET val = 5");
-            Sql("SELECT * FROM " + GetTableName(withSchemaDecisionSup()), res => OneRowList(1, 5).Equals(res));
+            Sql("SELECT * FROM " + GetTableName(withSchemaDecisionSup()),
+                res => Assert.AreEqual(OneRowList(1, 5), res));
 
             Sql("DELETE FROM " + GetTableName(withSchemaDecisionSup()) + " WHERE id = 1");
-            Sql("SELECT COUNT(*) FROM " + GetTableName(withSchemaDecisionSup()), res => OneRowList(0).Equals(res));
+            Sql("SELECT COUNT(*) FROM " + GetTableName(withSchemaDecisionSup()),
+                res => Assert.AreEqual(OneRowList(0), res));
 
             Sql("SELECT COUNT(*) FROM SYS.TABLES WHERE schema_name = 'PUBLIC' " +
-                "AND table_name = \'" + TBL_NAME + "\'", res => OneRowList(1).Equals(res));
+                "AND table_name = \'" + TableName + "\'", res => Assert.AreEqual(OneRowList(1), res));
 
             Sql("DROP TABLE " + GetTableName(withSchemaDecisionSup()));
         }

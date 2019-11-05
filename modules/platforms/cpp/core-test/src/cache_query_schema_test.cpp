@@ -44,7 +44,7 @@ using ignite::impl::binary::BinaryUtils;
  * @param cur Cursor.
  */
 template<typename Cursor>
-void CheckCursorEmpty(Cursor& cur)
+void ChechEmptyCursorGetNextThrowsException(Cursor& cur)
 {
     BOOST_REQUIRE(!cur.HasNext());
     BOOST_CHECK_EXCEPTION(cur.GetNext(), IgniteError, ignite_test::IsGenericError);
@@ -67,7 +67,7 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1)
 
     BOOST_REQUIRE(!row.HasNext());
 
-    CheckCursorEmpty(cur);
+    ChechEmptyCursorGetNextThrowsException(cur);
 }
 
 /**
@@ -100,7 +100,7 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
 {
     CheckRow<T1, T2>(cur, c1, c2);
 
-    CheckCursorEmpty(cur);
+    ChechEmptyCursorGetNextThrowsException(cur);
 }
 
 static const std::string TABLE_NAME = "T1";
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE(TestBasicOpsDiffSchemas)
     CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_4, "S4_KEY");
     CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_3, "S3_KEY");
 
-    CheckCursorEmpty(cursor);
+    ChechEmptyCursorGetNextThrowsException(cursor);
 
     Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
     Sql("DROP TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME);
