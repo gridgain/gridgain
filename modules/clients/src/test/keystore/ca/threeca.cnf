@@ -1,0 +1,16 @@
+[ ca ]
+default_ca = threeca
+
+[ threeca ]
+dir=ca
+certificate = $dir/threeca.pem
+database = $dir/threeca-index.txt
+private_key = $dir/threeca.key
+new_certs_dir = $dir/certs
+default_md = sha1
+policy = policy_match
+serial = $dir/threeca-serial
+default_days = 365
+
+[policy_match]
+commonName = supplied

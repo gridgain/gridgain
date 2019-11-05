@@ -1,0 +1,16 @@
+[ ca ]
+default_ca = oneca
+
+[ oneca ]
+dir=ca
+certificate = $dir/oneca.pem
+database = $dir/oneca-index.txt
+private_key = $dir/oneca.key
+new_certs_dir = $dir/certs
+default_md = sha1
+policy = policy_match
+serial = $dir/oneca-serial
+default_days = 365
+
+[policy_match]
+commonName = supplied
