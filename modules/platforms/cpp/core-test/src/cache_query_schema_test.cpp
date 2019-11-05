@@ -25,13 +25,10 @@
 
 #include "ignite/cache/cache.h"
 #include "ignite/cache/query/query_cursor.h"
-#include "ignite/cache/query/query_sql.h"
-#include "ignite/cache/query/query_text.h"
 #include "ignite/cache/query/query_sql_fields.h"
 #include "ignite/ignite.h"
 #include "ignite/ignition.h"
 #include "ignite/test_utils.h"
-#include "teamcity_messages.h"
 
 using namespace boost::unit_test;
 
@@ -97,6 +94,11 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
 }
 
 static const std::string TABLE_NAME = "T1";
+static const std::string SCHEMA_NAME_1 = "SCHEMA_1";
+static const std::string SCHEMA_NAME_2 = "SCHEMA_2";
+static const std::string SCHEMA_NAME_3 = "ScHeMa3";
+static const std::string SCHEMA_NAME_4 = "SCHEMA_4";
+static const std::string CACHE_NAME = "cache_4";
 
 /**
  * Test setup fixture.
@@ -106,9 +108,9 @@ struct CacheQuerySchemaTestSuiteFixture
     Ignite StartNode(const char* name)
     {
 #ifdef IGNITE_TESTS_32
-        return ignite_test::StartNode("cache-query-32.xml", name);
+        return ignite_test::StartNode("cache-query-schema-32.xml", name);
 #else
-        return ignite_test::StartNode("cache-query.xml", name);
+        return ignite_test::StartNode("cache-query-schema.xml", name);
 #endif
     }
 
@@ -230,9 +232,23 @@ BOOST_AUTO_TEST_CASE(TestCreateDropNonExistingSchema)
     );
 }
 
-BOOST_AUTO_TEST_CASE(TestDropIfExistsNonExistingSchema)
+// BOOST_AUTO_TEST_CASE(TestDropIfExistsNonExistingSchema)
+// {
+//     Sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TABLE_NAME);
+// }
+
+BOOST_AUTO_TEST_CASE(TestCreateTblsInDiffSchemasForSameCache)
 {
-    Sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TABLE_NAME);
+    std::string testCache = "cache1";
+
+    Sql("CREATE TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME +
+        " (s1_key INT PRIMARY KEY, s1_val INT) WITH \"cache_name=" + testCache + '"');
+
+    BOOST_CHECK_THROW(
+        Sql("CREATE TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME +
+            " (s1_key INT PRIMARY KEY, s2_val INT) WITH \"cache_name=" + testCache + '"'),
+        IgniteError
+    );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
