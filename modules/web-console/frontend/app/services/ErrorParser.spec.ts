@@ -20,7 +20,6 @@ import JavaTypes from './JavaTypes.service';
 const parser = new ErrorParser(new JavaTypes());
 
 import { assert } from 'chai';
-import foreach from 'lodash/forEach'
 
 const FULL_ERROR_MSG = '[Exception1] Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause';
 
@@ -28,7 +27,7 @@ suite('Error parser service', () => {
     test('Error parsing', () => {
         assert.equal(FULL_ERROR_MSG, parser.extractFullMessage(TEST_CASES[0].error));
 
-        foreach(TEST_CASES, (testError) => {
+        TEST_CASES.forEach((testError) => {
             const parsed = parser.parse(testError.error, testError.prefix);
 
             assert.equal(testError.expectedMessage, parsed.message);
