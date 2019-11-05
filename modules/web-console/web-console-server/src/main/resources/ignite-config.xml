@@ -54,8 +54,8 @@
                 <!-- Disabling WAL archiving. -->
                 <property name="walArchivePath" value="db/wal"/>
 
-                <!-- Web Console must survive power loss. -->
-                <property name="walMode" value="FSYNC"/>
+                <!-- Web Console will survive process crash. -->
+                <property name="walMode" value="LOG_ONLY"/>
             </bean>
         </property>
 
