@@ -35,7 +35,6 @@ import org.apache.ignite.agent.service.event.EventsExporter;
 import org.apache.ignite.agent.service.event.EventsService;
 import org.apache.ignite.agent.service.metrics.MetricExporter;
 import org.apache.ignite.agent.service.metrics.MetricsService;
-import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -97,8 +96,8 @@ public class Agent extends ManagementConsoleProcessor {
     /** Tracing service. */
     private TracingService tracingSrvc;
 
-    /** Span exporter. */
-    private ManagementConsoleSpanExporter spanExporter;
+//    /** Span exporter. */
+//    private ManagementConsoleSpanExporter spanExporter;
 
     /** Events exporter. */
     private EventsExporter evtsExporter;
@@ -145,7 +144,7 @@ public class Agent extends ManagementConsoleProcessor {
         metaStorage = ctx.distributedMetastorage();
 
         evtsExporter = new EventsExporter(ctx);
-        spanExporter = new ManagementConsoleSpanExporter(ctx);
+        // spanExporter = new ManagementConsoleSpanExporter(ctx);
         metricExporter = new MetricExporter(ctx);
 
         launchAgentListener(null, ctx.discovery().discoCache());
@@ -167,7 +166,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.closeQuiet(metricExporter);
         U.closeQuiet(evtsExporter);
-        U.closeQuiet(spanExporter);
+        // U.closeQuiet(spanExporter);
 
         disconnect();
     }
