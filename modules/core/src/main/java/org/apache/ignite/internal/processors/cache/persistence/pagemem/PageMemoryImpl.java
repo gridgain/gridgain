@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -958,7 +959,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         if (dirtyPages != null) {
             if (dirtyPages.remove(new FullPageId(pageId, grpId)))
-                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
+                seg.dirtyPagesCntr.decrementAndGet();
         }
 
         return relPtr;
@@ -1860,7 +1861,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 Segment seg = segment(pageId.groupId(), pageId.pageId());
 
                 if (seg.dirtyPages.add(pageId)) {
-                    int dirtyPagesCnt = seg.dirtyPagesCntr.updateAndGet(c -> c + 1);
+                    long dirtyPagesCnt = seg.dirtyPagesCntr.incrementAndGet();
 
                     if (dirtyPagesCnt >= seg.maxDirtyPages)
                         safeToUpdate.set(false);
@@ -1876,7 +1877,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             Segment seg = segment(pageId.groupId(), pageId.pageId());
 
             if (seg.dirtyPages.remove(pageId)) {
-                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
+                seg.dirtyPagesCntr.decrementAndGet();
 
                 memMetrics.decrementDirtyPages();
             }
@@ -2151,13 +2152,13 @@ public class PageMemoryImpl implements PageMemoryEx {
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
 
         /** Atomic size counter for {@link #dirtyPages}. Used for {@link PageMemoryImpl#safeToUpdate()} calculation. */
-        private final AtomicInteger dirtyPagesCntr = new AtomicInteger();
+        private final AtomicLong dirtyPagesCntr = new AtomicLong();
 
         /** Wrapper of pages of current checkpoint. */
         private volatile CheckpointPages checkpointPages;
 
         /** */
-        private final int maxDirtyPages;
+        private final long maxDirtyPages;
 
         /** Initial partition generation. */
         private static final int INIT_PART_GENERATION = 1;
@@ -2198,8 +2199,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             pool = new PagePool(idx, poolRegion, null);
 
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
-                ? pool.pages() * 3 / 4
-                : Math.min(pool.pages() * 2 / 3, cpPoolPages);
+                ? pool.pages() * 3L / 4
+                : Math.min(pool.pages() * 2L / 3, cpPoolPages);
         }
 
         /**
@@ -3036,7 +3037,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                             FullPageId fullId = PageHeader.fullPageId(absPtr);
 
                             if (seg.dirtyPages.remove(fullId))
-                                seg.dirtyPagesCntr.updateAndGet(c -> c - 1);
+                                seg.dirtyPagesCntr.decrementAndGet();
                         }
 
                         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, pageSize, (byte)0);
