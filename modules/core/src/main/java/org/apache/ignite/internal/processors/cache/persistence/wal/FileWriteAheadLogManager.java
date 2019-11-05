@@ -902,7 +902,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         try (WALIterator it = replay(ptr)) {
             IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
 
-            if (rec.get1().equals(ptr))
+            if (rec != null && rec.get2().position().equals(ptr))
                 return rec.get2();
             else
                 throw new StorageException("Failed to read record by pointer [ptr=" + ptr + ", rec=" + rec + "]");
@@ -1473,7 +1473,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             createFile(first);
         }
-        else
+        else if (isArchiverEnabled())
             checkFiles(0, false, null, null);
     }
 
@@ -1888,31 +1888,31 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * @throws StorageException If exception occurred in the archiver thread.
          */
         private long nextAbsoluteSegmentIndex() throws StorageException, IgniteInterruptedCheckedException {
-            synchronized (this) {
-                if (cleanErr != null)
-                    throw cleanErr;
+            if (cleanErr != null)
+                throw cleanErr;
 
-                try {
-                    long nextIdx = segmentAware.nextAbsoluteSegmentIndex();
+            try {
+                long nextIdx = segmentAware.nextAbsoluteSegmentIndex();
 
+                synchronized (this) {
                     // Wait for formatter so that we do not open an empty file in DEFAULT mode.
                     while (nextIdx % dsCfg.getWalSegments() > formatted && cleanErr == null)
                         wait();
-
-                    if (cleanErr != null)
-                        throw cleanErr;
-
-                    return nextIdx;
                 }
-                catch (IgniteInterruptedCheckedException e) {
-                    if (cleanErr != null)
-                        throw cleanErr;
 
-                    throw e;
-                }
-                catch (InterruptedException e) {
-                    throw new IgniteInterruptedCheckedException(e);
-                }
+                if (cleanErr != null)
+                    throw cleanErr;
+
+                return nextIdx;
+            }
+            catch (IgniteInterruptedCheckedException e) {
+                if (cleanErr != null)
+                    throw cleanErr;
+
+                throw e;
+            }
+            catch (InterruptedException e) {
+                throw new IgniteInterruptedCheckedException(e);
             }
         }
 
@@ -2507,7 +2507,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         "(WAL segment size change is not supported in 'DEFAULT' WAL mode) " +
                         "[filePath=" + checkFile.getAbsolutePath() +
                         ", fileSize=" + checkFile.length() +
-                        ", configSize=" + dsCfg.getWalSegments() + ']');
+                        ", configSize=" + dsCfg.getWalSegmentSize() + ']');
             }
             else if (create)
                 createFile(checkFile);
