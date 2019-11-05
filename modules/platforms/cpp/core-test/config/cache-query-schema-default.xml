@@ -35,8 +35,17 @@
             <list>
                 <value>SCHEMA_1</value>
                 <value>SCHEMA_2</value>
-                <value>ScHeMa3</value>
+                <value>"ScHeMa3"</value>
                 <value>SCHEMA_4</value>
+            </list>
+        </property>
+
+        <property name="cacheConfiguration">
+            <list>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="cache4"/>
+                    <property name="sqlSchema" value="SCHEMA_4"/>
+                </bean>
             </list>
         </property>
 

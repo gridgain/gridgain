@@ -40,13 +40,14 @@ using namespace ignite::common;
 using ignite::impl::binary::BinaryUtils;
 
 /**
- * Ensure that GetNext() fails.
+ * Ensure that cursor is empy fails.
  *
  * @param cur Cursor.
  */
 template<typename Cursor>
-void CheckGetNextRowFail(Cursor& cur)
+void CheckCursorEmpty(Cursor& cur)
 {
+    BOOST_REQUIRE(!cur.HasNext());
     BOOST_CHECK_EXCEPTION(cur.GetNext(), IgniteError, ignite_test::IsGenericError);
 }
 
@@ -66,9 +67,27 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1)
     BOOST_REQUIRE_EQUAL(row.GetNext<T1>(), c1);
 
     BOOST_REQUIRE(!row.HasNext());
-    BOOST_REQUIRE(!cur.HasNext());
 
-    CheckGetNextRowFail(cur);
+    CheckCursorEmpty(cur);
+}
+
+/**
+ * Check row through iteration.
+ *
+ * @param cur Cursor.
+ * @param c1 First column.
+ */
+template<typename T1, typename T2>
+void CheckRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
+{
+    BOOST_REQUIRE(cur.HasNext());
+
+    QueryFieldsRow row = cur.GetNext();
+
+    BOOST_REQUIRE_EQUAL(row.GetNext<T1>(), c1);
+    BOOST_REQUIRE_EQUAL(row.GetNext<T2>(), c2);
+
+    BOOST_REQUIRE(!row.HasNext());
 }
 
 /**
@@ -80,23 +99,16 @@ void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1)
 template<typename T1, typename T2>
 void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
 {
-    BOOST_REQUIRE(cur.HasNext());
+    CheckRow<T1, T2>(cur, c1, c2);
 
-    QueryFieldsRow row = cur.GetNext();
-
-    BOOST_REQUIRE_EQUAL(row.GetNext<T1>(), c1);
-    BOOST_REQUIRE_EQUAL(row.GetNext<T2>(), c2);
-
-    BOOST_REQUIRE(!row.HasNext());
-    BOOST_REQUIRE(!cur.HasNext());
-
-    CheckGetNextRowFail(cur);
+    CheckCursorEmpty(cur);
 }
 
 static const std::string TABLE_NAME = "T1";
 static const std::string SCHEMA_NAME_1 = "SCHEMA_1";
 static const std::string SCHEMA_NAME_2 = "SCHEMA_2";
 static const std::string SCHEMA_NAME_3 = "ScHeMa3";
+static const std::string Q_SCHEMA_NAME_3 = '"' + SCHEMA_NAME_3 + '"';
 static const std::string SCHEMA_NAME_4 = "SCHEMA_4";
 static const std::string CACHE_NAME = "cache_4";
 
@@ -232,10 +244,57 @@ BOOST_AUTO_TEST_CASE(TestCreateDropNonExistingSchema)
     );
 }
 
-// BOOST_AUTO_TEST_CASE(TestDropIfExistsNonExistingSchema)
-// {
-//     Sql("DROP TABLE IF EXISTS UNKNOWN_SCHEMA." + TABLE_NAME);
-// }
+BOOST_AUTO_TEST_CASE(TestBasicOpsDiffSchemas)
+{
+    Sql("CREATE TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME + " (s1_key INT PRIMARY KEY, s1_val INT)");
+    Sql("CREATE TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME + " (s2_key INT PRIMARY KEY, s2_val INT)");
+    Sql("CREATE TABLE " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME + " (s3_key INT PRIMARY KEY, s3_val INT)");
+    Sql("CREATE TABLE " + SCHEMA_NAME_4 + '.' + TABLE_NAME + " (s4_key INT PRIMARY KEY, s4_val INT)");
+
+    Sql("INSERT INTO " + SCHEMA_NAME_1 + '.' + TABLE_NAME + " (s1_key, s1_val) VALUES (1, 2)");
+    Sql("INSERT INTO " + SCHEMA_NAME_2 + '.' + TABLE_NAME + " (s2_key, s2_val) VALUES (1, 2)");
+    Sql("INSERT INTO " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME + " (s3_key, s3_val) VALUES (1, 2)");
+    Sql("INSERT INTO " + SCHEMA_NAME_4 + '.' + TABLE_NAME + " (s4_key, s4_val) VALUES (1, 2)");
+
+    Sql("UPDATE " + SCHEMA_NAME_1 + '.' + TABLE_NAME + " SET s1_val = 5");
+    Sql("UPDATE " + SCHEMA_NAME_2 + '.' + TABLE_NAME + " SET s2_val = 5");
+    Sql("UPDATE " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME + " SET s3_val = 5");
+    Sql("UPDATE " + SCHEMA_NAME_4 + '.' + TABLE_NAME + " SET s4_val = 5");
+
+    Sql("DELETE FROM " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
+    Sql("DELETE FROM " + SCHEMA_NAME_2 + '.' + TABLE_NAME);
+    Sql("DELETE FROM " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME);
+    Sql("DELETE FROM " + SCHEMA_NAME_4 + '.' + TABLE_NAME);
+
+    Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_1 + '.' + TABLE_NAME + "(s1_val)");
+    Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_2 + '.' + TABLE_NAME + "(s2_val)");
+    Sql("CREATE INDEX t1_idx_1 ON " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME + "(s3_val)");
+    Sql("CREATE INDEX t1_idx_1 ON " + SCHEMA_NAME_4 + '.' + TABLE_NAME + "(s4_val)");
+
+    Sql("SELECT * FROM " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
+    Sql("SELECT * FROM " + SCHEMA_NAME_2 + '.' + TABLE_NAME);
+    Sql("SELECT * FROM " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME);
+    Sql("SELECT * FROM " + SCHEMA_NAME_4 + '.' + TABLE_NAME);
+
+    Sql("SELECT * FROM " + SCHEMA_NAME_1 + '.' + TABLE_NAME
+      + " JOIN " + SCHEMA_NAME_2 + '.' + TABLE_NAME
+      + " JOIN " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME
+      + " JOIN " + SCHEMA_NAME_4 + '.' + TABLE_NAME);
+
+    QueryFieldsCursor cursor = Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME");
+
+    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_1, "S1_KEY");
+    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_2, "S2_KEY");
+    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_4, "S4_KEY");
+    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_3, "S3_KEY");
+
+    CheckCursorEmpty(cursor);
+
+    Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
+    Sql("DROP TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME);
+    Sql("DROP TABLE " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME);
+    Sql("DROP TABLE " + SCHEMA_NAME_4 + '.' + TABLE_NAME);
+}
 
 BOOST_AUTO_TEST_CASE(TestCreateTblsInDiffSchemasForSameCache)
 {
