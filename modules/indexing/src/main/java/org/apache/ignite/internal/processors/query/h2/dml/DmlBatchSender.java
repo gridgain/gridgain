@@ -230,17 +230,6 @@ public class DmlBatchSender {
                 cntPerRow[rowNum] = Statement.EXECUTE_FAILED;
             }
 
-//            if (X.hasCause(e, IgniteClusterReadOnlyException.class)) {
-//                SQLException sqlEx = new SQLException(
-//                    e.getMessage(),
-//                    SqlStateCode.CLUSTER_READ_ONLY_MODE_ENABLED,
-//                    IgniteQueryErrorCode.CLUSTER_READ_ONLY_MODE_ENABLED,
-//                    e
-//                );
-//
-//                return new DmlPageProcessingResult(0, null, sqlEx);
-//            }
-
             return new DmlPageProcessingResult(0, null,
                 new SQLException(e.getMessage(), SqlStateCode.INTERNAL_ERROR, IgniteQueryErrorCode.UNKNOWN, e));
         }

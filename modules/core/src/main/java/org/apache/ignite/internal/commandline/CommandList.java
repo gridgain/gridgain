@@ -58,12 +58,6 @@ public enum CommandList {
     /** */
     DATA_CENTER_REPLICATION("--dr", new DrCommand());
 
-//    /** */
-//    READ_ONLY_ENABLE("--read-only-on", new ClusterReadOnlyModeEnableCommand()),
-//
-//    /** */
-//    READ_ONLY_DISABLE("--read-only-off", new ClusterReadOnlyModeDisableCommand());
-
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
 
