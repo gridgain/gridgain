@@ -36,70 +36,102 @@ using namespace boost::unit_test;
 using namespace ignite;
 using namespace ignite::cache;
 using namespace ignite::cache::query;
-using namespace ignite::common;
+
+using namespace ignite_test;
 
 /**
  * Ensure that cursor is empy fails.
  *
- * @param cur Cursor.
+ * @param stmt Statement.
  */
-template<typename Cursor>
-void CheckCursorEmpty(Cursor& cur)
+void CheckCursorEmpty(SQLHSTMT stmt)
 {
-    BOOST_REQUIRE(!cur.HasNext());
+    SQLRETURN ret = SQLFetch(stmt);
+
+    BOOST_REQUIRE_EQUAL(ret, SQL_NO_DATA);
 }
 
 /**
  * Check single row through iteration.
  *
- * @param cur Cursor.
+ * @param stmt Statement.
  * @param c1 First column.
  */
-template<typename T1>
-void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1)
+void CheckSingleLongRow1(SQLHSTMT stmt, const int64_t c1)
 {
-    BOOST_REQUIRE(cur.HasNext());
+    int64_t val1 = 0;
 
-    QueryFieldsRow row = cur.GetNext();
+    SQLRETURN ret = SQLFetch(stmt);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_REQUIRE_EQUAL(row.GetNext<T1>(), c1);
+    ret = SQLGetData(stmt, 1, SQL_C_SBIGINT, &val1, 0, 0);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_REQUIRE(!row.HasNext());
+    BOOST_REQUIRE_EQUAL(val1, c1);
 
-    CheckCursorEmpty(cur);
+    CheckCursorEmpty(stmt);
 }
 
 /**
  * Check row through iteration.
  *
- * @param cur Cursor.
+ * @param stmt Statement.
  * @param c1 First column.
+ * @param c2 Second column.
  */
-template<typename T1, typename T2>
-void CheckRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
+void CheckStringRow2(SQLHSTMT stmt, const std::string& c1, const std::string& c2)
 {
-    BOOST_REQUIRE(cur.HasNext());
+    char val1[1024] = { 0 };
+    char val2[1024] = { 0 };
+    SQLLEN val1Len = 0;
+    SQLLEN val2Len = 0;
 
-    QueryFieldsRow row = cur.GetNext();
+    SQLRETURN ret = SQLFetch(stmt);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_REQUIRE_EQUAL(row.GetNext<T1>(), c1);
-    BOOST_REQUIRE_EQUAL(row.GetNext<T2>(), c2);
+    ret = SQLGetData(stmt, 1, SQL_C_CHAR, val1, sizeof(val1), &val1Len);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_REQUIRE(!row.HasNext());
+    ret = SQLGetData(stmt, 2, SQL_C_CHAR, val2, sizeof(val2), &val2Len);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_REQUIRE_EQUAL(std::string(val1, static_cast<size_t>(val1Len)), c1);
+    BOOST_REQUIRE_EQUAL(std::string(val2, static_cast<size_t>(val2Len)), c2);
 }
 
 /**
  * Check single row through iteration.
  *
- * @param cur Cursor.
+ * @param stmt Statement.
  * @param c1 First column.
+ * @param c2 Second column.
  */
-template<typename T1, typename T2>
-void CheckSingleRow(QueryFieldsCursor& cur, const T1& c1, const T2& c2)
+void CheckSingleIntRow2(SQLHSTMT stmt, int32_t c1, int32_t c2)
 {
-    CheckRow<T1, T2>(cur, c1, c2);
+    int32_t val1 = 0;
+    int32_t val2 = 0;
 
-    CheckCursorEmpty(cur);
+    SQLRETURN ret = SQLFetch(stmt);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLGetData(stmt, 1, SQL_C_SLONG, &val1, 0, 0);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLGetData(stmt, 2, SQL_C_SLONG, &val2, 0, 0);
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_REQUIRE_EQUAL(val1, c1);
+    BOOST_REQUIRE_EQUAL(val2, c2);
+
+    CheckCursorEmpty(stmt);
 }
 
 static const std::string TABLE_NAME = "T1";
@@ -132,11 +164,14 @@ struct SchemaTestSuiteFixture : odbc::OdbcTestSuite
     }
 
     /** Perform SQL in cluster. */
-    QueryFieldsCursor Sql(const std::string& sql)
+    void Sql(const std::string& sql)
     {
-        return grid
-            .GetOrCreateCache<int, int>("SchemaTestCache")
-            .Query(SqlFieldsQuery(sql));
+        // SQLRETURN ret = SQLFreeStmt(stmt, SQL_CLOSE);
+        // BOOST_REQUIRE_EQUAL(ret, SQL_SUCCESS);
+
+        SQLRETURN res = ExecQuery(sql);
+
+        BOOST_REQUIRE(res == SQL_SUCCESS || res == SQL_SUCCESS_WITH_INFO);
     }
 
     std::string TableName(bool withSchema)
@@ -153,20 +188,20 @@ struct SchemaTestSuiteFixture : odbc::OdbcTestSuite
 
         Sql("INSERT INTO " + TableName(pred()) + " (id, val) VALUES(1, 2)");
 
-        QueryFieldsCursor cursor = Sql("SELECT * FROM " + TableName(pred()));
-        CheckSingleRow<int32_t, int32_t>(cursor, 1, 2);
+        Sql("SELECT * FROM " + TableName(pred()));
+        CheckSingleIntRow2(stmt, 1, 2);
 
         Sql("UPDATE " + TableName(pred()) + " SET val = 5");
-        cursor = Sql("SELECT * FROM " + TableName(pred()));
-        CheckSingleRow<int32_t, int32_t>(cursor, 1, 5);
+        Sql("SELECT * FROM " + TableName(pred()));
+        CheckSingleIntRow2(stmt, 1, 5);
 
         Sql("DELETE FROM " + TableName(pred()) + " WHERE id = 1");
-        cursor = Sql("SELECT COUNT(*) FROM " + TableName(pred()));
-        CheckSingleRow<int64_t>(cursor, 0);
+        Sql("SELECT COUNT(*) FROM " + TableName(pred()));
+        CheckSingleLongRow1(stmt, 0);
 
-        cursor = Sql("SELECT COUNT(*) FROM SYS.TABLES WHERE schema_name = 'PUBLIC' "
+        Sql("SELECT COUNT(*) FROM SYS.TABLES WHERE schema_name = 'PUBLIC' "
             "AND table_name = \'" + TABLE_NAME + "\'");
-        CheckSingleRow<int64_t>(cursor, 1);
+        CheckSingleLongRow1(stmt, 1);
 
         Sql("DROP TABLE " + TableName(pred()));
     }
@@ -269,14 +304,14 @@ BOOST_AUTO_TEST_CASE(TestBasicOpsDiffSchemas)
       + " JOIN " + Q_SCHEMA_NAME_3 + '.' + TABLE_NAME
       + " JOIN " + SCHEMA_NAME_4 + '.' + TABLE_NAME);
 
-    QueryFieldsCursor cursor = Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME");
+    Sql("SELECT SCHEMA_NAME, KEY_ALIAS FROM SYS.TABLES ORDER BY SCHEMA_NAME");
 
-    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_1, "S1_KEY");
-    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_2, "S2_KEY");
-    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_4, "S4_KEY");
-    CheckRow<std::string, std::string>(cursor, SCHEMA_NAME_3, "S3_KEY");
+    CheckStringRow2(stmt, SCHEMA_NAME_1, "S1_KEY");
+    CheckStringRow2(stmt, SCHEMA_NAME_2, "S2_KEY");
+    CheckStringRow2(stmt, SCHEMA_NAME_4, "S4_KEY");
+    CheckStringRow2(stmt, SCHEMA_NAME_3, "S3_KEY");
 
-    CheckCursorEmpty(cursor);
+    CheckCursorEmpty(stmt);
 
     Sql("DROP TABLE " + SCHEMA_NAME_1 + '.' + TABLE_NAME);
     Sql("DROP TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME);
