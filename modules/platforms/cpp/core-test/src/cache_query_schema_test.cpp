@@ -16,7 +16,6 @@
 
 #include <stdint.h>
 
-#include <sstream>
 #include <iterator>
 
 #include <boost/test/unit_test.hpp>
@@ -110,7 +109,6 @@ static const std::string SCHEMA_NAME_2 = "SCHEMA_2";
 static const std::string SCHEMA_NAME_3 = "ScHeMa3";
 static const std::string Q_SCHEMA_NAME_3 = '"' + SCHEMA_NAME_3 + '"';
 static const std::string SCHEMA_NAME_4 = "SCHEMA_4";
-static const std::string CACHE_NAME = "cache_4";
 
 /**
  * Test setup fixture.

@@ -40,15 +40,6 @@
             </list>
         </property>
 
-        <property name="cacheConfiguration">
-            <list>
-                <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="cache4"/>
-                    <property name="sqlSchema" value="SCHEMA_4"/>
-                </bean>
-            </list>
-        </property>
-
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
                 <property name="ipFinder">
