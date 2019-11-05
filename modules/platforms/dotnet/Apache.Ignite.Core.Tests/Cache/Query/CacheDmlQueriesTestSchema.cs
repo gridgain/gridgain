@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// ReSharper disable UnusedAutoPropertyAccessor.Local
 namespace Apache.Ignite.Core.Tests.Cache.Query
 {
     using System;
