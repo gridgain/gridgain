@@ -30,6 +30,8 @@ export class Paragraph extends PanelCollapsible {
         this.showQueryButton = this.body.find('a').withExactText('Show query');
         this.clearResultButton = this.body.find('i.fa.fa-eraser');
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
+        this.metadataButton = this.body.find('i.fa-database');
+        this.cacheList = this.body.find('.queries-notebook-displayed-caches');
     }
     async enterQuery(text, options = {replace: false}) {
         return await enterAceText(this.queryField.with({timeout: 0}), text, options);
@@ -64,4 +66,13 @@ export const showStacktraceDialog = {
     causeWithoutStacktrace: showStacktraceDialogSelector.find('.stacktrace-viewer__cause').withText('Cause without stacktrace'),
     downloadLink: showStacktraceDialogSelector.find('span').withText('Full stacktrace is not available'),
     okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
+};
+
+export const addQueryButton = Selector('button').withText('Add query');
+
+const cacheMetadataPanel = Selector('.cache-metadata');
+
+export const cacheMetadata = {
+    panel: cacheMetadataPanel,
+    tree: cacheMetadataPanel.find('.popover-content')
 };
