@@ -124,7 +124,7 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
         region = provider.nextRegion();
 
-        pool = new PagePool(segment, region, sysPageSize, rwLock, log);
+        pool = new PagePool(segment, region, sysPageSize, rwLock);
     }
 
     /**
@@ -153,14 +153,10 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
             assertTrue("Failed for i=" + i, relPtr != PageMemoryImpl.INVALID_REL_PTR);
 
-            info("Allocated: " + U.hexLong(relPtr) + ", absolute: " + U.hexLong(pool.absolute(relPtr)));
-
             assertTrue(allocated.add(relPtr));
             allocatedQueue.add(relPtr);
 
             PageHeader.writeTimestamp(pool.absolute(relPtr), 0xFFFFFFFFFFFFFFFFL);
-
-            info("Absolute after timestamp write: " + U.hexLong(pool.absolute(relPtr)));
 
             assertEquals(i + 1, pool.size());
         }
@@ -175,8 +171,6 @@ public class PagePoolTest extends GridCommonAbstractTest {
             int i = 0;
 
             for (Long relPtr : allocated) {
-                info("About to release: " + U.hexLong(relPtr));
-
                 pool.releaseFreePage(relPtr);
 
                 i++;
@@ -198,8 +192,6 @@ public class PagePoolTest extends GridCommonAbstractTest {
                 long relPtr = it.next();
 
                 long fromPool = pool.borrowOrAllocateFreePage(tag);
-
-                info("Borrowed page: " + U.hexLong(fromPool) + ", absPtr=" + U.hexLong(pool.absolute(fromPool)));
 
                 assertEquals(relPtr, fromPool);
 
@@ -227,8 +219,6 @@ public class PagePoolTest extends GridCommonAbstractTest {
 
             while ((relPtr = pool.borrowOrAllocateFreePage(1)) != PageMemoryImpl.INVALID_REL_PTR) {
                 assertNull(allocated.put(relPtr, relPtr));
-
-                info("Allocated=" + U.hexLong(relPtr) + ", absolute=" + pool.absolute(relPtr));
 
                 PageHeader.writeTimestamp(pool.absolute(relPtr), 0xFFFFFFFFFFFFFFFFL);
             }
@@ -293,7 +283,9 @@ public class PagePoolTest extends GridCommonAbstractTest {
                     long polled = pool.borrowOrAllocateFreePage(1);
 
                     if (polled != PageMemoryImpl.INVALID_REL_PTR) {
-                        PageHeader.writeTimestamp(pool.absolute(polled), 0xFFFFFFFFFFFFFFFFL);
+                        long abs = pool.absolute(polled);
+
+                        PageHeader.writeTimestamp(abs, 0xFFFFFFFFFFFFFFFFL);
 
                         assertNull(allocated.put(polled, polled));
                     }

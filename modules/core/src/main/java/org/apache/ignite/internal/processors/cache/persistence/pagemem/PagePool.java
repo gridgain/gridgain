@@ -17,10 +17,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.LockSupport;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.OffheapReadWriteLock;
@@ -67,9 +64,6 @@ public class PagePool {
     /** Instance of RW Lock Updater */
     private OffheapReadWriteLock rwLock;
 
-    /** */
-    private IgniteLogger log;
-
     /**
      * @param idx Index.
      * @param region Region
@@ -78,14 +72,12 @@ public class PagePool {
         int idx,
         DirectMemoryRegion region,
         int sysPageSize,
-        OffheapReadWriteLock rwLock,
-        IgniteLogger log
+        OffheapReadWriteLock rwLock
     ) {
         this.idx = idx;
         this.region = region;
         this.sysPageSize = sysPageSize;
         this.rwLock = rwLock;
-        this.log = log;
 
         long base = (region.address() + 7) & ~0x7;
 
@@ -133,33 +125,15 @@ public class PagePool {
             long freePageRelPtr = freePageRelPtrMasked & ADDRESS_MASK;
 
             if (freePageRelPtr != PageMemoryImpl.INVALID_REL_PTR) {
-                LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(100000) + 1);
-
                 long freePageAbsPtr = absolute(freePageRelPtr);
 
                 long nextFreePageRelPtr = GridUnsafe.getLong(freePageAbsPtr) & ADDRESS_MASK;
 
-                LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(100000) + 1);
-
                 // nextFreePageRelPtr may be invalid because a concurrent thread may have already polled this value
                 // and used it.
-
                 long cnt = ((freePageRelPtrMasked & COUNTER_MASK) + COUNTER_INC) & COUNTER_MASK;
 
                 if (GridUnsafe.compareAndSwapLong(null, freePageListPtr, freePageRelPtrMasked, nextFreePageRelPtr | cnt)) {
-                    log.info("borrow " + U.hexLong(freePageRelPtrMasked) + "->" + U.hexLong(nextFreePageRelPtr | cnt));
-//                    try {
-//                        if (nextFreePageRelPtr != PageMemoryImpl.INVALID_REL_PTR)
-//                            absolute(nextFreePageRelPtr | cnt);
-//                    }
-//                    catch (AssertionError e) {
-//                        log.error("Failed on cnt=" + U.hexLong(cnt) + ", nextFreePage=" + U.hexLong(nextFreePageRelPtr) + ", freePageRelPtrMasked=" + U.hexLong(freePageRelPtrMasked));
-//
-//                        throw e;
-//                    }
-
-                    LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(100000) + 1);
-
                     GridUnsafe.putLong(freePageAbsPtr, PageHeader.PAGE_MARKER);
 
                     return freePageRelPtr;
@@ -224,11 +198,12 @@ public class PagePool {
 
             GridUnsafe.putLong(absPtr, freePageRelPtr);
 
-            if (GridUnsafe.compareAndSwapLong(null, freePageListPtr, freePageRelPtrMasked, relPtr)) {
-                log.info("release " + U.hexLong(freePageRelPtrMasked) + "->" + U.hexLong(relPtr));
+            long cnt = freePageRelPtrMasked & COUNTER_MASK;
 
+            long relPtrWithCounter = (relPtr & ADDRESS_MASK) | cnt;
+
+            if (GridUnsafe.compareAndSwapLong(null, freePageListPtr, freePageRelPtrMasked, relPtrWithCounter))
                 return resCntr;
-            }
         }
     }
 
