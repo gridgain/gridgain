@@ -24,10 +24,9 @@ export const taskResult = (result) => ({
 });
 
 /**
- * Generate feature set with ids from 0 to 95.
- * NOTE! 24-th feature disable scheduling functionality (WC_SCHEDULING_NOT_AVAILABLE).
+ * Generate features set with ids from 0 to 95.
  *
- * @param {Array<number>} excluded Array of feature numbers to exclude.
+ * @param {Array<number>} excluded Array with features to exclude.
  * @return {string} Base64 coded string of enabled features.
  */
 export const generateFeasureSet = (excluded = []) => {
@@ -88,13 +87,15 @@ export const simeplFakeSQLQuery = (nid, response) => (ws) => {
     });
 };
 
+export const WC_SCHEDULING_NOT_AVAILABLE = 24;
+
 const CLUSTER_1 = {
     id: '70831a7c-2b5e-4c11-8c08-5888911d5962',
     name: 'Cluster 1',
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: generateFeasureSet([24]),
+    supportedFeatures: generateFeasureSet([WC_SCHEDULING_NOT_AVAILABLE]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': {
             address: '10.0.75.1',
@@ -109,7 +110,7 @@ const CLUSTER_2 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: generateFeasureSet([24]),
+    supportedFeatures: generateFeasureSet([WC_SCHEDULING_NOT_AVAILABLE]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe4': {
             address: '10.0.75.1',
