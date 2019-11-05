@@ -54,6 +54,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
+        if (!enableExperimental())
+            return;
+
         Command.usage(log, "Enable management:", MANAGEMENT, ManagementCommandList.ENABLE.text());
         Command.usage(log, "Disable management:", MANAGEMENT, ManagementCommandList.DISABLE.text());
         Command.usage(log, "Change management URI:", MANAGEMENT, getUrlOptions());
