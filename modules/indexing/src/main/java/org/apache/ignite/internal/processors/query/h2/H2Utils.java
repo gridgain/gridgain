@@ -429,6 +429,14 @@ public class H2Utils {
      * @param c Connection.
      * @return Session.
      */
+    public static Session session(H2PooledConnection c) {
+        return session(c.connection());
+    }
+
+    /**
+     * @param c Connection.
+     * @return Session.
+     */
     public static Session session(Connection c) {
         return (Session)((JdbcConnection)c).getSession();
     }
@@ -439,7 +447,7 @@ public class H2Utils {
      * @param distributedJoins If distributed joins are enabled.
      * @param enforceJoinOrder Enforce join order of tables.
      */
-    public static void setupConnection(Connection conn, QueryContext qctx,
+    public static void setupConnection(H2PooledConnection conn, QueryContext qctx,
         boolean distributedJoins, boolean enforceJoinOrder) {
         assert qctx != null;
 
@@ -454,7 +462,7 @@ public class H2Utils {
      * @param lazy Lazy query execution mode.
      */
     public static void setupConnection(
-        Connection conn,
+        H2PooledConnection conn,
         H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
@@ -480,7 +488,7 @@ public class H2Utils {
      *
      * @param conn Connection to use.
      */
-    public static void resetSession(Connection conn) {
+    public static void resetSession(H2PooledConnection conn) {
         Session s = session(conn);
 
         // TODO: GG-19120: remove this check.
@@ -1034,7 +1042,7 @@ public class H2Utils {
         // Check for joins between system views and normal tables.
         if (!F.isEmpty(tbls)) {
             for (QueryTable tbl : tbls) {
-                if (QueryUtils.SCHEMA_SYS.equals(tbl.schema())) {
+                if (QueryUtils.sysSchemaName().equals(tbl.schema())) {
                     if (!F.isEmpty(cacheIds)) {
                         throw new IgniteSQLException("Normal tables and system views cannot be used in the same query.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
