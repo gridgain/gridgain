@@ -114,7 +114,7 @@ const _configureMinimalCacheStore = async(t) => {
 };
 
 // Testcafe #1 for https://ggsystems.atlassian.net/browse/GG-25370
-test.only('Save valid SQL scheme with empty cache', async(t) => {
+test('Save valid SQL scheme with empty cache', async(t) => {
     await t.click(createModelButton);
 
     await _configureMinimalQueryFields(t);
