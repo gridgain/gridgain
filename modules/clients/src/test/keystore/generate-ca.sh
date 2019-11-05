@@ -19,16 +19,27 @@ set -e
 
 pwd="123456"
 
+#
+# Create certificate authority with a specified name.
+#
+# param #1 CA name.
+#
 function createCa {
     ca_name=$1
 
+    echo
+    echo Create a certificate signing request for ${ca_name}.
     openssl req -new -newkey rsa:2048 -nodes -out ${ca_name}.csr -keyout ${ca_name}.key \
         -subj "/emailAddress=${ca_name}@ignite.apache.org/CN=${ca_name}/OU=Dev/O=Ignite/L=SPb/ST=SPb/C=RU"
 
+    echo
+    echo Self-sign the CSR for ${ca_name}.
     openssl x509 -trustout -signkey ${ca_name}.key -days 7305 -req -in ${ca_name}.csr -out ${ca_name}.pem
 
     rm ${ca_name}.csr
 
+    echo
+    echo Create auxiliary files for ${ca_name}.
     touch ${ca_name}-index.txt
     echo 01 > ${ca_name}-serial
     echo "[ ca ]
@@ -58,6 +69,9 @@ createCa twoca
 createCa threeca
 
 cd ..
+
+# Create four trust stores: trust-one, trust-two, trust-three and trust-both.
+# trust-both contains keys of oneca and twoca.
 
 keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-one.jks
 keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-two.jks

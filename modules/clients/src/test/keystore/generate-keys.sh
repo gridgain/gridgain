@@ -21,11 +21,11 @@ pwd="123456"
 
 #
 # Create artifacts for specified name: key pair-> cert request -> ca-signed certificate.
-# Save private key and CA-signed certificate into key storages: PEM, JKS, PFX (PKCS12).
+# Save private key and CA-signed certificate into JKS key storage.
 #
 # param $1 Artifact name.
 # param $2 Name of a certificate authority.
-# param $3 Password for all keys and storages.
+# param $3 If true, then an expired certificate will be generated.
 #
 function createStore {
 	artifact=$1
@@ -57,7 +57,7 @@ function createStore {
 	keytool -certreq -alias ${artifact} -file ${artifact}.csr -keypass ${pwd} -keystore ${artifact}.jks -storepass ${pwd}
 
 	echo
-	echo "Sign the CSR using ${ca_name}."
+	echo Sign the CSR using ${ca_name}.
 	openssl ca -config ca/${ca_name}.cnf \
 	        -startdate ${startdate} -enddate ${enddate} \
 	        -batch -out ${artifact}.pem -infiles ${artifact}.csr
