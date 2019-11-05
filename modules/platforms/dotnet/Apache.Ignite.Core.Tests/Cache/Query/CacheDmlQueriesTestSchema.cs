@@ -35,7 +35,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         private const string SCHEMA_NAME_3 = "ScHeMa3";
         private const string SCHEMA_NAME_4 = "SCHEMA_4";
 
-        private static readonly string Q_SCHEMA_NAME_3 = '"' + SCHEMA_NAME_3 + '"';
+        private const string Q_SCHEMA_NAME_3 = "\"" + SCHEMA_NAME_3 + "\"";
 
         /// <summary>
         /// Sets up test fixture.
