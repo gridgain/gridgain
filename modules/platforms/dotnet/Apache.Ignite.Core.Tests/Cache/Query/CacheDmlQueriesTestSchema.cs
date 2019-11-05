@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                 {
                     SCHEMA_NAME_1,
                     SCHEMA_NAME_2,
-                    SCHEMA_NAME_3,
+                    Q_SCHEMA_NAME_3,
                     SCHEMA_NAME_4
                 }
             };
@@ -224,8 +224,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 
             if (validator != null)
                 validator.Invoke(res);
-
-            throw new NotImplementedException();
         }
  
         /// <summary>
