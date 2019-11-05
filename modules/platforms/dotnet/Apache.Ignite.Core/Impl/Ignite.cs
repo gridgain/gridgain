@@ -976,8 +976,8 @@ namespace Apache.Ignite.Core.Impl
             IBinaryRawReader reader = Marshaller.StartUnmarshal(stream, false);
 
             var node = new ClusterNodeImpl(reader);
-
-            node.Init(this);
+            
+            node.Init(new ClusterNodeDataProvider(this));
 
             _nodes[node.Id] = node;
         }

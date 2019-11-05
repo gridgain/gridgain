@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;

@@ -62,6 +62,7 @@
     <Compile Include="Client\ISslStreamFactory.cs" />
     <Compile Include="Client\SslStreamFactory.cs" />
     <Compile Include="Cluster\IBaselineNode.cs" />
+    <Compile Include="Cluster\IClusterNodeDataProvider.cs" />
     <Compile Include="Common\IgniteProductVersion.cs" />
     <Compile Include="Configuration\CheckpointWriteOrder.cs" />
     <Compile Include="Configuration\DataPageEvictionMode.cs" />
@@ -92,9 +93,9 @@
     <Compile Include="Impl\Client\ClientFlags.cs" />
     <Compile Include="Impl\Client\Cluster\ClientClusterGroup.cs" />
     <Compile Include="Impl\Client\Cluster\ClientClusterGroupProjection.cs" />
-    <Compile Include="Impl\Client\Cluster\ClientClusterNode.cs" />
     <Compile Include="Impl\Client\Endpoint.cs" />
     <Compile Include="Impl\Client\SocketEndpoint.cs" />
+    <Compile Include="Impl\Cluster\ClusterNodeDataProvider.cs" />
     <Compile Include="Impl\Common\TaskRunner.cs" />
     <Compile Include="Impl\Transactions\TransactionCollectionImpl.cs" />
     <Compile Include="Impl\Unmanaged\UnmanagedThread.cs" />

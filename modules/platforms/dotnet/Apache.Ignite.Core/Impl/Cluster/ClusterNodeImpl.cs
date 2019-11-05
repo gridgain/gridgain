@@ -63,9 +63,9 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
         /** Metrics. */
         private volatile ClusterMetricsImpl _metrics;
-        
-        /** Ignite reference. */
-        private WeakReference _igniteRef;
+
+        /** Node details provider. */
+        private IClusterNodeDataProvider _nodeDetailsProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterNodeImpl"/> class.
@@ -168,16 +168,16 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
         public IClusterMetrics GetMetrics()
         {
-            var ignite = (Ignite)_igniteRef.Target;
-
-            if (ignite == null)
-                return _metrics;
-
             ClusterMetricsImpl oldMetrics = _metrics;
+            
+            long lastUpdateTime = oldMetrics != null ? oldMetrics.LastUpdateTimeRaw : 0;
 
-            long lastUpdateTime = oldMetrics.LastUpdateTimeRaw;
+            if (_nodeDetailsProvider == null)
+            {
+                return oldMetrics;
+            }
 
-            ClusterMetricsImpl newMetrics = ignite.ClusterGroup.RefreshClusterNodeMetrics(_id, lastUpdateTime);
+            ClusterMetricsImpl newMetrics = _nodeDetailsProvider.GetMetrics(_id, lastUpdateTime);
 
             if (newMetrics != null)
             {
@@ -236,12 +236,12 @@ namespace Apache.Ignite.Core.Impl.Cluster
         }
 
         /// <summary>
-        /// Initializes this instance with a grid.
+        /// Initializes this instance with a data provider.
         /// </summary>
-        /// <param name="grid">The grid.</param>
-        internal void Init(Ignite grid)
+        /// <param name="dataProvider">The data provider.</param>
+        internal void Init(IClusterNodeDataProvider dataProvider)
         {
-            _igniteRef = new WeakReference(grid);
+            _nodeDetailsProvider = dataProvider;
         }
 
         /// <summary>

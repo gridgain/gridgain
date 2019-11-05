@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Asserts equality with reflection recursively.
         /// </summary>
-        public static void ReflectionEqual(object x, object y, string propertyPath = null,
+        public static void ReflectionEqual(object x, object y, string propertyPath = null, 
             HashSet<string> ignoredProperties = null)
         {
             if (x == null && y == null)
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Tests
 
                 return;
             }
-
+            
             Assert.AreEqual(type, y.GetType());
 
             propertyPath = propertyPath ?? type.Name;
