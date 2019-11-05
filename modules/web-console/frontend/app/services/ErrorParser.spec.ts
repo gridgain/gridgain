@@ -20,13 +20,31 @@ import JavaTypes from './JavaTypes.service';
 const parser = new ErrorParser(new JavaTypes());
 
 import { assert } from 'chai';
+import foreach from 'lodash/forEach'
 
-// First letter of cause should be capital: GG-24882.
-const EXPECTED_CAUSES = ['Root cause (in lower case)', 'Duplicate cause', 'Final cause'];
+const FULL_ERROR_MSG = '[Exception1] Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause';
 
-const TEST_ERROR = {
-    className: 'test.Exception1',
-    message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
+suite('Error parser service', () => {
+    test('Error parsing', () => {
+        assert.equal(FULL_ERROR_MSG, parser.extractFullMessage(TEST_CASES[0].error));
+
+        foreach(TEST_CASES, (testError) => {
+            const parsed = parser.parse(testError.error, testError.prefix);
+
+            assert.equal(testError.expectedMessage, parsed.message);
+
+            assert.deepEqual(testError.expectedCauses, parsed.causes);
+        });
+    });
+});
+
+const TEST_CASES = [{
+    expectedMessage: 'Test: Final cause',
+    expectedCauses: ['Root cause (in lower case)', 'Duplicate cause', 'Final cause'],
+    prefix: 'Test: ',
+    error: {
+        className: 'test.Exception1',
+        message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
     at test.Class1.function(Class1.java:1)
     ... 9 more 
 Caused by: class test.Exception2: Final cause
@@ -41,20 +59,78 @@ Caused by: class test.Exception4: Duplicate cause
 Caused by: class test.Exception5: root cause (in lower case)
     at test.Class5.function(Class5.java:1)
     ... 40 more
-]`
-};
-
-const FULL_ERROR_MSG = '[Exception1] Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause';
-const ERROR_MSG = 'Test: Final cause';
-
-suite('Error parser service', () => {
-    test('Error parsing', () => {
-        assert.equal(FULL_ERROR_MSG, parser.extractFullMessage(TEST_ERROR));
-
-        const parsed = parser.parse(TEST_ERROR, 'Test: ');
-
-        assert.equal(ERROR_MSG, parsed.message);
-
-        assert.deepEqual(EXPECTED_CAUSES, parsed.causes);
-    });
-});
+`
+    }
+}, {
+    expectedMessage: 'Final cause',
+    expectedCauses: ['Final cause', 'First cause'],
+    error: {
+        className: '',
+        message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
+    at test.Class1.function(Class1.java:1)
+    ... 9 more 
+Caused by: class test.Exception2: first cause
+    at test.Class2.function(Class2.java:1)
+    ... 14 more
+Caused by: class test.Exception3: Final cause
+    at test.Class3.function(Class3.java:1)
+    ... 14 more`
+    }
+}, {
+    expectedMessage: 'Final cause',
+    expectedCauses: ['First cause'],
+    error: {
+        className: 'test.Exception1',
+        message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
+    at test.Class1.function(Class1.java:1)
+    ... 9 more 
+Caused by: class test.Exception2: first cause
+    at test.Class2.function(Class2.java:1)
+    ... 14 more
+Caused by: class test.Exception3: First cause
+    at test.Class3.function(Class3.java:1)
+    ... 14 more`
+    }
+}, {
+    expectedMessage: 'Final cause',
+    expectedCauses: ['First cause'],
+    error: {
+        className: 'test.Exception1',
+        message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
+    at test.Class1.function(Class1.java:1)
+    ... 9 more 
+Caused by: class test.Exception2: First cause
+    at test.Class2.function(Class2.java:1)
+    ... 14 more
+Caused by: class test.Exception3: first cause
+    at test.Class3.function(Class3.java:1)
+    ... 14 more
+Caused by: class test.Exception4: first cause
+    at test.Class4.function(Class4.java:1)
+    ... 29 more
+Caused by: class test.Exception5: First cause
+    at test.Class5.function(Class5.java:1)
+    ... 40 more`
+    }
+}, {
+    expectedMessage: 'Final cause',
+    expectedCauses: ['Final cause', 'Duplicate cause', 'First cause'],
+    error: {
+        className: 'test.Exception1',
+        message: `Failed to handle request: [req=EXE, taskName=test.TaskName, params=[], err=Final cause, trace=...]
+    at test.Class1.function(Class1.java:1)
+    ... 9 more 
+Caused by: class test.Exception2: First cause
+    at test.Class2.function(Class2.java:1)
+    ... 14 more
+Caused by: class test.Exception3: Duplicate cause
+    at test.Class3.function(Class3.java:1)
+    ... 14 more
+Caused by: class test.Exception4: Duplicate cause
+    at test.Class4.function(Class4.java:1)
+    ... 29 more
+Caused by: class test.Exception5: final cause
+    at test.Class5.function(Class5.java:1)
+    ... 40 more`
+    }
+}];
