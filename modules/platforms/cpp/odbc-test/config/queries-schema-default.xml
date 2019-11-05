@@ -31,6 +31,14 @@
         <property name="localHost" value="127.0.0.1"/>
         <property name="connectorConfiguration"><null/></property>
 
+        <property name="clientConnectorConfiguration">
+            <bean class="org.apache.ignite.configuration.ClientConnectorConfiguration">
+                <property name="host" value="127.0.0.1"/>
+                <property name="port" value="11110"/>
+                <property name="portRange" value="10"/>
+            </bean>
+        </property>
+
         <property name="sqlSchemas">
             <list>
                 <value>SCHEMA_1</value>

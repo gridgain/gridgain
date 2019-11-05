@@ -30,6 +30,7 @@
 
 #include "odbc_test_suite.h"
 #include "test_utils.h"
+#include "ignite/odbc/odbc_error.h"
 
 using namespace boost::unit_test;
 
@@ -150,9 +151,9 @@ struct SchemaTestSuiteFixture : odbc::OdbcTestSuite
      * Constructor.
      */
     SchemaTestSuiteFixture() :
-        grid(ignite_test::StartNode("queries-schema.xml", "Node1"))
+        grid(StartNode("queries-schema.xml", "Node1"))
     {
-        // No-op.
+        Connect("DRIVER={Apache Ignite};address=127.0.0.1:11110;schema=PUBLIC");
     }
 
     /**
@@ -166,12 +167,11 @@ struct SchemaTestSuiteFixture : odbc::OdbcTestSuite
     /** Perform SQL in cluster. */
     void Sql(const std::string& sql)
     {
-        // SQLRETURN ret = SQLFreeStmt(stmt, SQL_CLOSE);
-        // BOOST_REQUIRE_EQUAL(ret, SQL_SUCCESS);
+        SQLFreeStmt(stmt, SQL_CLOSE);
 
-        SQLRETURN res = ExecQuery(sql);
+        SQLRETURN ret = ExecQuery(sql);
 
-        BOOST_REQUIRE(res == SQL_SUCCESS || res == SQL_SUCCESS_WITH_INFO);
+        ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
     }
 
     std::string TableName(bool withSchema)
@@ -258,12 +258,12 @@ BOOST_AUTO_TEST_CASE(TestCreateDropNonExistingSchema)
 {
     BOOST_CHECK_THROW(
         Sql("CREATE TABLE UNKNOWN_SCHEMA." + TABLE_NAME + "(id INT PRIMARY KEY, val INT)"),
-        IgniteError
+        OdbcClientError
     );
 
     BOOST_CHECK_THROW(
         Sql("DROP TABLE UNKNOWN_SCHEMA." + TABLE_NAME),
-        IgniteError
+        OdbcClientError
     );
 }
 
@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(TestCreateTblsInDiffSchemasForSameCache)
     BOOST_CHECK_THROW(
         Sql("CREATE TABLE " + SCHEMA_NAME_2 + '.' + TABLE_NAME +
             " (s1_key INT PRIMARY KEY, s2_val INT) WITH \"cache_name=" + testCache + '"'),
-        IgniteError
+        OdbcClientError
     );
 }
 
