@@ -113,6 +113,10 @@ public class WebSocketManager implements AutoCloseable {
      * @param sesHnd Session handler.
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
+        // TODO GG-24671 debug OOM phase 2.
+        if (1==1)
+            return;
+
         if (isStopped)
             throw new InterruptedException("Web socket manager was stopped.");
 
