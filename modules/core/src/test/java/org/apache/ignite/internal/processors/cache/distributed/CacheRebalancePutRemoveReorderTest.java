@@ -117,6 +117,14 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         testPutRemoveReorder();
     }
 
+    /** Uses tombstones to handle put-remove reorder. */
+    @Test
+    public void testPutRemoveReorderWithTombstonesAndOnheapCache() throws Exception {
+        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+
+        testPutRemoveReorder();
+    }
+
     /** Uses deferred deletion queue to handle put-remove reorder. */
     @Test
     public void testPutRemoveReorderWithDeferredDelete() throws Exception {
