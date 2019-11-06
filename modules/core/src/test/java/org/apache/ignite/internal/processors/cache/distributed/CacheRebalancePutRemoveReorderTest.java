@@ -58,6 +58,8 @@ import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
  * Note: the test doesn't use parameterization to mitigate possible backport efforts.
  */
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+// Prevent deferred entries cleaning.
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL, value = "100000")
 public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** Partitions count. */
     public static final int PARTS_CNT = 32;
@@ -117,23 +119,23 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /** Uses tombstones to handle put-remove conflicts. */
+    /** Uses tombstones to handle put-remove conflicts for tx cache. */
     @Test
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, value = "0")
     public void testPutRemoveReorderWithTombstones() throws Exception {
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
 
-        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, PRELOADED_KEYS, 0);
+        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, PRELOADED_KEYS, 0, 0);
     }
 
-//    /** Uses deferred deletion queue to handle put-remove conflicts. */
-//    @Test
-//    public void testPutRemoveReorderWithDeferredDelete() throws Exception {
-//        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
-//
-//        testPutRemoveReorder(this::putRemove2, this::reorder2, 0, 0, 0);
-//    }
-//
+    /** Uses deferred deletion queue to handle put-remove conflicts for tx cache. */
+    @Test
+    public void testPutRemoveReorderWithDeferredDelete() throws Exception {
+        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+
+        testPutRemoveReorder(this::putRemove2, this::reorder2, 0, PRELOADED_KEYS, 1, 1);
+    }
+
 //    /** Uses tombstones to handle put-remove conflicts. */
 //    @Test
 //    public void testPutRemoveReorderWithTombstonesAndOnheapCache() throws Exception {
@@ -155,7 +157,8 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         Consumer<List> reorderClo,
         int expTombstoneCnt,
         int expSize,
-        int expHeapSize
+        int expHeapSize,
+        int expDeferredQeueuSize
     ) throws Exception {
         Ignite crd = startGrids(2);
         crd.cluster().active(true);
