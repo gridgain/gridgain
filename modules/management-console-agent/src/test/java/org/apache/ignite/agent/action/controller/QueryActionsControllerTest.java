@@ -24,17 +24,21 @@ import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.Response;
+import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
-import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
-import static org.apache.ignite.agent.dto.action.ActionStatus.RUNNING;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 
 /**
  * Query actions controller test.
@@ -47,6 +51,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldExecuteQuery() {
         Request req = new Request()
             .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()
@@ -55,7 +60,9 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setPageSize(10)
             );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 int id = ctx.read("$[2].rows[0][0]");
@@ -75,6 +82,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldExecuteQueryWithParameters() {
         Request req = new Request()
             .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()
@@ -84,7 +92,9 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setParameters(new Object[]{1})
             );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray arr = ctx.read("$[3].rows[*]");
@@ -105,21 +115,24 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldGetNextPage() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.executeSqlQuery")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                    new QueryArgument()
-                        .setQueryId("qry")
-                        .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
-                        .setPageSize(1)
-                );
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
+                    .setPageSize(1)
+            );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray arr = ctx.read("$[3].rows[*]");
                 boolean hasMore = ctx.read("$[3].hasMore");
-                
+
                 cursorId.set(ctx.read("$[3].cursorId"));
 
                 return hasMore && arr.size() == 1;
@@ -130,12 +143,15 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
 
         Request nextPageReq = new Request()
             .setAction("QueryActions.nextPage")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
             );
 
-        executeAction(nextPageReq, (r) -> {
+        executeAction(nextPageReq, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
@@ -158,16 +174,19 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldCancelQueryAndCleanup() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.executeSqlQuery")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                        new QueryArgument()
-                                .setQueryId("qry")
-                                .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
-                                .setPageSize(1)
-                );
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
+                    .setPageSize(1)
+            );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 cursorId.set(ctx.read("$[3].cursorId"));
@@ -179,20 +198,30 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         });
 
         Request cancelReq = new Request()
-                .setAction("QueryActions.cancel")
-                .setId(UUID.randomUUID())
-                .setArgument("qry");
+            .setAction("QueryActions.cancel")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument("qry");
 
-        executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
+        executeAction(cancelReq, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == COMPLETED;
+        });
 
         Request nextPageReq = new Request()
-                .setAction("QueryActions.nextPage")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                    new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
-                );
+            .setAction("QueryActions.nextPage")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
+            );
 
-        executeAction(nextPageReq, (r) -> r.getStatus() == FAILED);
+        executeAction(nextPageReq, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == FAILED;
+        });
     }
 
     /**
@@ -209,6 +238,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
 
         Request req = new Request()
             .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()
@@ -217,20 +247,33 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setPageSize(1_000)
             );
 
-        executeAction(req, (r) -> r.getStatus() == RUNNING);
-
-        Request cancelReq = new Request()
-                .setAction("QueryActions.cancel")
-                .setId(UUID.randomUUID())
-                .setArgument("qry");
-
-        executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
+        template.convertAndSend(buildActionRequestTopic(cluster.id()), req);
 
         assertWithPoll(
-                () -> {
-                    Response res = interceptor.getPayload(buildActionResponseDest(cluster.id(), req.getId()), Response.class);
-                    return res != null && res.getStatus() == FAILED;
-                }
+            () -> {
+                TaskResponse res = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+
+                return res != null && res.getJobCount() == 1;
+            }
+        );
+
+        Request cancelReq = new Request()
+            .setAction("QueryActions.cancel")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument("qry");
+
+        executeAction(cancelReq, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == COMPLETED;
+        });
+
+        assertWithPoll(
+            () -> {
+                JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+                return res != null && res.getStatus() == FAILED;
+            }
         );
     }
 
@@ -245,6 +288,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
 
         Request req = new Request()
             .setAction("QueryActions.executeScanQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new ScanQueryArgument()
@@ -253,7 +297,9 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setPageSize(1)
             );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
@@ -277,9 +323,8 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     }
 
     /**
-     * @param id Id.
+     * @param id  Id.
      * @param val Value.
-     *
      * @return Insert query string.
      */
     private String getInsertQuery(int id, int val) {

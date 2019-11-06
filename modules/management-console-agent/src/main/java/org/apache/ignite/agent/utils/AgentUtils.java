@@ -18,26 +18,23 @@ package org.apache.ignite.agent.utils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.Session;
+import org.apache.ignite.agent.dto.action.JobResponse;
+import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.AuthenticationContext;
@@ -48,6 +45,7 @@ import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ER
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
@@ -104,8 +102,8 @@ public final class AgentUtils {
     /**
      * @param igniteFut Ignite future.
      */
-    public static <T> CompletableFuture completeIgniteFuture(IgniteFuture<T> igniteFut) {
-        CompletableFuture<Object> fut = new CompletableFuture<>();
+    public static <T> CompletableFuture<T> completeIgniteFuture(IgniteFuture<T> igniteFut) {
+        CompletableFuture<T> fut = new CompletableFuture<>();
         igniteFut.chain(f -> {
             try {
                 fut.complete(f.get());
@@ -198,6 +196,19 @@ public final class AgentUtils {
      */
     public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
         return col == null ? Stream.empty() : col.stream();
+    }
+
+    /**
+     * @param id Id.
+     * @param nodeConsistentId Node consistent id.
+     * @param e Exception.
+     */
+    public static JobResponse convertToErrorJobResponse(UUID id, String nodeConsistentId, Throwable e) {
+        return new JobResponse()
+            .setRequestId(id)
+            .setStatus(FAILED)
+            .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()))
+            .setNodeConsistentId(nodeConsistentId);
     }
 
     /**

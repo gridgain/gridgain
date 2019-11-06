@@ -19,7 +19,7 @@ package org.apache.ignite.agent.dto.action;
 /**
  * Action status.
  */
-public enum ActionStatus {
+public enum Status {
     /** Action is running. */
     RUNNING,
 

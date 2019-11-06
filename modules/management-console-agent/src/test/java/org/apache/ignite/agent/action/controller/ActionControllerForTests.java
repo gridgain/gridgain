@@ -54,4 +54,14 @@ public class ActionControllerForTests {
     public String nodeIdAction() {
         return ctx.grid().cluster().localNode().id().toString();
     }
+
+
+    /**
+     * @return Node ID.
+     */
+    public String nodeIdActionWithSleep(long ms) throws InterruptedException {
+        Thread.sleep(ms);
+
+        return ctx.grid().cluster().localNode().id().toString();
+    }
 }

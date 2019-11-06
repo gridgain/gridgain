@@ -223,6 +223,13 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
+     * @return Distributed action service.
+     */
+    public DistributedActionService distributedActionService() {
+        return distributedActSrvc;
+    }
+
+    /**
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {

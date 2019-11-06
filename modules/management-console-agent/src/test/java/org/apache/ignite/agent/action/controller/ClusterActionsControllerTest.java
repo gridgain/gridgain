@@ -17,10 +17,13 @@
 package org.apache.ignite.agent.action.controller;
 
 import java.util.UUID;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 
 /**
  * Cluster actions controller test.
@@ -32,10 +35,15 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void activateCluster() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ClusterActions.activate");
+            .setId(UUID.randomUUID())
+            .setAction("ClusterActions.activate")
+            .setNodeIds(singleton(cluster.localNode().id()));
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.active());
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == COMPLETED && cluster.active();
+        });
     }
 
     /**
@@ -44,9 +52,14 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void deactivateCluster() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ClusterActions.deactivate");
+            .setId(UUID.randomUUID())
+            .setAction("ClusterActions.deactivate")
+            .setNodeIds(singleton(cluster.localNode().id()));
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.active());
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == COMPLETED && !cluster.active();
+        });
     }
 }

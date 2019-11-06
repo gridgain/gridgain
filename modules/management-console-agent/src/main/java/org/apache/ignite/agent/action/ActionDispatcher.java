@@ -19,17 +19,13 @@ package org.apache.ignite.agent.action;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -113,7 +109,7 @@ public class ActionDispatcher implements AutoCloseable {
             return (CompletableFuture) res;
 
         if (res instanceof IgniteFuture)
-           return completeIgniteFuture((IgniteFuture) res);
+           return completeIgniteFuture((IgniteFuture<?>) res);
 
         return completedFuture(res);
     }

@@ -27,14 +27,17 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.junit.Before;
 import org.junit.Test;
 
 import static java.lang.String.format;
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 
 /**
  * Query actions controller with parameters test.
@@ -89,7 +92,11 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                     .setPageSize(10)
             );
 
-        executeAction(initReq, (r) -> r.getStatus() == COMPLETED);
+        executeAction(initReq, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r.getStatus() == COMPLETED;
+        });
     }
 
     /**
@@ -99,6 +106,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
     public void shouldExecuteQueryWithInParameter() {
         Request req = new Request()
             .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setId(UUID.randomUUID())
             .setArgument(
                 new QueryArgument()
@@ -108,7 +116,9 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                     .setParameters(new Object[]{"1", "2"})
             );
 
-        executeAction(req, (r) -> {
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
                 JSONArray rows = ctx.read("$[0].rows[*]");
@@ -144,6 +154,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             String fieldName = t.getKey();
             Request req = new Request()
                 .setAction("QueryActions.executeSqlQuery")
+                .setNodeIds(singleton(cluster.localNode().id()))
                 .setId(UUID.randomUUID())
                 .setArgument(
                     new QueryArgument()
@@ -153,7 +164,9 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
                         .setParameters(new Object[]{t.getValue()})
                 );
 
-            executeAction(req, (r) -> {
+            executeAction(req, (res) -> {
+                JobResponse r = F.first(res);
+
                 if (r.getStatus() == COMPLETED) {
                     DocumentContext ctx = parse(r.getResult());
                     JSONArray rows = ctx.read("$[0].rows[*]");

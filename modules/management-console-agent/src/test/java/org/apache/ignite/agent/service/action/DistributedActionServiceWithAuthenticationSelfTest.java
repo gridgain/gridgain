@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.agent.service.action;
 
 import java.util.List;
@@ -5,27 +21,28 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.apache.ignite.agent.action.controller.AbstractActionControllerTest;
+import org.apache.ignite.agent.action.controller.AbstractActionControllerWithAuthenticationTest;
+import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
 import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.singleton;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
-import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
-import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 import static org.apache.ignite.agent.dto.action.Status.FAILED;
 import static org.apache.ignite.agent.dto.action.Status.RUNNING;
 
 /**
- * Test for distributed action service.
+ * Distributed action service with enabled authentication.
  */
-public class DistributedActionServiceSelfTest extends AbstractActionControllerTest {
+public class DistributedActionServiceWithAuthenticationSelfTest extends AbstractActionControllerWithAuthenticationTest {
     /**
      * Start grid instances.
      */
@@ -39,13 +56,16 @@ public class DistributedActionServiceSelfTest extends AbstractActionControllerTe
      */
     @Test
     public void shouldExecuteActionOnCoordinatorNode() throws Exception {
+        UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
+
         UUID crdId = cluster.localNode().id();
         String consistentId = String.valueOf(cluster.localNode().consistentId());
 
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("ActionControllerForTests.nodeIdAction")
-            .setNodeIds(singleton(crdId));
+            .setNodeIds(singleton(crdId))
+            .setSessionId(sesId);
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
@@ -76,10 +96,13 @@ public class DistributedActionServiceSelfTest extends AbstractActionControllerTe
      */
     @Test
     public void shouldExecuteActionOnNonCoordinatorNodes() throws Exception {
+        UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
+
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("ActionControllerForTests.nodeIdAction")
-            .setNodeIds(nonCrdNodeIds);
+            .setNodeIds(nonCrdNodeIds)
+            .setSessionId(sesId);
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
@@ -110,9 +133,12 @@ public class DistributedActionServiceSelfTest extends AbstractActionControllerTe
      */
     @Test
     public void shouldExecuteActionOnAllNodes() throws Exception {
+        UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
+
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction");
+            .setAction("ActionControllerForTests.nodeIdAction")
+            .setSessionId(sesId);
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
@@ -143,10 +169,13 @@ public class DistributedActionServiceSelfTest extends AbstractActionControllerTe
      */
     @Test
     public void shouldExecuteActionOnAllNodesWithNodeStop() throws Exception {
+        UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
+
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("ActionControllerForTests.nodeIdActionWithSleep")
-            .setArgument(5000);
+            .setArgument(5000)
+            .setSessionId(sesId);
 
         executeActionAndStopNode(req, 1000, 1, res -> {
             List<TaskResponse> taskResults =
@@ -168,59 +197,39 @@ public class DistributedActionServiceSelfTest extends AbstractActionControllerTe
     }
 
     /**
-     * Should send error response on response with invalid node id.
+     * Should send error response when user don't provide session id for executing secure action.
      */
     @Test
-    public void shouldSendErrorResponseWithInvalidNodeId() {
+    public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAthentication() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
-            .setNodeIds(singleton(UUID.randomUUID()));
+            .setAction("ActionControllerForTests.numberAction")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setArgument(10);
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
 
-            return taskRes.getStatus() == FAILED && r.getStatus() == FAILED && r.getError().getCode() == INTERNAL_ERROR_CODE;
+            return r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }
 
     /**
-     * Should send error response on response with invalid argument.
+     * Should send error response when user provide invalid session id for executing secure action.
      */
     @Test
-    public void shouldSendErrorResponseWithInvalidArgument() {
+    public void shouldSendErrorResponseOnExecutingSecuredActionWithInvalidSessionId() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
-            .setArgument("value");
+            .setAction("ActionControllerForTests.numberAction")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setArgument(10)
+            .setSessionId(UUID.randomUUID());
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
 
-            return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
-        });
-    }
-
-    /**
-     * Should send error response on response with incorrect action.
-     */
-    @Test
-    public void shouldSendErrorResponseWithIncorrectAction() {
-        Request req = new Request()
-            .setId(UUID.randomUUID())
-            .setAction("InvalidAction.updateAutoAdjustEnabled")
-            .setArgument(true);
-
-        executeAction(req, (res) -> {
-            JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
-
-            return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
+            return r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }
 }

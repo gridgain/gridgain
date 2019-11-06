@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.agent.service.action;
 
 import java.util.UUID;
@@ -8,17 +24,20 @@ import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.Response;
 import org.apache.ignite.agent.dto.action.ResponseError;
+import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
-import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
-import static org.apache.ignite.agent.dto.action.ActionStatus.RUNNING;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
+import static org.apache.ignite.agent.utils.AgentUtils.completeIgniteFuture;
 import static org.apache.ignite.agent.utils.AgentUtils.getErrorCode;
 
 /**
@@ -37,6 +56,9 @@ public class DistributedActionService {
     /** Logger. */
     private IgniteLogger log;
 
+    /** Local node consistent id. */
+    private String locNodeConsistentId;
+
     /**
      * @param ctx Context.
      * @param mgr Websocket manager.
@@ -46,6 +68,7 @@ public class DistributedActionService {
         this.mgr = mgr;
         this.log = ctx.log(ActionDispatcher.class);
         this.sesRegistry = SessionRegistry.getInstance(ctx);
+        this.locNodeConsistentId = String.valueOf(ctx.grid().localNode().consistentId());
     }
 
     /**
@@ -55,18 +78,9 @@ public class DistributedActionService {
         if (log.isDebugEnabled())
             log.debug("Received request: [sessionId=" + req.getSessionId() + ", reqId=" + req.getId() + "]");
 
-        // Deserialization error occurred.
-        if (req instanceof InvalidRequest) {
-            sendFailedResponse(req.getId(), ((InvalidRequest) req).getCause());
-
-            return;
-        }
-
-        ClusterGroup grp = req.getNodeId() == null
-            ? ctx.grid().cluster().forLocal()
-            : ctx.grid().cluster().forNodeId(req.getNodeId());
-
-        sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
+        ClusterGroup grp = F.isEmpty(req.getNodeIds())
+            ? ctx.grid().cluster().forServers()
+            : ctx.grid().cluster().forNodeIds(req.getNodeIds());
 
         executeAction(grp, req);
     }
@@ -81,6 +95,9 @@ public class DistributedActionService {
         boolean isSecurityNeeded = !isAuthenticateAct && (ctx.security().enabled() || ctx.authentication().enabled());
 
         try {
+            if (req instanceof InvalidRequest)
+                throw ((InvalidRequest) req).getCause();
+
             if (isSecurityNeeded) {
                 UUID sesId = req.getSessionId();
                 Session ses = sesRegistry.getSession(sesId);
@@ -94,10 +111,12 @@ public class DistributedActionService {
                     secCtx = ctx.security().withContext(ses.securityContext());
             }
 
-            ctx.grid().compute(grp).executeAsync(new ExecuteActionTask(), req).listen(f -> sendResponse(f.get()));
+            completeIgniteFuture(ctx.grid().compute(grp).executeAsync(new ExecuteActionTask(), req))
+                .exceptionally(e -> sendFailedTaskResponse(req.getId(), e))
+                .thenAccept(this::sendTaskResponse);
         }
         catch (Exception e) {
-            sendFailedResponse(req.getId(), e);
+            sendFailedTaskResponse(req.getId(), e);
         }
         finally {
             U.closeQuiet(secCtx);
@@ -105,25 +124,43 @@ public class DistributedActionService {
     }
 
     /**
-     * @param reqId Request ID.
-     * @param e Exception.
+     * @param res Response.
      */
-    private void sendFailedResponse(UUID reqId, Throwable e) {
-        sendResponse(new Response()
-            .setId(reqId)
-            .setStatus(FAILED)
-            .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()))
-        );
+    public void sendTaskResponse(TaskResponse res) {
+        UUID clusterId = ctx.cluster().get().id();
+
+        mgr.send(buildActionTaskResponseDest(clusterId, res.getId()), res);
     }
 
     /**
-     * Send action response to GMC.
-     *
      * @param res Response.
      */
-    private void sendResponse(Response res) {
+    public void sendJobResponse(JobResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionResponseDest(clusterId, res.getId()), res);
+        mgr.send(buildActionJobResponseDest(clusterId, res.getRequestId()), res);
+    }
+
+    /**
+     * @param reqId Request id.
+     * @param e Exception.
+     * @return Task response.
+     */
+    private TaskResponse sendFailedTaskResponse(UUID reqId, Throwable e) {
+        TaskResponse taskRes = new TaskResponse()
+            .setId(reqId)
+            .setJobCount(1)
+            .setStatus(FAILED)
+            .setNodeConsistentId(locNodeConsistentId);
+
+        JobResponse jobRes = new JobResponse()
+            .setRequestId(reqId)
+            .setStatus(FAILED)
+            .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()));
+
+        sendTaskResponse(taskRes);
+        sendJobResponse(jobRes);
+
+        return taskRes;
     }
 }
