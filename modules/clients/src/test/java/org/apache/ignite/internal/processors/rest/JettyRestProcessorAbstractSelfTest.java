@@ -2980,8 +2980,12 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
          * @return This helper for chaining method calls.
          */
         public VisorGatewayArgument arguments(Object... vals) {
-            for (Object val : vals)
-                put("p" + idx++, String.valueOf(val));
+            if (vals != null) {
+                for (Object val : vals)
+                    put("p" + idx++, String.valueOf(val));
+            }
+            else
+                put("p" + idx++, null);
 
             return this;
         }
