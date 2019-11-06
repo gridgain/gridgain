@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -156,6 +157,6 @@ public class ActionDispatcher implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        pool.shutdown();
+        U.shutdownNow(getClass(), pool, log);
     }
 }

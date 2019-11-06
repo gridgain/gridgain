@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.management;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -34,9 +34,6 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Hosted console URI. */
-    private static final String HOSTED_CONSOLE_URI = "https://gmc.gridgain.com";
-
     /** Local console URI. */
     private static final String LOCAL_CONSOLE_URI = "http://localhost:3000";
 
@@ -44,7 +41,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     private boolean enabled = true;
 
     /** */
-    private List<String> consoleUris = F.asList(LOCAL_CONSOLE_URI, HOSTED_CONSOLE_URI);
+    private List<String> consoleUris = Collections.singletonList(LOCAL_CONSOLE_URI);
 
     /** */
     @GridToStringExclude

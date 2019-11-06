@@ -35,6 +35,7 @@ import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
@@ -174,6 +175,6 @@ public class ClusterService implements AutoCloseable {
         ctx.event().removeDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
         ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
-        baselineExecSrvc.shutdown();
+        U.shutdownNow(getClass(), baselineExecSrvc, log);
     }
 }

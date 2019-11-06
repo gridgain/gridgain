@@ -18,7 +18,6 @@ package org.apache.ignite.agent.service.sender;
 
 import java.util.List;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.internal.GridKernalContext;
 
@@ -34,9 +33,6 @@ public class ManagementConsoleSender<T> extends RetryableSender<T> {
 
     /** Topic name. */
     private final String dest;
-
-    /** Logger. */
-    private final IgniteLogger log;
 
     /** Retry count. */
     private int retryCnt;
@@ -57,10 +53,9 @@ public class ManagementConsoleSender<T> extends RetryableSender<T> {
      * @param cap Capacity.
      */
     public ManagementConsoleSender(GridKernalContext ctx, WebSocketManager mgr, String dest, int cap) {
-        super(cap);
+        super(cap, ctx.log(ManagementConsoleSender.class));
         this.mgr = mgr;
         this.dest = dest;
-        this.log = ctx.log(ManagementConsoleSender.class);
     }
 
     /** {@inheritDoc} */

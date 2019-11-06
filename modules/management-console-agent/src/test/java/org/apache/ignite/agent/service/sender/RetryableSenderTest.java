@@ -38,7 +38,7 @@ public class RetryableSenderTest {
     @Test
     public void shouldSendInBatches() {
         List<List<Integer>> results = new ArrayList<>();
-        RetryableSender<Integer> snd = new RetryableSender<Integer>(10) {
+        RetryableSender<Integer> snd = new RetryableSender<Integer>(10, null) {
             @Override protected void sendInternal(List<Integer> elements) {
                 results.add(elements);
             }
@@ -59,7 +59,7 @@ public class RetryableSenderTest {
         AtomicBoolean shouldSnd = new AtomicBoolean(false);
         AtomicInteger retryCnt = new AtomicInteger();
 
-        RetryableSender<Integer> snd = new RetryableSender<Integer>(10) {
+        RetryableSender<Integer> snd = new RetryableSender<Integer>(10, null) {
             @Override protected void sendInternal(List<Integer> elements) {
                 if (!shouldSnd.get()) {
                     retryCnt.incrementAndGet();
