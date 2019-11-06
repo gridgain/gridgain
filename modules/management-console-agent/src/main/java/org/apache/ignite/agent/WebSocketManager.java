@@ -102,8 +102,6 @@ public class WebSocketManager implements AutoCloseable {
      * @param ctx Context.
      */
     public WebSocketManager(GridKernalContext ctx) {
-        // Runtime.getRuntime().addShutdownHook(new Thread(() -> isStopped = true));
-
         this.ctx = ctx;
         this.log = ctx.log(WebSocketManager.class);
     }

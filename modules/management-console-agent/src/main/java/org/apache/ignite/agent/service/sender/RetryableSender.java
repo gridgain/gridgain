@@ -23,6 +23,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Retryable sender with limited queue.
@@ -40,10 +42,15 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     /** Executor service. */
     private final ExecutorService exSrvc = Executors.newSingleThreadExecutor();
 
+    /** Logger. */
+    protected final IgniteLogger log;
+
     /**
      * @param cap Capacity.
+     * @param log Logger.
      */
-    protected RetryableSender(int cap) {
+    protected RetryableSender(int cap, IgniteLogger log) {
+        this.log = log;
         queue = new ArrayBlockingQueue<>(cap);
         exSrvc.submit(this);
     }
@@ -55,6 +62,7 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
 
             try {
                 e = queue.take();
+
                 sendInternal(e);
             }
             catch (InterruptedException ex) {
@@ -74,7 +82,7 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        exSrvc.shutdown();
+        U.shutdownNow(getClass(), exSrvc, log);
     }
 
     /**
