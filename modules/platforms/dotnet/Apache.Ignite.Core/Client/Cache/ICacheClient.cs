@@ -428,8 +428,8 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Returns cache with the specified expired policy set. This policy will be used for each operation
         /// invoked on the returned cache.
         /// <para />
-        /// Unlike the <see cref="ICache{TK,TV}.WithExpiryPolicy"/> method,
-        /// expiry durations are calculated for every key-value API operation.
+        /// Unlike the <see cref="ICache{TK,TV}.WithExpiryPolicy"/> method, expiry durations are retrieved
+        /// from specified <see cref="IExpiryPolicy"/> on every key-value API operation.
         /// </summary>
         /// <param name="plc">Expiry policy to use.</param>
         /// <returns>Cache instance with the specified expiry policy set.</returns>
