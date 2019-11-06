@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Unmanaged
 {
+    using System;
     using System.Linq;
     using System.Threading;
     using NUnit.Framework;
@@ -54,6 +55,8 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             
             Assert.AreEqual(threadNamesBefore, threadNamesAfter, message);
             Assert.IsNotEmpty(threadNamesAfter);
+            
+            Console.WriteLine("Java Threads: {0}", string.Join(", ", threadNamesAfter));
         }
 
         /// <summary>
