@@ -37,6 +37,7 @@ import org.apache.ignite.agent.service.metrics.MetricExporter;
 import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
+import org.apache.ignite.agent.utils.ManagementConsoleThreadFactory;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
@@ -287,7 +288,8 @@ public class Agent extends ManagementConsoleProcessor {
 
         evtsExporter.addGlobalEventListener();
 
-        connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        connectPool =
+            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new ManagementConsoleThreadFactory("connection-pool"));
 
         ctx.event().enableEvents(NOT_ENABLED_EVTS);
 

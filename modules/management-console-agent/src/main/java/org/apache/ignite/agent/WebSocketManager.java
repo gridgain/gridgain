@@ -233,10 +233,7 @@ public class WebSocketManager implements AutoCloseable {
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.addBean(httpClient);
 
-        JettyWebSocketClient jettyWebSockClient = new JettyWebSocketClient(webSockClient);
-        jettyWebSockClient.setTaskExecutor(null);
-
-        return jettyWebSockClient;
+        return new JettyWebSocketClient(webSockClient);
     }
 
     /**

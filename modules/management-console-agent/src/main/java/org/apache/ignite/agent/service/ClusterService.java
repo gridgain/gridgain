@@ -27,6 +27,7 @@ import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
+import org.apache.ignite.agent.utils.ManagementConsoleThreadFactory;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -72,7 +73,8 @@ public class ClusterService implements AutoCloseable {
     private IgniteLogger log;
 
     /** Executor service. */
-    private ScheduledExecutorService baselineExecSrvc = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService baselineExecSrvc =
+        Executors.newScheduledThreadPool(1, new ManagementConsoleThreadFactory("cluster-service-pool"));
 
     /**
      * @param ctx Context.
