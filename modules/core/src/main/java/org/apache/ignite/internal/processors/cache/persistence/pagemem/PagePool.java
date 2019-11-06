@@ -17,9 +17,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.OffheapReadWriteLock;
@@ -124,8 +122,6 @@ public class PagePool {
         while (true) {
             long freePageRelPtrMasked = GridUnsafe.getLong(freePageListPtr);
 
-            LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
-
             long freePageRelPtr = freePageRelPtrMasked & ADDRESS_MASK;
 
             if (freePageRelPtr != PageMemoryImpl.INVALID_REL_PTR) {
@@ -133,18 +129,12 @@ public class PagePool {
 
                 long nextFreePageRelPtr = GridUnsafe.getLong(freePageAbsPtr) & ADDRESS_MASK;
 
-                LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
-
                 // nextFreePageRelPtr may be invalid because a concurrent thread may have already polled this value
                 // and used it.
                 long cnt = ((freePageRelPtrMasked & COUNTER_MASK) + COUNTER_INC) & COUNTER_MASK;
 
                 if (GridUnsafe.compareAndSwapLong(null, freePageListPtr, freePageRelPtrMasked, nextFreePageRelPtr | cnt)) {
-                    LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
-
                     GridUnsafe.putLong(freePageAbsPtr, PageHeader.PAGE_MARKER);
-
-                    LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
 
                     return freePageRelPtr;
                 }
@@ -204,13 +194,9 @@ public class PagePool {
         while (true) {
             long freePageRelPtrMasked = GridUnsafe.getLong(freePageListPtr);
 
-            LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
-
             long freePageRelPtr = freePageRelPtrMasked & PageMemoryImpl.RELATIVE_PTR_MASK;
 
             GridUnsafe.putLong(absPtr, freePageRelPtr);
-
-            LockSupport.parkNanos(ThreadLocalRandom.current().nextInt(5000) + 1);
 
             long cnt = freePageRelPtrMasked & COUNTER_MASK;
 
