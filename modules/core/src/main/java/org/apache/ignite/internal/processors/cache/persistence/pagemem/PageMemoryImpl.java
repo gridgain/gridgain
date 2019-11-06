@@ -1187,13 +1187,17 @@ public class PageMemoryImpl implements PageMemoryEx {
         if (segments == null)
             return;
 
+        PagesWriteThrottlePolicy writeThrottle0;
+
         synchronized (segmentsLock) {
             for (Segment seg : segments)
                 seg.checkpointPages = null;
 
-            if (throttlingPlc != ThrottlingPolicy.DISABLED)
-                writeThrottle.onFinishCheckpoint();
+            writeThrottle0 = writeThrottle;
         }
+
+        if (throttlingPlc != ThrottlingPolicy.DISABLED)
+            writeThrottle0.onFinishCheckpoint();
     }
 
     /** {@inheritDoc} */
