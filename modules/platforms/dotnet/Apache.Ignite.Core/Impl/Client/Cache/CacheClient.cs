@@ -52,7 +52,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             /// No flags
             /// </summary>
             None = 0,
-            // 1 << 0 is reserved for Java thin client.
+            /// <summary>
+            /// With keep binary flag.
+            /// Reserved for other thin clients.
+            /// </summary>
+            // ReSharper disable once ShiftExpressionRealShiftCountIsZero
+            // ReSharper disable once UnusedMember.Local
+            WithKeepBinary = 1 << 0,
             /// <summary>
             /// With expiration policy.
             /// </summary>
@@ -560,7 +566,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 return result;
             }
 
-            return new CacheClient<TK1, TV1>(_ignite, _name, true);
+            return new CacheClient<TK1, TV1>(_ignite, _name, true, _expiryPolicy);
         }
 
         /** <inheritDoc /> */

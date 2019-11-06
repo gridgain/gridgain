@@ -924,7 +924,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         public void TestCacheWithExpiryPolicyOnCreate()
         {
             const int val = 3;
-            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
+            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(100), null, null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
             cacheWithExpiryPolicy.Put(val, val);
@@ -933,7 +933,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             // Wait for an expiration.
-            Thread.Sleep(300);
+            Thread.Sleep(200);
 
             // Expiry policies should be applied, no cache item exists.
             Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
@@ -945,23 +945,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnUpdate()
         {
-            const int val = 5;
-            var expiryPolicy = new ExpiryPolicy(null, TimeSpan.FromMilliseconds(200), null);
+            const int val = 4;
+            var expiryPolicy = new ExpiryPolicy(null, TimeSpan.FromMilliseconds(100), null);
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
             cacheWithExpiryPolicy.Put(val, val);
 
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
-            Thread.Sleep(100);
+            Thread.Sleep(50);
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
             cacheWithExpiryPolicy.Put(val, val + 1);
 
-            Thread.Sleep(100);
+            Thread.Sleep(50);
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
-            Thread.Sleep(100);
+            Thread.Sleep(50);
             
             // Expiry policies should be applied, no cache item exists.
             Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
@@ -973,7 +973,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpiryPolicyOnAccess()
         {
-            const int val = 8;
+            const int val = 6;
             var expiryPolicy = new ExpiryPolicy(null, null, TimeSpan.FromMilliseconds(200));
             var cacheWithExpiryPolicy = GetClientCache<int>().WithExpiryPolicy(expiryPolicy);
 
@@ -986,10 +986,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             cacheWithExpiryPolicy.Get(val);
 
-            Thread.Sleep(100);
+            Thread.Sleep(150);
             Assert.IsTrue(cacheWithExpiryPolicy.ContainsKey(val));
 
-            Thread.Sleep(100);
+            Thread.Sleep(150);
 
             // Expiry policies should be applied, no cache item exists.
             Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val));
@@ -1001,17 +1001,65 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestCacheWithExpirationHasIsolatedScope()
         {
-            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(200), null, null);
+            const int val = 7;
+            var expiryPolicy = new ExpiryPolicy(TimeSpan.FromMilliseconds(100), null, null);
             var cache = GetClientCache<int>();
             var cacheWithExpiryPolicy = cache.WithExpiryPolicy(expiryPolicy);
 
-            cache.Put(1, 1);
-            cacheWithExpiryPolicy.Put(2, 2);
+            cache.Put(val, val);
+            cacheWithExpiryPolicy.Put(val + 1, val);
 
             Thread.Sleep(200);
             
-            Assert.IsTrue(cache.ContainsKey(1));
-            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(2));
+            Assert.IsTrue(cache.ContainsKey(val));
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(val + 1));
+        }
+        
+        /// <summary>
+        /// Test cache with expiration does not modify keepBinary flag.
+        /// </summary>
+        [Test]
+        public void TestCacheWithExpirationDoesNotAffectKeepBinarySettings()
+        {
+            const int key = 10;
+            var person = new Person(1);
+
+            var cache = GetClientCache<Person>();
+            cache.Put(key, person);
+
+            var cacheWithKeepBinary = cache.WithKeepBinary<int, IBinaryObject>();
+            AssertExtensions.ReflectionEqual(person, cacheWithKeepBinary.Get(key).Deserialize<Person>());
+
+            var expiryPolicy = new ExpiryPolicy(null, null, TimeSpan.FromMilliseconds(100));
+            
+            var cacheWithExpiryPolicy = cacheWithKeepBinary.WithExpiryPolicy(expiryPolicy);
+            AssertExtensions.ReflectionEqual(person, cacheWithExpiryPolicy.Get(key).Deserialize<Person>());
+
+            Thread.Sleep(200);
+
+            Assert.IsFalse(cacheWithExpiryPolicy.ContainsKey(key));
+        }
+
+        /// <summary>
+        /// Test cache with keepBinary does not modify expiry policy settings.
+        /// </summary>
+        [Test]
+        public void TestCacheWithKeepBinaryDoesNotAffectExpirationPolicy()
+        {
+            const int key = 11;
+            var person = new Person(1);
+
+            var expiryPolicy = new ExpiryPolicy(null, null, TimeSpan.FromMilliseconds(100));
+            var cacheWithExpiryPolicy = GetClientCache<Person>().WithExpiryPolicy(expiryPolicy);
+
+            cacheWithExpiryPolicy.Put(key, person);
+
+            var cacheWithKeepBinary = cacheWithExpiryPolicy.WithKeepBinary<int, IBinaryObject>();
+            AssertExtensions.ReflectionEqual(person, cacheWithKeepBinary.Get(key).Deserialize<Person>());
+
+            Thread.Sleep(200);
+
+            Assert.IsFalse(cacheWithKeepBinary.ContainsKey(key));
         }
 
         private class Container

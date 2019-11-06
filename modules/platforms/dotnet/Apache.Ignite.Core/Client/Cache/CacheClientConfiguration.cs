@@ -414,7 +414,7 @@ namespace Apache.Ignite.Core.Client.Cache
 
         /// <summary>
         /// Gets or sets the factory for <see cref="IExpiryPolicy"/> to be used for all cache operations,
-        /// unless <see cref="ICache{TK,TV}.WithExpiryPolicy"/> is called.
+        /// unless <see cref="ICacheClient{TK,TV}.WithExpiryPolicy"/> is called.
         /// <para />
         /// Default is null, which means no expiration.
         /// </summary>
