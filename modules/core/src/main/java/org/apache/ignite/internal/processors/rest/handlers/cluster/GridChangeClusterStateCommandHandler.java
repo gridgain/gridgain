@@ -69,7 +69,7 @@ public class GridChangeClusterStateCommandHandler extends GridRestCommandHandler
                 default:
                     assert req.state() != null : req;
 
-                    U.log(log, "Received cluster state change request to " + req.state() +
+                    U.error(log, "GG-24341 Received cluster state change request to " + req.state() +
                         " state from client node with ID: " + req.clientId());
 
                     ctx.grid().cluster().state(req.state());

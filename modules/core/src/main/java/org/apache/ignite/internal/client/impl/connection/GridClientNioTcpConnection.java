@@ -825,6 +825,8 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     ) throws GridClientClosedException, GridClientConnectionResetException {
         assert state != null;
 
+        log.info("GG-24341 change state to " + state);
+
         return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
     }
 
