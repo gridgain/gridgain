@@ -87,7 +87,7 @@ class ClientCacheRequest extends ClientRequest {
      *
      * @return expiry policy flag value.
      */
-    protected boolean withExpiryPolicy() {
+    private boolean withExpiryPolicy() {
         return (flags & FLAG_WITH_EXPIRY_POLICY) == FLAG_WITH_EXPIRY_POLICY;
     }
 
@@ -105,6 +105,7 @@ class ClientCacheRequest extends ClientRequest {
         IgniteCache<Object, Object> cache = ctx.kernalContext().grid().cache(cacheName);
         if (withExpiryPolicy())
             cache = cache.withExpiryPolicy(expiryPolicy);
+        
         return cache;
     }
 

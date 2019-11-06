@@ -52,6 +52,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             /// No flags
             /// </summary>
             None = 0,
+
             /// <summary>
             /// With keep binary flag.
             /// Reserved for other thin clients.
@@ -59,6 +60,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             // ReSharper disable once ShiftExpressionRealShiftCountIsZero
             // ReSharper disable once UnusedMember.Local
             WithKeepBinary = 1 << 0,
+
             /// <summary>
             /// With expiration policy.
             /// </summary>
