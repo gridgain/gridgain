@@ -1338,7 +1338,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointMetricsTracker tracker
     ) throws IgniteCheckedException {
         assert absPtr != 0;
-        assert PageHeader.isAcquired(absPtr);
+        assert PageHeader.isAcquired(absPtr) : fullId;
 
         // Exception protection flag.
         // No need to write if exception occurred.
@@ -2022,7 +2022,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         //return NULL_PAGE;
 
         while (true) {
-            long lastIdx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
+            long lastIdx = ThreadLocalRandom.current().nextLong(1, GridUnsafe.getLong(checkpointPool
+                .lastAllocatedIdxPtr));
 
             if (lastIdx == 1L)
                 return NULL_PAGE;
@@ -2037,8 +2038,6 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 long freePageAbsPtr = checkpointPool.absolute(relative);
 
-                long ptr = PageHeader.tempBufferPointer(freePageAbsPtr);
-
                 searched++;
 
                 long pageId = PageHeader.readPageId(freePageAbsPtr);
@@ -2047,13 +2046,6 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 if (pageId == 0 && grpId == 0)
                     continue;
-
-                //System.err.println("get r: " + relative);
-
-                //System.err.println("get: " + new FullPageId(pageId, grpId) + " " + pageId + " lastIdx: " + lastIdx);
-
-/*                if (pageId == 0)
-                    return NULL_PAGE*/;
 
                 return new FullPageId(pageId, grpId);
             }

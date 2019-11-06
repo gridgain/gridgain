@@ -4993,32 +4993,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 PageMemoryImpl.ThrottlingPolicy plc = resolveThrottlingPolicy(); // to public !!!
 
-/*                if (plc != PageMemoryImpl.ThrottlingPolicy.DISABLED) {
+                if (plc != PageMemoryImpl.ThrottlingPolicy.DISABLED) {
                     if (pageMem.shouldThrottle()) {
                         FullPageId fullId0 = pageMem.pageToDumpFirst(); // переписать нужно передать !
 
-                        //System.err.println("TR!!! " + fullId0);
-
-                        if (!writePageIds0.contains(fullId0)) { // not mine page
-                            System.err.println("not mine");
+                        if (!writePageIds0.remove(fullId0))
                             continue;
-                        }
-
-                        if (fullId0 == FullPageId.NULL_PAGE) {
-                            System.err.println("TR00 brk!!! " + fullId0);
-                            break;
-                        }
 
                         pageMem.checkpointWritePage(fullId0, tmpWriteBuf, pageStoreWriter, tracker);
-
-                        tmpWriteBuf.rewind();
 
                         if (fullId0.equals(fullId))
                             fullId = null;
                         else
                             tmpWriteBuf.rewind();
                     }
-                }*/
+                }
 
                 if (fullId != null)
                     pageMem.checkpointWritePage(fullId, tmpWriteBuf, pageStoreWriter, tracker);
