@@ -38,8 +38,12 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
             
             // Wait for Java threads to stabilize.
             Thread.Sleep(TestUtils.DfltBusywaitSleepInterval);
-            Assert.IsTrue(TestUtils.WaitForCondition(() => 
-                GetJavaThreadNames().SequenceEqual(threadNamesBefore), 5000));
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                var threadNames = threadNamesBefore;
+                threadNamesBefore = GetJavaThreadNames();
+                return threadNames.SequenceEqual(threadNamesBefore);
+            }, 5000));
 
             // Run Ignite operations on C# threads to cause JNI thread attach.
             TestUtils.RunMultiThreaded(() => cache.Put(1, 1), 10);
