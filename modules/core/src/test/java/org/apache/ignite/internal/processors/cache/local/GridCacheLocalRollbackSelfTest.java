@@ -1,21 +1,4 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -30,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.cache.local;
 
 import java.io.ByteArrayOutputStream;
@@ -40,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -58,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -65,7 +49,6 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
@@ -76,19 +59,20 @@ import static org.apache.ignite.internal.commandline.CommandHandler.initLogger;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
+import static org.apache.ignite.testframework.LogListener.matches;
 
 /**
  * Class for testing rollback transaction with local cache.
  */
 public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
-    /** Logger for listen log messages. */
-    private static ListeningTestLogger listeningLog;
-
     /** Number of nodes. */
     private static final int NODES = 4;
 
     /** Number of transactions. */
     private static final int TX_COUNT = 20;
+
+    /** Logger for listen log messages. */
+    private static ListeningTestLogger listeningLog;
 
     /** Creating a client node. */
     private boolean clientNode;
@@ -104,6 +88,8 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        /*To listen the logs of future in current tests, since the log in the
+        futures is static and is not reset when tests are launched.*/
         setFieldValue(GridDhtTxFinishFuture.class, "log", null);
         ((AtomicReference<IgniteLogger>)getFieldValue(GridDhtTxFinishFuture.class, "logRef")).set(null);
     }
@@ -111,8 +97,6 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-
-        cleanPersistenceDir();
 
         listeningLog.clearListeners();
 
@@ -165,7 +149,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
         stopGrid(stoppedNodeId);
 
-        LogListener logLsnr = new LogListener();
+        LogListener logLsnr = newLogListener();
 
         listeningLog.registerListener(logLsnr);
 
@@ -221,7 +205,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
             txKeys.forEach(clientCache::get);
         });
 
-        LogListener logLsnr = new LogListener();
+        LogListener logLsnr = newLogListener();
 
         listeningLog.registerListener(logLsnr);
 
@@ -257,8 +241,7 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
 
         checkCacheData(cacheValues, cacheName);
 
-        Boolean correctEx = logLsnr.correctEx.get();
-        assertTrue(nonNull(correctEx) && correctEx);
+        assertTrue(logLsnr.check());
 
         clientNode = false;
 
@@ -354,32 +337,14 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Class for searching and analyzing exceptions in the log.
+     * Creating an instance of LogListener to find an exception
+     * "Unable to send message (node left topology):".
+     *
+     * @return LogListener.
      */
-    private static class LogListener implements Consumer<String> {
-        /**
-         * Flag on finding only valid exceptions.
-         */
-        final AtomicReference<Boolean> correctEx = new AtomicReference<>();
-
-        /**
-         * Class to search for an exception "node left topology" in the log with no TcpCommunicationSpi on the stack.
-         */
-        final String PREFIX_EX_MSG = "Unable to send message (node left topology):";
-
-        /**
-         * Search an exception in log message with a check for presence of TcpCommunicationSpi in it.
-         *
-         * @param logStr Line from the log.
-         */
-        @Override public void accept(String logStr) {
-            if (!logStr.contains(PREFIX_EX_MSG))
-                return;
-
-            if (logStr.contains(TcpCommunicationSpi.class.getName()))
-                correctEx.set(false);
-            else if (isNull(correctEx.get()))
-                correctEx.set(true);
-        }
+    private LogListener newLogListener() {
+        return matches("Unable to send message (node left topology):")
+            .andMatches(logStr -> !logStr.contains(TcpCommunicationSpi.class.getName()))
+            .build();
     }
 }
