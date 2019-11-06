@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent.service.metrics;
 
+import java.util.List;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
 import org.apache.ignite.internal.IgniteEx;
@@ -33,10 +34,10 @@ public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
      */
     @Test
     public void shouldSendMetricsOnPull() throws Exception {
-        IgniteEx ignite_1 = startGrid(0);
-        changeManagementConsoleUri(ignite_1);
+        IgniteEx ignite = startGrids(2);
+        changeManagementConsoleUri(ignite);
 
-        IgniteCluster cluster = ignite_1.cluster();
+        IgniteCluster cluster = ignite.cluster();
         cluster.active(true);
 
         assertWithPoll(
@@ -47,8 +48,9 @@ public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
 
         assertWithPoll(
             () -> {
-                String metrics = new String((byte[]) interceptor.getPayload(buildMetricsDest(cluster.id())));
-                return metrics != null && metrics.contains(cluster.tag());
+                List<Object> metrics = interceptor.getAllRawPayloads(buildMetricsDest(cluster.id()));
+
+                return metrics != null && metrics.size() == 2 && metrics.stream().allMatch(m -> new String((byte[]) m).contains(cluster.tag()));
             }
         );
     }

@@ -115,7 +115,7 @@ public enum IgniteComponentType {
         ManagementConsoleProcessor.class.getName(),
         "org.apache.ignite.agent.Agent",
         "ignite-management-console-agent",
-        "org.apache.ignite.agent.service.exporter.MetricExporterMessageFactory"
+        "org.apache.ignite.agent.service.metrics.MetricExporterMessageFactory"
     );
 
     /** No-op class name. */
