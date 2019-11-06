@@ -23,13 +23,28 @@ import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
+import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
+import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 
 /**
  * Metric service test.
  */
 public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void shouldBeAvailableManagementConsoleFeature() throws Exception {
+        startGrid(0);
+
+        assertTrue(nodeSupports(allFeatures(grid(0).context()), MANAGEMENT_CONSOLE));
+    }
+
+    /**
      * Should send cluster metrics.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void shouldSendMetricsOnPull() throws Exception {

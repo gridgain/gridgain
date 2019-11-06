@@ -26,8 +26,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
+import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 
 /**
@@ -87,7 +90,14 @@ public class MetricsService implements AutoCloseable {
      * Pull metrics from cluster.
      */
     public void broadcastPullMetrics() {
-        Collection<ClusterNode> nodes = ctx.grid().cluster().forServers().nodes();
+        Collection<ClusterNode> nodes = ctx
+            .grid()
+            .cluster()
+            .forServers()
+            .nodes()
+            .stream()
+            .filter(n -> nodeSupports(ctx, n, MANAGEMENT_CONSOLE))
+            .collect(toList());
 
         try {
             if (log.isDebugEnabled())
