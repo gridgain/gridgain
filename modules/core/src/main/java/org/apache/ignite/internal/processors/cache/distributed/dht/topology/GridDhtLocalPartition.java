@@ -763,7 +763,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @see #clearTombstones(EvictionContext).
      */
     void clearTombstonesAsync() {
-        //grp.shared().evict().clearTombstonesAsync(grp, this);
+        grp.shared().evict().clearTombstonesAsync(grp, this);
     }
 
     /**

@@ -1675,34 +1675,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
 
             switch (c.operationType()) {
-                case PUT: {
+                case PUT:
+                case IN_PLACE:
                     assert c.newRow() != null : c;
 
-                    CacheDataRow oldRow = c.oldRow();
-
-                    finishUpdate(cctx, c.newRow(), oldRow);
+                    finishUpdate(cctx, c.newRow(), c.oldRow());
 
                     break;
-                }
 
-                case REMOVE: {
-                    CacheDataRow oldRow = c.oldRow();
-
-                    finishRemove(cctx, row.key(), oldRow);
-
-                    break;
-                }
-
-                case IN_PLACE:
-                    //assert !isTombstone(c.newRow());
-
-                    if (isTombstone(c.oldRow())) {
-                        tombstoneRemoved();
-
-                        incrementSize(cctx.cacheId());
-                    }
-                    else if (isTombstone(c.newRow()))
-                        tombstoneCreated();
+                case REMOVE:
+                    finishRemove(cctx, row.key(), c.oldRow());
 
                     break;
 
