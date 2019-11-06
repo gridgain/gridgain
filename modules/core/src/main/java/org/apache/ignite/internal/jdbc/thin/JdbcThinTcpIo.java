@@ -60,6 +60,9 @@ import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBoolean
  * JDBC IO layer implementation based on blocking IPC streams.
  */
 public class JdbcThinTcpIo {
+    /** Version 0.0.0. Used when server responded with authorization error. */
+    private static final ClientListenerProtocolVersion VER_0_0_0 = ClientListenerProtocolVersion.create(0, 0, 0);
+
     /** Version 2.1.0. */
     private static final ClientListenerProtocolVersion VER_2_1_0 = ClientListenerProtocolVersion.create(2, 1, 0);
 
@@ -308,7 +311,7 @@ public class JdbcThinTcpIo {
 
             if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();
-            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0)
+            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0 && VER_0_0_0.compareTo(srvProtoVer0) < 0)
                 return handshake(srvProtoVer0);
             else {
                 throw new SQLException("Handshake failed [driverProtocolVer=" + CURRENT_VER +
