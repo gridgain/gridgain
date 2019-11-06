@@ -808,8 +808,6 @@ public class GridJettyRestHandler extends AbstractHandler {
 
                 restReq = restReq0;
 
-                log.error("GG-24341 handle req: " + restReq + " params: " + params);
-
                 break;
             }
 

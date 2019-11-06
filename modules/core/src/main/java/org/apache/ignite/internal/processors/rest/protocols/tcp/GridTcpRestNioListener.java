@@ -397,8 +397,6 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                 restChangeReq.command(CLUSTER_SET_STATE);
             }
 
-            log.error("GG-24341 listen() req: " + req + " restReq: " + restChangeReq);
-
             restReq = restChangeReq;
         }
         else if (msg instanceof GridClientClusterNameRequest)
