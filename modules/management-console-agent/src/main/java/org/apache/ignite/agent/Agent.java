@@ -274,6 +274,12 @@ public class Agent extends ManagementConsoleProcessor {
             return;
         }
 
+        if (F.isEmpty(cfg.getConsoleUris())) {
+            log.info("Skip start Management Console agent on coordinator, because the server URI is not set");
+
+            return;
+        }
+
         log.info("Starting Management Console agent on coordinator");
 
         mgr = new WebSocketManager(ctx);

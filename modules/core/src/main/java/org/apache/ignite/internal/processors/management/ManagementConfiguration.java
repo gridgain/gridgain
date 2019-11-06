@@ -19,13 +19,17 @@ package org.apache.ignite.internal.processors.management;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 
 /**
  * This class defines Management Console Agent configuration.
@@ -34,14 +38,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Local console URI. */
-    private static final String LOCAL_CONSOLE_URI = "http://localhost:3000";
+    /** Default console URI. */
+    private static final String DFLT_CONSOLE_URIS = IgniteProperties.get("ignite.management.console.uris");
 
     /** */
     private boolean enabled = true;
 
     /** */
-    private List<String> consoleUris = Collections.singletonList(LOCAL_CONSOLE_URI);
+    private List<String> consoleUris = F.isEmpty(DFLT_CONSOLE_URIS) ? emptyList() : asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
     @GridToStringExclude
