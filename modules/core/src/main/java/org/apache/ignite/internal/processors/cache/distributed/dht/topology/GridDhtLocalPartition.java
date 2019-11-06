@@ -66,7 +66,6 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.GridIteratorAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -92,7 +91,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** */
     private static final GridCacheMapEntryFactory ENTRY_FACTORY = GridDhtCacheEntry::new;
 
-    /** Maximum size for delete queue. */
+    /** Maximum size of delete queue. */
     public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 200_000);
 
     /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
@@ -208,8 +207,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         clearFuture = new ClearFuture();
 
-        int delQueueSize = grp.systemCache() ? 100 :
-            Math.max(MAX_DELETE_QUEUE_SIZE / grp.affinity().partitions(), 20);
+        int delQueueSize = grp.systemCache() ? 100 : Math.max(MAX_DELETE_QUEUE_SIZE / grp.affinity().partitions(),
+            grp.supportsTombstone() ? 0 : 20);
 
         rmvQueueMaxSize = U.ceilPow2(delQueueSize);
 
@@ -239,7 +238,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         if (log.isDebugEnabled())
             log.debug("Partition has been created [grp=" + grp.cacheOrGroupName()
-                + ", p=" + id + ", state=" + state() + "]");
+                + ", p=" + id + ", state=" + state() + ", rmvQueueMaxSize=" + rmvQueueMaxSize + "]");
     }
 
     /**
@@ -394,29 +393,17 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * TODO FIXME Get rid of deferred delete queue https://issues.apache.org/jira/browse/IGNITE-11704
      */
     void cleanupRemoveQueue() {
-        if (state() == MOVING) {
-            if (rmvQueue.sizex() >= rmvQueueMaxSize) {
-                LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
-                    "[grpId=" + this.grp.groupId() +
-                    ", partId=" + id() +
-                    ", grpParts=" + this.grp.affinity().partitions() +
-                    ", maxRmvQueueSize=" + rmvQueueMaxSize + ']');
-            }
-
-            return;
-        }
-
-        while (rmvQueue.sizex() >= rmvQueueMaxSize) {
+        // Delete entries from queue beyond max capacity.
+        while (rmvQueue.sizex() > rmvQueueMaxSize) {
             RemovedEntryHolder item = rmvQueue.pollFirst();
 
             if (item != null)
                 removeVersionedEntry(item.cacheId(), item.key(), item.version());
         }
 
-        if (!grp.isDrEnabled()) {
+        if (!grp.isDrEnabled() && state() != MOVING) {
             RemovedEntryHolder item = rmvQueue.peekFirst();
 
             while (item != null && item.expireTime() < U.currentTimeMillis()) {
@@ -1563,6 +1550,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public GridLongList finalizeUpdateCounters() {
         return store.finalizeUpdateCounters();
+    }
+
+    /**
+     * @return {@code True} if deferred deletion queue is full.
+     */
+    public boolean deferredDeleteQueueFull() {
+        return rmvQueue.sizex() >= rmvQueueMaxSize;
     }
 
     /**

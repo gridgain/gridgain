@@ -4588,7 +4588,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (obsoleteVersionExtras() != null)
                         return true;
 
-                    // TODO IGNITE-5286: need keep removed entries in heap map, otherwise removes can be lost.
+                    // Ignore deferred deletion and remove entry from heap if tombstone should be created.
                     if (cctx.deferredDelete() && deletedUnlocked() && !cctx.group().shouldCreateTombstone(localPartition()))
                         return false;
 

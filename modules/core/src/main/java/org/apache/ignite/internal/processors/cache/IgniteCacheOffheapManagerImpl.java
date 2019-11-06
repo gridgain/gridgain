@@ -1688,7 +1688,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 case REMOVE: {
                     CacheDataRow oldRow = c.oldRow();
 
-                    finishRemove(cctx, row.key(), oldRow, null);
+                    finishRemove(cctx, row.key(), oldRow);
 
                     break;
                 }
@@ -2578,28 +2578,39 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /**
          * @param cctx Cache context.
-         * @param newRow New row.
-         * @param oldRow Old row if available.
+         * @param newRow New row, can be tombstone.
+         * @param oldRow Old row if available, can be tombstone.
          * @throws IgniteCheckedException If failed.
          */
         private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
             throws IgniteCheckedException {
-            //assert !isTombstone(newRow) || oldRow == null;
 
+            boolean newTombstone = isTombstone(newRow);
             boolean oldTombstone = isTombstone(oldRow);
-            boolean oldNull = oldRow == null || oldTombstone;
-
-            if (oldNull)
-                incrementSize(cctx.cacheId());
-
-            KeyCacheObject key = newRow.key();
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
-            if (qryMgr.enabled())
-                qryMgr.store(newRow, oldNull ? null : oldRow, true);
+            if (!newTombstone) {
+                if (oldRow == null || oldTombstone)
+                    incrementSize(cctx.cacheId());
 
-            updatePendingEntries(cctx, newRow, oldNull ? null : oldRow);
+                if (qryMgr.enabled())
+                    qryMgr.store(newRow, oldTombstone ? null : oldRow, true);
+
+                updatePendingEntries(cctx, newRow, oldTombstone ? null : oldRow);
+
+                if (oldTombstone)
+                    tombstoneRemoved();
+            }
+            else if (!oldTombstone) {
+                if (oldRow != null) {
+                    clearPendingEntries(cctx, oldRow);
+
+                    decrementSize(cctx.cacheId());
+                }
+
+                tombstoneCreated();
+            }
 
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
@@ -2607,11 +2618,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
-
-            if (oldTombstone)
-                tombstoneRemoved();
-            else if (isTombstone(newRow))
-                tombstoneCreated();
         }
 
         /**
@@ -2654,7 +2660,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheDataRow oldRow = dataTree.remove(new SearchRow(cacheId, key));
 
-                finishRemove(cctx, key, oldRow, null);
+                finishRemove(cctx, key, oldRow);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2741,10 +2747,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
-                if (!isTombstone(c.oldRow))
-                    tombstoneCreated();
-
-                finishRemove(cctx, key, c.oldRow, c.newRow);
+                finishUpdate(cctx, c.newRow, c.oldRow);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2755,19 +2758,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param cctx Cache context.
          * @param key Key.
          * @param oldRow Removed row.
-         * @param tombstoneRow Tombstone row (if tombstone was created for remove).
          * @throws IgniteCheckedException If failed.
          */
         private void finishRemove(
             GridCacheContext cctx,
             KeyCacheObject key,
-            @Nullable CacheDataRow oldRow,
-            @Nullable CacheDataRow tombstoneRow
+            @Nullable CacheDataRow oldRow
         ) throws IgniteCheckedException {
             boolean oldTombstone = isTombstone(oldRow);
-            boolean oldNull = oldRow == null || oldTombstone;
 
-            if (!oldNull) {
+            if (oldRow != null && !oldTombstone) {
                 clearPendingEntries(cctx, oldRow);
 
                 decrementSize(cctx.cacheId());
@@ -2776,12 +2776,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCacheQueryManager qryMgr = cctx.queries();
 
             if (qryMgr.enabled())
-                qryMgr.remove(key, oldNull ? null : oldRow);
+                qryMgr.remove(key, oldTombstone ? null : oldRow);
 
-            if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
+            if (oldRow != null)
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
 
-            if (oldTombstone && tombstoneRow == null)
+            if (oldTombstone)
                 tombstoneRemoved();
         }
 

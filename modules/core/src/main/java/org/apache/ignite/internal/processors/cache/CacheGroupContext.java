@@ -193,6 +193,9 @@ public class CacheGroupContext {
     /** Cache group metrics. */
     private final CacheGroupMetricsImpl metrics;
 
+    /** */
+    private final boolean supportsTombstones;
+
     /**
      * @param ctx Context.
      * @param grpId Group ID.
@@ -207,7 +210,7 @@ public class CacheGroupContext {
      * @param locStartVer Topology version when group was started on local node.
      * @param persistenceEnabled Persistence enabled flag.
      * @param walEnabled Wal enabled flag.
-     * @param persistenceGroup {@code true} if this group was configured as persistence in despite of data region.
+     * @param persistenceGrp {@code True} if this group was configured as persistence in despite of data region.
      */
     CacheGroupContext(
         GridCacheSharedContext ctx,
@@ -224,7 +227,7 @@ public class CacheGroupContext {
         boolean persistenceEnabled,
         boolean walEnabled,
         boolean recoveryMode,
-        boolean persistenceGroup) {
+        boolean persistenceGrp) {
         assert ccfg != null;
         assert dataRegion != null || !affNode;
         assert grpId != 0 : "Invalid group ID [cache=" + ccfg.getName() + ", grpName=" + ccfg.getGroupName() + ']';
@@ -244,7 +247,7 @@ public class CacheGroupContext {
         this.persistenceEnabled = persistenceEnabled;
         this.localWalEnabled = true;
         this.recoveryMode = new AtomicBoolean(recoveryMode);
-        this.persistenceGroup = persistenceGroup;
+        this.persistenceGroup = persistenceGrp;
 
         ioPlc = cacheType.ioPolicy();
 
@@ -290,6 +293,9 @@ public class CacheGroupContext {
         }
 
         hasAtomicCaches = ccfg.getAtomicityMode() == ATOMIC;
+
+        supportsTombstones =
+            !mvccEnabled && !isLocal() && !hasAtomicCaches() && !systemCache() && ccfg.getCacheStoreFactory() == null;
     }
 
     /**
@@ -1329,8 +1335,7 @@ public class CacheGroupContext {
      * @return {@code True} if need create temporary tombstones entries for removed data.
      */
     public boolean supportsTombstone() {
-        // TODO check for store.configured. Remove calculation.
-        return !mvccEnabled && !isLocal() && !hasAtomicCaches();
+        return supportsTombstones;
     }
 
     /**
@@ -1338,7 +1343,10 @@ public class CacheGroupContext {
      * @return {@code True} if need create tombstone for remove in given partition.
      */
     public boolean shouldCreateTombstone(@Nullable GridDhtLocalPartition part) {
-        return part != null && supportsTombstone() && part.state() == GridDhtPartitionState.MOVING;
+        return supportsTombstones &&
+            part != null &&
+            part.state() == GridDhtPartitionState.MOVING &&
+            part.deferredDeleteQueueFull();
     }
 
     /**

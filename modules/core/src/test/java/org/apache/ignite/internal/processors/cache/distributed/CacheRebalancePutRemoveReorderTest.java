@@ -18,22 +18,25 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -47,10 +50,10 @@ import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 /**
  * Test scenario:
  * <p>
- * 1. Trigger historical rebalance over single partition.
+ * 1. Trigger historical rebalance over single partition to make reordering possible.
  * 2. Tamper with supply message changing entries order in various ways.
  * <p>
- * Success: partitions copies are consistent.
+ * Success: partitions copies are consistent, all sizes and counters are valid.
  *
  * Note: the test doesn't use parameterization to mitigate possible backport efforts.
  */
@@ -62,8 +65,13 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** */
     private CacheAtomicityMode atomicityMode;
 
+    private boolean onheapCacheEnabled = false;
+
     /** */
     private static final int MB = 1024 * 1024;
+
+    /** */
+    private static final int PRELOADED_KEYS = 1;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -85,7 +93,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setBackups(1).
-            setOnheapCacheEnabled(false).
+            setOnheapCacheEnabled(onheapCacheEnabled).
             setAtomicityMode(atomicityMode).
             setWriteSynchronizationMode(FULL_SYNC).
             setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
@@ -109,40 +117,46 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /** Uses tombstones to handle put-remove reorder. */
+    /** Uses tombstones to handle put-remove conflicts. */
     @Test
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, value = "0")
     public void testPutRemoveReorderWithTombstones() throws Exception {
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
 
-        testPutRemoveReorder();
+        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, PRELOADED_KEYS, 0);
     }
 
-    /** Uses tombstones to handle put-remove reorder. */
-    @Test
-    public void testPutRemoveReorderWithTombstonesAndOnheapCache() throws Exception {
-        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
-
-        testPutRemoveReorder();
-    }
-
-    /** Uses deferred deletion queue to handle put-remove reorder. */
-    @Test
-    public void testPutRemoveReorderWithDeferredDelete() throws Exception {
-        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
-
-        testPutRemoveReorder();
-    }
-
-    /** Uses deferred deletion queue to handle put-remove reorder. */
-    @Test
-    public void testPutRemoveReorderWithDeferredDeleteAtomic() throws Exception {
-        atomicityMode = CacheAtomicityMode.ATOMIC;
-
-        testPutRemoveReorder();
-    }
+//    /** Uses deferred deletion queue to handle put-remove conflicts. */
+//    @Test
+//    public void testPutRemoveReorderWithDeferredDelete() throws Exception {
+//        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+//
+//        testPutRemoveReorder(this::putRemove2, this::reorder2, 0, 0, 0);
+//    }
+//
+//    /** Uses tombstones to handle put-remove conflicts. */
+//    @Test
+//    public void testPutRemoveReorderWithTombstonesAndOnheapCache() throws Exception {
+//        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+//
+//        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, 0, 0);
+//    }
+//
+//    /** Uses deferred deletion queue to handle put-remove conflicts. */
+//    @Test
+//    public void testPutRemoveReorderWithDeferredDeleteAtomic() throws Exception {
+//        atomicityMode = CacheAtomicityMode.ATOMIC;
+//
+//        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, 0, 0);
+//    }
 
     /** */
-    private void testPutRemoveReorder() throws Exception {
+    private void testPutRemoveReorder(BiConsumer<IgniteCache, List> putClo,
+        Consumer<List> reorderClo,
+        int expTombstoneCnt,
+        int expSize,
+        int expHeapSize
+    ) throws Exception {
         Ignite crd = startGrids(2);
         crd.cluster().active(true);
 
@@ -152,7 +166,8 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         List<Integer> keys = partitionKeys(crd.cache(DEFAULT_CACHE_NAME), part, 2, 0);
 
-        for (int p = 0; p < PARTS_CNT; p++)
+        // Partition should not be empty for historical rebalancing.
+        for (int p = 0; p < PARTS_CNT * PRELOADED_KEYS; p++)
             cache.put(p, 0);
 
         forceCheckpoint();
@@ -163,8 +178,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        cache.put(keys.get(1), 1);
-        cache.remove(keys.get(1));
+        putClo.accept(cache, keys);
 
         TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionSupplyMessage) {
@@ -179,27 +193,35 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
                 List<GridCacheEntryInfo> infos0 = col.infos();
 
-                // Reorder remove and put.
-                GridCacheEntryInfo e1 = infos0.get(0);
-                infos0.set(0, infos0.get(1));
-                infos0.set(1, e1);
+                reorderClo.accept(infos0);
             }
 
             return false;
         });
 
-        startGrid(1);
+        IgniteEx g1 = startGrid(1);
 
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 
-//        stopGrid(true, name);
-//
-//        IgniteEx tmp = startGrid(1);
-//
-//        GridDhtLocalPartition part0 = tmp.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part);
-//
-//        assertTrue(part0.dataStore().tombstonesCount() > 0);
+        GridDhtLocalPartition part0 = g1.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part);
+
+        assertNotNull(part0);
+
+        assertEquals(expSize, part0.dataStore().fullSize());
+        assertEquals(expTombstoneCnt, part0.dataStore().tombstonesCount());
+        assertEquals(expHeapSize, part0.internalSize());
+    }
+
+    private void putRemove2(IgniteCache cache, List keys) {
+        cache.put(keys.get(PRELOADED_KEYS), 1);
+        cache.remove(keys.get(PRELOADED_KEYS));
+    }
+
+    private void reorder2(List entries) {
+        Object e1 = entries.get(0);
+        entries.set(0, entries.get(1));
+        entries.set(1, e1);
     }
 }
