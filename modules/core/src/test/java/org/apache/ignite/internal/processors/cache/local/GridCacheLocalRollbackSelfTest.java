@@ -38,7 +38,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishFuture;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -343,8 +342,6 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
      * @return LogListener.
      */
     private LogListener newLogListener() {
-        return matches("Unable to send message (node left topology):")
-            .andMatches(logStr -> !logStr.contains(TcpCommunicationSpi.class.getName()))
-            .build();
+        return matches("Unable to send message (node left topology):").build();
     }
 }
