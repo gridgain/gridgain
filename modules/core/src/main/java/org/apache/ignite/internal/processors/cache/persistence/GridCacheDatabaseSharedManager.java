@@ -30,7 +30,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -3219,10 +3218,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         // Sort all dirty pages.
-        List<T2<DataRegion, Collection<FullPageId>>> sortedPages = sortCpPagesIfNeeded(res);
+        List<T2<DataRegion, Collection<FullPageId>>> orderedPages = orderCpPages(res);
 
         // Now cpPages are common for all segments.
-        sortedPages.forEach(k -> ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2()));
+        orderedPages.forEach(k -> ((PageMemoryEx)k.get1().pageMemory()).checkpointPages(k.get2()));
 
         // Identity stores set for future fsync.
         Collection<PageStore> updStores = new GridConcurrentHashSet<>();
@@ -3234,16 +3233,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         int seq = 0;
 
-        for (T2<DataRegion, Collection<FullPageId>> pagesPerRegion : sortedPages) {
+        for (T2<DataRegion, Collection<FullPageId>> pagesPerRegion : orderedPages) {
             // Calculate stripe index.
             int stripeIdx = seq++ % exec.stripes();
 
-            NavigableSet<FullPageId> pagesToWrite = (NavigableSet<FullPageId>)pagesPerRegion.get2();
-
-            // Add number of handled pages.
-            cpPagesCnt.addAndGet(pagesToWrite.size());
-
             exec.execute(stripeIdx, () -> {
+                NavigableSet<FullPageId> pagesToWrite = (NavigableSet<FullPageId>)pagesPerRegion.get2();
+
+                DataRegion dataRegion = pagesPerRegion.get1();
+
+                // Add number of handled pages.
+                cpPagesCnt.addAndGet(pagesToWrite.size());
+
                 PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
                     assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;
 
@@ -3273,7 +3274,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         // Save pageId to local variable for future using if exception occurred.
                         fullPageId = fullId;
 
-                        PageMemoryEx pageMem = getPageMemoryForCacheGroup(fullId.groupId());
+                        PageMemoryEx pageMem = (PageMemoryEx)dataRegion.pageMemory();
 
                         // Write page content to page store via pageStoreWriter.
                         // Tracker is null, because no need to track checkpoint metrics on recovery.
@@ -4356,7 +4357,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 tracker.onSplitAndSortCpPagesStart();
 
-                List<T2<DataRegion, Collection<FullPageId>>> alignedPages = sortCpPagesIfNeeded(cpPagesTuple.get1());
+                List<T2<DataRegion, Collection<FullPageId>>> alignedPages = orderCpPages(cpPagesTuple.get1());
 
                 ArrayList<DataRegion> regsForCheckpointing = new ArrayList<>(alignedPages.size());
 
@@ -4811,7 +4812,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param pagesPerRegion
      * @return
      */
-    private List<T2<DataRegion, Collection<FullPageId>>> sortCpPagesIfNeeded(
+    private List<T2<DataRegion, Collection<FullPageId>>> orderCpPages(
         List<T3<DataRegion, Collection<FullPageId>[], Integer>> pagesPerRegion) {
         List<T2<DataRegion, Collection<FullPageId>>> res = new ArrayList<>(pagesPerRegion.size());
 
@@ -4939,7 +4940,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         /**
-         * @param writePageIds Collections of pages to write.
          * @return pagesToRetry Pages which should be retried.
          */
         private List<FullPageId> writePages(DataRegion dataReg, Collection<FullPageId> pages) throws
@@ -5240,7 +5240,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @return Existed or new future which corresponds to the given state.
          */
         public GridFutureAdapter futureFor(State state) {
-            GridFutureAdapter stateFut = stateFutures.computeIfAbsent(state, (k) -> new GridFutureAdapter());
+            GridFutureAdapter stateFut = stateFutures.computeIfAbsent(state, k -> new GridFutureAdapter());
 
             if (greaterOrEqualTo(state) && !stateFut.isDone())
                 stateFut.onDone(failCause);

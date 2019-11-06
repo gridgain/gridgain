@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -26,7 +28,7 @@ import org.apache.ignite.internal.pagemem.FullPageId;
  */
 class CheckpointPages {
     /** */
-    private Collection<FullPageId> segCheckpointPages;
+    private AtomicReference<Collection<FullPageId>> segCheckpointPages;
 
     /** The sign which allows to replace pages from a checkpoint by page replacer. */
     private final IgniteInternalFuture allowToReplace;
@@ -36,7 +38,7 @@ class CheckpointPages {
      * @param replaceFuture The sign which allows to replace pages from a checkpoint by page replacer.
      */
     CheckpointPages(Collection<FullPageId> pages, IgniteInternalFuture replaceFuture) {
-        segCheckpointPages = pages;
+        segCheckpointPages = new AtomicReference<>(pages);
         allowToReplace = replaceFuture;
     }
 
@@ -45,7 +47,7 @@ class CheckpointPages {
      * @return {@code true} If fullPageId is allowable to store to disk.
      */
     public boolean allowToSave(FullPageId fullPageId) throws IgniteCheckedException {
-        Collection<FullPageId> checkpointPages = segCheckpointPages;
+        Collection<FullPageId> checkpointPages = segCheckpointPages.get();
 
         if (checkpointPages == null || allowToReplace == null)
             return false;
@@ -61,7 +63,7 @@ class CheckpointPages {
      * @return {@code true} If fullPageId is candidate to stored to disk by current checkpoint.
      */
     public boolean contains(FullPageId fullPageId) {
-        Collection<FullPageId> checkpointPages = segCheckpointPages;
+        Collection<FullPageId> checkpointPages = segCheckpointPages.get();
 
         return checkpointPages != null && checkpointPages.contains(fullPageId);
     }
@@ -71,7 +73,7 @@ class CheckpointPages {
      * @return {@code true} if is marking was successful.
      */
     public boolean markAsSaved(FullPageId fullPageId) {
-        Collection<FullPageId> checkpointPages = segCheckpointPages;
+        Collection<FullPageId> checkpointPages = segCheckpointPages.get();
 
         return checkpointPages != null && checkpointPages.remove(fullPageId);
     }
@@ -80,7 +82,7 @@ class CheckpointPages {
      * @return Size of all pages in current checkpoint.
      */
     public int size() {
-        Collection<FullPageId> checkpointPages = segCheckpointPages;
+        Collection<FullPageId> checkpointPages = segCheckpointPages.get();
 
         return checkpointPages == null ? 0 : checkpointPages.size();
     }
@@ -90,14 +92,12 @@ class CheckpointPages {
      * @param pages
      */
     public void cpPages(Collection<FullPageId> pages) {
-        segCheckpointPages = pages;
+        segCheckpointPages.set(pages);
     }
 
     /**
-     *
-     * @param pages
      */
     public Collection<FullPageId> cpPages() {
-        return segCheckpointPages;
+        return segCheckpointPages.get();
     }
 }

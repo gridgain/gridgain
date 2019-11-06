@@ -131,10 +131,10 @@ public interface PageMemoryEx extends PageMemory {
      * temporary buffer which will be flushed to the main memory after the checkpointing finished. This method must be
      * called when no concurrent operations on pages are performed.
      *
-     * @return Couple of collection of dirty page IDs and flag. The flag is {@code true}, if since last checkpoint at
-     * least one page with user data (not relates with system cache) became a dirty, and {@code false} otherwise.
+     * @return Collections of dirty pages, user cache accessory flag and summary of dirty pages.
+     * The flag is {@code true}, if since last checkpoint at least one page with user data (not relates with system
+     * cache) became a dirty, and {@code false} otherwise.
      * @throws IgniteException If checkpoint has been already started and was not finished.
-     * @throws IgniteCheckedException In case of interruption or execution abortion.
      * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
     public T3<Collection[], Boolean, Integer> beginCheckpointEx(

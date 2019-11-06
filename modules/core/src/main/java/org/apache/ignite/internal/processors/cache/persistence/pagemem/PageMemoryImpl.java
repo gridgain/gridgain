@@ -1188,7 +1188,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     long absPtr = seg.absolute(relPtr);
 
-                    PageHeader.inCp(absPtr, true); // no need under cp write lock here ?
+                    PageHeader.inCp(absPtr, true);
                 }
             }
             finally {
