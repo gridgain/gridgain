@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -67,6 +68,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** */
     private CacheAtomicityMode atomicityMode;
 
+    /** */
     private boolean onheapCacheEnabled = false;
 
     /** */
@@ -215,6 +217,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         assertEquals(expSize, part0.dataStore().fullSize());
         assertEquals(expTombstoneCnt, part0.dataStore().tombstonesCount());
         assertEquals(expHeapSize, part0.internalSize());
+        assertEquals(expDeferredQeueuSize, ((Collection)U.field(part0, "rmvQueue")).size());
     }
 
     private void putRemove2(IgniteCache cache, List keys) {

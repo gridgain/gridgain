@@ -3456,8 +3456,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (val == null) {
                     skipQryNtf = true;
 
-                    if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal())
+                    if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal()) {
                         deletedUnlocked(true);
+
+                        // Deleted entry should be put to queue if tombstones are disabled.
+                        if (!cctx.group().shouldCreateTombstone(localPartition())) {
+                            deferred = true;
+                            oldVer = ver;
+                        }
+                    }
                 }
                 else if (deletedUnlocked())
                     deletedUnlocked(false);
@@ -4588,7 +4595,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (obsoleteVersionExtras() != null)
                         return true;
 
-                    // Ignore deferred deletion and remove entry from heap if tombstone should be created.
+                    // Ignore deferred deletion and remove entry from map if tombstone should be created.
                     if (cctx.deferredDelete() && deletedUnlocked() && !cctx.group().shouldCreateTombstone(localPartition()))
                         return false;
 
