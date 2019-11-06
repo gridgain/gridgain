@@ -59,6 +59,8 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
 import static java.util.Collections.unmodifiableCollection;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 
@@ -300,7 +302,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             else if (ids.size() == 1) {
                 ClusterNode node = ctx.discovery().node(F.first(ids));
 
-                return node != null ? Collections.singleton(node) : Collections.emptyList();
+                return node != null ? singleton(node) : emptySet();
             }
             else {
                 ArrayList<ClusterNode> nodes = new ArrayList<>(ids.size());
@@ -410,7 +412,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             Set<UUID> nodeIds;
 
             if (F.isEmpty(nodes))
-                nodeIds = contains(node) ? Collections.singleton(node.id()) : Collections.<UUID>emptySet();
+                nodeIds = contains(node) ? singleton(node.id()) : emptySet();
             else {
                 nodeIds = U.newHashSet(nodes.length + 1);
 
@@ -459,7 +461,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             Set<UUID> nodeIds;
 
             if (F.isEmpty(ids))
-                nodeIds = contains(id) ? Collections.singleton(id) : Collections.<UUID>emptySet();
+                nodeIds = contains(id) ? singleton(id) : emptySet();
             else {
                 nodeIds = U.newHashSet(ids.length + 1);
 
@@ -536,7 +538,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
 
     /** {@inheritDoc} */
     @Override public final ClusterGroup forRemotes() {
-        return forOthers(Collections.singleton(ctx.localNodeId()));
+        return forOthers(singleton(ctx.localNodeId()));
     }
 
     /**
@@ -709,7 +711,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         long lastTopVer = discoMgr.topologyVersion();
         long startTime = discoMgr.gridStartTime();
 
-        if (state == null || state.lastTopVer != lastTopVer || state.startTime != startTime)
+        if (state == null || state.lastTopVer < lastTopVer || state.startTime != startTime)
             return reset(state);
 
         return state;
@@ -735,9 +737,9 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             if (ids != null)
                 nodeIds = ids;
             else if (nodes.isEmpty())
-                nodeIds = Collections.emptySet();
+                nodeIds = emptySet();
             else if (nodes.size() == 1)
-                nodeIds = Collections.singleton(F.first(nodes).id());
+                nodeIds = singleton(F.first(nodes).id());
             else
                 nodeIds = nodes.stream().map(ClusterNode::id).collect(Collectors.toSet());
 
@@ -1007,11 +1009,27 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
 
             ClusterNode node = isOldest ? U.oldest(nodes, null) : U.youngest(nodes, null);
 
-            return node == null ? Collections.emptySet() : Collections.singleton(node);
+            return node == null ? emptySet() : singleton(node);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Collection<ClusterNode> nodes() {
+            UUID nodeId = F.first(ensureLastTopologyState().nodeIds);
+
+            guard();
+
+            try {
+                return singleton(ctx.discovery().node(nodeId));
+            }
+            finally {
+                unguard();
+            }
         }
 
         /** {@inheritDoc} */
         @Override public IgnitePredicate<ClusterNode> predicate() {
+            ensureLastTopologyState();
+
             return ageP;
         }
 
@@ -1065,12 +1083,17 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
     /**
      * Predicate for youngest/oldest cluster groups.
      */
-    private static class AgeClusterGroupPredicate implements IgnitePredicate<ClusterNode> {
+    private static class AgeClusterGroupPredicate implements IgnitePredicate<ClusterNode>, Externalizable {
         /** */
         private static final long serialVersionUID = 0L;
 
         /** Target cluster group. */
-        private final ClusterGroupAdapter grp;
+        private ClusterGroupAdapter grp;
+
+        /** Default constructor for serialization. */
+        public AgeClusterGroupPredicate() {
+            this(null);
+        }
 
         /**
          * @param grp Cluster group.
@@ -1082,6 +1105,37 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
             return grp.ensureLastTopologyState().nodeIds.contains(node.id());
+        }
+
+        /** {@inheritDoc} */
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
+            out.writeObject(grp);
+
+            ClusterGroupState state = grp.state;
+            if (state == null)
+                out.writeBoolean(false);
+            else {
+                out.writeBoolean(true);
+
+                out.writeLong(state.lastTopVer);
+                out.writeLong(state.startTime);
+
+                out.writeObject(F.first(state.nodeIds));
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            grp = (ClusterGroupAdapter)in.readObject();
+
+            if (in.readBoolean()) {
+                long lastTopVer = in.readLong();
+                long startTime = in.readLong();
+
+                UUID nodeId = (UUID)in.readObject();
+
+                grp.state = new ClusterGroupState(singleton(nodeId), emptySet(), lastTopVer, startTime);
+            }
         }
     }
 
