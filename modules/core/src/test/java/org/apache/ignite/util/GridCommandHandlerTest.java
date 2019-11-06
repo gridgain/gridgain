@@ -466,6 +466,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
     /** */
     private void setState(Ignite ignite, ClusterState state, String strState, String... cacheNames) {
+        log.info(ignite.cluster().state() + " -> " + state);
+
         assertEquals(EXIT_CODE_OK, execute("--set-state", strState));
 
         assertEquals(state, ignite.cluster().state());
