@@ -18,6 +18,8 @@ package org.apache.ignite.util;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -35,6 +37,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -63,6 +66,9 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.metric.IoStatisticsHolderNoOp.INSTANCE;
 import static org.apache.ignite.internal.util.IgniteUtils.field;
 import static org.apache.ignite.internal.util.IgniteUtils.hasField;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CacheEntityThreeFields.DOUBLE_NAME;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CacheEntityThreeFields.ID_NAME;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CacheEntityThreeFields.STR_NAME;
 
 /**
  * Utility class for tests.
@@ -71,8 +77,17 @@ public class GridCommandHandlerIndexingUtils {
     /** Test cache name. */
     public static final String CACHE_NAME = "persons-cache-vi";
 
+    /** Cache name second. */
+    public static final String CACHE_NAME_SECOND = CACHE_NAME + "-second";
+
     /** Test group name. */
     public static final String GROUP_NAME = "group1";
+
+    /** Test group name. */
+    public static final String GROUP_NAME_SECOND = GROUP_NAME + "_second";
+
+    /** Three entries cache name common partition. */
+    public static final String THREE_ENTRIES_CACHE_NAME_COMMON_PART = "three_entries";
 
     /** Private constructor */
     private GridCommandHandlerIndexingUtils() {
@@ -234,6 +249,40 @@ public class GridCommandHandlerIndexingUtils {
     }
 
     /**
+     * Creates and fills cache.
+     *
+     * @param ignite Ignite instance.
+     * @param cacheName Cache name.
+     * @param grpName Cache group.
+     * @param entities Collection of {@link QueryEntity}.
+     */
+    public static void createAndFillThreeFieldsEntryCache(
+        final Ignite ignite,
+        final String cacheName,
+        final String grpName,
+        final Collection<QueryEntity> entities)
+    {
+        assert nonNull(ignite);
+        assert nonNull(cacheName);
+
+        ignite.createCache(new CacheConfiguration<Integer, CacheEntityThreeFields>()
+            .setName(cacheName)
+            .setGroupName(grpName)
+            .setWriteSynchronizationMode(FULL_SYNC)
+            .setAtomicityMode(ATOMIC)
+            .setBackups(1)
+            .setQueryEntities(entities)
+            .setAffinity(new RendezvousAffinityFunction(false, 32)));
+
+        ThreadLocalRandom rand = ThreadLocalRandom.current();
+
+        try (IgniteDataStreamer<Integer, CacheEntityThreeFields> streamer = ignite.dataStreamer(cacheName)) {
+            for (int i = 0; i < 10_000; i++)
+                streamer.addData(i, new CacheEntityThreeFields(rand.nextInt(), valueOf(rand.nextLong()), rand.nextDouble()));
+        }
+    }
+
+    /**
      * Deleting records from the index bypassing cache.
      *
      * @param internalCache Cache.
@@ -304,6 +353,42 @@ public class GridCommandHandlerIndexingUtils {
             .addQueryField(idField, Integer.class.getName(), null)
             .addQueryField(nameField, String.class.getName(), null)
             .setIndexes(asList(new QueryIndex(nameField), new QueryIndex(idField)));
+    }
+
+    /** */
+    public static QueryEntity complexIndexEntry() {
+        QueryEntity entity = prepareQueryEntiry();
+
+        entity.setIndexes(asList(new QueryIndex(ID_NAME),
+                                 new QueryIndex(STR_NAME),
+                                 new QueryIndex(asList(STR_NAME, DOUBLE_NAME), QueryIndexType.SORTED)));
+
+        return entity;
+    }
+
+    /** */
+    public static QueryEntity simpleIndexEntry() {
+        QueryEntity entity = prepareQueryEntiry();
+
+        entity.setIndexes(asList(new QueryIndex(ID_NAME),
+                                 new QueryIndex(STR_NAME),
+                                 new QueryIndex(DOUBLE_NAME)));
+
+        return entity;
+    }
+
+    /** */
+    private static QueryEntity prepareQueryEntiry() {
+        QueryEntity entity = new QueryEntity();
+
+        entity.setKeyType(Integer.class.getName());
+        entity.setValueType(CacheEntityThreeFields.class.getName());
+
+        entity.addQueryField(ID_NAME, Integer.class.getName(), null);
+        entity.addQueryField(STR_NAME, String.class.getName(), null);
+        entity.addQueryField(DOUBLE_NAME, Double.class.getName(), null);
+
+        return entity;
     }
 
     /**
@@ -378,5 +463,53 @@ public class GridCommandHandlerIndexingUtils {
 
             return this;
         }
+    }
+
+    /**
+     * Simple class for tests. Used for complex indexes.
+     */
+    static class CacheEntityThreeFields implements Serializable {
+        /** */
+        public static final String ID_NAME = "id";
+        /** */
+        public static final String STR_NAME = "strField";
+        /** */
+        public static final String DOUBLE_NAME = "boubleField";
+
+        /** Id. */
+        int id;
+
+        /** String field. */
+        String strField;
+
+        /** Double field. */
+        double doubleField;
+
+        /** */
+        public CacheEntityThreeFields(int id, String strField, double doubleField) {
+            this.id = id;
+            this.strField = strField;
+            this.doubleField = doubleField;
+        }
+    }
+
+    /**
+     * Creates several caches with different indexes. Fills them with random values.
+     *
+     * @param ignite Ignite instance.
+     */
+    public static void createAndFillSeveralCaches(final Ignite ignite) {
+        createAndFillCache(ignite, CACHE_NAME, GROUP_NAME);
+
+        createAndFillThreeFieldsEntryCache(ignite, "test_" + THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_complex_index",
+            GROUP_NAME, asList(complexIndexEntry()));
+
+        createAndFillCache(ignite, CACHE_NAME_SECOND, GROUP_NAME_SECOND);
+
+        createAndFillThreeFieldsEntryCache(ignite, THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_simple_indexes",
+            null, asList(simpleIndexEntry()));
+
+        createAndFillThreeFieldsEntryCache(ignite, THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_no_indexes",
+            null, Collections.emptyList());
     }
 }

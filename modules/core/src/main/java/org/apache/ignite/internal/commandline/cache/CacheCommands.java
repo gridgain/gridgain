@@ -89,31 +89,14 @@ public class CacheCommands implements Command<CacheSubcommands> {
         if (cmd == null)
             cmd = CacheSubcommands.HELP;
 
-        switch (cmd) {
-            case HELP:
-                break;
 
-            case RESET_LOST_PARTITIONS:
-            case LIST:
-            case IDLE_VERIFY:
-            case PARTITION_RECONCILIATION:
-            case PARTITION_RECONCILIATION_CANCEL:
-            case VALIDATE_INDEXES:
-            case FIND_AND_DELETE_GARBAGE:
-            case CONTENTION:
-            case DISTRIBUTION:
-                cmd.subcommand().parseArguments(argIter);
-
-                break;
-
-            default:
-                throw new IllegalArgumentException("Unknown --cache subcommand " + cmd);
-        }
+        if (cmd != HELP)
+            cmd.subcommand().parseArguments(argIter);
 
         if (argIter.hasNextSubArg())
             throw new IllegalArgumentException("Unexpected argument of --cache subcommand: " + argIter.peekNextArg());
 
-        this.subcommand = cmd;
+        subcommand = cmd;
     }
 
 

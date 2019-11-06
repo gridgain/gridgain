@@ -116,6 +116,9 @@ public class CommandHandler {
     /** */
     public static final String NULL = "null";
 
+    /** Empty group name. */
+    public static final String EMPTY_GROUP_NAME = "no_group";
+
     /** */
     private final Scanner in = new Scanner(System.in);
 

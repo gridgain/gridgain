@@ -527,6 +527,69 @@ public class CommandHandlerParsingTest {
         );
     }
 
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexForceRebuildWrongArgs() {
+        String nodeId = UUID.randomUUID().toString();
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names")),
+            IllegalArgumentException.class,
+            "Expected comma-separated list of cache names."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names")),
+            IllegalArgumentException.class,
+            "Expected comma-separated list of cache group names."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--cache-names", "someNames")),
+            IllegalArgumentException.class,
+            "Either --group-names or --cache-names must be specified."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "someNames", "--cache-names", "someMoreNames")),
+            IllegalArgumentException.class,
+            "--cache-names arg specified twice."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--group-names", "someMoreNames")),
+            IllegalArgumentException.class,
+            "--group-names arg specified twice."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "--some-other-arg")),
+            IllegalArgumentException.class,
+            "--group-names not specified."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "--some-other-arg")),
+            IllegalArgumentException.class,
+            "--cache-names not specified."
+        );
+    }
+
     /**
      * Argument validation test.
      *
