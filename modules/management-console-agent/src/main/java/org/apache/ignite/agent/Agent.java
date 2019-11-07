@@ -149,10 +149,11 @@ public class Agent extends ManagementConsoleProcessor {
         spanExporter = new ManagementConsoleSpanExporter(ctx);
         metricExporter = new MetricExporter(ctx);
 
-        launchAgentListener(null, ctx.discovery().discoCache());
-
-        // Listener for coordinator changed.
-        ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+        // Connect to backend if local node is a coordinator or await coordinator change event.
+        if (isCoordinator(ctx.discovery().discoCache()))
+            connect();
+        else
+            ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         evtsExporter.addLocalEventListener();
         metricExporter.addMetricListener();
@@ -215,9 +216,7 @@ public class Agent extends ManagementConsoleProcessor {
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        ClusterNode crdNode = F.first(discoCache.serverNodes());
-
-        if (crdNode != null && crdNode.isLocal()) {
+        if (isCoordinator(discoCache)) {
             cfg = readFromMetaStorage();
 
             connect();
@@ -291,9 +290,9 @@ public class Agent extends ManagementConsoleProcessor {
         connectPool =
             (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
 
-        ctx.event().enableEvents(NOT_ENABLED_EVTS);
+        connectPool.submit(this::connect0);
 
-        submitConnectTask();
+        ctx.event().enableEvents(NOT_ENABLED_EVTS);
     }
 
     /**
@@ -399,7 +398,7 @@ public class Agent extends ManagementConsoleProcessor {
                 if (disconnected.compareAndSet(false, true)) {
                     log.error("Lost websocket connection with server: " + curSrvUri);
 
-                    submitConnectTask();
+                    reconnect();
                 }
             }
         }
@@ -408,8 +407,17 @@ public class Agent extends ManagementConsoleProcessor {
     /**
      * Submit a reconnection task only if there no active connect in progress.
      */
-    private void submitConnectTask() {
+    private void reconnect() {
         if (connectPool.getActiveCount() == 0)
             connectPool.submit(this::connect0);
+    }
+
+    /**
+     * @param discoCache Disco cache.
+     */
+    private boolean isCoordinator(DiscoCache discoCache) {
+        ClusterNode crdNode = F.first(discoCache.serverNodes());
+
+        return crdNode != null && crdNode.isLocal();
     }
 }

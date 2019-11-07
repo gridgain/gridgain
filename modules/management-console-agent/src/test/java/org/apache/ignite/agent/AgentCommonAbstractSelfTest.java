@@ -16,8 +16,11 @@
 
 package org.apache.ignite.agent;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.config.TestChannelInterceptor;
 import org.apache.ignite.agent.config.WebSocketConfig;
@@ -35,6 +38,7 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
@@ -43,8 +47,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.awaitility.Awaitility.with;
 
@@ -77,6 +83,13 @@ public abstract class AgentCommonAbstractSelfTest extends GridCommonAbstractTest
     public void stopAndClear() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
+
+        List<String> mgmtThreadNames = Thread.getAllStackTraces().keySet().stream()
+            .filter(thread -> thread.getName().startsWith("mgmt-"))
+            .map(Thread::getName)
+            .collect(toList());
+
+        assertEqualsCollections(emptyList(), mgmtThreadNames);
     }
 
     /**
