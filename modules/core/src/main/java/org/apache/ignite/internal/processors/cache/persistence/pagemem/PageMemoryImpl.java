@@ -409,9 +409,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                 totalTblSize += segments[i].tableSize();
             }
 
-            this.segments = segments;
-
             initWriteThrottle();
+
+            this.segments = segments;
 
             if (log.isInfoEnabled())
                 log.info("Started page memory [memoryAllocated=" + U.readableSize(totalAllocated, false) +
