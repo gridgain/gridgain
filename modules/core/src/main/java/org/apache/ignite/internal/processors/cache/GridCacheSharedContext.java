@@ -1181,6 +1181,14 @@ public class GridCacheSharedContext<K, V> {
     }
 
     /**
+     * For test purposes.
+     * @param evictMgr Evict manager.
+     */
+    public void setEvictManager(PartitionsEvictManager evictMgr) {
+        this.evictMgr = evictMgr;
+    }
+
+    /**
      * @return {@code True} if lazy memory allocation enabled. {@code False} otherwise.
      */
     public boolean isLazyMemoryAllocation(@Nullable DataRegion region) {

@@ -34,13 +34,19 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -72,6 +78,9 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     private boolean onheapCacheEnabled = false;
 
     /** */
+    private boolean delayDemandMessage = false;
+
+    /** */
     private static final int MB = 1024 * 1024;
 
     /** */
@@ -80,7 +89,15 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
+        cfg.setCommunicationSpi(commSpi);
+
+        if (delayDemandMessage) {
+            commSpi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionDemandMessage);
+
+            delayDemandMessage = false;
+        }
 
         cfg.setConsistentId("node" + igniteInstanceName);
 
@@ -204,7 +221,12 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
             return false;
         });
 
+        delayDemandMessage = true;
+
         IgniteEx g1 = startGrid(1);
+
+        // Replace evict manager with stubbed clearTombstonesAsync method to avoid tombstones removal on partition owning.
+        stubTombstonesRemoval(g1);
 
         awaitPartitionMapExchange();
 
@@ -220,11 +242,39 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         assertEquals(expDeferredQeueuSize, ((Collection)U.field(part0, "rmvQueue")).size());
     }
 
+    /**
+     * Replace partition evict manager with special version which ignores tombstones clearing.
+     *
+     * @param grid Grid.
+     */
+    private void stubTombstonesRemoval(IgniteEx grid) throws InterruptedException {
+        TestRecordingCommunicationSpi.spi(grid).waitForBlocked();
+
+        GridCacheSharedContext<Object, Object> ctx = grid.context().cache().context();
+
+        PartitionsEvictManager mgr = U.field(ctx, "evictMgr");
+
+        PartitionsEvictManager mocked = Mockito.spy(mgr);
+
+        Mockito.doNothing().when(mocked).clearTombstonesAsync(Mockito.any(), Mockito.any());
+
+        ctx.setEvictManager(mocked);
+
+        TestRecordingCommunicationSpi.spi(grid).stopBlock();
+    }
+
+    /**
+     * @param cache Cache.
+     * @param keys Keys.
+     */
     private void putRemove2(IgniteCache cache, List keys) {
         cache.put(keys.get(PRELOADED_KEYS), 1);
         cache.remove(keys.get(PRELOADED_KEYS));
     }
 
+    /**
+     * @param entries Entries.
+     */
     private void reorder2(List entries) {
         Object e1 = entries.get(0);
         entries.set(0, entries.get(1));
