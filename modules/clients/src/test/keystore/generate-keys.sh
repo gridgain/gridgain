@@ -71,10 +71,6 @@ function createStore {
 	cat ${artifact}.pem ${ca_cert} > ${artifact}.chain
 
 	echo
-	echo Update the keystore, ${artifact}.jks, by importing the CA certificate.
-	keytool -import -alias ${ca_name} -file ${ca_cert} -keypass ${pwd} -noprompt -trustcacerts -keystore ${artifact}.jks -storepass ${pwd}
-
-	echo
 	echo Update the keystore, ${artifact}.jks, by importing the full certificate chain for the ${artifact}.
 	keytool -import -alias ${artifact} -file ${artifact}.chain -keypass ${pwd} -noprompt -trustcacerts -keystore ${artifact}.jks -storepass ${pwd}
 
