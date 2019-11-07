@@ -94,9 +94,6 @@ public class WebSocketManager implements AutoCloseable {
     /** Reconnect count. */
     private int reconnectCnt;
 
-    /** Is stopped. */
-    private volatile boolean isStopped;
-
     /**
      * @param ctx Context.
      */
@@ -110,12 +107,6 @@ public class WebSocketManager implements AutoCloseable {
      * @param sesHnd Session handler.
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
-        if (isStopped)
-            throw new InterruptedException("Web socket manager was stopped.");
-
-        if (client != null)
-            client.stop();
-
         if (reconnectCnt == -1)
             log.info("Connecting to server: " + uri);
 
@@ -126,10 +117,19 @@ public class WebSocketManager implements AutoCloseable {
 
         client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
         client.setMessageConverter(getMessageConverter());
-        client.start();
 
-        ses = client.connect(uri, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
-        reconnectCnt = -1;
+        try {
+            client.start();
+
+            ses = client.connect(uri, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
+
+            reconnectCnt = -1;
+        }
+        catch (Exception e) {
+            close();
+            
+            throw e;
+        }
     }
 
     /**
@@ -177,8 +177,6 @@ public class WebSocketManager implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        isStopped = true;
-
         if (client != null)
             client.stop();
     }
