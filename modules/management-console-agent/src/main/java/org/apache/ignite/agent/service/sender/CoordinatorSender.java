@@ -43,7 +43,7 @@ public class CoordinatorSender<T> extends RetryableSender<T> {
      * @param cap Capacity.
      */
     public CoordinatorSender(GridKernalContext ctx, String topicName, int cap) {
-        super(cap, ctx.log(CoordinatorSender.class));
+        super(ctx.log(CoordinatorSender.class), topicName + "-sender-", cap);
 
         this.ctx = ctx;
         this.topicName = topicName;

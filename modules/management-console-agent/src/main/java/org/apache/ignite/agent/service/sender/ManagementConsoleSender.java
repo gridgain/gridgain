@@ -41,19 +41,22 @@ public class ManagementConsoleSender<T> extends RetryableSender<T> {
      * @param ctx Context.
      * @param mgr Manager.
      * @param dest Destination.
+     * @param threadNamePrefix the prefix to use for the names of newly created threads.
      */
-    public ManagementConsoleSender(GridKernalContext ctx, WebSocketManager mgr, String dest) {
-        this(ctx, mgr, dest, DEFAULT_QUEUE_CAP);
+    public ManagementConsoleSender(GridKernalContext ctx, WebSocketManager mgr, String dest, String threadNamePrefix) {
+        this(ctx, mgr, dest, threadNamePrefix, DEFAULT_QUEUE_CAP);
     }
 
     /**
      * @param ctx Context.
      * @param mgr Manager.
      * @param dest Destination.
+     * @param threadNamePrefix the prefix to use for the names of newly created threads.
      * @param cap Capacity.
      */
-    public ManagementConsoleSender(GridKernalContext ctx, WebSocketManager mgr, String dest, int cap) {
-        super(cap, ctx.log(ManagementConsoleSender.class));
+    public ManagementConsoleSender(GridKernalContext ctx, WebSocketManager mgr, String dest, String threadNamePrefix, int cap) {
+        super(ctx.log(ManagementConsoleSender.class), threadNamePrefix, cap);
+
         this.mgr = mgr;
         this.dest = dest;
     }

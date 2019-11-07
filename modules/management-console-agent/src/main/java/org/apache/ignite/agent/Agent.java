@@ -37,7 +37,6 @@ import org.apache.ignite.agent.service.metrics.MetricExporter;
 import org.apache.ignite.agent.service.metrics.MetricsService;
 import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter;
 import org.apache.ignite.agent.service.tracing.TracingService;
-import org.apache.ignite.agent.utils.ManagementConsoleThreadFactory;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
@@ -57,6 +56,7 @@ import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
@@ -289,7 +289,7 @@ public class Agent extends ManagementConsoleProcessor {
         evtsExporter.addGlobalEventListener();
 
         connectPool =
-            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new ManagementConsoleThreadFactory("connection-pool"));
+            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
 
         ctx.event().enableEvents(NOT_ENABLED_EVTS);
 

@@ -52,7 +52,13 @@ public class EventsService implements AutoCloseable {
     public EventsService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
 
-        snd = new ManagementConsoleSender<>(ctx, mgr, buildEventsDest(ctx.cluster().get().id()));
+        snd = new ManagementConsoleSender<>(
+            ctx,
+            mgr,
+            buildEventsDest(ctx.cluster().get().id()),
+            "mgmt-console-events-sender-",
+            QUEUE_CAP
+        );
 
         ctx.grid().message().localListen(EVENTS_TOPIC, lsnr);
     }

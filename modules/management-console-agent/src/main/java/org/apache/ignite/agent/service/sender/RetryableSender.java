@@ -24,8 +24,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.utils.ManagementConsoleThreadFactory;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 /**
  * Retryable sender with limited queue.
@@ -47,13 +47,15 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     protected final IgniteLogger log;
 
     /**
-     * @param cap Capacity.
      * @param log Logger.
+     * @param threadNamePrefix the prefix to use for the names of newly created threads.
+     * @param cap Capacity.
      */
-    protected RetryableSender(int cap, IgniteLogger log) {
+    protected RetryableSender(IgniteLogger log, String threadNamePrefix, int cap) {
         this.log = log;
         queue = new ArrayBlockingQueue<>(cap);
-        exSrvc = Executors.newSingleThreadExecutor(new ManagementConsoleThreadFactory("retryable-sender"));
+        
+        exSrvc = Executors.newSingleThreadExecutor(new CustomizableThreadFactory(threadNamePrefix));
         exSrvc.submit(this);
     }
 

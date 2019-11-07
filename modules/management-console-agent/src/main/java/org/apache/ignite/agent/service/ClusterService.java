@@ -27,7 +27,6 @@ import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
-import org.apache.ignite.agent.utils.ManagementConsoleThreadFactory;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -37,6 +36,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
@@ -74,7 +74,7 @@ public class ClusterService implements AutoCloseable {
 
     /** Executor service. */
     private ScheduledExecutorService baselineExecSrvc =
-        Executors.newScheduledThreadPool(1, new ManagementConsoleThreadFactory("cluster-service-pool"));
+        Executors.newScheduledThreadPool(1, new CustomizableThreadFactory("mgmt-console-baseline-watcher-"));
 
     /**
      * @param ctx Context.

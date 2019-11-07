@@ -87,7 +87,12 @@ public class NodeConfigurationService implements AutoCloseable {
      * @return Sender which send messages from queue to Management Console.
      */
     private ManagementConsoleSender<NodeConfiguration> createSender() {
-        UUID clusterId = ctx.cluster().get().id();
-        return new ManagementConsoleSender<>(ctx, mgr, buildClusterNodeConfigurationDest(clusterId));
+        return new ManagementConsoleSender<>(
+            ctx,
+            mgr,
+            buildClusterNodeConfigurationDest(ctx.cluster().get().id()),
+            "mgmt-console-node-cfg-sender-",
+            QUEUE_CAP
+        );
     }
 }

@@ -229,7 +229,7 @@ public class WebSocketManager implements AutoCloseable {
         // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(log, httpClient, uri);
 
-        httpClient.setName("mc-http-client");
+        httpClient.setName("mgmt-console-http-client");
         httpClient.addBean(httpClient.getExecutor());
 
         WebSocketClient webSockClient = new WebSocketClient(httpClient);
