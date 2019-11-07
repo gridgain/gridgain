@@ -144,7 +144,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     public void testPutRemoveReorderWithTombstones() throws Exception {
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
 
-        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, PRELOADED_KEYS, 0, 0);
+        testPutRemoveReorder(this::putRemove2, this::reorder2, this::noop1, 1, PRELOADED_KEYS, 0, 0);
     }
 
     /** Uses deferred deletion queue to handle put-remove conflicts for tx cache. */
@@ -152,7 +152,14 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     public void testPutRemoveReorderWithDeferredDelete() throws Exception {
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
 
-        testPutRemoveReorder(this::putRemove2, this::reorder2, 0, PRELOADED_KEYS, 1, 1);
+        testPutRemoveReorder(this::putRemove2, this::reorder2, this::noop1, 0, PRELOADED_KEYS, 1, 1);
+    }
+
+    @Test
+    public void testPutRemoveReorder2() throws Exception {
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+
+        testPutRemoveReorder(this::put1, this::noop2, this::remove1, 0, PRELOADED_KEYS, 1, 1);
     }
 
 //    /** Uses tombstones to handle put-remove conflicts. */
@@ -174,6 +181,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** */
     private void testPutRemoveReorder(BiConsumer<IgniteCache, List> putClo,
         Consumer<List> reorderClo,
+        BiConsumer<IgniteCache, List> beforeReorderClo,
         int expTombstoneCnt,
         int expSize,
         int expHeapSize,
@@ -216,6 +224,8 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
                 List<GridCacheEntryInfo> infos0 = col.infos();
 
                 reorderClo.accept(infos0);
+
+                return true;
             }
 
             return false;
@@ -227,6 +237,13 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         // Replace evict manager with stubbed clearTombstonesAsync method to avoid tombstones removal on partition owning.
         stubTombstonesRemoval(g1);
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        if (beforeReorderClo != null)
+            beforeReorderClo.accept(cache, keys);
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
 
         awaitPartitionMapExchange();
 
@@ -279,5 +296,31 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         Object e1 = entries.get(0);
         entries.set(0, entries.get(1));
         entries.set(1, e1);
+    }
+
+    /**
+     * @param node Node.
+     * @param keys Keys.
+     */
+    private void noop1(IgniteCache cache, List keys) {
+        System.out.println();
+    }
+
+    /**
+     */
+    private void noop2(List entries) {
+        System.out.println();
+    }
+
+    /**
+     */
+    private void put1(IgniteCache cache, List keys) {
+        cache.put(keys.get(PRELOADED_KEYS), 1);
+    }
+
+    /**
+     */
+    private void remove1(IgniteCache cache, List keys) {
+        cache.remove(keys.get(PRELOADED_KEYS));
     }
 }

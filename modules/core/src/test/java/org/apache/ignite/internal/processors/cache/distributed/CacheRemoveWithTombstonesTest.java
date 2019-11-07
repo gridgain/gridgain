@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -56,6 +57,8 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  *
  */
 @RunWith(Parameterized.class)
+// All conflicts are resolved using tombstones.
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, value = "0")
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     /** Test parameters. */
     @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")
@@ -85,6 +88,8 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setRebalanceThreadPoolSize(4); // Enables reordering for historical rebalance.
 
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
@@ -191,7 +196,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         blockRebalance(ignite0);
 
-        IgniteEx ignite1 = GridTestUtils.runAsync(() -> startGrid(1)).get(10, TimeUnit.SECONDS);
+        IgniteEx ignite1 = GridTestUtils.runAsync(() -> startGrid(1)).get(30, TimeUnit.SECONDS);
 
         if (persistence) {
             ignite0.cluster().baselineAutoAdjustEnabled(false);

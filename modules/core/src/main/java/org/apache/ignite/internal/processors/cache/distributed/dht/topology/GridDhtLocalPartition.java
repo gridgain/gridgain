@@ -395,6 +395,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      */
     void cleanupRemoveQueue() {
+        if (!group().supportsTombstone() && state() == MOVING)
+            return;
+
         // Delete entries from queue beyond max capacity.
         while (rmvQueue.sizex() > rmvQueueMaxSize) {
             RemovedEntryHolder item = rmvQueue.pollFirst();
