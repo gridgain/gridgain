@@ -53,9 +53,13 @@ public class MultipleSSLContextsTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration igniteCfg = super.getConfiguration(igniteInstanceName);
 
-        igniteCfg.setClientMode(clientMode);
+        if (clientMode) {
+            igniteCfg.setClientMode(true);
 
-        igniteCfg.setSslContextFactory(clusterSSLFactory());
+            igniteCfg.setSslContextFactory(clientSSLFactory());
+        }
+        else
+            igniteCfg.setSslContextFactory(serverSSLFactory());
 
         ClientConnectorConfiguration clientConnectorCfg = new ClientConnectorConfiguration()
             .setSslEnabled(true)
@@ -73,10 +77,17 @@ public class MultipleSSLContextsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @return SSL context factory to use for communication between nodes in a cluster.
+     * @return SSL context factory to use on server nodes for communication between nodes in a cluster.
      */
-    private Factory<SSLContext> clusterSSLFactory() {
-        return GridTestUtils.sslTrustedFactory("cluster", "trustone");
+    private Factory<SSLContext> serverSSLFactory() {
+        return GridTestUtils.sslTrustedFactory("server", "trustone");
+    }
+
+    /**
+     * @return SSL context factory to use on client nodes for communication between nodes in a cluster.
+     */
+    private Factory<SSLContext> clientSSLFactory() {
+        return GridTestUtils.sslTrustedFactory("client", "trustone");
     }
 
     /**

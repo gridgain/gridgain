@@ -40,7 +40,7 @@ public class SingletonSSLContextFactoryTest {
     private SslContextFactory createSslFactory() {
         SslContextFactory factory = new SslContextFactory();
 
-        factory.setKeyStoreFilePath(GridTestUtils.keyStorePath("cluster"));
+        factory.setKeyStoreFilePath(GridTestUtils.keyStorePath("server"));
         factory.setKeyStorePassword(GridTestUtils.keyStorePassword().toCharArray());
         factory.setTrustStoreFilePath(GridTestUtils.keyStorePath("trustone"));
         factory.setTrustStorePassword(GridTestUtils.keyStorePassword().toCharArray());

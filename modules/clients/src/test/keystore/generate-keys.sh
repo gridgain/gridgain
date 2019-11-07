@@ -79,7 +79,8 @@ function createStore {
 
 mkdir -p ca/certs
 
-createStore cluster oneca
+createStore client oneca
+createStore server oneca
 createStore thinClient twoca
 createStore thinServer twoca
 createStore connectorClient threeca
