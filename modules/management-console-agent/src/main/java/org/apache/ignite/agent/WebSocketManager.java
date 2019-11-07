@@ -24,7 +24,6 @@ import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
@@ -37,6 +36,7 @@ import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
@@ -45,7 +45,6 @@ import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.WebSocketHttpHeaders;
-import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.jetty.JettyWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
@@ -125,7 +124,7 @@ public class WebSocketManager implements AutoCloseable {
 
         Thread.sleep(reconnectCnt * 1000);
 
-        client = new WebSocketStompClient(createJettyWebSocketClient(uri, cfg));
+        client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
         client.setMessageConverter(getMessageConverter());
         client.start();
 
@@ -226,27 +225,22 @@ public class WebSocketManager implements AutoCloseable {
      * @param cfg Config.
      * @return Jetty websocket client.
      */
-    private WebSocketClient createJettyWebSocketClient(URI uri, ManagementConfiguration cfg) throws Exception {
-        HttpClient httpClient = createHttpClient(uri, cfg);
-        org.eclipse.jetty.websocket.client.WebSocketClient webSockClient = new org.eclipse.jetty.websocket.client.WebSocketClient(httpClient);
+    private JettyWebSocketClient createWebSocketClient(URI uri, ManagementConfiguration cfg) throws Exception {
+        HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
+        
+        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+        configureProxy(log, httpClient, uri);
+
+        httpClient.setName("mc-http-client");
+        httpClient.addBean(httpClient.getExecutor());
+
+        WebSocketClient webSockClient = new WebSocketClient(httpClient);
+
         webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.addBean(httpClient);
 
         return new JettyWebSocketClient(webSockClient);
-    }
-
-    /**
-     * @return Jetty http client.
-     */
-    private HttpClient createHttpClient(URI uri, ManagementConfiguration cfg) throws IgniteCheckedException {
-        HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
-        httpClient.setName("management-console-http-client");
-
-        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
-        configureProxy(log, httpClient, uri);
-
-        return httpClient;
     }
 
     /**
