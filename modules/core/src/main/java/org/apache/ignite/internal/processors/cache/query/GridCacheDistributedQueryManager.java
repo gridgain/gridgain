@@ -559,7 +559,11 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 queryTopologyVersion(),
                 mvccSnapshot,
                 // Force deployment anyway if scan query is used.
-                cctx.deploymentEnabled() || (qry.query().scanFilter() != null && cctx.gridDeploy().enabled()),
+                cctx.deploymentEnabled() ||
+                    (
+                        (qry.query().scanFilter() != null || qry.query().transform() != null)
+                            && cctx.gridDeploy().enabled()
+                    ),
                 dataPageScanEnabled);
 
             addQueryFuture(req.id(), fut);
