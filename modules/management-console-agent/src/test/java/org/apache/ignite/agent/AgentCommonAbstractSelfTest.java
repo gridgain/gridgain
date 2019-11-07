@@ -16,11 +16,9 @@
 
 package org.apache.ignite.agent;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.config.TestChannelInterceptor;
 import org.apache.ignite.agent.config.WebSocketConfig;
@@ -38,7 +36,6 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
