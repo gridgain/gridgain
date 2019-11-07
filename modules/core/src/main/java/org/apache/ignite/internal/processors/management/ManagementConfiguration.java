@@ -34,14 +34,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Local console URI. */
-    private static final String LOCAL_CONSOLE_URI = "http://localhost:3000";
+    /** Default console URI. */
+    private static final String DFLT_CONSOLE_URI = "http://localhost:3000";
 
     /** */
     private boolean enabled = true;
 
     /** */
-    private List<String> consoleUris = Collections.singletonList(LOCAL_CONSOLE_URI);
+    private List<String> consoleUris = Collections.singletonList(DFLT_CONSOLE_URI);
 
     /** */
     @GridToStringExclude
