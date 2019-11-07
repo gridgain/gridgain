@@ -727,6 +727,18 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             exchCtx = new ExchangeContext(crdNode, this);
 
+
+            if (log.isDebugEnabled()) {
+                log.debug("ExchangeContext: " + exchCtx);
+                log.debug("ExchangeContext: " + firstEvtDiscoCache.allNodes().stream()
+                    .map(ClusterNode::version)
+                    .collect(Collectors.toList()));
+            }
+            log.error("crdNode: " + crdNode);
+            log.error("IGNITE_EXCHANGE_COMPATIBILITY_VER_1: " + getBoolean(ExchangeContext.IGNITE_EXCHANGE_COMPATIBILITY_VER_1));
+            log.error("ExchangeContext.fetchAffinityOnJoin(): " + exchCtx.fetchAffinityOnJoin());
+            log.error("firstEvtDiscoCache.minimumNodeVersion(): " + firstEvtDiscoCache.minimumNodeVersion());
+
             cctx.exchange().exchangerBlockingSectionBegin();
 
             assert state == null : state;

@@ -1819,6 +1819,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 }
                 else {
                     if (fut.context().fetchAffinityOnJoin()) {
+                        log.error("fetchAffinityOnJoin for " + desc);
                         GridDhtAssignmentFetchFuture fetchFut = new GridDhtAssignmentFetchFuture(cctx,
                             desc.groupId(),
                             topVer,
