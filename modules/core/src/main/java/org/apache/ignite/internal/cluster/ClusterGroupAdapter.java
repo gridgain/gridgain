@@ -322,7 +322,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         else {
             Collection<ClusterNode> all;
 
-            if (p instanceof DaemonFilter)
+            if (p == null || p instanceof DaemonFilter)
                 all = F.concat(false, ctx.discovery().daemonNodes(), ctx.discovery().allNodes());
             else
                 all = ctx.discovery().allNodes();
