@@ -311,7 +311,10 @@ public class JdbcThinTcpIo {
 
             if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();
-            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0 && VER_0_0_0.compareTo(srvProtoVer0) < 0)
+            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0
+                // server responds with a zero version of the protocol in case of an authorization error
+                // so we should not fallback to this version
+                && VER_0_0_0.compareTo(srvProtoVer0) < 0)
                 return handshake(srvProtoVer0);
             else {
                 throw new SQLException("Handshake failed [driverProtocolVer=" + CURRENT_VER +
