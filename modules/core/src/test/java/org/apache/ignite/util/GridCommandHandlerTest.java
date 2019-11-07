@@ -255,20 +255,45 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * @param newClusterId Flag whether to use new cluster ID.
+     * @throws Exception If failed.
+     */
+    private void testDeactivateWithCheckClusterNameInConfirmationByDefault(boolean newClusterId) throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+        assertFalse(igniteEx.cluster().active());
+
+        String clusterName = newClusterId
+            ? igniteEx.cluster().id().toString()
+            : igniteEx.context().cache().utilityCache().context().dynamicDeploymentId().toString();
+
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
+            igniteEx,
+            clusterName
+        );
+    }
+
+    /**
      * Test the deactivation command on the active and no cluster with checking
      * the cluster name(default) in confirmation.
      *
      * @throws Exception If failed.
      * */
     @Test
-    public void testDeactivateWithCheckClusterNameInConfirmationByDefault() throws Exception {
-        IgniteEx igniteEx = startGrid(0);
-        assertFalse(igniteEx.cluster().active());
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    public void testDeactivateWithCheckClusterNameInConfirmationByDefaultWithNewClusterId() throws Exception {
+        testDeactivateWithCheckClusterNameInConfirmationByDefault(true);
+    }
 
-        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
-            igniteEx,
-            igniteEx.cluster().id().toString()
-        );
+    /**
+     * Test the deactivation command on the active and no cluster with checking
+     * the cluster name(default) in confirmation.
+     *
+     * @throws Exception If failed.
+     * */
+    @Test
+    public void testDeactivateWithCheckClusterNameInConfirmationByDefaultWithOldClusterId() throws Exception {
+        testDeactivateWithCheckClusterNameInConfirmationByDefault(false);
     }
 
     /**
