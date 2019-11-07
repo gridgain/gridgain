@@ -1014,12 +1014,14 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
 
         /** {@inheritDoc} */
         @Override public Collection<ClusterNode> nodes() {
-            UUID nodeId = F.first(ensureLastTopologyState().nodeIds);
-
             guard();
 
             try {
-                return singleton(ctx.discovery().node(nodeId));
+                UUID nodeId = F.first(ensureLastTopologyState().nodeIds);
+
+                ClusterNode node = nodeId == null ? null : ctx.discovery().node(nodeId);
+
+                return node == null ? emptySet() : singleton(node);
             }
             finally {
                 unguard();
