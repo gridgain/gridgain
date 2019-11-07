@@ -54,7 +54,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
-        if (!enableExperimental())
+        if (!experimentalEnabled())
             return;
 
         Command.usage(log, "Enable management:", MANAGEMENT, ManagementCommandList.ENABLE.text());
@@ -81,7 +81,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
      * @throws GridClientException If failed to activate.
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        if (enableExperimental()) {
+        if (experimentalEnabled()) {
             try (GridClient client = Command.startClient(clientCfg)) {
                 UUID crdId = client.compute().nodes().stream()
                     .min(Comparator.comparingLong(GridClientNode::order))
@@ -158,25 +158,21 @@ public class ManagementCommands implements Command<ManagementArguments> {
                         throw new IllegalArgumentException("Expected one of auto-adjust arguments");
 
                     switch (uriArg) {
-                        case KEYSTORE: {
-                            String path = argIter.nextArg("key store path");
-
-                            managementArgs.setKeyStore(readFileToString(path));
+                        case KEYSTORE:
+                            managementArgs.setKeyStore(readFileToString(argIter.nextArg("key store path")));
 
                             break;
-                        }
+
                         case KEYSTORE_PASSWORD:
                             managementArgs.setKeyStorePassword(argIter.nextArg("key store password"));
 
                             break;
 
-                        case TRUSTSTORE: {
-                            String path = argIter.nextArg("trust store path");
-
-                            managementArgs.setTrustStorePassword(readFileToString(path));
+                        case TRUSTSTORE:
+                            managementArgs.setTrustStorePassword(readFileToString(argIter.nextArg("trust store path")));
 
                             break;
-                        }
+
                         case TRUSTSTORE_PASSWORD:
                             managementArgs.setTrustStorePassword(argIter.nextArg("trust store password"));
 
@@ -198,7 +194,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             break;
 
                         default:
-
+                            // No-op.
                     }
                 }
         }
