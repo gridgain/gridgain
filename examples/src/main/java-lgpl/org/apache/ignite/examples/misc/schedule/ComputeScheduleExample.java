@@ -67,11 +67,20 @@ public class ComputeScheduleExample {
                         return invocations;
                     }
                 },
-                "{9, 5, 3} * * * * *" // Cron expression.
+                "{5, 3} * * * * *" // Cron expression.
             );
 
-            while (!fut.isDone())
-                System.out.println(">>> Invocation #: " + fut.get());
+            try {
+                while (!fut.isDone())
+                    System.out.println(">>> Invocation #: " + fut.get());
+
+                fut.get();
+            }
+            catch (IgniteException e) {
+                System.out.println(">>> Schedule future is done with error [err=" + e +']');
+
+                throw e;
+            }
 
             System.out.println();
             System.out.println(">>> Schedule future is done and has been unscheduled.");
