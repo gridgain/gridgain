@@ -801,7 +801,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (relPtr == INVALID_REL_PTR) {
                 relPtr = seg.borrowOrAllocateFreePage(pageId);
 
-                if (pageAllocated != null && PageIdUtils.pageIndex(pageId) == 0)
+                if (pageAllocated != null)
                     pageAllocated.set(true);
 
                 if (relPtr == INVALID_REL_PTR)
