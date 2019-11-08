@@ -69,7 +69,9 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
 
                 sendInternal(e);
             }
-            catch (InterruptedException ex) {
+            catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+
                 break;
             }
             catch (Exception ex) {
