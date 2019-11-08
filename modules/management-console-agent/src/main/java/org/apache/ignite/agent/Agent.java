@@ -25,6 +25,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
@@ -130,6 +131,9 @@ public class Agent extends ManagementConsoleProcessor {
     /** Meta storage. */
     private DistributedMetaStorage metaStorage;
 
+    /** Session registry. */
+    private SessionRegistry sessionRegistry;
+
     /** Active server uri. */
     private String curSrvUri;
 
@@ -215,6 +219,13 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
+     * @return Session registry.
+     */
+    public SessionRegistry sessionRegistry() {
+        return sessionRegistry;
+    }
+
+    /**
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
@@ -276,8 +287,6 @@ public class Agent extends ManagementConsoleProcessor {
         }
         catch (Exception e) {
             log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
-
-            mgr.close();
         }
     }
 
@@ -294,6 +303,7 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Starting Management Console agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
+        sessionRegistry = new SessionRegistry(ctx);
         clusterSrvc = new ClusterService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);

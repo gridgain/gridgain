@@ -72,7 +72,7 @@ public class QueryActionsController {
         this.log = ctx.log(QueryActionsController.class);
 
         qryProc = ctx.query();
-        qryRegistry = new QueryHolderRegistry(ctx, Duration.ofMinutes(5));
+        qryRegistry = new QueryHolderRegistry(ctx, Duration.ofMinutes(5).toMillis());
     }
 
     /**

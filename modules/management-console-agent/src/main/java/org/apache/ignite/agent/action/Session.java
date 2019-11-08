@@ -56,7 +56,7 @@ public class Session {
 
     /** Credentials that can be used for security context invalidation. */
     @GridToStringExclude
-    private volatile SecurityCredentials creds;
+    private volatile SecurityCredentials creds = new SecurityCredentials();
 
     /**
      * @param id Session ID.
@@ -128,6 +128,13 @@ public class Session {
      */
     public void lastInvalidateTime(long time) {
         lastInvalidateTime.set(time);
+    }
+
+    /**
+     * @return Last invalidate time.
+     */
+    public long lastInvalidateTime() {
+        return lastInvalidateTime.get();
     }
 
     /**

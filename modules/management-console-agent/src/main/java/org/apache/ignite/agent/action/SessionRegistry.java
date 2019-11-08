@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
@@ -31,9 +32,6 @@ import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
  * Security session registry.
  */
 public class SessionRegistry {
-    /** Instance. */
-    private static volatile SessionRegistry instance;
-
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -46,11 +44,19 @@ public class SessionRegistry {
     /** Interval to invalidate session tokens. */
     private final long sesTokTtl;
 
+    /** Security enabled. */
+    private boolean securityEnabled;
+
+    /** Authentication enabled. */
+    private boolean authenticationEnabled;
+
     /**
      * @param ctx Context.
      */
-    private SessionRegistry(GridKernalContext ctx) {
+    public SessionRegistry(GridKernalContext ctx) {
         this.ctx = ctx;
+        securityEnabled = ctx.security().enabled();
+        authenticationEnabled = ctx.authentication().enabled();
 
         ManagementConfiguration cfg = ctx.managementConsole().configuration();
 
@@ -59,28 +65,12 @@ public class SessionRegistry {
     }
 
     /**
-     * @param ctx Context.
-     */
-    public static SessionRegistry getInstance(GridKernalContext ctx) {
-        SessionRegistry locInstance = instance;
-
-        if (locInstance == null) {
-            synchronized (SessionRegistry.class) {
-                locInstance = instance;
-
-                if (locInstance == null)
-                    instance = locInstance = new SessionRegistry(ctx);
-            }
-        }
-
-        return locInstance;
-    }
-
-    /**
      * @param ses Session.
      */
     public void saveSession(Session ses) {
         sesIdToSes.put(ses.id(), ses);
+
+        scheduleToRemove(ses.id());
     }
 
     /**
@@ -107,11 +97,41 @@ public class SessionRegistry {
         }
 
         if (ses.sessionExpired(sesTokTtl)) {
-            ses.securityContext(authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
-            sesIdToSes.put(ses.id(), ses);
+
+            try {
+                if (securityEnabled)
+                    ses.securityContext(authenticate(ctx.security(), ses));
+                else if (authenticationEnabled)
+                    ses.authorizationContext(authenticate(ctx.authentication(), ses));
+
+                sesIdToSes.put(ses.id(), ses);
+            }
+            catch (IgniteCheckedException ex) {
+                sesIdToSes.remove(ses.id());
+
+                throw ex;
+            }
         }
 
         return ses;
+    }
+
+    /**
+     * @param sesId Session id.
+     */
+    private void scheduleToRemove(UUID sesId) {
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(sesTtl) {
+            @Override public void onTimeout() {
+                sesIdToSes.computeIfPresent(sesId, (id, ses) -> {
+                    if (ses.timedOut(sesTtl))
+                        return null;
+                    else
+                        scheduleToRemove(sesId);
+
+                    return ses;
+                });
+            }
+        });
     }
 }
