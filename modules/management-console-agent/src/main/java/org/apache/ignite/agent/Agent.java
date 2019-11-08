@@ -245,13 +245,17 @@ public class Agent extends ManagementConsoleProcessor {
 
             disconnected.set(false);
         }
-        catch (IgniteInterruptedCheckedException e) {
+        catch (IgniteInterruptedCheckedException | IgniteInterruptedException e) {
             if (log.isDebugEnabled())
                 log.debug("Caught interrupted exception: " + e);
+
+            mgr.close();
         }
         catch (InterruptedException e) {
             if (log.isDebugEnabled())
                 log.debug("Caught interrupted exception: " + e);
+
+            mgr.close();
 
             Thread.currentThread().interrupt();
         }
@@ -259,23 +263,22 @@ public class Agent extends ManagementConsoleProcessor {
             connect0();
         }
         catch (ExecutionException e) {
-            if (X.hasCause(e, InterruptedException.class, IgniteInterruptedCheckedException.class, IgniteInterruptedException.class)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Runtime exception occurred during establish connection with Management Console" +
-                        " caused by thread interruption: " + e.getMessage());
-                }
-            }
-            else if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
+            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
 
                 connect0();
             }
-            else
+            else {
                 log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+
+                mgr.close();
+            }
         }
         catch (Exception e) {
             log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+
+            mgr.close();
         }
     }
 
