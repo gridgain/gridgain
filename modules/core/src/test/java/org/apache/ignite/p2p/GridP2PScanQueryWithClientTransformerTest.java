@@ -20,6 +20,7 @@ import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.List;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -41,7 +42,13 @@ public class GridP2PScanQueryWithClientTransformerTest extends GridCommonAbstrac
     private static final String TRANSFORMER_CLASS_NAME = "org.apache.ignite.tests.p2p.cache.ScanQueryTestTransformer";
 
     /** */
-    private static final int SCALE_FACTOR = 10;
+    private static final String TRANSFORMER_CLOSURE_NAME = "org.apache.ignite.tests.p2p.cache.ScanQueryTestTransformerWrapper$1";
+
+    /** */
+    private static final int SCALE_FACTOR = 7;
+
+    /** */
+    private static final int CACHE_SIZE = 10;
 
     /** Initialize ClassLoader. */
     static {
@@ -59,7 +66,7 @@ public class GridP2PScanQueryWithClientTransformerTest extends GridCommonAbstrac
      * Verifies that Scan Query transformer is loaded by p2p mechanism when it is missing on server's classpath.
      */
     @Test
-    public void testScanQueryWithExternalClass() throws Exception {
+    public void testScanQueryCursorWithExternalClass() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
         IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
@@ -69,8 +76,6 @@ public class GridP2PScanQueryWithClientTransformerTest extends GridCommonAbstrac
         IgniteEx client = startClientGrid(1);
 
         IgniteCache<Object, Object> clientCache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        IgniteClosure<Integer, Integer> transformer = loadTransformerClass();
 
         QueryCursor<Integer> query = clientCache.query(new ScanQuery<Integer, Integer>(), loadTransformerClass());
 
@@ -83,13 +88,50 @@ public class GridP2PScanQueryWithClientTransformerTest extends GridCommonAbstrac
         assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
     }
 
+    @Test
+    public void testScanQueryGetAllWithExternalClass() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+
+        populateCache(cache);
+
+        IgniteEx client = startClientGrid(1);
+
+        IgniteCache<Object, Object> clientCache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        QueryCursor<Integer> query = clientCache.query(new ScanQuery<Integer, Integer>(), loadTransformerClass());
+
+        List<Integer> results = query.getAll();
+
+        assertNotNull(results);
+        assertEquals(CACHE_SIZE, results.size());
+    }
+
+    @Test
+    public void testScanQueryCursorWithAnonymousClass() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+
+        populateCache(cache);
+
+        IgniteEx client = startClientGrid(1);
+
+        IgniteCache<Object, Object> clientCache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        QueryCursor<Integer> query = clientCache.query(new ScanQuery<Integer, Integer>(), loadTransformerClosure());
+
+        List<Integer> results = query.getAll();
+    }
+
     /**
      * @param cache Cache to populate.
      */
     private int populateCache(IgniteCache cache) {
         int sum = 0;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < CACHE_SIZE; i++) {
             sum += i;
 
             cache.put(i, i);
@@ -108,5 +150,9 @@ public class GridP2PScanQueryWithClientTransformerTest extends GridCommonAbstrac
         Constructor ctor = TEST_CLASS_LOADER.loadClass(TRANSFORMER_CLASS_NAME).getConstructor(int.class);
 
         return (IgniteClosure)ctor.newInstance(SCALE_FACTOR);
+    }
+
+    private IgniteClosure loadTransformerClosure() throws Exception {
+        return (IgniteClosure)TEST_CLASS_LOADER.loadClass(TRANSFORMER_CLOSURE_NAME).newInstance();
     }
 }

@@ -17,32 +17,12 @@
 package org.apache.ignite.tests.p2p.cache;
 
 import javax.cache.Cache;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.lang.IgniteClosure;
 
-/**
- * Test class to verify p2p class loading for transformer of Scan Query
- * (see {@link IgniteCache#query(Query, IgniteClosure)}).
- */
-public class ScanQueryTestTransformer implements IgniteClosure<Cache.Entry<Integer, Integer>, Integer> {
-    /** */
-    private final int scaleFactor;
-
-    /** */
+public class ScanQueryTestTransformerWrapper {
     private final IgniteClosure<Cache.Entry<Integer, Integer>, Integer> clo = new IgniteClosure<Cache.Entry<Integer, Integer>, Integer>() {
         @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
-            return entry.getValue() * 10;
+            return entry.getValue();
         }
     };
-
-    /** */
-    public ScanQueryTestTransformer(int scaleFactor) {
-        this.scaleFactor = scaleFactor;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
-        return entry.getValue() * scaleFactor;
-    }
 }
