@@ -824,7 +824,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -832,11 +831,9 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on server side.</li>
      *         <li>Destroy newly created cache through client.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b>
      *      Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnSrvDestroyOnThickClient() {
@@ -856,7 +853,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -864,11 +860,9 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on server side.</li>
      *         <li>Destroy newly created cache through client.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b>
      *      Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnSrvDestroyOnThinClient() {
@@ -888,7 +882,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -896,11 +889,9 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on server side.</li>
      *         <li>Destroy newly created cache through client.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b>
      *      Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnSrvDestroyOnRestClient() throws Exception {
@@ -920,7 +911,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -928,11 +918,9 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through server node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b>
      *      Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnThickClientDestroyOnSrv() {
@@ -952,7 +940,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -960,11 +947,9 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through server node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b>
      *      Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnThinClientSrvDestroyOnSrv() {
@@ -984,7 +969,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -992,10 +976,8 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through server node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnJdbcClientDestroyOnSrv() throws Exception {
@@ -1015,7 +997,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -1023,10 +1004,8 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through server node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnRestClientDestroyOnSrv() throws Exception {
@@ -1046,7 +1025,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -1054,10 +1032,8 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through some other, previously created, <b>Thin</b> client node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnThickClientDestroyThinClient() {
@@ -1077,7 +1053,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -1085,10 +1060,8 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through some other, previously created, <b>Rest</b> client node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnThinClientSrvDestroyOnRestClient() throws Exception{
@@ -1108,7 +1081,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
      *     <b>Steps:</b>
      *     <ol>
@@ -1116,10 +1088,8 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through some other, previously created, <b>Thin</b> client node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
      */
     @Test
     public void testCreateOnJdbcClientDestroyOnThinClient() throws Exception {
@@ -1135,22 +1105,21 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
     }
 
     /**
+     * Test plan link []
      * Create and destroy caches:
      * <p>
      *     <b>Prerequisites:</b>
      *     Start server node, create 1 cache in a single cache group.
-     * </p>
      * <p>
-     *     <b>Rest:</b>
+     *     <b>Steps:</b>
      *     <ol>
      *         <li>Start <b>Jdbc Thin</b> client.</li>
      *         <li>Create new cache with an existing cache group on client side.</li>
      *         <li>Destroy newly created cache through some other, previously created, <b>Thick</b> client node.</li>
      *     </ol>
-     * </p>
      * <p>
      *      <b>Expected:</b> Only one cache, initially created within server node is expected.
-     * </p>
+     * @throws Exception If failed.
      */
     @Test
     public void testCreateOnRestClientDestroyOnThickClient() throws Exception {

@@ -57,10 +57,8 @@ public class ClientSideCacheCreationDestructionWileTopologyChangeTest extends Cl
         return GridTestUtils.runAsync(() -> {
             while (procTopChanges.get()) {
                 try {
-                    if (srv.cluster().nodes().size() < MAX_NODES_CNT) {
+                    if (srv.cluster().nodes().size() < MAX_NODES_CNT)
                         startGrid(UUID.randomUUID().toString());
-                        System.out.println("!!!");
-                    }
                 }
                 catch (Exception e) {
                     fail("Unable to add or remove node: " + e);
