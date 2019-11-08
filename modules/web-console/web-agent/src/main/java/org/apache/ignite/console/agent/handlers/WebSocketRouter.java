@@ -186,7 +186,6 @@ public class WebSocketRouter implements AutoCloseable {
         if (client != null) {
             try {
                 client.stop();
-                client.destroy();
             }
             catch (Exception ignored) {
                 // No-op.
@@ -224,13 +223,15 @@ public class WebSocketRouter implements AutoCloseable {
                 return;
 
             HttpClient httpClient = new HttpClient(createServerSslFactory(cfg));
+            httpClient.setName("http-client");
+            httpClient.addBean(httpClient.getExecutor());
 
             // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
             configureProxy(httpClient, cfg.serverUri());
 
             client = new WebSocketClient(httpClient);
+            client.addBean(httpClient);
 
-            httpClient.start();
             client.start();
             client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(5L, TimeUnit.SECONDS);
 
