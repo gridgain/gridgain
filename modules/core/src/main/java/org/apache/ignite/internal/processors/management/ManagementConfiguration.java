@@ -29,7 +29,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 
 /**
  * This class defines Management Console Agent configuration.
@@ -39,13 +38,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Default console URI. */
-    private static final String DFLT_CONSOLE_URIS = IgniteProperties.get("ignite.management.console.uris");
+    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.management.console.uris"))
+        ? "http://localhost:3000" : IgniteProperties.get("ignite.management.console.uris");
+
+    /** */                                                              
+    private List<String> consoleUris = asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
     private boolean enabled = true;
-
-    /** */
-    private List<String> consoleUris = F.isEmpty(DFLT_CONSOLE_URIS) ? emptyList() : asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
     @GridToStringExclude
