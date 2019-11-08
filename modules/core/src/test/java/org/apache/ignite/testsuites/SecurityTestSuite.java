@@ -31,7 +31,6 @@ import org.apache.ignite.internal.processors.security.compute.closure.ExecutorSe
 import org.apache.ignite.internal.processors.security.datastreamer.DataStreamerPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.datastreamer.closure.DataStreamerRemoteSecurityContextCheckTest;
 import org.apache.ignite.ssl.MultipleSSLContextsTest;
-import org.apache.ignite.ssl.SingletonSSLContextFactoryTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -56,8 +55,7 @@ import org.junit.runners.Suite;
     ThinClientPermissionCheckTest.class,
     IgniteSecurityProcessorTest.class,
 
-    MultipleSSLContextsTest.class,
-    SingletonSSLContextFactoryTest.class
+    MultipleSSLContextsTest.class
 })
 public class SecurityTestSuite {
 }
