@@ -23,6 +23,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.file.OpenOption;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -64,14 +65,14 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
         DataStorageConfiguration dbCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(400L * 1024 * 1024)
-                .setCheckpointPageBufferSize(200L * 1000 * 1000)
+                .setCheckpointPageBufferSize(50L * 1000 * 1000)
                 .setName("dfltDataRegion")
                 .setMetricsEnabled(true)
                 .setPersistenceEnabled(true))
-            .setWalMode(WALMode.BACKGROUND)
+            .setWalMode(WALMode.LOG_ONLY)
             .setCheckpointFrequency(20_000)
-            .setWriteThrottlingEnabled(true)
-            .setCheckpointThreads(1)
+            //.setWriteThrottlingEnabled(true)
+            //.setCheckpointThreads(1)
             .setFileIOFactory(new SlowCheckpointFileIOFactory());
 
         cfg.setDataStorageConfiguration(dbCfg);
@@ -131,6 +132,10 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
 
             final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 1_000, 20);
 
+            AtomicLong cnt = new AtomicLong();
+
+            long start = System.currentTimeMillis();
+
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
@@ -139,7 +144,9 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         while (run.get()) {
                             System.out.println(
                                 "Put rate over last 10 seconds: " + (putRate10secs.value() / 10) +
-                                    " puts/sec, over last 1 second: " + putRate1sec.value());
+                                    " puts/sec, over last 1 second: " + putRate1sec.value() +
+                                    " pages cnt: " + cnt.get() +
+                                    " total time: " + (System.currentTimeMillis() - start));
 
                             if (putRate10secs.value() == 0) {
                                 zeroDropdown.set(true);
@@ -175,6 +182,8 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         putRate10secs.increment();
 
                         putRate1sec.increment();
+
+                        cnt.incrementAndGet();
                     }
 
                     run.set(false);

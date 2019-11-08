@@ -4978,6 +4978,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             FullPageId fullId = writePageIds0.pollFirst();
 
+            PageMemoryImpl.ThrottlingPolicy plc = resolveThrottlingPolicy();
+
             while (fullId != null) {
                 if (checkpointer.shutdownNow)
                     break;
@@ -4992,14 +4994,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 // TODO IGNITE-7792 add generic mapping.
 
-                PageMemoryImpl.ThrottlingPolicy plc = resolveThrottlingPolicy(); // to public !!!
-
                 if (plc != PageMemoryImpl.ThrottlingPolicy.DISABLED) {
                     if (pageMem.shouldThrottle()) {
-                        FullPageId fullId0 = pageMem.pageToDumpFirst(); // переписать нужно передать !
+                        FullPageId fullId0 = pageMem.pageToDumpFirst(writePageIds0);
 
-                        if (!writePageIds0.remove(fullId0))
-                            continue;
+                        snapshotMgr.beforePageWrite(fullId);
 
                         pageMem.checkpointWritePage(fullId0, tmpWriteBuf, pageStoreWriter, tracker);
 

@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Set;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -88,7 +90,7 @@ public interface PageMemoryEx extends PageMemory {
     boolean shouldThrottle();
 
     /** */
-    FullPageId pageToDumpFirst();
+    FullPageId pageToDumpFirst(Set<FullPageId> pages);
 
     /**
      * @see #acquirePage(int, long)

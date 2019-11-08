@@ -2018,40 +2018,41 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** */
-    @Override public FullPageId pageToDumpFirst() {
-        //return NULL_PAGE;
+    @Override public FullPageId pageToDumpFirst(Set<FullPageId> pages) {
+        long idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
 
-        while (true) {
-            long lastIdx = ThreadLocalRandom.current().nextLong(1, GridUnsafe.getLong(checkpointPool
-                .lastAllocatedIdxPtr));
+        long lastIdx = ThreadLocalRandom.current().nextLong(idx / 2, idx);
 
-            if (lastIdx == 1L)
-                return NULL_PAGE;
+        long searched = 0;
 
-            long searched = 0;
+        //if (GridUnsafe.compareAndSwapLong(null, checkpointPool.lastAllocatedIdxPtr, lastIdx, lastIdx - 1)) {
+        while (--lastIdx > 1) {
+            assert (lastIdx & SEGMENT_INDEX_MASK) == 0L;
 
-            //if (GridUnsafe.compareAndSwapLong(null, checkpointPool.lastAllocatedIdxPtr, lastIdx, lastIdx - 1)) {
-            while (--lastIdx > 0) {
-                assert (lastIdx & SEGMENT_INDEX_MASK) == 0L;
+            long relative = checkpointPool.relative(lastIdx);
 
-                long relative = checkpointPool.relative(lastIdx);
+            long freePageAbsPtr = checkpointPool.absolute(relative);
 
-                long freePageAbsPtr = checkpointPool.absolute(relative);
+            searched++;
 
-                searched++;
+            long pageId = PageHeader.readPageId(freePageAbsPtr);
 
-                long pageId = PageHeader.readPageId(freePageAbsPtr);
+            int grpId = PageHeader.readPageGroupId(freePageAbsPtr);
 
-                int grpId = PageHeader.readPageGroupId(freePageAbsPtr);
+            if (pageId == 0 && grpId == 0)
+                continue;
 
-                if (pageId == 0 && grpId == 0)
-                    continue;
+            FullPageId pageOut = new FullPageId(pageId, grpId);
 
-                return new FullPageId(pageId, grpId);
-            }
+            if (!pages.remove(pageOut))
+                continue;
 
-            System.err.println("searched: " + searched + " pages: " + checkpointPool.pagesCntr.intValue());
+            return pageOut;
         }
+
+        System.err.println("searched: " + searched + " pages: " + checkpointPool.pagesCntr.intValue());
+
+        return NULL_PAGE;
     }
 
     /**
