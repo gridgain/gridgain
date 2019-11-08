@@ -1105,7 +1105,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
     }
 
     /**
-     * Test plan link []
      * Create and destroy caches:
      * <p>
      *     <b>Prerequisites:</b>
