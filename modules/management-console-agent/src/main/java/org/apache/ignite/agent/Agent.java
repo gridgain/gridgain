@@ -172,19 +172,13 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Stopping Management Console agent.");
 
         U.shutdownNow(getClass(), connectPool, log);
-        log.info("connectPool closed.");
+        
         U.closeQuiet(cacheSrvc);
-        log.info("cacheSrvc closed.");
         U.closeQuiet(actSrvc);
-        log.info("actSrvc closed.");
         U.closeQuiet(metricSrvc);
-        log.info("metricSrvc closed.");
         U.closeQuiet(nodeConfigurationSrvc);
-        log.info("nodeConfigurationSrvc closed.");
         U.closeQuiet(evtSrvc);
-        log.info("evtSrvc closed.");
         U.closeQuiet(tracingSrvc);
-        log.info("tracingSrvc closed.");
         U.closeQuiet(clusterSrvc);
         log.info("clusterSrvc closed.");
         U.closeQuiet(mgr);
