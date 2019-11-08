@@ -72,14 +72,16 @@ public class EventsExporter implements AutoCloseable {
      * Adds local event listener.
      */
     public void addLocalEventListener() {
-        this.ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
+        ctx.event().enableEvents(LOCAL_EVT_TYPES);
+        ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
     }
 
     /**
      * Adds global event listener.
      */
     public void addGlobalEventListener() {
-        this.ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
+        ctx.event().enableEvents(GLOBAL_EVT_TYPES);
+        ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
     }
 
     /** {@inheritDoc} */

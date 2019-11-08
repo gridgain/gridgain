@@ -80,14 +80,6 @@ public class Agent extends ManagementConsoleProcessor {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
-    /** Not enabled events by default. */
-    private static final int[] NOT_ENABLED_EVTS = new int[] {
-        EVT_CLUSTER_ACTIVATED,
-        EVT_CLUSTER_DEACTIVATED,
-        EVT_CACHE_STARTED,
-        EVT_CACHE_STOPPED
-    };
-
     /** Websocket manager. */
     private WebSocketManager mgr;
 
@@ -310,8 +302,6 @@ public class Agent extends ManagementConsoleProcessor {
             (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
 
         connectPool.submit(this::connect0);
-
-        ctx.event().enableEvents(NOT_ENABLED_EVTS);
     }
 
     /**
