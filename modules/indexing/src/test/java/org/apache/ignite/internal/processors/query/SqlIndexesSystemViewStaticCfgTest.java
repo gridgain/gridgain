@@ -136,7 +136,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
 
         for (Ignite ign : G.allGrids()) {
             GridTestUtils.assertThrowsWithCause(
-                () -> execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                () -> execSql(ign, "SELECT * FROM IGNITE.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
                 IgniteException.class);
         }
 
@@ -211,7 +211,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
             assertTrue(GridTestUtils.waitForCondition(() -> {
-                List<List<?>> indexes = execSql(ign, "SELECT * FROM SYS.INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM IGNITE.INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
 
                 return checker.test(indexes);
             }, 1000));
