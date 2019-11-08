@@ -23,9 +23,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Web socket router tests.
@@ -50,6 +49,6 @@ public class WebSocketRouterTest {
             .map(Thread::getName)
             .collect(toList());
 
-        assertEquals(emptyList(), httpClientThreads);
+        assertTrue(httpClientThreads.isEmpty());
     }
 }
