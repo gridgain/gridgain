@@ -25,10 +25,15 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -578,10 +583,48 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             storeMgr = (FilePageStoreManager)store;
 
-            cpDir = Paths.get(storeMgr.workDir().getAbsolutePath(), "cp").toFile();
+            Path cpPath = Paths.get(storeMgr.workDir().getAbsolutePath(), "cp");
+            cpDir = cpPath.toFile();
 
             if (!U.mkdirs(cpDir))
                 throw new IgniteCheckedException("Could not create directory for checkpoint metadata: " + cpDir);
+
+            try {
+                WatchService watcher = FileSystems.getDefault().newWatchService();
+
+                for (Path path = cpPath; path != null; path = path.getParent())
+                    path.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+
+                new Thread(() -> {
+                    for (;;) {
+                        try {
+                            WatchKey key = watcher.take();
+
+                            for (WatchEvent<?> event: key.pollEvents()) {
+                                WatchEvent.Kind<?> kind = event.kind();
+
+                                if (kind == StandardWatchEventKinds.OVERFLOW)
+                                    continue;
+
+                                WatchEvent<Path> ev = (WatchEvent<Path>)event;
+                                Path name = ev.context();
+
+                                log.info("Path entry deleted: " + name.toAbsolutePath());
+                            }
+
+                            key.reset();
+                        }
+                        catch (InterruptedException e) {
+                            log.error("Watcher thread interrupted", e);
+
+                            return;
+                        }
+                    }
+                }).start();
+            }
+            catch (IOException e) {
+                log.error("Error occurred while initializing cp dir watcher", e);
+            }
 
             final FileLockHolder preLocked = kernalCtx.pdsFolderResolver()
                     .resolveFolders()
