@@ -70,7 +70,7 @@ public class QueryUtils {
      * @return Query result.
      */
     public static QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
-        return curHolder.isScanCursor()
+        return curHolder.scanCursor()
             ? fetchScanQueryResult(curHolder, pageSize)
             : fetchSqlQueryResult(curHolder, pageSize);
     }
@@ -85,7 +85,7 @@ public class QueryUtils {
         long start = U.currentTimeMillis();
 
         List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
-        List<QueryField> cols = getColumns(curHolder.getCursor());
+        List<QueryField> cols = getColumns(curHolder.cursor());
         boolean hasMore = curHolder.hasNext();
 
         return qryRes

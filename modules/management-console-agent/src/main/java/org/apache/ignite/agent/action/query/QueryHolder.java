@@ -47,7 +47,7 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @return Query ID.
      */
-    public String getQueryId() {
+    public String queryId() {
         return qryId;
     }
 
@@ -61,7 +61,7 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @return Query cancel hook.
      */
-    public GridQueryCancel getCancelHook() {
+    public GridQueryCancel cancelHook() {
         return cancelHook;
     }
 
@@ -74,7 +74,7 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @param cursorId Cursor ID.
      */
-    public CursorHolder getCursor(String cursorId) {
+    public CursorHolder cursor(String cursorId) {
         return cursors.get(cursorId);
     }
 
@@ -82,7 +82,7 @@ public class QueryHolder implements AutoCloseable {
      * @param cursorId Cursor ID.
      */
     public void closeCursor(String cursorId) {
-        CursorHolder cursor = getCursor(cursorId);
+        CursorHolder cursor = cursor(cursorId);
 
         if (cursor != null) {
             U.closeQuiet(cursor);
@@ -93,14 +93,14 @@ public class QueryHolder implements AutoCloseable {
     /**
      * @return @{code true} if holder was accessed.
      */
-    public boolean isAccessed() {
+    public boolean accessed() {
         return isAccessed;
     }
 
     /**
      * @param accessed Accessed.
      */
-    public QueryHolder setAccessed(boolean accessed) {
+    public QueryHolder accessed(boolean accessed) {
         isAccessed = accessed;
         return this;
     }

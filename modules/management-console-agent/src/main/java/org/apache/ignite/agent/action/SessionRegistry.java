@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.action;
 
-import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,13 +38,13 @@ public class SessionRegistry {
     private final GridKernalContext ctx;
 
     /** SessionId-Session map. */
-    private final ConcurrentMap<UUID, Session> sesId2Ses = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Session> sesIdToSes = new ConcurrentHashMap<>();
 
     /** Session time to live. */
-    private final Duration sesTtl;
+    private final long sesTtl;
 
     /** Interval to invalidate session tokens. */
-    private final Duration sesTokTtl;
+    private final long sesTokTtl;
 
     /**
      * @param ctx Context.
@@ -55,8 +54,8 @@ public class SessionRegistry {
 
         ManagementConfiguration cfg = ctx.managementConsole().configuration();
 
-        sesTtl = Duration.ofMillis(cfg.getSecuritySessionTimeout());
-        sesTokTtl = Duration.ofMillis(cfg.getSecuritySessionExpirationTimeout());
+        sesTtl = cfg.getSecuritySessionTimeout();
+        sesTokTtl = cfg.getSecuritySessionExpirationTimeout();
     }
 
     /**
@@ -81,7 +80,7 @@ public class SessionRegistry {
      * @param ses Session.
      */
     public void saveSession(Session ses) {
-        sesId2Ses.put(ses.id(), ses);
+        sesIdToSes.put(ses.id(), ses);
     }
 
     /**
@@ -93,13 +92,13 @@ public class SessionRegistry {
         if (sesId == null)
             throw new IgniteAuthenticationException("Invalid session ID: null");
 
-        Session ses = sesId2Ses.get(sesId);
+        Session ses = sesIdToSes.get(sesId);
 
         if (ses == null)
             throw new IgniteAuthenticationException("Session not found for ID: " + sesId);
 
-        if (!ses.touch() || ses.isTimedOut(sesTtl.toMillis())) {
-            sesId2Ses.remove(ses.id(), ses);
+        if (!ses.touch() || ses.timedOut(sesTtl)) {
+            sesIdToSes.remove(ses.id(), ses);
 
             if (ctx.security().enabled() && ses.securityContext() != null && ses.securityContext().subject() != null)
                 ctx.security().onSessionExpired(ses.securityContext().subject().id());
@@ -107,10 +106,10 @@ public class SessionRegistry {
             return null;
         }
 
-        if (ses.isSessionExpired(sesTokTtl.toMillis())) {
+        if (ses.sessionExpired(sesTokTtl)) {
             ses.securityContext(authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
-            sesId2Ses.put(ses.id(), ses);
+            sesIdToSes.put(ses.id(), ses);
         }
 
         return ses;

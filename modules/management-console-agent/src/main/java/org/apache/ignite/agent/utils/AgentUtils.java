@@ -30,10 +30,10 @@ import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
@@ -91,9 +91,9 @@ public final class AgentUtils {
     }
 
     /**
-     * @param igniteFut Ignite future.
+     * @param igniteFut Ignite internal future.
      */
-    public static <T> CompletableFuture completeIgniteFuture(IgniteFuture<T> igniteFut) {
+    public static <T> CompletableFuture completeIgniteFuture(IgniteInternalFuture<T> igniteFut) {
         CompletableFuture<Object> fut = new CompletableFuture<>();
         igniteFut.chain(f -> {
             try {

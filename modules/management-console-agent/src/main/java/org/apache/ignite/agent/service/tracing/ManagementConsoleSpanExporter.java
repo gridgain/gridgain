@@ -49,8 +49,8 @@ public class ManagementConsoleSpanExporter implements AutoCloseable {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
-    /** Status description. */
-    public static final String TRACING_TOPIC = "mgmt-console-tracing-topic";
+    /** Topic for traces. */
+    public static final String TOPIC_SPANS = "mgmt-console-spans-topic";
 
     /** Status code. */
     private static final String STATUS_CODE = "census.status_code";
@@ -117,7 +117,7 @@ public class ManagementConsoleSpanExporter implements AutoCloseable {
      * @return Worker which send messages from queue to topic.
      */
     private CoordinatorSender<Span> createSender() {
-        return new CoordinatorSender<>(ctx, TRACING_TOPIC, QUEUE_CAP);
+        return new CoordinatorSender<>(ctx, TOPIC_SPANS, QUEUE_CAP);
     }
 
     /**

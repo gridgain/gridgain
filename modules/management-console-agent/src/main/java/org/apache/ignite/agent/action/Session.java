@@ -151,7 +151,7 @@ public class Session {
      * @return {@code True} if expired.
      * @see #touch()
      */
-    public boolean isTimedOut(long sesTimeout) {
+    public boolean timedOut(long sesTimeout) {
         long time0 = lastTouchTime.get();
 
         if (time0 == TIMEDOUT_STATE)
@@ -166,7 +166,7 @@ public class Session {
      * @param sesTokTtl Session expire time.
      * @return {@code true} if session should be invalidated.
      */
-    public boolean isSessionExpired(long sesTokTtl) {
+    public boolean sessionExpired(long sesTokTtl) {
         return System.currentTimeMillis() - lastInvalidateTime.get() > sesTokTtl;
     }
 
@@ -174,7 +174,7 @@ public class Session {
      * Checks whether session at expired state (EXPIRATION_FLAG) or not, if not then tries to update last touch time.
      *
      * @return {@code False} if session timed out (not successfully touched).
-     * @see #isTimedOut(long)
+     * @see #timedOut(long)
      */
     public boolean touch() {
         while (true) {
@@ -203,7 +203,7 @@ public class Session {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(id);
+        return id.hashCode();
     }
 
     /** {@inheritDoc} */

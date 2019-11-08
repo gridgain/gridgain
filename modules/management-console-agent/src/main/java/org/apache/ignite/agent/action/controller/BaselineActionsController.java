@@ -81,9 +81,9 @@ public class BaselineActionsController {
         Collection<BaselineNode> baselineTop = new ArrayList<>();
 
         for (String consistentId : consIds) {
-            if (srvrs.containsKey(consistentId))
+            if (srvrs.get(consistentId) != null)
                 baselineTop.add(srvrs.get(consistentId));
-            else if (baseline.containsKey(consistentId))
+            else if (baseline.get(consistentId) != null)
                 baselineTop.add(baseline.get(consistentId));
         }
 

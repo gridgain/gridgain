@@ -36,7 +36,7 @@ public class ActionControllerAnnotationProcessor {
     /**
      * @return Action controllers methods.
      */
-    public static Map<String, ActionMethod> getActions() {
+    public static Map<String, ActionMethod> actions() {
         return methods;
     }
 
@@ -59,7 +59,7 @@ public class ActionControllerAnnotationProcessor {
 
                 String actName = controllerName + "." + method.getName();
                 ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
-                methods.put(actMtd.getActionName(), actMtd);
+                methods.put(actMtd.actionName(), actMtd);
             }
         }
 

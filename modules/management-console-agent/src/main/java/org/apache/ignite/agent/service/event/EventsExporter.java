@@ -38,8 +38,8 @@ public class EventsExporter implements AutoCloseable {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
-    /** Status description. */
-    static final String EVENTS_TOPIC = "mgmt-console-event-topic";
+    /** Topic for events. */
+    static final String TOPIC_EVTS = "mgmt-console-event-topic";
 
     /** Global event types. */
     private static final int[] GLOBAL_EVT_TYPES = concat(EVTS_DISCOVERY, EVTS_CACHE_LIFECYCLE, EVTS_CLUSTER_ACTIVATION);
@@ -57,7 +57,7 @@ public class EventsExporter implements AutoCloseable {
     private RetryableSender<VisorGridEvent> snd;
 
     /** On node traces listener. */
-    private final GridLocalEventListener lsnr = this::onEvent;
+    private final GridLocalEventListener lsnr = this::processEvent;
 
     /**
      * @param ctx Context.
@@ -65,7 +65,7 @@ public class EventsExporter implements AutoCloseable {
     public EventsExporter(GridKernalContext ctx) {
         this.ctx = ctx;
         
-        snd = new CoordinatorSender<>(ctx, EVENTS_TOPIC, QUEUE_CAP);
+        snd = new CoordinatorSender<>(ctx, TOPIC_EVTS, QUEUE_CAP);
     }
 
     /**
@@ -94,7 +94,7 @@ public class EventsExporter implements AutoCloseable {
      *
      * @param evt local grid event.
      */
-    void onEvent(Event evt) {
+    void processEvent(Event evt) {
         VisorGridEvent evt0 = EVT_MAPPER.apply(evt);
 
         if (evt0 != null)

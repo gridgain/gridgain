@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import org.apache.ignite.agent.action.ActionMethod;
 
-import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.getActions;
+import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.actions;
 
 /**
  * Request deserializer.
@@ -47,14 +47,14 @@ public class RequestDeserializer extends StdDeserializer<Request> {
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
         UUID sesId = p.getCodec().treeToValue(node.get("sessionId"), UUID.class);
         String act = node.get("action").asText();
-        ActionMethod actMtd = getActions().get(act);
+        ActionMethod actMtd = actions().get(act);
 
         try {
             if (actMtd == null)
                 throw new IllegalArgumentException("Failed to find method for action: " + act);
 
             req = new Request().setId(id).setAction(act).setSessionId(sesId);
-            Parameter[] parameters = actMtd.getMethod().getParameters();
+            Parameter[] parameters = actMtd.method().getParameters();
 
             if (parameters.length == 1) {
                 Class<?> argType = parameters[0].getType();

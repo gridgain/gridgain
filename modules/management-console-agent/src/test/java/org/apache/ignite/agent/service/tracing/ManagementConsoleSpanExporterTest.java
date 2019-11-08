@@ -41,7 +41,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static io.opencensus.trace.TraceOptions.DEFAULT;
-import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TRACING_TOPIC;
+import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -68,7 +68,7 @@ public class ManagementConsoleSpanExporterTest extends AbstractServiceTest {
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
 
-        Assert.assertEquals(TRACING_TOPIC, topicCaptor.getValue());
+        Assert.assertEquals(TOPIC_SPANS, topicCaptor.getValue());
         Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
     }
 

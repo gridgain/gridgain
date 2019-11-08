@@ -27,7 +27,7 @@ import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
-import static org.apache.ignite.agent.service.event.EventsExporter.EVENTS_TOPIC;
+import static org.apache.ignite.agent.service.event.EventsExporter.TOPIC_EVTS;
 
 /**
  * Events service.
@@ -43,7 +43,7 @@ public class EventsService implements AutoCloseable {
     private final RetryableSender<VisorGridEvent> snd;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, List<VisorGridEvent>> lsnr = this::onEvents;
+    private final IgniteBiPredicate<UUID, List<VisorGridEvent>> lsnr = this::processEvents;
 
     /**
      * @param ctx Context.
@@ -60,12 +60,12 @@ public class EventsService implements AutoCloseable {
             QUEUE_CAP
         );
 
-        ctx.grid().message().localListen(EVENTS_TOPIC, lsnr);
+        ctx.grid().message().localListen(TOPIC_EVTS, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.grid().message().stopLocalListen(EVENTS_TOPIC, lsnr);
+        ctx.grid().message().stopLocalListen(TOPIC_EVTS, lsnr);
 
         U.closeQuiet(snd);
     }
@@ -74,7 +74,7 @@ public class EventsService implements AutoCloseable {
      * @param nid Node id.
      * @param evts Events.
      */
-    boolean onEvents(UUID nid, List<VisorGridEvent> evts) {
+    boolean processEvents(UUID nid, List<VisorGridEvent> evts) {
         snd.send(evts);
 
         return true;

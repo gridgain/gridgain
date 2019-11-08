@@ -28,7 +28,7 @@ import org.apache.ignite.testframework.GridTestNode;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import static org.apache.ignite.agent.service.event.EventsExporter.EVENTS_TOPIC;
+import static org.apache.ignite.agent.service.event.EventsExporter.TOPIC_EVTS;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -53,14 +53,14 @@ public class EventsExporterTest extends AbstractServiceTest {
         GridTestNode rmv = new GridTestNode(UUID.randomUUID());
         DiscoveryEvent evt = new DiscoveryEvent(rmv, "msg", EVT_NODE_LEFT, rmv);
 
-        exporter.onEvent(evt);
+        exporter.processEvent(evt);
 
         ArgumentCaptor<Object> topicCaptor = ArgumentCaptor.forClass(Object.class);
         ArgumentCaptor<Object> evtsCaptor = ArgumentCaptor.forClass(Object.class);
         
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), evtsCaptor.capture());
 
-        assertEquals(EVENTS_TOPIC, topicCaptor.getValue());
+        assertEquals(TOPIC_EVTS, topicCaptor.getValue());
 
         Collection<VisorGridDiscoveryEvent> evts = (Collection<VisorGridDiscoveryEvent>)evtsCaptor.getValue();
 

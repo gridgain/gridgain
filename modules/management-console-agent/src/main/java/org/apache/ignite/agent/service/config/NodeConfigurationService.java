@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
-import static org.apache.ignite.agent.service.config.NodeConfigurationExporter.NODE_CONFIGURATION_TOPIC;
+import static org.apache.ignite.agent.service.config.NodeConfigurationExporter.TOPIC_NODE_CFG;
 
 /**
  * Node configuration service.
@@ -46,7 +46,7 @@ public class NodeConfigurationService implements AutoCloseable {
     private final ManagementConsoleSender<NodeConfiguration> snd;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeConfiguration;
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::processNodeConfigurations;
 
     /**
      * @param ctx Context.
@@ -57,12 +57,12 @@ public class NodeConfigurationService implements AutoCloseable {
         this.mgr = mgr;
         this.snd = createSender();
 
-        ctx.grid().message().localListen(NODE_CONFIGURATION_TOPIC, lsnr);
+        ctx.grid().message().localListen(TOPIC_NODE_CFG, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.grid().message().stopLocalListen(NODE_CONFIGURATION_TOPIC, lsnr);
+        ctx.grid().message().stopLocalListen(TOPIC_NODE_CFG, lsnr);
         U.closeQuiet(snd);
     }
 
@@ -70,7 +70,7 @@ public class NodeConfigurationService implements AutoCloseable {
      * @param nid Uuid.
      * @param cfgList Config list.
      */
-    boolean onNodeConfiguration(UUID nid, Object cfgList) {
+    boolean processNodeConfigurations(UUID nid, Object cfgList) {
         String cfg = F.first((List<String>) cfgList);
 
         if (!F.isEmpty(cfg)) {

@@ -18,6 +18,7 @@ package org.apache.ignite.agent.action.query;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -51,7 +52,7 @@ public class QueryHolderRegistry {
         this.holderTtl = holderTtl;
         log = ctx.log(QueryHolderRegistry.class);
 
-        qryHolders = ctx.grid().cluster().nodeLocalMap();
+        qryHolders = new ConcurrentHashMap<>();
     }
 
     /**
@@ -61,6 +62,7 @@ public class QueryHolderRegistry {
      */
     public QueryHolder createQueryHolder(String qryId) {
         QueryHolder qryHolder = new QueryHolder(qryId);
+
         qryHolders.put(qryId, qryHolder);
 
         scheduleToRemove(qryId);
@@ -94,13 +96,14 @@ public class QueryHolderRegistry {
      * @return Cursor holder by query ID and cursor ID.
      */
     public CursorHolder findCursor(String qryId, String cursorId) {
-        if (!qryHolders.containsKey(qryId))
+        QueryHolder qryHolder = qryHolders.get(qryId);
+
+        if (qryHolder == null)
             throw new IgniteException("Query results are expired.");
 
-        QueryHolder qryHolder = qryHolders.get(qryId);
-        qryHolder.setAccessed(true);
+        qryHolder.accessed(true);
 
-        return qryHolder.getCursor(cursorId);
+        return qryHolder.cursor(cursorId);
     }
 
     /**
@@ -144,8 +147,8 @@ public class QueryHolderRegistry {
                 QueryHolder holder = qryHolders.get(qryId);
 
                 if (holder != null) {
-                    if (holder.isAccessed()) {
-                        holder.setAccessed(false);
+                    if (holder.accessed()) {
+                        holder.accessed(false);
 
                         // Holder was accessed, we need to keep it for one more period.
                         scheduleToRemove(qryId);

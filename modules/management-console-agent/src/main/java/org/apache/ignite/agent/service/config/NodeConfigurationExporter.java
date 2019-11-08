@@ -33,8 +33,8 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /** Mapper. */
     private final ObjectMapper mapper = jsonMapper();
 
-    /** Status description. */
-    public static final String NODE_CONFIGURATION_TOPIC = "mgmt-console-node-configuration-topic";
+    /** Topic for node config. */
+    public static final String TOPIC_NODE_CFG = "mgmt-console-node-configuration-topic";
 
     /** Sender. */
     private final CoordinatorSender<String> snd;
@@ -50,7 +50,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
      */
     public NodeConfigurationExporter(GridKernalContext ctx) {
         this.ctx = ctx;
-        this.snd = new CoordinatorSender<>(ctx, NODE_CONFIGURATION_TOPIC);
+        this.snd = new CoordinatorSender<>(ctx, TOPIC_NODE_CFG);
         this.log = ctx.log(NodeConfigurationExporter.class);
     }
 

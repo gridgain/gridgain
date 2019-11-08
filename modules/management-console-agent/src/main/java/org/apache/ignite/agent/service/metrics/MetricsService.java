@@ -46,7 +46,7 @@ public class MetricsService implements AutoCloseable {
     private IgniteLogger log;
 
     /** Listener. */
-    private final GridMessageListener lsnr = this::onNodeMetrics;
+    private final GridMessageListener lsnr = this::processMetricResponse;
 
     /**
      * @param ctx Context.
@@ -69,7 +69,7 @@ public class MetricsService implements AutoCloseable {
      * @param msg Message received.
      * @param plc Message policy (pool).
      */
-     void onNodeMetrics(UUID nodeId, Object msg, byte plc) {
+     void processMetricResponse(UUID nodeId, Object msg, byte plc) {
         if (msg instanceof MetricResponse) {
             MetricResponse res = (MetricResponse)msg;
 

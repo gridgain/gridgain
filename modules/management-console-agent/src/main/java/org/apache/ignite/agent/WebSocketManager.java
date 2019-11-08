@@ -121,7 +121,7 @@ public class WebSocketManager implements AutoCloseable {
         try {
             client.start();
 
-            ses = client.connect(uri, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
+            ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
 
             reconnectCnt = -1;
         }
@@ -160,7 +160,7 @@ public class WebSocketManager implements AutoCloseable {
      * @param payload Payload.
      */
     public synchronized boolean send(String dest, Object payload) {
-        boolean connected = isConnected();
+        boolean connected = connected();
 
         if (connected)
             ses.send(dest, payload);
@@ -171,7 +171,7 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return {@code True} if agent connected to backend.
      */
-    public boolean isConnected() {
+    public boolean connected() {
         return ses != null && ses.isConnected();
     }
 
@@ -196,7 +196,7 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return Handshake headers.
      */
-    private WebSocketHttpHeaders getHandshakeHeaders() {
+    private WebSocketHttpHeaders handshakeHeaders() {
         UUID clusterId = ctx.cluster().get().id();
 
         WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
@@ -209,7 +209,7 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return Connection headers.
      */
-    private StompHeaders getConnectHeaders() {
+    private StompHeaders connectHeaders() {
         UUID clusterId = ctx.cluster().get().id();
 
         StompHeaders connectHeaders = new StompHeaders();

@@ -57,6 +57,7 @@ public class SecurityActionsController {
      */
     public String authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
         Session ses = authenticate0(reqCreds);
+
         registry.saveSession(ses);
 
         if (log.isDebugEnabled())
@@ -79,6 +80,7 @@ public class SecurityActionsController {
             throw new IgniteAuthenticationException("Authentication failed, credentials not found");
 
         Session ses = Session.random();
+        
         ses.credentials(reqCreds.getCredentials());
         ses.address(reqCreds.getAddress());
 

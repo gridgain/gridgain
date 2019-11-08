@@ -105,7 +105,7 @@ public class CacheService implements AutoCloseable {
      * Send caches information to Management Console.
      */
     private void sendCacheInfo() {
-        if (!ctx.isStopping() && mgr.isConnected()) {
+        if (!ctx.isStopping() && mgr.connected()) {
             Collection<CacheInfo> cachesInfo = getCachesInfo();
             Collection<CacheSqlMetadata> cacheSqlMetadata = getCacheSqlMetadata();
 

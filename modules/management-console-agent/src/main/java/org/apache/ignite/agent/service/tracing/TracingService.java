@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
-import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TRACING_TOPIC;
+import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
 
 /**
  * Tracing service.
@@ -43,7 +43,7 @@ public class TracingService implements AutoCloseable {
     private final WebSocketManager mgr;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, Object> lsnr = this::onNodeTraces;
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::processSpans;
 
     /** Worker. */
     private final RetryableSender<Span> snd;
@@ -57,12 +57,12 @@ public class TracingService implements AutoCloseable {
         this.mgr = mgr;
         this.snd = createSender();
 
-        ctx.grid().message().localListen(TRACING_TOPIC, lsnr);
+        ctx.grid().message().localListen(TOPIC_SPANS, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.grid().message().stopLocalListen(TRACING_TOPIC, lsnr);
+        ctx.grid().message().stopLocalListen(TOPIC_SPANS, lsnr);
         U.closeQuiet(snd);
     }
 
@@ -70,7 +70,7 @@ public class TracingService implements AutoCloseable {
      * @param uuid Uuid.
      * @param spans Spans.
      */
-    boolean onNodeTraces(UUID uuid, Object spans) {
+    boolean processSpans(UUID uuid, Object spans) {
         snd.send((List<Span>) spans);
 
         return true;

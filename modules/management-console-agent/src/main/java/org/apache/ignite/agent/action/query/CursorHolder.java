@@ -53,7 +53,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
     /**
      * @return @{code true} if this cursor from scan query.
      */
-    public boolean isScanCursor() {
+    public boolean scanCursor() {
         return isScanCursor;
     }
 
@@ -61,7 +61,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
      * @param scanCursor Scan cursor.
      * @return This for chaining methods.
      */
-    public CursorHolder setScanCursor(boolean scanCursor) {
+    public CursorHolder scanCursor(boolean scanCursor) {
         isScanCursor = scanCursor;
         return this;
     }
@@ -69,7 +69,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
     /**
      * @return Query cursor.
      */
-    public QueryCursor getCursor() {
+    public QueryCursor cursor() {
         return cursor;
     }
 

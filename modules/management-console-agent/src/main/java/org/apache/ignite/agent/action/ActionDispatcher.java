@@ -29,12 +29,12 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.getActions;
+import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.actions;
 import static org.apache.ignite.agent.utils.AgentUtils.completeFutureWithException;
 import static org.apache.ignite.agent.utils.AgentUtils.completeIgniteFuture;
 
@@ -76,7 +76,7 @@ public class ActionDispatcher implements AutoCloseable {
     public CompletableFuture<CompletableFuture> dispatch(Request req) {
         String act = req.getAction();
 
-        ActionMethod mtd = getActions().get(act);
+        ActionMethod mtd = actions().get(act);
 
         if (mtd == null)
             throw new IgniteException("Failed to find action method");
@@ -92,7 +92,7 @@ public class ActionDispatcher implements AutoCloseable {
      */
     private CompletableFuture handleRequest(ActionMethod mtd, Request req) {
         try {
-            Class<?> ctrlCls = mtd.getControllerClass();
+            Class<?> ctrlCls = mtd.controllerClass();
 
             boolean securityEnabled = ctx.security().enabled();
             boolean authenticationEnabled = ctx.authentication().enabled();
@@ -100,7 +100,7 @@ public class ActionDispatcher implements AutoCloseable {
             if (!controllers.containsKey(ctrlCls))
                 controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
 
-            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.getActionName());
+            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.actionName());
 
             if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
                 UUID sesId = req.getSessionId();
@@ -117,12 +117,12 @@ public class ActionDispatcher implements AutoCloseable {
 
                 if (ses.securityContext() != null) {
                     try (OperationSecurityContext ignored = ctx.security().withContext(ses.securityContext())) {
-                        return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
+                        return invoke(mtd.method(), controllers.get(ctrlCls), req.getArgument());
                     }
                 }
             }
 
-            return invoke(mtd.getMethod(), controllers.get(ctrlCls), req.getArgument());
+            return invoke(mtd.method(), controllers.get(ctrlCls), req.getArgument());
         }
         catch (InvocationTargetException e) {
             return completeFutureWithException(e.getTargetException());
@@ -146,11 +146,8 @@ public class ActionDispatcher implements AutoCloseable {
         if (res instanceof Void)
             return completedFuture(null);
 
-        if (res instanceof CompletableFuture)
-            return (CompletableFuture) res;
-
-        if (res instanceof IgniteFuture)
-           return completeIgniteFuture((IgniteFuture) res);
+        if (res instanceof IgniteInternalFuture)
+            return completeIgniteFuture((IgniteInternalFuture) res);
 
         return completedFuture(res);
     }
