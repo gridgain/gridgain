@@ -254,7 +254,7 @@ public class MultipleSSLContextsTest extends GridCommonAbstractTest {
         for (Map.Entry<Integer, Integer> e : exp.entrySet()) {
             int key = e.getKey();
             Integer expVal = e.getValue();
-            Integer actVal = e.getValue();
+            Integer actVal = cache.get(key);
 
             assertEquals("Cache contains an unexpected value for a key=" + key, expVal, actVal);
         }
