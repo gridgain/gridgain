@@ -371,6 +371,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         CacheObject val;
 
+        boolean tombstone = false;
+
         lockEntry();
 
         try {
@@ -409,6 +411,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
             val = this.val;
 
             deferredDelVer = this.ver;
+
+            tombstone = this.tombstone();
         }
         finally {
             unlockEntry();
@@ -417,7 +421,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         if (val == null) {
             boolean deferred = cctx.deferredDelete() && !detached() && !isInternal();
 
-            if (deferred) {
+            if (deferred && !tombstone) {
                 if (deferredDelVer != null)
                     cctx.onDeferredDelete(this, deferredDelVer);
             }

@@ -138,6 +138,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private static final byte IS_EVICT_DISABLED = 0x04;
 
     /** */
+    private static final byte IS_TOMBSTONE_MASK = 0x08;
+
+    /** */
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
     /**
@@ -1717,6 +1720,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
 
             if (cctx.group().shouldCreateTombstone(localPartition())) {
+                setTombstone();
+
                 cctx.offheap().removeWithTombstone(cctx, key, newVer, localPartition());
 
                 // TODO FIXME leak of tombstones is possible.
@@ -3464,6 +3469,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             deferred = true;
                             oldVer = ver;
                         }
+                        else
+                            setTombstone();
                     }
                 }
                 else if (deletedUnlocked())
@@ -4595,8 +4602,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (obsoleteVersionExtras() != null)
                         return true;
 
-                    // Ignore deferred deletion and remove entry from map if tombstone should be created.
-                    if (cctx.deferredDelete() && deletedUnlocked() && !cctx.group().shouldCreateTombstone(localPartition()))
+                    if (cctx.deferredDelete() && deletedUnlocked() && !tombstone())
                         return false;
 
                     if (!hasReaders() && markObsolete0(obsoleteVer, false, null)) {
@@ -4811,6 +4817,20 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             incrementMapPublicSize();
         }
+    }
+
+    /** */
+    protected final void setTombstone() {
+        assert lock.isHeldByCurrentThread();
+
+        flags |= IS_TOMBSTONE_MASK;
+    }
+
+    /** */
+    protected final boolean tombstone() {
+        assert lock.isHeldByCurrentThread();
+
+        return (flags & IS_TOMBSTONE_MASK) != 0;
     }
 
     /**

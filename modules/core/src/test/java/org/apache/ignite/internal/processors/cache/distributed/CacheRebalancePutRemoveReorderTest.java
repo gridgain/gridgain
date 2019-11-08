@@ -95,7 +95,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     private static final int PART = 0;
 
     /** */
-    private static final int KEYS_CNT = 512;
+    private static final int KEYS_CNT = 1024;
 
     /** */
     private static final int MAX_QUEUE_SIZE = CU.perPartitionRmvMaxQueueSize(MAX_DELETE_QUEUE_SIZE, PARTS_CNT);
@@ -192,7 +192,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
                 for (Object key : list)
                     cache.remove(key);
             }
-        }, KEYS_CNT - MAX_QUEUE_SIZE, PRELOADED_KEYS, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE);
+        }, KEYS_CNT - MAX_QUEUE_SIZE, 0, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE);
     }
 
     /** */
