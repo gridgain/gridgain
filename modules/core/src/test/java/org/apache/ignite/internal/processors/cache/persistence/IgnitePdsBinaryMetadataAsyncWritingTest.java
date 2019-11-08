@@ -43,6 +43,7 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateAcceptedMessage;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
@@ -56,6 +57,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.suppressException;
 
 /**
  * Tests for verification of binary metadata async writing to disk.
@@ -340,18 +342,25 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             .setWriteSynchronizationMode(FULL_SYNC);
 
         IgniteEx ig0 = startGrid(0);
+        IgniteEx cl0 = startGrid("client0");
+
+
+        CountDownLatch fileWriteLatch = new CountDownLatch(1);
+        IgniteEx ig1 = startGrid(1);
+
+        ig1.context().discovery().setCustomEventListener(
+            MetadataUpdateAcceptedMessage.class,
+            (topVer, snd, msg) -> suppressException(fileWriteLatch::await)
+        );
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();
         listeningLog.registerListener(waitingForWriteLsnr);
-        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
-        IgniteEx ig1 = startGrid(1);
 
-        specialFileIOFactory = null;
-        listeningLog = null;
         IgniteEx ig2 = startGrid(2);
 
-        IgniteEx cl0 = startGrid("client0");
+        listeningLog = null;
+
         ig0.cluster().active(true);
         IgniteCache cache0 = cl0.createCache(testCacheCfg);
 

@@ -668,7 +668,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
         if (hldr != null) {
             try {
-                metadataFileStore.waitForWriteCompletion(typeId, hldr.acceptedVersion());
+                metadataFileStore.waitForWriteCompletion(typeId, hldr.pendingVersion());
             }
             catch (IgniteCheckedException e) {
                 log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
