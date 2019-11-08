@@ -118,18 +118,11 @@ public class WebSocketManager implements AutoCloseable {
         client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
         client.setMessageConverter(getMessageConverter());
 
-        try {
-            client.start();
+        client.start();
 
-            ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
+        ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
 
-            reconnectCnt = -1;
-        }
-        catch (Exception e) {
-            close();
-            
-            throw e;
-        }
+        reconnectCnt = -1;
     }
 
     /**

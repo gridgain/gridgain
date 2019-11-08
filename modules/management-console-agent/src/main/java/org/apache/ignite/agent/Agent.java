@@ -25,6 +25,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
@@ -40,6 +41,7 @@ import org.apache.ignite.agent.service.tracing.TracingService;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
@@ -243,13 +245,26 @@ public class Agent extends ManagementConsoleProcessor {
 
             disconnected.set(false);
         }
-        catch (InterruptedException ignored) {
-            // No-op.
+        catch (IgniteInterruptedCheckedException | IgniteInterruptedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Caught interrupted exception: " + e);
+
+            mgr.close();
+        }
+        catch (InterruptedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Caught interrupted exception: " + e);
+
+            mgr.close();
+
+            Thread.currentThread().interrupt();
         }
         catch (TimeoutException ignored) {
             connect0();
         }
         catch (ExecutionException e) {
+            mgr.close();
+
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
@@ -261,6 +276,8 @@ public class Agent extends ManagementConsoleProcessor {
         }
         catch (Exception e) {
             log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+
+            mgr.close();
         }
     }
 
