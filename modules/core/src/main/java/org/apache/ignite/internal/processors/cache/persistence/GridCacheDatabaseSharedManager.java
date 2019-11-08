@@ -4832,12 +4832,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             Collection<FullPageId>[] collections = entry.get2();
             Integer size = entry.get3();
 
-            if (persistenceCfg.getCheckpointWriteOrder() == CheckpointWriteOrder.SEQUENTIAL)
+            // now always sequential write, need to be replaced.
+            //if (persistenceCfg.getCheckpointWriteOrder() == CheckpointWriteOrder.SEQUENTIAL)
                 sortPages(collections, checkpointPages, size >= parallelSortThreshold);
-            else {
+/*            else {
                 for (Collection coll : collections)
                     checkpointPages.addAll(coll);
-            }
+            }*/
 
             res.add(new T2<>(dataReg, checkpointPages));
         }
