@@ -86,7 +86,7 @@ public class WebSocketManager implements AutoCloseable {
     private IgniteLogger log;
 
     /** Client. */
-    private WebSocketStompClient client;
+    private JettyWebSocketClient client;
 
     /** Session. */
     private StompSession ses;
@@ -115,12 +115,14 @@ public class WebSocketManager implements AutoCloseable {
 
         Thread.sleep(reconnectCnt * 1000);
 
-        client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
-        client.setMessageConverter(getMessageConverter());
+        client = createWebSocketClient(uri, cfg);
 
-        client.start();
+        WebSocketStompClient stompClient = new WebSocketStompClient(client);
+        stompClient.setMessageConverter(getMessageConverter());
 
-        ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
+        stompClient.start();
+
+        ses = stompClient.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
 
         reconnectCnt = -1;
     }
