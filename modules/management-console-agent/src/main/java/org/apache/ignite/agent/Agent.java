@@ -244,7 +244,7 @@ public class Agent extends ManagementConsoleProcessor {
             disconnected.set(false);
         }
         catch (InterruptedException ignored) {
-            // No-op.
+            Thread.currentThread().interrupt();
         }
         catch (TimeoutException ignored) {
             connect0();
