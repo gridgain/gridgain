@@ -64,8 +64,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersion
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridRandom;
 import org.apache.ignite.internal.util.GridStripedLock;
@@ -84,6 +84,7 @@ import org.jsr166.ConcurrentLinkedHashMap;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_TYPE;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.effectivePageId;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.rnd;
 import static org.apache.ignite.internal.processors.database.BPlusTreeSelfTest.TestTree.threadId;
@@ -94,6 +95,7 @@ import static org.apache.ignite.internal.util.IgniteTree.OperationType.REMOVE;
 /**
  */
 @WithSystemProperty(key = IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL, value = "20000")
+@WithSystemProperty(key = IGNITE_PAGE_LOCK_TRACKER_TYPE, value = "1")
 public class BPlusTreeSelfTest extends GridCommonAbstractTest {
     /** */
     private static final short LONG_INNER_IO = 30000;
@@ -145,6 +147,11 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
 
     /** Tracking of locks holding. */
     private PageLockTrackerManager lockTrackerManager;
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return 10 * 60 * 1000;
+    }
 
     /**
      * Check that we do not keep any locks at the moment.
