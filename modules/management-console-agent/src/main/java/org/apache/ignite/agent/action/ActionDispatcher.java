@@ -127,6 +127,11 @@ public class ActionDispatcher implements AutoCloseable {
         catch (InvocationTargetException e) {
             return completeFutureWithException(e.getTargetException());
         }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            return completeFutureWithException(e);
+        }
         catch (Exception e) {
             return completeFutureWithException(e);
         }
