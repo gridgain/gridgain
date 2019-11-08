@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -41,10 +43,10 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.util.deque.FastSizeDeque;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -53,20 +55,23 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition.MAX_DELETE_QUEUE_SIZE;
 
 /**
  * Test scenario:
  * <p>
- * 1. Trigger historical rebalance over single partition to make reordering possible.
- * 2. Tamper with supply message changing entries order in various ways.
+ * 1. Put data to single partition.
+ * 2. Trigger historical rebalance to make reordering possible.
+ * 3. Tamper with supply message reordering entries in various ways or update cache in the middle of rebalance.
  * <p>
  * Success: partitions copies are consistent, all sizes and counters are valid.
  *
  * Note: the test doesn't use parameterization to mitigate possible backport efforts.
  */
+// Enable historical rebalancing for all tests.
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-// Prevent deferred entries cleaning.
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL, value = "100000")
+// Prevent automatic deferred entries cleaning.
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL, value = "1000000")
 public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     /** Partitions count. */
     public static final int PARTS_CNT = 32;
@@ -85,6 +90,15 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
     /** */
     private static final int PRELOADED_KEYS = 1;
+
+    /** */
+    private static final int PART = 0;
+
+    /** */
+    private static final int KEYS_CNT = 512;
+
+    /** */
+    private static final int MAX_QUEUE_SIZE = CU.perPartitionRmvMaxQueueSize(MAX_DELETE_QUEUE_SIZE, PARTS_CNT);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -140,7 +154,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
     /** Uses tombstones to handle put-remove conflicts for tx cache. */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, value = "0")
+    @WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
     public void testPutRemoveReorderWithTombstones() throws Exception {
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
 
@@ -162,21 +176,87 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         testPutRemoveReorder(this::put1, this::noop2, this::remove1, 0, PRELOADED_KEYS, 1, 1);
     }
 
-//    /** Uses tombstones to handle put-remove conflicts. */
-//    @Test
-//    public void testPutRemoveReorderWithTombstonesAndOnheapCache() throws Exception {
-//        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
-//
-//        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, 0, 0);
-//    }
-//
-//    /** Uses deferred deletion queue to handle put-remove conflicts. */
-//    @Test
-//    public void testPutRemoveReorderWithDeferredDeleteAtomic() throws Exception {
-//        atomicityMode = CacheAtomicityMode.ATOMIC;
-//
-//        testPutRemoveReorder(this::putRemove2, this::reorder2, 1, 0, 0);
-//    }
+
+    /** */
+    @Test
+    public void testPutRemoveTombstonesMixedTx() throws Exception {
+        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+
+        testPutRemoveReorder(new BiConsumer<IgniteCache, List>() {
+            @Override public void accept(IgniteCache cache, List list) {
+                for (Object key : list)
+                    cache.put(key, key);
+            }
+        }, this::noop2, new BiConsumer<IgniteCache, List>() {
+            @Override public void accept(IgniteCache cache, List list) {
+                for (Object key : list)
+                    cache.remove(key);
+            }
+        }, KEYS_CNT - MAX_QUEUE_SIZE, PRELOADED_KEYS, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE);
+    }
+
+    /** */
+    @Test
+    public void testRemoveNoTombstonesTx() throws Exception {
+        doTestTombstonesAndQueueSizeOnRegularDeletions(CacheAtomicityMode.TRANSACTIONAL, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE, 0);
+    }
+
+    /** */
+    @Test
+    public void testRemoveNoTombstonesAtomic() throws Exception {
+        doTestTombstonesAndQueueSizeOnRegularDeletions(CacheAtomicityMode.ATOMIC, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE, 0);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
+    public void testRemoveNoTombstonesNoQueueTx() throws Exception {
+        doTestTombstonesAndQueueSizeOnRegularDeletions(CacheAtomicityMode.TRANSACTIONAL, 0, 0, 0);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
+    public void testRemoveNoTombstonesNoQueueAtomic() throws Exception {
+        // Deferred queue cannot be disabled for atomic caches.
+        doTestTombstonesAndQueueSizeOnRegularDeletions(CacheAtomicityMode.ATOMIC, MAX_QUEUE_SIZE, MAX_QUEUE_SIZE, 0);
+    }
+
+    /** */
+    private void doTestTombstonesAndQueueSizeOnRegularDeletions(CacheAtomicityMode atomicityMode,
+        int expQueueSize,
+        int expInternalSize,
+        int expTombstonesCnt
+    ) throws Exception {
+        this.atomicityMode = atomicityMode;
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(crd.cache(DEFAULT_CACHE_NAME), PART, KEYS_CNT, 0);
+
+        try(IgniteDataStreamer<Object, Object> ds = crd.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (Integer key : keys)
+                ds.addData(key, key);
+        }
+
+        for (IgniteEx ignite : Arrays.asList(grid(0), grid(1))) {
+            @Nullable GridDhtLocalPartition part =
+                ignite.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(PART);
+
+            FastSizeDeque q = U.field(part, "rmvQueue");
+
+            for (Integer key : keys)
+                cache.remove(key);
+
+            assertEquals(expQueueSize, q.sizex());
+            assertEquals(expInternalSize, part.internalSize());
+            assertEquals(expTombstonesCnt, part.dataStore().tombstonesCount());
+            assertEquals(0, part.dataStore().fullSize());
+        }
+    }
 
     /** */
     private void testPutRemoveReorder(BiConsumer<IgniteCache, List> putClo,
@@ -187,14 +267,14 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
         int expHeapSize,
         int expDeferredQeueuSize
     ) throws Exception {
-        Ignite crd = startGrids(2);
-        crd.cluster().active(true);
+        Ignite supplier = startGrids(2);
+        supplier.cluster().active(true);
 
-        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = supplier.cache(DEFAULT_CACHE_NAME);
 
         final int part = 0;
 
-        List<Integer> keys = partitionKeys(crd.cache(DEFAULT_CACHE_NAME), part, 2, 0);
+        List<Integer> keys = partitionKeys(supplier.cache(DEFAULT_CACHE_NAME), part, KEYS_CNT, 0);
 
         // Partition should not be empty for historical rebalancing.
         for (int p = 0; p < PARTS_CNT * PRELOADED_KEYS; p++)
@@ -210,7 +290,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         putClo.accept(cache, keys);
 
-        TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
+        TestRecordingCommunicationSpi.spi(supplier).blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionSupplyMessage) {
                 GridDhtPartitionSupplyMessage sup = (GridDhtPartitionSupplyMessage)msg;
 
@@ -233,23 +313,23 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
 
         delayDemandMessage = true;
 
-        IgniteEx g1 = startGrid(1);
+        IgniteEx demander = startGrid(1);
 
         // Replace evict manager with stubbed clearTombstonesAsync method to avoid tombstones removal on partition owning.
-        stubTombstonesRemoval(g1);
+        stubTombstonesRemoval(demander);
 
-        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+        TestRecordingCommunicationSpi.spi(supplier).waitForBlocked();
 
         if (beforeReorderClo != null)
             beforeReorderClo.accept(cache, keys);
 
-        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+        TestRecordingCommunicationSpi.spi(supplier).stopBlock();
 
         awaitPartitionMapExchange();
 
-        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+        assertPartitionsSame(idleVerify(supplier, DEFAULT_CACHE_NAME));
 
-        GridDhtLocalPartition part0 = g1.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part);
+        GridDhtLocalPartition part0 = demander.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part);
 
         assertNotNull(part0);
 
@@ -260,7 +340,7 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Replace partition evict manager with special version which ignores tombstones clearing.
+     * Replace partition evict manager with special version which ignores tombstones clearing on own.
      *
      * @param grid Grid.
      */
@@ -285,6 +365,17 @@ public class CacheRebalancePutRemoveReorderTest extends GridCommonAbstractTest {
      * @param keys Keys.
      */
     private void putRemove2(IgniteCache cache, List keys) {
+        cache.put(keys.get(PRELOADED_KEYS), 1);
+        cache.remove(keys.get(PRELOADED_KEYS));
+    }
+
+    /**
+     * @param cache Cache.
+     * @param keys Keys.
+     */
+    private void putRemove4(IgniteCache cache, List keys) {
+        cache.put(keys.get(PRELOADED_KEYS), 1);
+        cache.remove(keys.get(PRELOADED_KEYS));
         cache.put(keys.get(PRELOADED_KEYS), 1);
         cache.remove(keys.get(PRELOADED_KEYS));
     }

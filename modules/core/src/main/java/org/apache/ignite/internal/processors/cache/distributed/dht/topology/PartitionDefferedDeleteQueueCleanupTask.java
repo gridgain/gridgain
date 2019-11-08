@@ -87,8 +87,10 @@ public class PartitionDefferedDeleteQueueCleanupTask implements GridTimeoutObjec
                             }
 
                             if (top != null) {
-                                for (GridDhtLocalPartition part : top.currentLocalPartitions())
-                                    part.cleanupRemoveQueue();
+                                for (GridDhtLocalPartition part : top.currentLocalPartitions()) {
+                                    if (part.rmvQueueMaxSize() > 0)
+                                        part.cleanupRemoveQueue();
+                                }
                             }
 
                             if (cctx.kernalContext().isStopping())

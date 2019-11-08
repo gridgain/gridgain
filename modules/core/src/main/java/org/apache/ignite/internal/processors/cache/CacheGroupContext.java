@@ -1346,7 +1346,7 @@ public class CacheGroupContext {
         return supportsTombstones &&
             part != null &&
             part.state() == GridDhtPartitionState.MOVING &&
-            part.deferredDeleteQueueFull();
+            part.deferredDeleteQueueIsFull();
     }
 
     /**

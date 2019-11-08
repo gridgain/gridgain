@@ -2068,6 +2068,16 @@ public class GridCacheUtils {
     }
 
     /**
+     * Calculates per partition deferred deletion queue size.
+     *
+     * @param max Max size.
+     * @param parts Partitions.
+     */
+    public static int perPartitionRmvMaxQueueSize(int max, int parts) {
+        return U.ceilPow2(Math.max(max / parts, 32));
+    }
+
+    /**
      *
      */
     public interface BackupPostProcessingClosure extends IgniteInClosure<Collection<GridCacheEntryInfo>>,

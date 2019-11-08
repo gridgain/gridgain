@@ -43,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assume;
@@ -60,6 +61,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
  *
  */
 @RunWith(Parameterized.class)
+@WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
 public class CacheRemoveWithTombstonesLoadTest extends GridCommonAbstractTest {
     /** Dummy data. */
     private static final byte[] DUMMY_DATA = {};

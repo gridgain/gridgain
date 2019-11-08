@@ -624,7 +624,11 @@ public class GridCacheContext<K, V> implements Externalizable {
     public void cache(GridCacheAdapter<K, V> cache) {
         this.cache = cache;
 
-        deferredDel = (cache.isDht() || cache.isDhtAtomic() || cache.isColocated() ||
+        boolean disabled = IgniteSystemProperties.getBoolean("TEST_DISABLE_RMW_QUEUE", false) &&
+            cache.context().group().supportsTombstone();
+
+        deferredDel = !disabled &&
+            (cache.isDht() || cache.isDhtAtomic() || cache.isColocated() ||
             (cache.isNear() && cache.configuration().getAtomicityMode() == ATOMIC));
     }
 

@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,6 +43,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 /**
  * Tests to check failover scenarios over tombstones.
  */
+@WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
 public class CacheRemoveWithTombstonesFailoverTest extends PartitionsEvictManagerAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {

@@ -58,7 +58,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  */
 @RunWith(Parameterized.class)
 // All conflicts are resolved using tombstones.
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, value = "0")
+@WithSystemProperty(key = "TEST_DISABLE_RMW_QUEUE", value = "true")
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     /** Test parameters. */
     @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")
