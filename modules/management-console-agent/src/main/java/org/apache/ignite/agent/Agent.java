@@ -240,16 +240,15 @@ public class Agent extends ManagementConsoleProcessor {
                 disconnected.set(false);
             }
             catch (InterruptedException e) {
-                if (log.isDebugEnabled())
-                    log.debug("Caught interrupted exception: " + e);
+                log.warning("Caught interrupted exception");
 
                 Thread.currentThread().interrupt();
             }
-            catch (TimeoutException ignored) {
-                continue;
-            }
             catch (Exception e) {
-                if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
+                log.warning("Caught exception", e);
+
+                if (e instanceof TimeoutException || X.hasCause(e, ConnectException.class, UpgradeException.class,
+                    EofException.class, ConnectionLostException.class)) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
 
