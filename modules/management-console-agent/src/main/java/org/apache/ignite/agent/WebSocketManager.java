@@ -175,8 +175,12 @@ public class WebSocketManager implements AutoCloseable {
         if (ses != null)
             ses.disconnect();
 
+        log.info("ses.disconnect");
+
         if (client != null)
             client.stop();
+
+        log.info("client.stop");
     }
 
     /**
@@ -313,6 +317,7 @@ public class WebSocketManager implements AutoCloseable {
 
         if (trustAll) {
             // TODO GG-25519: sslCtxFactory.setHostnameVerifier((hostname, session) -> true); available in Jetty >= 9.4.15.x
+            sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
             sslCtxFactory.setTrustAll(true);
         }
         else if (!F.isEmpty(trustStore)) {
