@@ -175,12 +175,8 @@ public class WebSocketManager implements AutoCloseable {
         if (ses != null)
             ses.disconnect();
 
-        log.info("ses.disconnect");
-
         if (client != null)
             client.stop();
-
-        log.info("client.stop");
     }
 
     /**

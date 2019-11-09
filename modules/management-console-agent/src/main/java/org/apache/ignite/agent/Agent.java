@@ -62,10 +62,6 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestT
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
@@ -172,7 +168,7 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Stopping Management Console agent.");
 
         U.shutdownNow(getClass(), connectPool, log);
-        
+
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
         U.closeQuiet(metricSrvc);
@@ -180,9 +176,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.closeQuiet(evtSrvc);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(clusterSrvc);
-        log.info("clusterSrvc closed.");
         U.closeQuiet(mgr);
-        log.info("mgr closed.");
 
         disconnected.set(false);
 
@@ -238,33 +232,26 @@ public class Agent extends ManagementConsoleProcessor {
                 mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
 
                 disconnected.set(false);
+
+                break;
             }
             catch (InterruptedException e) {
-                log.warning("Caught interrupted exception");
-
                 Thread.currentThread().interrupt();
+
+                break;
             }
             catch (Exception e) {
-                log.warning("Caught exception", e);
-
                 if (e instanceof TimeoutException || X.hasCause(e, ConnectException.class, UpgradeException.class,
                     EofException.class, ConnectionLostException.class)) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
-
-                    continue;
                 }
-                else if (X.hasCause(e, InterruptedException.class)) {
-                    if (log.isDebugEnabled())
-                        log.debug("Caught interrupted exception: " + e);
-
-                    Thread.currentThread().interrupt();
-                }
-                else
+                else {
                     log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
-            }
 
-            break;
+                    break;
+                }
+            }
         }
     }
 
