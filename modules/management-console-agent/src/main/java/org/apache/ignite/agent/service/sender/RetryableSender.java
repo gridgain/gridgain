@@ -72,8 +72,6 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
             }
             catch (Exception ex) {
                 if (X.hasCause(ex, InterruptedException.class)) {
-                    U.quiet(true, "Caught interrupted exception: " + ex);
-
                     Thread.currentThread().interrupt();
 
                     break;
