@@ -279,7 +279,7 @@ public class PlatformServices extends PlatformAbstractTarget {
                     args = new Object[reader.readInt()];
 
                     for (int i = 0; i < args.length; i++)
-                        args[i] = reader.readObjectDetached();
+                        args[i] = reader.readObjectDetached(!srvKeepBinary);
                 }
                 else
                     args = null;

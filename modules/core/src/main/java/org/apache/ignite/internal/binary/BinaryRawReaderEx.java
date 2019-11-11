@@ -29,4 +29,11 @@ public interface BinaryRawReaderEx extends BinaryRawReader {
      * @throws org.apache.ignite.binary.BinaryObjectException In case of error.
      */
     @Nullable public Object readObjectDetached() throws BinaryObjectException;
+
+    /**
+     * @param deserialize {@code true} if object should be unmarshelled and then deserialized.
+     * @return Object.
+     * @throws org.apache.ignite.binary.BinaryObjectException In case of error.
+     */
+    @Nullable public Object readObjectDetached(boolean deserialize) throws BinaryObjectException;
 }

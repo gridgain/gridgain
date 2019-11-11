@@ -1823,8 +1823,21 @@ public class BinaryUtils {
      * @return Unmarshalled value.
      * @throws BinaryObjectException In case of error.
      */
+    @Nullable public static Object unmarshal(
+            BinaryInputStream in,
+            BinaryContext ctx,
+            ClassLoader ldr,
+            BinaryReaderHandlesHolder handles,
+            boolean detach) throws BinaryObjectException {
+        return unmarshal(in, ctx, ldr, handles, detach, false);
+    }
+
+    /**
+     * @return Unmarshalled value.
+     * @throws BinaryObjectException In case of error.
+     */
     @Nullable public static Object unmarshal(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
-        BinaryReaderHandlesHolder handles, boolean detach) throws BinaryObjectException {
+        BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize) throws BinaryObjectException {
         int start = in.position();
 
         byte flag = in.readByte();
