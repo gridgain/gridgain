@@ -36,21 +36,22 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryMetricsUpdateMessage;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *
+ * Checks the metric messages processing in cases related to overflowing.
  */
 public class MetricsCompactionTest extends GridCommonAbstractTest {
     /** Test uuid. */
     private final static UUID TEST_UUID = UUID.randomUUID();
 
     /**
-     *
+     * Latches for blocking disco messages on a sender.
      */
-    private final ConcurrentMap<Integer, CountDownLatch> latchs = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, CountDownLatch> latches = new ConcurrentHashMap<>();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -70,7 +71,9 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        stopAllGrids();
+        latches.entrySet().forEach(e -> e.getValue().countDown());
+
+        stopAllGrids(true);
     }
 
     /**
@@ -87,26 +90,24 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         List<TcpDiscoveryMetricsUpdateMessage> records = Collections.synchronizedList(new ArrayList<>());
 
         srvSpi.addSendMessageListener(msg -> {
-            if(msg instanceof TcpDiscoveryMetricsUpdateMessage) {
+            if (msg instanceof TcpDiscoveryMetricsUpdateMessage) {
                 try {
-                    if(record.get())
+                    if (record.get())
                         records.add((TcpDiscoveryMetricsUpdateMessage)msg);
 
-                    latchs.get(1).await();
+                    latches.get(1).await();
                 }
                 catch (InterruptedException ignore) {
                 }
             }
         });
 
-        latchs.put(1, new CountDownLatch(1)); // Blocks srv discovery for sending
-
-        Thread.sleep(1_000);
+        latches.put(1, new CountDownLatch(1)); // Blocks srv discovery for sending
 
         TcpDiscoveryMetricsUpdateMessage msgLap1T1 = createMetricsMessage(crd); // Lap 0, time 1
         msgLap1T1.setMetrics(srv.localNode().id(), new ClusterMetricsSnapshot()); // Lap 1
 
-        sendDiscoMessage(srvSpi, createMetricsMessage(crd)); // Dummy message for blocking GridWorker.
+        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2)); // Dummy message for blocking GridWorker.
         sendDiscoMessage(srvSpi, msgLap1T1);
         sendDiscoMessage(srvSpi, createMetricsMessage(crd));
 
@@ -134,8 +135,8 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         assertTrue(metricMsgT2.stream().anyMatch(m -> m.passedLaps(srv.localNode().id()) == 0));
 
         record.set(true);
-        latchs.put(0, new CountDownLatch(1));
-        latchs.get(1).countDown();
+        latches.put(0, new CountDownLatch(1));
+        latches.get(1).countDown();
 
         assertTrue(GridTestUtils.waitForCondition(() -> records.size() == 2, 10_000));
         assertTrue(records.stream().anyMatch(m -> m.passedLaps(srv.localNode().id()) == 1 && m.metrics().containsKey(TEST_UUID)));
@@ -146,7 +147,7 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    public void testQueueDoesNotContainMoreTwoMetricMessages() throws Exception {
+    public void testQueueDoesNotContainMoreThanTwoMetricMessages() throws Exception {
         IgniteEx crd = startGrid(0);
 
         IgniteEx srv = startGrid(1);
@@ -156,26 +157,24 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         List<TcpDiscoveryMetricsUpdateMessage> records = Collections.synchronizedList(new ArrayList<>());
 
         srvSpi.addSendMessageListener(msg -> {
-            if(msg instanceof TcpDiscoveryMetricsUpdateMessage) {
+            if (msg instanceof TcpDiscoveryMetricsUpdateMessage) {
                 try {
-                    if(record.get())
+                    if (record.get())
                         records.add((TcpDiscoveryMetricsUpdateMessage)msg);
 
-                    latchs.get(1).await();
+                    latches.get(1).await();
                 }
                 catch (InterruptedException ignore) {
                 }
             }
         });
 
-        latchs.put(1, new CountDownLatch(1)); // Blocks srv discovery for sending
-
-        Thread.sleep(1_000);
+        latches.put(1, new CountDownLatch(1)); // Blocks srv discovery for sending
 
         TcpDiscoveryMetricsUpdateMessage msgLap1T1 = createMetricsMessage(crd); // Lap 0, time 1
         msgLap1T1.setMetrics(srv.localNode().id(), new ClusterMetricsSnapshot()); // Lap 1
 
-        sendDiscoMessage(srvSpi, createMetricsMessage(crd)); // Dummy message for blocking GridWorker.
+        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2)); // Dummy message for blocking GridWorker.
         sendDiscoMessage(srvSpi, msgLap1T1);
         sendDiscoMessage(srvSpi, createMetricsMessage(crd));
 
@@ -193,7 +192,7 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         TcpDiscoveryMetricsUpdateMessage msg0T2 = createMetricsMessage(crd);
         msg0T2.setMetrics(TEST_UUID, new ClusterMetricsSnapshot());
 
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             sendDiscoMessage(srvSpi, msg0T2);
             sendDiscoMessage(srvSpi, msgLap1T2);
         }
@@ -209,15 +208,16 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
      * @param discoverySpi Discovery spi.
      * @param msg Message.
      */
-    private void sendDiscoMessage(TcpDiscoverySpi discoverySpi, TcpDiscoveryAbstractMessage msg) throws IgniteCheckedException {
+    private void sendDiscoMessage(TcpDiscoverySpi discoverySpi,
+        TcpDiscoveryAbstractMessage msg) throws IgniteCheckedException {
         ServerImpl srvImpl = U.field(discoverySpi, "impl");
         Object msgWorker = U.field(srvImpl, "msgWorker");
 
-        U.invoke(null, msgWorker, "addMessage", new Class[] { TcpDiscoveryAbstractMessage.class }, msg);
+        U.invoke(null, msgWorker, "addMessage", new Class[] {TcpDiscoveryAbstractMessage.class}, msg);
     }
 
     /**
-     *
+     * Creates empty {@link TcpDiscoveryMetricsUpdateMessage}.
      */
     private TcpDiscoveryMetricsUpdateMessage createMetricsMessage(IgniteEx node) {
         TcpDiscoveryMetricsUpdateMessage msg = new TcpDiscoveryMetricsUpdateMessage(node.localNode().id());
@@ -226,9 +226,9 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
 
         return msg;
     }
-    
+
     /**
-     *
+     * Extracts {@link TcpDiscoveryMetricsUpdateMessage} from disco queue.
      */
     private List<TcpDiscoveryMetricsUpdateMessage> metricsMessages(BlockingDeque queue) {
         return (List<TcpDiscoveryMetricsUpdateMessage>)queue.stream()
@@ -237,7 +237,7 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Extracts message worker queue from {@link TcpDiscoverySpi}.
      */
     private BlockingDeque extractQueue(TcpDiscoverySpi discoSpi) {
         ServerImpl srvImpl = U.field(discoSpi, "impl");
@@ -246,7 +246,9 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         return U.field(msgWorker, "queue");
     }
 
-    /** */
+    /**
+     *
+     */
     private class TestTcpDiscoverySpi extends TcpDiscoverySpi {
         /** Instance name. */
         private final String instanceName;
@@ -260,9 +262,9 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override protected int readReceipt(Socket sock, long timeout) throws IOException {
-            CountDownLatch latch = latchs.get(getTestIgniteInstanceIndex(instanceName));
+            CountDownLatch latch = latches.get(getTestIgniteInstanceIndex(instanceName));
 
-            if(latch != null) {
+            if (latch != null) {
                 try {
                     latch.await();
                 }
