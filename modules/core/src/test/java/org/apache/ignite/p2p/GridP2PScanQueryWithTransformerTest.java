@@ -21,6 +21,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
+import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -114,35 +115,6 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Executes scenario with successful p2p loading of Transformer class
-     * with client or server node sending Scan Query request and iterating over result set.
-     *
-     * @param withClientNode Flag to execute scan query from client or server node.
-     * @throws Exception If failed.
-     */
-    private void executeP2PClassLoadingEnabledTest(boolean withClientNode) throws Exception {
-        IgniteEx ig0 = startGrid(0);
-
-        IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
-
-        int sumPopulated = populateCache(cache);
-
-        IgniteEx requestingNode = withClientNode ? startClientGrid(1) : startGrid(1);
-
-        IgniteCache<Object, Object> reqNodeCache = requestingNode.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        QueryCursor<Integer> query = reqNodeCache.query(new ScanQuery<Integer, Integer>(), loadTransformerClass());
-
-        int sumQueried = 0;
-
-        for (Integer val : query) {
-            sumQueried += val;
-        }
-
-        assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
-    }
-
-    /**
      * Verifies that Scan Query Transformer is loaded by p2p mechanism <b>from client node</b>
      * when it is missing on server's classpath.
      *
@@ -232,6 +204,63 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
     }
 
     /**
+     * Verifies that deployment isn't needed if Transformer class is available on classpath of all nodes.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSharedTransformerWorksWhenP2PIsDisabled() throws Exception {
+        p2pEnabled = false;
+
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+
+        populateCache(cache);
+
+        IgniteEx client = startClientGrid(1);
+
+        IgniteCache<Object, Object> clientCache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        QueryCursor<Integer> query = clientCache.query(new ScanQuery<Integer, Integer>(),
+            new SharedTransformer(SCALE_FACTOR));
+
+        List<Integer> results = query.getAll();
+
+        assertNotNull(results);
+        assertEquals(CACHE_SIZE, results.size());
+    }
+
+    /**
+     * Executes scenario with successful p2p loading of Transformer class
+     * with client or server node sending Scan Query request and iterating over result set.
+     *
+     * @param withClientNode Flag to execute scan query from client or server node.
+     * @throws Exception If failed.
+     */
+    private void executeP2PClassLoadingEnabledTest(boolean withClientNode) throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+
+        int sumPopulated = populateCache(cache);
+
+        IgniteEx requestingNode = withClientNode ? startClientGrid(1) : startGrid(1);
+
+        IgniteCache<Object, Object> reqNodeCache = requestingNode.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        QueryCursor<Integer> query = reqNodeCache.query(new ScanQuery<Integer, Integer>(), loadTransformerClass());
+
+        int sumQueried = 0;
+
+        for (Integer val : query) {
+            sumQueried += val;
+        }
+
+        assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
+    }
+
+    /**
      * Executes scenario with p2p loading of Transformer class failed
      * with client or server node sending Scan Query request.
      *
@@ -305,5 +334,21 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
         Object wrapper = ctor.newInstance(SCALE_FACTOR);
 
         return GridTestUtils.getFieldValue(wrapper, "clo");
+    }
+
+    /** */
+    private static final class SharedTransformer implements IgniteClosure<Cache.Entry<Integer, Integer>, Integer> {
+        /** */
+        private final int scaleFactor;
+
+        /** */
+        private SharedTransformer(int factor) {
+            scaleFactor = factor;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
+            return entry.getValue() * scaleFactor;
+        }
     }
 }
