@@ -14,67 +14,78 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service.event;
+package org.apache.ignite.agent.service.tracing;
 
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.agent.WebSocketManager;
+import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.agent.service.sender.ManagementConsoleSender;
 import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
-import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
-import static org.apache.ignite.agent.service.event.EventsExporter.TOPIC_EVTS;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
+import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
 
 /**
- * Events service.
+ * Tracing processor.
  */
-public class EventsService extends GridProcessorAdapter {
+public class TracingProcessor extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
-    /** Worker. */
-    private final RetryableSender<VisorGridEvent> snd;
+    /** Manager. */
+    private final WebSocketManager mgr;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, List<VisorGridEvent>> lsnr = this::processEvents;
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::processSpans;
+
+    /** Worker. */
+    private final RetryableSender<Span> snd;
 
     /**
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public EventsService(GridKernalContext ctx, WebSocketManager mgr) {
+    public TracingProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
 
-        snd = new ManagementConsoleSender<>(
-            ctx,
-            mgr,
-            buildEventsDest(ctx.cluster().get().id()),
-            "mgmt-console-events-sender-",
-            QUEUE_CAP
-        );
+        this.mgr = mgr;
+        this.snd = createSender();
 
-        ctx.grid().message().localListen(TOPIC_EVTS, lsnr);
+        ctx.grid().message().localListen(TOPIC_SPANS, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        ctx.grid().message().stopLocalListen(TOPIC_EVTS, lsnr);
+        ctx.grid().message().stopLocalListen(TOPIC_SPANS, lsnr);
 
         U.closeQuiet(snd);
     }
 
     /**
-     * @param nid Node id.
-     * @param evts Events.
+     * @param uuid Uuid.
+     * @param spans Spans.
      */
-    boolean processEvents(UUID nid, List<VisorGridEvent> evts) {
-        snd.send(evts);
+    boolean processSpans(UUID uuid, Object spans) {
+        snd.send((List<Span>)spans);
 
         return true;
+    }
+
+    /**
+     * @return Sender which send messages from queue to Management Console.
+     */
+    private RetryableSender<Span> createSender() {
+        return new ManagementConsoleSender<>(
+            ctx,
+            mgr,
+            buildSaveSpanDest(ctx.cluster().get().id()),
+            "mgmt-console-tracing-sender-",
+            QUEUE_CAP
+        );
     }
 }

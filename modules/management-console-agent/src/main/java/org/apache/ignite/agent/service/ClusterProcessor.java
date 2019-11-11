@@ -48,9 +48,9 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 /**
- * Cluster service.
+ * Cluster processor.
  */
-public class ClusterService extends GridProcessorAdapter {
+public class ClusterProcessor extends GridProcessorAdapter {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_JOINED, EVT_NODE_FAILED, EVT_NODE_LEFT};
 
@@ -74,7 +74,7 @@ public class ClusterService extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public ClusterService(GridKernalContext ctx, WebSocketManager mgr) {
+    public ClusterProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
         this.mgr = mgr;
         cluster = ctx.grid().cluster();

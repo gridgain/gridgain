@@ -43,9 +43,9 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 
 /**
- * Cache service.
+ * Cache processor.
  */
-public class CacheService extends GridProcessorAdapter {
+public class CacheProcessor extends GridProcessorAdapter {
     /** Cache events. */
     private static final int[] EVTS_CACHE = new int[] {EVT_CACHE_STARTED, EVT_CACHE_STOPPED};
 
@@ -59,7 +59,7 @@ public class CacheService extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Websocket manager.
      */
-    public CacheService(GridKernalContext ctx, WebSocketManager mgr) {
+    public CacheProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
         this.mgr = mgr;
         this.evts = ctx.grid().events();

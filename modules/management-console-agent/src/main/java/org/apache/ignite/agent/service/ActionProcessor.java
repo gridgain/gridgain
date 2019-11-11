@@ -41,9 +41,9 @@ import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 
 /**
- * Action service.
+ * Action processor.
  */
-public class ActionService extends GridProcessorAdapter {
+public class ActionProcessor extends GridProcessorAdapter {
     /** Manager. */
     private final WebSocketManager mgr;
 
@@ -54,7 +54,7 @@ public class ActionService extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public ActionService(GridKernalContext ctx, WebSocketManager mgr) {
+    public ActionProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
 
         this.mgr = mgr;

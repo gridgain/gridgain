@@ -33,9 +33,9 @@ import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 
 /**
- * Metric service.
+ * Metric processor.
  */
-public class MetricsService extends GridProcessorAdapter {
+public class MetricProcessor extends GridProcessorAdapter {
     /** Manager. */
     private WebSocketManager mgr;
 
@@ -46,7 +46,7 @@ public class MetricsService extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public MetricsService(GridKernalContext ctx, WebSocketManager mgr) {
+    public MetricProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
 
         this.mgr = mgr;

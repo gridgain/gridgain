@@ -14,64 +14,71 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.service.tracing;
+package org.apache.ignite.agent.service.config;
 
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.agent.WebSocketManager;
-import org.apache.ignite.agent.dto.tracing.Span;
+import org.apache.ignite.agent.dto.NodeConfiguration;
 import org.apache.ignite.agent.service.sender.ManagementConsoleSender;
-import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
-import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
-import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
+import static org.apache.ignite.agent.service.config.NodeConfigurationExporter.TOPIC_NODE_CFG;
 
 /**
- * Tracing service.
+ * Node configuration processor.
  */
-public class TracingService extends GridProcessorAdapter {
+public class NodeConfigurationProcessor extends GridProcessorAdapter {
     /** Queue capacity. */
-    private static final int QUEUE_CAP = 100;
+    private static final int QUEUE_CAP = 10;
 
     /** Manager. */
     private final WebSocketManager mgr;
 
-    /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, Object> lsnr = this::processSpans;
+    /** Sender. */
+    private final ManagementConsoleSender<NodeConfiguration> snd;
 
-    /** Worker. */
-    private final RetryableSender<Span> snd;
+    /** On node traces listener. */
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::processNodeConfigurations;
 
     /**
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public TracingService(GridKernalContext ctx, WebSocketManager mgr) {
+    public NodeConfigurationProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
-
         this.mgr = mgr;
         this.snd = createSender();
 
-        ctx.grid().message().localListen(TOPIC_SPANS, lsnr);
+        ctx.grid().message().localListen(TOPIC_NODE_CFG, lsnr);
     }
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        ctx.grid().message().stopLocalListen(TOPIC_SPANS, lsnr);
+        ctx.grid().message().stopLocalListen(TOPIC_NODE_CFG, lsnr);
 
         U.closeQuiet(snd);
     }
 
     /**
-     * @param uuid Uuid.
-     * @param spans Spans.
+     * @param nid Uuid.
+     * @param cfgList Config list.
      */
-    boolean processSpans(UUID uuid, Object spans) {
-        snd.send((List<Span>)spans);
+    boolean processNodeConfigurations(UUID nid, Object cfgList) {
+        String cfg = F.first((List<String>)cfgList);
+
+        if (!F.isEmpty(cfg)) {
+            String consistentId = ctx.cluster().get().node(nid).consistentId().toString();
+
+            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
+
+            snd.send(nodeCfg);
+        }
 
         return true;
     }
@@ -79,12 +86,12 @@ public class TracingService extends GridProcessorAdapter {
     /**
      * @return Sender which send messages from queue to Management Console.
      */
-    private RetryableSender<Span> createSender() {
+    private ManagementConsoleSender<NodeConfiguration> createSender() {
         return new ManagementConsoleSender<>(
             ctx,
             mgr,
-            buildSaveSpanDest(ctx.cluster().get().id()),
-            "mgmt-console-tracing-sender-",
+            buildClusterNodeConfigurationDest(ctx.cluster().get().id()),
+            "mgmt-console-node-cfg-sender-",
             QUEUE_CAP
         );
     }
