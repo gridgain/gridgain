@@ -246,21 +246,18 @@ public class Agent extends ManagementConsoleProcessor {
 
                 break;
             }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-
-                break;
-            }
             catch (Exception e) {
-                if (e instanceof TimeoutException || X.hasCause(e, ConnectException.class, UpgradeException.class,
-                    EofException.class, ConnectionLostException.class)) {
-                    if (disconnected.compareAndSet(false, true))
-                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
-                }
-                else {
-                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+                if (X.hasCause(e, InterruptedException.class)) {
+                    Thread.currentThread().interrupt();
 
                     break;
+                }
+                else if (disconnected.compareAndSet(false, true)) {
+                    if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
+                        EofException.class, ConnectionLostException.class))
+                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
+                    else
+                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
                 }
             }
         }
