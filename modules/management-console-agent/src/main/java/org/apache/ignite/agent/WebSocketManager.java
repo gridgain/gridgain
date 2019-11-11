@@ -81,7 +81,7 @@ public class WebSocketManager extends GridProcessorAdapter {
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
     /** Client. */
-    private JettyWebSocketClient client;
+    private WebSocketStompClient client;
 
     /** Session. */
     private StompSession ses;
@@ -109,14 +109,12 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         Thread.sleep(reconnectCnt * 1000);
 
-        client = createWebSocketClient(uri, cfg);
+        client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
+        client.setMessageConverter(getMessageConverter());
 
-        WebSocketStompClient stompClient = new WebSocketStompClient(client);
-        stompClient.setMessageConverter(getMessageConverter());
+        client.start();
 
-        stompClient.start();
-
-        ses = stompClient.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
+        ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
 
         reconnectCnt = -1;
     }

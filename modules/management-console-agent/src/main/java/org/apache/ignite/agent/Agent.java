@@ -259,7 +259,7 @@ public class Agent extends ManagementConsoleProcessor {
 
                     Thread.currentThread().interrupt();
 
-                    break;
+                    return;
                 }
                 else {
                     if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
