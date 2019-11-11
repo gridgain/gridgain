@@ -171,8 +171,14 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         U.quiet(false, "ses.disconnect()");
 
-        if (client != null)
-            client.stop();
+        if (client != null) {
+            try {
+                client.stop();
+            }
+            catch (Exception ignored) {
+                // No-op.
+            }
+        }
 
         U.quiet(false, "client.stop()");
     }
