@@ -318,6 +318,8 @@ public class QueryParser {
                 // Prepare new query.
                 SqlFieldsQuery newQry = cloneFieldsQuery(qry).setSql(prepared.getSQL());
 
+                c.schema(newQry.getSchema());
+
                 final int paramsCnt = prepared.getParameters().size();
 
                 Object[] argsOrig = qry.getArgs();
@@ -475,8 +477,6 @@ public class QueryParser {
 
                     // Prepare additional two-step query for FOR UPDATE case.
                     if (splitNeeded) {
-                        c.schema(newQry.getSchema());
-
                         forUpdateTwoStepQry = GridSqlQuerySplitter.split(
                             c,
                             selForUpdate,
@@ -494,8 +494,6 @@ public class QueryParser {
                 GridCacheTwoStepQuery twoStepQry = null;
 
                 if (splitNeeded) {
-                    c.schema(newQry.getSchema());
-
                     twoStepQry = GridSqlQuerySplitter.split(
                         c,
                         selectStmt,
