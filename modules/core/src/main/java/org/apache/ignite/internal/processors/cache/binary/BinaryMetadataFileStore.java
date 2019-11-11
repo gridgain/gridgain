@@ -148,6 +148,8 @@ class BinaryMetadataFileStore {
 
             U.error(log, msg);
 
+            writer.cancel();
+
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
             throw new IgniteException(msg, e);
