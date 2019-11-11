@@ -101,6 +101,8 @@ public class WebSocketManager extends GridProcessorAdapter {
      * @param sesHnd Session handler.
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
+        U.quiet(false, "connect");
+
         if (reconnectCnt == -1)
             log.info("Connecting to server: " + uri);
 
@@ -167,12 +169,12 @@ public class WebSocketManager extends GridProcessorAdapter {
         if (connected())
             ses.disconnect();
 
-        U.quietAndInfo(log, "ses.disconnect()");
+        U.quiet(false, "ses.disconnect()");
 
         if (client != null)
             client.stop();
 
-        U.quietAndInfo(log, "client.stop()");
+        U.quiet(false, "client.stop()");
     }
 
     /**

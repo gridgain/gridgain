@@ -243,8 +243,6 @@ public class Agent extends ManagementConsoleProcessor {
             try {
                 mgr.stop(true);
 
-                U.dumpStack(log, "connect0");
-
                 curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
                 mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
@@ -255,21 +253,19 @@ public class Agent extends ManagementConsoleProcessor {
             }
             catch (Exception e) {
                 if (X.hasCause(e, InterruptedException.class)) {
-                    log.warning("Caught interrupted exception", e);
+                    U.quiet(true, "Caught interrupted exception: " + e);
 
                     Thread.currentThread().interrupt();
 
-                    return;
+                    break;
                 }
-                else {
-                    if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
-                        EofException.class, ConnectionLostException.class)) {
-                        if (disconnected.compareAndSet(false, true))
-                            log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
-                    }
-                    else
-                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
+                    EofException.class, ConnectionLostException.class)) {
+                    if (disconnected.compareAndSet(false, true))
+                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
+                else
+                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
             }
         }
     }
@@ -417,7 +413,7 @@ public class Agent extends ManagementConsoleProcessor {
      * Submit a reconnection task only if there no active connect in progress.
      */
     private void reconnect() {
-        U.quietAndInfo(log, "reconnect");
+        U.quiet(false, "reconnect");
 
         if (connectPool.getActiveCount() == 0)
             connectPool.submit(this::connect0);
