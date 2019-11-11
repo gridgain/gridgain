@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.Agent;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -64,7 +65,7 @@ public class ActionDispatcher implements AutoCloseable {
         this.ctx = ctx;
 
         log = ctx.log(ActionDispatcher.class);
-        sesRegistry = SessionRegistry.getInstance(ctx);
+        sesRegistry = ((Agent) ctx.managementConsole()).sessionRegistry();
     }
 
     /**

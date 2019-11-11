@@ -41,13 +41,13 @@ public class QueryHolderRegistry {
     private final IgniteLogger log;
 
     /** Holder ttl. */
-    private final Duration holderTtl;
+    private final long holderTtl;
 
     /**
      * @param ctx Context.
      * @param holderTtl Holder ttl.
      */
-    public QueryHolderRegistry(GridKernalContext ctx, Duration holderTtl) {
+    public QueryHolderRegistry(GridKernalContext ctx, long holderTtl) {
         this.ctx = ctx;
         this.holderTtl = holderTtl;
         log = ctx.log(QueryHolderRegistry.class);
@@ -142,7 +142,7 @@ public class QueryHolderRegistry {
      * @param qryId Query id.
      */
     private void scheduleToRemove(String qryId) {
-        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(holderTtl.toMillis()) {
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(holderTtl) {
             @Override public void onTimeout() {
                 QueryHolder holder = qryHolders.get(qryId);
 

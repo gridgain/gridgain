@@ -31,10 +31,13 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
+import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.AuthenticationContext;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
@@ -120,12 +123,15 @@ public final class AgentUtils {
     }
 
     /**
-     * Authenticate by session.
+     * Authenticate by session and ignite security.
      *
      * @param security Security.
      * @param ses Session.
      */
-    public static SecurityContext authenticate(IgniteSecurity security, Session ses) throws IgniteAuthenticationException, IgniteCheckedException {
+    public static SecurityContext authenticate(
+        IgniteSecurity security,
+        Session ses
+    ) throws IgniteAuthenticationException, IgniteCheckedException {
         AuthenticationContext authCtx = new AuthenticationContext();
 
         authCtx.subjectType(REMOTE_CLIENT);
@@ -138,13 +144,44 @@ public final class AgentUtils {
 
         if (subjCtx == null) {
             if (ses.credentials() == null)
-                throw new IgniteAuthenticationException("Failed to authenticate remote client (secure session SPI not set?): " + ses);
+                throw new IgniteAuthenticationException(
+                    "Failed to authenticate remote client (secure session SPI not set?): " + ses.id()
+                );
 
-            throw new IgniteAuthenticationException("Failed to authenticate remote client (invalid credentials?): " + ses);
+            throw new IgniteAuthenticationException(
+                "Failed to authenticate remote client (invalid credentials?): " + ses.id()
+            );
         }
 
         return subjCtx;
     }
+
+    /**
+     * Authenticate by session and authentication processor.
+     *
+     * @param authenticationProc Authentication processor.
+     * @param ses Session.
+     */
+    public static AuthorizationContext authenticate(
+        IgniteAuthenticationProcessor authenticationProc,
+        Session ses
+    ) throws IgniteCheckedException {
+        SecurityCredentials creds = ses.credentials();
+
+        String login = null;
+
+        if (creds.getLogin() instanceof String)
+            login = (String) creds.getLogin();
+
+        String pwd = null;
+
+        if (creds.getPassword() instanceof String)
+            pwd = (String) creds.getPassword();
+
+        return authenticationProc.authenticate(login, pwd);
+    }
+
+
 
     /**
      * @param security Security.
