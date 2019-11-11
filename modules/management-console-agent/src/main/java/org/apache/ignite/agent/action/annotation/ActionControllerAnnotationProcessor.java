@@ -48,9 +48,12 @@ public class ActionControllerAnnotationProcessor {
      */
     static Map<String, ActionMethod> findActionMethods(String... basePkgs) {
         Map<String, ActionMethod> methods = new HashMap<>();
-        Reflections reflections = new Reflections((Object[]) basePkgs);
+
+        Reflections reflections = new Reflections((Object[])basePkgs);
+
         for (Class<?> controllerCls : reflections.getTypesAnnotatedWith(ActionController.class)) {
             ActionController annotation = controllerCls.getAnnotation(ActionController.class);
+
             String controllerName = F.isEmpty(annotation.value()) ? controllerCls.getSimpleName() : annotation.value();
 
             for (Method method : controllerCls.getDeclaredMethods()) {
@@ -58,7 +61,9 @@ public class ActionControllerAnnotationProcessor {
                     continue;
 
                 String actName = controllerName + "." + method.getName();
+
                 ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
+
                 methods.put(actMtd.actionName(), actMtd);
             }
         }

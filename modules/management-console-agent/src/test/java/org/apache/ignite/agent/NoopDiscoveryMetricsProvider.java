@@ -22,7 +22,7 @@ import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 
 /**
- * No  discovery metrics provider.
+ * No-op discovery metrics provider.
  */
 public class NoopDiscoveryMetricsProvider implements DiscoveryMetricsProvider {
     /** {@inheritDoc} */

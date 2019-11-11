@@ -56,9 +56,9 @@ public class ActionService extends GridProcessorAdapter {
      */
     public ActionService(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
-        this.mgr = mgr;
 
-        dispatcher = new ActionDispatcher(ctx);
+        this.mgr = mgr;
+        this.dispatcher = new ActionDispatcher(ctx);
     }
 
     /**
@@ -70,6 +70,7 @@ public class ActionService extends GridProcessorAdapter {
         // Deserialization error occurred.
         if (req instanceof InvalidRequest) {
             Throwable ex = ((InvalidRequest) req).getCause();
+
             sendResponse(
                 new Response()
                     .setId(req.getId())

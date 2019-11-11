@@ -55,6 +55,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
 
         if (accessor.getCommand() == StompCommand.SEND) {
             String dest = getDestination(msg.getHeaders());
+
             messages.compute(dest, (k, v) -> {
                 if (v == null)
                     return Lists.newArrayList(msg.getPayload());
@@ -99,6 +100,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
      */
     public <T> List<T> getListPayload(String dest, Class<T> clazz) {
         Object payload = F.last(messages.get(dest));
+
         if (payload == null)
             return null;
 

@@ -135,6 +135,7 @@ public class ClusterService extends GridProcessorAdapter {
             log.debug("Sending full topology to Management Console");
 
         Object crdId = cluster.localNode().consistentId();
+
         mgr.send(
             buildClusterTopologyDest(cluster.id()),
             TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
@@ -168,6 +169,7 @@ public class ClusterService extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
+
         ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
         U.shutdownNow(getClass(), baselineExecSrvc, log);

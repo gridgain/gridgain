@@ -42,9 +42,11 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendInitialStates() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterCachesInfoDest(cluster.id())) != null);
@@ -57,16 +59,20 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendCacheInfoOnCreatedOrDestroyedCache() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         IgniteCache<Object, Object> cache = ignite.getOrCreateCache("test-cache");
+
         cache.put(1, 2);
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache".equals(i.getName()));
         });
 
@@ -74,6 +80,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache".equals(i.getName()));
         });
     }
@@ -84,18 +91,22 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendCacheInfoIfCacheCreatedOnOtherNode() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         IgniteEx ignite_2 = startGrid(0);
 
         IgniteCache<Object, Object> cache = ignite_2.getOrCreateCache("test-cache-1");
+
         cache.put(1, 2);
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
         });
 
@@ -103,6 +114,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
         });
     }
@@ -113,9 +125,11 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendCacheInfoOnCreatedOrDestroyedCacheFromSql() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
@@ -125,6 +139,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
 
@@ -135,6 +150,7 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
 
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
             return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
     }
@@ -145,9 +161,11 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendCacheMetadataOnAlterTableAndCreateIndex() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         ignite.context().query().querySqlFields(
@@ -201,9 +219,11 @@ public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendCacheMetadataOnCreateAndDropIndex() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         ignite.context().query().querySqlFields(

@@ -32,12 +32,9 @@ public class MetricExporterMessageFactory implements MessageFactory {
         switch (type) {
             case -63:
                 msg = new MetricRequest();
-
                 break;
-
             case -62:
                 msg = new MetricResponse();
-
                 break;
         }
 

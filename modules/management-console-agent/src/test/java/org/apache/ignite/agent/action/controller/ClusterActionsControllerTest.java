@@ -32,8 +32,8 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void activateCluster() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ClusterActions.activate");
+            .setId(UUID.randomUUID())
+            .setAction("ClusterActions.activate");
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.active());
     }
@@ -44,8 +44,8 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void deactivateCluster() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ClusterActions.deactivate");
+            .setId(UUID.randomUUID())
+            .setAction("ClusterActions.deactivate");
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.active());
     }

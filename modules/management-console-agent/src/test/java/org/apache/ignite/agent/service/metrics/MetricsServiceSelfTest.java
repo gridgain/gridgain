@@ -50,9 +50,11 @@ public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendMetricsOnPull() throws Exception {
         IgniteEx ignite = startGrids(2);
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         assertWithPoll(

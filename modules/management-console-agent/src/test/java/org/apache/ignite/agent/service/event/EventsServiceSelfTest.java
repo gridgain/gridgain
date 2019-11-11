@@ -63,10 +63,12 @@ public class EventsServiceSelfTest extends AgentCommonAbstractSelfTest {
      */
     @Test
     public void shouldSendActivationEvent() throws Exception {
-        IgniteEx ignite = (IgniteEx)startGrid();
+        IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         assertWithPoll(() -> {

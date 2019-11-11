@@ -64,9 +64,10 @@ public class ManagementConsoleSpanExporterTest extends AbstractServiceTest {
         exporter.getTraceHandler().timeLimitedExport(getSpanData());
 
         ArgumentCaptor<Object> topicCaptor = ArgumentCaptor.forClass(Object.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+
+        verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
         Assert.assertEquals(TOPIC_SPANS, topicCaptor.getValue());
         Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
@@ -77,11 +78,14 @@ public class ManagementConsoleSpanExporterTest extends AbstractServiceTest {
         GridKernalContext ctx = super.getMockContext();
 
         IgniteClusterEx cluster = ctx.grid().cluster();
+
         ClusterGroup grp = mock(ClusterGroup.class);
+
         when(cluster.forServers()).thenReturn(grp);
         when(grp.nodes()).thenReturn(Lists.newArrayList(new TcpDiscoveryNode()));
 
         IgniteConfiguration cfg = mock(IgniteConfiguration.class);
+
         TracingSpi tracingSpi = mock(TracingSpi.class);
 
         when(ctx.config()).thenReturn(cfg);

@@ -61,6 +61,7 @@ public class NodeConfigurationService extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_NODE_CFG, lsnr);
+
         U.closeQuiet(snd);
     }
 
@@ -69,10 +70,11 @@ public class NodeConfigurationService extends GridProcessorAdapter {
      * @param cfgList Config list.
      */
     boolean processNodeConfigurations(UUID nid, Object cfgList) {
-        String cfg = F.first((List<String>) cfgList);
+        String cfg = F.first((List<String>)cfgList);
 
         if (!F.isEmpty(cfg)) {
             String consistentId = ctx.cluster().get().node(nid).consistentId().toString();
+
             NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
 
             snd.send(nodeCfg);

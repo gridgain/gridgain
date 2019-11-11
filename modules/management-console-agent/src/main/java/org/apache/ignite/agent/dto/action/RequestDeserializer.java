@@ -40,13 +40,20 @@ public class RequestDeserializer extends StdDeserializer<Request> {
     }
 
     /** {@inheritDoc} */
-    @Override public Request deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+    @Override public Request deserialize(
+        JsonParser p,
+        DeserializationContext ctxt
+    ) throws IOException, JsonProcessingException {
         Request req;
+
         JsonNode node = p.getCodec().readTree(p);
 
         UUID id = p.getCodec().treeToValue(node.get("id"), UUID.class);
+
         UUID sesId = p.getCodec().treeToValue(node.get("sessionId"), UUID.class);
+
         String act = node.get("action").asText();
+
         ActionMethod actMtd = actions().get(act);
 
         try {
@@ -54,10 +61,12 @@ public class RequestDeserializer extends StdDeserializer<Request> {
                 throw new IllegalArgumentException("Failed to find method for action: " + act);
 
             req = new Request().setId(id).setAction(act).setSessionId(sesId);
+
             Parameter[] parameters = actMtd.method().getParameters();
 
             if (parameters.length == 1) {
                 Class<?> argType = parameters[0].getType();
+
                 Object arg = p.getCodec().treeToValue(node.get("argument"), argType);
 
                 req.setArgument(arg);

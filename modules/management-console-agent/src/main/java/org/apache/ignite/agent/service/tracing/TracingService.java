@@ -52,6 +52,7 @@ public class TracingService extends GridProcessorAdapter {
      */
     public TracingService(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
+
         this.mgr = mgr;
         this.snd = createSender();
 
@@ -61,6 +62,7 @@ public class TracingService extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_SPANS, lsnr);
+
         U.closeQuiet(snd);
     }
 
@@ -69,7 +71,7 @@ public class TracingService extends GridProcessorAdapter {
      * @param spans Spans.
      */
     boolean processSpans(UUID uuid, Object spans) {
-        snd.send((List<Span>) spans);
+        snd.send((List<Span>)spans);
 
         return true;
     }

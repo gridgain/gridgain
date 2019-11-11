@@ -35,9 +35,9 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     @Test
     public void updateAutoAdjustEnabledToTrue() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("BaselineActions.updateAutoAdjustEnabled")
-                .setArgument(true);
+            .setId(UUID.randomUUID())
+            .setAction("BaselineActions.updateAutoAdjustEnabled")
+            .setArgument(true);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled());
     }
@@ -48,9 +48,9 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     @Test
     public void updateAutoAdjustEnabledToFalse() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("BaselineActions.updateAutoAdjustEnabled")
-                .setArgument(false);
+            .setId(UUID.randomUUID())
+            .setAction("BaselineActions.updateAutoAdjustEnabled")
+            .setArgument(false);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled());
     }
@@ -61,9 +61,9 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
     @Test
     public void updateAutoAdjustAwaitingTime() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
-                .setArgument(10_000);
+            .setId(UUID.randomUUID())
+            .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
+            .setArgument(10_000);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000);
     }
@@ -76,6 +76,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         cluster.baselineAutoAdjustEnabled(false);
 
         IgniteEx ignite_2 = startGrid(2);
+
         IgniteEx ignite_3 = startGrid(3);
 
         List<String> ids = Lists.newArrayList(

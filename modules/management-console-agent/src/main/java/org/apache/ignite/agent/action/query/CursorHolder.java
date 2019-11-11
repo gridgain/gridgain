@@ -46,8 +46,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
     public CursorHolder(QueryCursor cursor, boolean isScanCursor) {
         this.cursor = cursor;
         this.isScanCursor = isScanCursor;
-
-        iter = cursor.iterator();
+        this.iter = cursor.iterator();
     }
 
     /**
@@ -63,6 +62,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
      */
     public CursorHolder scanCursor(boolean scanCursor) {
         isScanCursor = scanCursor;
+
         return this;
     }
 

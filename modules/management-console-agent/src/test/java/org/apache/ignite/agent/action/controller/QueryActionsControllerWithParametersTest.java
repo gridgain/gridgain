@@ -111,6 +111,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         executeAction(req, (r) -> {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
+
                 JSONArray rows = ctx.read("$[0].rows[*]");
 
                 return rows.size() == 2;
@@ -142,6 +143,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             tupleOf("VALUE_UUID", UUID.fromString("a-a-a-a-a").toString())
         ).forEach(t -> {
             String fieldName = t.getKey();
+
             Request req = new Request()
                 .setAction("QueryActions.executeSqlQuery")
                 .setId(UUID.randomUUID())
@@ -156,13 +158,17 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             executeAction(req, (r) -> {
                 if (r.getStatus() == COMPLETED) {
                     DocumentContext ctx = parse(r.getResult());
+
                     JSONArray rows = ctx.read("$[0].rows[*]");
+
                     JSONArray row = ctx.read("$[0].rows[0][*]");
+
                     JSONArray cols = ctx.read("$[0].columns[*]");
 
                     int fieldIdx = findFieldIndex(fieldName, cols);
 
                     Object expVal = t.getValue();
+
                     String actVal = row.get(fieldIdx).toString();
 
                     if ("VALUE_DATE".equals(fieldName))
@@ -191,7 +197,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         int idx;
 
         for (idx = 0; idx < cols.size(); idx++) {
-            String fn = ((Map<String, String>) cols.get(idx)).get("fieldName");
+            String fn = ((Map<String, String>)cols.get(idx)).get("fieldName");
 
             if (fieldName.equals(fn))
                 break;
@@ -202,7 +208,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
 
     /**
      * @param field Field.
-     * @param val Value.
+     * @param val   Value.
      */
     private IgniteBiTuple<String, Object> tupleOf(String field, Object val) {
         return new IgniteBiTuple<>(field, val);
@@ -213,39 +219,39 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
      */
     private String getAllTypeCreateQueryTable() {
         return "CREATE TABLE mc_agent_all_types_table (" +
-                " id INT, " +
-                " value_bool BOOLEAN," +
-                " value_tiny_int TINYINT," +
-                " value_small_int SMALLINT," +
-                " value_big_int BIGINT," +
-                " value_decimal DECIMAL," +
-                " value_double DOUBLE," +
-                " value_real REAL," +
-                " value_time TIME," +
-                " value_date DATE," +
-                " value_timestamp TIMESTAMP," +
-                " value_varchar VARCHAR," +
-                " value_char CHAR," +
-                " value_uuid UUID," +
-                " PRIMARY KEY (id)" +
+            " id INT, " +
+            " value_bool BOOLEAN," +
+            " value_tiny_int TINYINT," +
+            " value_small_int SMALLINT," +
+            " value_big_int BIGINT," +
+            " value_decimal DECIMAL," +
+            " value_double DOUBLE," +
+            " value_real REAL," +
+            " value_time TIME," +
+            " value_date DATE," +
+            " value_timestamp TIMESTAMP," +
+            " value_varchar VARCHAR," +
+            " value_char CHAR," +
+            " value_uuid UUID," +
+            " PRIMARY KEY (id)" +
             ");";
     }
 
     /**
-     * @param id Id.
-     * @param boolVal Bool value.
-     * @param tinyIntVal Tiny int value.
+     * @param id          Id.
+     * @param boolVal     Bool value.
+     * @param tinyIntVal  Tiny int value.
      * @param smallIntVal Small int value.
-     * @param bigIntVal Big int value.
-     * @param decimalVal Decimal value.
-     * @param doubleVal Double value.
-     * @param realVal Real value.
-     * @param timeVal Time value.
-     * @param dateVal Date value.
-     * @param tsVal Timestamp value.
-     * @param varcharVal Varchar value.
-     * @param cVal Closure value.
-     * @param uuidVal Uuid value.
+     * @param bigIntVal   Big int value.
+     * @param decimalVal  Decimal value.
+     * @param doubleVal   Double value.
+     * @param realVal     Real value.
+     * @param timeVal     Time value.
+     * @param dateVal     Date value.
+     * @param tsVal       Timestamp value.
+     * @param varcharVal  Varchar value.
+     * @param cVal        Closure value.
+     * @param uuidVal     Uuid value.
      */
     private String getInsertAllTypesQuery(
         int id,
@@ -264,20 +270,20 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         UUID uuidVal
     ) {
         return "INSERT INTO mc_agent_all_types_table VALUES("
-                + id + ", "
-                + boolVal + ", "
-                + tinyIntVal + ", "
-                + smallIntVal + ", "
-                + bigIntVal + ", "
-                + decimalVal + ", "
-                + doubleVal + ", "
-                + realVal + ", "
-                + format("\'%s\'", timeVal) + ", "
-                + format("\'%s\'", dateVal) + ", "
-                + format("\'%s\'", tsVal) + ", "
-                + format("\'%s\'", varcharVal)+ ", "
-                + format("\'%s\'", cVal) + ", "
-                + format("\'%s\'", uuidVal) +
+            + id + ", "
+            + boolVal + ", "
+            + tinyIntVal + ", "
+            + smallIntVal + ", "
+            + bigIntVal + ", "
+            + decimalVal + ", "
+            + doubleVal + ", "
+            + realVal + ", "
+            + format("\'%s\'", timeVal) + ", "
+            + format("\'%s\'", dateVal) + ", "
+            + format("\'%s\'", tsVal) + ", "
+            + format("\'%s\'", varcharVal) + ", "
+            + format("\'%s\'", cVal) + ", "
+            + format("\'%s\'", uuidVal) +
             ");";
     }
 

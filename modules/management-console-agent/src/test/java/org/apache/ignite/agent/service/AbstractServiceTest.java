@@ -54,6 +54,7 @@ public abstract class AbstractServiceTest {
      */
     protected WebSocketManager getMockWebSocketManager() {
         WebSocketManager mgr = mock(WebSocketManager.class);
+
         when(ses.isConnected()).thenAnswer(i -> isSesConnected);
 
         return mgr;
@@ -64,24 +65,28 @@ public abstract class AbstractServiceTest {
      */
     protected GridKernalContext getMockContext() {
         GridKernalContext ctx = mock(GridKernalContext.class);
+
         when(ctx.log(any(Class.class))).thenReturn(mock(IgniteLogger.class));
 
         ClusterProcessor clusterProcessor = mock(ClusterProcessor.class);
+
         IgniteEx grid = mock(IgniteEx.class);
+
         IgniteMessaging messaging = mock(IgniteMessaging.class);
+
         IgniteClusterImpl cluster = mock(IgniteClusterImpl.class);
+
         when(cluster.id()).thenReturn(UUID.fromString("a-a-a-a-a"));
         when(cluster.tag()).thenReturn("Test tag");
-
         when(ctx.grid()).thenReturn(grid);
         when(ctx.cluster()).thenReturn(clusterProcessor);
         when(grid.cluster()).thenReturn(cluster);
         when(clusterProcessor.get()).thenReturn(cluster);
-
         when(grid.message()).thenReturn(messaging);
         when(grid.message(any(ClusterGroup.class))).thenReturn(messaging);
 
         GridDiscoveryManager disco = mock(GridDiscoveryManager.class);
+
         DiscoCache discoCache = mock(DiscoCache.class);
 
         when(discoCache.version()).thenReturn(new AffinityTopologyVersion(1L));

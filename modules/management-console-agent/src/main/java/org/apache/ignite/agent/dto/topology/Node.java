@@ -178,10 +178,11 @@ public class Node {
 
     /**
      * @param baselineNode Baseline node.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public Node setBaselineNode(boolean baselineNode) {
         this.baselineNode = baselineNode;
+
         return this;
     }
 
@@ -194,10 +195,11 @@ public class Node {
 
     /**
      * @param online Online.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public Node setOnline(boolean online) {
         this.online = online;
+
         return this;
     }
 

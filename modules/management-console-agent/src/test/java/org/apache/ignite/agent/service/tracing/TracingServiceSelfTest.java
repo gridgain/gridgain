@@ -35,9 +35,11 @@ public class TracingServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendInitialStates() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
@@ -49,14 +51,17 @@ public class TracingServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendSpans() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
+
         changeManagementConsoleUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
+
         cluster.active(true);
 
         assertWithPoll(
             () -> {
                 List<Span> spans = interceptor.getPayload(buildSaveSpanDest(cluster.id()), List.class);
+
                 return spans != null && !spans.isEmpty();
             }
         );

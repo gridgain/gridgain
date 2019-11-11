@@ -51,23 +51,25 @@ public class EventsExporterTest extends AbstractServiceTest {
         EventsExporter exporter = new EventsExporter(ctx);
 
         GridTestNode rmv = new GridTestNode(UUID.randomUUID());
+
         DiscoveryEvent evt = new DiscoveryEvent(rmv, "msg", EVT_NODE_LEFT, rmv);
 
         exporter.processEvent(evt);
 
         ArgumentCaptor<Object> topicCaptor = ArgumentCaptor.forClass(Object.class);
+
         ArgumentCaptor<Object> evtsCaptor = ArgumentCaptor.forClass(Object.class);
-        
+
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), evtsCaptor.capture());
 
         assertEquals(TOPIC_EVTS, topicCaptor.getValue());
 
-        Collection<VisorGridDiscoveryEvent> evts = (Collection<VisorGridDiscoveryEvent>)evtsCaptor.getValue();
+        Collection<VisorGridDiscoveryEvent> evts = (Collection<VisorGridDiscoveryEvent>) evtsCaptor.getValue();
 
         assertEquals(1, evts.size());
 
         VisorGridDiscoveryEvent actual = F.first(evts);
-        
+
         assertEquals(evt.type(), actual.getTypeId());
         assertEquals(evt.message(), actual.getMessage());
         assertEquals(rmv.id(), actual.getNid());

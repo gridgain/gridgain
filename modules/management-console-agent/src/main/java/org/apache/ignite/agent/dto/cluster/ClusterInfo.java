@@ -68,10 +68,11 @@ public class ClusterInfo {
 
     /**
      * @param id Id.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setId(UUID id) {
         this.id = id;
+
         return this;
     }
 
@@ -84,10 +85,11 @@ public class ClusterInfo {
 
     /**
      * @param tag Cluster tag.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setTag(String tag) {
         this.tag = tag;
+
         return this;
     }
 
@@ -100,10 +102,11 @@ public class ClusterInfo {
 
     /**
      * @param baselineParameters Baseline parameters.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setBaselineParameters(BaselineInfo baselineParameters) {
         this.baselineParameters = baselineParameters;
+
         return this;
     }
 
@@ -116,10 +119,11 @@ public class ClusterInfo {
 
     /**
      * @param active Active.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setActive(boolean active) {
         isActive = active;
+
         return this;
     }
 
@@ -132,10 +136,11 @@ public class ClusterInfo {
 
     /**
      * @param persistenceEnabled Is persistence enabled.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setPersistenceEnabled(boolean persistenceEnabled) {
         isPersistenceEnabled = persistenceEnabled;
+
         return this;
     }
 
@@ -148,10 +153,11 @@ public class ClusterInfo {
 
     /**
      * @param features Features.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public ClusterInfo setFeatures(Set<String> features) {
         this.features = features;
+
         return this;
     }
 

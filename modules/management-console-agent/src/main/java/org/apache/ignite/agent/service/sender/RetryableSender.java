@@ -53,9 +53,9 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
      */
     protected RetryableSender(IgniteLogger log, String threadNamePrefix, int cap) {
         this.log = log;
-        queue = new ArrayBlockingQueue<>(cap);
-        
-        exSrvc = Executors.newSingleThreadExecutor(new CustomizableThreadFactory(threadNamePrefix));
+        this.queue = new ArrayBlockingQueue<>(cap);
+        this.exSrvc = Executors.newSingleThreadExecutor(new CustomizableThreadFactory(threadNamePrefix));
+
         exSrvc.submit(this);
     }
 
@@ -112,6 +112,7 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
      */
     private List<List<T>> splitOnBatches(List<T> list) {
         List<T> batch = new ArrayList<>();
+
         List<List<T>> res = new ArrayList<>();
 
         for (T e : list) {

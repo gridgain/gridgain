@@ -44,6 +44,7 @@ public class NodeConfigurationExporter extends GridProcessorAdapter {
      */
     public NodeConfigurationExporter(GridKernalContext ctx) {
         super(ctx);
+
         this.snd = new CoordinatorSender<>(ctx, TOPIC_NODE_CFG);
     }
 

@@ -49,9 +49,8 @@ public class QueryHolderRegistry {
     public QueryHolderRegistry(GridKernalContext ctx, long holderTtl) {
         this.ctx = ctx;
         this.holderTtl = holderTtl;
-        log = ctx.log(QueryHolderRegistry.class);
-
-        qryHolders = new ConcurrentHashMap<>();
+        this.log = ctx.log(QueryHolderRegistry.class);
+        this.qryHolders = new ConcurrentHashMap<>();
     }
 
     /**

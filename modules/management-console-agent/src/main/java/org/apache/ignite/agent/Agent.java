@@ -133,7 +133,7 @@ public class Agent extends ManagementConsoleProcessor {
     private DistributedMetaStorage metaStorage;
 
     /** Session registry. */
-    private SessionRegistry sessionRegistry;
+    private SessionRegistry sesRegistry;
 
     /** Active server uri. */
     private String curSrvUri;
@@ -150,11 +150,10 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        metaStorage = ctx.distributedMetastorage();
-
-        evtsExporter = new EventsExporter(ctx);
-        spanExporter = new ManagementConsoleSpanExporter(ctx);
-        metricExporter = new MetricExporter(ctx);
+        this.metaStorage = ctx.distributedMetastorage();
+        this.evtsExporter = new EventsExporter(ctx);
+        this.spanExporter = new ManagementConsoleSpanExporter(ctx);
+        this.metricExporter = new MetricExporter(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isCoordinator(ctx.discovery().discoCache()))
@@ -163,10 +162,13 @@ public class Agent extends ManagementConsoleProcessor {
             ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         evtsExporter.addLocalEventListener();
+
         metricExporter.addMetricListener();
 
         NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+
         exporter.export();
+
         quiteStop(exporter);
     }
 
@@ -223,7 +225,7 @@ public class Agent extends ManagementConsoleProcessor {
      * @return Session registry.
      */
     public SessionRegistry sessionRegistry() {
-        return sessionRegistry;
+        return sesRegistry;
     }
 
     /**
@@ -303,15 +305,15 @@ public class Agent extends ManagementConsoleProcessor {
 
         log.info("Starting Management Console agent on coordinator");
 
-        mgr = new WebSocketManager(ctx);
-        sessionRegistry = new SessionRegistry(ctx);
-        clusterSrvc = new ClusterService(ctx, mgr);
-        tracingSrvc = new TracingService(ctx, mgr);
-        metricSrvc = new MetricsService(ctx, mgr);
-        evtSrvc = new EventsService(ctx, mgr);
-        nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
-        actSrvc = new ActionService(ctx, mgr);
-        cacheSrvc = new CacheService(ctx, mgr);
+        this.mgr = new WebSocketManager(ctx);
+        this.sesRegistry = new SessionRegistry(ctx);
+        this.clusterSrvc = new ClusterService(ctx, mgr);
+        this.tracingSrvc = new TracingService(ctx, mgr);
+        this.metricSrvc = new MetricsService(ctx, mgr);
+        this.evtSrvc = new EventsService(ctx, mgr);
+        this.nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
+        this.actSrvc = new ActionService(ctx, mgr);
+        this.cacheSrvc = new CacheService(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 
@@ -375,15 +377,18 @@ public class Agent extends ManagementConsoleProcessor {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster:: " + curSrvUri);
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
             U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
 
             clusterSrvc.sendInitialState();
+
             cacheSrvc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {

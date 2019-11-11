@@ -104,11 +104,14 @@ public class CacheService extends GridProcessorAdapter {
      */
     private void sendCacheInfo() {
         if (!ctx.isStopping() && mgr.connected()) {
+            UUID clusterId = ctx.cluster().get().id();
+
             Collection<CacheInfo> cachesInfo = getCachesInfo();
+
             Collection<CacheSqlMetadata> cacheSqlMetadata = getCacheSqlMetadata();
 
-            UUID clusterId = ctx.cluster().get().id();
             mgr.send(buildClusterCachesInfoDest(clusterId), cachesInfo);
+
             mgr.send(buildClusterCachesSqlMetaDest(clusterId), cacheSqlMetadata);
         }
     }
@@ -118,11 +121,13 @@ public class CacheService extends GridProcessorAdapter {
      */
     private Collection<CacheSqlMetadata> getCacheSqlMetadata() {
         GridCacheProcessor cacheProc = ctx.cache();
+
         List<CacheSqlMetadata> cachesMetadata = new ArrayList<>();
 
         for (Map.Entry<String, DynamicCacheDescriptor> item : cacheProc.cacheDescriptors().entrySet()) {
             if (item.getValue().sql()) {
                 String cacheName = item.getKey();
+
                 Collection<GridQueryTypeDescriptor> types = ctx.query().types(cacheName);
 
                 if (types != null)
@@ -138,7 +143,9 @@ public class CacheService extends GridProcessorAdapter {
      */
     private List<CacheInfo> getCachesInfo() {
         GridCacheProcessor cacheProc = ctx.cache();
+
         Map<String, DynamicCacheDescriptor> cacheDescriptors = cacheProc.cacheDescriptors();
+
         List<CacheInfo> cachesInfo = new ArrayList<>(cacheDescriptors.size());
 
         for (Map.Entry<String, DynamicCacheDescriptor> item : cacheDescriptors.entrySet()) {
@@ -158,6 +165,7 @@ public class CacheService extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         evts.stopLocalListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
+
         evts.stopLocalListen(this::onCacheEvents, EVTS_CACHE);
     }
 }

@@ -47,8 +47,8 @@ public class SecurityActionsController {
      */
     public SecurityActionsController(GridKernalContext ctx) {
         this.ctx = ctx;
-        log = ctx.log(SecurityActionsController.class);
-        registry = ((Agent) ctx.managementConsole()).sessionRegistry();
+        this.log = ctx.log(SecurityActionsController.class);
+        this.registry = ((Agent) ctx.managementConsole()).sessionRegistry();
     }
 
     /**
@@ -73,20 +73,21 @@ public class SecurityActionsController {
      * @throws IgniteCheckedException If authentication failed.
      */
     private Session authenticate0(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
-        boolean authenticationEnabled = ctx.authentication().enabled();
         boolean securityEnabled = ctx.security().enabled();
+
+        boolean authenticationEnabled = ctx.authentication().enabled();
 
         if (reqCreds.getCredentials() == null)
             throw new IgniteAuthenticationException("Authentication failed, credentials not found");
 
         Session ses = Session.random();
 
-        ses.credentials(reqCreds.getCredentials());
         ses.address(reqCreds.getAddress());
+        ses.credentials(reqCreds.getCredentials());
 
         if (securityEnabled) {
-            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
+            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
         }
         else if (authenticationEnabled)
             ses.authorizationContext(AgentUtils.authenticate(ctx.authentication(), ses));

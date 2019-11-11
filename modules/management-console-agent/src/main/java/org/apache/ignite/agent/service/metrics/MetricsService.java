@@ -48,6 +48,7 @@ public class MetricsService extends GridProcessorAdapter {
      */
     public MetricsService(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
+
         this.mgr = mgr;
 
         // Listener for collecting metrics event.

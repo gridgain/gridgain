@@ -94,6 +94,7 @@ public abstract class AgentCommonAbstractSelfTest extends GridCommonAbstractTest
      */
     protected void changeManagementConsoleUri(IgniteEx ignite) {
         ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
+
         cfg.setConsoleUris(F.asList("http://localhost:" + port));
 
         ignite.context().managementConsole().configuration(cfg);

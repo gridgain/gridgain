@@ -80,7 +80,8 @@ public class MetricExporter extends GridProcessorAdapter {
 
                 try {
                     ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
-                } catch (IgniteCheckedException e) {
+                }
+                catch (IgniteCheckedException e) {
                     log.error("Error during sending message [topic=" + TOPIC_METRICS +
                         ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
                 }

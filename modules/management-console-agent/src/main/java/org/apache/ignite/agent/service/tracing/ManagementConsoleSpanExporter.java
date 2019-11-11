@@ -86,6 +86,7 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
     @Override public void stop(boolean cancel) {
         if (exporter != null) {
             U.closeQuiet(snd);
+
             exporter.stop();
         }
     }
@@ -118,7 +119,9 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
      */
     static Span fromSpanDataToSpan(SpanData spanData) {
         SpanContext ctx = spanData.getContext();
+
         long startTs = toEpochMillis(spanData.getStartTimestamp());
+
         long endTs = toEpochMillis(spanData.getEndTimestamp());
 
         Span span = new Span()
@@ -135,8 +138,10 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
             span.getTags().put(label.getKey(), attributeValueToString(label.getValue()));
 
         Status status = spanData.getStatus();
+
         if (status != null) {
             span.getTags().put(STATUS_CODE, status.getCanonicalCode().toString());
+
             if (status.getDescription() != null)
                 span.getTags().put(STATUS_DESCRIPTION, status.getDescription());
         }
@@ -160,8 +165,7 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
     }
 
     /** Return to string. */
-    private static final Function<Object, String> returnToStr =
-            Functions.returnToString();
+    private static final Function<Object, String> returnToStr = Functions.returnToString();
 
     /**
      * @param attributeVal Attribute value.

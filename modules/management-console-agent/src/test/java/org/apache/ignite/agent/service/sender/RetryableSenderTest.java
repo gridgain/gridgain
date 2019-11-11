@@ -38,6 +38,7 @@ public class RetryableSenderTest {
     @Test
     public void shouldSendInBatches() {
         List<List<Integer>> results = new ArrayList<>();
+
         RetryableSender<Integer> snd = new RetryableSender<Integer>(null, "test-sender-", 10) {
             @Override protected void sendInternal(List<Integer> elements) {
                 results.add(elements);
@@ -46,8 +47,11 @@ public class RetryableSenderTest {
 
         snd.send(IntStream.range(0, 17).boxed().collect(Collectors.toList()));
 
-        with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS).until(() -> !results.isEmpty() && results.get(0).size() == 10);
-        with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS).until(() -> !results.isEmpty() && results.get(1).size() == 7);
+        with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS)
+            .until(() -> !results.isEmpty() && results.get(0).size() == 10);
+
+        with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS)
+            .until(() -> !results.isEmpty() && results.get(1).size() == 7);
     }
 
     /**
@@ -56,7 +60,9 @@ public class RetryableSenderTest {
     @Test
     public void shouldRetrySend() {
         List<List<Integer>> results = new ArrayList<>();
+
         AtomicBoolean shouldSnd = new AtomicBoolean(false);
+
         AtomicInteger retryCnt = new AtomicInteger();
 
         RetryableSender<Integer> snd = new RetryableSender<Integer>(null, "test-sender-", 10) {

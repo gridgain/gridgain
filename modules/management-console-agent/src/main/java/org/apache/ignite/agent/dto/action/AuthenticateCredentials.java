@@ -38,9 +38,11 @@ public class AuthenticateCredentials {
 
     /**
      * @param creds Credentials.
+     * @return @{code This} for chaining method calls.
      */
     public AuthenticateCredentials setCredentials(SecurityCredentials creds) {
         this.creds = creds;
+
         return this;
     }
 
@@ -53,9 +55,11 @@ public class AuthenticateCredentials {
 
     /**
      * @param addr Address.
+     * @return @{code This} for chaining method calls.
      */
     public AuthenticateCredentials setAddress(InetSocketAddress addr) {
         this.addr = addr;
+
         return this;
     }
 }

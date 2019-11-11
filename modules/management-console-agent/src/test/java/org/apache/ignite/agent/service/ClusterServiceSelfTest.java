@@ -44,9 +44,11 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendInitialStates() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
+
         changeManagementConsoleUri(ignite);
 
         IgniteCluster cluster = ignite.cluster();
+
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
@@ -75,9 +77,11 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendChangedClusterTopology() throws Exception {
         IgniteEx ignite = startGrid(0);
+
         changeManagementConsoleUri(ignite);
 
         IgniteClusterEx cluster = ignite.cluster();
+
         cluster.active(true);
 
         startGrid(1);
@@ -85,6 +89,7 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
         assertWithPoll(
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
+
                 return top != null && top.getNodes().size() == 2;
             }
         );
@@ -96,15 +101,19 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendChangedTopologyWhenBaselineWasChanged() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
+
         changeManagementConsoleUri(ignite_1);
+
         ignite_1.cluster().baselineAutoAdjustEnabled(false);
 
         IgniteCluster cluster = ignite_1.cluster();
+
         cluster.active(true);
 
         assertWithPoll(
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
+
                 return top != null && top.getNodes().size() == 1;
             }
         );
@@ -112,11 +121,13 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
         Ignite ignite_2 = startGrid(1);
 
         Collection<ClusterNode> nodes = ignite_1.cluster().forServers().nodes();
+
         ignite_1.cluster().setBaselineTopology(nodes);
 
         assertWithPoll(
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
+
                 return top != null && top.getNodes().size() == 2;
             }
         );
@@ -128,14 +139,17 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldSendChangedActiveState() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
+
         changeManagementConsoleUri(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
+
         cluster.active(true);
 
         assertWithPoll(
             () -> {
                 ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
+
                 return info != null && info.isActive();
             }
         );
@@ -145,6 +159,7 @@ public class ClusterServiceSelfTest extends AgentCommonAbstractSelfTest {
         assertWithPoll(
             () -> {
                 ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
+
                 return info != null && !info.isActive();
             }
         );
