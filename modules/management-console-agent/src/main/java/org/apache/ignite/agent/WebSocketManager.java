@@ -26,6 +26,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -60,7 +61,7 @@ import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 /**
  * Web socket manager.
  */
-public class WebSocketManager implements AutoCloseable {
+public class WebSocketManager extends GridProcessorAdapter {
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 
@@ -79,12 +80,6 @@ public class WebSocketManager implements AutoCloseable {
     /** Max sleep time seconds between reconnects. */
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
-    /** Context. */
-    private GridKernalContext ctx;
-
-    /** Logger. */
-    private IgniteLogger log;
-
     /** Client. */
     private JettyWebSocketClient client;
 
@@ -95,11 +90,10 @@ public class WebSocketManager implements AutoCloseable {
     private int reconnectCnt;
 
     /**
-     * @param ctx Context.
+     * @param ctx Kernal context.
      */
-    public WebSocketManager(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(WebSocketManager.class);
+    protected WebSocketManager(GridKernalContext ctx) {
+        super(ctx);
     }
 
     /**
@@ -171,7 +165,7 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         if (connected())
             ses.disconnect();
 

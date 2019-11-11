@@ -21,6 +21,7 @@ import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
@@ -34,7 +35,7 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
 /**
  * Events exporter which send events to coordinator.
  */
-public class EventsExporter implements AutoCloseable {
+public class EventsExporter extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
@@ -50,8 +51,6 @@ public class EventsExporter implements AutoCloseable {
     /** Event mapper. */
     private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
 
-    /** Context. */
-    private GridKernalContext ctx;
 
     /** Sender. */
     private RetryableSender<VisorGridEvent> snd;
@@ -63,7 +62,7 @@ public class EventsExporter implements AutoCloseable {
      * @param ctx Context.
      */
     public EventsExporter(GridKernalContext ctx) {
-        this.ctx = ctx;
+        super(ctx);
         
         snd = new CoordinatorSender<>(ctx, TOPIC_EVTS, QUEUE_CAP);
     }
@@ -85,7 +84,7 @@ public class EventsExporter implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         this.ctx.event().removeLocalEventListener(lsnr, concat(LOCAL_EVT_TYPES, GLOBAL_EVT_TYPES));
 
         U.closeQuiet(snd);

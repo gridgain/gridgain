@@ -26,11 +26,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.Agent;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -42,15 +42,9 @@ import static org.apache.ignite.agent.utils.AgentUtils.completeIgniteFuture;
 /**
  * Action dispatcher.
  */
-public class ActionDispatcher implements AutoCloseable {
-    /** Context. */
-    private final GridKernalContext ctx;
-
+public class ActionDispatcher extends GridProcessorAdapter {
     /** Session registry. */
     private SessionRegistry sesRegistry;
-
-    /** Logger. */
-    private IgniteLogger log;
 
     /** Controllers. */
     private final Map<Class, Object> controllers = new ConcurrentHashMap<>();
@@ -62,9 +56,8 @@ public class ActionDispatcher implements AutoCloseable {
      * @param ctx Context.
      */
     public ActionDispatcher(GridKernalContext ctx) {
-        this.ctx = ctx;
+        super(ctx);
 
-        log = ctx.log(ActionDispatcher.class);
         sesRegistry = ((Agent) ctx.managementConsole()).sessionRegistry();
     }
 
@@ -159,7 +152,7 @@ public class ActionDispatcher implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         U.shutdownNow(getClass(), pool, log);
     }
 }

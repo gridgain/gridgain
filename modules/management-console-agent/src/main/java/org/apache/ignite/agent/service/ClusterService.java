@@ -22,7 +22,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
@@ -34,6 +33,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
@@ -50,7 +50,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 /**
  * Cluster service.
  */
-public class ClusterService implements AutoCloseable {
+public class ClusterService extends GridProcessorAdapter {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_JOINED, EVT_NODE_FAILED, EVT_NODE_LEFT};
 
@@ -60,17 +60,11 @@ public class ClusterService implements AutoCloseable {
     /** Baseline parameters. */
     private volatile BaselineInfo curBaselineParameters;
 
-    /** Context. */
-    private GridKernalContext ctx;
-
     /** Cluster. */
     private IgniteClusterEx cluster;
 
     /** Manager. */
     private WebSocketManager mgr;
-
-    /** Logger. */
-    private IgniteLogger log;
 
     /** Executor service. */
     private ScheduledExecutorService baselineExecSrvc =
@@ -81,10 +75,9 @@ public class ClusterService implements AutoCloseable {
      * @param mgr Manager.
      */
     public ClusterService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
         cluster = ctx.grid().cluster();
-        log = ctx.log(ClusterService.class);
 
         GridEventStorageManager evtMgr = ctx.event();
 
@@ -174,7 +167,7 @@ public class ClusterService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
         ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 

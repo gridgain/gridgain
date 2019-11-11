@@ -19,7 +19,6 @@ package org.apache.ignite.agent.service;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteAuthenticationException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
@@ -27,8 +26,8 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
 import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityException;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
@@ -39,31 +38,25 @@ import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ER
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
+import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 
 /**
  * Action service.
  */
-public class ActionService implements AutoCloseable {
-    /** Context. */
-    private final GridKernalContext ctx;
-
+public class ActionService extends GridProcessorAdapter {
     /** Manager. */
     private final WebSocketManager mgr;
 
     /** Action dispatcher. */
     private final ActionDispatcher dispatcher;
 
-    /** Logger. */
-    private final IgniteLogger log;
-
     /**
      * @param ctx Context.
      * @param mgr Manager.
      */
     public ActionService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
-        this.log = ctx.log(ActionService.class);
 
         dispatcher = new ActionDispatcher(ctx);
     }
@@ -141,7 +134,7 @@ public class ActionService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
-        U.closeQuiet(dispatcher);
+    @Override public void stop(boolean cancel) {
+        quiteStop(dispatcher);
     }
 }

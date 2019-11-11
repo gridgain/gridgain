@@ -63,6 +63,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -153,18 +154,18 @@ public class Agent extends ManagementConsoleProcessor {
         evtsExporter.addLocalEventListener();
         metricExporter.addMetricListener();
 
-        try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
-            exporter.export();
-        }
+        NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+        exporter.export();
+        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(lsnr, EVTS_DISCOVERY);
 
-        U.closeQuiet(metricExporter);
-        U.closeQuiet(evtsExporter);
-        U.closeQuiet(spanExporter);
+        quiteStop(metricExporter);
+        quiteStop(evtsExporter);
+        quiteStop(spanExporter);
 
         disconnect();
     }
@@ -175,16 +176,16 @@ public class Agent extends ManagementConsoleProcessor {
     private void disconnect() {
         log.info("Stopping Management Console agent.");
 
-        U.closeQuiet(cacheSrvc);
-        U.closeQuiet(actSrvc);
-        U.closeQuiet(metricSrvc);
-        U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(evtSrvc);
-        U.closeQuiet(tracingSrvc);
-        U.closeQuiet(clusterSrvc);
+        quiteStop(cacheSrvc);
+        quiteStop(actSrvc);
+        quiteStop(metricSrvc);
+        quiteStop(nodeConfigurationSrvc);
+        quiteStop(evtSrvc);
+        quiteStop(tracingSrvc);
+        quiteStop(clusterSrvc);
 
         U.shutdownNow(getClass(), connectPool, log);
-        U.closeQuiet(mgr);
+        quiteStop(mgr);
 
         disconnected.set(false);
 
@@ -240,7 +241,7 @@ public class Agent extends ManagementConsoleProcessor {
     private void connect0() {
         while (true) {
             try {
-                mgr.close();
+                mgr.stop(true);
 
                 U.dumpStack(log, "connect0");
 

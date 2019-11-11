@@ -18,13 +18,13 @@ package org.apache.ignite.agent.service.metrics;
 
 import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.metric.MetricRequest;
 import org.apache.ignite.agent.dto.metric.MetricResponse;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
@@ -35,15 +35,9 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 /**
  * Metric service.
  */
-public class MetricsService implements AutoCloseable {
-    /** Context. */
-    private GridKernalContext ctx;
-
+public class MetricsService extends GridProcessorAdapter {
     /** Manager. */
     private WebSocketManager mgr;
-
-    /** Logger. */
-    private IgniteLogger log;
 
     /** Listener. */
     private final GridMessageListener lsnr = this::processMetricResponse;
@@ -53,9 +47,8 @@ public class MetricsService implements AutoCloseable {
      * @param mgr Manager.
      */
     public MetricsService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
-        this.log = ctx.log(MetricsService.class);
 
         // Listener for collecting metrics event.
         ctx.io().addMessageListener(TOPIC_METRICS, lsnr);
@@ -108,7 +101,7 @@ public class MetricsService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.io().removeMessageListener(TOPIC_METRICS, lsnr);
     }
 }

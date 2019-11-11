@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.metric.MetricRegistrySchema;
 import org.apache.ignite.agent.dto.metric.MetricRequest;
 import org.apache.ignite.agent.dto.metric.MetricResponse;
@@ -30,6 +29,7 @@ import org.apache.ignite.agent.dto.metric.MetricType;
 import org.apache.ignite.agent.dto.metric.VarIntWriter;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
@@ -59,15 +59,9 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
  * Reg schemas
  * Data
  */
-public class MetricExporter implements AutoCloseable {
+public class MetricExporter extends GridProcessorAdapter {
     /** Default varInt byte buffer capacity. */
     private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;
-
-    /** Context. */
-    private final GridKernalContext ctx;
-
-    /** Logger. */
-    private final IgniteLogger log;
 
     /** Listener. */
     private final GridMessageListener lsnr;
@@ -78,8 +72,7 @@ public class MetricExporter implements AutoCloseable {
      * @param ctx Kernal context.
      */
     public MetricExporter(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(MetricExporter.class);
+        super(ctx);
 
         this.lsnr = (UUID nodeId, Object msg, byte plc) -> {
             if (msg instanceof MetricRequest) {
@@ -127,7 +120,7 @@ public class MetricExporter implements AutoCloseable {
 
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.io().removeMessageListener(TOPIC_METRICS, lsnr);
     }
 

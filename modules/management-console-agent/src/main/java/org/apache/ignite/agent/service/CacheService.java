@@ -29,6 +29,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
@@ -44,12 +45,9 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
 /**
  * Cache service.
  */
-public class CacheService implements AutoCloseable {
+public class CacheService extends GridProcessorAdapter {
     /** Cache events. */
     private static final int[] EVTS_CACHE = new int[] {EVT_CACHE_STARTED, EVT_CACHE_STOPPED};
-
-    /** Context. */
-    private final GridKernalContext ctx;
 
     /** Events. */
     private final IgniteEvents evts;
@@ -62,7 +60,7 @@ public class CacheService implements AutoCloseable {
      * @param mgr Websocket manager.
      */
     public CacheService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
         this.evts = ctx.grid().events();
 
@@ -161,7 +159,7 @@ public class CacheService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         evts.stopLocalListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
         evts.stopLocalListen(this::onCacheEvents, EVTS_CACHE);
     }

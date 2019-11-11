@@ -22,6 +22,7 @@ import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.NodeConfiguration;
 import org.apache.ignite.agent.service.sender.ManagementConsoleSender;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -32,12 +33,9 @@ import static org.apache.ignite.agent.service.config.NodeConfigurationExporter.T
 /**
  * Node configuration service.
  */
-public class NodeConfigurationService implements AutoCloseable {
+public class NodeConfigurationService extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;
-
-    /** Context. */
-    private final GridKernalContext ctx;
 
     /** Manager. */
     private final WebSocketManager mgr;
@@ -53,7 +51,7 @@ public class NodeConfigurationService implements AutoCloseable {
      * @param mgr Manager.
      */
     public NodeConfigurationService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
         this.snd = createSender();
 
@@ -61,7 +59,7 @@ public class NodeConfigurationService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_NODE_CFG, lsnr);
         U.closeQuiet(snd);
     }
