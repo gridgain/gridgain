@@ -70,9 +70,6 @@ class BinaryMetadataFileStore {
     /** */
     private BinaryMetadataAsyncWriter writer;
 
-    /** */
-    private final ConcurrentMap<OperationSyncKey, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
-
     /**
      * @param metadataLocCache Metadata locale cache.
      * @param ctx Context.
@@ -276,6 +273,8 @@ class BinaryMetadataFileStore {
     private class BinaryMetadataAsyncWriter extends GridWorker {
         /** */
         private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue<>();
+        /** */
+        private final ConcurrentMap<OperationSyncKey, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
 
         /** */
         BinaryMetadataAsyncWriter() {
@@ -480,7 +479,7 @@ class BinaryMetadataFileStore {
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return 31 * typeId + typeVer;
+            return 31 * typeId;
         }
 
         /** {@inheritDoc} */
@@ -490,7 +489,7 @@ class BinaryMetadataFileStore {
 
             OperationSyncKey that = (OperationSyncKey)obj;
 
-            return (that.typeId == typeId) && (that.typeVer == typeVer);
+            return (that.typeId == typeId);
         }
 
         /** {@inheritDoc} */

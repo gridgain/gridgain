@@ -117,7 +117,7 @@ public class ListeningTestLogger implements IgniteLogger {
         if (!dbg)
             return;
 
-        if (echo != null)
+        if (echo != null && echo.isTraceEnabled())
             echo.trace(msg);
 
         applyListeners(msg);
@@ -128,7 +128,7 @@ public class ListeningTestLogger implements IgniteLogger {
         if (!dbg)
             return;
 
-        if (echo != null)
+        if (echo != null && echo.isDebugEnabled())
             echo.debug(msg);
 
         applyListeners(msg);
