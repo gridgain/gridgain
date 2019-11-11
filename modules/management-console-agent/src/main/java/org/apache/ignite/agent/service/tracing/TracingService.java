@@ -23,6 +23,7 @@ import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.agent.service.sender.ManagementConsoleSender;
 import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
@@ -32,12 +33,9 @@ import static org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExpor
 /**
  * Tracing service.
  */
-public class TracingService implements AutoCloseable {
+public class TracingService extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
-
-    /** Context. */
-    private final GridKernalContext ctx;
 
     /** Manager. */
     private final WebSocketManager mgr;
@@ -53,7 +51,7 @@ public class TracingService implements AutoCloseable {
      * @param mgr Manager.
      */
     public TracingService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
         this.mgr = mgr;
         this.snd = createSender();
 
@@ -61,7 +59,7 @@ public class TracingService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_SPANS, lsnr);
         U.closeQuiet(snd);
     }

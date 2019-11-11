@@ -30,11 +30,11 @@ import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.tracing.Annotation;
 import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.agent.service.sender.CoordinatorSender;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
@@ -45,7 +45,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Span exporter which send spans to coordinator.
  */
-public class ManagementConsoleSpanExporter implements AutoCloseable {
+public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
@@ -58,12 +58,6 @@ public class ManagementConsoleSpanExporter implements AutoCloseable {
     /** Status description. */
     private static final String STATUS_DESCRIPTION = "census.status_description";
 
-    /** Context. */
-    private GridKernalContext ctx;
-
-    /** Logger. */
-    private IgniteLogger log;
-
     /** Exporter. */
     private OpenCensusTraceExporter exporter;
 
@@ -74,8 +68,7 @@ public class ManagementConsoleSpanExporter implements AutoCloseable {
      * @param ctx Context.
      */
     public ManagementConsoleSpanExporter(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(ManagementConsoleSpanExporter.class);
+        super(ctx);
 
         if (ctx.config().getTracingSpi() != null) {
             try {
@@ -90,7 +83,7 @@ public class ManagementConsoleSpanExporter implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         if (exporter != null) {
             U.closeQuiet(snd);
             exporter.stop();

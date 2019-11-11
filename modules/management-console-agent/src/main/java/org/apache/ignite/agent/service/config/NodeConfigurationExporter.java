@@ -18,10 +18,10 @@ package org.apache.ignite.agent.service.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.dto.IgniteConfigurationWrapper;
 import org.apache.ignite.agent.service.sender.CoordinatorSender;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
@@ -29,7 +29,7 @@ import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 /**
  * Node configuration exporter.
  */
-public class NodeConfigurationExporter implements AutoCloseable {
+public class NodeConfigurationExporter extends GridProcessorAdapter {
     /** Mapper. */
     private final ObjectMapper mapper = jsonMapper();
 
@@ -39,19 +39,12 @@ public class NodeConfigurationExporter implements AutoCloseable {
     /** Sender. */
     private final CoordinatorSender<String> snd;
 
-    /** Logger. */
-    private final IgniteLogger log;
-
-    /** Context. */
-    private GridKernalContext ctx;
-
     /**
      * @param ctx Context.
      */
     public NodeConfigurationExporter(GridKernalContext ctx) {
-        this.ctx = ctx;
+        super(ctx);
         this.snd = new CoordinatorSender<>(ctx, TOPIC_NODE_CFG);
-        this.log = ctx.log(NodeConfigurationExporter.class);
     }
 
     /**
@@ -67,7 +60,7 @@ public class NodeConfigurationExporter implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         U.closeQuiet(snd);
     }
 }

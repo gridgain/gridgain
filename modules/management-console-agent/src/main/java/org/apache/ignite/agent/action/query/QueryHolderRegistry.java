@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.action.query;
 
-import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

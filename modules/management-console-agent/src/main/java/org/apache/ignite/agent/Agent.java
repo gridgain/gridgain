@@ -25,8 +25,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.IgniteInterruptedException;
+import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.service.ActionService;
 import org.apache.ignite.agent.service.CacheService;
@@ -65,6 +65,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
@@ -164,18 +165,18 @@ public class Agent extends ManagementConsoleProcessor {
         evtsExporter.addLocalEventListener();
         metricExporter.addMetricListener();
 
-        try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
-            exporter.export();
-        }
+        NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+        exporter.export();
+        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        U.closeQuiet(metricExporter);
-        U.closeQuiet(evtsExporter);
-        U.closeQuiet(spanExporter);
+        quiteStop(metricExporter);
+        quiteStop(evtsExporter);
+        quiteStop(spanExporter);
 
         disconnect();
     }
@@ -188,14 +189,14 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        U.closeQuiet(cacheSrvc);
-        U.closeQuiet(actSrvc);
-        U.closeQuiet(metricSrvc);
-        U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(evtSrvc);
-        U.closeQuiet(tracingSrvc);
-        U.closeQuiet(clusterSrvc);
-        U.closeQuiet(mgr);
+        quiteStop(cacheSrvc);
+        quiteStop(actSrvc);
+        quiteStop(metricSrvc);
+        quiteStop(nodeConfigurationSrvc);
+        quiteStop(evtSrvc);
+        quiteStop(tracingSrvc);
+        quiteStop(clusterSrvc);
+        quiteStop(mgr);
 
         disconnected.set(false);
 
@@ -260,13 +261,13 @@ public class Agent extends ManagementConsoleProcessor {
             if (log.isDebugEnabled())
                 log.debug("Caught interrupted exception: " + e);
 
-            mgr.close();
+            mgr.stop(true);
         }
         catch (InterruptedException e) {
             if (log.isDebugEnabled())
                 log.debug("Caught interrupted exception: " + e);
 
-            mgr.close();
+            mgr.stop(true);
 
             Thread.currentThread().interrupt();
         }
@@ -274,7 +275,7 @@ public class Agent extends ManagementConsoleProcessor {
             connect0();
         }
         catch (ExecutionException e) {
-            mgr.close();
+            mgr.stop(true);
 
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))

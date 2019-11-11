@@ -22,6 +22,7 @@ import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.service.sender.ManagementConsoleSender;
 import org.apache.ignite.agent.service.sender.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -32,12 +33,9 @@ import static org.apache.ignite.agent.service.event.EventsExporter.TOPIC_EVTS;
 /**
  * Events service.
  */
-public class EventsService implements AutoCloseable {
+public class EventsService extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
-
-    /** Context. */
-    private GridKernalContext ctx;
 
     /** Worker. */
     private final RetryableSender<VisorGridEvent> snd;
@@ -50,7 +48,7 @@ public class EventsService implements AutoCloseable {
      * @param mgr Manager.
      */
     public EventsService(GridKernalContext ctx, WebSocketManager mgr) {
-        this.ctx = ctx;
+        super(ctx);
 
         snd = new ManagementConsoleSender<>(
             ctx,
@@ -64,7 +62,7 @@ public class EventsService implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_EVTS, lsnr);
 
         U.closeQuiet(snd);

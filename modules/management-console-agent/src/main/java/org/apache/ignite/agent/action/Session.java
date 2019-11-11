@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.action;
 
 import java.net.InetSocketAddress;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;

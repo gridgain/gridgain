@@ -31,6 +31,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.GridProcessor;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
@@ -224,5 +225,22 @@ public final class AgentUtils {
      */
     public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
         return col == null ? Stream.empty() : col.stream();
+    }
+
+
+    /**
+     * Quietly closes given processor ignoring possible checked exception.
+     *
+     * @param proc Process.
+     */
+    public static void quiteStop(GridProcessor proc) {
+        if (proc != null) {
+            try {
+                proc.stop(true);
+            }
+            catch (Exception ignored) {
+                // No-op.
+            }
+        }
     }
 }
