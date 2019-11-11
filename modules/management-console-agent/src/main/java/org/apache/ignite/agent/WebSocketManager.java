@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.client.HttpClient;
@@ -169,12 +170,34 @@ public class WebSocketManager extends GridProcessorAdapter {
         if (connected())
             ses.disconnect();
 
-        log.info("before client.stop()");
+        U.quietAndInfo(log, "before client.stop()");
 
-        if (client != null && client.isRunning())
-            client.stop();
+        if (client != null) {
+            Thread t = new Thread(() -> client.stop());
 
-        log.info("after client.stop()");
+            try {
+                t.start();
+
+                t.join(100L);
+
+                if (t.isAlive()) {
+                    GridStringBuilder sb = new GridStringBuilder();
+
+                    U.printStackTrace(t.getId(), sb);
+
+                    U.quietAndInfo(log, sb.toString());
+                }
+            }
+            catch (InterruptedException e) {
+                GridStringBuilder sb = new GridStringBuilder();
+
+                U.printStackTrace(t.getId(), sb);
+
+                U.quietAndInfo(log, sb.toString());
+            }
+        }
+
+        U.quietAndInfo(log, "after client.stop()");
     }
 
     /**
@@ -232,7 +255,7 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
-        webSockClient.addBean(httpClient);
+        webSockClient.addManaged(httpClient);
 
         return new JettyWebSocketClient(webSockClient) {
             @Override public void stop() {
