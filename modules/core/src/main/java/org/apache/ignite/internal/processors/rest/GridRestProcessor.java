@@ -28,6 +28,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -65,6 +66,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
@@ -87,6 +89,8 @@ import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.plugin.security.SecurityPermissionSet;
+import org.apache.ignite.plugin.security.SecuritySubject;
 import org.apache.ignite.thread.IgniteThread;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKEN_TIMEOUT;
@@ -97,6 +101,8 @@ import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_ILLEGAL_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SECURITY_CHECK_FAILED;
+import static org.apache.ignite.plugin.security.SecurityPermission.ADMIN_OPS;
+import static org.apache.ignite.plugin.security.SecurityPermission.TASK_EXECUTE;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
 /**
@@ -898,7 +904,13 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
             case EXE:
             case RESULT:
-                perm = SecurityPermission.TASK_EXECUTE;
+                perm = Optional.of(ctx.security())
+                    .map(IgniteSecurity::securityContext)
+                    .map(SecurityContext::subject)
+                    .map(SecuritySubject::permissions)
+                    .map(SecurityPermissionSet::systemPermissions)
+                    .map(permissions -> permissions.contains(ADMIN_OPS) ? ADMIN_OPS : null)
+                    .orElse(TASK_EXECUTE);
 
                 GridRestTaskRequest taskReq = (GridRestTaskRequest)req;
                 name = taskReq.taskName();
@@ -925,7 +937,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case BASELINE_REMOVE:
             case CLUSTER_READ_ONLY_ENABLE:
             case CLUSTER_READ_ONLY_DISABLE:
-                perm = SecurityPermission.ADMIN_OPS;
+                perm = ADMIN_OPS;
 
                 break;
 
