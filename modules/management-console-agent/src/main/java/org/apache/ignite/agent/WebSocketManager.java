@@ -172,11 +172,17 @@ public class WebSocketManager implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
+        log.warning("close");
+
         if (ses != null)
             ses.disconnect();
 
+        log.warning("ses.disconnect()");
+
         if (client != null)
             client.stop();
+
+        log.warning("client.stop()");
     }
 
     /**

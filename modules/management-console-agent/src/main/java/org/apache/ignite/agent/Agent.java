@@ -42,6 +42,8 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
+import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
@@ -117,13 +119,16 @@ public class Agent extends ManagementConsoleProcessor {
     private DistributedMetaStorage metaStorage;
 
     /** Session registry. */
-    private SessionRegistry sessionRegistry;
+    private SessionRegistry sesRegistry;
 
     /** Active server uri. */
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
+
+    /** Listener. */
+    private final DiscoveryEventListener lsnr = this::launchAgentListener;
 
     /**
      * @param ctx Kernal context.
@@ -144,7 +149,7 @@ public class Agent extends ManagementConsoleProcessor {
         if (isCoordinator(ctx.discovery().discoCache()))
             connect();
         else
-            ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+            ctx.event().addDiscoveryEventListener(lsnr, EVTS_DISCOVERY);
 
         evtsExporter.addLocalEventListener();
         metricExporter.addMetricListener();
@@ -156,7 +161,7 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+        ctx.event().removeDiscoveryEventListener(lsnr, EVTS_DISCOVERY);
 
         U.closeQuiet(metricExporter);
         U.closeQuiet(evtsExporter);
@@ -172,6 +177,8 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Stopping Management Console agent.");
 
         U.shutdownNow(getClass(), connectPool, log);
+
+        log.warning("U.shutdownNow");
 
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
@@ -207,7 +214,7 @@ public class Agent extends ManagementConsoleProcessor {
      * @return Session registry.
      */
     public SessionRegistry sessionRegistry() {
-        return sessionRegistry;
+        return sesRegistry;
     }
 
     /**
@@ -280,7 +287,7 @@ public class Agent extends ManagementConsoleProcessor {
         log.info("Starting Management Console agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
-        sessionRegistry = new SessionRegistry(ctx);
+        sesRegistry = new SessionRegistry(ctx);
         clusterSrvc = new ClusterService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
