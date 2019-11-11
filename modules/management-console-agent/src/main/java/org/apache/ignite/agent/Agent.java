@@ -178,7 +178,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        log.warning("U.shutdownNow");
+        U.quietAndInfo(log, "U.shutdownNow");
 
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
