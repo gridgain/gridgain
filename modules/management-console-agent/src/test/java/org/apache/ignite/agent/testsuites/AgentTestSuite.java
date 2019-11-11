@@ -19,9 +19,9 @@ package org.apache.ignite.agent.testsuites;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.apache.ignite.agent.dto.action.RequestDeserializerTest;
 import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
-import org.apache.ignite.agent.service.event.EventsExporterTest;
-import org.apache.ignite.agent.service.sender.RetryableSenderTest;
-import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporterTest;
+import org.apache.ignite.agent.processor.event.EventsExporterTest;
+import org.apache.ignite.agent.processor.sender.RetryableSenderTest;
+import org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporterTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
