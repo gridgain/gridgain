@@ -19,10 +19,22 @@ package org.apache.ignite.tests.p2p.cache;
 import javax.cache.Cache;
 import org.apache.ignite.lang.IgniteClosure;
 
+/** */
 public class ScanQueryTestTransformerWrapper {
+    /** */
+    private final int scaleFactor;
+
+    /** */
     private final IgniteClosure<Cache.Entry<Integer, Integer>, Integer> clo = new IgniteClosure<Cache.Entry<Integer, Integer>, Integer>() {
         @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
-            return entry.getValue();
+            return entry.getValue() * scaleFactor;
         }
     };
+
+    /**
+     * @param scaleFactor Scale factor.
+     */
+    public ScanQueryTestTransformerWrapper(int scaleFactor) {
+        this.scaleFactor = scaleFactor;
+    }
 }
