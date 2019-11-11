@@ -43,7 +43,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
-import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
@@ -178,8 +177,6 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        U.quietAndInfo(log, "U.shutdownNow");
-
         U.closeQuiet(cacheSrvc);
         U.closeQuiet(actSrvc);
         U.closeQuiet(metricSrvc);
@@ -244,6 +241,8 @@ public class Agent extends ManagementConsoleProcessor {
         while (true) {
             try {
                 mgr.close();
+
+                U.dumpStack(log, "connect0");
 
                 curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
@@ -417,6 +416,8 @@ public class Agent extends ManagementConsoleProcessor {
      * Submit a reconnection task only if there no active connect in progress.
      */
     private void reconnect() {
+        U.quietAndInfo(log, "reconnect");
+
         if (connectPool.getActiveCount() == 0)
             connectPool.submit(this::connect0);
     }
