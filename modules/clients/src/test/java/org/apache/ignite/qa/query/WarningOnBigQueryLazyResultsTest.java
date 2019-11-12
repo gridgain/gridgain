@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.qa;
-
-import org.apache.ignite.qa.query.WarningOnBigQueryLazyResultsTest;
-import org.apache.ignite.qa.query.WarningOnBigQueryResultsTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.qa.query;
 
 /**
- * JDBC driver test suite.
+ * Tests for log print for long running query.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    WarningOnBigQueryResultsTest.class,
-    WarningOnBigQueryLazyResultsTest.class,
-})
-public class QaJdbcTestSuite {
+public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
+    /** {@inheritDoc} */
+    @Override protected boolean lazy() {
+        return true;
+    }
 }

@@ -270,6 +270,8 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
         if (rowIter != null && rowIter.hasNext()) {
             row = rowIter.next();
 
+            fetchSizeInterceptor.checkOnFetchNext();
+
             return true;
         }
         else
