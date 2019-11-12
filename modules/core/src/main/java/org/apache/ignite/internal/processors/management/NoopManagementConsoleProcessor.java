@@ -18,11 +18,14 @@ package org.apache.ignite.internal.processors.management;
 
 import org.apache.ignite.internal.GridKernalContext;
 
+/**
+ * No-op management console processor.
+ */
 public class NoopManagementConsoleProcessor extends AbstractManagementConsoleProcessor {
     /**
      * @param ctx Kernal context.
      */
-    protected NoopManagementConsoleProcessor(GridKernalContext ctx) {
+    public NoopManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 }
