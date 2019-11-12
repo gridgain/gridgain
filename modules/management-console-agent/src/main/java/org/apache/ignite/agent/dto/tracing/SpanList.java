@@ -14,26 +14,34 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.testsuites;
+package org.apache.ignite.agent.dto.tracing;
 
-import org.apache.ignite.agent.dto.metric.MetricProtocolTest;
-import org.apache.ignite.agent.dto.metric.MetricRegistrySchemaTest;
-import org.apache.ignite.agent.dto.metric.MetricSchemaTest;
-import org.apache.ignite.agent.dto.metric.VarIntTest;
-import org.apache.ignite.agent.processor.export.MetricsExporterTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.util.List;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Metrics exporter test suite.
+ * DTO for list of spans.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    MetricsExporterTest.class,
-    MetricProtocolTest.class,
-    MetricRegistrySchemaTest.class,
-    MetricSchemaTest.class,
-    VarIntTest.class
-})
-public class MetricsExporterSuite {
+public class SpanList {
+    /** List of spans. */
+    private final List<Span> list;
+
+    /**
+     * @param list List of spans.
+     */
+    public SpanList(List<Span> list) {
+        this.list = list;
+    }
+
+    /**
+     * @return List of spans.
+     */
+    public List<Span> list() {
+        return list;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(SpanList.class, this);
+    }
 }

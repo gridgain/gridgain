@@ -18,12 +18,12 @@ package org.apache.ignite.agent.processor;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteAuthenticationException;
-import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
 import org.apache.ignite.agent.dto.action.ResponseError;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;

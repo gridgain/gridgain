@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.sender;
+package org.apache.ignite.agent.ws;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
+import org.apache.ignite.logger.NullLogger;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -36,16 +38,18 @@ public class RetryableSenderTest {
      * Should split list of elements into batches and send.
      */
     @Test
-    public void shouldSendInBatches() {
+    public void shouldSendInBatches() throws Exception {
         List<List<Integer>> results = new ArrayList<>();
 
-        RetryableSender<Integer> snd = new RetryableSender<Integer>(null, "test-sender-", 10) {
-            @Override protected void sendInternal(List<Integer> elements) {
+        RetryableSender<Integer> snd = new RetryableSender<Integer>(new StandaloneGridKernalContext(new NullLogger(), null, null)) {
+            @Override boolean sendInternal(String dest, List<Integer> elements) {
                 results.add(elements);
+
+                return true;
             }
         };
 
-        snd.send(IntStream.range(0, 17).boxed().collect(Collectors.toList()));
+        snd.send("dest", IntStream.range(0, 17).boxed().collect(Collectors.toList()));
 
         with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS)
             .until(() -> !results.isEmpty() && results.get(0).size() == 10);
@@ -58,25 +62,28 @@ public class RetryableSenderTest {
      * Should retry send elements if we can't send.
      */
     @Test
-    public void shouldRetrySend() {
+    public void shouldRetrySend() throws Exception {
         List<List<Integer>> results = new ArrayList<>();
 
         AtomicBoolean shouldSnd = new AtomicBoolean(false);
 
         AtomicInteger retryCnt = new AtomicInteger();
 
-        RetryableSender<Integer> snd = new RetryableSender<Integer>(null, "test-sender-", 10) {
-            @Override protected void sendInternal(List<Integer> elements) {
+        RetryableSender<Integer> snd = new RetryableSender<Integer>(new StandaloneGridKernalContext(new NullLogger(), null, null)) {
+            @Override boolean sendInternal(String dest, List<Integer> elements) {
                 if (!shouldSnd.get()) {
                     retryCnt.incrementAndGet();
-                    throw new RuntimeException();
+
+                    return false;
                 }
-                else
-                    results.add(elements);
+
+                results.add(elements);
+
+                return true;
             }
         };
 
-        snd.send(IntStream.range(0, 17).boxed().collect(Collectors.toList()));
+        snd.send("dest", IntStream.range(0, 17).boxed().collect(Collectors.toList()));
 
         with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(() -> retryCnt.get() >= 2);
 

@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
-import org.apache.ignite.agent.WebSocketManager;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;

@@ -31,14 +31,13 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.processor.ActionProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
-import org.apache.ignite.agent.processor.config.NodesConfigurationExporter;
-import org.apache.ignite.agent.processor.config.NodesConfigurationProcessor;
-import org.apache.ignite.agent.processor.event.EventsExporter;
-import org.apache.ignite.agent.processor.event.EventsProcessor;
-import org.apache.ignite.agent.processor.metrics.MetricsExporter;
+import org.apache.ignite.agent.processor.ManagementConsoleTopicProcessor;
+import org.apache.ignite.agent.processor.export.EventsExporter;
+import org.apache.ignite.agent.processor.export.MetricsExporter;
+import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
+import org.apache.ignite.agent.processor.export.SpanExporter;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
-import org.apache.ignite.agent.processor.tracing.SpanExporter;
-import org.apache.ignite.agent.processor.tracing.SpanProcessor;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
@@ -83,6 +82,9 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
+    /** Topic management console. */
+    public static final String TOPIC_MANAGEMENT_CONSOLE = "mgmt-console-topic";
+
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
@@ -100,9 +102,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Cluster processor. */
     private ClusterInfoProcessor clusterProc;
 
-    /** Tracing processor. */
-    private SpanProcessor tracingProc;
-
     /** Span exporter. */
     private SpanExporter spanExporter;
 
@@ -118,11 +117,8 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Action processor. */
     private ActionProcessor actProc;
 
-    /** Event processor. */
-    private EventsProcessor evtProc;
-
-    /** Node configuration processor. */
-    private NodesConfigurationProcessor nodeConfigurationProc;
+    /** Topic processor. */
+    private ManagementConsoleTopicProcessor topicProc;
 
     /** Cache processor. */
     private CacheChangesProcessor cacheProc;
@@ -157,8 +153,11 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         this.metricExporter = new MetricsExporter(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
-        if (isLocalNodeCoordinator(ctx.discovery()))
+        if (isLocalNodeCoordinator(ctx.discovery())) {
+            topicProc = new ManagementConsoleTopicProcessor(ctx);
+
             connect();
+        }
         else
             ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
@@ -175,6 +174,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
+        quiteStop(topicProc);
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
         quiteStop(spanExporter);
@@ -193,9 +193,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         quiteStop(cacheProc);
         quiteStop(actProc);
         quiteStop(metricProc);
-        quiteStop(nodeConfigurationProc);
-        quiteStop(evtProc);
-        quiteStop(tracingProc);
         quiteStop(clusterProc);
         quiteStop(mgr);
 
@@ -225,6 +222,13 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
      */
     public SessionRegistry sessionRegistry() {
         return sesRegistry;
+    }
+
+    /**
+     * @return Weboscket manager.
+     */
+    public WebSocketManager webSocketManager() {
+        return mgr;
     }
 
     /**
@@ -307,10 +311,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         this.mgr = new WebSocketManager(ctx);
         this.sesRegistry = new SessionRegistry(ctx);
         this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
-        this.tracingProc = new SpanProcessor(ctx, mgr);
         this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.evtProc = new EventsProcessor(ctx, mgr);
-        this.nodeConfigurationProc = new NodesConfigurationProcessor(ctx, mgr);
         this.actProc = new ActionProcessor(ctx, mgr);
         this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 

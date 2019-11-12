@@ -31,12 +31,11 @@ import org.apache.ignite.agent.dto.action.RequestDeserializerTest;
 import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
 import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
-import org.apache.ignite.agent.processor.event.EventsExporterTest;
-import org.apache.ignite.agent.processor.event.EventsProcessorTest;
+import org.apache.ignite.agent.processor.ManagementConsoleTopicProcessorTest;
+import org.apache.ignite.agent.processor.export.EventsExporterTest;
+import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
-import org.apache.ignite.agent.processor.sender.RetryableSenderTest;
-import org.apache.ignite.agent.processor.tracing.SpanExporterTest;
-import org.apache.ignite.agent.processor.tracing.SpanProcessorTest;
+import org.apache.ignite.agent.ws.RetryableSenderTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -51,7 +50,7 @@ import org.junit.runners.Suite;
     CacheChangesProcessorTest.class,
     ClusterActionsControllerTest.class,
     ClusterInfoProcessorTest.class,
-    EventsProcessorTest.class,
+    ManagementConsoleTopicProcessorTest.class,
     IgniteConfigurationWrapperTest.class,
     MetricsProcessorTest.class,
     QueryActionsControllerTest.class,
@@ -59,7 +58,6 @@ import org.junit.runners.Suite;
     QueryRegistryTest.class,
     SessionRegistryTest.class,
     SecurityActionsControllerTest.class,
-    SpanProcessorTest.class,
     ActionControllerAnnotationProcessorTest.class,
     SpanExporterTest.class,
     EventsExporterTest.class,
