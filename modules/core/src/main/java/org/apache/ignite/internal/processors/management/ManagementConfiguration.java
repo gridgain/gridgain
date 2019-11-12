@@ -41,7 +41,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.management.console.uris"))
         ? "http://localhost:3000" : IgniteProperties.get("ignite.management.console.uris");
 
-    /** */                                                              
+    /** */
     private List<String> consoleUris = asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
@@ -230,7 +230,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
             return false;
 
         ManagementConfiguration that = (ManagementConfiguration)o;
-        
+
         return enabled == that.enabled &&
             Objects.equals(consoleUris, that.consoleUris) &&
             Objects.equals(consoleKeyStore, that.consoleKeyStore) &&
