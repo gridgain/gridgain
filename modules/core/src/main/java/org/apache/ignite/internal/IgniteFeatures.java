@@ -112,7 +112,10 @@ public enum IgniteFeatures {
     DR_CONTROL_UTILITY(25),
 
     /** */
-    TRACING(26);
+    TRACING(26),
+
+    /** Support of DR clear sender store from  Web Console. */
+    WC_DR_CLEAR_SENDER_STORE(29);
 
     /**
      * Unique feature identifier.
