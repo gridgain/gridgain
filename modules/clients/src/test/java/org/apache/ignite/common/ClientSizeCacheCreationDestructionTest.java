@@ -690,7 +690,7 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         assertEquals(0, this.srv.cacheNames().size());
 
-        this.srv.createCache("CACHE_GROUP");
+        this.srv.createCache(CACHE_GROUP_NAME);
     }
 
     /**
@@ -738,7 +738,7 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         assertEquals(0, this.srv.cacheNames().size());
 
-        this.srv.createCache("CACHE_GROUP");
+        this.srv.createCache(CACHE_GROUP_NAME);
     }
 
     /**
@@ -785,8 +785,6 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
                 fail(e.toString());
             }
 
-            latch.countDown();
-
             try {
                 conn.connect();
 
@@ -816,7 +814,7 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         assertEquals(0, this.srv.cacheNames().size());
 
-        this.srv.createCache("CACHE_GROUP");
+        this.srv.createCache(CACHE_GROUP_NAME);
     }
 
     /**
