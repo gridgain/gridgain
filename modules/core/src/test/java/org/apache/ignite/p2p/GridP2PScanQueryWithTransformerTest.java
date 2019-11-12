@@ -23,6 +23,7 @@ import java.net.URLClassLoader;
 import java.util.List;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -30,6 +31,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -54,9 +57,6 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
     /** */
     private static final int CACHE_SIZE = 10;
 
-    /** */
-    private boolean p2pEnabled;
-
     /** Initialize ClassLoader. */
     static {
         try {
@@ -68,6 +68,15 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
             throw new RuntimeException("Define property p2p.uri.cls", e);
         }
     }
+
+    /** */
+    private boolean p2pEnabled;
+
+    /** */
+    private ClassLoader clsLoader;
+
+    /** */
+    private IgniteLogger logger;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -81,7 +90,14 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setPeerClassLoadingEnabled(p2pEnabled);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setPeerClassLoadingEnabled(p2pEnabled);
+        cfg.setClassLoader(clsLoader);
+        if (logger != null)
+            cfg.setGridLogger(logger);
+
+        return cfg;
     }
 
     /**
@@ -239,13 +255,30 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     private void executeP2PClassLoadingEnabledTest(boolean withClientNode) throws Exception {
+        ListeningTestLogger listeningLogger = new ListeningTestLogger();
+        LogListener clsDeployedMsgLsnr = LogListener.matches(
+            "Class was deployed in SHARED or CONTINUOUS mode: " +
+                "class org.apache.ignite.tests.p2p.cache.ScanQueryTestTransformer")
+            .build();
+        listeningLogger.registerListener(clsDeployedMsgLsnr);
+        logger = listeningLogger;
+
         IgniteEx ig0 = startGrid(0);
+
+        logger = null;
 
         IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
 
         int sumPopulated = populateCache(cache);
 
-        IgniteEx requestingNode = withClientNode ? startClientGrid(1) : startGrid(1);
+        IgniteEx requestingNode;
+
+        if (withClientNode)
+             requestingNode = startClientGrid(1);
+        else {
+            clsLoader = TEST_CLASS_LOADER;
+            requestingNode = startGrid(1);
+        }
 
         IgniteCache<Object, Object> reqNodeCache = requestingNode.getOrCreateCache(DEFAULT_CACHE_NAME);
 
@@ -258,6 +291,7 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
         }
 
         assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
+        assertTrue(clsDeployedMsgLsnr.check());
     }
 
     /**
@@ -268,13 +302,30 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
      * @throws Exception If test scenario failed.
      */
     private void executeP2PClassLoadingDisabledTest(boolean withClientNode) throws Exception {
+        ListeningTestLogger listeningLogger = new ListeningTestLogger();
+        LogListener clsDeployedMsgLsnr = LogListener.matches(
+            "Class was deployed in SHARED or CONTINUOUS mode: " +
+                "class org.apache.ignite.tests.p2p.cache.ScanQueryTestTransformerWrapper")
+            .build();
+        listeningLogger.registerListener(clsDeployedMsgLsnr);
+        logger = listeningLogger;
+
         IgniteEx ig0 = startGrid(0);
+
+        logger = null;
 
         IgniteCache<Integer, Integer> cache = ig0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
 
         populateCache(cache);
 
-        IgniteEx requestNode = (withClientNode) ? startClientGrid(1) : startGrid(1);
+        IgniteEx requestNode;
+
+        if (withClientNode)
+            requestNode = startClientGrid(1);
+        else {
+            clsLoader = TEST_CLASS_LOADER;
+            requestNode = startGrid(1);
+        }
 
         IgniteCache<Object, Object> reqNodeCache = requestNode.getOrCreateCache(DEFAULT_CACHE_NAME);
 
@@ -287,6 +338,8 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
             //No-op.
 
             checkTopology(2);
+
+            assertFalse(clsDeployedMsgLsnr.check());
 
             return;
         }

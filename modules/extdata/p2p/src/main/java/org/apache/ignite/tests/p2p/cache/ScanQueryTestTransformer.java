@@ -30,13 +30,6 @@ public class ScanQueryTestTransformer implements IgniteClosure<Cache.Entry<Integ
     private final int scaleFactor;
 
     /** */
-    private final IgniteClosure<Cache.Entry<Integer, Integer>, Integer> clo = new IgniteClosure<Cache.Entry<Integer, Integer>, Integer>() {
-        @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
-            return entry.getValue() * 10;
-        }
-    };
-
-    /** */
     public ScanQueryTestTransformer(int scaleFactor) {
         this.scaleFactor = scaleFactor;
     }
