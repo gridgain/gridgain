@@ -46,7 +46,7 @@ import org.junit.Test;
  */
 public class MetricsCompactionTest extends GridCommonAbstractTest {
     /** Test uuid. */
-    private final static UUID TEST_UUID = UUID.randomUUID();
+    private static final UUID TEST_UUID = UUID.randomUUID();
 
     /**
      * Latches for blocking disco messages on a sender.
