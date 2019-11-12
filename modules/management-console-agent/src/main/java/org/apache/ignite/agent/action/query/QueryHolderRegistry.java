@@ -84,7 +84,7 @@ public class QueryHolderRegistry {
         });
 
         if (log.isDebugEnabled())
-            log.debug("Cursor was added to query holder [queryId=" + qryId + ", cursorId=" + cursorId + "]");
+            log.debug("Cursor was added to query holder [queryId=" + qryId + ", cursorId=" + cursorId + ']');
 
         return cursorId;
     }
@@ -116,7 +116,7 @@ public class QueryHolderRegistry {
         });
 
         if (log.isDebugEnabled())
-            log.debug("Cursor was closed [queryId=" + qryId + ", cursorId=" + cursorId + "]");
+            log.debug("Cursor was closed [queryId=" + qryId + ", cursorId=" + cursorId + ']');
     }
 
     /**
@@ -128,7 +128,7 @@ public class QueryHolderRegistry {
 
         qryHolders.computeIfPresent(qryId, (k, v) -> {
             if (log.isDebugEnabled())
-                log.debug("Cancel query by id [queryId=" + qryId + "]");
+                log.debug("Cancel query by id [queryId=" + qryId + ']');
 
             U.closeQuiet(v);
 
@@ -153,7 +153,7 @@ public class QueryHolderRegistry {
                     }
                     else {
                         if (log.isDebugEnabled())
-                            log.debug("Remove expire query holder, [queryId=" + qryId + "]");
+                            log.debug("Remove expire query holder, [queryId=" + qryId + ']');
 
                         // Remove stored query holder otherwise.
                         cancelQuery(qryId);

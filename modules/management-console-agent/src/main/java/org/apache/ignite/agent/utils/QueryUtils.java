@@ -26,7 +26,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -294,7 +293,7 @@ public class QueryUtils {
             return "size=" + ((Byte[])o).length;
 
         if (o instanceof Object[])
-            return "size=" + ((Object[])o).length + ", values=[" + mkString((Object[])o, 120) + "]";
+            return "size=" + ((Object[])o).length + ", values=[" + mkString((Object[])o, 120) + ']';
 
         if (o instanceof BinaryObject)
             return binaryToString((BinaryObject)o);
@@ -437,9 +436,9 @@ public class QueryUtils {
 
             // Add only SQL indexes.
             if (desc.type() == QueryIndexType.SORTED) {
-                Collection<String> idxFields = new LinkedList<>();
+                Collection<String> idxFields = new ArrayList<>();
 
-                Collection<String> descendings = new LinkedList<>();
+                Collection<String> descendings = new ArrayList<>();
 
                 for (String idxField : e.getValue().fields()) {
                     String idxFieldUpper = idxField.toUpperCase();

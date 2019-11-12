@@ -50,7 +50,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 /**
  * Cluster processor.
  */
-public class ClusterProcessor extends GridProcessorAdapter {
+public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_JOINED, EVT_NODE_FAILED, EVT_NODE_LEFT};
 
@@ -74,7 +74,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public ClusterProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public ClusterInfoProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
         this.mgr = mgr;
         cluster = ctx.grid().cluster();

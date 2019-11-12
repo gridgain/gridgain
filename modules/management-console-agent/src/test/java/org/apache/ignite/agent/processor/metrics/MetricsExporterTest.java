@@ -41,9 +41,9 @@ import static org.junit.Assert.assertTrue;
 /**
  *
  */
-public class MetricExporterTest {
+public class MetricsExporterTest {
     /** */
-    private static MetricExporter exporter;
+    private static MetricsExporter exporter;
 
     /** */
     private static final IgniteLogger LOG = new NullLogger();
@@ -53,7 +53,7 @@ public class MetricExporterTest {
      */
     @Before
     public void setUp() throws Exception {
-        exporter = new MetricExporter(new StandaloneGridKernalContext(LOG, null, null));
+        exporter = new MetricsExporter(new StandaloneGridKernalContext(LOG, null, null));
     }
 
     /** */

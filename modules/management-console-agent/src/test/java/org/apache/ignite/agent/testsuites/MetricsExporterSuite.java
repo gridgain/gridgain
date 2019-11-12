@@ -20,7 +20,7 @@ import org.apache.ignite.agent.dto.metric.MetricProtocolTest;
 import org.apache.ignite.agent.dto.metric.MetricRegistrySchemaTest;
 import org.apache.ignite.agent.dto.metric.MetricSchemaTest;
 import org.apache.ignite.agent.dto.metric.VarIntTest;
-import org.apache.ignite.agent.processor.metrics.MetricExporterTest;
+import org.apache.ignite.agent.processor.metrics.MetricsExporterTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -29,7 +29,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    MetricExporterTest.class,
+    MetricsExporterTest.class,
     MetricProtocolTest.class,
     MetricRegistrySchemaTest.class,
     MetricSchemaTest.class,

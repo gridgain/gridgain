@@ -59,7 +59,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
  * Reg schemas
  * Data
  */
-public class MetricExporter extends GridProcessorAdapter {
+public class MetricsExporter extends GridProcessorAdapter {
     /** Default varInt byte buffer capacity. */
     private static final int DEFAULT_VARINT_BYTE_BUF_CAPACITY = 2048;
 
@@ -71,7 +71,7 @@ public class MetricExporter extends GridProcessorAdapter {
      *
      * @param ctx Kernal context.
      */
-    public MetricExporter(GridKernalContext ctx) {
+    public MetricsExporter(GridKernalContext ctx) {
         super(ctx);
 
         this.lsnr = (UUID nodeId, Object msg, byte plc) -> {

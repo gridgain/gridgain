@@ -28,12 +28,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
-import static org.apache.ignite.agent.processor.config.NodeConfigurationExporter.TOPIC_NODE_CFG;
+import static org.apache.ignite.agent.processor.config.NodesConfigurationExporter.TOPIC_NODE_CFG;
 
 /**
  * Node configuration processor.
  */
-public class NodeConfigurationProcessor extends GridProcessorAdapter {
+public class NodesConfigurationProcessor extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 10;
 
@@ -50,7 +50,7 @@ public class NodeConfigurationProcessor extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public NodeConfigurationProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public NodesConfigurationProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
         this.mgr = mgr;
         this.snd = createSender();

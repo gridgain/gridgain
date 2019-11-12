@@ -32,7 +32,7 @@ public class ActionControllerAnnotationProcessorTest {
      */
     @Test
     public void findActionMethods() {
-        Map<String, ActionMethod> methods = ActionControllerAnnotationProcessor.findActionMethods("org.apache.ignite.agent.action");
+        Map<String, ActionMethod> methods = ActionControllerAnnotationReader.findActionMethods("org.apache.ignite.agent.action");
 
         assertTrue(methods.containsKey("TestActionController.action"));
 

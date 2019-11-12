@@ -17,11 +17,14 @@
 package org.apache.ignite.agent.dto.topology;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 import com.google.common.collect.Lists;
-import org.apache.ignite.agent.NoopDiscoveryMetricsProvider;
+import org.apache.ignite.cache.CacheMetrics;
+import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.junit.Test;
 
@@ -47,7 +50,7 @@ public class TopologySnapshotTest {
             Lists.newArrayList("127.0.0.1"),
             Collections.emptyList(),
             8080,
-            new NoopDiscoveryMetricsProvider(),
+            new TestDiscoveryMetricsProvider(),
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_1
         );
@@ -63,7 +66,7 @@ public class TopologySnapshotTest {
             Lists.newArrayList("127.0.0.1"),
             Collections.emptyList(),
             8080,
-            new NoopDiscoveryMetricsProvider(),
+            new TestDiscoveryMetricsProvider(),
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_2
         );
@@ -129,7 +132,7 @@ public class TopologySnapshotTest {
             Lists.newArrayList("127.0.0.1"),
             Collections.emptyList(),
             8080,
-            new NoopDiscoveryMetricsProvider(),
+            new TestDiscoveryMetricsProvider(),
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_1
         );
@@ -156,6 +159,21 @@ public class TopologySnapshotTest {
                 assertFalse(node.isClient());
                 assertEquals(clusterNodeId_1, node.getNodeId());
             }
+        }
+    }
+
+    /**
+     * Test discovery metrics provider.
+     */
+    public static class TestDiscoveryMetricsProvider implements DiscoveryMetricsProvider {
+        /** {@inheritDoc} */
+        @Override public ClusterMetrics metrics() {
+            return null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<Integer, CacheMetrics> cacheMetrics() {
+            return null;
         }
     }
 }

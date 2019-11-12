@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 /**
  * Metric processor.
  */
-public class MetricProcessor extends GridProcessorAdapter {
+public class MetricsProcessor extends GridProcessorAdapter {
     /** Manager. */
     private WebSocketManager mgr;
 
@@ -46,7 +46,7 @@ public class MetricProcessor extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public MetricProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public MetricsProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
 
         this.mgr = mgr;

@@ -19,7 +19,7 @@ package org.apache.ignite.internal;
 import java.lang.reflect.Constructor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.management.NoopManagementConsoleProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
@@ -112,10 +112,10 @@ public enum IgniteComponentType {
 
     /** Management console. */
     MANAGEMENT_CONSOLE(
-        ManagementConsoleProcessor.class.getName(),
-        "org.apache.ignite.agent.Agent",
+        NoopManagementConsoleProcessor.class.getName(),
+        "org.apache.ignite.agent.ManagementConsoleAgent",
         "ignite-management-console-agent",
-        "org.apache.ignite.agent.processor.metrics.MetricExporterMessageFactory"
+        "org.apache.ignite.agent.processor.metrics.MetricsExporterMessageFactory"
     );
 
     /** No-op class name. */

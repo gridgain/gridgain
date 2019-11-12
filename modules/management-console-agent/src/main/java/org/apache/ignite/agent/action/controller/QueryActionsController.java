@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.action.annotation.ActionController;
@@ -38,7 +37,9 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.agent.utils.QueryUtils.fetchResult;
@@ -80,10 +81,10 @@ public class QueryActionsController {
      * @param qryId Query id.
      * @return Completable feature.
      */
-    public CompletableFuture<Void> cancel(String qryId) {
+    public IgniteFuture<Void> cancel(String qryId) {
         qryRegistry.cancelQuery(qryId);
 
-        return CompletableFuture.completedFuture(null);
+        return new IgniteFinishedFutureImpl<>();
     }
 
     /**
@@ -187,7 +188,7 @@ public class QueryActionsController {
                 return Collections.singletonList(res);
             }
             catch (Throwable e) {
-                log.warning("Failed to execute scan query: [qryId=" + qryId + ", cache=" + cacheName + "]", e);
+                log.warning("Failed to execute scan query: [qryId=" + qryId + ", cache=" + cacheName + ']', e);
 
                 qryRegistry.cancelQuery(qryId);
 

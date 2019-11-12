@@ -16,21 +16,20 @@
 
 package org.apache.ignite.internal.processors.management;
 
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 /**
  * No-op implementation of Management Console Agent, throws exception on usage attempt.
  */
-public class ManagementConsoleProcessor extends GridProcessorAdapter {
+public abstract class AbstractManagementConsoleProcessor extends GridProcessorAdapter {
     /** Management configuration instance. */
     protected ManagementConfiguration cfg = new ManagementConfiguration();
 
     /**
      * @param ctx Kernal context.
      */
-    public ManagementConsoleProcessor(GridKernalContext ctx) {
+    protected AbstractManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 
@@ -50,12 +49,5 @@ public class ManagementConsoleProcessor extends GridProcessorAdapter {
      */
     public ManagementConfiguration configuration() {
         return cfg;
-    }
-
-    /**
-     * @return No-op processor usage exception;
-     */
-    private IgniteException processorException() {
-        return new IgniteException("Current Ignite configuration does not support Management Console.");
     }
 }

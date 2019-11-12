@@ -24,7 +24,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 /**
  * Message factory for metric exporter messages.
  */
-public class MetricExporterMessageFactory implements MessageFactory {
+public class MetricsExporterMessageFactory implements MessageFactory {
     /** {@inheritDoc} */
     @Override public Message create(short type) {
         Message msg = null;

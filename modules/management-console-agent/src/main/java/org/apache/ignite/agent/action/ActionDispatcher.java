@@ -26,18 +26,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.Agent;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
+import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteFuture;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.actions;
-import static org.apache.ignite.agent.utils.AgentUtils.completeFutureWithException;
-import static org.apache.ignite.agent.utils.AgentUtils.completeIgniteFuture;
+import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReader.actions;
 
 /**
  * Action dispatcher.
@@ -58,7 +58,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
     public ActionDispatcher(GridKernalContext ctx) {
         super(ctx);
 
-        sesRegistry = ((Agent) ctx.managementConsole()).sessionRegistry();
+        sesRegistry = ((ManagementConsoleAgent) ctx.managementConsole()).sessionRegistry();
     }
 
     /**
@@ -67,7 +67,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
      * @param req Request.
      * @return Completable future with action result.
      */
-    public CompletableFuture<CompletableFuture> dispatch(Request req) {
+    public CompletableFuture<IgniteFuture> dispatch(Request req) {
         String act = req.getAction();
 
         ActionMethod mtd = actions().get(act);
@@ -84,7 +84,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
      * @param mtd Method.
      * @param req Request.
      */
-    private CompletableFuture handleRequest(ActionMethod mtd, Request req) {
+    private IgniteFuture handleRequest(ActionMethod mtd, Request req) {
         try {
             Class<?> ctrlCls = mtd.controllerClass();
 
@@ -109,7 +109,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
                 }
 
                 if (log.isDebugEnabled())
-                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + "]");
+                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + ']');
 
                 if (ses.securityContext() != null) {
                     try (OperationSecurityContext ignored = ctx.security().withContext(ses.securityContext())) {
@@ -121,15 +121,15 @@ public class ActionDispatcher extends GridProcessorAdapter {
             return invoke(mtd.method(), controllers.get(ctrlCls), req.getArgument());
         }
         catch (InvocationTargetException e) {
-            return completeFutureWithException(e.getTargetException());
+            return new IgniteFinishedFutureImpl(e.getTargetException());
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
 
-            return completeFutureWithException(e);
+            return new IgniteFinishedFutureImpl(e);
         }
         catch (Exception e) {
-            return completeFutureWithException(e);
+            return new IgniteFinishedFutureImpl(e);
         }
     }
 
@@ -141,16 +141,19 @@ public class ActionDispatcher extends GridProcessorAdapter {
      * @param arg Argument.
      */
     @SuppressWarnings("unchecked")
-    private CompletableFuture invoke(Method mtd, Object controller, Object arg) throws Exception {
+    private IgniteFuture invoke(Method mtd, Object controller, Object arg) throws Exception {
         Object res = arg == null ? mtd.invoke(controller) : mtd.invoke(controller, arg);
 
+        if (res instanceof IgniteFuture)
+            return (IgniteFuture) res;
+
         if (res instanceof Void)
-            return completedFuture(null);
+            return new IgniteFinishedFutureImpl();
 
         if (res instanceof IgniteInternalFuture)
-            return completeIgniteFuture((IgniteInternalFuture) res);
+            return new IgniteFutureImpl((IgniteInternalFuture) res);
 
-        return completedFuture(res);
+        return new IgniteFinishedFutureImpl(res);
     }
 
     /** {@inheritDoc} */

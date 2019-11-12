@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
@@ -30,7 +29,6 @@ import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.GridProcessor;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
@@ -95,37 +93,6 @@ public final class AgentUtils {
     }
 
     /**
-     * @param igniteFut Ignite internal future.
-     */
-    public static <T> CompletableFuture completeIgniteFuture(IgniteInternalFuture<T> igniteFut) {
-        CompletableFuture<Object> fut = new CompletableFuture<>();
-
-        igniteFut.chain(f -> {
-            try {
-                fut.complete(f.get());
-            }
-            catch (Exception ex) {
-                fut.completeExceptionally(ex);
-            }
-
-            return f;
-        });
-
-        return fut;
-    }
-
-    /**
-     * @param e Exception.
-     */
-    public static <T> CompletableFuture<T> completeFutureWithException(Throwable e) {
-        CompletableFuture<T> fut = new CompletableFuture<>();
-
-        fut.completeExceptionally(e);
-
-        return fut;
-    }
-
-    /**
      * Authenticate by session and ignite security.
      *
      * @param security Security.
@@ -146,10 +113,11 @@ public final class AgentUtils {
         SecurityContext subjCtx = security.authenticate(authCtx);
 
         if (subjCtx == null) {
-            if (ses.credentials() == null)
+            if (ses.credentials() == null) {
                 throw new IgniteAuthenticationException(
                     "Failed to authenticate remote client (secure session SPI not set?): " + ses.id()
                 );
+            }
 
             throw new IgniteAuthenticationException(
                 "Failed to authenticate remote client (invalid credentials?): " + ses.id()
@@ -215,9 +183,10 @@ public final class AgentUtils {
 
         Set<String> features = U.newHashSet(enums.length);
 
-        for (IgniteFeatures val : enums)
+        for (IgniteFeatures val : enums) {
             if (allNodesSupports(ctx, nodes, val))
                 features.add(val.name());
+        }
 
         return features;
     }
@@ -229,7 +198,6 @@ public final class AgentUtils {
     public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
         return col == null ? Stream.empty() : col.stream();
     }
-
 
     /**
      * Quietly closes given processor ignoring possible checked exception.
