@@ -459,7 +459,7 @@ final class BinaryMetadataTransport {
 
                         metaLocCache.put(typeId, newHolder);
 
-                        metadataFileStore.prepareToWriteMetadata(typeId, newHolder.pendingVersion());
+                        metadataFileStore.prepareToWriteMetadata(msg.metadata(), pendingVer);
                     }
                 }
             }
@@ -499,7 +499,7 @@ final class BinaryMetadataTransport {
 
                             metaLocCache.put(typeId, newHolder);
 
-                            metadataFileStore.prepareToWriteMetadata(typeId, newHolder.pendingVersion());
+                            metadataFileStore.prepareToWriteMetadata(mergedMeta, pendingVer);
                         }
                     }
                     catch (BinaryObjectException ignored) {
@@ -584,12 +584,12 @@ final class BinaryMetadataTransport {
                     //this is duplicate ack
                     msg.duplicated(true);
 
-                    metadataFileStore.finishWrite(typeId, holder.pendingVersion());
+                    metadataFileStore.finishWrite(typeId, newAcceptedVer);
 
                     return;
                 }
 
-                metadataFileStore.writeMetadataAsync(holder.metadata(), holder.pendingVersion());
+                metadataFileStore.writeMetadataAsync(typeId, newAcceptedVer);
 
                 metaLocCache.put(typeId, new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
             }

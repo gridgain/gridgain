@@ -214,33 +214,25 @@ class BinaryMetadataFileStore {
     }
 
     /**
-     * @param typeId Binary metadata type id.
-     * @param typeVer Type version.
-     */
-    void prepareToWriteMetadata(int typeId, int typeVer) {
-        if (!isPersistenceEnabled)
-            return;
-
-        writer.prepareToWriteMetadata(typeId, typeVer);
-    }
-
-    /**
      * @param meta Binary metadata to be written.
      * @param typeVer Type version.
      */
-    void writeMetadataAsync(BinaryMetadata meta, int typeVer) {
+    void prepareToWriteMetadata(BinaryMetadata meta, int typeVer) {
         if (!isPersistenceEnabled)
             return;
 
-        if (log.isDebugEnabled())
-            log.debug(
-                "Submitting task for async write for" +
-                    " [typeName=" + meta.typeName() +
-                    ", typeId=" + meta.typeId() +
-                    ", typeVersion=" + typeVer + ']'
-            );
+        writer.reservedMetadataToWrite(meta, typeVer);
+    }
 
-        writer.submit(new WriteOperationTask(meta, typeVer));
+    /**
+     * @param typeId Type ID.
+     * @param typeVer Type version.
+     */
+    void writeMetadataAsync(int typeId, int typeVer) {
+        if (!isPersistenceEnabled)
+            return;
+
+        writer.allowToWrite(typeId, typeVer);
     }
 
     /**
@@ -280,7 +272,7 @@ class BinaryMetadataFileStore {
         /** */
         private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue<>();
         /** */
-        private final ConcurrentMap<OperationSyncKey, GridFutureAdapter> writeOpFutures = new ConcurrentHashMap<>();
+        private final ConcurrentMap<OperationSyncKey, WriteOperationTask> writeOpTask = new ConcurrentHashMap<>();
 
         /** */
         BinaryMetadataAsyncWriter() {
@@ -288,13 +280,33 @@ class BinaryMetadataFileStore {
         }
 
         /**
-         * @param task Write operation task.
+         * @param typeId Type ID.
+         * @param typeVer Type version.
          */
-        synchronized void submit(WriteOperationTask task) {
+        synchronized void allowToWrite(int typeId, int typeVer) {
             if (isCancelled())
                 return;
 
-            queue.add(task);
+            WriteOperationTask task = writeOpTask.get(new OperationSyncKey(typeId, typeVer));
+
+            if (task != null) {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Submitting task for async write for" +
+                            " [typeId=" + typeId +
+                            ", typeVersion=" + typeVer + ']'
+                    );
+
+                queue.add(task);
+            }
+            else {
+                if (log.isDebugEnabled())
+                    log.debug(
+                        "Task for async write for" +
+                            " [typeId=" + typeId +
+                            ", typeVersion=" + typeVer + "] not found"
+                    );
+            }
         }
 
         /** {@inheritDoc} */
@@ -305,7 +317,7 @@ class BinaryMetadataFileStore {
 
             IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled (node is stopping).");
 
-            for (Map.Entry<OperationSyncKey, GridFutureAdapter> e : writeOpFutures.entrySet()) {
+            for (Map.Entry<OperationSyncKey, WriteOperationTask> e : writeOpTask.entrySet()) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Cancelling future for write operation for" +
@@ -313,10 +325,10 @@ class BinaryMetadataFileStore {
                             ", typeVer=" + e.getKey().typeVer + ']'
                     );
 
-                e.getValue().onDone(err);
+                e.getValue().future.onDone(err);
             }
 
-            writeOpFutures.clear();
+            writeOpTask.clear();
         }
 
         /** {@inheritDoc} */
@@ -347,8 +359,8 @@ class BinaryMetadataFileStore {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Starting write operation for" +
-                        " [typeId=" + task.meta.typeId() +
-                        ", typeVer=" + task.typeVer + ']'
+                            " [typeId=" + task.meta.typeId() +
+                            ", typeVer=" + task.typeVer + ']'
                     );
 
                 writeMetadata(task.meta);
@@ -365,9 +377,9 @@ class BinaryMetadataFileStore {
          * @param typeVer Type version.
          */
         void finishWriteFuture(int typeId, int typeVer) {
-            GridFutureAdapter fut = writeOpFutures.remove(new OperationSyncKey(typeId, typeVer));
+            WriteOperationTask task = writeOpTask.remove(new OperationSyncKey(typeId, typeVer));
 
-            if (fut != null) {
+            if (task != null) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Future for write operation for" +
@@ -376,7 +388,7 @@ class BinaryMetadataFileStore {
                             " completed."
                     );
 
-                fut.onDone();
+                task.future.onDone();
             }
             else {
                 if (log.isDebugEnabled())
@@ -390,21 +402,22 @@ class BinaryMetadataFileStore {
         }
 
         /**
-         * @param typeId Binary metadata type id.
+         * @param meta Binary metadata.
          * @param typeVer Type version.
          */
-        synchronized void prepareToWriteMetadata(int typeId, int typeVer) {
+        synchronized void reservedMetadataToWrite(BinaryMetadata meta, int typeVer) {
             if (isCancelled())
                 return;
 
             if (log.isDebugEnabled())
                 log.debug(
                     "Prepare task for async write for" +
-                        " [typeId=" + typeId +
+                        "[typeName=" + meta.typeName() +
+                        ", typeId=" + meta.typeId() +
                         ", typeVersion=" + typeVer + ']'
                 );
 
-            writeOpFutures.putIfAbsent(new OperationSyncKey(typeId, typeVer), new GridFutureAdapter());
+            writeOpTask.putIfAbsent(new OperationSyncKey(meta.typeId(), typeVer), new WriteOperationTask(meta, typeVer));
         }
 
         /**
@@ -421,9 +434,9 @@ class BinaryMetadataFileStore {
                 return;
             }
 
-            GridFutureAdapter fut = writeOpFutures.get(new OperationSyncKey(typeId, typeVer));
+            WriteOperationTask task = writeOpTask.get(new OperationSyncKey(typeId, typeVer));
 
-            if (fut != null) {
+            if (task != null) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Waiting for write completion of" +
@@ -431,7 +444,7 @@ class BinaryMetadataFileStore {
                             ", typeVer=" + typeVer + "]"
                     );
                 try {
-                    fut.get();
+                    task.future.get();
                 }
                 finally {
                     if (log.isDebugEnabled())
@@ -453,6 +466,8 @@ class BinaryMetadataFileStore {
         private final BinaryMetadata meta;
         /** */
         private final int typeVer;
+        /** */
+        private final GridFutureAdapter future = new GridFutureAdapter();
 
         /**
          * @param meta Metadata for binary type.
