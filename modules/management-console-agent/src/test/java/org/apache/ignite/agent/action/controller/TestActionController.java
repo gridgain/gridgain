@@ -23,7 +23,7 @@ import org.apache.ignite.internal.GridKernalContext;
 /**
  * Test action controller for other tests.
  */
-@ActionController
+@ActionController("IgniteTestActionController")
 public class TestActionController {
     /**
      * Context.

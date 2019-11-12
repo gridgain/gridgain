@@ -27,6 +27,7 @@ import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.SecurityException;
 
@@ -113,11 +114,11 @@ public class ActionProcessor extends GridProcessorAdapter {
      * @return Integer error code.
      */
     private int getErrorCode(Throwable e) {
-        Throwable cause = e.getCause();
-
-        if (cause instanceof SecurityException)
+        if (e instanceof SecurityException || X.hasCause(e, SecurityException.class))
             return AUTHORIZE_ERROR_CODE;
-        else if (cause instanceof IgniteAuthenticationException || cause instanceof IgniteAccessControlException)
+        else if (e instanceof IgniteAuthenticationException || e instanceof IgniteAccessControlException
+            || X.hasCause(e, IgniteAuthenticationException.class, IgniteAccessControlException.class)
+        )
             return AUTHENTICATION_ERROR_CODE;
 
         return INTERNAL_ERROR_CODE;
