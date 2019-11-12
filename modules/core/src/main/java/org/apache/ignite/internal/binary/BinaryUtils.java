@@ -1889,7 +1889,7 @@ public class BinaryUtils {
 
                 handles.setHandle(po, start);
 
-                return po;
+                return deserialize ? po.deserialize() : po;
             }
 
             case GridBinaryMarshaller.BYTE:
