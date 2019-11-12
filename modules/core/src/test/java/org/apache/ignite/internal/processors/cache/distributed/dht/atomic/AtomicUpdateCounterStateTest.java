@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -36,7 +37,10 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -112,21 +116,17 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testBackupFailCrd() throws Exception {
-
+    public void testPrimaryFail() throws Exception {
+        doTestPrimaryFail();
     }
 
-    /**
-     *
-     * @throws Exception
-     */
     @Test
-    public void testSinglePutReorderPrimaryFail() throws Exception {
+    public void testSinglePutReorderBackupFail() throws Exception {
         doTestBackupFail();
     }
 
     @Test
-    public void testPutAllReorderPrimaryFailNearPrimary() throws Exception {
+    public void testPutAllReorderBackupFailNearPrimary() throws Exception {
         doTestReorderBackupRestartPutAll(new Supplier<Ignite>() {
             @Override public Ignite get() {
                 return grid(0);
@@ -135,27 +135,12 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testPutAllReorderPrimaryFailNearClient() throws Exception {
+    public void testPutAllReorderBackupFailNearClient() throws Exception {
         doTestReorderBackupRestartPutAll(new Supplier<Ignite>() {
             @Override public Ignite get() {
                 return grid("client");
             }
         });
-    }
-
-    @Test
-    public void testPrimaryFailNotCrd() throws Exception {
-
-    }
-
-    @Test
-    public void testPrimaryAndNearFailCrd() throws Exception {
-
-    }
-
-    @Test
-    public void testPrimaryAndNearFailNotCrd() throws Exception {
-
     }
 
     private void doTestBackupFail() throws Exception {
@@ -294,6 +279,68 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             awaitPartitionMapExchange();
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    private void doTestPrimaryFail() throws Exception {
+        backups = 2;
+
+        try {
+            IgniteEx crd = startGrids(backups + 1);
+
+            crd.cluster().active(true);
+
+            IgniteEx client = startGrid("client");
+
+            assertNotNull(client.cache(DEFAULT_CACHE_NAME));
+
+            IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+            final int part = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.localNode())[1];
+
+            List<Integer> keys = partitionKeys(cache, part, 10, 0);
+
+            TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
+                return msg instanceof GridDhtAtomicSingleUpdateRequest;
+            });
+
+            IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+                try {
+                    cache.put(keys.get(0), keys.get(0));
+                }
+                catch (Exception e) {
+                    assertTrue(X.hasCause(e, NodeStoppingException.class));
+                }
+            });
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+            TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+                boolean first = true;
+
+                @Override public boolean apply(T2<ClusterNode, GridIoMessage> objects) {
+                    if (first) {
+                        first = false;
+
+                        return true;
+                    }
+
+                    return false;
+                }
+            });
+
+            assertTrue(TestRecordingCommunicationSpi.spi(crd).hasBlockedMessages());
+
+            doSleep(1000);
+
+            crd.close();
+
+            fut.get();
+
+            assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
         }
         finally {
             stopAllGrids();
