@@ -176,6 +176,8 @@ public class Agent extends ManagementConsoleProcessor {
     private void disconnect() {
         log.info("Stopping Management Console agent.");
 
+        U.shutdownNow(getClass(), connectPool, log);
+
         quiteStop(cacheSrvc);
         quiteStop(actSrvc);
         quiteStop(metricSrvc);
@@ -183,8 +185,6 @@ public class Agent extends ManagementConsoleProcessor {
         quiteStop(evtSrvc);
         quiteStop(tracingSrvc);
         quiteStop(clusterSrvc);
-
-        U.shutdownNow(getClass(), connectPool, log);
         quiteStop(mgr);
 
         disconnected.set(false);
