@@ -32,10 +32,8 @@ import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.agent.dto.tracing.Annotation;
 import org.apache.ignite.agent.dto.tracing.Span;
-import org.apache.ignite.agent.processor.sender.CoordinatorSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 
@@ -46,9 +44,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * Span exporter which send spans to coordinator.
  */
 public class SpanExporter extends GridProcessorAdapter {
-    /** Queue capacity. */
-    private static final int QUEUE_CAP = 100;
-
     /** Topic for traces. */
     public static final String TOPIC_SPANS = "mgmt-console-spans-topic";
 
@@ -61,9 +56,6 @@ public class SpanExporter extends GridProcessorAdapter {
     /** Exporter. */
     private OpenCensusTraceExporter exporter;
 
-    /** Worker. */
-    private CoordinatorSender<Span> snd;
-
     /**
      * @param ctx Context.
      */
@@ -72,8 +64,8 @@ public class SpanExporter extends GridProcessorAdapter {
 
         if (ctx.config().getTracingSpi() != null) {
             try {
-                snd = createSender();
                 exporter = new OpenCensusTraceExporter(getTraceHandler());
+
                 exporter.start(ctx.igniteInstanceName());
             }
             catch (IgniteSpiException ex) {
@@ -84,11 +76,8 @@ public class SpanExporter extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        if (exporter != null) {
-            U.closeQuiet(snd);
-
+        if (exporter != null)
             exporter.stop();
-        }
     }
 
     /**
@@ -102,16 +91,9 @@ public class SpanExporter extends GridProcessorAdapter {
                         .map(SpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
-                snd.send(spans);
+                ctx.grid().message(ctx.grid().cluster().forOldest()).send(TOPIC_SPANS, (Object)spans);
             }
         };
-    }
-
-    /**
-     * @return Worker which send messages from queue to topic.
-     */
-    private CoordinatorSender<Span> createSender() {
-        return new CoordinatorSender<>(ctx, TOPIC_SPANS, QUEUE_CAP);
     }
 
     /**

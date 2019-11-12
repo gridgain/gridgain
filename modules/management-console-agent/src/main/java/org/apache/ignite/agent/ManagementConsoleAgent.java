@@ -169,8 +169,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
 
         exporter.export();
-
-        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */

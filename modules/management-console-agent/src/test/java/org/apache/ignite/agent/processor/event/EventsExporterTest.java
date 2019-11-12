@@ -16,13 +16,11 @@
 
 package org.apache.ignite.agent.processor.event;
 
-import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.agent.processor.AbstractServiceTest;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.event.VisorGridDiscoveryEvent;
 import org.apache.ignite.testframework.GridTestNode;
 import org.junit.Test;
@@ -64,11 +62,7 @@ public class EventsExporterTest extends AbstractServiceTest {
 
         assertEquals(TOPIC_EVTS, topicCaptor.getValue());
 
-        Collection<VisorGridDiscoveryEvent> evts = (Collection<VisorGridDiscoveryEvent>) evtsCaptor.getValue();
-
-        assertEquals(1, evts.size());
-
-        VisorGridDiscoveryEvent actual = F.first(evts);
+        VisorGridDiscoveryEvent actual = (VisorGridDiscoveryEvent) evtsCaptor.getValue();
 
         assertEquals(evt.type(), actual.getTypeId());
         assertEquals(evt.message(), actual.getMessage());

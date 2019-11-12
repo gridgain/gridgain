@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.processor.event;
 
-import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.processor.sender.ManagementConsoleSender;
@@ -41,7 +40,7 @@ public class EventsProcessor extends GridProcessorAdapter {
     private final RetryableSender<VisorGridEvent> snd;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, List<VisorGridEvent>> lsnr = this::processEvents;
+    private final IgniteBiPredicate<UUID, VisorGridEvent> lsnr = this::processEvent;
 
     /**
      * @param ctx Context.
@@ -70,10 +69,10 @@ public class EventsProcessor extends GridProcessorAdapter {
 
     /**
      * @param nid Node id.
-     * @param evts Events.
+     * @param evt Event.
      */
-    boolean processEvents(UUID nid, List<VisorGridEvent> evts) {
-        snd.send(evts);
+    boolean processEvent(UUID nid, VisorGridEvent evt) {
+        snd.send(evt);
 
         return true;
     }

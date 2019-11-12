@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.processor.config;
 
-import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.NodeConfiguration;
@@ -44,7 +43,7 @@ public class NodesConfigurationProcessor extends GridProcessorAdapter {
     private final ManagementConsoleSender<NodeConfiguration> snd;
 
     /** On node traces listener. */
-    private final IgniteBiPredicate<UUID, Object> lsnr = this::processNodeConfigurations;
+    private final IgniteBiPredicate<UUID, Object> lsnr = this::processNodeConfiguration;
 
     /**
      * @param ctx Context.
@@ -67,10 +66,10 @@ public class NodesConfigurationProcessor extends GridProcessorAdapter {
 
     /**
      * @param nid Uuid.
-     * @param cfgList Config list.
+     * @param strCfg Config.
      */
-    boolean processNodeConfigurations(UUID nid, Object cfgList) {
-        String cfg = F.first((List<String>)cfgList);
+    boolean processNodeConfiguration(UUID nid, Object strCfg) {
+        String cfg = (String)strCfg;
 
         if (!F.isEmpty(cfg)) {
             String consistentId = ctx.cluster().get().node(nid).consistentId().toString();

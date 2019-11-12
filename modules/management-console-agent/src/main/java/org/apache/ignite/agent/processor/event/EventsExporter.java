@@ -16,13 +16,10 @@
 
 package org.apache.ignite.agent.processor.event;
 
-import org.apache.ignite.agent.processor.sender.CoordinatorSender;
-import org.apache.ignite.agent.processor.sender.RetryableSender;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 
@@ -36,9 +33,6 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
  * Events exporter which send events to coordinator.
  */
 public class EventsExporter extends GridProcessorAdapter {
-    /** Queue capacity. */
-    private static final int QUEUE_CAP = 100;
-
     /** Topic for events. */
     static final String TOPIC_EVTS = "mgmt-console-event-topic";
 
@@ -51,10 +45,6 @@ public class EventsExporter extends GridProcessorAdapter {
     /** Event mapper. */
     private static final VisorEventMapper EVT_MAPPER = new VisorEventMapper();
 
-
-    /** Sender. */
-    private RetryableSender<VisorGridEvent> snd;
-
     /** On node traces listener. */
     private final GridLocalEventListener lsnr = this::processEvent;
 
@@ -63,8 +53,6 @@ public class EventsExporter extends GridProcessorAdapter {
      */
     public EventsExporter(GridKernalContext ctx) {
         super(ctx);
-        
-        snd = new CoordinatorSender<>(ctx, TOPIC_EVTS, QUEUE_CAP);
     }
 
     /**
@@ -84,8 +72,6 @@ public class EventsExporter extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         this.ctx.event().removeLocalEventListener(lsnr, concat(LOCAL_EVT_TYPES, GLOBAL_EVT_TYPES));
-
-        U.closeQuiet(snd);
     }
 
     /**
@@ -97,6 +83,8 @@ public class EventsExporter extends GridProcessorAdapter {
         VisorGridEvent evt0 = EVT_MAPPER.apply(evt);
 
         if (evt0 != null)
-            snd.send(EVT_MAPPER.apply(evt));
+            ctx.grid()
+                .message(ctx.grid().cluster().forOldest())
+                .send(TOPIC_EVTS, EVT_MAPPER.apply(evt));
     }
 }
