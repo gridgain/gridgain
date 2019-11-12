@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
 import org.apache.ignite.Ignite;
@@ -354,6 +355,31 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             fut.get();
 
             assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    @Test
+    public void testSinglePrimaryPutAll() throws Exception {
+        backups = 0;
+
+        try {
+            IgniteEx crd = startGrids(1);
+
+            crd.cluster().active(true);
+
+            IgniteEx client = startGrid("client");
+
+            Map<Integer, Integer> data = new LinkedHashMap<>();
+
+            for (int i = 0; i < PARTS; i++)
+                data.put(i, i);
+
+            client.cache(DEFAULT_CACHE_NAME).putAll(data);
+
+            LockSupport.park();
         }
         finally {
             stopAllGrids();
