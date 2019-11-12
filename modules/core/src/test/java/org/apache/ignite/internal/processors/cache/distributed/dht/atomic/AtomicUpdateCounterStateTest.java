@@ -115,11 +115,24 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /**
+     * Test scenario:
+     * 1. Start atomic update.
+     * 2. Delay message to one of backups.
+     * 3. Stop primary node.
+     *
+     * Success: backups are in sync.
+     */
     @Test
     public void testPrimaryFail() throws Exception {
         doTestPrimaryFail();
     }
 
+    /**
+     * Test scenario:
+     *
+     * 1. Start two atomic updates.
+     */
     @Test
     public void testSinglePutReorderBackupFail() throws Exception {
         doTestBackupFail();
