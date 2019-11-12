@@ -833,7 +833,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                             logKeysToPendingTxsTracker(entriesWithCounters);
 
-                            ptr = cctx.wal().log(new DataRecord(entriesWithCounters));
+                            cctx.wal().log(new DataRecord(entriesWithCounters));
                         }
 
                         if (ptr != null && !cctx.tm().logTxRecords())
