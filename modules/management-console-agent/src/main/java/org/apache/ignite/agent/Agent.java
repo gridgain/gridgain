@@ -239,12 +239,9 @@ public class Agent extends ManagementConsoleProcessor {
      * Connect to backend in same thread.
      */
     private void connect0() {
-        while (true) {
+        while (!ctx.isStopping()) {
             try {
                 mgr.stop(true);
-
-                if (ctx.isStopping())
-                    return;
 
                 curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
@@ -255,6 +252,8 @@ public class Agent extends ManagementConsoleProcessor {
                 break;
             }
             catch (Exception e) {
+                mgr.stop(true);
+
                 if (X.hasCause(e, InterruptedException.class)) {
                     U.quiet(true, "Caught interrupted exception: " + e);
 
