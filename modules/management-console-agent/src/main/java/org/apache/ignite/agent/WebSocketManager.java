@@ -167,9 +167,9 @@ public class WebSocketManager extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        if (connected())
-            ses.disconnect();
-
+//        if (connected())
+//            ses.disconnect();
+//
         U.quietAndInfo(log, "before client.stop()");
 
         if (client != null) {
