@@ -40,7 +40,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Management console agent self test suite.
+ * Management console agent test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

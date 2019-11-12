@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
@@ -76,12 +77,13 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
                     addToQueue(e);
 
             }
-            catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-
-                break;
-            }
             catch (Exception ex) {
+                if (X.hasCause(ex, InterruptedException.class)) {
+                    Thread.currentThread().interrupt();
+
+                    break;
+                }
+
                 addToQueue(e);
             }
         }

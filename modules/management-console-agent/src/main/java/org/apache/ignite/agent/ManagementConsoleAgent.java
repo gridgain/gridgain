@@ -16,16 +16,15 @@
 
 package org.apache.ignite.agent;
 
+import java.io.EOFException;
 import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.processor.ActionProcessor;
@@ -41,7 +40,6 @@ import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.AbstractManagementConsoleProcessor;
@@ -50,7 +48,6 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -66,10 +63,6 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTop
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
@@ -87,14 +80,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
 
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
-
-    /** Not enabled events by default. */
-    private static final int[] NOT_ENABLED_EVTS = new int[] {
-        EVT_CLUSTER_ACTIVATED,
-        EVT_CLUSTER_DEACTIVATED,
-        EVT_CACHE_STARTED,
-        EVT_CACHE_STOPPED
-    };
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -255,44 +240,36 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
      * Connect to backend in same thread.
      */
     private void connect0() {
-        curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
+        while (!ctx.isStopping()) {
+            try {
+                mgr.stop(true);
 
-        try {
-            mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
+                curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
-            disconnected.set(false);
-        }
-        catch (IgniteInterruptedCheckedException | IgniteInterruptedException e) {
-            if (log.isDebugEnabled())
-                log.debug("Caught interrupted exception: " + e);
+                mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
 
-            mgr.stop(true);
-        }
-        catch (InterruptedException e) {
-            if (log.isDebugEnabled())
-                log.debug("Caught interrupted exception: " + e);
+                disconnected.set(false);
 
-            mgr.stop(true);
-
-            Thread.currentThread().interrupt();
-        }
-        catch (TimeoutException ignored) {
-            connect0();
-        }
-        catch (ExecutionException e) {
-            mgr.stop(true);
-
-            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
-                if (disconnected.compareAndSet(false, true))
-                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
-
-                connect0();
+                break;
             }
-            else
-                log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
-        }
-        catch (Exception e) {
-            log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+            catch (Exception e) {
+                mgr.stop(true);
+
+                if (X.hasCause(e, InterruptedException.class)) {
+                    U.quiet(true, "Caught interrupted exception: " + e);
+
+                    Thread.currentThread().interrupt();
+
+                    break;
+                }
+                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
+                    EOFException.class, ConnectionLostException.class)) {
+                    if (disconnected.compareAndSet(false, true))
+                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
+                }
+                else
+                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+            }
         }
     }
 
@@ -321,8 +298,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
             (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
 
         connectPool.submit(this::connect0);
-
-        ctx.event().enableEvents(NOT_ENABLED_EVTS);
     }
 
     /**
@@ -378,7 +353,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
 
             U.quietAndInfo(log, "");
 
-            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster:: " + curSrvUri);
+            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
 
@@ -441,8 +416,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
      * Submit a reconnection task only if there no active connect in progress.
      */
     private void reconnect() {
-        if (connectPool.getActiveCount() == 0)
-            connectPool.submit(this::connect0);
+        connectPool.submit(this::connect0);
     }
 
     /**

@@ -65,7 +65,10 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
         this.evts = ctx.grid().events();
 
         // Listener for cache metadata change.
+        evts.enableLocal(EVT_DISCOVERY_CUSTOM_EVT);
         evts.localListen(this::onDiscoveryCustomEvent, EVT_DISCOVERY_CUSTOM_EVT);
+
+        evts.enableLocal(EVTS_CACHE);
         evts.localListen(this::onCacheEvents, EVTS_CACHE);
     }
 

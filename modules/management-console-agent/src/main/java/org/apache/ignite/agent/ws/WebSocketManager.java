@@ -232,7 +232,16 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         webSockClient.addBean(httpClient);
 
-        return new JettyWebSocketClient(webSockClient);
+        return new JettyWebSocketClient(webSockClient) {
+            @Override public void stop() {
+                try {
+                    webSockClient.stop();
+                }
+                catch (Exception ex) {
+                    throw new IllegalStateException("Failed to stop Jetty WebSocketClient", ex);
+                }
+            }
+        };
     }
 
     /**
