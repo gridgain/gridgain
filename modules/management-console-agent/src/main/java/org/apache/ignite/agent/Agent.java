@@ -243,6 +243,9 @@ public class Agent extends ManagementConsoleProcessor {
             try {
                 mgr.stop(true);
 
+                if (ctx.isStopping())
+                    return;
+
                 curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
 
                 mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());

@@ -28,7 +28,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.client.HttpClient;
@@ -172,30 +171,8 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         U.quietAndInfo(log, "before client.stop()");
 
-        if (client != null) {
-            Thread t = new Thread(() -> client.stop());
-
-            try {
-                t.start();
-
-                t.join(100L);
-
-                if (t.isAlive()) {
-                    GridStringBuilder sb = new GridStringBuilder();
-
-                    U.printStackTrace(t.getId(), sb);
-
-                    U.quietAndInfo(log, sb.toString());
-                }
-            }
-            catch (InterruptedException e) {
-                GridStringBuilder sb = new GridStringBuilder();
-
-                U.printStackTrace(t.getId(), sb);
-
-                U.quietAndInfo(log, sb.toString());
-            }
-        }
+        if (client != null)
+            client.stop();
 
         U.quietAndInfo(log, "after client.stop()");
     }
