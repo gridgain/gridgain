@@ -58,7 +58,6 @@ import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
-import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -999,7 +998,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     List<String> fields = new ArrayList<>();
 
                     for (String field : table.fields().keySet()) {
-                        if (table.property(field).membership() != PropertyMembership.VALUE)
+                        if (table.property(field).key())
                             fields.add(field);
                     }
 

@@ -20,7 +20,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
-import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +32,7 @@ public class QueryClassProperty implements GridQueryProperty {
     private final QueryPropertyAccessor accessor;
 
     /** */
-    private final PropertyMembership membership;
+    private final boolean key;
 
     /** */
     private QueryClassProperty parent;
@@ -51,16 +50,16 @@ public class QueryClassProperty implements GridQueryProperty {
      * Constructor.
      *
      * @param accessor Way of accessing the property.
-     * @param membership Whether the property belongs to the cache entry's key, value or both.
+     * @param key {@code true} if key property, {@code false} otherwise.
      * @param name Property name.
      * @param notNull {@code true} if null value is not allowed.
      * @param coCtx Cache Object Context.
      */
-    public QueryClassProperty(QueryPropertyAccessor accessor, PropertyMembership membership, String name,
+    public QueryClassProperty(QueryPropertyAccessor accessor, boolean key, String name,
         boolean notNull, @Nullable CacheObjectContext coCtx) {
         this.accessor = accessor;
 
-        this.membership = membership;
+        this.key = key;
 
         this.name = !F.isEmpty(name) ? name : accessor.getPropertyName();
 
@@ -71,7 +70,7 @@ public class QueryClassProperty implements GridQueryProperty {
 
     /** {@inheritDoc} */
     @Override public Object value(Object key, Object val) throws IgniteCheckedException {
-        Object x = unwrap(membership == PropertyMembership.KEY ? key : val);
+        Object x = unwrap(this.key ? key : val);
 
         if (parent != null)
             x = parent.value(key, val);
@@ -84,23 +83,8 @@ public class QueryClassProperty implements GridQueryProperty {
 
     /** {@inheritDoc} */
     @Override public void setValue(Object key, Object val, Object propVal) throws IgniteCheckedException {
-        if (membership() != PropertyMembership.VALUE)
-            setValue(key, val, propVal, unwrap(key));
+        Object x = unwrap(this.key ? key : val);
 
-        if (membership() != PropertyMembership.KEY)
-            setValue(key, val, propVal, unwrap(val));
-    }
-
-    /**
-     * Sets this property value for the given object.
-     *
-     * @param key Key.
-     * @param val Value.
-     * @param propVal Property value.
-     * @param x The object to set the property of.
-     * @throws IgniteCheckedException If failed.
-     */
-    private void setValue(Object key, Object val, Object propVal, Object x) throws IgniteCheckedException {
         if (parent != null)
             x = parent.value(key, val);
 
@@ -111,8 +95,8 @@ public class QueryClassProperty implements GridQueryProperty {
     }
 
     /** {@inheritDoc} */
-    @Override public PropertyMembership membership() {
-        return membership;
+    @Override public boolean key() {
+        return key;
     }
 
     /**

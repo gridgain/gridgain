@@ -33,7 +33,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.h2.message.DbException;
@@ -362,7 +361,7 @@ public class GridH2RowDescriptor {
      * @return {@code true} if given column corresponds to a key property, {@code false} otherwise
      */
     public boolean isColumnKeyProperty(int col) {
-        return props[col].membership() != PropertyMembership.VALUE;
+        return props[col].key();
     }
 
     /**

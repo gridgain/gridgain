@@ -31,7 +31,6 @@ import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
@@ -340,7 +339,7 @@ public final class UpdatePlan {
 
             GridQueryProperty prop = desc.property(c.getName());
 
-            if (prop.membership() != PropertyMembership.VALUE)
+            if (prop.key())
                 continue; // Don't get values of key's columns - we won't use them anyway
 
             boolean hasNewColVal = newColVals.containsKey(c.getName());

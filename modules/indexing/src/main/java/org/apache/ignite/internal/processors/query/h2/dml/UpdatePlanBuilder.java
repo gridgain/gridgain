@@ -36,7 +36,6 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -261,10 +260,9 @@ public final class UpdatePlanBuilder {
 
             assert prop != null : "Property '" + colName + "' not found.";
 
-            if (prop.membership() != PropertyMembership.VALUE)
+            if (prop.key())
                 hasKeyProps = true;
-
-            if (prop.membership() != PropertyMembership.KEY)
+            else
                 hasValProps = true;
         }
 
@@ -543,10 +541,9 @@ public final class UpdatePlanBuilder {
 
             assert prop != null : "Property '" + colName + "' not found.";
 
-            if (prop.membership() != PropertyMembership.VALUE)
+            if (prop.key())
                 hasKeyProps = true;
-
-            if (prop.membership() != PropertyMembership.KEY)
+            else
                 hasValProps = true;
         }
 

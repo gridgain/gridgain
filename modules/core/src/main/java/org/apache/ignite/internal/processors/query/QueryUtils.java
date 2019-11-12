@@ -273,7 +273,6 @@ public class QueryUtils {
         normalEntity.setValueType(entity.getValueType());
         normalEntity.setFields(entity.getFields());
         normalEntity.setKeyFields(entity.getKeyFields());
-        normalEntity.setKeyValueFields(entity.getKeyValueFields());
         normalEntity.setKeyFieldName(entity.getKeyFieldName());
         normalEntity.setValueFieldName(entity.getValueFieldName());
         normalEntity.setNotNullFields(entity.getNotNullFields());
@@ -556,7 +555,6 @@ public class QueryUtils {
         throws IgniteCheckedException {
         LinkedHashMap<String, String> fields = qryEntity.getFields();
         Set<String> keyFields = qryEntity.getKeyFields();
-        Set<String> keyValFields = qryEntity.getKeyValueFields();
         Set<String> notNulls = qryEntity.getNotNullFields();
         Map<String, Object> dlftVals = qryEntity.getDefaultFieldValues();
         Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
@@ -567,51 +565,35 @@ public class QueryUtils {
         // is a value field, and null keyFields tells us that current configuration
         // does not tell us anything about this field's ownership.
         boolean hasKeyFields = (keyFields != null);
-        boolean hasKeyValFields = (keyValFields != null);
 
         boolean isKeyClsSqlType = isSqlType(d.keyClass());
 
-        if (!isKeyClsSqlType) {
+        if (hasKeyFields && !isKeyClsSqlType) {
             //ensure that 'keyFields' is case sensitive subset of 'fields'
-            if (hasKeyFields)
-                for (String keyField : keyFields) {
-                    if (!fields.containsKey(keyField))
-                        throw new IgniteCheckedException("QueryEntity 'keyFields' property must be a subset of keys " +
-                            "from 'fields' property (case sensitive): " + keyField);
-                }
-
-            if (hasKeyValFields)
-                for (String keyValField : keyValFields) {
-                    if (!fields.containsKey(keyValField))
-                        throw new IgniteCheckedException("QueryEntity 'keyValueFields' property must be a subset " +
-                            "of key&value from 'fields' property (case sensitive): " + keyValField);
-                }
+            for (String keyField : keyFields) {
+                if (!fields.containsKey(keyField))
+                    throw new IgniteCheckedException("QueryEntity 'keyFields' property must be a subset of keys " +
+                        "from 'fields' property (case sensitive): " + keyField);
+            }
         }
 
         for (Map.Entry<String, String> entry : fields.entrySet()) {
-            PropertyMembership membership;
-            String fieldName = entry.getKey();
-            String fieldType = entry.getValue();
+            Boolean isKeyField;
 
-            if (isKeyClsSqlType)
-                // Entire key is not field of itself, even if it is set in "keyFields".
-                membership = PropertyMembership.VALUE;
+            if (isKeyClsSqlType) // We don't care about keyFields in this case - it might be null, or empty, or anything
+                isKeyField = false;
             else
-                membership = hasKeyFields && keyFields.contains(fieldName)
-                    ? PropertyMembership.KEY
-                    : hasKeyValFields && keyValFields.contains(fieldName)
-                    ? PropertyMembership.KEY_VALUE
-                    : PropertyMembership.VALUE;
+                isKeyField = (hasKeyFields ? keyFields.contains(entry.getKey()) : null);
 
             boolean notNull = notNulls != null && notNulls.contains(entry.getKey());
 
             Object dfltVal = dlftVals != null ? dlftVals.get(entry.getKey()) : null;
 
-            QueryBinaryProperty prop = buildBinaryProperty(ctx, fieldName,
-                U.classForName(fieldType, Object.class, true),
-                d.aliases(), membership, notNull, dfltVal,
-                precision == null ? -1 : precision.getOrDefault(fieldName, -1),
-                scale == null ? -1 : scale.getOrDefault(fieldName, -1));
+            QueryBinaryProperty prop = buildBinaryProperty(ctx, entry.getKey(),
+                U.classForName(entry.getValue(), Object.class, true),
+                d.aliases(), isKeyField, notNull, dfltVal,
+                precision == null ? -1 : precision.getOrDefault(entry.getKey(), -1),
+                scale == null ? -1 : scale.getOrDefault(entry.getKey(), -1));
 
             d.addProperty(prop, false);
         }
@@ -622,8 +604,9 @@ public class QueryUtils {
             keyFieldName = KEY_FIELD_NAME;
 
         if (!F.isEmpty(precision) && precision.containsKey(keyFieldName) &&
-            !fields.containsKey(keyFieldName))
-            addKeyValueValidationProperty(ctx, qryEntity, d, keyFieldName, PropertyMembership.KEY);
+            !fields.containsKey(keyFieldName)) {
+            addKeyValueValidationProperty(ctx, qryEntity, d, keyFieldName, true);
+        }
 
         String valFieldName = qryEntity.getValueFieldName();
 
@@ -631,8 +614,9 @@ public class QueryUtils {
             valFieldName = VAL_FIELD_NAME;
 
         if (!F.isEmpty(precision) && precision.containsKey(valFieldName) &&
-            !fields.containsKey(valFieldName))
-            addKeyValueValidationProperty(ctx, qryEntity, d, valFieldName, PropertyMembership.VALUE);
+            !fields.containsKey(valFieldName)) {
+            addKeyValueValidationProperty(ctx, qryEntity, d, valFieldName, false);
+        }
 
         processIndexes(qryEntity, d);
     }
@@ -647,13 +631,13 @@ public class QueryUtils {
      * @throws IgniteCheckedException
      */
     private static void addKeyValueValidationProperty(GridKernalContext ctx, QueryEntity qryEntity, QueryTypeDescriptorImpl d,
-        String name, PropertyMembership membership) throws IgniteCheckedException {
+        String name, boolean isKey) throws IgniteCheckedException {
 
         Map<String, Object> dfltVals = qryEntity.getDefaultFieldValues();
         Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
         Map<String, Integer> scale = qryEntity.getFieldsScale();
 
-        String typeName = membership == PropertyMembership.KEY ? qryEntity.getKeyType() : qryEntity.getValueType();
+        String typeName = isKey ? qryEntity.getKeyType() : qryEntity.getValueType();
 
         Object dfltVal = dfltVals.get(name);
 
@@ -662,7 +646,7 @@ public class QueryUtils {
             name,
             U.classForName(typeName, Object.class, true),
             d.aliases(),
-            membership,
+            isKey,
             true,
             dfltVal,
             precision == null ? -1 : precision.getOrDefault(name, -1),
@@ -803,7 +787,8 @@ public class QueryUtils {
      *      nested fields.
      * @param resType Result type.
      * @param aliases Aliases.
-     * @param membership Key/Value ownership.
+     * @param isKeyField Key ownership flag, as defined in {@link QueryEntity#keyFields}: {@code true} if field belongs
+     *      to key, {@code false} if it belongs to value, {@code null} if QueryEntity#keyFields is null.
      * @param notNull {@code true} if {@code null} value is not allowed.
      * @param dlftVal Default value.
      * @param precision Precision.
@@ -811,7 +796,7 @@ public class QueryUtils {
      * @return Binary property.
      */
     public static QueryBinaryProperty buildBinaryProperty(GridKernalContext ctx, String pathStr,
-        Class<?> resType, Map<String, String> aliases, PropertyMembership membership, boolean notNull, Object dlftVal,
+        Class<?> resType, Map<String, String> aliases, @Nullable Boolean isKeyField, boolean notNull, Object dlftVal,
         int precision, int scale) {
         String[] path = pathStr.split("\\.");
 
@@ -828,7 +813,7 @@ public class QueryUtils {
             String alias = aliases.get(fullName.toString());
 
             // The key flag that we've found out is valid for the whole path.
-            res = new QueryBinaryProperty(ctx, prop, res, resType, membership, alias, notNull, dlftVal,
+            res = new QueryBinaryProperty(ctx, prop, res, resType, isKeyField, alias, notNull, dlftVal,
                 precision, scale);
         }
 
@@ -849,18 +834,10 @@ public class QueryUtils {
     public static QueryClassProperty buildClassProperty(Class<?> keyCls, Class<?> valCls, String pathStr,
         Class<?> resType, Map<String,String> aliases, boolean notNull, CacheObjectContext coCtx)
         throws IgniteCheckedException {
-        QueryClassProperty res = buildClassProperty(
-            PropertyMembership.VALUE,
-            valCls,
-            pathStr,
-            resType,
-            aliases,
-            notNull,
-            coCtx
-        );
+        QueryClassProperty res = buildClassProperty(false, valCls, pathStr, resType, aliases, notNull, coCtx);
 
         if (res == null) // We check value before key consistently with BinaryProperty.
-            res = buildClassProperty(PropertyMembership.KEY, keyCls, pathStr, resType, aliases, notNull, coCtx);
+            res = buildClassProperty(true, keyCls, pathStr, resType, aliases, notNull, coCtx);
 
         if (res == null)
             throw new IgniteCheckedException(propertyInitializationExceptionMessage(keyCls, valCls, pathStr, resType));
@@ -916,7 +893,7 @@ public class QueryUtils {
     }
 
     /**
-     * @param membership If this is a key property.
+     * @param key If this is a key property.
      * @param cls Source type class.
      * @param pathStr String representing path to the property. May contains dots '.' to identify nested fields.
      * @param resType Expected result type.
@@ -926,15 +903,8 @@ public class QueryUtils {
      * @return Property instance corresponding to the given path.
      */
     @SuppressWarnings("ConstantConditions")
-    public static QueryClassProperty buildClassProperty(
-        PropertyMembership membership,
-        Class<?> cls,
-        String pathStr,
-        Class<?> resType,
-        Map<String,String> aliases,
-        boolean notNull,
-        CacheObjectContext coCtx
-    ) {
+    public static QueryClassProperty buildClassProperty(boolean key, Class<?> cls, String pathStr, Class<?> resType,
+        Map<String,String> aliases, boolean notNull, CacheObjectContext coCtx) {
         String[] path = pathStr.split("\\.");
 
         QueryClassProperty res = null;
@@ -954,7 +924,7 @@ public class QueryUtils {
             if (accessor == null)
                 return null;
 
-            QueryClassProperty tmp = new QueryClassProperty(accessor, membership, alias, notNull, coCtx);
+            QueryClassProperty tmp = new QueryClassProperty(accessor, key, alias, notNull, coCtx);
 
             tmp.parent(res);
 
@@ -1468,7 +1438,7 @@ public class QueryUtils {
 
         GridQueryProperty prop = type.property(colName);
 
-        if (prop != null && prop.membership() != PropertyMembership.VALUE)
+        if (prop != null && prop.key())
             return new SchemaOperationException("Cannot drop column \"" + colName +
                 "\" because it is a part of a cache key");
 
@@ -1568,8 +1538,8 @@ public class QueryUtils {
         }
 
         /** {@inheritDoc} */
-        @Override public PropertyMembership membership() {
-            return isKey ? PropertyMembership.KEY : PropertyMembership.VALUE;
+        @Override public boolean key() {
+            return isKey;
         }
 
         /** {@inheritDoc} */
