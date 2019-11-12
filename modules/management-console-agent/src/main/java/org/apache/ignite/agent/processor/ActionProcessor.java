@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.processor;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.action.ActionDispatcher;
@@ -28,6 +27,7 @@ import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.SecurityException;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
@@ -85,9 +85,9 @@ public class ActionProcessor extends GridProcessorAdapter {
             sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
 
             dispatcher.dispatch(req)
-                    .thenApply(CompletableFuture::join)
+                    .thenApply(IgniteFuture::get)
                     .thenApply(r -> new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r))
-                    .exceptionally(e -> convertToErrorResponse(req.getId(), e))
+                    .exceptionally(e -> convertToErrorResponse(req.getId(), e.getCause()))
                     .thenAccept(this::sendResponse);
         }
         catch (Exception e) {
@@ -100,7 +100,7 @@ public class ActionProcessor extends GridProcessorAdapter {
      * @param e Throwable.
      */
     private Response convertToErrorResponse(UUID id, Throwable e) {
-        log.error(String.format("Failed to execute action, send error response to Management Console: [reqId=%s]", id), e);
+        log.error("Failed to execute action, send error response to Management Console: [reqId=" + id + ']', e);
 
         return new Response()
                 .setId(id)

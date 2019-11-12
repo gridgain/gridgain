@@ -105,7 +105,7 @@ public class SessionRegistry {
                 else if (authenticationEnabled)
                     ses.authorizationContext(authenticate(ctx.authentication(), ses));
 
-                sesIdToSes.put(ses.id(), ses);
+                saveSession(ses);
             }
             catch (IgniteCheckedException ex) {
                 sesIdToSes.remove(ses.id());

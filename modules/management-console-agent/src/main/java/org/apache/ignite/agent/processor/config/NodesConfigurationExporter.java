@@ -29,7 +29,7 @@ import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 /**
  * Node configuration exporter.
  */
-public class NodeConfigurationExporter extends GridProcessorAdapter {
+public class NodesConfigurationExporter extends GridProcessorAdapter {
     /** Mapper. */
     private final ObjectMapper mapper = jsonMapper();
 
@@ -42,7 +42,7 @@ public class NodeConfigurationExporter extends GridProcessorAdapter {
     /**
      * @param ctx Context.
      */
-    public NodeConfigurationExporter(GridKernalContext ctx) {
+    public NodesConfigurationExporter(GridKernalContext ctx) {
         super(ctx);
 
         this.snd = new CoordinatorSender<>(ctx, TOPIC_NODE_CFG);

@@ -25,9 +25,9 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.reflections.Reflections;
 
 /**
- * Processor for {@link ActionController} annotation.
+ * Reader for {@link ActionController} annotation.
  */
-public class ActionControllerAnnotationProcessor {
+public class ActionControllerAnnotationReader {
     /** Methods. */
     private static final Map<String, ActionMethod> methods = Collections.unmodifiableMap(
         findActionMethods("org.apache.ignite.agent.action.controller", "org.gridgain.agent.action.controller")
@@ -49,7 +49,7 @@ public class ActionControllerAnnotationProcessor {
     static Map<String, ActionMethod> findActionMethods(String... basePkgs) {
         Map<String, ActionMethod> methods = new HashMap<>();
 
-        Reflections reflections = new Reflections((Object[])basePkgs);
+        Reflections reflections = new Reflections(basePkgs);
 
         for (Class<?> controllerCls : reflections.getTypesAnnotatedWith(ActionController.class)) {
             ActionController annotation = controllerCls.getAnnotation(ActionController.class);
@@ -60,7 +60,7 @@ public class ActionControllerAnnotationProcessor {
                 if (method.isSynthetic())
                     continue;
 
-                String actName = controllerName + "." + method.getName();
+                String actName = controllerName + '.' + method.getName();
 
                 ActionMethod actMtd = new ActionMethod(actName, method, controllerCls);
 

@@ -28,12 +28,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
-import static org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
+import static org.apache.ignite.agent.processor.tracing.SpanExporter.TOPIC_SPANS;
 
 /**
  * Tracing processor.
  */
-public class TracingProcessor extends GridProcessorAdapter {
+public class SpanProcessor extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
@@ -50,7 +50,7 @@ public class TracingProcessor extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Manager.
      */
-    public TracingProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public SpanProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
 
         this.mgr = mgr;

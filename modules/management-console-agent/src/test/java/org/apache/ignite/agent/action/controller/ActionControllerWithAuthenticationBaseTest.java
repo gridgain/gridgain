@@ -39,7 +39,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.numberAction")
+            .setAction("TestActionController.numberAction")
             .setArgument(10)
             .setSessionId(sesId);
 
@@ -53,7 +53,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
     public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAuthentication() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.numberAction")
+            .setAction("TestActionController.numberAction")
             .setArgument(10);
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
@@ -66,7 +66,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
     public void shouldSendErrorResponseOnExecutingSecuredActionWithInvalidSessionId() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.numberAction")
+            .setAction("TestActionController.numberAction")
             .setArgument(10)
             .setSessionId(UUID.randomUUID());
 

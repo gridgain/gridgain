@@ -29,24 +29,24 @@ import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.processor.ActionProcessor;
-import org.apache.ignite.agent.processor.CacheProcessor;
-import org.apache.ignite.agent.processor.ClusterProcessor;
-import org.apache.ignite.agent.processor.config.NodeConfigurationExporter;
-import org.apache.ignite.agent.processor.config.NodeConfigurationProcessor;
+import org.apache.ignite.agent.processor.CacheChangesProcessor;
+import org.apache.ignite.agent.processor.ClusterInfoProcessor;
+import org.apache.ignite.agent.processor.config.NodesConfigurationExporter;
+import org.apache.ignite.agent.processor.config.NodesConfigurationProcessor;
 import org.apache.ignite.agent.processor.event.EventsExporter;
 import org.apache.ignite.agent.processor.event.EventsProcessor;
-import org.apache.ignite.agent.processor.metrics.MetricExporter;
-import org.apache.ignite.agent.processor.metrics.MetricProcessor;
-import org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporter;
-import org.apache.ignite.agent.processor.tracing.TracingProcessor;
+import org.apache.ignite.agent.processor.metrics.MetricsExporter;
+import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
+import org.apache.ignite.agent.processor.tracing.SpanExporter;
+import org.apache.ignite.agent.processor.tracing.SpanProcessor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.processors.management.AbstractManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -74,11 +74,12 @@ import static org.apache.ignite.events.EventType.EVT_CLUSTER_DEACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Management Agent.
+ * Management console agent.
  */
-public class Agent extends ManagementConsoleProcessor {
+public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
@@ -97,22 +98,22 @@ public class Agent extends ManagementConsoleProcessor {
     private WebSocketManager mgr;
 
     /** Cluster processor. */
-    private ClusterProcessor clusterProc;
+    private ClusterInfoProcessor clusterProc;
 
     /** Tracing processor. */
-    private TracingProcessor tracingProc;
+    private SpanProcessor tracingProc;
 
     /** Span exporter. */
-    private ManagementConsoleSpanExporter spanExporter;
+    private SpanExporter spanExporter;
 
     /** Events exporter. */
     private EventsExporter evtsExporter;
 
     /** Metric exporter. */
-    private MetricExporter metricExporter;
+    private MetricsExporter metricExporter;
 
     /** Metric processor. */
-    private MetricProcessor metricProc;
+    private MetricsProcessor metricProc;
 
     /** Action processor. */
     private ActionProcessor actProc;
@@ -121,10 +122,10 @@ public class Agent extends ManagementConsoleProcessor {
     private EventsProcessor evtProc;
 
     /** Node configuration processor. */
-    private NodeConfigurationProcessor nodeConfigurationProc;
+    private NodesConfigurationProcessor nodeConfigurationProc;
 
     /** Cache processor. */
-    private CacheProcessor cacheProc;
+    private CacheChangesProcessor cacheProc;
 
     /** Execute service. */
     private ThreadPoolExecutor connectPool;
@@ -144,7 +145,7 @@ public class Agent extends ManagementConsoleProcessor {
     /**
      * @param ctx Kernal context.
      */
-    public Agent(GridKernalContext ctx) {
+    public ManagementConsoleAgent(GridKernalContext ctx) {
         super(ctx);
     }
 
@@ -152,11 +153,11 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void onKernalStart(boolean active) {
         this.metaStorage = ctx.distributedMetastorage();
         this.evtsExporter = new EventsExporter(ctx);
-        this.spanExporter = new ManagementConsoleSpanExporter(ctx);
-        this.metricExporter = new MetricExporter(ctx);
+        this.spanExporter = new SpanExporter(ctx);
+        this.metricExporter = new MetricsExporter(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
-        if (isCoordinator(ctx.discovery().discoCache()))
+        if (isLocalNodeCoordinator(ctx.discovery()))
             connect();
         else
             ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
@@ -165,7 +166,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         metricExporter.addMetricListener();
 
-        NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+        NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
 
         exporter.export();
 
@@ -218,7 +219,7 @@ public class Agent extends ManagementConsoleProcessor {
 
         disconnect();
 
-        launchAgentListener(null, ctx.discovery().discoCache());
+        launchAgentListener(null, null);
     }
 
     /**
@@ -232,7 +233,7 @@ public class Agent extends ManagementConsoleProcessor {
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (isCoordinator(discoCache)) {
+        if (isLocalNodeCoordinator(ctx.discovery())) {
             cfg = readFromMetaStorage();
 
             connect();
@@ -307,13 +308,13 @@ public class Agent extends ManagementConsoleProcessor {
 
         this.mgr = new WebSocketManager(ctx);
         this.sesRegistry = new SessionRegistry(ctx);
-        this.clusterProc = new ClusterProcessor(ctx, mgr);
-        this.tracingProc = new TracingProcessor(ctx, mgr);
-        this.metricProc = new MetricProcessor(ctx, mgr);
+        this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
+        this.tracingProc = new SpanProcessor(ctx, mgr);
+        this.metricProc = new MetricsProcessor(ctx, mgr);
         this.evtProc = new EventsProcessor(ctx, mgr);
-        this.nodeConfigurationProc = new NodeConfigurationProcessor(ctx, mgr);
+        this.nodeConfigurationProc = new NodesConfigurationProcessor(ctx, mgr);
         this.actProc = new ActionProcessor(ctx, mgr);
-        this.cacheProc = new CacheProcessor(ctx, mgr);
+        this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 

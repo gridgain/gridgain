@@ -45,7 +45,7 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
 /**
  * Cache processor.
  */
-public class CacheProcessor extends GridProcessorAdapter {
+public class CacheChangesProcessor extends GridProcessorAdapter {
     /** Cache events. */
     private static final int[] EVTS_CACHE = new int[] {EVT_CACHE_STARTED, EVT_CACHE_STOPPED};
 
@@ -59,7 +59,7 @@ public class CacheProcessor extends GridProcessorAdapter {
      * @param ctx Context.
      * @param mgr Websocket manager.
      */
-    public CacheProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public CacheChangesProcessor(GridKernalContext ctx, WebSocketManager mgr) {
         super(ctx);
         this.mgr = mgr;
         this.evts = ctx.grid().events();

@@ -19,7 +19,7 @@ package org.apache.ignite.agent.action.controller;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.Response;
 import org.apache.ignite.internal.IgniteEx;
@@ -35,7 +35,7 @@ import static org.awaitility.Awaitility.with;
 /**
  * Abstract test for action controllers.
  */
-abstract class AbstractActionControllerTest extends AgentCommonAbstractSelfTest {
+abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
     /** Mapper. */
     protected final ObjectMapper mapper = jsonMapper();
 

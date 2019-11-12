@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import org.apache.ignite.agent.action.ActionMethod;
 
-import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessor.actions;
+import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReader.actions;
 
 /**
  * Request deserializer.

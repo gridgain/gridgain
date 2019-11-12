@@ -35,19 +35,19 @@ public class StompDestinationsUtils {
     private static final String CLUSTER_CACHES_SQL_META_DEST = CLUSTER_CACHES_INFO_DEST + "sql-meta/";
 
     /** Cluster node configuration. */
-    private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/%s";
+    private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/";
 
     /** Cluster action response destination. */
     private static final String CLUSTER_ACTION_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/";
 
-    /** Save span destination. */
-    private static final String SAVE_SPAN_DEST = "/app/agent/spans/%s/add";
+    /** Span destination. */
+    private static final String SPAN_DEST = "/app/agent/spans/";
 
     /** Metrics destination. */
-    private static final String METRICS_DEST = "/app/agent/metrics/%s/add";
+    private static final String METRICS_DEST = "/app/agent/metrics/";
 
     /** Events destination. */
-    private static final String EVENTS_DEST = CLUSTER_PREFIX_DEST + "/events/%s/add";
+    private static final String EVENTS_DEST = CLUSTER_PREFIX_DEST + "/events/";
 
     /**
      * @param clusterId Cluster id.
@@ -62,7 +62,7 @@ public class StompDestinationsUtils {
      * @return Cluster node configuration.
      */
     public static String buildClusterNodeConfigurationDest(UUID clusterId) {
-        return String.format(CLUSTER_NODE_CONFIGURATION, clusterId);
+        return CLUSTER_NODE_CONFIGURATION + clusterId;
     }
 
     /**
@@ -70,21 +70,21 @@ public class StompDestinationsUtils {
      * @return Save span destination.
      */
     public static String buildSaveSpanDest(UUID clusterId) {
-        return String.format(SAVE_SPAN_DEST, clusterId);
+        return SPAN_DEST + clusterId + "/add";
     }
 
     /**
      * @return Metrics destination.
      */
     public static String buildMetricsDest(UUID clusterId) {
-        return String.format(METRICS_DEST, clusterId);
+        return METRICS_DEST + clusterId + "/add";
     }
 
     /**
      * @return Events destination.
      */
     public static String buildEventsDest(UUID clusterId) {
-        return String.format(EVENTS_DEST, clusterId);
+        return EVENTS_DEST + clusterId + "/add";
     }
 
     /**

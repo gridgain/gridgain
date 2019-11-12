@@ -24,7 +24,7 @@ import org.apache.ignite.internal.GridKernalContext;
  * Test action controller for other tests.
  */
 @ActionController
-public class ActionControllerForTests {
+public class TestActionController {
     /**
      * Context.
      */
@@ -33,7 +33,7 @@ public class ActionControllerForTests {
     /**
      * @param ctx Context.
      */
-    public ActionControllerForTests(GridKernalContext ctx) {
+    public TestActionController(GridKernalContext ctx) {
         this.ctx = ctx;
     }
 

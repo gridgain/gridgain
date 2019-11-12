@@ -18,7 +18,7 @@ package org.apache.ignite.agent.processor.metrics;
 
 import java.util.List;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.junit.Test;
 
@@ -29,9 +29,9 @@ import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 
 /**
- * Metric service test.
+ * Metrics processor test.
  */
-public class MetricsServiceSelfTest extends AgentCommonAbstractSelfTest {
+public class MetricsProcessorTest extends AgentCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */

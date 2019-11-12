@@ -14,24 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent;
+package org.apache.ignite.internal.processors.management;
 
-import java.util.Map;
-import org.apache.ignite.cache.CacheMetrics;
-import org.apache.ignite.cluster.ClusterMetrics;
-import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
+import org.apache.ignite.internal.GridKernalContext;
 
-/**
- * No-op discovery metrics provider.
- */
-public class NoopDiscoveryMetricsProvider implements DiscoveryMetricsProvider {
-    /** {@inheritDoc} */
-    @Override public ClusterMetrics metrics() {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Map<Integer, CacheMetrics> cacheMetrics() {
-        return null;
+public class NoopManagementConsoleProcessor extends AbstractManagementConsoleProcessor {
+    /**
+     * @param ctx Kernal context.
+     */
+    protected NoopManagementConsoleProcessor(GridKernalContext ctx) {
+        super(ctx);
     }
 }

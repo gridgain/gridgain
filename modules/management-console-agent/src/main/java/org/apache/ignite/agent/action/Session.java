@@ -30,7 +30,7 @@ import org.apache.ignite.plugin.security.SecurityCredentials;
  */
 public class Session {
     /** Expiration STATE. It's a final state of lastTouchTime. */
-    private static final Long TIMEDOUT_STATE = 0L;
+    private static final long TIMEDOUT_STATE = 0L;
 
     /** Session ID. */
     private final UUID id;

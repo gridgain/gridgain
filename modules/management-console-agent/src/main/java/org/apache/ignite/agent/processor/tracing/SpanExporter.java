@@ -45,7 +45,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Span exporter which send spans to coordinator.
  */
-public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
+public class SpanExporter extends GridProcessorAdapter {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
 
@@ -67,7 +67,7 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
     /**
      * @param ctx Context.
      */
-    public ManagementConsoleSpanExporter(GridKernalContext ctx) {
+    public SpanExporter(GridKernalContext ctx) {
         super(ctx);
 
         if (ctx.config().getTracingSpi() != null) {
@@ -99,7 +99,7 @@ public class ManagementConsoleSpanExporter extends GridProcessorAdapter {
             @Override public void timeLimitedExport(Collection<SpanData> spanDataList) {
                 List<Span> spans = spanDataList
                         .stream()
-                        .map(ManagementConsoleSpanExporter::fromSpanDataToSpan)
+                        .map(SpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
                 snd.send(spans);
