@@ -64,10 +64,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param typeName Type name.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setTypeName(String typeName) {
         this.typeName = typeName;
+
         return this;
     }
 
@@ -80,10 +81,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param cacheName Cache name.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setCacheName(String cacheName) {
         this.cacheName = cacheName;
+
         return this;
     }
 
@@ -96,10 +98,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param schemaName Schema name.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setSchemaName(String schemaName) {
         this.schemaName = schemaName;
+
         return this;
     }
 
@@ -112,10 +115,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param tblName Table name.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setTableName(String tblName) {
         this.tblName = tblName;
+
         return this;
     }
 
@@ -128,10 +132,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param keyCls Key class.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setKeyClass(String keyCls) {
         this.keyCls = keyCls;
+
         return this;
     }
 
@@ -144,10 +149,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param valCls Value class.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setValueClass(String valCls) {
         this.valCls = valCls;
+
         return this;
     }
 
@@ -160,10 +166,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param fields Fields.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setFields(Map<String, String> fields) {
         this.fields = fields;
+
         return this;
     }
 
@@ -176,10 +183,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param notNullFields Not null fields.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setNotNullFields(Set<String> notNullFields) {
         this.notNullFields = notNullFields;
+
         return this;
     }
 
@@ -192,10 +200,11 @@ public class CacheSqlMetadata {
 
     /**
      * @param indexes Indexes.
-     * @return @{code This} for method chaining.
+     * @return @{code This} for chaining method calls.
      */
     public CacheSqlMetadata setIndexes(List<CacheSqlIndexMetadata> indexes) {
         this.indexes = indexes;
+
         return this;
     }
 

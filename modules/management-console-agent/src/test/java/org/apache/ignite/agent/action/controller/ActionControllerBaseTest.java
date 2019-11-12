@@ -33,9 +33,9 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
     @Test
     public void shouldSendErrorResponseWithInvalidArgument() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
-                .setArgument("value");
+            .setId(UUID.randomUUID())
+            .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
+            .setArgument("value");
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }
@@ -46,9 +46,9 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
     @Test
     public void shouldSendErrorResponseWithIncorrectAction() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("InvalidAction.updateAutoAdjustEnabled")
-                .setArgument(true);
+            .setId(UUID.randomUUID())
+            .setAction("InvalidAction.updateAutoAdjustEnabled")
+            .setArgument(true);
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
     }

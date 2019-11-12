@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.commandline.management;
 
-import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -35,7 +34,7 @@ public enum ManagementCommandList {
     /**
      * Management status.
      */
-    URI("uri", ManagementURLCommandArg.class),
+    URI("uri"),
 
     /**
      * Management status.
@@ -53,24 +52,11 @@ public enum ManagementCommandList {
     /** Name. */
     private final String name;
 
-    /** Enum class with argument list for command. */
-    private final Class<? extends Enum<? extends CommandArg>> cmdArgs;
-
     /**
      * @param name Name.
      */
     ManagementCommandList(String name) {
         this.name = name;
-        cmdArgs = null;
-    }
-
-    /**
-     * @param name Name.
-     * @param cmdArgs Arguments.
-     */
-    ManagementCommandList(String name, Class<? extends Enum<? extends CommandArg>> cmdArgs) {
-        this.name = name;
-        this.cmdArgs = cmdArgs;
     }
 
     /**

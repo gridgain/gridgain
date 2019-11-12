@@ -38,10 +38,10 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
         UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ActionControllerForTests.numberAction")
-                .setArgument(10)
-                .setSessionId(sesId);
+            .setId(UUID.randomUUID())
+            .setAction("ActionControllerForTests.numberAction")
+            .setArgument(10)
+            .setSessionId(sesId);
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED);
     }
@@ -52,9 +52,9 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
     @Test
     public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAuthentication() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ActionControllerForTests.numberAction")
-                .setArgument(10);
+            .setId(UUID.randomUUID())
+            .setAction("ActionControllerForTests.numberAction")
+            .setArgument(10);
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
@@ -65,10 +65,10 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
     @Test
     public void shouldSendErrorResponseOnExecutingSecuredActionWithInvalidSessionId() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("ActionControllerForTests.numberAction")
-                .setArgument(10)
-                .setSessionId(UUID.randomUUID());
+            .setId(UUID.randomUUID())
+            .setAction("ActionControllerForTests.numberAction")
+            .setArgument(10)
+            .setSessionId(UUID.randomUUID());
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }

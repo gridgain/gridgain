@@ -62,10 +62,11 @@ public class QueryArgument {
 
     /**
      * @param qryId Query ID.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setQueryId(String qryId) {
         this.qryId = qryId;
+
         return this;
     }
 
@@ -78,10 +79,11 @@ public class QueryArgument {
 
     /**
      * @param cacheName Cache name.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setCacheName(String cacheName) {
         this.cacheName = cacheName;
+
         return this;
     }
 
@@ -94,10 +96,11 @@ public class QueryArgument {
 
     /**
      * @param qryTxt Query txt.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setQueryText(String qryTxt) {
         this.qryTxt = qryTxt;
+
         return this;
     }
 
@@ -110,10 +113,11 @@ public class QueryArgument {
 
     /**
      * @param parameters Parameters.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setParameters(Object[] parameters) {
         this.parameters = parameters;
+
         return this;
     }
 
@@ -126,10 +130,11 @@ public class QueryArgument {
 
     /**
      * @param distributedJoins Distributed joins.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setDistributedJoins(boolean distributedJoins) {
         this.distributedJoins = distributedJoins;
+
         return this;
     }
 
@@ -142,10 +147,11 @@ public class QueryArgument {
 
     /**
      * @param enforceJoinOrder Enforce join order.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setEnforceJoinOrder(boolean enforceJoinOrder) {
         this.enforceJoinOrder = enforceJoinOrder;
+
         return this;
     }
 
@@ -158,10 +164,11 @@ public class QueryArgument {
 
     /**
      * @param targetNodeId Target node id.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public QueryArgument setTargetNodeId(UUID targetNodeId) {
         this.targetNodeId = targetNodeId;
+
         return this;
     }
 
@@ -178,6 +185,7 @@ public class QueryArgument {
      */
     public QueryArgument setPageSize(int pageSize) {
         this.pageSize = pageSize;
+
         return this;
     }
 
@@ -194,6 +202,7 @@ public class QueryArgument {
      */
     public QueryArgument setLazy(boolean lazy) {
         this.lazy = lazy;
+
         return this;
     }
 
@@ -210,6 +219,7 @@ public class QueryArgument {
      */
     public QueryArgument setCollocated(boolean collocated) {
         this.collocated = collocated;
+
         return this;
     }
 

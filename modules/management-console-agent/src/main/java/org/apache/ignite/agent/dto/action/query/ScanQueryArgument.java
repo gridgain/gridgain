@@ -45,10 +45,11 @@ public class ScanQueryArgument {
 
     /**
      * @param qryId Query ID.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ScanQueryArgument setQueryId(String qryId) {
         this.qryId = qryId;
+
         return this;
     }
 
@@ -61,10 +62,11 @@ public class ScanQueryArgument {
 
     /**
      * @param cacheName Cache name.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ScanQueryArgument setCacheName(String cacheName) {
         this.cacheName = cacheName;
+
         return this;
     }
 
@@ -77,10 +79,11 @@ public class ScanQueryArgument {
 
     /**
      * @param pageSize Page size.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ScanQueryArgument setPageSize(int pageSize) {
         this.pageSize = pageSize;
+
         return this;
     }
 
@@ -93,10 +96,11 @@ public class ScanQueryArgument {
 
     /**
      * @param targetNodeId Target node id.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ScanQueryArgument setTargetNodeId(UUID targetNodeId) {
         this.targetNodeId = targetNodeId;
+
         return this;
     }
 

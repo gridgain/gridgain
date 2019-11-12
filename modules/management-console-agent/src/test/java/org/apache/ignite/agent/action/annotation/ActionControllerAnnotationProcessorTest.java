@@ -35,6 +35,7 @@ public class ActionControllerAnnotationProcessorTest {
         Map<String, ActionMethod> methods = ActionControllerAnnotationProcessor.findActionMethods("org.apache.ignite.agent.action");
 
         assertTrue(methods.containsKey("TestActionController.action"));
+
         assertTrue(methods.containsKey("TestAction.action"));
     }
 

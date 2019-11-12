@@ -30,11 +30,15 @@ import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.GridProcessor;
+import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
+import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.AuthenticationContext;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
@@ -91,10 +95,11 @@ public final class AgentUtils {
     }
 
     /**
-     * @param igniteFut Ignite future.
+     * @param igniteFut Ignite internal future.
      */
-    public static <T> CompletableFuture completeIgniteFuture(IgniteFuture<T> igniteFut) {
+    public static <T> CompletableFuture completeIgniteFuture(IgniteInternalFuture<T> igniteFut) {
         CompletableFuture<Object> fut = new CompletableFuture<>();
+
         igniteFut.chain(f -> {
             try {
                 fut.complete(f.get());
@@ -114,18 +119,22 @@ public final class AgentUtils {
      */
     public static <T> CompletableFuture<T> completeFutureWithException(Throwable e) {
         CompletableFuture<T> fut = new CompletableFuture<>();
+
         fut.completeExceptionally(e);
 
         return fut;
     }
 
     /**
-     * Authenticate by session.
+     * Authenticate by session and ignite security.
      *
      * @param security Security.
      * @param ses Session.
      */
-    public static SecurityContext authenticate(IgniteSecurity security, Session ses) throws IgniteAuthenticationException, IgniteCheckedException {
+    public static SecurityContext authenticate(
+        IgniteSecurity security,
+        Session ses
+    ) throws IgniteAuthenticationException, IgniteCheckedException {
         AuthenticationContext authCtx = new AuthenticationContext();
 
         authCtx.subjectType(REMOTE_CLIENT);
@@ -138,13 +147,44 @@ public final class AgentUtils {
 
         if (subjCtx == null) {
             if (ses.credentials() == null)
-                throw new IgniteAuthenticationException("Failed to authenticate remote client (secure session SPI not set?): " + ses);
+                throw new IgniteAuthenticationException(
+                    "Failed to authenticate remote client (secure session SPI not set?): " + ses.id()
+                );
 
-            throw new IgniteAuthenticationException("Failed to authenticate remote client (invalid credentials?): " + ses);
+            throw new IgniteAuthenticationException(
+                "Failed to authenticate remote client (invalid credentials?): " + ses.id()
+            );
         }
 
         return subjCtx;
     }
+
+    /**
+     * Authenticate by session and authentication processor.
+     *
+     * @param authenticationProc Authentication processor.
+     * @param ses Session.
+     */
+    public static AuthorizationContext authenticate(
+        IgniteAuthenticationProcessor authenticationProc,
+        Session ses
+    ) throws IgniteCheckedException {
+        SecurityCredentials creds = ses.credentials();
+
+        String login = null;
+
+        if (creds.getLogin() instanceof String)
+            login = (String) creds.getLogin();
+
+        String pwd = null;
+
+        if (creds.getPassword() instanceof String)
+            pwd = (String) creds.getPassword();
+
+        return authenticationProc.authenticate(login, pwd);
+    }
+
+
 
     /**
      * @param security Security.
@@ -172,6 +212,7 @@ public final class AgentUtils {
      */
     public static Set<String> getClusterFeatures(GridKernalContext ctx, Collection<ClusterNode> nodes) {
         IgniteFeatures[] enums = IgniteFeatures.values();
+
         Set<String> features = U.newHashSet(enums.length);
 
         for (IgniteFeatures val : enums)
@@ -187,5 +228,22 @@ public final class AgentUtils {
      */
     public static <T> Stream<T> fromNullableCollection(Collection<T> col) {
         return col == null ? Stream.empty() : col.stream();
+    }
+
+
+    /**
+     * Quietly closes given processor ignoring possible checked exception.
+     *
+     * @param proc Process.
+     */
+    public static void quiteStop(GridProcessor proc) {
+        if (proc != null) {
+            try {
+                proc.stop(true);
+            }
+            catch (Exception ignored) {
+                // No-op.
+            }
+        }
     }
 }

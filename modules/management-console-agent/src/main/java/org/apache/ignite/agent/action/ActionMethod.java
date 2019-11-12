@@ -46,21 +46,21 @@ public class ActionMethod {
     /**
      * @return Controller class.
      */
-    public Class<?> getControllerClass() {
+    public Class<?> controllerClass() {
         return controllerCls;
     }
 
     /**
      * @return Action method.
      */
-    public Method getMethod() {
+    public Method method() {
         return mtd;
     }
 
     /**
      * @return Action name.
      */
-    public String getActionName() {
+    public String actionName() {
         return actName;
     }
 

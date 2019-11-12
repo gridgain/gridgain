@@ -25,7 +25,9 @@ import org.apache.ignite.internal.GridKernalContext;
  */
 @ActionController
 public class ActionControllerForTests {
-    /** Context. */
+    /**
+     * Context.
+     */
     private final GridKernalContext ctx;
 
     /**

@@ -70,7 +70,7 @@ public class QueryUtils {
      * @return Query result.
      */
     public static QueryResult fetchResult(CursorHolder curHolder, int pageSize) {
-        return curHolder.isScanCursor()
+        return curHolder.scanCursor()
             ? fetchScanQueryResult(curHolder, pageSize)
             : fetchSqlQueryResult(curHolder, pageSize);
     }
@@ -82,10 +82,13 @@ public class QueryUtils {
      */
     public static QueryResult fetchSqlQueryResult(CursorHolder curHolder, int pageSize) {
         QueryResult qryRes = new QueryResult();
+
         long start = U.currentTimeMillis();
 
         List<Object[]> rows = fetchSqlQueryRows(curHolder, pageSize);
-        List<QueryField> cols = getColumns(curHolder.getCursor());
+
+        List<QueryField> cols = getColumns(curHolder.cursor());
+
         boolean hasMore = curHolder.hasNext();
 
         return qryRes
@@ -102,9 +105,11 @@ public class QueryUtils {
      */
     public static QueryResult fetchScanQueryResult(CursorHolder curHolder, int pageSize) {
         QueryResult qryRes = new QueryResult();
+
         long start = U.currentTimeMillis();
 
         List<Object[]> rows = fetchScanQueryRows(curHolder, pageSize);
+
         boolean hasMore = curHolder.hasNext();
 
         return qryRes
@@ -120,6 +125,7 @@ public class QueryUtils {
      */
     public static List<QueryField> getColumns(QueryCursor cursor) {
         List<GridQueryFieldMetadata> meta = ((QueryCursorEx)cursor).fieldsMeta();
+
         if (meta == null)
             return Collections.emptyList();
 
@@ -217,16 +223,16 @@ public class QueryUtils {
      */
     private static boolean isKnownType(Object obj) {
         return obj instanceof String ||
-                obj instanceof Boolean ||
-                obj instanceof Byte ||
-                obj instanceof Integer ||
-                obj instanceof Long ||
-                obj instanceof Short ||
-                obj instanceof Date ||
-                obj instanceof Double ||
-                obj instanceof Float ||
-                obj instanceof BigDecimal ||
-                obj instanceof URL;
+            obj instanceof Boolean ||
+            obj instanceof Byte ||
+            obj instanceof Integer ||
+            obj instanceof Long ||
+            obj instanceof Short ||
+            obj instanceof Date ||
+            obj instanceof Double ||
+            obj instanceof Float ||
+            obj instanceof BigDecimal ||
+            obj instanceof URL;
     }
 
     /**
@@ -247,6 +253,7 @@ public class QueryUtils {
             Cache.Entry<Object, Object> next = scanItr.next();
 
             Object k = next.getKey();
+
             Object v = next.getValue();
 
             rows.add(new Object[] {typeOf(k), valueOf(k), typeOf(v), valueOf(v)});
@@ -397,6 +404,7 @@ public class QueryUtils {
 
         for (GridQueryTypeDescriptor type : types) {
             CacheSqlMetadata metadata = new CacheSqlMetadata().setCacheName(cacheName);
+
             // Filter internal types (e.g., data structures).
             if (type.name().startsWith("GridCache"))
                 continue;
@@ -430,6 +438,7 @@ public class QueryUtils {
             // Add only SQL indexes.
             if (desc.type() == QueryIndexType.SORTED) {
                 Collection<String> idxFields = new LinkedList<>();
+
                 Collection<String> descendings = new LinkedList<>();
 
                 for (String idxField : e.getValue().fields()) {

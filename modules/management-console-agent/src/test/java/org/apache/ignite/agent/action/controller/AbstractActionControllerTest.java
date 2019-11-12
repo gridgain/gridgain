@@ -48,13 +48,14 @@ abstract class AbstractActionControllerTest extends AgentCommonAbstractSelfTest 
         changeManagementConsoleUri(ignite);
 
         cluster = ignite.cluster();
+
         cluster.active(true);
     }
 
     /**
      * Send action request and check execution result with assert function and specific grid instances count.
      *
-     * @param req Request.
+     * @param req      Request.
      * @param assertFn Assert fn.
      */
     protected void executeAction(Request req, Function<Response, Boolean> assertFn) {
@@ -72,9 +73,7 @@ abstract class AbstractActionControllerTest extends AgentCommonAbstractSelfTest 
         );
     }
 
-    /**
-     * @param cond Condition.
-     */
+    /** {@inheritDoc} */
     @Override protected void assertWithPoll(Callable<Boolean> cond) {
         with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
     }

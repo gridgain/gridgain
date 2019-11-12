@@ -73,14 +73,17 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
     @Bean
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+
         container.setMaxTextMessageBufferSize(131072);
         container.setMaxBinaryMessageBufferSize(131072);
+
         return container;
     }
 
     /** {@inheritDoc} */
     @Override public boolean configureMessageConverters(List<MessageConverter> msgConverters) {
         MappingJackson2MessageConverter smileJsonConverter = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+
         smileJsonConverter.setObjectMapper(binaryMapper());
 
         msgConverters.add(smileJsonConverter);
@@ -101,6 +104,7 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
      */
     protected TaskScheduler getHeartbeatScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+
         scheduler.setPoolSize(1);
         scheduler.setThreadNamePrefix("stomp-heartbeat-thread-");
         scheduler.initialize();

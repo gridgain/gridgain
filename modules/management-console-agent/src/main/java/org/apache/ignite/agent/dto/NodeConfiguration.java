@@ -54,10 +54,11 @@ public class NodeConfiguration {
 
     /**
      * @param json Config in JSON format.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public NodeConfiguration setJson(String json) {
         this.json = json;
+
         return this;
     }
 
@@ -70,10 +71,11 @@ public class NodeConfiguration {
 
     /**
      * @param consistentId Consistence id.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public NodeConfiguration setConsistentId(String consistentId) {
         this.consistentId = consistentId;
+
         return this;
     }
 

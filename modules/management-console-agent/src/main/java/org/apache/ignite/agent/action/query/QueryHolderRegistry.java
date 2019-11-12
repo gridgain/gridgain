@@ -16,8 +16,8 @@
 
 package org.apache.ignite.agent.action.query;
 
-import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -40,18 +40,17 @@ public class QueryHolderRegistry {
     private final IgniteLogger log;
 
     /** Holder ttl. */
-    private final Duration holderTtl;
+    private final long holderTtl;
 
     /**
      * @param ctx Context.
      * @param holderTtl Holder ttl.
      */
-    public QueryHolderRegistry(GridKernalContext ctx, Duration holderTtl) {
+    public QueryHolderRegistry(GridKernalContext ctx, long holderTtl) {
         this.ctx = ctx;
         this.holderTtl = holderTtl;
-        log = ctx.log(QueryHolderRegistry.class);
-
-        qryHolders = ctx.grid().cluster().nodeLocalMap();
+        this.log = ctx.log(QueryHolderRegistry.class);
+        this.qryHolders = new ConcurrentHashMap<>();
     }
 
     /**
@@ -61,6 +60,7 @@ public class QueryHolderRegistry {
      */
     public QueryHolder createQueryHolder(String qryId) {
         QueryHolder qryHolder = new QueryHolder(qryId);
+
         qryHolders.put(qryId, qryHolder);
 
         scheduleToRemove(qryId);
@@ -94,13 +94,14 @@ public class QueryHolderRegistry {
      * @return Cursor holder by query ID and cursor ID.
      */
     public CursorHolder findCursor(String qryId, String cursorId) {
-        if (!qryHolders.containsKey(qryId))
+        QueryHolder qryHolder = qryHolders.get(qryId);
+
+        if (qryHolder == null)
             throw new IgniteException("Query results are expired.");
 
-        QueryHolder qryHolder = qryHolders.get(qryId);
-        qryHolder.setAccessed(true);
+        qryHolder.accessed(true);
 
-        return qryHolder.getCursor(cursorId);
+        return qryHolder.cursor(cursorId);
     }
 
     /**
@@ -139,13 +140,13 @@ public class QueryHolderRegistry {
      * @param qryId Query id.
      */
     private void scheduleToRemove(String qryId) {
-        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(holderTtl.toMillis()) {
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(holderTtl) {
             @Override public void onTimeout() {
                 QueryHolder holder = qryHolders.get(qryId);
 
                 if (holder != null) {
-                    if (holder.isAccessed()) {
-                        holder.setAccessed(false);
+                    if (holder.accessed()) {
+                        holder.accessed(false);
 
                         // Holder was accessed, we need to keep it for one more period.
                         scheduleToRemove(qryId);

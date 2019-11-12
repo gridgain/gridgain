@@ -24,9 +24,9 @@ import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -61,7 +61,7 @@ import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 /**
  * Web socket manager.
  */
-public class WebSocketManager implements AutoCloseable {
+public class WebSocketManager extends GridProcessorAdapter {
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 
@@ -80,12 +80,6 @@ public class WebSocketManager implements AutoCloseable {
     /** Max sleep time seconds between reconnects. */
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
-    /** Context. */
-    private GridKernalContext ctx;
-
-    /** Logger. */
-    private IgniteLogger log;
-
     /** Client. */
     private WebSocketStompClient client;
 
@@ -95,15 +89,11 @@ public class WebSocketManager implements AutoCloseable {
     /** Reconnect count. */
     private int reconnectCnt;
 
-    /** Is stopped. */
-    private volatile boolean isStopped;
-
     /**
-     * @param ctx Context.
+     * @param ctx Kernal context.
      */
-    public WebSocketManager(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(WebSocketManager.class);
+    protected WebSocketManager(GridKernalContext ctx) {
+        super(ctx);
     }
 
     /**
@@ -111,12 +101,6 @@ public class WebSocketManager implements AutoCloseable {
      * @param sesHnd Session handler.
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
-        if (isStopped)
-            throw new InterruptedException("Web socket manager was stopped.");
-
-        if (client != null)
-            client.stop();
-
         if (reconnectCnt == -1)
             log.info("Connecting to server: " + uri);
 
@@ -125,15 +109,14 @@ public class WebSocketManager implements AutoCloseable {
 
         Thread.sleep(reconnectCnt * 1000);
 
-        WebSocketClient webSockClient = new WebSocketClient(createHttpClient(uri, cfg));
-        webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
-        webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
+        client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
 
-        client = new WebSocketStompClient(new JettyWebSocketClient(webSockClient));
         client.setMessageConverter(getMessageConverter());
+
         client.start();
 
-        ses = client.connect(uri, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
+        ses = client.connect(uri, handshakeHeaders(), connectHeaders(), sesHnd).get(10L, SECONDS);
+
         reconnectCnt = -1;
     }
 
@@ -149,6 +132,7 @@ public class WebSocketManager implements AutoCloseable {
         // TODO: workaround of spring-messaging bug with send byte array data.
         // https://github.com/spring-projects/spring-framework/issues/23358
         StompHeaders headers = new StompHeaders();
+
         headers.setContentType(MimeTypeUtils.APPLICATION_OCTET_STREAM);
         headers.setDestination(dest);
 
@@ -165,7 +149,7 @@ public class WebSocketManager implements AutoCloseable {
      * @param payload Payload.
      */
     public synchronized boolean send(String dest, Object payload) {
-        boolean connected = isConnected();
+        boolean connected = connected();
 
         if (connected)
             ses.send(dest, payload);
@@ -176,14 +160,12 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return {@code True} if agent connected to backend.
      */
-    public boolean isConnected() {
+    public boolean connected() {
         return ses != null && ses.isConnected();
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
-        isStopped = true;
-
+    @Override public void stop(boolean cancel) {
         if (client != null)
             client.stop();
     }
@@ -192,7 +174,9 @@ public class WebSocketManager implements AutoCloseable {
      * @return Composite message converter.
      */
     private CompositeMessageConverter getMessageConverter() {
-        MappingJackson2MessageConverter mapper = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+        MappingJackson2MessageConverter mapper =
+            new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+
         mapper.setObjectMapper(this.mapper);
 
         return new CompositeMessageConverter(
@@ -203,10 +187,11 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return Handshake headers.
      */
-    private WebSocketHttpHeaders getHandshakeHeaders() {
+    private WebSocketHttpHeaders handshakeHeaders() {
         UUID clusterId = ctx.cluster().get().id();
 
         WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
+
         handshakeHeaders.add(AGENT_VERSION_HDR, CURR_VER);
         handshakeHeaders.add(CLUSTER_ID_HDR, clusterId.toString());
 
@@ -216,31 +201,38 @@ public class WebSocketManager implements AutoCloseable {
     /**
      * @return Connection headers.
      */
-    private StompHeaders getConnectHeaders() {
+    private StompHeaders connectHeaders() {
         UUID clusterId = ctx.cluster().get().id();
 
         StompHeaders connectHeaders = new StompHeaders();
+
         connectHeaders.add(CLUSTER_ID_HDR, clusterId.toString());
 
         return connectHeaders;
     }
 
     /**
-     * @return Jetty http client.
+     * @param uri Uri.
+     * @param cfg Config.
+     * @return Jetty websocket client.
      */
-    private HttpClient createHttpClient(URI uri, ManagementConfiguration cfg) throws IgniteCheckedException {
+    private JettyWebSocketClient createWebSocketClient(URI uri, ManagementConfiguration cfg) throws Exception {
         HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
+        
         // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(log, httpClient, uri);
 
-        try {
-            httpClient.start();
-        }
-        catch (Exception e) {
-            throw new IgniteCheckedException(e);
-        }
+        httpClient.setName("mgmt-console-http-client");
+        httpClient.addBean(httpClient.getExecutor());
 
-        return httpClient;
+        WebSocketClient webSockClient = new WebSocketClient(httpClient);
+
+        webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
+        webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
+
+        webSockClient.addBean(httpClient);
+
+        return new JettyWebSocketClient(webSockClient);
     }
 
     /**
@@ -376,10 +368,12 @@ public class WebSocketManager implements AutoCloseable {
                 String scheme = p.getURI().getScheme();
 
                 user = System.getProperty(scheme + ".proxyUsername");
+
                 pwd = System.getProperty(scheme + ".proxyPassword");
             }
             else {
                 user = System.getProperty("java.net.socks.username");
+
                 pwd = System.getProperty("java.net.socks.password");
             }
 

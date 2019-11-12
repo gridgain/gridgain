@@ -45,9 +45,9 @@ public abstract class AbstractActionControllerWithAuthenticationTest extends Abs
     protected UUID authenticate(AuthenticateCredentials creds) {
         final AtomicReference<UUID> sesId = new AtomicReference<>();
         Request authReq = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("SecurityActions.authenticate")
-                .setArgument(creds);
+            .setId(UUID.randomUUID())
+            .setAction("SecurityActions.authenticate")
+            .setArgument(creds);
 
         executeAction(authReq, (r) -> {
             if (r.getStatus() == COMPLETED && r.getResult() != null) {

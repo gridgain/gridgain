@@ -25,21 +25,24 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteInterruptedException;
+import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.service.ActionService;
-import org.apache.ignite.agent.service.CacheService;
-import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
-import org.apache.ignite.agent.service.config.NodeConfigurationService;
-import org.apache.ignite.agent.service.event.EventsExporter;
-import org.apache.ignite.agent.service.event.EventsService;
-import org.apache.ignite.agent.service.metrics.MetricExporter;
-import org.apache.ignite.agent.service.metrics.MetricsService;
-import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter;
-import org.apache.ignite.agent.service.tracing.TracingService;
+import org.apache.ignite.agent.processor.ActionProcessor;
+import org.apache.ignite.agent.processor.CacheProcessor;
+import org.apache.ignite.agent.processor.ClusterProcessor;
+import org.apache.ignite.agent.processor.config.NodeConfigurationExporter;
+import org.apache.ignite.agent.processor.config.NodeConfigurationProcessor;
+import org.apache.ignite.agent.processor.event.EventsExporter;
+import org.apache.ignite.agent.processor.event.EventsProcessor;
+import org.apache.ignite.agent.processor.metrics.MetricExporter;
+import org.apache.ignite.agent.processor.metrics.MetricProcessor;
+import org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporter;
+import org.apache.ignite.agent.processor.tracing.TracingProcessor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
@@ -56,11 +59,13 @@ import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
@@ -91,11 +96,11 @@ public class Agent extends ManagementConsoleProcessor {
     /** Websocket manager. */
     private WebSocketManager mgr;
 
-    /** Cluster service. */
-    private ClusterService clusterSrvc;
+    /** Cluster processor. */
+    private ClusterProcessor clusterProc;
 
-    /** Tracing service. */
-    private TracingService tracingSrvc;
+    /** Tracing processor. */
+    private TracingProcessor tracingProc;
 
     /** Span exporter. */
     private ManagementConsoleSpanExporter spanExporter;
@@ -106,26 +111,29 @@ public class Agent extends ManagementConsoleProcessor {
     /** Metric exporter. */
     private MetricExporter metricExporter;
 
-    /** Metric service. */
-    private MetricsService metricSrvc;
+    /** Metric processor. */
+    private MetricProcessor metricProc;
 
-    /** Action service. */
-    private ActionService actSrvc;
+    /** Action processor. */
+    private ActionProcessor actProc;
 
-    /** Event service. */
-    private EventsService evtSrvc;
+    /** Event processor. */
+    private EventsProcessor evtProc;
 
-    /** Node configuration service. */
-    private NodeConfigurationService nodeConfigurationSrvc;
+    /** Node configuration processor. */
+    private NodeConfigurationProcessor nodeConfigurationProc;
 
-    /** Cache service. */
-    private CacheService cacheSrvc;
+    /** Cache processor. */
+    private CacheProcessor cacheProc;
 
     /** Execute service. */
     private ThreadPoolExecutor connectPool;
 
     /** Meta storage. */
     private DistributedMetaStorage metaStorage;
+
+    /** Session registry. */
+    private SessionRegistry sesRegistry;
 
     /** Active server uri. */
     private String curSrvUri;
@@ -142,32 +150,35 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        metaStorage = ctx.distributedMetastorage();
+        this.metaStorage = ctx.distributedMetastorage();
+        this.evtsExporter = new EventsExporter(ctx);
+        this.spanExporter = new ManagementConsoleSpanExporter(ctx);
+        this.metricExporter = new MetricExporter(ctx);
 
-        evtsExporter = new EventsExporter(ctx);
-        spanExporter = new ManagementConsoleSpanExporter(ctx);
-        metricExporter = new MetricExporter(ctx);
-
-        launchAgentListener(null, ctx.discovery().discoCache());
-
-        // Listener for coordinator changed.
-        ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+        // Connect to backend if local node is a coordinator or await coordinator change event.
+        if (isCoordinator(ctx.discovery().discoCache()))
+            connect();
+        else
+            ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         evtsExporter.addLocalEventListener();
+
         metricExporter.addMetricListener();
 
-        try (NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx)) {
-            exporter.export();
-        }
+        NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+
+        exporter.export();
+
+        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        U.closeQuiet(metricExporter);
-        U.closeQuiet(evtsExporter);
-        U.closeQuiet(spanExporter);
+        quiteStop(metricExporter);
+        quiteStop(evtsExporter);
+        quiteStop(spanExporter);
 
         disconnect();
     }
@@ -180,14 +191,14 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        U.closeQuiet(cacheSrvc);
-        U.closeQuiet(actSrvc);
-        U.closeQuiet(metricSrvc);
-        U.closeQuiet(nodeConfigurationSrvc);
-        U.closeQuiet(evtSrvc);
-        U.closeQuiet(tracingSrvc);
-        U.closeQuiet(clusterSrvc);
-        U.closeQuiet(mgr);
+        quiteStop(cacheProc);
+        quiteStop(actProc);
+        quiteStop(metricProc);
+        quiteStop(nodeConfigurationProc);
+        quiteStop(evtProc);
+        quiteStop(tracingProc);
+        quiteStop(clusterProc);
+        quiteStop(mgr);
 
         disconnected.set(false);
 
@@ -211,12 +222,17 @@ public class Agent extends ManagementConsoleProcessor {
     }
 
     /**
+     * @return Session registry.
+     */
+    public SessionRegistry sessionRegistry() {
+        return sesRegistry;
+    }
+
+    /**
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        ClusterNode crdNode = F.first(discoCache.serverNodes());
-
-        if (crdNode != null && crdNode.isLocal()) {
+        if (isCoordinator(discoCache)) {
             cfg = readFromMetaStorage();
 
             connect();
@@ -243,13 +259,26 @@ public class Agent extends ManagementConsoleProcessor {
 
             disconnected.set(false);
         }
-        catch (InterruptedException ignored) {
-            // No-op.
+        catch (IgniteInterruptedCheckedException | IgniteInterruptedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Caught interrupted exception: " + e);
+
+            mgr.stop(true);
+        }
+        catch (InterruptedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Caught interrupted exception: " + e);
+
+            mgr.stop(true);
+
+            Thread.currentThread().interrupt();
         }
         catch (TimeoutException ignored) {
             connect0();
         }
         catch (ExecutionException e) {
+            mgr.stop(true);
+
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class, ConnectionLostException.class)) {
                 if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
@@ -284,22 +313,24 @@ public class Agent extends ManagementConsoleProcessor {
 
         log.info("Starting Management Console agent on coordinator");
 
-        mgr = new WebSocketManager(ctx);
-        clusterSrvc = new ClusterService(ctx, mgr);
-        tracingSrvc = new TracingService(ctx, mgr);
-        metricSrvc = new MetricsService(ctx, mgr);
-        evtSrvc = new EventsService(ctx, mgr);
-        nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
-        actSrvc = new ActionService(ctx, mgr);
-        cacheSrvc = new CacheService(ctx, mgr);
+        this.mgr = new WebSocketManager(ctx);
+        this.sesRegistry = new SessionRegistry(ctx);
+        this.clusterProc = new ClusterProcessor(ctx, mgr);
+        this.tracingProc = new TracingProcessor(ctx, mgr);
+        this.metricProc = new MetricProcessor(ctx, mgr);
+        this.evtProc = new EventsProcessor(ctx, mgr);
+        this.nodeConfigurationProc = new NodeConfigurationProcessor(ctx, mgr);
+        this.actProc = new ActionProcessor(ctx, mgr);
+        this.cacheProc = new CacheProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 
-        connectPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        connectPool =
+            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
+
+        connectPool.submit(this::connect0);
 
         ctx.event().enableEvents(NOT_ENABLED_EVTS);
-
-        submitConnectTask();
     }
 
     /**
@@ -354,16 +385,19 @@ public class Agent extends ManagementConsoleProcessor {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster:: " + curSrvUri);
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
             U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
 
-            clusterSrvc.sendInitialState();
-            cacheSrvc.sendInitialState();
+            clusterProc.sendInitialState();
+
+            cacheProc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 /** {@inheritDoc} */
@@ -373,7 +407,7 @@ public class Agent extends ManagementConsoleProcessor {
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    metricSrvc.broadcastPullMetrics();
+                    metricProc.broadcastPullMetrics();
                 }
             });
 
@@ -385,7 +419,7 @@ public class Agent extends ManagementConsoleProcessor {
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actSrvc.onActionRequest((Request) payload);
+                    actProc.onActionRequest((Request)payload);
                 }
             });
 
@@ -405,7 +439,7 @@ public class Agent extends ManagementConsoleProcessor {
                 if (disconnected.compareAndSet(false, true)) {
                     log.error("Lost websocket connection with server: " + curSrvUri);
 
-                    submitConnectTask();
+                    reconnect();
                 }
             }
         }
@@ -414,8 +448,17 @@ public class Agent extends ManagementConsoleProcessor {
     /**
      * Submit a reconnection task only if there no active connect in progress.
      */
-    private void submitConnectTask() {
+    private void reconnect() {
         if (connectPool.getActiveCount() == 0)
             connectPool.submit(this::connect0);
+    }
+
+    /**
+     * @param discoCache Disco cache.
+     */
+    private boolean isCoordinator(DiscoCache discoCache) {
+        ClusterNode crdNode = F.first(discoCache.serverNodes());
+
+        return crdNode != null && crdNode.isLocal();
     }
 }

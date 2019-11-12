@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.action;
 
-import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -24,6 +23,7 @@ import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
@@ -32,56 +32,45 @@ import static org.apache.ignite.agent.utils.AgentUtils.authenticate;
  * Security session registry.
  */
 public class SessionRegistry {
-    /** Instance. */
-    private static volatile SessionRegistry instance;
-
     /** Context. */
     private final GridKernalContext ctx;
 
     /** SessionId-Session map. */
-    private final ConcurrentMap<UUID, Session> sesId2Ses = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Session> sesIdToSes = new ConcurrentHashMap<>();
 
     /** Session time to live. */
-    private final Duration sesTtl;
+    private final long sesTtl;
 
     /** Interval to invalidate session tokens. */
-    private final Duration sesTokTtl;
+    private final long sesTokTtl;
+
+    /** Security enabled. */
+    private boolean securityEnabled;
+
+    /** Authentication enabled. */
+    private boolean authenticationEnabled;
 
     /**
      * @param ctx Context.
      */
-    private SessionRegistry(GridKernalContext ctx) {
+    public SessionRegistry(GridKernalContext ctx) {
         this.ctx = ctx;
+        this.securityEnabled = ctx.security().enabled();
+        this.authenticationEnabled = ctx.authentication().enabled();
 
         ManagementConfiguration cfg = ctx.managementConsole().configuration();
 
-        sesTtl = Duration.ofMillis(cfg.getSecuritySessionTimeout());
-        sesTokTtl = Duration.ofMillis(cfg.getSecuritySessionExpirationTimeout());
-    }
-
-    /**
-     * @param ctx Context.
-     */
-    public static SessionRegistry getInstance(GridKernalContext ctx) {
-        SessionRegistry locInstance = instance;
-
-        if (locInstance == null) {
-            synchronized (SessionRegistry.class) {
-                locInstance = instance;
-
-                if (locInstance == null)
-                    instance = locInstance = new SessionRegistry(ctx);
-            }
-        }
-
-        return locInstance;
+        this.sesTtl = cfg.getSecuritySessionTimeout();
+        this.sesTokTtl = cfg.getSecuritySessionExpirationTimeout();
     }
 
     /**
      * @param ses Session.
      */
     public void saveSession(Session ses) {
-        sesId2Ses.put(ses.id(), ses);
+        sesIdToSes.put(ses.id(), ses);
+
+        scheduleToRemove(ses.id());
     }
 
     /**
@@ -93,13 +82,13 @@ public class SessionRegistry {
         if (sesId == null)
             throw new IgniteAuthenticationException("Invalid session ID: null");
 
-        Session ses = sesId2Ses.get(sesId);
+        Session ses = sesIdToSes.get(sesId);
 
         if (ses == null)
             throw new IgniteAuthenticationException("Session not found for ID: " + sesId);
 
-        if (!ses.touch() || ses.isTimedOut(sesTtl.toMillis())) {
-            sesId2Ses.remove(ses.id(), ses);
+        if (!ses.touch() || ses.timedOut(sesTtl)) {
+            sesIdToSes.remove(ses.id(), ses);
 
             if (ctx.security().enabled() && ses.securityContext() != null && ses.securityContext().subject() != null)
                 ctx.security().onSessionExpired(ses.securityContext().subject().id());
@@ -107,12 +96,42 @@ public class SessionRegistry {
             return null;
         }
 
-        if (ses.isSessionExpired(sesTokTtl.toMillis())) {
-            ses.securityContext(authenticate(ctx.security(), ses));
+        if (ses.sessionExpired(sesTokTtl)) {
             ses.lastInvalidateTime(U.currentTimeMillis());
-            sesId2Ses.put(ses.id(), ses);
+
+            try {
+                if (securityEnabled)
+                    ses.securityContext(authenticate(ctx.security(), ses));
+                else if (authenticationEnabled)
+                    ses.authorizationContext(authenticate(ctx.authentication(), ses));
+
+                sesIdToSes.put(ses.id(), ses);
+            }
+            catch (IgniteCheckedException ex) {
+                sesIdToSes.remove(ses.id());
+
+                throw ex;
+            }
         }
 
         return ses;
+    }
+
+    /**
+     * @param sesId Session id.
+     */
+    private void scheduleToRemove(UUID sesId) {
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(sesTtl) {
+            @Override public void onTimeout() {
+                sesIdToSes.computeIfPresent(sesId, (id, ses) -> {
+                    if (ses.timedOut(sesTtl))
+                        return null;
+                    else
+                        scheduleToRemove(sesId);
+
+                    return ses;
+                });
+            }
+        });
     }
 }

@@ -19,6 +19,7 @@ package org.apache.ignite.agent.action.controller;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.Agent;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.action.annotation.ActionController;
@@ -26,7 +27,6 @@ import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
 import org.apache.ignite.agent.utils.AgentUtils;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.security.SecurityCredentials;
 
 /**
  * Controller for security actions.
@@ -47,8 +47,8 @@ public class SecurityActionsController {
      */
     public SecurityActionsController(GridKernalContext ctx) {
         this.ctx = ctx;
-        log = ctx.log(SecurityActionsController.class);
-        registry = SessionRegistry.getInstance(ctx);
+        this.log = ctx.log(SecurityActionsController.class);
+        this.registry = ((Agent) ctx.managementConsole()).sessionRegistry();
     }
 
     /**
@@ -57,6 +57,7 @@ public class SecurityActionsController {
      */
     public String authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
         Session ses = authenticate0(reqCreds);
+
         registry.saveSession(ses);
 
         if (log.isDebugEnabled())
@@ -72,35 +73,24 @@ public class SecurityActionsController {
      * @throws IgniteCheckedException If authentication failed.
      */
     private Session authenticate0(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
-        boolean authenticationEnabled = ctx.authentication().enabled();
         boolean securityEnabled = ctx.security().enabled();
+
+        boolean authenticationEnabled = ctx.authentication().enabled();
 
         if (reqCreds.getCredentials() == null)
             throw new IgniteAuthenticationException("Authentication failed, credentials not found");
 
         Session ses = Session.random();
-        ses.credentials(reqCreds.getCredentials());
+
         ses.address(reqCreds.getAddress());
+        ses.credentials(reqCreds.getCredentials());
 
         if (securityEnabled) {
-            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
             ses.lastInvalidateTime(U.currentTimeMillis());
+            ses.securityContext(AgentUtils.authenticate(ctx.security(), ses));
         }
-        else if (authenticationEnabled) {
-            SecurityCredentials creds = ses.credentials();
-
-            String login = null;
-
-            if (creds.getLogin() instanceof String)
-                login = (String) creds.getLogin();
-
-            String pwd = null;
-
-            if (creds.getPassword() instanceof String)
-                pwd = (String) creds.getPassword();
-
-            ses.authorizationContext(ctx.authentication().authenticate(login, pwd));
-        }
+        else if (authenticationEnabled)
+            ses.authorizationContext(AgentUtils.authenticate(ctx.authentication(), ses));
 
         return ses;
     }
