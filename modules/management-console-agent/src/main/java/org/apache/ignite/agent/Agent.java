@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent;
 
+import java.io.EOFException;
 import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
@@ -48,7 +49,6 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -260,7 +260,7 @@ public class Agent extends ManagementConsoleProcessor {
                     break;
                 }
                 else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
-                    EofException.class, ConnectionLostException.class)) {
+                    EOFException.class, ConnectionLostException.class)) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
