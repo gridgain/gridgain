@@ -42,6 +42,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
     @Before
     public void setup() throws Exception {
         ignite = (IgniteEx) startGrid();
+
         ignite.cluster().active(true);
     }
 
@@ -54,6 +55,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
         Session ses = Session.random();
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         assertNotNull(registry.getSession(ses.id()));
@@ -100,6 +102,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
         ignite.context().managementConsole().configuration().setSecuritySessionTimeout(100);
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         Thread.sleep(200);
@@ -121,6 +124,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
         ignite.context().managementConsole().configuration().setSecuritySessionTimeout(100);
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         for (int i = 0; i < 5; i++) {
@@ -137,6 +141,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldUpdateLastInvalidateTime() throws Exception {
         Session ses = Session.random();
+
         ses.credentials(new SecurityCredentials("ignite", "ignite"));
 
         long oldLastInvalidateTime = ses.lastInvalidateTime();
@@ -144,6 +149,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
         ignite.context().managementConsole().configuration().setSecuritySessionExpirationTimeout(100);
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         Thread.sleep(110);
@@ -161,6 +167,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
         ignite.context().managementConsole().configuration().setSecuritySessionExpirationTimeout(100);
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         Thread.sleep(110);
@@ -184,11 +191,13 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
     @Test
     public void shouldRemoveSessionAfterInvalidateSessionWithIncorrectCredentials() throws Exception {
         Session ses = Session.random();
+
         ses.credentials(new SecurityCredentials("ignite", "ignite2"));
 
         ignite.context().managementConsole().configuration().setSecuritySessionExpirationTimeout(100);
 
         SessionRegistry registry = new SessionRegistry(ignite.context());
+
         registry.saveSession(ses);
 
         Thread.sleep(110);

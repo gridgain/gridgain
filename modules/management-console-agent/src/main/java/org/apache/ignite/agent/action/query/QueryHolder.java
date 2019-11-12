@@ -68,6 +68,7 @@ public class QueryHolder implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         cancelHook.cancel();
+
         cursors.keySet().forEach(this::closeCursor);
     }
 
@@ -86,6 +87,7 @@ public class QueryHolder implements AutoCloseable {
 
         if (cursor != null) {
             U.closeQuiet(cursor);
+
             cursors.remove(cursorId);
         }
     }
@@ -102,6 +104,7 @@ public class QueryHolder implements AutoCloseable {
      */
     public QueryHolder accessed(boolean accessed) {
         isAccessed = accessed;
+
         return this;
     }
 }

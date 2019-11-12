@@ -75,8 +75,9 @@ public class BaselineActionsController {
      * @param consIds Node consistent ids.
      */
     private Collection<BaselineNode> baselineNodesForIds(Collection<String> consIds) {
-        Map<String, BaselineNode> baseline = currentBaseLine();
         Map<String, BaselineNode> srvrs = currentServers();
+
+        Map<String, BaselineNode> baseline = currentBaseLine();
 
         Collection<BaselineNode> baselineTop = new ArrayList<>();
 

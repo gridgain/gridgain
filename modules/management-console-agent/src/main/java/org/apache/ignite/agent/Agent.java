@@ -26,23 +26,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.service.ActionService;
-import org.apache.ignite.agent.service.CacheService;
-import org.apache.ignite.agent.service.ClusterService;
-import org.apache.ignite.agent.service.config.NodeConfigurationExporter;
-import org.apache.ignite.agent.service.config.NodeConfigurationService;
-import org.apache.ignite.agent.service.event.EventsExporter;
-import org.apache.ignite.agent.service.event.EventsService;
-import org.apache.ignite.agent.service.metrics.MetricExporter;
-import org.apache.ignite.agent.service.metrics.MetricsService;
-import org.apache.ignite.agent.service.tracing.ManagementConsoleSpanExporter;
-import org.apache.ignite.agent.service.tracing.TracingService;
+import org.apache.ignite.agent.processor.ActionProcessor;
+import org.apache.ignite.agent.processor.CacheProcessor;
+import org.apache.ignite.agent.processor.ClusterProcessor;
+import org.apache.ignite.agent.processor.config.NodeConfigurationExporter;
+import org.apache.ignite.agent.processor.config.NodeConfigurationProcessor;
+import org.apache.ignite.agent.processor.event.EventsExporter;
+import org.apache.ignite.agent.processor.event.EventsProcessor;
+import org.apache.ignite.agent.processor.metrics.MetricExporter;
+import org.apache.ignite.agent.processor.metrics.MetricProcessor;
+import org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporter;
+import org.apache.ignite.agent.processor.tracing.TracingProcessor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
@@ -82,11 +81,11 @@ public class Agent extends ManagementConsoleProcessor {
     /** Websocket manager. */
     private WebSocketManager mgr;
 
-    /** Cluster service. */
-    private ClusterService clusterSrvc;
+    /** Cluster processor. */
+    private ClusterProcessor clusterProc;
 
-    /** Tracing service. */
-    private TracingService tracingSrvc;
+    /** Tracing processor. */
+    private TracingProcessor tracingProc;
 
     /** Span exporter. */
     private ManagementConsoleSpanExporter spanExporter;
@@ -97,20 +96,20 @@ public class Agent extends ManagementConsoleProcessor {
     /** Metric exporter. */
     private MetricExporter metricExporter;
 
-    /** Metric service. */
-    private MetricsService metricSrvc;
+    /** Metric processor. */
+    private MetricProcessor metricProc;
 
-    /** Action service. */
-    private ActionService actSrvc;
+    /** Action processor. */
+    private ActionProcessor actProc;
 
-    /** Event service. */
-    private EventsService evtSrvc;
+    /** Event processor. */
+    private EventsProcessor evtProc;
 
-    /** Node configuration service. */
-    private NodeConfigurationService nodeConfigurationSrvc;
+    /** Node configuration processor. */
+    private NodeConfigurationProcessor nodeConfigurationProc;
 
-    /** Cache service. */
-    private CacheService cacheSrvc;
+    /** Cache processor. */
+    private CacheProcessor cacheProc;
 
     /** Execute service. */
     private ThreadPoolExecutor connectPool;
@@ -127,9 +126,6 @@ public class Agent extends ManagementConsoleProcessor {
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
 
-    /** Listener. */
-    private final DiscoveryEventListener lsnr = this::launchAgentListener;
-
     /**
      * @param ctx Kernal context.
      */
@@ -139,29 +135,31 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        metaStorage = ctx.distributedMetastorage();
-
-        evtsExporter = new EventsExporter(ctx);
-        spanExporter = new ManagementConsoleSpanExporter(ctx);
-        metricExporter = new MetricExporter(ctx);
+        this.metaStorage = ctx.distributedMetastorage();
+        this.evtsExporter = new EventsExporter(ctx);
+        this.spanExporter = new ManagementConsoleSpanExporter(ctx);
+        this.metricExporter = new MetricExporter(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isCoordinator(ctx.discovery().discoCache()))
             connect();
         else
-            ctx.event().addDiscoveryEventListener(lsnr, EVTS_DISCOVERY);
+            ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         evtsExporter.addLocalEventListener();
+
         metricExporter.addMetricListener();
 
         NodeConfigurationExporter exporter = new NodeConfigurationExporter(ctx);
+
         exporter.export();
+
         quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        ctx.event().removeDiscoveryEventListener(lsnr, EVTS_DISCOVERY);
+        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
@@ -178,13 +176,13 @@ public class Agent extends ManagementConsoleProcessor {
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        quiteStop(cacheSrvc);
-        quiteStop(actSrvc);
-        quiteStop(metricSrvc);
-        quiteStop(nodeConfigurationSrvc);
-        quiteStop(evtSrvc);
-        quiteStop(tracingSrvc);
-        quiteStop(clusterSrvc);
+        quiteStop(cacheProc);
+        quiteStop(actProc);
+        quiteStop(metricProc);
+        quiteStop(nodeConfigurationProc);
+        quiteStop(evtProc);
+        quiteStop(tracingProc);
+        quiteStop(clusterProc);
         quiteStop(mgr);
 
         disconnected.set(false);
@@ -284,15 +282,15 @@ public class Agent extends ManagementConsoleProcessor {
 
         log.info("Starting Management Console agent on coordinator");
 
-        mgr = new WebSocketManager(ctx);
-        sesRegistry = new SessionRegistry(ctx);
-        clusterSrvc = new ClusterService(ctx, mgr);
-        tracingSrvc = new TracingService(ctx, mgr);
-        metricSrvc = new MetricsService(ctx, mgr);
-        evtSrvc = new EventsService(ctx, mgr);
-        nodeConfigurationSrvc = new NodeConfigurationService(ctx, mgr);
-        actSrvc = new ActionService(ctx, mgr);
-        cacheSrvc = new CacheService(ctx, mgr);
+        this.mgr = new WebSocketManager(ctx);
+        this.sesRegistry = new SessionRegistry(ctx);
+        this.clusterProc = new ClusterProcessor(ctx, mgr);
+        this.tracingProc = new TracingProcessor(ctx, mgr);
+        this.metricProc = new MetricProcessor(ctx, mgr);
+        this.evtProc = new EventsProcessor(ctx, mgr);
+        this.nodeConfigurationProc = new NodeConfigurationProcessor(ctx, mgr);
+        this.actProc = new ActionProcessor(ctx, mgr);
+        this.cacheProc = new CacheProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 
@@ -354,16 +352,19 @@ public class Agent extends ManagementConsoleProcessor {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
+
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
             U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
 
-            clusterSrvc.sendInitialState();
-            cacheSrvc.sendInitialState();
+            clusterProc.sendInitialState();
+
+            cacheProc.sendInitialState();
 
             ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 /** {@inheritDoc} */
@@ -373,7 +374,7 @@ public class Agent extends ManagementConsoleProcessor {
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    metricSrvc.broadcastPullMetrics();
+                    metricProc.broadcastPullMetrics();
                 }
             });
 
@@ -385,7 +386,7 @@ public class Agent extends ManagementConsoleProcessor {
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actSrvc.onActionRequest((Request) payload);
+                    actProc.onActionRequest((Request)payload);
                 }
             });
 

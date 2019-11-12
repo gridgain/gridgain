@@ -36,9 +36,9 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
     @Test
     public void shouldSuccessfullyAuthenticate() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("SecurityActions.authenticate")
-                .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
+            .setId(UUID.randomUUID())
+            .setAction("SecurityActions.authenticate")
+            .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         executeAction(req, (r) -> r.getStatus() == COMPLETED && UUID.fromString((String) r.getResult()) != null);
     }
@@ -49,9 +49,9 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
     @Test
     public void shouldSendErrorResponseWithEmptyCredentials() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("SecurityActions.authenticate")
-                .setArgument(new AuthenticateCredentials());
+            .setId(UUID.randomUUID())
+            .setAction("SecurityActions.authenticate")
+            .setArgument(new AuthenticateCredentials());
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }
@@ -62,9 +62,9 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
     @Test
     public void shouldSendErrorResponseWithInvalidCredentials() {
         Request req = new Request()
-                .setId(UUID.randomUUID())
-                .setAction("SecurityActions.authenticate")
-                .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite2")));
+            .setId(UUID.randomUUID())
+            .setAction("SecurityActions.authenticate")
+            .setArgument(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite2")));
 
         executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
     }

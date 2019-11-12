@@ -55,13 +55,13 @@ public class SessionRegistry {
      */
     public SessionRegistry(GridKernalContext ctx) {
         this.ctx = ctx;
-        securityEnabled = ctx.security().enabled();
-        authenticationEnabled = ctx.authentication().enabled();
+        this.securityEnabled = ctx.security().enabled();
+        this.authenticationEnabled = ctx.authentication().enabled();
 
         ManagementConfiguration cfg = ctx.managementConsole().configuration();
 
-        sesTtl = cfg.getSecuritySessionTimeout();
-        sesTokTtl = cfg.getSecuritySessionExpirationTimeout();
+        this.sesTtl = cfg.getSecuritySessionTimeout();
+        this.sesTokTtl = cfg.getSecuritySessionExpirationTimeout();
     }
 
     /**

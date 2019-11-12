@@ -58,7 +58,9 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         executeAction(req, (r) -> {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
+
                 int id = ctx.read("$[2].rows[0][0]");
+
                 int val = ctx.read("$[2].rows[0][1]");
 
                 return id == 1 && val == 2;
@@ -87,8 +89,11 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         executeAction(req, (r) -> {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
+
                 JSONArray arr = ctx.read("$[3].rows[*]");
+
                 int id = ctx.read("$[3].rows[0][0]");
+
                 int val = ctx.read("$[3].rows[0][1]");
 
                 return arr.size() == 1 && id == 1 && val == 2;
@@ -105,21 +110,23 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldGetNextPage() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.executeSqlQuery")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                    new QueryArgument()
-                        .setQueryId("qry")
-                        .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
-                        .setPageSize(1)
-                );
+            .setAction("QueryActions.executeSqlQuery")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
+                    .setPageSize(1)
+            );
 
         executeAction(req, (r) -> {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
+
                 JSONArray arr = ctx.read("$[3].rows[*]");
+
                 boolean hasMore = ctx.read("$[3].hasMore");
-                
+
                 cursorId.set(ctx.read("$[3].cursorId"));
 
                 return hasMore && arr.size() == 1;
@@ -140,8 +147,11 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 DocumentContext ctx = parse(r.getResult());
 
                 JSONArray arr = ctx.read("$.rows[*]");
+
                 boolean hasMore = ctx.read("$.hasMore");
+
                 int id = ctx.read("$.rows[0][0]");
+
                 int val = ctx.read("$.rows[0][1]");
 
                 return arr.size() == 1 && !hasMore && id == 2 && val == 3;
@@ -158,18 +168,19 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     public void shouldCancelQueryAndCleanup() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
         Request req = new Request()
-                .setAction("QueryActions.executeSqlQuery")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                        new QueryArgument()
-                                .setQueryId("qry")
-                                .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
-                                .setPageSize(1)
-                );
+            .setAction("QueryActions.executeSqlQuery")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setQueryText(getCreateQuery() + getInsertQuery(1, 2) + getInsertQuery(2, 3) + getSelectQuery())
+                    .setPageSize(1)
+            );
 
         executeAction(req, (r) -> {
             if (r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
+
                 cursorId.set(ctx.read("$[3].cursorId"));
 
                 return true;
@@ -179,18 +190,18 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         });
 
         Request cancelReq = new Request()
-                .setAction("QueryActions.cancel")
-                .setId(UUID.randomUUID())
-                .setArgument("qry");
+            .setAction("QueryActions.cancel")
+            .setId(UUID.randomUUID())
+            .setArgument("qry");
 
         executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
 
         Request nextPageReq = new Request()
-                .setAction("QueryActions.nextPage")
-                .setId(UUID.randomUUID())
-                .setArgument(
-                    new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
-                );
+            .setAction("QueryActions.nextPage")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new NextPageQueryArgument().setQueryId("qry").setCursorId(cursorId.get()).setPageSize(1)
+            );
 
         executeAction(nextPageReq, (r) -> r.getStatus() == FAILED);
     }
@@ -220,17 +231,18 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         executeAction(req, (r) -> r.getStatus() == RUNNING);
 
         Request cancelReq = new Request()
-                .setAction("QueryActions.cancel")
-                .setId(UUID.randomUUID())
-                .setArgument("qry");
+            .setAction("QueryActions.cancel")
+            .setId(UUID.randomUUID())
+            .setArgument("qry");
 
         executeAction(cancelReq, (r) -> r.getStatus() == COMPLETED);
 
         assertWithPoll(
-                () -> {
-                    Response res = interceptor.getPayload(buildActionResponseDest(cluster.id(), req.getId()), Response.class);
-                    return res != null && res.getStatus() == FAILED;
-                }
+            () -> {
+                Response res = interceptor.getPayload(buildActionResponseDest(cluster.id(), req.getId()), Response.class);
+
+                return res != null && res.getStatus() == FAILED;
+            }
         );
     }
 
@@ -258,8 +270,11 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 DocumentContext ctx = parse(r.getResult());
 
                 JSONArray arr = ctx.read("$[0].rows[*]");
+
                 boolean hasMore = ctx.read("$[0].hasMore");
+
                 String id = ctx.read("$[0].rows[0][1]");
+
                 String val = ctx.read("$[0].rows[0][3]");
 
                 return arr.size() == 1 && hasMore && "key_2".equals(id) && "value_2".equals(val);
@@ -277,9 +292,8 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     }
 
     /**
-     * @param id Id.
+     * @param id  Id.
      * @param val Value.
-     *
      * @return Insert query string.
      */
     private String getInsertQuery(int id, int val) {
@@ -306,7 +320,8 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     private DocumentContext parse(Object obj) {
         try {
             return JsonPath.parse(mapper.writeValueAsString(obj));
-        } catch (JsonProcessingException e) {
+        }
+        catch (JsonProcessingException e) {
             throw new IgniteException(e);
         }
     }

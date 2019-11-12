@@ -26,11 +26,11 @@ import org.apache.ignite.agent.action.controller.QueryActionsControllerWithParam
 import org.apache.ignite.agent.action.controller.SecurityActionsControllerTest;
 import org.apache.ignite.agent.action.query.QueryRegistryTest;
 import org.apache.ignite.agent.dto.IgniteConfigurationWrapperTest;
-import org.apache.ignite.agent.service.CacheServiceSelfTest;
-import org.apache.ignite.agent.service.ClusterServiceSelfTest;
-import org.apache.ignite.agent.service.event.EventsServiceSelfTest;
-import org.apache.ignite.agent.service.metrics.MetricsServiceSelfTest;
-import org.apache.ignite.agent.service.tracing.TracingServiceSelfTest;
+import org.apache.ignite.agent.processor.CacheServiceSelfTest;
+import org.apache.ignite.agent.processor.ClusterServiceSelfTest;
+import org.apache.ignite.agent.processor.event.EventsServiceSelfTest;
+import org.apache.ignite.agent.processor.metrics.MetricsServiceSelfTest;
+import org.apache.ignite.agent.processor.tracing.TracingServiceSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 

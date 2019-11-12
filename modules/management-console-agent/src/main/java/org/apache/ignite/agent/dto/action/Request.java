@@ -47,10 +47,11 @@ public class Request {
 
     /**
      * @param id Request id.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public Request setId(UUID id) {
         this.id = id;
+
         return this;
     }
 
@@ -63,10 +64,11 @@ public class Request {
 
     /**
      * @param act Action name.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public Request setAction(String act) {
         this.act = act;
+
         return this;
     }
 
@@ -79,10 +81,11 @@ public class Request {
 
     /**
      * @param arg Action argument.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public Request setArgument(Object arg) {
         this.arg = arg;
+
         return this;
     }
 
@@ -98,6 +101,7 @@ public class Request {
      */
     public Request setTimestamp(long ts) {
         this.ts = ts;
+
         return this;
     }
 
@@ -113,6 +117,7 @@ public class Request {
      */
     public Request setSessionId(UUID sesId) {
         this.sesId = sesId;
+
         return this;
     }
 

@@ -89,6 +89,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
             Class<?> ctrlCls = mtd.controllerClass();
 
             boolean securityEnabled = ctx.security().enabled();
+
             boolean authenticationEnabled = ctx.authentication().enabled();
 
             if (!controllers.containsKey(ctrlCls))
@@ -98,6 +99,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
 
             if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
                 UUID sesId = req.getSessionId();
+
                 Session ses = sesRegistry.getSession(sesId);
 
                 if (ses == null) {

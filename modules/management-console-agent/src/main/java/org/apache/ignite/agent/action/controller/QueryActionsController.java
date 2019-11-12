@@ -70,9 +70,8 @@ public class QueryActionsController {
     public QueryActionsController(GridKernalContext ctx) {
         this.ctx = ctx;
         this.log = ctx.log(QueryActionsController.class);
-
-        qryProc = ctx.query();
-        qryRegistry = new QueryHolderRegistry(ctx, Duration.ofMinutes(5).toMillis());
+        this.qryProc = ctx.query();
+        this.qryRegistry = new QueryHolderRegistry(ctx, Duration.ofMinutes(5).toMillis());
     }
 
     /**

@@ -99,6 +99,7 @@ public final class AgentUtils {
      */
     public static <T> CompletableFuture completeIgniteFuture(IgniteInternalFuture<T> igniteFut) {
         CompletableFuture<Object> fut = new CompletableFuture<>();
+
         igniteFut.chain(f -> {
             try {
                 fut.complete(f.get());
@@ -118,6 +119,7 @@ public final class AgentUtils {
      */
     public static <T> CompletableFuture<T> completeFutureWithException(Throwable e) {
         CompletableFuture<T> fut = new CompletableFuture<>();
+
         fut.completeExceptionally(e);
 
         return fut;
@@ -210,6 +212,7 @@ public final class AgentUtils {
      */
     public static Set<String> getClusterFeatures(GridKernalContext ctx, Collection<ClusterNode> nodes) {
         IgniteFeatures[] enums = IgniteFeatures.values();
+
         Set<String> features = U.newHashSet(enums.length);
 
         for (IgniteFeatures val : enums)

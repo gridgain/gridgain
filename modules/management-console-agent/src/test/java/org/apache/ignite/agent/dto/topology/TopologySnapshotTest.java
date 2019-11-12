@@ -39,7 +39,9 @@ public class TopologySnapshotTest {
     @Test
     public void topology() {
         UUID clusterNodeId_1 = UUID.fromString("b-b-b-b-b");
+
         String consistentNodeId_1 = UUID.fromString("c-c-c-c-c").toString();
+
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
             Lists.newArrayList("127.0.0.1"),
@@ -49,10 +51,13 @@ public class TopologySnapshotTest {
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_1
         );
+
         clusterNode_1.setAttributes(Collections.emptyMap());
 
         UUID clusterNodeId_2 = UUID.fromString("e-e-e-e-e");
+
         String consistentNodeId_2 = UUID.fromString("d-d-d-d-d").toString();
+
         TcpDiscoveryNode clusterNode_2 = new TcpDiscoveryNode(
             clusterNodeId_2,
             Lists.newArrayList("127.0.0.1"),
@@ -62,6 +67,7 @@ public class TopologySnapshotTest {
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_2
         );
+
         clusterNode_2.setAttributes(Collections.emptyMap());
 
         DetachedClusterNode onlineBaselineNode = new DetachedClusterNode(
@@ -70,12 +76,14 @@ public class TopologySnapshotTest {
         );
 
         String consistentNodeIdOffline = UUID.fromString("a-a-a-a-a").toString();
+
         DetachedClusterNode offlineBaselineNode = new DetachedClusterNode(
             consistentNodeIdOffline,
             Collections.emptyMap()
         );
 
         UUID crdId = UUID.fromString("c-c-c-c-c");
+
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,
@@ -113,7 +121,9 @@ public class TopologySnapshotTest {
     @Test
     public void topologyWithEmptyBaseline() {
         UUID clusterNodeId_1 = UUID.fromString("b-b-b-b-b");
+
         String consistentNodeId_1 = UUID.fromString("c-c-c-c-c").toString();
+
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
             Lists.newArrayList("127.0.0.1"),
@@ -123,9 +133,11 @@ public class TopologySnapshotTest {
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_1
         );
+
         clusterNode_1.setAttributes(Collections.emptyMap());
 
         UUID crdId = UUID.fromString("c-c-c-c-c");
+
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,

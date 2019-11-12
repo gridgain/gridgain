@@ -70,10 +70,11 @@ public class ResponseError {
 
     /**
      * @param code Code.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ResponseError setCode(int code) {
         this.code = code;
+
         return this;
     }
 
@@ -86,10 +87,11 @@ public class ResponseError {
 
     /**
      * @param msg Message.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ResponseError setMessage(String msg) {
         this.msg = msg;
+
         return this;
     }
 
@@ -102,10 +104,11 @@ public class ResponseError {
 
     /**
      * @param stackTrace Stack trace.
-     * @return This for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
     public ResponseError setStackTrace(StackTraceElement[] stackTrace) {
         this.stackTrace = stackTrace;
+
         return this;
     }
 

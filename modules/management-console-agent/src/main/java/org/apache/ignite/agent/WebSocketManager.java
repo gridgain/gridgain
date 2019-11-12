@@ -110,6 +110,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         Thread.sleep(reconnectCnt * 1000);
 
         client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
+
         client.setMessageConverter(getMessageConverter());
 
         client.start();
@@ -131,6 +132,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         // TODO: workaround of spring-messaging bug with send byte array data.
         // https://github.com/spring-projects/spring-framework/issues/23358
         StompHeaders headers = new StompHeaders();
+
         headers.setContentType(MimeTypeUtils.APPLICATION_OCTET_STREAM);
         headers.setDestination(dest);
 
@@ -172,7 +174,9 @@ public class WebSocketManager extends GridProcessorAdapter {
      * @return Composite message converter.
      */
     private CompositeMessageConverter getMessageConverter() {
-        MappingJackson2MessageConverter mapper = new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+        MappingJackson2MessageConverter mapper =
+            new MappingJackson2MessageConverter(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+
         mapper.setObjectMapper(this.mapper);
 
         return new CompositeMessageConverter(
@@ -187,6 +191,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         UUID clusterId = ctx.cluster().get().id();
 
         WebSocketHttpHeaders handshakeHeaders = new WebSocketHttpHeaders();
+
         handshakeHeaders.add(AGENT_VERSION_HDR, CURR_VER);
         handshakeHeaders.add(CLUSTER_ID_HDR, clusterId.toString());
 
@@ -200,6 +205,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         UUID clusterId = ctx.cluster().get().id();
 
         StompHeaders connectHeaders = new StompHeaders();
+
         connectHeaders.add(CLUSTER_ID_HDR, clusterId.toString());
 
         return connectHeaders;
@@ -223,6 +229,7 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
+
         webSockClient.addBean(httpClient);
 
         return new JettyWebSocketClient(webSockClient) {
@@ -370,10 +377,12 @@ public class WebSocketManager extends GridProcessorAdapter {
                 String scheme = p.getURI().getScheme();
 
                 user = System.getProperty(scheme + ".proxyUsername");
+
                 pwd = System.getProperty(scheme + ".proxyPassword");
             }
             else {
                 user = System.getProperty("java.net.socks.username");
+
                 pwd = System.getProperty("java.net.socks.password");
             }
 
