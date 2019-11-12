@@ -24,6 +24,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
@@ -69,12 +70,13 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
 
                 sendInternal(e);
             }
-            catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-
-                break;
-            }
             catch (Exception ex) {
+                if (X.hasCause(ex, InterruptedException.class)) {
+                    Thread.currentThread().interrupt();
+
+                    break;
+                }
+
                 addToQueue(e);
             }
         }

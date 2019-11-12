@@ -85,6 +85,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         evtMgr.addDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
 
         // Listen for activation/deactivation.
+        evtMgr.enableEvents(EVTS_CLUSTER_ACTIVATION);
         evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
         // TODO GG-21449: this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*

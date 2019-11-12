@@ -59,6 +59,7 @@ public class EventsExporter extends GridProcessorAdapter {
      * Adds local event listener.
      */
     public void addLocalEventListener() {
+        this.ctx.event().enableEvents(LOCAL_EVT_TYPES);
         this.ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
     }
 
@@ -66,6 +67,7 @@ public class EventsExporter extends GridProcessorAdapter {
      * Adds global event listener.
      */
     public void addGlobalEventListener() {
+        this.ctx.event().enableEvents(GLOBAL_EVT_TYPES);
         this.ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
     }
 
