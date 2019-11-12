@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -135,7 +136,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
     @Test
     public void testPrimaryFailCrd() throws Exception {
-
+        doTestPrimaryFailPutAll();
     }
 
     @Test
@@ -172,7 +173,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             Set<Thread> senderThreads = new GridConcurrentHashSet<>();
 
             TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
-                if (msg instanceof GridDhtAtomicSingleUpdateRequest) {
+                if (msg instanceof GridDhtAtomicUpdateRequest) {
                     senderThreads.add(Thread.currentThread());
 
                     GridDhtAtomicSingleUpdateRequest r = (GridDhtAtomicSingleUpdateRequest)msg;
@@ -213,6 +214,78 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             awaitPartitionMapExchange();
 
             assertCountersSame(part, false);
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    private void doTestPrimaryFailPutAll() throws Exception {
+        try {
+            IgniteEx crd = startGrids(backups + 1);
+
+            crd.cluster().active(true);
+
+            IgniteEx client = startGrid("client");
+
+            assertNotNull(client.cache(DEFAULT_CACHE_NAME));
+
+            IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+            List<Integer> keys = primaryKeys(cache, 10, 0);
+
+            Set<Thread> senderThreads = new GridConcurrentHashSet<>();
+
+            TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
+                if (msg instanceof GridDhtAtomicUpdateRequest) {
+                    senderThreads.add(Thread.currentThread());
+
+                    GridDhtAtomicUpdateRequest r = (GridDhtAtomicUpdateRequest)msg;
+
+                    return r.updateCounter(1) == 1;
+                }
+
+                return false;
+            });
+
+            IgniteInternalFuture putFut = GridTestUtils.runAsync(() -> {
+                try {
+                    Map<Integer, Integer> m0 = new LinkedHashMap<>();
+                    m0.put(keys.get(0), keys.get(0));
+                    m0.put(keys.get(2), keys.get(2));
+
+                    cache.putAll(m0);
+                }
+                catch (Exception e) {
+                    assertTrue(X.hasCause(e, NodeStoppingException.class));
+                }
+            });
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+            // Update out of counter order.
+            // IMPORTANT: reordering is possible only if messages are send to backup from different threads.
+            Map<Integer, Integer> m1 = new LinkedHashMap<>();
+            m1.put(keys.get(1), keys.get(1));
+            m1.put(keys.get(2) + PARTS, keys.get(2) + PARTS);
+
+            cache.putAll(m1);
+
+            forceCheckpoint();
+
+            assertEquals(2, senderThreads.size());
+
+            stopGrid(1);
+
+            TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+            putFut.get();
+
+            startGrid(1);
+
+            awaitPartitionMapExchange();
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
         }
