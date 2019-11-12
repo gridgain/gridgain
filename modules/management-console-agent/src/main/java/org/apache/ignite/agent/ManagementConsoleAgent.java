@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.processor.ActionProcessor;
+import org.apache.ignite.agent.processor.ActionsProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
 import org.apache.ignite.agent.processor.ManagementConsoleTopicProcessor;
@@ -99,8 +99,8 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
-    /** Action processor. */
-    private ActionProcessor actProc;
+    /** Actions processor. */
+    private ActionsProcessor actProc;
 
     /** Topic processor. */
     private ManagementConsoleTopicProcessor topicProc;
@@ -289,7 +289,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         this.sesRegistry = new SessionRegistry(ctx);
         this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
         this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.actProc = new ActionProcessor(ctx, mgr);
+        this.actProc = new ActionsProcessor(ctx, mgr);
         this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
