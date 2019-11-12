@@ -28,7 +28,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.client.HttpClient;
@@ -102,8 +101,6 @@ public class WebSocketManager extends GridProcessorAdapter {
      * @param sesHnd Session handler.
      */
     public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
-        U.quietAndInfo(log, "connect");
-
         if (reconnectCnt == -1)
             log.info("Connecting to server: " + uri);
 
@@ -167,39 +164,8 @@ public class WebSocketManager extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-//        if (connected())
-//            ses.disconnect();
-//
-        U.quietAndInfo(log, "before client.stop()");
-
-        if (client != null) {
-            Thread t = Thread.currentThread();
-
-            new Thread(() -> {
-                try {
-                    t.join(1000L);
-
-                    if (t.isAlive()) {
-                        GridStringBuilder sb = new GridStringBuilder();
-
-                        U.printStackTrace(t.getId(), sb);
-
-                        U.quietAndInfo(log, sb.toString());
-                    }
-                }
-                catch (InterruptedException e) {
-                    GridStringBuilder sb = new GridStringBuilder();
-
-                    U.printStackTrace(t.getId(), sb);
-
-                    U.quietAndInfo(log, sb.toString());
-                }
-            }).start();
-
+        if (client != null)
             client.stop();
-        }
-
-        U.quietAndInfo(log, "after client.stop()");
     }
 
     /**

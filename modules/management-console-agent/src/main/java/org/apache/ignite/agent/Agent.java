@@ -415,10 +415,7 @@ public class Agent extends ManagementConsoleProcessor {
      * Submit a reconnection task only if there no active connect in progress.
      */
     private void reconnect() {
-        U.quiet(false, "reconnect");
-
-        if (connectPool.getActiveCount() == 0)
-            connectPool.submit(this::connect0);
+        connectPool.submit(this::connect0);
     }
 
     /**
