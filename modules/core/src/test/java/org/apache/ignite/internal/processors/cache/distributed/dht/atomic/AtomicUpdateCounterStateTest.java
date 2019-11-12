@@ -122,7 +122,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSinglePutReorderPrimaryFail() throws Exception {
-        doTestPrimaryFail();
+        doTestBackupFail();
     }
 
     @Test
@@ -158,7 +158,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
     }
 
-    private void doTestPrimaryFail() throws Exception {
+    private void doTestBackupFail() throws Exception {
         backups = 1;
 
         try {
@@ -179,7 +179,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             Set<Thread> senderThreads = new GridConcurrentHashSet<>();
 
             TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
-                if (msg instanceof GridDhtAtomicUpdateRequest) {
+                if (msg instanceof GridDhtAtomicSingleUpdateRequest) {
                     senderThreads.add(Thread.currentThread());
 
                     GridDhtAtomicSingleUpdateRequest r = (GridDhtAtomicSingleUpdateRequest)msg;
