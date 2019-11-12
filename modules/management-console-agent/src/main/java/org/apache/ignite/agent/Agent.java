@@ -355,7 +355,7 @@ public class Agent extends ManagementConsoleProcessor {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
-            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster:: " + curSrvUri);
+            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
