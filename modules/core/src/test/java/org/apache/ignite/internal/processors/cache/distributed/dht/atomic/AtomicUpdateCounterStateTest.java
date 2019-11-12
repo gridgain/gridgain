@@ -16,19 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
-import javax.cache.CacheException;
+import java.util.function.Supplier;
+
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -38,22 +36,15 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
-import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.transactions.TransactionException;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 
 /**
@@ -130,13 +121,26 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
      * @throws Exception
      */
     @Test
-    public void testSinglePutReorderNearIsPrimaryNode() throws Exception {
+    public void testSinglePutReorderPrimaryFail() throws Exception {
         doTestPrimaryFail();
     }
 
     @Test
-    public void testPrimaryFailCrd() throws Exception {
-        doTestPrimaryFailPutAll();
+    public void testPutAllReorderPrimaryFailNearPrimary() throws Exception {
+        doTestReorderBackupRestartPutAll(new Supplier<Ignite>() {
+            @Override public Ignite get() {
+                return grid(0);
+            }
+        });
+    }
+
+    @Test
+    public void testPutAllReorderPrimaryFailNearClient() throws Exception {
+        doTestReorderBackupRestartPutAll(new Supplier<Ignite>() {
+            @Override public Ignite get() {
+                return grid("client");
+            }
+        });
     }
 
     @Test
@@ -155,6 +159,8 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
     }
 
     private void doTestPrimaryFail() throws Exception {
+        backups = 1;
+
         try {
             IgniteEx crd = startGrids(backups + 1);
 
@@ -196,11 +202,11 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
             // Update out of counter order.
-            // IMPORTANT: reordering is possible only if messages are send to backup from different threads.
             cache.put(keys.get(1), keys.get(1));
 
             forceCheckpoint();
 
+            // IMPORTANT: reordering is possible only if messages are send to backup from different threads.
             assertEquals(2, senderThreads.size());
 
             stopGrid(1);
@@ -222,7 +228,9 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         }
     }
 
-    private void doTestPrimaryFailPutAll() throws Exception {
+    private void doTestReorderBackupRestartPutAll(Supplier<Ignite> nodeSupplier) throws Exception {
+        backups = 1;
+
         try {
             IgniteEx crd = startGrids(backups + 1);
 
@@ -232,9 +240,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             assertNotNull(client.cache(DEFAULT_CACHE_NAME));
 
-            IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
-
-            List<Integer> keys = primaryKeys(cache, 10, 0);
+            List<Integer> keys = primaryKeys(crd.cache(DEFAULT_CACHE_NAME), 10, 0);
 
             Set<Thread> senderThreads = new GridConcurrentHashSet<>();
 
@@ -256,7 +262,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
                     m0.put(keys.get(0), keys.get(0));
                     m0.put(keys.get(2), keys.get(2));
 
-                    cache.putAll(m0);
+                    nodeSupplier.get().cache(DEFAULT_CACHE_NAME).putAll(m0);
                 }
                 catch (Exception e) {
                     assertTrue(X.hasCause(e, NodeStoppingException.class));
@@ -266,15 +272,15 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
             // Update out of counter order.
-            // IMPORTANT: reordering is possible only if messages are send to backup from different threads.
             Map<Integer, Integer> m1 = new LinkedHashMap<>();
             m1.put(keys.get(1), keys.get(1));
             m1.put(keys.get(2) + PARTS, keys.get(2) + PARTS);
 
-            cache.putAll(m1);
+            nodeSupplier.get().cache(DEFAULT_CACHE_NAME).putAll(m1);
 
             forceCheckpoint();
 
+            // IMPORTANT: reordering is possible only if messages are send to backup from different threads.
             assertEquals(2, senderThreads.size());
 
             stopGrid(1);
