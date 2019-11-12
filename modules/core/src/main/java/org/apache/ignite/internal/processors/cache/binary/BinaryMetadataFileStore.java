@@ -256,6 +256,9 @@ class BinaryMetadataFileStore {
      * @throws IgniteCheckedException If write operation failed.
      */
     void waitForWriteCompletion(int typeId, int typeVer) throws IgniteCheckedException {
+        if (!isPersistenceEnabled)
+            return;
+
         writer.waitForWriteCompletion(typeId, typeVer);
     }
 
@@ -264,6 +267,9 @@ class BinaryMetadataFileStore {
      * @param typeVer Type version.
      */
     void finishWrite(int typeId, int typeVer) {
+        if (!isPersistenceEnabled)
+            return;
+
         writer.finishWriteFuture(typeId, typeVer);
     }
 
