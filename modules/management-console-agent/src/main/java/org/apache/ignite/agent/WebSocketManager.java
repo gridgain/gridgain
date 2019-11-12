@@ -257,7 +257,7 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
-        webSockClient.addManaged(httpClient);
+        webSockClient.addBean(httpClient);
 
         return new JettyWebSocketClient(webSockClient) {
             @Override public void stop() {
