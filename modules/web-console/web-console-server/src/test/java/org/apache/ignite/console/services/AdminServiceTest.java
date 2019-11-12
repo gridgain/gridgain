@@ -16,38 +16,49 @@
 
 package org.apache.ignite.console.services;
 
-
-import org.apache.ignite.console.MockConfiguration;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.repositories.ConfigurationsRepository;
-import org.apache.ignite.console.repositories.NotebooksRepository;
+import org.apache.ignite.console.json.JsonArray;
+import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.junit.Assert;
+import org.apache.ignite.console.web.security.IgniteSessionRepository;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.session.ExpiringSession;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.UUID;
-
+import static junit.framework.TestCase.assertTrue;
+import static org.apache.ignite.console.common.Utils.SPRING_SECURITY_CONTEXT;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
-import static org.mockito.Matchers.any;
+import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
+import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Admin service test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {MockConfiguration.class})
+@SpringBootTest(classes = {TestGridConfiguration.class})
 public class AdminServiceTest {
+    /** */
+    private static final long MILLIS_IN_A_DAY = 86400000;
+
     /** Activities service. */
     @Autowired
     private AdminService adminSrvc;
@@ -56,38 +67,52 @@ public class AdminServiceTest {
     @MockBean
     private EventPublisher evtPublisher;
 
-    /** Configurations repository. */
-    @MockBean
-    private ConfigurationsRepository configurationsRepo;
+    /** Sessions. */
+    @Autowired
+    private IgniteSessionRepository sesRepo;
 
-    /** Notebooks repository. */
-    @MockBean
-    private NotebooksRepository notebooksRepo;
+    /**
+     * @throws Exception If failed.
+     */
+    @BeforeClass
+    public static void setup() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
 
-    /** Accounts service. */
-    @MockBean
-    private AccountsService accountsSrvc;
+    /**
+     * @throws Exception If failed.
+     */
+    @AfterClass
+    public static void tearDown() throws Exception {
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
 
     /**
      * Should publish event with ACCOUNT_DELETE type.
      */
     @Test
-    public void shouldPublishUserDeleteEvent() {
-        when(accountsSrvc.delete(any(UUID.class)))
-            .thenAnswer(invocation -> {
-                Account acc = new Account();
-                acc.setId(invocation.getArgumentAt(0, UUID.class));
+    public void shouldPublishUserCreareAndDeleteEvent() {
+        Account acc = adminSrvc.registerUser(signUpRequest("delete@delete.com"));
 
-                return acc;
-            });
-
-        UUID accId = UUID.randomUUID();
-        adminSrvc.delete(accId);
+        adminSrvc.delete(acc.getId());
 
         ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
+        verify(evtPublisher, times(2)).publish(captor.capture());
 
-        Assert.assertEquals(ACCOUNT_DELETE, captor.getValue().getType());
+        assertEquals(ACCOUNT_DELETE, captor.getValue().getType());
+    }
+
+    /**
+     * @return Sign up request.
+     */
+    private SignUpRequest signUpRequest(String email) {
+        SignUpRequest req = new SignUpRequest();
+        req.setEmail(email);
+        req.setPassword("1");
+
+        return req;
     }
 
     /**
@@ -95,25 +120,50 @@ public class AdminServiceTest {
      */
     @Test
     public void shouldPublishUserCreateByAdminEvent() {
-        when(accountsSrvc.create(any(SignUpRequest.class)))
-                .thenAnswer(invocation -> {
-                    SignUpRequest req = invocation.getArgumentAt(0, SignUpRequest.class);
-                    Account acc = new Account();
-                    acc.setEmail(req.getEmail());
-                    acc.setPassword(req.getPassword());
-
-                    return acc;
-                });
-
-        SignUpRequest req = new SignUpRequest();
-        req.setEmail("mail@mail");
-        req.setPassword("1");
-
-        adminSrvc.registerUser(req);
+        adminSrvc.registerUser(signUpRequest("create@create.com"));
 
         ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals(ACCOUNT_CREATE_BY_ADMIN, captor.getValue().getType());
+        assertEquals(ACCOUNT_CREATE_BY_ADMIN, captor.getValue().getType());
+    }
+
+    /**
+     * Should list users.
+     */
+    @Test
+    public void shouldListUsers() {
+        Account acc = adminSrvc.registerUser(signUpRequest("test@test.com"));
+
+        ExpiringSession ses = sesRepo.createSession();
+
+        Authentication auth = new UsernamePasswordAuthenticationToken(acc, acc.getPassword());
+
+        SecurityContext ctx = SecurityContextHolder.createEmptyContext();
+
+        ctx.setAuthentication(auth);
+
+        ses.setAttribute(SPRING_SECURITY_CONTEXT, ctx);
+
+        sesRepo.save(ses);
+
+        long now = System.currentTimeMillis();
+
+        JsonArray list = adminSrvc.list(now - MILLIS_IN_A_DAY, now + MILLIS_IN_A_DAY);
+
+        AtomicInteger cnt = new AtomicInteger(0);
+
+        list.forEach(item -> {
+            JsonObject json = (JsonObject)item;
+
+            if ("test@test.com".equals(json.getString("email"))) {
+                cnt.incrementAndGet();
+
+                assertTrue(json.getLong("lastLogin", -1L) > 0);
+                assertTrue(json.getLong("lastActivity", -1L) > 0);
+            }
+        });
+
+        assertEquals(1, cnt.get());
     }
 }

@@ -190,23 +190,25 @@ public class ClustersRepository {
      * Cleanup cluster index.
      */
     void cleanupClusterIndex() {
-        Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
+        txMgr.doInTransaction(() -> {
+            Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
 
-        stream(clusterIdsByUser.cache().spliterator(), false)
-            .peek(entry -> {
-                Set<ClusterSession> activeClusters =
-                    entry.getValue().stream().filter(cluster -> nids.contains(cluster.getNid())).collect(toSet());
+            stream(clusterIdsByUser.cache().spliterator(), false)
+                .peek(entry -> {
+                    Set<ClusterSession> activeClusters =
+                        entry.getValue().stream().filter(cluster -> nids.contains(cluster.getNid())).collect(toSet());
 
-                entry.getValue().removeAll(activeClusters);
-            })
-            .filter(entry -> !entry.getValue().isEmpty())
-            .forEach(entry -> clusterIdsByUser.removeAll(entry.getKey(), entry.getValue()));
+                    entry.getValue().removeAll(activeClusters);
+                })
+                .filter(entry -> !entry.getValue().isEmpty())
+                .forEach(entry -> clusterIdsByUser.removeAll(entry.getKey(), entry.getValue()));
+        });
     }
 
     /**
      * Periodically cleanup expired cluster topologies.
      */
-    @Scheduled(initialDelay = 0, fixedRate = 60_000)
+    @Scheduled(initialDelay = 0, fixedRate = 300_000)
     public void cleanupClusterHistory() {
         txMgr.doInTransaction(() -> {
             Set<String> clusterIds = stream(clusters.cache().spliterator(), false)

@@ -25,6 +25,10 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Defines supported features and check its on other nodes.
@@ -59,8 +63,9 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
-    /** Support of cluster read-only mode. */
-    CLUSTER_READ_ONLY_MODE(9),
+//    TODO: https://ggsystems.atlassian.net/browse/GG-25084
+//    /** Support of cluster read-only mode. */
+//    CLUSTER_READ_ONLY_MODE(9),
 
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
@@ -89,20 +94,28 @@ public enum IgniteFeatures {
     /** Support of DR events from  Web Console. */
     WC_DR_EVENTS(20),
 
-    /** Support of rolling upgrade status task for Web Console. */
-    WC_ROLLING_UPGRADE_STATUS(21),
+    /**
+     * Rolling upgrade based on distributed metastorage.
+     */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE(21),
 
     /** Support of chain parameter in snapshot delete task for Web Console. */
     WC_SNAPSHOT_CHAIN_MODE(22),
 
-    /** Support of baseline auto adjustment for Web Console. */
-    WC_BASELINE_AUTO_ADJUSTMENT(23),
+    /** Support of baseline auto adjustment. */
+    BASELINE_AUTO_ADJUSTMENT(23),
 
     /** Scheduling disabled. */
     WC_SCHEDULING_NOT_AVAILABLE(24),
 
     /** Support of DR-specific visor tasks used by control utility. */
-    DR_CONTROL_UTILITY(25);
+    DR_CONTROL_UTILITY(25),
+
+    /** */
+    TRACING(26),
+
+    /** Support of DR clear sender store from  Web Console. */
+    WC_DR_CLEAR_SENDER_STORE(29);
 
     /**
      * Unique feature identifier.
@@ -201,15 +214,32 @@ public enum IgniteFeatures {
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
-            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
+                continue;
+
+            //Disable new rolling upgrade
+            if(DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
                 continue;
 
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
                 continue;
 
+            // Add only when tracing is enabled.
+            if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
+                continue;
+
             // Add only when scheduling is disabled.
             if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
+                continue;
+
+            if (DISTRIBUTED_METASTORAGE == value && !isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+                continue;
+
+            if (CLUSTER_ID_AND_TAG == value && !isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE))
+                continue;
+
+            if (BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
             final int featureId = value.getFeatureId();

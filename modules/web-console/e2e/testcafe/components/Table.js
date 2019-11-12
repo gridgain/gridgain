@@ -38,8 +38,35 @@ const findCell = Selector((table, rowIndex, columnLabel) => {
     if (!row)
         row = _findRowElement(table, '.ui-grid-render-container:not(.left)');
 
-    if (row)
+    if (row && row.element)
         return row.element.querySelectorAll(`.ui-grid-cell`)[row.columnIndex];
+
+    return null;
+});
+
+const findFilter = Selector((table, columnLabel) => {
+    const _findColumnHeader = (table, containerSelector) => {
+        const header = [].constructor.from(
+            table.querySelectorAll(`${containerSelector} .ui-grid-header-cell:not(.ui-grid-header-span)`)
+        ).find((t) => t.textContent.includes(columnLabel));
+
+        console.log(header);
+
+        if (!header)
+            return null;
+
+        return header;
+    };
+
+    table = table();
+
+    let header = _findColumnHeader(table, '.ui-grid-render-container.left');
+
+    if (!header)
+        header = _findColumnHeader(table, '.ui-grid-render-container:not(.left)');
+
+    if (header)
+        return header.querySelectorAll(`.ui-grid-filter-input-0`);
 
     return null;
 });
@@ -58,6 +85,13 @@ export class Table {
         await t.hover(this.actionsButton).click(Selector('.dropdown-menu a').withText(label));
     }
 
+    /** @param {string} group */
+    async switchColumnGroup(group) {
+        await t.click(this._selector.find('grid-column-selector'))
+            .click(Selector('li').withText(group))
+            .pressKey('Esc');
+    }
+
     /**
      * Toggles grid row selection
      * @param {number} index Index of row, starting with 1
@@ -72,5 +106,13 @@ export class Table {
      */
     findCell(rowIndex, columnLabel) {
         return Selector(findCell(this._selector, rowIndex, columnLabel));
+    }
+
+    /**
+     * @param {number} rowIndex
+     * @param {string} columnLabel
+     */
+    findFilter(columnLabel) {
+        return Selector(findFilter(this._selector, columnLabel));
     }
 }

@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
@@ -35,12 +36,13 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent
- * in the classpath on the joined node.
+ * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent in the classpath on
+ * the joined node.
  */
 public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
     /** */
@@ -85,7 +87,7 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
     public void testCollocatedSet() throws Exception {
         useExtendedClasses = true;
 
-        Ignite ignite0 = startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
@@ -107,7 +109,7 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         useExtendedClasses = false;
 
-        startGrid(1);
+        GridTestUtils.runAsync(() -> startGrid(1));
 
         ignite0.cluster().setBaselineTopology(ignite0.cluster().forServers().nodes());
 

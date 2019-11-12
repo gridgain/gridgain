@@ -96,7 +96,7 @@ suite('JavaTypesTestsSuite', () => {
 
     test('isKeyword', () => {
         assert.equal(instance.isKeyword('abstract'), true);
-        assert.equal(instance.isKeyword('Abstract'), true);
+        assert.equal(instance.isKeyword('Abstract'), false);
         assert.equal(instance.isKeyword('abra kadabra'), false);
         assert.equal(instance.isKeyword(), false);
         assert.equal(instance.isKeyword(null), false);

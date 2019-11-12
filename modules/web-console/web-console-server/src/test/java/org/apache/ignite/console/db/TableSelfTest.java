@@ -100,7 +100,7 @@ public class TableSelfTest extends GridCommonAbstractTest {
 
             assertTrue("Object with index '1' exist", objTbl.containsKey(obj1.getId()));
 
-            Thread.sleep(1000L);
+            Thread.sleep(1500L);
             
             assertFalse("Object with index '1' expire", objTbl.containsKey(obj1.getId()));
         }

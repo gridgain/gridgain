@@ -341,8 +341,7 @@ public class IgniteSqlKeyValueFieldsTest  extends AbstractIndexingCommonTest {
      * to create an index, there will be an error.
      */
     @Test
-    public void
-    testChangeColumnTypeByAlterTableDropAddColumn() {
+    public void testChangeColumnTypeByAlterTableDropAddColumn() {
         // test1
         changeSqlColumnType(
             "int",

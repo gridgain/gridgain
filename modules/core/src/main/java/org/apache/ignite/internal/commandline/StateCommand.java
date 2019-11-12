@@ -22,6 +22,8 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandList.STATE;
 
 /**
@@ -40,25 +42,20 @@ public class StateCommand implements Command<Void> {
      * @throws Exception If failed to print state.
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)){
+        try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            UUID id = state.id();
-            String tag = state.tag();
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+                UUID id = state.id();
+                String tag = state.tag();
 
-            log.info("Cluster  ID: " + id);
-            log.info("Cluster tag: " + tag);
+                log.info("Cluster  ID: " + id);
+                log.info("Cluster tag: " + tag);
 
-            log.info(CommandHandler.DELIM);
-
-            if (state.active()) {
-                if (state.readOnly())
-                    log.info("Cluster is active (read-only)");
-                else
-                    log.info("Cluster is active");
+                log.info(CommandHandler.DELIM);
             }
-            else
-                log.info("Cluster is inactive");
+
+            log.info("Cluster is " + (state.active() ? "active" : "inactive"));
         }
         catch (Throwable e) {
             if (!CommandHandler.isAuthError(e))

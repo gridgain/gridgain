@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.configuration.distributed;
 
+import java.io.Serializable;
+
 /**
  * Dispatcher of distributed properties.
  *
@@ -28,28 +30,11 @@ public interface DistributedPropertyDispatcher {
      * @param props Properties to attach to processor.
      * @param <T> Type of property value.
      */
-    public <T extends DistributedProperty> void registerProperties(T... props);
+    <T extends DistributedChangeableProperty> void registerProperties(T... props);
     /**
      * Attach already created property.
      *
      * @param prop Property to attach to processor.
-     * @param <T> Type of property value.
      */
-    public <T extends DistributedProperty> T registerProperty(T prop);
-
-    /**
-     * Create and attach new long property.
-     *
-     * @param name Name of property.
-     * @return Attached new property.
-     */
-    public DistributedLongProperty registerLong(String name);
-
-    /**
-     * Create and attach new boolean property.
-     *
-     * @param name Name of property.
-     * @return Attached new property.
-     */
-    public DistributedBooleanProperty registerBoolean(String name);
+    <T extends Serializable> DistributedProperty<T> registerProperty(DistributedChangeableProperty<T> prop);
 }

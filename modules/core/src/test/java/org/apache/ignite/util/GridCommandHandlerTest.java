@@ -57,6 +57,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
@@ -89,6 +90,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -102,6 +104,10 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
@@ -110,6 +116,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -133,7 +140,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         initDiagnosticDir();
 
-        cleanDiagnosticDir();
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -176,35 +183,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
         assertTrue(ignite.cluster().active());
-        assertFalse(ignite.cluster().readOnly());
-    }
-
-    /**
-     * Test enabling/disabling read-only mode works via control.sh
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testReadOnlyEnableDisable() throws Exception {
-        Ignite ignite = startGrids(1);
-
-        ignite.cluster().active(true);
-
-        assertFalse(ignite.cluster().readOnly());
-
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--read-only-on"));
-
-        assertTrue(ignite.cluster().readOnly());
-
-        assertContains(log, testOut.toString(), "Cluster read-only mode enabled");
-
-        assertEquals(EXIT_CODE_OK, execute("--read-only-off"));
-
-        assertFalse(ignite.cluster().readOnly());
-
-        assertContains(log, testOut.toString(), "Cluster read-only mode disabled");
     }
 
     /**
@@ -213,6 +191,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    })
     public void testClusterChangeTag() throws Exception {
         final String newTag = "new_tag";
 
@@ -336,6 +318,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    })
     public void testState() throws Exception {
         final String newTag = "new_tag";
 
@@ -351,8 +337,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
-        UUID clId = ignite.cluster().id();
-        String clTag = ignite.cluster().tag();
+        UUID clId = ((IgniteClusterEx)ignite.cluster()).id();
+        String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
         assertContains(log, out, "Cluster is inactive");
         assertContains(log, out, "Cluster  ID: " + clId);
@@ -368,7 +354,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
             try {
-                ignite.cluster().tag(newTag);
+                ((IgniteClusterEx)ignite.cluster()).tag(newTag);
             }
             catch (IgniteCheckedException e) {
                 return false;
@@ -382,16 +368,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+    }
 
-        ignite.cluster().readOnly(true);
+    /**
+     * Verifies that info about Cluster ID and tag is not printed to command output when the feature is disabled.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testState1() throws Exception {
+        Ignite ignite = startGrids(1);
 
-        awaitPartitionMapExchange();
+        injectTestSystemOut();
 
-        assertTrue(ignite.cluster().readOnly());
+        assertFalse(ignite.cluster().active());
+
+        injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
-        assertContains(log, testOut.toString(), "Cluster is active (read-only)");
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster is inactive");
+        assertNotContains(log, out, "Cluster  ID: ");
+        assertNotContains(log, out, "Cluster tag: ");
     }
 
     /**
@@ -503,7 +503,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineAdd() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -529,7 +529,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineRemove() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -589,7 +589,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineSet() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -613,7 +613,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineSetWithOfflineNode() throws Exception {
-        Ignite ignite0 = startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
@@ -642,7 +642,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testBaselineVersion() throws Exception {
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -665,6 +665,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
+    })
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -702,6 +707,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    })
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -733,6 +743,20 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
             baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
         );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineAutoAdjustmentAutoFeatueDisabled() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
     }
 
     /**

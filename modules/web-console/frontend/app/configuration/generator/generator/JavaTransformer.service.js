@@ -1809,8 +1809,9 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @param pkg Class package name.
      * @param clsName Class name.
      * @param {String} cfgRef Config.
+     * @param {boolean} persistenceEnabled
      */
-    static loadCaches(caches, pkg, clsName, cfgRef) {
+    static loadCaches(caches, pkg, clsName, cfgRef, persistenceEnabled) {
         const sb = new StringBuilder();
 
         sb.append(`package ${pkg};`)
@@ -1840,6 +1841,11 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         sb.startBlock('public static void main(String[] args) throws Exception {');
 
         sb.startBlock(`try (Ignite ignite = Ignition.start(${cfgRef})) {`);
+
+        if (persistenceEnabled) {
+            sb.append('ignite.cluster().active(true);')
+                .emptyLine();
+        }
 
         sb.append('System.out.println(">>> Loading caches...");');
 

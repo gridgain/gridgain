@@ -127,24 +127,30 @@ public class AccountsRepository {
     }
 
     /**
+     * Put first user marker.
+     */
+    @SuppressWarnings("unchecked")
+    public void putFirstUserMarker() {
+        IgniteCache cache = accountsTbl.cache();
+
+        cache.put(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
+    }
+
+    /**
      * Save account.
      *
      * @param acc Account to save.
      * @return Saved account.
      * @throws IgniteException if failed to save account.
      */
-    @SuppressWarnings("unchecked")
     public Account create(Account acc) throws AuthenticationServiceException {
         return txMgr.doInTransaction(() -> {
             boolean firstUser = !hasUsers();
 
             acc.setAdmin(firstUser);
 
-            if (firstUser) {
-                IgniteCache cache = accountsTbl.cache();
-
-                cache.put(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
-            }
+            if (firstUser)
+                putFirstUserMarker();
 
             save(acc);
 
