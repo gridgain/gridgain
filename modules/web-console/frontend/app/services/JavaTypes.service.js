@@ -136,7 +136,7 @@ export default class JavaTypes {
      * @returns {boolean} 'true' if given value is one of Java reserved keywords.
      */
     isKeyword(value) {
-        return !!(value && includes(JAVA_KEYWORDS, value.toLowerCase()));
+        return !!(value && includes(JAVA_KEYWORDS, value));
     }
 
     /**

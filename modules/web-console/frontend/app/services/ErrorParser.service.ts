@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
+
 import isEmpty from 'lodash/isEmpty';
 import {nonEmpty} from 'app/utils/lodashMixins';
 
@@ -70,7 +72,7 @@ export default class {
                     const msgStart = err.message.indexOf(': ', causeIdx + CAUSE_STR.length) + 2;
                     const causeEndLine = err.message.indexOf('\n', msgStart);
                     const msgEnd = err.message.indexOf('[', msgStart);
-                    const cause = err.message.substring(msgStart, msgEnd >= 0 && msgEnd < causeEndLine ? msgEnd : causeEndLine);
+                    const cause = _.upperFirst(err.message.substring(msgStart, msgEnd >= 0 && msgEnd < causeEndLine ? msgEnd : causeEndLine));
 
                     if (causes && causes[0] !== cause)
                         causes.unshift(cause);

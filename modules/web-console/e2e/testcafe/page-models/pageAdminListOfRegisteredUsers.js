@@ -17,5 +17,16 @@
 import {Selector} from 'testcafe';
 import {Table} from '../components/Table';
 
+export const TEST_USER = {
+    email: 'foo@example.com',
+    password: '1',
+    passwordConfirm: '1',
+    firstName: 'User',
+    lastName: 'Name',
+    country: 'Brazil',
+    company: 'Acme Inc.',
+    industry: 'Banking',
+};
+
 export const usersTable = new Table(Selector('ignite-list-of-registered-users'));
 export const userNameCell = Selector('.ui-grid-cell-contents');

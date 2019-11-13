@@ -86,6 +86,10 @@ import org.apache.ignite.jdbc.thin.JdbcThinStatementTimeoutSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinStreamingNotOrderedSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinStreamingOrderedSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinStreamingResetStreamTest;
+import org.apache.ignite.jdbc.thin.JdbcThinSystemSchemaDurabilityTest;
+import org.apache.ignite.jdbc.thin.JdbcThinSystemSchemaExplicitSchemaNamePropFalseTest;
+import org.apache.ignite.jdbc.thin.JdbcThinSystemSchemaExplicitSchemaNamePropTrueTest;
+import org.apache.ignite.jdbc.thin.JdbcThinSystemSchemaImplicitSchemaNamePropTest;
 import org.apache.ignite.jdbc.thin.JdbcThinTcpIoTest;
 import org.apache.ignite.jdbc.thin.JdbcThinTransactionsClientAutoCommitComplexSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinTransactionsClientNoAutoCommitComplexSelfTest;
@@ -96,6 +100,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinTransactionsServerNoAutoCommitComplex
 import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSkipReducerOnUpdateSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinWalModeChangeSelfTest;
+import org.apache.ignite.qa.QaJdbcTestSuite;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -104,6 +109,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    QaJdbcTestSuite.class,
+
     JdbcConnectionSelfTest.class,
     JdbcStatementSelfTest.class,
     JdbcPreparedStatementSelfTest.class,
@@ -181,6 +188,11 @@ import org.junit.runners.Suite;
     JdbcThinStatementCancelSelfTest.class,
     JdbcThinStatementTimeoutSelfTest.class,
     JdbcThinConnectionTimeoutSelfTest.class,
+
+    JdbcThinSystemSchemaDurabilityTest.class,
+    JdbcThinSystemSchemaImplicitSchemaNamePropTest.class,
+    JdbcThinSystemSchemaExplicitSchemaNamePropTrueTest.class,
+    JdbcThinSystemSchemaExplicitSchemaNamePropFalseTest.class,
 
     JdbcThinInsertStatementSelfTest.class,
     JdbcThinUpdateStatementSelfTest.class,

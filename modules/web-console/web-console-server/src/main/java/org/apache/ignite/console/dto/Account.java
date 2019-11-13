@@ -65,12 +65,6 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Reset password token. */
     private String resetPwdTok;
 
-    /** Last login. */
-    private String lastLogin;
-
-    /** Last activity. */
-    private String lastActivity;
-
     /** Administration. */
     private boolean admin;
 
@@ -237,20 +231,6 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
      */
     public void setAdmin(boolean admin) {
         this.admin = admin;
-    }
-
-    /**
-     * @return Last login.
-     */
-    public String lastLogin() {
-        return lastLogin;
-    }
-
-    /**
-     * @return Last activity.
-     */
-    public String lastActivity() {
-        return lastActivity;
     }
 
     /**

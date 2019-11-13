@@ -131,7 +131,7 @@ public class BrowsersServiceSelfTest {
 
     /** */
     @Test
-    public void shouldRenoveSessionAttributeOnClusterLogout() {
+    public void shouldRemoveSessionAttributeOnClusterLogout() {
         String clusterId = UUID.randomUUID().toString();
 
         WebSocketRequest req = new WebSocketRequest();

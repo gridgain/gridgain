@@ -19,9 +19,13 @@ package org.apache.ignite.console.web.security;
 import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
+import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -40,6 +44,9 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.session.ExpiringSession;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
@@ -85,6 +92,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         SIGN_IN_ROUTE, SIGN_UP_ROUTE,
         FORGOT_PASSWORD_ROUTE, RESET_PASSWORD_ROUTE, ACTIVATION_RESEND
     };
+
+    /** Timeout that the {@link Session} should be kept alive between requests (default: 30 days). */
+    @Value("${server.sessions.expiration.timeout:2592000000}")
+    private long sesExpirationTimeout;
 
     /** */
     private final AccountsService accountsSrv;
@@ -182,6 +193,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         res.setStatus(HttpServletResponse.SC_OK);
 
         res.getWriter().flush();
+    }
+
+    /**
+     * @param ignite Ignite.
+     * @param txMgr Transaction manager.
+     */
+    @Bean
+    public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
+        return new IgniteSessionRepository(sesExpirationTimeout, ignite, txMgr);
     }
 
     /**

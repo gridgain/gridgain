@@ -27,16 +27,7 @@ fixture('Assumed identity')
     .beforeEach(async(t) => {
         await dropTestDB();
         await insertTestUser();
-        await insertTestUser({
-            email: 'foo@example.com',
-            password: '1',
-            passwordConfirm: '1',
-            firstName: 'User',
-            lastName: 'Name',
-            country: 'Brazil',
-            company: 'Acme Inc.',
-            industry: 'Banking'
-        });
+        await insertTestUser(admin.TEST_USER);
         await t.useRole(regularUser);
     })
     .afterEach(async() => {
