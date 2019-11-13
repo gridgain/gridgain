@@ -1033,7 +1033,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
      * @param nearNode Near node.
      * @param req Request.
      * @param filter0 Filter.
-     * @return Future.
+     * @return Future or null if topology is not ready.
      */
     public IgniteInternalFuture<GridNearLockResponse> lockAllAsync(
         final GridCacheContext<?, ?> cacheCtx,

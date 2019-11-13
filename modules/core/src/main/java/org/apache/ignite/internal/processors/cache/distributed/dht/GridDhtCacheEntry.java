@@ -712,7 +712,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
     /**
      * @return Readers.
      */
-    @Nullable public ReaderId[] readersLocked() {
+    @Nullable public ReaderId[] readersUnlocked() {
         assert lockedByCurrentThread();
 
         return this.rdrs;

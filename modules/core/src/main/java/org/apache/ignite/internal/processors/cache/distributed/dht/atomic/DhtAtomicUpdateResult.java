@@ -18,11 +18,14 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -42,6 +45,9 @@ class DhtAtomicUpdateResult {
 
     /** */
     private IgniteCacheExpiryPolicy expiry;
+
+    /** */
+    GridFutureAdapter<Boolean> readyFut = new GridFutureAdapter<>();
 
     /**
      * If batch update was interrupted in the middle, it should be continued from processedEntriesCount to avoid
@@ -125,8 +131,8 @@ class DhtAtomicUpdateResult {
     /**
      * @param retVal Result for operation.
      */
-    void returnValue(GridCacheReturn retVal) {
-        this.retVal = retVal;
+    GridCacheReturn returnValue(GridCacheReturn retVal) {
+        return this.retVal;
     }
 
     /**
@@ -157,5 +163,9 @@ class DhtAtomicUpdateResult {
      */
     public int processedEntriesCount() {
         return processedEntriesCount;
+    }
+
+    IgniteInternalFuture<Boolean> readyFuture() {
+        return readyFut;
     }
 }

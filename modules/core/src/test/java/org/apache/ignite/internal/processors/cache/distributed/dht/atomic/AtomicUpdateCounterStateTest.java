@@ -379,7 +379,9 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             client.cache(DEFAULT_CACHE_NAME).putAll(data);
 
-            LockSupport.park();
+            for (int i = 0; i < PARTS; i++)
+                assertEquals(i, client.cache(DEFAULT_CACHE_NAME).get(i));
+
         }
         finally {
             stopAllGrids();
