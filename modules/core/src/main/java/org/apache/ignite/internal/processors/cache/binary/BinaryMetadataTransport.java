@@ -459,7 +459,7 @@ final class BinaryMetadataTransport {
 
                         metaLocCache.put(typeId, newHolder);
 
-                        metadataFileStore.prepareToWriteMetadata(msg.metadata(), pendingVer);
+                        metadataFileStore.prepareMetadataWriting(msg.metadata(), pendingVer);
                     }
                 }
             }
@@ -499,7 +499,7 @@ final class BinaryMetadataTransport {
 
                             metaLocCache.put(typeId, newHolder);
 
-                            metadataFileStore.prepareToWriteMetadata(mergedMeta, pendingVer);
+                            metadataFileStore.prepareMetadataWriting(mergedMeta, pendingVer);
                         }
                     }
                     catch (BinaryObjectException ignored) {

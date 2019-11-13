@@ -344,7 +344,6 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         IgniteEx ig0 = startGrid(0);
         IgniteEx cl0 = startGrid("client0");
 
-
         CountDownLatch fileWriteLatch = new CountDownLatch(1);
         IgniteEx ig1 = startGrid(1);
 
@@ -357,7 +356,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();
         listeningLog.registerListener(waitingForWriteLsnr);
 
-        IgniteEx ig2 = startGrid(2);
+        startGrid(2);
 
         listeningLog = null;
 
@@ -491,7 +490,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         //internal map in BinaryMetadataFileStore with futures awaiting write operations
         Map map = GridTestUtils.getFieldValue(
-            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(),  "metadataFileStore", "writer","writeOpFutures");
+            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(),  "metadataFileStore", "writer", "preparedWriteTasks");
 
         assertTrue(!map.isEmpty());
 
