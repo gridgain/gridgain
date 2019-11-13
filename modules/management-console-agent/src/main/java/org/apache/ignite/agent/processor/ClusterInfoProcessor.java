@@ -22,10 +22,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -85,6 +85,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         evtMgr.addDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
 
         // Listen for activation/deactivation.
+        evtMgr.enableEvents(EVTS_CLUSTER_ACTIVATION);
         evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
         // TODO GG-21449: this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*

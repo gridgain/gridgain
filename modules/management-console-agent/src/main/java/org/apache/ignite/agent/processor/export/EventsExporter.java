@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.event;
+package org.apache.ignite.agent.processor.export;
 
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.events.EventType.EVTS_CACHE_LIFECYCLE;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
@@ -33,9 +34,6 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.concat;
  * Events exporter which send events to coordinator.
  */
 public class EventsExporter extends GridProcessorAdapter {
-    /** Topic for events. */
-    static final String TOPIC_EVTS = "mgmt-console-event-topic";
-
     /** Global event types. */
     private static final int[] GLOBAL_EVT_TYPES = concat(EVTS_DISCOVERY, EVTS_CACHE_LIFECYCLE, EVTS_CLUSTER_ACTIVATION);
 
@@ -59,6 +57,7 @@ public class EventsExporter extends GridProcessorAdapter {
      * Adds local event listener.
      */
     public void addLocalEventListener() {
+        this.ctx.event().enableEvents(LOCAL_EVT_TYPES);
         this.ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
     }
 
@@ -66,6 +65,7 @@ public class EventsExporter extends GridProcessorAdapter {
      * Adds global event listener.
      */
     public void addGlobalEventListener() {
+        this.ctx.event().enableEvents(GLOBAL_EVT_TYPES);
         this.ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
     }
 
@@ -85,6 +85,6 @@ public class EventsExporter extends GridProcessorAdapter {
         if (evt0 != null)
             ctx.grid()
                 .message(ctx.grid().cluster().forOldest())
-                .send(TOPIC_EVTS, EVT_MAPPER.apply(evt));
+                .send(TOPIC_MANAGEMENT_CONSOLE, EVT_MAPPER.apply(evt));
     }
 }

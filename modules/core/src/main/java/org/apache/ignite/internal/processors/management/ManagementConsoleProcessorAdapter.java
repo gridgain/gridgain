@@ -22,14 +22,14 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 /**
  * No-op implementation of Management Console Agent, throws exception on usage attempt.
  */
-public abstract class AbstractManagementConsoleProcessor extends GridProcessorAdapter {
+public abstract class ManagementConsoleProcessorAdapter extends GridProcessorAdapter {
     /** Management configuration instance. */
     protected ManagementConfiguration cfg = new ManagementConfiguration();
 
     /**
      * @param ctx Kernal context.
      */
-    protected AbstractManagementConsoleProcessor(GridKernalContext ctx) {
+    protected ManagementConsoleProcessorAdapter(GridKernalContext ctx) {
         super(ctx);
     }
 

@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.ManagementConsoleAgent;
+import org.apache.ignite.agent.ManagementConsoleProcessor;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -58,7 +58,7 @@ public class ActionDispatcher extends GridProcessorAdapter {
     public ActionDispatcher(GridKernalContext ctx) {
         super(ctx);
 
-        sesRegistry = ((ManagementConsoleAgent) ctx.managementConsole()).sessionRegistry();
+        sesRegistry = ((ManagementConsoleProcessor)ctx.managementConsole()).sessionRegistry();
     }
 
     /**
