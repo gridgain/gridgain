@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 
-import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.events.EventType.EVTS_CACHE_LIFECYCLE;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;

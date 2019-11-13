@@ -18,14 +18,14 @@ package org.apache.ignite.agent.processor;
 
 import java.util.UUID;
 import org.apache.ignite.agent.dto.NodeConfiguration;
-import org.apache.ignite.agent.dto.tracing.SpanList;
+import org.apache.ignite.agent.dto.tracing.SpanBatch;
 import org.apache.ignite.agent.ws.RetryableSender;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
-import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
@@ -68,8 +68,8 @@ public class ManagementConsoleTopicProcessor extends GridProcessorAdapter {
             snd.send(buildClusterNodeConfigurationDest(ctx.cluster().get().id()), msg);
         else if (msg instanceof VisorGridEvent)
             snd.send(buildEventsDest(ctx.cluster().get().id()), msg);
-        else if (msg instanceof SpanList)
-            snd.send(buildSaveSpanDest(ctx.cluster().get().id()), ((SpanList)msg).list());
+        else if (msg instanceof SpanBatch)
+            snd.send(buildSaveSpanDest(ctx.cluster().get().id()), ((SpanBatch)msg).list());
 
         return true;
     }

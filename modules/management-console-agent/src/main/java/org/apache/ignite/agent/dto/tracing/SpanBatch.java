@@ -20,21 +20,21 @@ import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * DTO for list of spans.
+ * DTO for batch of spans.
  */
-public class SpanList {
+public class SpanBatch {
     /** List of spans. */
     private final List<Span> list;
 
     /**
-     * @param list List of spans.
+     * @param list Batch of spans.
      */
-    public SpanList(List<Span> list) {
+    public SpanBatch(List<Span> list) {
         this.list = list;
     }
 
     /**
-     * @return List of spans.
+     * @return Batch of spans.
      */
     public List<Span> list() {
         return list;
@@ -42,6 +42,6 @@ public class SpanList {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(SpanList.class, this);
+        return S.toString(SpanBatch.class, this);
     }
 }

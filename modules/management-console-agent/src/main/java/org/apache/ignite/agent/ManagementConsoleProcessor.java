@@ -42,7 +42,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.processors.management.AbstractManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
@@ -71,7 +71,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator
 /**
  * Management console agent.
  */
-public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
+public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
@@ -126,7 +126,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /**
      * @param ctx Kernal context.
      */
-    public ManagementConsoleAgent(GridKernalContext ctx) {
+    public ManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 

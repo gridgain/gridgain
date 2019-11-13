@@ -21,7 +21,7 @@ import org.apache.ignite.internal.GridKernalContext;
 /**
  * No-op management console processor.
  */
-public class NoopManagementConsoleProcessor extends AbstractManagementConsoleProcessor {
+public class NoopManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
     /**
      * @param ctx Kernal context.
      */

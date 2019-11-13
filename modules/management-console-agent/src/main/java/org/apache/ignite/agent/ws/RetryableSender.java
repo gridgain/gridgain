@@ -23,7 +23,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.ignite.agent.ManagementConsoleAgent;
+import org.apache.ignite.agent.ManagementConsoleProcessor;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.X;
@@ -95,7 +95,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     boolean sendInternal(String dest, List<T> elements) throws InterruptedException {
         Thread.sleep(Math.min(MAX_SLEEP_TIME_SECONDS, retryCnt) * 1000);
 
-        WebSocketManager mgr = ((ManagementConsoleAgent)ctx.managementConsole()).webSocketManager();
+        WebSocketManager mgr = ((ManagementConsoleProcessor)ctx.managementConsole()).webSocketManager();
 
         if (mgr != null && !mgr.send(dest, elements)) {
             retryCnt++;
