@@ -14,18 +14,34 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.management;
+package org.apache.ignite.agent.dto.tracing;
 
-import org.apache.ignite.internal.GridKernalContext;
+import java.util.List;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * No-op management console processor.
+ * DTO for batch of spans.
  */
-public class NoopManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
+public class SpanBatch {
+    /** List of spans. */
+    private final List<Span> list;
+
     /**
-     * @param ctx Kernal context.
+     * @param list Batch of spans.
      */
-    public NoopManagementConsoleProcessor(GridKernalContext ctx) {
-        super(ctx);
+    public SpanBatch(List<Span> list) {
+        this.list = list;
+    }
+
+    /**
+     * @return Batch of spans.
+     */
+    public List<Span> list() {
+        return list;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(SpanBatch.class, this);
     }
 }

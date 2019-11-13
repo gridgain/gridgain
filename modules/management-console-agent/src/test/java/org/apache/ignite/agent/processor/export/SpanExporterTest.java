@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.tracing;
+package org.apache.ignite.agent.processor.export;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -28,7 +27,7 @@ import io.opencensus.trace.SpanId;
 import io.opencensus.trace.TraceId;
 import io.opencensus.trace.Tracestate;
 import io.opencensus.trace.export.SpanData;
-import org.apache.ignite.agent.dto.tracing.Span;
+import org.apache.ignite.agent.dto.tracing.SpanBatch;
 import org.apache.ignite.agent.processor.AbstractServiceTest;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -41,7 +40,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static io.opencensus.trace.TraceOptions.DEFAULT;
-import static org.apache.ignite.agent.processor.tracing.SpanExporter.TOPIC_SPANS;
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -69,8 +68,8 @@ public class SpanExporterTest extends AbstractServiceTest {
 
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), payloadCaptor.capture());
 
-        Assert.assertEquals(TOPIC_SPANS, topicCaptor.getValue());
-        Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
+        Assert.assertEquals(TOPIC_MANAGEMENT_CONSOLE, topicCaptor.getValue());
+        Assert.assertEquals(1, ((SpanBatch) payloadCaptor.getValue()).list().size());
     }
 
     /** {@inheritDoc} */

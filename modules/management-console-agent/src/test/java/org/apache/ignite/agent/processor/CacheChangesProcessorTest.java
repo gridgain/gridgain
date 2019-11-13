@@ -54,6 +54,28 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
+     * Should not send system cache info.
+     */
+    @Test
+    public void shouldNotSendSystemCacheInfo() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        ignite.getOrCreateCache("test-cache");
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cachesInfo = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return !cachesInfo.isEmpty() && cachesInfo.stream().noneMatch(i -> "ignite-sys-cache".equals(i.getName()));
+        });
+    }
+
+    /**
      * Should send correct cache info on create and destroy cache events.
      */
     @Test
