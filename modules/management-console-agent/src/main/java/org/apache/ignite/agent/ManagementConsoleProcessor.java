@@ -44,6 +44,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.websocket.api.UpgradeException;
@@ -64,6 +65,8 @@ import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_ID_AND_TAG;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
@@ -121,6 +124,9 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
 
+    /** Is all features enabled. */
+    private boolean isMgmtConsoleFeaturesEnabled;
+
     /**
      * @param ctx Kernal context.
      */
@@ -130,41 +136,50 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        this.metaStorage = ctx.distributedMetastorage();
-        this.evtsExporter = new EventsExporter(ctx);
-        this.spanExporter = new SpanExporter(ctx);
-        this.metricExporter = new MetricsExporter(ctx);
+        isMgmtConsoleFeaturesEnabled = ReadableDistributedMetaStorage.isSupported(ctx) &&
+            allNodesSupports(ctx, ctx.discovery().discoCache().allNodes(), CLUSTER_ID_AND_TAG);
 
-        // Connect to backend if local node is a coordinator or await coordinator change event.
-        if (isLocalNodeCoordinator(ctx.discovery())) {
-            messagesProc = new ManagementConsoleMessagesProcessor(ctx);
+        if (isMgmtConsoleFeaturesEnabled) {
+            this.metaStorage = ctx.distributedMetastorage();
+            this.evtsExporter = new EventsExporter(ctx);
+            this.spanExporter = new SpanExporter(ctx);
+            this.metricExporter = new MetricsExporter(ctx);
 
-            connect();
+            // Connect to backend if local node is a coordinator or await coordinator change event.
+            if (isLocalNodeCoordinator(ctx.discovery())) {
+                messagesProc = new ManagementConsoleMessagesProcessor(ctx);
+
+                connect();
+            }
+            else
+                ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+
+            evtsExporter.addLocalEventListener();
+
+            metricExporter.addMetricListener();
+
+            NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
+
+            exporter.export();
+
+            quiteStop(exporter);
         }
         else
-            ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
-
-        evtsExporter.addLocalEventListener();
-
-        metricExporter.addMetricListener();
-
-        NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
-
-        exporter.export();
-
-        quiteStop(exporter);
+            log.warning("Management console requires DISTRIBUTED_METASTORAGE and CLUSTER_ID_AND_TAG features for work");
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+        if (isMgmtConsoleFeaturesEnabled) {
+            ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        quiteStop(messagesProc);
-        quiteStop(metricExporter);
-        quiteStop(evtsExporter);
-        quiteStop(spanExporter);
+            quiteStop(messagesProc);
+            quiteStop(metricExporter);
+            quiteStop(evtsExporter);
+            quiteStop(spanExporter);
 
-        disconnect();
+            disconnect();
+        }
     }
 
     /**
@@ -188,18 +203,20 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
-        ManagementConfiguration oldCfg = configuration();
+        if (isMgmtConsoleFeaturesEnabled) {
+            ManagementConfiguration oldCfg = configuration();
 
-        if (oldCfg.isEnabled() != cfg.isEnabled())
-            cfg = oldCfg.setEnabled(cfg.isEnabled());
+            if (oldCfg.isEnabled() != cfg.isEnabled())
+                cfg = oldCfg.setEnabled(cfg.isEnabled());
 
-        super.configuration(cfg);
+            super.configuration(cfg);
 
-        writeToMetaStorage(cfg);
+            writeToMetaStorage(cfg);
 
-        disconnect();
+            disconnect();
 
-        launchAgentListener(null, null);
+            launchAgentListener(null, null);
+        }
     }
 
     /**
