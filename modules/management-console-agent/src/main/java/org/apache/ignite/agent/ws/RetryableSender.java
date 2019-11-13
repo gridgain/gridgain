@@ -36,7 +36,7 @@ import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
  */
 public class RetryableSender<T> extends GridProcessorAdapter implements Runnable {
     /** Queue capacity. */
-    private static final int DEFAULT_QUEUE_CAP = 100;
+    private static final int DEFAULT_QUEUE_CAP = 500;
 
     /** Max sleep time seconds between retries. */
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
