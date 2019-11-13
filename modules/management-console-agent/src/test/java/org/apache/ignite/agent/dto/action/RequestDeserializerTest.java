@@ -47,7 +47,7 @@ public class RequestDeserializerTest {
      */
     @Test
     public void deserializeWithValidAction() throws Exception {
-        Request req = new Request().setAction("ActionControllerForTests.action").setArgument(true).setId(UUID.randomUUID());
+        Request req = new Request().setAction("IgniteTestActionController.action").setArgument(true).setId(UUID.randomUUID());
 
         Request deserializedReq = mapper.readValue(mapper.writeValueAsBytes(req), Request.class);
 

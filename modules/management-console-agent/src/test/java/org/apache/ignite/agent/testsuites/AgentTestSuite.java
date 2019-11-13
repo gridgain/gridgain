@@ -16,22 +16,52 @@
 
 package org.apache.ignite.agent.testsuites;
 
+import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
+import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
+import org.apache.ignite.agent.action.controller.ActionControllerWithAuthenticationBaseTest;
+import org.apache.ignite.agent.action.controller.BaselineActionsControllerTest;
+import org.apache.ignite.agent.action.controller.ClusterActionsControllerTest;
+import org.apache.ignite.agent.action.controller.QueryActionsControllerTest;
+import org.apache.ignite.agent.action.controller.QueryActionsControllerWithParametersTest;
+import org.apache.ignite.agent.action.controller.SecurityActionsControllerTest;
+import org.apache.ignite.agent.action.query.QueryRegistryTest;
+import org.apache.ignite.agent.dto.IgniteConfigurationWrapperTest;
 import org.apache.ignite.agent.dto.action.RequestDeserializerTest;
 import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
+import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
+import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
 import org.apache.ignite.agent.processor.event.EventsExporterTest;
+import org.apache.ignite.agent.processor.event.EventsProcessorTest;
+import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
 import org.apache.ignite.agent.processor.sender.RetryableSenderTest;
-import org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporterTest;
+import org.apache.ignite.agent.processor.tracing.SpanExporterTest;
+import org.apache.ignite.agent.processor.tracing.SpanProcessorTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Management console agent test suite.
+ * Management console agent self test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ActionControllerBaseTest.class,
+    ActionControllerWithAuthenticationBaseTest.class,
+    BaselineActionsControllerTest.class,
+    CacheChangesProcessorTest.class,
+    ClusterActionsControllerTest.class,
+    ClusterInfoProcessorTest.class,
+    EventsProcessorTest.class,
+    IgniteConfigurationWrapperTest.class,
+    MetricsProcessorTest.class,
+    QueryActionsControllerTest.class,
+    QueryActionsControllerWithParametersTest.class,
+    QueryRegistryTest.class,
+    SessionRegistryTest.class,
+    SecurityActionsControllerTest.class,
+    SpanProcessorTest.class,
     ActionControllerAnnotationProcessorTest.class,
-    ManagementConsoleSpanExporterTest.class,
+    SpanExporterTest.class,
     EventsExporterTest.class,
     RetryableSenderTest.class,
     RequestDeserializerTest.class,

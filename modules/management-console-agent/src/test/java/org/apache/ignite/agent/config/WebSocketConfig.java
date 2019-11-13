@@ -43,9 +43,6 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
     /** Agent path. */
     public static final String AGENTS_PATH = "/agents";
 
-    /** Heartbeat intervals. */
-    private static final long[] HEARTBEAT = {10_000, 10_000};
-
     /** {@inheritDoc} */
     @Override public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint(AGENTS_PATH);

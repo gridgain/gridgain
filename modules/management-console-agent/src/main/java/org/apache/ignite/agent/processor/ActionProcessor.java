@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.processor;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.action.ActionDispatcher;
@@ -28,6 +27,8 @@ import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.security.SecurityException;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
@@ -85,9 +86,9 @@ public class ActionProcessor extends GridProcessorAdapter {
             sendResponse(new Response().setId(req.getId()).setStatus(RUNNING));
 
             dispatcher.dispatch(req)
-                    .thenApply(CompletableFuture::join)
+                    .thenApply(IgniteFuture::get)
                     .thenApply(r -> new Response().setId(req.getId()).setStatus(COMPLETED).setResult(r))
-                    .exceptionally(e -> convertToErrorResponse(req.getId(), e))
+                    .exceptionally(e -> convertToErrorResponse(req.getId(), e.getCause()))
                     .thenAccept(this::sendResponse);
         }
         catch (Exception e) {
@@ -100,7 +101,7 @@ public class ActionProcessor extends GridProcessorAdapter {
      * @param e Throwable.
      */
     private Response convertToErrorResponse(UUID id, Throwable e) {
-        log.error(String.format("Failed to execute action, send error response to Management Console: [reqId=%s]", id), e);
+        log.error("Failed to execute action, send error response to Management Console: [reqId=" + id + ']', e);
 
         return new Response()
                 .setId(id)
@@ -113,11 +114,11 @@ public class ActionProcessor extends GridProcessorAdapter {
      * @return Integer error code.
      */
     private int getErrorCode(Throwable e) {
-        Throwable cause = e.getCause();
-
-        if (cause instanceof SecurityException)
+        if (e instanceof SecurityException || X.hasCause(e, SecurityException.class))
             return AUTHORIZE_ERROR_CODE;
-        else if (cause instanceof IgniteAuthenticationException || cause instanceof IgniteAccessControlException)
+        else if (e instanceof IgniteAuthenticationException || e instanceof IgniteAccessControlException
+            || X.hasCause(e, IgniteAuthenticationException.class, IgniteAccessControlException.class)
+        )
             return AUTHENTICATION_ERROR_CODE;
 
         return INTERNAL_ERROR_CODE;

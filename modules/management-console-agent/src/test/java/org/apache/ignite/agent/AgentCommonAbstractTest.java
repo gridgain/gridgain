@@ -57,7 +57,7 @@ import static org.awaitility.Awaitility.with;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = WebSocketConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-public abstract class AgentCommonAbstractSelfTest extends GridCommonAbstractTest {
+public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     /** Template. */
     @Autowired
     protected SimpMessagingTemplate template;
@@ -79,6 +79,7 @@ public abstract class AgentCommonAbstractSelfTest extends GridCommonAbstractTest
     @After
     public void stopAndClear() throws Exception {
         stopAllGrids();
+
         cleanPersistenceDir();
 
         List<String> mgmtThreadNames = Thread.getAllStackTraces().keySet().stream()

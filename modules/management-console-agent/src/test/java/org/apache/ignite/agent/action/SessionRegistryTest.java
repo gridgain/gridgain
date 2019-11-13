@@ -18,7 +18,7 @@ package org.apache.ignite.agent.action;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteAuthenticationException;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
@@ -32,7 +32,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 /**
  * Session registry test.
  */
-public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
+public class SessionRegistryTest extends AgentCommonAbstractTest {
     /** Ignite. */
     private IgniteEx ignite;
 
@@ -176,7 +176,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
             registry.getSession(ses.id());
 
             return null;
-        }, IgniteAccessControlException.class, "The user name or password is incorrect [userName=" + ses.credentials().getLogin() + "]");
+        }, IgniteAccessControlException.class, "The user name or password is incorrect [userName=" + ses.credentials().getLogin() + ']');
 
         assertThrows(null, () -> {
             registry.getSession(ses.id());
@@ -206,7 +206,7 @@ public class SessionRegistryTest extends AgentCommonAbstractSelfTest {
             registry.getSession(ses.id());
 
             return null;
-        }, IgniteAccessControlException.class, "The user name or password is incorrect [userName=" + ses.credentials().getLogin() + "]");
+        }, IgniteAccessControlException.class, "The user name or password is incorrect [userName=" + ses.credentials().getLogin() + ']');
 
         assertThrows(null, () -> {
             registry.getSession(ses.id());

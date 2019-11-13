@@ -19,7 +19,7 @@ package org.apache.ignite.agent.processor.event;
 import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
@@ -29,9 +29,9 @@ import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
- * Events service test.
+ * Events processor test.
  */
-public class EventsServiceSelfTest extends AgentCommonAbstractSelfTest {
+public class EventsProcessorTest extends AgentCommonAbstractTest {
     /**
      * Should register handler and export events.
      */

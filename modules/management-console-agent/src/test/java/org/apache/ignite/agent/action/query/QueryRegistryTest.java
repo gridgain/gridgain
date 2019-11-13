@@ -18,7 +18,7 @@ package org.apache.ignite.agent.action.query;
 
 import java.util.ArrayList;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -27,7 +27,7 @@ import org.junit.Test;
 /**
  * Query registry test.
  */
-public class QueryRegistryTest extends AgentCommonAbstractSelfTest {
+public class QueryRegistryTest extends AgentCommonAbstractTest {
     /**
      * Should remove expired holders.
      */

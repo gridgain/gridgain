@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.agent.AgentCommonAbstractSelfTest;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
@@ -33,9 +33,9 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesI
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
 
 /**
- * Cache service self test.
+ * Cache changes processor test.
  */
-public class CacheServiceSelfTest extends AgentCommonAbstractSelfTest {
+public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     /**
      * Should send initial states to backend.
      */

@@ -41,16 +41,16 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static io.opencensus.trace.TraceOptions.DEFAULT;
-import static org.apache.ignite.agent.processor.tracing.ManagementConsoleSpanExporter.TOPIC_SPANS;
+import static org.apache.ignite.agent.processor.tracing.SpanExporter.TOPIC_SPANS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Management console span exporter test.
+ * Span exporter test.
  */
-public class ManagementConsoleSpanExporterTest extends AbstractServiceTest {
+public class SpanExporterTest extends AbstractServiceTest {
     /** Context. */
     private GridKernalContext ctx = getMockContext();
 
@@ -59,7 +59,7 @@ public class ManagementConsoleSpanExporterTest extends AbstractServiceTest {
      */
     @Test
     public void shouldSendTracesToTopic() throws Exception {
-        ManagementConsoleSpanExporter exporter = new ManagementConsoleSpanExporter(ctx);
+        SpanExporter exporter = new SpanExporter(ctx);
 
         exporter.getTraceHandler().timeLimitedExport(getSpanData());
 
