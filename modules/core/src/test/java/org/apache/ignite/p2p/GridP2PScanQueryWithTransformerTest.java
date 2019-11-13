@@ -186,9 +186,8 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
 
         int sumQueried = 0;
 
-        for (Integer val : query) {
+        for (Integer val : query)
             sumQueried += val;
-        }
 
         assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
     }
@@ -286,9 +285,8 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
 
         int sumQueried = 0;
 
-        for (Integer val : query) {
+        for (Integer val : query)
             sumQueried += val;
-        }
 
         assertTrue(sumQueried == sumPopulated * SCALE_FACTOR);
         assertTrue(clsDeployedMsgLsnr.check());
