@@ -1888,6 +1888,8 @@ public class Select extends Query {
                 clearHashJoinIndexAfterQuery();
 
                 isEverything(ExpressionVisitor.getCleanupVisitor());
+
+                cleanupResources();
             }
         }
 
@@ -2034,5 +2036,14 @@ public class Select extends Query {
                     ((HashJoinIndex)f.getIndex()).clearHashTable(session);
             }
         });
+    }
+
+    /**
+     * Cleanups cached rows.
+     */
+    private void cleanupResources() {
+        for (TableFilter f : filters) {
+            f.cleanup();
+        }
     }
 }
