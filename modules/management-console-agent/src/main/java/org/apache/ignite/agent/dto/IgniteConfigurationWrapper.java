@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
         "deploymentSpi",
         "collisionSpi",
         "cacheStoreSessionListenerFactories",
+        "failureHandler",
         "localEventListeners"
     }
 )

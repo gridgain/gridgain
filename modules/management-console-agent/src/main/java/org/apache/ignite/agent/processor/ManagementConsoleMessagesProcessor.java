@@ -32,9 +32,9 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 
 /**
- * Management console topic processor.
+ * Management console messages processor.
  */
-public class ManagementConsoleTopicProcessor extends GridProcessorAdapter {
+public class ManagementConsoleMessagesProcessor extends GridProcessorAdapter {
     /** Sender. */
     private final RetryableSender<Object> snd;
 
@@ -44,7 +44,7 @@ public class ManagementConsoleTopicProcessor extends GridProcessorAdapter {
     /**
      * @param ctx Context.
      */
-    public ManagementConsoleTopicProcessor(GridKernalContext ctx) {
+    public ManagementConsoleMessagesProcessor(GridKernalContext ctx) {
         super(ctx);
 
         this.snd = new RetryableSender<>(ctx);

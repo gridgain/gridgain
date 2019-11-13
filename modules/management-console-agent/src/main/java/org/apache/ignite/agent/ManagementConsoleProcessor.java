@@ -20,8 +20,8 @@ import java.io.EOFException;
 import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
@@ -30,7 +30,7 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.processor.ActionsProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
-import org.apache.ignite.agent.processor.ManagementConsoleTopicProcessor;
+import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessor;
 import org.apache.ignite.agent.processor.export.EventsExporter;
 import org.apache.ignite.agent.processor.export.MetricsExporter;
 import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
@@ -101,13 +101,13 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     private ActionsProcessor actProc;
 
     /** Topic processor. */
-    private ManagementConsoleTopicProcessor topicProc;
+    private ManagementConsoleMessagesProcessor topicProc;
 
     /** Cache processor. */
     private CacheChangesProcessor cacheProc;
 
     /** Execute service. */
-    private ThreadPoolExecutor connectPool;
+    private ExecutorService connectPool;
 
     /** Meta storage. */
     private DistributedMetaStorage metaStorage;
@@ -137,7 +137,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
-            topicProc = new ManagementConsoleTopicProcessor(ctx);
+            topicProc = new ManagementConsoleMessagesProcessor(ctx);
 
             connect();
         }
@@ -294,8 +294,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         evtsExporter.addGlobalEventListener();
 
-        connectPool =
-            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
+        connectPool = Executors.newSingleThreadExecutor(new CustomizableThreadFactory("mgmt-console-connection-"));
 
         connectPool.submit(this::connect0);
     }

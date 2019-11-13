@@ -31,7 +31,7 @@ import org.apache.ignite.agent.dto.action.RequestDeserializerTest;
 import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
 import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
-import org.apache.ignite.agent.processor.ManagementConsoleTopicProcessorTest;
+import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessorTest;
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
@@ -50,7 +50,7 @@ import org.junit.runners.Suite;
     CacheChangesProcessorTest.class,
     ClusterActionsControllerTest.class,
     ClusterInfoProcessorTest.class,
-    ManagementConsoleTopicProcessorTest.class,
+    ManagementConsoleMessagesProcessorTest.class,
     IgniteConfigurationWrapperTest.class,
     MetricsProcessorTest.class,
     QueryActionsControllerTest.class,

@@ -34,9 +34,9 @@ import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
- * Management console topic processor test.
+ * Management console messages processor test.
  */
-public class ManagementConsoleTopicProcessorTest  extends AgentCommonAbstractTest {
+public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractTest {
     /**
      * Should register handler and export events.
      */
