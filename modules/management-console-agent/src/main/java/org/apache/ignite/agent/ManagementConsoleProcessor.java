@@ -37,15 +37,13 @@ import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
 import org.apache.ignite.agent.processor.export.SpanExporter;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
 import org.apache.ignite.agent.ws.WebSocketManager;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.websocket.api.UpgradeException;
@@ -153,6 +151,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
 
         exporter.export();
+
+        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
@@ -417,14 +417,5 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      */
     private void reconnect() {
         connectPool.submit(this::connect0);
-    }
-
-    /**
-     * @param discoCache Disco cache.
-     */
-    private boolean isCoordinator(DiscoCache discoCache) {
-        ClusterNode crdNode = F.first(discoCache.serverNodes());
-
-        return crdNode != null && crdNode.isLocal();
     }
 }
