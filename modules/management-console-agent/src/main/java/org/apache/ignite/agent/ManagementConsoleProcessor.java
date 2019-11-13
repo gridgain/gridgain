@@ -101,7 +101,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     private ActionsProcessor actProc;
 
     /** Topic processor. */
-    private ManagementConsoleMessagesProcessor topicProc;
+    private ManagementConsoleMessagesProcessor messagesProc;
 
     /** Cache processor. */
     private CacheChangesProcessor cacheProc;
@@ -137,7 +137,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
-            topicProc = new ManagementConsoleMessagesProcessor(ctx);
+            messagesProc = new ManagementConsoleMessagesProcessor(ctx);
 
             connect();
         }
@@ -159,7 +159,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        quiteStop(topicProc);
+        quiteStop(messagesProc);
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
         quiteStop(spanExporter);
@@ -308,13 +308,15 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         ctx.cache().context().database().checkpointReadLock();
 
-        ManagementConfiguration cfg = null;
+        ManagementConfiguration cfg;
 
         try {
             cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Failed to read management configuration from meta storage!");
+
+            throw U.convertException(e);
         }
         finally {
             ctx.cache().context().database().checkpointReadUnlock();
@@ -412,7 +414,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
-     * Submit a reconnection task only if there no active connect in progress.
+     * Submit a reconnection task.
      */
     private void reconnect() {
         connectPool.submit(this::connect0);
