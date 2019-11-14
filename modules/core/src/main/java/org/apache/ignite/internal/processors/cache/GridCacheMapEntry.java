@@ -4743,7 +4743,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @return {@code True} if deleted.
      */
     @SuppressWarnings("SimplifiableIfStatement")
-    protected final boolean deletedUnlocked() {
+    public final boolean deletedUnlocked() {
         assert lock.isHeldByCurrentThread();
 
         if (!cctx.deferredDelete())

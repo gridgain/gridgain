@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 import java.io.Externalizable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
@@ -90,9 +93,11 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridLongList;
+import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.nio.GridNioBackPressureControl;
 import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
@@ -2029,78 +2034,89 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 //                retVal = dhtUpdRes.returnValue();
         }
         else {
-            Set<Integer> parts = new LinkedHashSet<>();
+            StripedExecutor svc = ctx.kernalContext().getStripedExecutorService();
+
+            BitSet stripes = new BitSet(svc.stripes());
 
             for (KeyCacheObject object : req.keys()) {
                 int part = object.partition();
+                int stripe = svc.stripe(part);
 
-                if (!parts.contains(part))
-                    parts.add(part);
+                stripes.set(stripe);
             }
 
-            AtomicInteger cntr = new AtomicInteger(parts.size());
+            AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
 
-            // TODO if already in striped no need to resubmit.
-            for (Integer part : parts) {
-                ctx.kernalContext().getStripedExecutorService().execute(part, new Runnable() {
-                    @Override public void run() {
-                        try {
-                            updateSingleBatch(node,
-                                hasNear,
-                                req,
-                                res,
-                                ver,
-                                ctx.isDrEnabled(),
-                                taskName,
-                                expiry,
-                                sndPrevVal,
-                                dhtUpdRes,
-                                part);
+            Runnable delayed = null;
 
-                            int val = cntr.decrementAndGet();
+            for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe+1)) {
+                final int finalStripe = stripe;
 
-                            if (val == 0) {
-                                GridCacheReturn retVal = dhtUpdRes.returnValue();
+                Runnable r = () -> {
+                    updateSingleBatch(node,
+                        hasNear,
+                        req,
+                        res,
+                        ver,
+                        ctx.isDrEnabled(),
+                        taskName,
+                        expiry,
+                        sndPrevVal,
+                        dhtUpdRes,
+                        finalStripe);
 
-                                GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+                    int val = cntr.decrementAndGet();
 
-                                if (retVal == null)
-                                    retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
+                    if (val == 0) {
+                        GridCacheReturn retVal = dhtUpdRes.returnValue();
 
-                                res.returnValue(retVal);
+                        GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
-                                if (dhtFut != null) {
-                                    if (req.writeSynchronizationMode() == PRIMARY_SYNC
-                                        // To avoid deadlock disable back-pressure for sender data node.
-                                        && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
-                                        && !dhtFut.isDone()) {
-                                        final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
+                        if (retVal == null)
+                            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
 
-                                        if (tracker instanceof GridNioMessageTracker) {
-                                            ((GridNioMessageTracker)tracker).onMessageReceived();
+                        res.returnValue(retVal);
 
-                                            dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
-                                                @Override public void apply(IgniteInternalFuture<Void> fut) {
-                                                    ((GridNioMessageTracker)tracker).onMessageProcessed();
-                                                }
-                                            });
+                        if (dhtFut != null) {
+                            if (req.writeSynchronizationMode() == PRIMARY_SYNC
+                                // To avoid deadlock disable back-pressure for sender data node.
+                                && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
+                                && !dhtFut.isDone()) {
+                                final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
+
+                                if (tracker instanceof GridNioMessageTracker) {
+                                    ((GridNioMessageTracker)tracker).onMessageReceived();
+
+                                    dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
+                                        @Override public void apply(IgniteInternalFuture<Void> fut) {
+                                            ((GridNioMessageTracker)tracker).onMessageProcessed();
                                         }
-                                    }
-
-                                    ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
+                                    });
                                 }
-
-                                dhtUpdRes.expiryPolicy(expiry);
-
-                                dhtUpdRes.readyFut.onDone(true);
                             }
+
+                            ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
                         }
-                        catch (GridCacheEntryRemovedException e) {
-                            assert false; // Should never be thrown.
-                        }
+
+                        dhtUpdRes.expiryPolicy(expiry);
+
+                        dhtUpdRes.readyFut.onDone(true); // Will invoke listener and finish msg processing.
                     }
-                });
+                };
+
+                if (delayed == null && Thread.currentThread() instanceof IgniteThread) {
+                    if (((IgniteThread)Thread.currentThread()).stripe() >= 0) {
+                        delayed = r;
+
+                        continue;
+                    }
+                }
+
+                ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
             }
+
+            if (delayed != null)
+                delayed.run(); // Run after all tasks are submitted for better parallelism.
         }
 
         return dhtUpdRes;
@@ -2549,7 +2565,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param expiry Expiry policy.
      * @param sndPrevVal If {@code true} sends previous value to backups.
      * @param dhtUpdRes Dht update result
-     * @throws GridCacheEntryRemovedException Should be never thrown.
      */
     private void updateSingleBatch(
         ClusterNode nearNode,
@@ -2562,8 +2577,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         @Nullable IgniteCacheExpiryPolicy expiry,
         boolean sndPrevVal,
         DhtAtomicUpdateResult dhtUpdRes,
-        int part
-    ) throws GridCacheEntryRemovedException{
+        int stripe
+    ) {
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
         //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
 
@@ -2580,13 +2595,15 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             for (int i = 0; i < req.size(); i++) {
                 KeyCacheObject k = req.key(i);
 
-                if (k.partition() != part)
+                if (ctx.kernalContext().getStripedExecutorService().stripe(k.partition()) != stripe)
                     continue;
 
                 GridCacheOperation op = req.operation();
 
+                GridDhtCacheEntry entry;
+
                 while(true) {
-                    GridDhtCacheEntry entry = entryExx(k, topVer);
+                    entry = entryExx(k, topVer);
 
                     try {
                         GridCacheVersion newConflictVer = req.conflictVersion(i);
@@ -2631,46 +2648,46 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             dhtFut,
                             false);
 
-//                if (dhtFut != null) {
-//                    if (updRes.sendToDht()) { // Send to backups even in case of remove-remove scenarios.
-//                        GridCacheVersionConflictContext<?, ?> conflictCtx = updRes.conflictResolveResult();
+//                        if (dhtFut != null) {
+//                            if (updRes.sendToDht()) { // Send to backups even in case of remove-remove scenarios.
+//                                GridCacheVersionConflictContext<?, ?> conflictCtx = updRes.conflictResolveResult();
 //
-//                        if (conflictCtx == null)
-//                            newConflictVer = null;
-//                        else if (conflictCtx.isMerge())
-//                            newConflictVer = null; // Conflict version is discarded in case of merge.
+//                                if (conflictCtx == null)
+//                                    newConflictVer = null;
+//                                else if (conflictCtx.isMerge())
+//                                    newConflictVer = null; // Conflict version is discarded in case of merge.
 //
-//                        EntryProcessor<Object, Object, Object> entryProcessor = null;
+//                                EntryProcessor<Object, Object, Object> entryProcessor = null;
 //
-//                        dhtFut.addWriteEntry(
-//                            affAssignment,
-//                            entry,
-//                            updRes.newValue(),
-//                            entryProcessor,
-//                            updRes.newTtl(),
-//                            updRes.conflictExpireTime(),
-//                            newConflictVer,
-//                            sndPrevVal,
-//                            updRes.oldValue(),
-//                            updRes.updateCounter(),
-//                            op);
+//                                dhtFut.addWriteEntry(
+//                                    affAssignment,
+//                                    entry,
+//                                    updRes.newValue(),
+//                                    entryProcessor,
+//                                    updRes.newTtl(),
+//                                    updRes.conflictExpireTime(),
+//                                    newConflictVer,
+//                                    sndPrevVal,
+//                                    updRes.oldValue(),
+//                                    updRes.updateCounter(),
+//                                    op);
 //
-//                        if (readers != null)
-//                            dhtFut.addNearWriteEntries(
-//                                nearNode,
-//                                readers,
-//                                entry,
-//                                updRes.newValue(),
-//                                entryProcessor,
-//                                updRes.newTtl(),
-//                                updRes.conflictExpireTime());
-//                    }
-//                    else {
-//                        if (log.isDebugEnabled())
-//                            log.debug("Entry did not pass the filter or conflict resolution (will skip write) " +
-//                                "[entry=" + entry + ", filter=" + Arrays.toString(req.filter()) + ']');
-//                    }
-//                }
+////                                if (readers != null)
+////                                    dhtFut.addNearWriteEntries(
+////                                        nearNode,
+////                                        readers,
+////                                        entry,
+////                                        updRes.newValue(),
+////                                        entryProcessor,
+////                                        updRes.newTtl(),
+////                                        updRes.conflictExpireTime());
+//                            }
+//                            else {
+//                                if (log.isDebugEnabled())
+//                                    log.debug("Entry did not pass the filter or conflict resolution (will skip write) " +
+//                                        "[entry=" + entry + ", filter=" + Arrays.toString(req.filter()) + ']');
+//                            }
+//                        }
 
 //                        if (hasNear) {
 //                            if (updRes.sendToDht()) {
@@ -2745,6 +2762,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         // Retry.
                     }
                 }
+
+                entry.touch();
             }
 
             //dhtUpdRes.returnValue(retVal);
@@ -3105,7 +3124,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         try {
             for (int i = 0; i < size; i++) {
                 GridCacheMapEntry entry = locked.get(i);
-                if (entry != null && entry.deleted()) {
+                if (entry != null && entry.deletedUnlocked()) {
                     if (skip == null)
                         skip = U.newHashSet(locked.size());
 

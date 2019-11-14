@@ -197,8 +197,17 @@ public class StripedExecutor implements ExecutorService {
         else {
             assert idx >= 0 : idx;
 
-            stripes[idx % stripes.length].execute(cmd);
+            stripes[stripe(idx)].execute(cmd);
         }
+    }
+
+    /**
+     * @param idx Index.
+     *
+     * @return Stripe for index.
+     */
+    public final int stripe(int idx) {
+        return idx % stripes.length;
     }
 
     /** {@inheritDoc} */

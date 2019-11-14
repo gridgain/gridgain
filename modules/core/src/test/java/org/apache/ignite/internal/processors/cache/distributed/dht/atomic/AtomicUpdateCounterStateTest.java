@@ -39,6 +39,7 @@ import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -382,6 +383,9 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             for (int i = 0; i < PARTS; i++)
                 assertEquals(i, client.cache(DEFAULT_CACHE_NAME).get(i));
 
+            GridDhtLocalPartition part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+
+            assertEquals(0, part.internalSize());
         }
         finally {
             stopAllGrids();
