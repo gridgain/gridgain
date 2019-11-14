@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent;
+package org.apache.ignite.agent.ws;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
@@ -92,7 +92,7 @@ public class WebSocketManager extends GridProcessorAdapter {
     /**
      * @param ctx Kernal context.
      */
-    protected WebSocketManager(GridKernalContext ctx) {
+    public WebSocketManager(GridKernalContext ctx) {
         super(ctx);
     }
 

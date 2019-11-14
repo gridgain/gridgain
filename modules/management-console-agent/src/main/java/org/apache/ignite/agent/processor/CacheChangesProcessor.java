@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
@@ -41,6 +41,7 @@ import static org.apache.ignite.agent.utils.QueryUtils.queryTypesToMetadataList;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 
 /**
  * Cache processor.
@@ -154,12 +155,14 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
         for (Map.Entry<String, DynamicCacheDescriptor> item : cacheDescriptors.entrySet()) {
             DynamicCacheDescriptor cd = item.getValue();
 
-            cachesInfo.add(
-                new CacheInfo()
-                    .setName(item.getKey())
-                    .setDeploymentId(cd.deploymentId())
-                    .setGroup(cd.groupDescriptor().groupName())
-            );
+            if (!isSystemCache(item.getKey())) {
+                cachesInfo.add(
+                    new CacheInfo()
+                        .setName(item.getKey())
+                        .setDeploymentId(cd.deploymentId())
+                        .setGroup(cd.groupDescriptor().groupName())
+                );
+            }
         }
 
         return cachesInfo;

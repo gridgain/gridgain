@@ -20,33 +20,30 @@ import java.io.EOFException;
 import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.processor.ActionProcessor;
+import org.apache.ignite.agent.processor.ActionsProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
-import org.apache.ignite.agent.processor.config.NodesConfigurationExporter;
-import org.apache.ignite.agent.processor.config.NodesConfigurationProcessor;
-import org.apache.ignite.agent.processor.event.EventsExporter;
-import org.apache.ignite.agent.processor.event.EventsProcessor;
-import org.apache.ignite.agent.processor.metrics.MetricsExporter;
+import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessor;
+import org.apache.ignite.agent.processor.export.EventsExporter;
+import org.apache.ignite.agent.processor.export.MetricsExporter;
+import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
+import org.apache.ignite.agent.processor.export.SpanExporter;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
-import org.apache.ignite.agent.processor.tracing.SpanExporter;
-import org.apache.ignite.agent.processor.tracing.SpanProcessor;
-import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.processors.management.AbstractManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.websocket.api.UpgradeException;
@@ -72,9 +69,12 @@ import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator
 /**
  * Management console agent.
  */
-public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
+public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
+
+    /** Topic management console. */
+    public static final String TOPIC_MANAGEMENT_CONSOLE = "mgmt-console-topic";
 
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
@@ -84,9 +84,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
 
     /** Cluster processor. */
     private ClusterInfoProcessor clusterProc;
-
-    /** Tracing processor. */
-    private SpanProcessor tracingProc;
 
     /** Span exporter. */
     private SpanExporter spanExporter;
@@ -100,20 +97,17 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
-    /** Action processor. */
-    private ActionProcessor actProc;
+    /** Actions processor. */
+    private ActionsProcessor actProc;
 
-    /** Event processor. */
-    private EventsProcessor evtProc;
-
-    /** Node configuration processor. */
-    private NodesConfigurationProcessor nodeConfigurationProc;
+    /** Topic processor. */
+    private ManagementConsoleMessagesProcessor messagesProc;
 
     /** Cache processor. */
     private CacheChangesProcessor cacheProc;
 
     /** Execute service. */
-    private ThreadPoolExecutor connectPool;
+    private ExecutorService connectPool;
 
     /** Meta storage. */
     private DistributedMetaStorage metaStorage;
@@ -130,7 +124,7 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     /**
      * @param ctx Kernal context.
      */
-    public ManagementConsoleAgent(GridKernalContext ctx) {
+    public ManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 
@@ -142,8 +136,11 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         this.metricExporter = new MetricsExporter(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
-        if (isLocalNodeCoordinator(ctx.discovery()))
+        if (isLocalNodeCoordinator(ctx.discovery())) {
+            messagesProc = new ManagementConsoleMessagesProcessor(ctx);
+
             connect();
+        }
         else
             ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
@@ -154,12 +151,15 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         NodesConfigurationExporter exporter = new NodesConfigurationExporter(ctx);
 
         exporter.export();
+
+        quiteStop(exporter);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
+        quiteStop(messagesProc);
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
         quiteStop(spanExporter);
@@ -178,9 +178,6 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         quiteStop(cacheProc);
         quiteStop(actProc);
         quiteStop(metricProc);
-        quiteStop(nodeConfigurationProc);
-        quiteStop(evtProc);
-        quiteStop(tracingProc);
         quiteStop(clusterProc);
         quiteStop(mgr);
 
@@ -210,6 +207,13 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
      */
     public SessionRegistry sessionRegistry() {
         return sesRegistry;
+    }
+
+    /**
+     * @return Weboscket manager.
+     */
+    public WebSocketManager webSocketManager() {
+        return mgr;
     }
 
     /**
@@ -292,17 +296,13 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
         this.mgr = new WebSocketManager(ctx);
         this.sesRegistry = new SessionRegistry(ctx);
         this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
-        this.tracingProc = new SpanProcessor(ctx, mgr);
         this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.evtProc = new EventsProcessor(ctx, mgr);
-        this.nodeConfigurationProc = new NodesConfigurationProcessor(ctx, mgr);
-        this.actProc = new ActionProcessor(ctx, mgr);
+        this.actProc = new ActionsProcessor(ctx, mgr);
         this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 
-        connectPool =
-            (ThreadPoolExecutor) Executors.newFixedThreadPool(1, new CustomizableThreadFactory("mgmt-console-connection-"));
+        connectPool = Executors.newSingleThreadExecutor(new CustomizableThreadFactory("mgmt-console-connection-"));
 
         connectPool.submit(this::connect0);
     }
@@ -316,13 +316,15 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
 
         ctx.cache().context().database().checkpointReadLock();
 
-        ManagementConfiguration cfg = null;
+        ManagementConfiguration cfg;
 
         try {
             cfg = metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Failed to read management configuration from meta storage!");
+
+            throw U.convertException(e);
         }
         finally {
             ctx.cache().context().database().checkpointReadUnlock();
@@ -420,18 +422,9 @@ public class ManagementConsoleAgent extends AbstractManagementConsoleProcessor {
     }
 
     /**
-     * Submit a reconnection task only if there no active connect in progress.
+     * Submit a reconnection task.
      */
     private void reconnect() {
         connectPool.submit(this::connect0);
-    }
-
-    /**
-     * @param discoCache Disco cache.
-     */
-    private boolean isCoordinator(DiscoCache discoCache) {
-        ClusterNode crdNode = F.first(discoCache.serverNodes());
-
-        return crdNode != null && crdNode.isLocal();
     }
 }

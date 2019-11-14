@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.tracing;
+package org.apache.ignite.agent.processor.export;
 
 import java.util.Collection;
 import java.util.List;
@@ -32,6 +32,7 @@ import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.agent.dto.tracing.Annotation;
 import org.apache.ignite.agent.dto.tracing.Span;
+import org.apache.ignite.agent.dto.tracing.SpanBatch;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -39,14 +40,12 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 
 /**
  * Span exporter which send spans to coordinator.
  */
 public class SpanExporter extends GridProcessorAdapter {
-    /** Topic for traces. */
-    public static final String TOPIC_SPANS = "mgmt-console-spans-topic";
-
     /** Status code. */
     private static final String STATUS_CODE = "census.status_code";
 
@@ -91,7 +90,7 @@ public class SpanExporter extends GridProcessorAdapter {
                         .map(SpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
-                ctx.grid().message(ctx.grid().cluster().forOldest()).send(TOPIC_SPANS, (Object)spans);
+                ctx.grid().message(ctx.grid().cluster().forOldest()).send(TOPIC_MANAGEMENT_CONSOLE, new SpanBatch(spans));
             }
         };
     }

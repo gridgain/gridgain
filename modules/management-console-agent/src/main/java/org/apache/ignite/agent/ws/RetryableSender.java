@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.sender;
+package org.apache.ignite.agent.ws;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,39 +23,44 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.agent.ManagementConsoleProcessor;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 /**
  * Retryable sender with limited queue.
  */
-public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
+public class RetryableSender<T> extends GridProcessorAdapter implements Runnable {
     /** Queue capacity. */
-    protected static final int DEFAULT_QUEUE_CAP = 1;
+    private static final int DEFAULT_QUEUE_CAP = 500;
+
+    /** Max sleep time seconds between retries. */
+    private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
     /** Batch size. */
     private static final int BATCH_SIZE = 10;
 
     /** Queue. */
-    private final BlockingQueue<List<T>> queue;
+    private final BlockingQueue<IgniteBiTuple<String, List<T>>> queue;
 
     /** Executor service. */
     private final ExecutorService exSrvc;
 
-    /** Logger. */
-    protected final IgniteLogger log;
+    /** Retry count. */
+    private int retryCnt;
 
     /**
-     * @param log Logger.
-     * @param threadNamePrefix the prefix to use for the names of newly created threads.
-     * @param cap Capacity.
+     * @param ctx Context.
      */
-    protected RetryableSender(IgniteLogger log, String threadNamePrefix, int cap) {
-        this.log = log;
-        this.queue = new ArrayBlockingQueue<>(cap);
-        this.exSrvc = Executors.newSingleThreadExecutor(new CustomizableThreadFactory(threadNamePrefix));
+    public RetryableSender(GridKernalContext ctx) {
+        super(ctx);
+
+        this.queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAP);
+        this.exSrvc = Executors.newSingleThreadExecutor(new CustomizableThreadFactory("mgmt-console-sender-"));
 
         exSrvc.submit(this);
     }
@@ -63,12 +68,14 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     /** {@inheritDoc} */
     @Override public void run() {
         while (true) {
-            List<T> e = null;
+            IgniteBiTuple<String, List<T>> e = null;
 
             try {
                 e = queue.take();
 
-                sendInternal(e);
+                if (!sendInternal(e.getKey(), e.getValue()))
+                    addToQueue(e);
+
             }
             catch (Exception ex) {
                 if (X.hasCause(ex, InterruptedException.class)) {
@@ -83,30 +90,46 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     }
 
     /**
-     * Abstract send method.
      * @param elements Elements.
      */
-    protected abstract void sendInternal(List<T> elements) throws Exception;
+    boolean sendInternal(String dest, List<T> elements) throws InterruptedException {
+        Thread.sleep(Math.min(MAX_SLEEP_TIME_SECONDS, retryCnt) * 1000);
+
+        WebSocketManager mgr = ((ManagementConsoleProcessor)ctx.managementConsole()).webSocketManager();
+
+        if (mgr != null && !mgr.send(dest, elements)) {
+            retryCnt++;
+
+            if (retryCnt == 1)
+                log.warning("Failed to send message to Management Console, will retry in " + retryCnt * 1000 + " ms");
+
+            return false;
+        }
+
+        retryCnt = 0;
+
+        return true;
+    }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public void stop(boolean cancel) {
         U.shutdownNow(getClass(), exSrvc, log);
     }
 
     /**
      * @param element Element to send.
      */
-    public void send(T element) {
+    public void send(String dest, T element) {
         if (element != null)
-            addToQueue(Collections.singletonList(element));
+            addToQueue(new IgniteBiTuple<>(dest, Collections.singletonList(element)));
     }
 
     /**
      * @param elements Elements to send.
      */
-    public void send(List<T> elements) {
+    public void send(String dest, List<T> elements) {
         if (elements != null)
-            splitOnBatches(elements).forEach(this::addToQueue);
+            splitOnBatches(elements).stream().map(e -> new IgniteBiTuple<>(dest, e)).forEach(this::addToQueue);
     }
 
     /**
@@ -133,10 +156,10 @@ public abstract class RetryableSender<T> implements Runnable, AutoCloseable {
     }
 
     /**
-     * @param batch Batch.
+     * @param msg Message.
      */
-    private void addToQueue(List<T> batch) {
-        while (!queue.offer(batch))
+    private void addToQueue(IgniteBiTuple<String, List<T>> msg) {
+        while (!queue.offer(msg))
             queue.poll();
     }
 }

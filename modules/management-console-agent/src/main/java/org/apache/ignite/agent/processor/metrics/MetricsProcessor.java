@@ -18,9 +18,9 @@ package org.apache.ignite.agent.processor.metrics;
 
 import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.agent.WebSocketManager;
 import org.apache.ignite.agent.dto.metric.MetricRequest;
 import org.apache.ignite.agent.dto.metric.MetricResponse;
+import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;

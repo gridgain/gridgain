@@ -16,11 +16,9 @@
 
 package org.apache.ignite.agent.dto;
 
-import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
@@ -28,7 +26,7 @@ import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 /**
  * Test of cluster configuration.
  */
-public class IgniteConfigurationWrapperTest {
+public class IgniteConfigurationWrapperTest extends AgentCommonAbstractTest {
     /** Mapper. */
     private ObjectMapper mapper = jsonMapper();
 
@@ -36,13 +34,13 @@ public class IgniteConfigurationWrapperTest {
      * Test serialisation/deserialization of default configuration.
      */
     @Test
-    public void defaultConfiguration() throws IOException {
-        try (Ignite ignite = Ignition.start(new IgniteConfiguration())) {
-            IgniteConfigurationWrapper cfg0 = new IgniteConfigurationWrapper(ignite.configuration());
+    public void defaultConfiguration() throws Exception {
+        Ignite ignite = startGrid();
 
-            String str = mapper.writeValueAsString(cfg0);
+        IgniteConfigurationWrapper cfg0 = new IgniteConfigurationWrapper(ignite.configuration());
 
-            IgniteConfigurationWrapper cfg = mapper.readValue(str, IgniteConfigurationWrapper.class);
-        }
+        String str = mapper.writeValueAsString(cfg0);
+
+        IgniteConfigurationWrapper cfg = mapper.readValue(str, IgniteConfigurationWrapper.class);
     }
 }

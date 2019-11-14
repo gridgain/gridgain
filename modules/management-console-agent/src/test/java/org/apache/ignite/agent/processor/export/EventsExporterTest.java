@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.processor.event;
+package org.apache.ignite.agent.processor.export;
 
 import java.util.UUID;
 import org.apache.ignite.agent.processor.AbstractServiceTest;
@@ -26,7 +26,7 @@ import org.apache.ignite.testframework.GridTestNode;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import static org.apache.ignite.agent.processor.event.EventsExporter.TOPIC_EVTS;
+import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -60,7 +60,7 @@ public class EventsExporterTest extends AbstractServiceTest {
 
         verify(ctx.grid().message(), timeout(100).times(1)).send(topicCaptor.capture(), evtsCaptor.capture());
 
-        assertEquals(TOPIC_EVTS, topicCaptor.getValue());
+        assertEquals(TOPIC_MANAGEMENT_CONSOLE, topicCaptor.getValue());
 
         VisorGridDiscoveryEvent actual = (VisorGridDiscoveryEvent) evtsCaptor.getValue();
 

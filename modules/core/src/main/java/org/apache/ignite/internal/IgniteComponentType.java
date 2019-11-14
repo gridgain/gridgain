@@ -113,7 +113,7 @@ public enum IgniteComponentType {
     /** Management console. */
     MANAGEMENT_CONSOLE(
         NoopManagementConsoleProcessor.class.getName(),
-        "org.apache.ignite.agent.ManagementConsoleAgent",
+        "org.apache.ignite.agent.ManagementConsoleProcessor",
         "ignite-management-console-agent",
         "org.apache.ignite.agent.processor.metrics.MetricsExporterMessageFactory"
     );
