@@ -164,7 +164,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
      * @param cacheOp Corresponding cache operation.
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
-    final void addWriteEntry(
+    synchronized final void addWriteEntry(
         AffinityAssignment affAssignment,
         GridDhtCacheEntry entry,
         @Nullable CacheObject val,
@@ -181,7 +181,6 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         List<ClusterNode> affNodes = affAssignment.get(entry.partition());
 
         // Client has seen that rebalancing finished, it is safe to use affinity mapping.
-        // TODO not calculate twice.
         List<ClusterNode> dhtNodes = updateReq.affinityMapping() ?
             affNodes : cctx.dht().topology().nodes(entry.partition(), affAssignment, affNodes);
 

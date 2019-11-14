@@ -42,7 +42,7 @@ class DhtAtomicUpdateResult {
     private Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted;
 
     /** */
-    private AtomicReferenceArray<GridDhtAtomicAbstractUpdateFuture> dhtFuts;
+    private GridDhtAtomicAbstractUpdateFuture dhtFut;
 
     /** */
     private IgniteCacheExpiryPolicy expiry;
@@ -69,12 +69,10 @@ class DhtAtomicUpdateResult {
      * @param dhtFut DHT update future.
      */
     DhtAtomicUpdateResult(GridCacheReturn retVal,
-        Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted,
-        int stripes
+        Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted
     ) {
         this.retVal = retVal;
         this.deleted = deleted;
-        this.dhtFuts = new AtomicReferenceArray<>(stripes);
     }
 
     /**
@@ -126,8 +124,8 @@ class DhtAtomicUpdateResult {
     /**
      * @return DHT future.
      */
-    GridDhtAtomicAbstractUpdateFuture dhtFuture(int stripe) {
-        return dhtFuts.get(stripe);
+    GridDhtAtomicAbstractUpdateFuture dhtFuture() {
+        return dhtFut;
     }
 
     /**
@@ -147,8 +145,8 @@ class DhtAtomicUpdateResult {
     /**
      * @param dhtFut DHT future.
      */
-    void dhtFuture(@Nullable GridDhtAtomicAbstractUpdateFuture dhtFut, int stripe) {
-        this.dhtFuts.set(stripe, dhtFut);
+    void dhtFuture(@Nullable GridDhtAtomicAbstractUpdateFuture dhtFut) {
+        this.dhtFut = dhtFut;
     }
 
     /**

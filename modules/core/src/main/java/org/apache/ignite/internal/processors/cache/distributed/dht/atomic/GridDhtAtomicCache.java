@@ -1868,8 +1868,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
                                     IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
 
-                                    dhtUpdRes.dhtFuture(0).map(node, dhtUpdRes.returnValue(), res, completionCb);
+                                    dhtUpdRes.dhtFuture().map(node, dhtUpdRes.returnValue(), res, completionCb);
 
+                                    // TODO add to deferred per stripe.
                                     if (deleted != null) {
                                         //assert !deleted.isEmpty();
                                         assert ctx.deferredDelete() : this;
@@ -1983,8 +1984,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         UpdateReplyClosure completionCb
     ) throws GridCacheEntryRemovedException {
         DhtAtomicUpdateResult dhtUpdRes = new DhtAtomicUpdateResult(new GridCacheReturn(node.isLocal()),
-            new CopyOnWriteArrayList<>(),
-            ctx.kernalContext().getStripedExecutorService().stripes());
+            new CopyOnWriteArrayList<>());
 
         GridDhtPartitionTopology top = topology();
 
@@ -1994,6 +1994,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // Assign next version for update inside entries lock.
         GridCacheVersion ver = ctx.versions().next(top.readyTopologyVersion());
+
+        dhtUpdRes.dhtFuture(createDhtFuture(ver, req));
 
         if (hasNear)
             res.nearVersion(ver);
@@ -2081,26 +2083,31 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                         res.returnValue(retVal);
 
-//                        if (dhtFut != null) {
-//                            if (req.writeSynchronizationMode() == PRIMARY_SYNC
-//                                // To avoid deadlock disable back-pressure for sender data node.
-//                                && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
-//                                && !dhtFut.isDone()) {
-//                                final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
-//
-//                                if (tracker instanceof GridNioMessageTracker) {
-//                                    ((GridNioMessageTracker)tracker).onMessageReceived();
-//
-//                                    dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
-//                                        @Override public void apply(IgniteInternalFuture<Void> fut) {
-//                                            ((GridNioMessageTracker)tracker).onMessageProcessed();
-//                                        }
-//                                    });
-//                                }
-//                            }
-//
-//                            ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
-//                        }
+                        GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+
+                        if (dhtFut != null) {
+                            dhtFut.map(node, retVal, res, completionCb);
+
+                            // TODO purpose ?
+                            if (req.writeSynchronizationMode() == PRIMARY_SYNC
+                                // To avoid deadlock disable back-pressure for sender data node.
+                                && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
+                                && !dhtFut.isDone()) {
+                                final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
+
+                                if (tracker instanceof GridNioMessageTracker) {
+                                    ((GridNioMessageTracker)tracker).onMessageReceived();
+
+                                    dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
+                                        @Override public void apply(IgniteInternalFuture<Void> fut) {
+                                            ((GridNioMessageTracker)tracker).onMessageProcessed();
+                                        }
+                                    });
+                                }
+                            }
+
+                            ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
+                        }
 
                         dhtUpdRes.expiryPolicy(expiry);
 
@@ -2583,8 +2590,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         DhtAtomicUpdateResult dhtUpdRes,
         int stripe,
         UpdateReplyClosure completionCb) {
-        GridDhtAtomicAbstractUpdateFuture dhtFut = new GridDhtAtomicUpdateFuture(ctx, ver, req);
-        dhtUpdRes.dhtFuture(dhtFut, stripe);
+
+        GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
         //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
 
         AffinityTopologyVersion topVer = req.topologyVersion();
@@ -2664,6 +2671,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                 EntryProcessor<Object, Object, Object> entryProcessor = null;
 
+                                // TODO remove synchronized.
                                 dhtFut.addWriteEntry(
                                     affAssignment,
                                     entry,
@@ -2861,7 +2869,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
             AffinityAssignment affAssignment = ctx.affinity().assignment(topVer);
 
-            final GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture(0);
+            final GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
             Collection<Object> failedToUnwrapKeys = null;
 

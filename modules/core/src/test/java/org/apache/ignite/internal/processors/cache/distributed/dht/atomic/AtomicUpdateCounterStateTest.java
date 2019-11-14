@@ -388,6 +388,8 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             assertEquals(0, part.internalSize());
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            checkFutures();
         }
         finally {
             stopAllGrids();
