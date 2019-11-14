@@ -218,7 +218,7 @@ public class H2Utils {
 
         SB sql = new SB();
 
-        String keyValVisibility = tbl.type().fields().isEmpty() ? " VISIBLE" : " INVISIBLE";
+        String keyValVisibility = " INVISIBLE"; //tbl.type().fields().isEmpty() ? " VISIBLE" : " INVISIBLE";
 
         sql.a("CREATE TABLE ").a(tbl.fullTableName()).a(" (")
             .a(KEY_FIELD_NAME).a(' ').a(keyType).a(keyValVisibility).a(" NOT NULL");
