@@ -513,7 +513,7 @@ class BinaryMetadataFileStore {
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return 31 * typeId;
+            return 31 * typeId + typeVer;
         }
 
         /** {@inheritDoc} */
@@ -523,7 +523,7 @@ class BinaryMetadataFileStore {
 
             OperationSyncKey that = (OperationSyncKey)obj;
 
-            return (that.typeId == typeId);
+            return (that.typeId == typeId) && (that.typeVer == typeVer);
         }
 
         /** {@inheritDoc} */
