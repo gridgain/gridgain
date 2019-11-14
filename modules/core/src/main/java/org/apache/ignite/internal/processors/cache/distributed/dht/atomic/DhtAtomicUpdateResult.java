@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult;
@@ -41,7 +42,7 @@ class DhtAtomicUpdateResult {
     private Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted;
 
     /** */
-    private GridDhtAtomicAbstractUpdateFuture dhtFut;
+    private AtomicReferenceArray<GridDhtAtomicAbstractUpdateFuture> dhtFuts;
 
     /** */
     private IgniteCacheExpiryPolicy expiry;
@@ -69,10 +70,11 @@ class DhtAtomicUpdateResult {
      */
     DhtAtomicUpdateResult(GridCacheReturn retVal,
         Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted,
-        GridDhtAtomicAbstractUpdateFuture dhtFut) {
+        int stripes
+    ) {
         this.retVal = retVal;
         this.deleted = deleted;
-        this.dhtFut = dhtFut;
+        this.dhtFuts = new AtomicReferenceArray<>(stripes);
     }
 
     /**
@@ -124,8 +126,8 @@ class DhtAtomicUpdateResult {
     /**
      * @return DHT future.
      */
-    GridDhtAtomicAbstractUpdateFuture dhtFuture() {
-        return dhtFut;
+    GridDhtAtomicAbstractUpdateFuture dhtFuture(int stripe) {
+        return dhtFuts.get(stripe);
     }
 
     /**
@@ -145,8 +147,8 @@ class DhtAtomicUpdateResult {
     /**
      * @param dhtFut DHT future.
      */
-    void dhtFuture(@Nullable GridDhtAtomicAbstractUpdateFuture dhtFut) {
-        this.dhtFut = dhtFut;
+    void dhtFuture(@Nullable GridDhtAtomicAbstractUpdateFuture dhtFut, int stripe) {
+        this.dhtFuts.set(stripe, dhtFut);
     }
 
     /**
