@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.h2.engine.Session;
 import org.h2.result.ResultExternal;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
@@ -40,8 +41,8 @@ public class PlainExternalResult extends AbstractExternalResult {
      * @param ctx Kernal context.
      * @param memTracker Memory tracker.
      */
-    public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
-        super(ctx, memTracker, false, 0);
+    public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, Session ses) {
+        super(ctx, memTracker, false, 0, ses.getDataHandler());
     }
 
     /**

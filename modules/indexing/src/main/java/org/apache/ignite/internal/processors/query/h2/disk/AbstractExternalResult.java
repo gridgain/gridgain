@@ -21,6 +21,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.result.ResultExternal;
 import org.h2.result.ResultInterface;
+import org.h2.store.DataHandler;
 
 /**
  * Basic class for external result.
@@ -54,11 +55,16 @@ public abstract class AbstractExternalResult implements ResultExternal {
      * @param memTracker Memory tracker
      * @param useHashIdx Flag whether to use hash index.
      * @param initSize Initial result set size.
+     * @param hnd H2 data handler.
      */
-    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, boolean useHashIdx, long initSize) {
+    protected AbstractExternalResult(GridKernalContext ctx,
+        H2MemoryTracker memTracker,
+        boolean useHashIdx,
+        long initSize,
+        DataHandler hnd) {
         this.log = ctx.log(AbstractExternalResult.class);
         this.data = new ExternalResultData(log, ctx.config().getWorkDirectory(), ctx.query().fileIOFactory(),
-            ctx.localNodeId(), useHashIdx, initSize);
+            ctx.localNodeId(), useHashIdx, initSize, hnd);
         this.parent = null;
         this.memTracker = memTracker;
     }

@@ -85,7 +85,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         SortOrder sort,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize);
+        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize, ses.getDataHandler());
 
         this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;

@@ -339,7 +339,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
         external = distinct || distinctIndexes != null || sort != null ?
             new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
-                rowCount) : new PlainExternalResult(ctx, memTracker);
+                rowCount) : new PlainExternalResult(ctx, memTracker, session);
     }
 
     /** {@inheritDoc} */

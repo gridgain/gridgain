@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.store.Data;
+import org.h2.store.DataHandler;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
@@ -82,13 +83,16 @@ public class ExternalResultData implements AutoCloseable {
     private long lastWrittenPos;
 
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
-    private final Data writeBuff = Data.create(null, DEFAULT_ROW_SIZE, false);
+    private final Data writeBuff;
 
     /** Sorted chunks addresses on the disk. */
     private final Collection<Chunk> chunks = new ArrayList<>();
 
     /** Reusable header buffer. */
     private final ByteBuffer headReadBuff = ByteBuffer.allocate(ROW_HEADER_SIZE);
+
+    /** H2 data handler. */
+    private final DataHandler hnd;
 
     /** Data buffer. */
     private ByteBuffer readBuff;
@@ -99,13 +103,16 @@ public class ExternalResultData implements AutoCloseable {
      * @param fileIOFactory File io factory.
      * @param locNodeId Node id.
      * @param useHashIdx Whether to use hash index.
+     * @param initSize Initial size.
+     * @param hnd Data handler.
      */
     ExternalResultData(IgniteLogger log,
         String workDir,
         FileIOFactory fileIOFactory,
         UUID locNodeId,
         boolean useHashIdx,
-        long initSize) {
+        long initSize,
+        DataHandler hnd) {
         this.log = log;
         this.fileIOFactory = fileIOFactory;
         String fileName = "spill_" + locNodeId + "_" + idGen.incrementAndGet();
@@ -120,6 +127,10 @@ public class ExternalResultData implements AutoCloseable {
 
             if (log.isDebugEnabled())
                 log.debug("Created spill file " + file.getName());
+
+            this.hnd = hnd;
+
+            writeBuff = Data.create(hnd, DEFAULT_ROW_SIZE, false);
 
             hashIdx = useHashIdx ? new ExternalResultHashIndex(fileIOFactory, file, this, initSize) : null;
         }
@@ -137,6 +148,8 @@ public class ExternalResultData implements AutoCloseable {
             file = parent.file;
             fileIOFactory = parent.fileIOFactory;
             fileIo = fileIOFactory.create(file, READ);
+            writeBuff = parent.writeBuff;
+            hnd = parent.hnd;
             if (parent.hashIdx != null)
                 hashIdx = parent.hashIdx.createShallowCopy();
             else
@@ -317,7 +330,7 @@ public class ExternalResultData implements AutoCloseable {
 
         readBuff.flip();
 
-        Data buff = Data.create(null, readBuff.array(), true);
+        Data buff = Data.create(hnd, readBuff.array(), true);
 
         IgniteBiTuple<ValueRow, Value[]> row = new IgniteBiTuple<>();
 

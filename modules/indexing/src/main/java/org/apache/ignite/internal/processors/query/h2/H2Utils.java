@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -76,6 +77,7 @@ import org.h2.engine.Session;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.result.Row;
 import org.h2.result.SortOrder;
+import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.util.JdbcUtils;
@@ -629,7 +631,7 @@ public class H2Utils {
             case Value.BYTES:
                 return ValueBytes.get((byte[])obj);
             case Value.JAVA_OBJECT:
-                return ValueJavaObject.getNoCopy(obj, null, null);
+                return ValueJavaObject.getNoCopy(obj, null, getHandler(coCtx.kernalContext()));
             case Value.ARRAY:
                 Object[] arr = (Object[])obj;
 
@@ -1153,5 +1155,15 @@ public class H2Utils {
         }
 
         return memory;
+    }
+
+    /**
+     * @param ctx Kernal context/
+     * @return Data handler.
+     */
+    public static DataHandler getHandler(GridKernalContext ctx) {
+        GridQueryIndexing indexing = ctx.query().getIndexing();
+
+        return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
     }
 }

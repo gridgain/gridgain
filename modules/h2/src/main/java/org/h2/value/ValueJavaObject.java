@@ -99,7 +99,7 @@ public class ValueJavaObject extends ValueBytes {
         @Override
         public byte[] getBytesNoCopy() {
             if (value == null) {
-                value = JdbcUtils.serialize(javaObject, null);
+                value = JdbcUtils.serialize(javaObject, getDataHandler());
             }
             return value;
         }

@@ -181,6 +181,7 @@ import org.h2.api.ErrorCode;
 import org.h2.api.JavaObjectSerializer;
 import org.h2.engine.Session;
 import org.h2.engine.SysProperties;
+import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableType;
@@ -2125,7 +2126,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (JdbcUtils.serializer != null)
             U.warn(log, "Custom H2 serialization is already configured, will override.");
 
-        JdbcUtils.serializer = h2Serializer();
+        JavaObjectSerializer h2Serializer = h2Serializer();
+
+        JdbcUtils.serializer = h2Serializer;
+
+        connMgr.setH2Serializer(h2Serializer);
 
         cleanSpillDirectory();
     }
@@ -2326,6 +2331,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return U.unmarshal(marshaller, bytes, clsLdr);
             }
         };
+    }
+
+    /**
+     * @return Data handler.
+     */
+    public DataHandler dataHandler() {
+        return connMgr.dataHandler();
     }
 
     /** {@inheritDoc} */
