@@ -1868,7 +1868,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
                                     IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
 
-                                    //dhtFut.map(node, dhtUpdRes.returnValue(), res, completionCb);
+                                    dhtUpdRes.dhtFuture(0).map(node, dhtUpdRes.returnValue(), res, completionCb);
 
                                     if (deleted != null) {
                                         //assert !deleted.isEmpty();
