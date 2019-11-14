@@ -181,6 +181,9 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         assertFalse(plan, plan.toUpperCase().contains("T_IDX"));
 
+        // Trying to do a select.
+        cache.query(new SqlFieldsQuery("select id, p from t where p = 0")).getAll();
+
         assertFalse(blockedSystemCriticalThreadLsnr.check());
 
         assertTrue(indexDropProcessListener.check());

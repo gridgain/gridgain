@@ -5189,7 +5189,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            metastorage.write(STORE_PENDING_DELETE_PREFIX, obj);
+            metastorage.write(pendingDeleteObjectName(type, name), obj);
         }
         finally {
             ctx.cache().context().database().checkpointReadUnlock();
@@ -5205,7 +5205,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         }
 
         try {
-            return (PendingDeleteObject) metastorage.read(STORE_PENDING_DELETE_PREFIX + name);
+            return (PendingDeleteObject) metastorage.read(pendingDeleteObjectName(type, name));
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException("Failed to read value from pending objects storage.", e);

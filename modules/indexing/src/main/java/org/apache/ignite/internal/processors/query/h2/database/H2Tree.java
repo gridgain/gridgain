@@ -246,9 +246,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
                 H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled));
 
-            boolean destroy = cctx.kernalContext().cache().getPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, name) != null;
-
-            initTree(initNew, inlineSize, destroy);
+            initTree(initNew, inlineSize);
         }
 
         cols = unwrappedPk ? unwrappedColsInfo.cols() : wrappedColsInfo.cols();
@@ -259,6 +257,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             columnIds[i] = cols[i].column.getColumnId();
 
         created = initNew;
+
+        boolean destroy = cctx.kernalContext().cache().getPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, name) != null;
+
+        if (destroy)
+            destroy();
     }
 
     /**
