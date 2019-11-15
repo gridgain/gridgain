@@ -1732,12 +1732,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             ctx.deploymentEnabled());
 
-        assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
+        assert !req.returnValue() || req.operation() == TRANSFORM || req.size() == 1;
 
         //GridDhtAtomicAbstractUpdateFuture dhtFut = null;
 
         //IgniteCacheExpiryPolicy expiry = null;
-
         try {
             // If batch store update is enabled, we need to lock all entries.
             // First, need to acquire locks on cache entries, then check filter.
@@ -1745,170 +1744,181 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
             //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = null;
 
-                while (true) {
-                    GridDhtPartitionTopology top = topology();
+            GridDhtAtomicAbstractUpdateFuture dhtFut = null;
 
-                    boolean remap = false;
+            while (true) {
+                GridDhtPartitionTopology top = topology();
 
-                    top.readLock();
+                boolean remap = false;
 
-                    try {
-                        if (top.stopping()) {
-                            if (ctx.shared().cache().isCacheRestarting(name()))
-                                res.addFailedKeys(req.keys(), new IgniteCacheRestartingException(name()));
-                            else
-                                res.addFailedKeys(req.keys(), new CacheStoppedException(name()));
+                top.readLock();
+
+                try {
+                    if (top.stopping()) {
+                        if (ctx.shared().cache().isCacheRestarting(name()))
+                            res.addFailedKeys(req.keys(), new IgniteCacheRestartingException(name()));
+                        else
+                            res.addFailedKeys(req.keys(), new CacheStoppedException(name()));
+
+                        completionCb.apply(req, res);
+
+                        return;
+                    }
+
+                    // Do not check topology version if topology was locked on near node by
+                    // external transaction or explicit lock.
+                    if (!req.topologyLocked()) {
+                        AffinityTopologyVersion waitVer = top.topologyVersionFuture().initialVersion();
+
+                        // No need to remap if next future version is compatible.
+                        boolean compatible =
+                            waitVer.isBetween(req.lastAffinityChangedTopologyVersion(), req.topologyVersion());
+
+                        // Can not wait for topology future since it will break
+                        // GridNearAtomicCheckUpdateRequest processing.
+                        remap = !compatible && !top.topologyVersionFuture().isDone() ||
+                            needRemap(req.topologyVersion(), top.readyTopologyVersion());
+                    }
+
+                    // Registering the mvcc future will prevent topology version moving forward before completing atomic update.
+                    // This can cause multiple primaries.
+                    if (!remap) {
+                        dhtFut = createDhtFuture(null, req);
+
+                        ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
+                    }
+                }
+                finally {
+                    top.readUnlock();
+                }
+
+                if (!remap) {
+                    boolean validateCache = needCacheValidation(node);
+
+                    if (validateCache) {
+                        GridDhtTopologyFuture topFut = top.topologyVersionFuture();
+
+                        // Cache validation should use topology version from the update request
+                        // in case of the topology version was locked on near node.
+                        if (req.topologyLocked()) {
+                            // affinityReadyFuture() can return GridFinishedFuture under some circumstances
+                            // and therefore it cannot be used for validation.
+                            IgniteInternalFuture<AffinityTopologyVersion> affFut =
+                                ctx.shared().exchange().affinityReadyFuture(req.topologyVersion());
+
+                            if (affFut.isDone()) {
+                                List<GridDhtPartitionsExchangeFuture> futs =
+                                    ctx.shared().exchange().exchangeFutures();
+
+                                boolean found = false;
+
+                                for (int i = 0; i < futs.size(); ++i) {
+                                    GridDhtPartitionsExchangeFuture fut = futs.get(i);
+
+                                    // We have to check fut.exchangeDone() here -
+                                    // otherwise attempt to get topVer will throw error.
+                                    // We won't skip needed future as per affinity ready future is done.
+                                    if (fut.exchangeDone() &&
+                                        fut.topologyVersion().equals(req.topologyVersion())) {
+                                        topFut = fut;
+
+                                        found = true;
+
+                                        break;
+                                    }
+                                }
+
+                                assert found : "The requested topology future cannot be found [topVer="
+                                    + req.topologyVersion() + ']';
+                            }
+                            else {
+                                affFut.listen(f -> updateAllAsyncInternal0(node, req, completionCb));
+
+                                return;
+                            }
+
+                            assert req.topologyVersion().equals(topFut.topologyVersion()) :
+                                "The requested topology version cannot be found [" +
+                                    "reqTopFut=" + req.topologyVersion()
+                                    + ", topFut=" + topFut + ']';
+                        }
+
+                        assert topFut.isDone() : topFut;
+
+                        Throwable err = topFut.validateCache(ctx, req.recovery(), false, null, null);
+
+                        if (err != null) {
+                            IgniteCheckedException e = new IgniteCheckedException(err);
+
+                            dhtFut.onDone(e);
+
+                            res.error(e);
 
                             completionCb.apply(req, res);
 
                             return;
                         }
-
-                        // Do not check topology version if topology was locked on near node by
-                        // external transaction or explicit lock.
-                        if (!req.topologyLocked()) {
-                            AffinityTopologyVersion waitVer = top.topologyVersionFuture().initialVersion();
-
-                            // No need to remap if next future version is compatible.
-                            boolean compatible =
-                                waitVer.isBetween(req.lastAffinityChangedTopologyVersion(), req.topologyVersion());
-
-                            // Can not wait for topology future since it will break
-                            // GridNearAtomicCheckUpdateRequest processing.
-                            remap = !compatible && !top.topologyVersionFuture().isDone() ||
-                                needRemap(req.topologyVersion(), top.readyTopologyVersion());
-                        }
-                    }
-                    finally {
-                        top.readUnlock();
                     }
 
-                    if (!remap) {
-                        boolean validateCache = needCacheValidation(node);
+                    DhtAtomicUpdateResult dhtUpdRes = updateStriped(node, req, res, completionCb, dhtFut);
 
-                        if (validateCache) {
-                            GridDhtTopologyFuture topFut = top.topologyVersionFuture();
+                    dhtUpdRes.readyFuture().listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                        @Override public void apply(IgniteInternalFuture<Boolean> fut) {
+                            try {
+                                fut.get();
 
-                            // Cache validation should use topology version from the update request
-                            // in case of the topology version was locked on near node.
-                            if (req.topologyLocked()) {
-                                // affinityReadyFuture() can return GridFinishedFuture under some circumstances
-                                // and therefore it cannot be used for validation.
-                                IgniteInternalFuture<AffinityTopologyVersion> affFut =
-                                    ctx.shared().exchange().affinityReadyFuture(req.topologyVersion());
+                                // This call will convert entry processor invocation results to cache object instances.
+                                // Must be done outside topology read lock to avoid deadlocks.
+                                if (dhtUpdRes.returnValue() != null)
+                                    dhtUpdRes.returnValue().marshalResult(ctx);
 
-                                if (affFut.isDone()) {
-                                    List<GridDhtPartitionsExchangeFuture> futs =
-                                        ctx.shared().exchange().exchangeFutures();
+                                //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+                                Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
+                                IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
 
-                                    boolean found = false;
+                                dhtUpdRes.dhtFuture().map(node, dhtUpdRes.returnValue(), res, completionCb);
 
-                                    for (int i = 0; i < futs.size(); ++i) {
-                                        GridDhtPartitionsExchangeFuture fut = futs.get(i);
+                                // TODO add to deferred per stripe.
+                                if (deleted != null) {
+                                    //assert !deleted.isEmpty();
+                                    assert ctx.deferredDelete() : this;
 
-                                        // We have to check fut.exchangeDone() here -
-                                        // otherwise attempt to get topVer will throw error.
-                                        // We won't skip needed future as per affinity ready future is done.
-                                        if (fut.exchangeDone() &&
-                                            fut.topologyVersion().equals(req.topologyVersion())) {
-                                            topFut = fut;
-
-                                            found = true;
-
-                                            break;
-                                        }
-                                    }
-
-                                    assert found : "The requested topology future cannot be found [topVer="
-                                        + req.topologyVersion() + ']';
-                                }
-                                else {
-                                    affFut.listen(f -> updateAllAsyncInternal0(node, req, completionCb));
-
-                                    return;
+                                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
+                                        ctx.onDeferredDelete(e.get1(), e.get2());
                                 }
 
-                                assert req.topologyVersion().equals(topFut.topologyVersion()) :
-                                    "The requested topology version cannot be found [" +
-                                        "reqTopFut=" + req.topologyVersion()
-                                        + ", topFut=" + topFut + ']';
+                                // TODO handle failure: probably drop the node from topology
+                                // TODO fire events only after successful fsync
+                                if (ctx.shared().wal() != null)
+                                    ctx.shared().wal().flush(null, false);
+
+                                if (req.writeSynchronizationMode() != FULL_ASYNC)
+                                    req.cleanup(!node.isLocal());
+
+                                sendTtlUpdateRequest(expiry);
                             }
-
-                            assert topFut.isDone() : topFut;
-
-                            Throwable err = topFut.validateCache(ctx, req.recovery(), false, null, null);
-
-                            if (err != null) {
-                                IgniteCheckedException e = new IgniteCheckedException(err);
-
-                                res.error(e);
+                            catch (IgniteCheckedException e) {
+                                res.addFailedKeys(req.keys(), e);
 
                                 completionCb.apply(req, res);
-
-                                return;
                             }
-                        }
-
-                        DhtAtomicUpdateResult dhtUpdRes = update(node, req, res, completionCb);
-
-                        dhtUpdRes.readyFuture().listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-                            @Override public void apply(IgniteInternalFuture<Boolean> fut) {
-                                try {
-                                    fut.get();
-
-                                    // This call will convert entry processor invocation results to cache object instances.
-                                    // Must be done outside topology read lock to avoid deadlocks.
-                                    if (dhtUpdRes.returnValue() != null)
-                                        dhtUpdRes.returnValue().marshalResult(ctx);
-
-                                    //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
-                                    Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
-                                    IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
-
-                                    dhtUpdRes.dhtFuture().map(node, dhtUpdRes.returnValue(), res, completionCb);
-
-                                    // TODO add to deferred per stripe.
-                                    if (deleted != null) {
-                                        //assert !deleted.isEmpty();
-                                        assert ctx.deferredDelete() : this;
-
-                                        for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-                                            ctx.onDeferredDelete(e.get1(), e.get2());
-                                    }
-
-                                    // TODO handle failure: probably drop the node from topology
-                                    // TODO fire events only after successful fsync
-                                    if (ctx.shared().wal() != null)
-                                        ctx.shared().wal().flush(null, false);
-
-                                    if (req.writeSynchronizationMode() != FULL_ASYNC)
-                                        req.cleanup(!node.isLocal());
-
-                                    sendTtlUpdateRequest(expiry);
-                                }
-                                catch (IgniteCheckedException e) {
-                                    res.addFailedKeys(req.keys(), e);
-
-                                    completionCb.apply(req, res);
-                                }
 //                                finally {
 //                                    if (locked != null)
 //                                        unlockEntries(locked, req.topologyVersion());
 //                                }
-                            }
-                        });
+                        }
+                    });
 
 //                        dhtFut = updDhtRes.dhtFuture();
 //                        deleted = updDhtRes.deleted();
 //                        expiry = updDhtRes.expiryPolicy();
-                    }
-                    else
-                        // Should remap all keys.
-                        res.remapTopologyVersion(top.lastTopologyChangeVersion());
-
-
-                    break;
                 }
+                else
+                    // Should remap all keys.
+                    res.remapTopologyVersion(top.lastTopologyChangeVersion());
+
+                break;
+            }
 //            finally {
 //                if (locked != null)
 //                    unlockEntries(locked, req.topologyVersion());
@@ -1971,14 +1981,16 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param req Request.
      * @param res Response.
      * @param completionCb
+     * @param dhtFut
      * @return Operation result.
      * @throws GridCacheEntryRemovedException If got obsolete entry.
      */
-    private DhtAtomicUpdateResult update(
+    private DhtAtomicUpdateResult updateStriped(
         ClusterNode node,
         GridNearAtomicAbstractUpdateRequest req,
         GridNearAtomicUpdateResponse res,
-        UpdateReplyClosure completionCb
+        UpdateReplyClosure completionCb,
+        GridDhtAtomicAbstractUpdateFuture dhtFut
     ) throws GridCacheEntryRemovedException {
         DhtAtomicUpdateResult dhtUpdRes = new DhtAtomicUpdateResult(new GridCacheReturn(node.isLocal()),
             new CopyOnWriteArrayList<>());
@@ -1989,20 +2001,21 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         boolean hasNear = req.nearCache();
 
-        // Assign next version for update inside entries lock.
-        GridCacheVersion ver = ctx.versions().next(top.readyTopologyVersion());
+        // Assign next version for update inside entries lock to avoid version reordering.
+        //GridCacheVersion ver = ctx.versions().next(top.readyTopologyVersion());
 
-        dhtUpdRes.dhtFuture(createDhtFuture(ver, req));
+        dhtUpdRes.dhtFuture(dhtFut);
 
-        if (hasNear)
-            res.nearVersion(ver);
+        // TODO separate near cache logic.
+//        if (hasNear)
+//            res.nearVersion(ver);
 
-        if (msgLog.isDebugEnabled()) {
-            msgLog.debug("Assigned update version [futId=" + req.futureId() +
-                ", writeVer=" + ver + ']');
-        }
+//        if (msgLog.isDebugEnabled()) {
+//            msgLog.debug("Assigned update version [futId=" + req.futureId() +
+//                ", writeVer=" + ver + ']');
+//        }
 
-        assert ver != null : "Got null version for update request: " + req;
+        //assert ver != null : "Got null version for update request: " + req;
 
         boolean sndPrevVal = !top.rebalanceFinished(req.topologyVersion());
 //
@@ -2013,119 +2026,90 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 //
 //        GridCacheReturn retVal = null;
 
-        if (req.size() > 1 &&                    // Several keys ...
-            writeThrough() && !req.skipStore() && // and store is enabled ...
-            !ctx.store().isLocal() &&             // and this is not local store ...
-            // (conflict resolver should be used for local store)
-            !ctx.dr().receiveEnabled()            // and no DR.
-            ) {
-            // This method can only be used when there are no replicated entries in the batch.
-            updateWithBatch(node,
-                hasNear,
-                req,
-                res,
-                null,
-                ver,
-                ctx.isDrEnabled(),
-                taskName,
-                expiry,
-                sndPrevVal,
-                dhtUpdRes);
+        StripedExecutor svc = ctx.kernalContext().getStripedExecutorService();
 
-//            if (req.operation() == TRANSFORM)
-//                retVal = dhtUpdRes.returnValue();
+        BitSet stripes = new BitSet(svc.stripes());
+
+        for (KeyCacheObject object : req.keys()) {
+            int part = object.partition();
+            int stripe = svc.stripe(part);
+
+            stripes.set(stripe);
         }
-        else {
-            StripedExecutor svc = ctx.kernalContext().getStripedExecutorService();
 
-            BitSet stripes = new BitSet(svc.stripes());
+        AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
 
-            for (KeyCacheObject object : req.keys()) {
-                int part = object.partition();
-                int stripe = svc.stripe(part);
+        int myStripe = -1;
 
-                stripes.set(stripe);
-            }
+        if (Thread.currentThread() instanceof IgniteThread)
+            myStripe = ((IgniteThread)Thread.currentThread()).stripe();
 
-            AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
+        Runnable delayed = null;
 
-            int myStripe = -1;
+        for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe + 1)) {
+            final int finalStripe = stripe;
 
-            if (Thread.currentThread() instanceof IgniteThread)
-                myStripe = ((IgniteThread)Thread.currentThread()).stripe();
+            Runnable r = () -> {
+                updateSingleBatch(node,
+                    hasNear,
+                    req,
+                    res,
+                    ctx.isDrEnabled(),
+                    taskName,
+                    expiry,
+                    sndPrevVal,
+                    dhtUpdRes,
+                    finalStripe
+                );
 
-            Runnable delayed = null;
+                int val = cntr.decrementAndGet();
 
-            for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe+1)) {
-                final int finalStripe = stripe;
+                if (val == 0) {
+                    GridCacheReturn retVal = dhtUpdRes.returnValue();
 
-                Runnable r = () -> {
-                    updateSingleBatch(node,
-                        hasNear,
-                        req,
-                        res,
-                        ver,
-                        ctx.isDrEnabled(),
-                        taskName,
-                        expiry,
-                        sndPrevVal,
-                        dhtUpdRes,
-                        finalStripe
-                    );
+                    //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
-                    int val = cntr.decrementAndGet();
+                    if (retVal == null)
+                        retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
 
-                    if (val == 0) {
-                        GridCacheReturn retVal = dhtUpdRes.returnValue();
+                    res.returnValue(retVal);
 
-                        //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+                    if (dhtFut != null) {
+                        dhtFut.map(node, retVal, res, completionCb);
 
-                        if (retVal == null)
-                            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
+                        // TODO purpose ?
+                        if (req.writeSynchronizationMode() == PRIMARY_SYNC
+                            // To avoid deadlock disable back-pressure for sender data node.
+                            && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
+                            && !dhtFut.isDone()) {
+                            final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
 
-                        res.returnValue(retVal);
+                            if (tracker instanceof GridNioMessageTracker) {
+                                ((GridNioMessageTracker)tracker).onMessageReceived();
 
-                        GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
-
-                        if (dhtFut != null) {
-                            dhtFut.map(node, retVal, res, completionCb);
-
-                            // TODO purpose ?
-                            if (req.writeSynchronizationMode() == PRIMARY_SYNC
-                                // To avoid deadlock disable back-pressure for sender data node.
-                                && !ctx.discovery().cacheGroupAffinityNode(node, ctx.groupId())
-                                && !dhtFut.isDone()) {
-                                final IgniteRunnable tracker = GridNioBackPressureControl.threadTracker();
-
-                                if (tracker instanceof GridNioMessageTracker) {
-                                    ((GridNioMessageTracker)tracker).onMessageReceived();
-
-                                    dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
-                                        @Override public void apply(IgniteInternalFuture<Void> fut) {
-                                            ((GridNioMessageTracker)tracker).onMessageProcessed();
-                                        }
-                                    });
-                                }
+                                dhtFut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
+                                    @Override public void apply(IgniteInternalFuture<Void> fut) {
+                                        ((GridNioMessageTracker)tracker).onMessageProcessed();
+                                    }
+                                });
                             }
-
-                            ctx.mvcc().addAtomicFuture(dhtFut.id(), dhtFut);
                         }
-
-                        dhtUpdRes.expiryPolicy(expiry);
-
-                        dhtUpdRes.readyFut.onDone(true); // Will invoke listener and finish msg processing.
                     }
-                };
 
-                if (myStripe == finalStripe)
-                    delayed = r;
-                else
-                    ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
-            }
+                    dhtUpdRes.expiryPolicy(expiry);
 
-            if (delayed != null)
-                delayed.run();
+                    dhtUpdRes.readyFut.onDone(true); // Will invoke listener and finish msg processing.
+                }
+            };
+
+            if (myStripe == finalStripe)
+                delayed = r;
+            else
+                ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
         }
+
+        if (delayed != null)
+            delayed.run();
 
         return dhtUpdRes;
     }
@@ -2579,7 +2563,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         boolean hasNear,
         GridNearAtomicAbstractUpdateRequest req,
         GridNearAtomicUpdateResponse res,
-        GridCacheVersion ver,
         boolean replicate,
         String taskName,
         @Nullable IgniteCacheExpiryPolicy expiry,
@@ -2587,6 +2570,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         DhtAtomicUpdateResult dhtUpdRes,
         int stripe
     ) {
+        GridCacheVersion ver = ctx.versions().next(topology().readyTopologyVersion());
+
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
         //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
 
@@ -2679,7 +2664,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     sndPrevVal,
                                     updRes.oldValue(),
                                     updRes.updateCounter(),
-                                    op);
+                                    op,
+                                    ver);
 
 //                                if (readers != null)
 //                                    dhtFut.addNearWriteEntries(
@@ -2975,7 +2961,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             sndPrevVal,
                             updRes.oldValue(),
                             updRes.updateCounter(),
-                            op);
+                            op, ver);
 
                         if (readers != null)
                             dhtFut.addNearWriteEntries(
@@ -3388,7 +3374,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
 
-        Runnable firstR = null;
+        Runnable delayed = null;
 
         IgniteThread t = (IgniteThread)Thread.currentThread();
 
@@ -3466,14 +3452,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             };
 
             if (myStripe == finalStripe)
-                firstR = r; // Delay execution.
+                delayed = r; // Delay execution.
             else
                 ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
         }
 
-        assert firstR != null;
+        assert delayed != null;
 
-        firstR.run();
+        delayed.run();
     }
 
     private void processStriped(GridDhtAtomicAbstractUpdateRequest req,
@@ -3484,8 +3470,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicNearResponse nearRes,
         int stripe
     ) {
-        GridCacheVersion ver = req.writeVersion();
-
         ctx.shared().database().checkpointReadLock();
 
         try {
@@ -3494,6 +3478,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 if (ctx.kernalContext().getStripedExecutorService().stripe(key.partition()) != stripe)
                     continue;
+
+                GridCacheVersion ver = ((GridDhtAtomicUpdateRequest)req).versions().get(i);
 
                 try {
                     while (true) {

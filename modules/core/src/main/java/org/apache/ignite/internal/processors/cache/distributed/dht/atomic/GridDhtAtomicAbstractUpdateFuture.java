@@ -162,6 +162,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
      * @param prevVal Previous value.
      * @param updateCntr Partition update counter.
      * @param cacheOp Corresponding cache operation.
+     * @param writeVer Write version.
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     synchronized final void addWriteEntry(
@@ -175,7 +176,9 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp) {
+        GridCacheOperation cacheOp,
+        @Nullable GridCacheVersion writeVer
+    ) {
         AffinityTopologyVersion topVer = updateReq.topologyVersion();
 
         List<ClusterNode> affNodes = affAssignment.get(entry.partition());
@@ -206,7 +209,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                     updateReq = createRequest(
                         node.id(),
                         futId,
-                        writeVer,
+                        null,
                         syncMode,
                         topVer,
                         ttl,
@@ -225,7 +228,8 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                     addPrevVal,
                     prevVal,
                     updateCntr,
-                    cacheOp);
+                    cacheOp,
+                    writeVer);
             }
         }
     }

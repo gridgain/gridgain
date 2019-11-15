@@ -126,6 +126,10 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     /** Partition. */
     private GridLongList updateCntrs;
 
+    /** Write versions. */
+    @GridDirectCollection(GridCacheVersion.class)
+    private List<GridCacheVersion> versions;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
@@ -202,7 +206,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp) {
+        GridCacheOperation cacheOp, GridCacheVersion writeVer) {
         assert key.partition() >= 0 : key;
 
         keys.add(key);
@@ -264,6 +268,11 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
         if (conflictExpireTimes != null)
             conflictExpireTimes.add(conflictExpireTime);
+
+        if (versions == null)
+            versions = new ArrayList<>();
+
+        versions.add(writeVer);
     }
 
     /** {@inheritDoc} */
@@ -482,6 +491,11 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
         return invokeArgs;
     }
 
+    /** */
+    @Nullable public List<GridCacheVersion> versions() {
+        return versions;
+    }
+
     /** {@inheritDoc} */
     @Override public void prepareMarshal(GridCacheSharedContext ctx) throws IgniteCheckedException {
         super.prepareMarshal(ctx);
@@ -653,6 +667,12 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
                 writer.incrementState();
 
+            case 29:
+                if (!writer.writeCollection("versions", versions, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
         }
 
         return true;
@@ -797,6 +817,14 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
                 reader.incrementState();
 
+            case 29:
+                versions = reader.readCollection("versions", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridDhtAtomicUpdateRequest.class);
@@ -815,7 +843,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 29;
+        return 30;
     }
 
     /** {@inheritDoc} */

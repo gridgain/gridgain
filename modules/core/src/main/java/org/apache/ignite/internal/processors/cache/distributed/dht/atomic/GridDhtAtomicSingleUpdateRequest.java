@@ -121,6 +121,7 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
      * @param prevVal Previous value.
      * @param updateCntr Update counter.
      * @param cacheOp Corresponding cache operation.
+     * @param writeVer
      */
     @Override public void addWriteValue(KeyCacheObject key,
         @Nullable CacheObject val,
@@ -131,7 +132,9 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp) {
+        GridCacheOperation cacheOp,
+        GridCacheVersion writeVer)
+    {
         assert entryProcessor == null;
         assert ttl <= 0 : ttl;
         assert conflictExpireTime <= 0 : conflictExpireTime;
