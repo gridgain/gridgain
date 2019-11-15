@@ -489,7 +489,8 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                 if (isNull(cctx.discovery().getAlive(n.id()))){
                     log.error("Unable to send message (node left topology): " + n);
 
-                    fut.onNodeLeft();
+                    fut.onNodeLeft(new ClusterTopologyCheckedException("Node left grid while sending message to: "
+                        + n.id()));
                 }
 
                 cctx.io().send(n, req, tx.ioPolicy());
