@@ -1744,25 +1744,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         checkpointLock.readLock().unlock();
 
-        if (checkpointer != null) {
-            Collection<DataRegion> dataRegs = context().database().dataRegions();
-
-            if (dataRegs != null) {
-                for (DataRegion dataReg : dataRegs) {
-                    if (!dataReg.config().isPersistenceEnabled())
-                        continue;
-
-                    PageMemoryEx mem = (PageMemoryEx)dataReg.pageMemory();
-
-                    if (mem != null && !mem.safeToUpdate()) {
-                        checkpointer.wakeupForCheckpoint(0, "too many dirty pages");
-
-                        break;
-                    }
-                }
-            }
-        }
-
         if (ASSERTION_ENABLED)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() - 1);
     }
@@ -4133,6 +4114,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         offheap.destroyPartitionStore(grpId, partId);
 
                         req.onDone(null);
+
+                        grp.metrics().decrementInitializedLocalPartitions();
 
                         if (log.isDebugEnabled())
                             log.debug("Partition file has destroyed [grpId=" + grpId + ", partId=" + partId + "]");
