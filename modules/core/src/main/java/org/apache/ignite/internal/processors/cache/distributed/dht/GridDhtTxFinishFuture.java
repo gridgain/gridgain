@@ -486,7 +486,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             req.writeVersion(tx.writeVersion() != null ? tx.writeVersion() : tx.xidVersion());
 
             try {
-                if (isNull(cctx.discovery().node(n.id()))){
+                if (isNull(cctx.discovery().getAlive(n.id()))){
                     log.error("Unable to send message (node left topology): " + n);
 
                     fut.onNodeLeft();
