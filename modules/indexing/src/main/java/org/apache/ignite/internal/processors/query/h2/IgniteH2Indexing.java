@@ -2131,7 +2131,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         JdbcUtils.serializer = h2Serializer;
 
         connMgr.setH2Serializer(h2Serializer);
+    }
 
+    /** {@inheritDoc} */
+    @Override public void onKernalStart() {
         cleanSpillDirectory();
     }
 
@@ -2146,7 +2149,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 DISK_SPILL_DIR,
                 false);
 
-            U.delete(spillDir);
+            File[] spillFiles = spillDir.listFiles();
+
+            if (spillFiles.length == 0)
+                return;
+
+            for (int i = 0; i < spillFiles.length; i++) {
+                try {
+                    File spillFile = spillFiles[i];
+
+                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
+
+                    UUID nodeUuid = UUID.fromString(nodeId);
+
+                    if (!ctx.discovery().alive(nodeUuid))
+                        spillFile.delete();
+                }
+                catch (Exception e) {
+                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
+                }
+            }
         }
         catch (Exception e) {
             log.warning("Failed to cleanup the temporary directory for intermediate " +
