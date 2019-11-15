@@ -23,16 +23,13 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
@@ -2068,8 +2065,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         expiry,
                         sndPrevVal,
                         dhtUpdRes,
-                        finalStripe,
-                        completionCb);
+                        finalStripe
+                    );
 
                     int val = cntr.decrementAndGet();
 
@@ -2565,7 +2562,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
     /**
      * Updates locked entries one-by-one.
-     *  @param nearNode Originating node.
+     * @param completionCb
+     * @param nearNode Originating node.
      * @param hasNear {@code True} if originating node has near cache.
      * @param req Update request.
      * @param res Update response.
@@ -2575,7 +2573,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param expiry Expiry policy.
      * @param sndPrevVal If {@code true} sends previous value to backups.
      * @param dhtUpdRes Dht update result
-     * @param completionCb
      */
     private void updateSingleBatch(
         ClusterNode nearNode,
@@ -2588,9 +2585,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         @Nullable IgniteCacheExpiryPolicy expiry,
         boolean sndPrevVal,
         DhtAtomicUpdateResult dhtUpdRes,
-        int stripe,
-        UpdateReplyClosure completionCb) {
-
+        int stripe
+    ) {
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
         //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
 
@@ -2612,7 +2608,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 GridCacheOperation op = req.operation();
 
-                GridDhtCacheEntry entry;
+                GridDhtCacheEntry entry = null;
 
                 while(true) {
                     entry = entryExx(k, topVer);
@@ -2671,7 +2667,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                 EntryProcessor<Object, Object, Object> entryProcessor = null;
 
-                                // TODO remove synchronized.
+                                // TODO remove synchronized on hot path.
                                 dhtFut.addWriteEntry(
                                     affAssignment,
                                     entry,
@@ -2772,22 +2768,18 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         res.addFailedKey(k, e);
                     }
                     catch (GridCacheEntryRemovedException e) {
-                        // Retry.
+                        entry = null;
+                    }
+                    finally {
+                        if (entry != null)
+                            entry.touch();
                     }
                 }
-
-                entry.touch();
             }
-
-            //dhtUpdRes.returnValue(retVal);
-            //dhtUpdRes.deleted(deleted);
-            //dhtUpdRes.dhtFuture(dhtFut);
         }
         finally {
             ctx.shared().database().checkpointReadUnlock();
         }
-
-        //dhtFut.map(nearNode, dhtUpdRes.returnValue(), res, completionCb);
     }
 
     /**
@@ -3363,7 +3355,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         assert req.partition() >= 0 : req;
 
-        GridCacheVersion ver = req.writeVersion();
+        boolean replicate = ctx.isDrEnabled();
+
+        boolean intercept = req.forceTransformBackups() && ctx.config().getInterceptor() != null;
+
+        String taskName = ctx.kernalContext().task().resolveTaskName(req.taskNameHash());
 
         GridDhtAtomicNearResponse nearRes = null;
 
@@ -3375,17 +3371,129 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 req.flags());
         }
 
-        boolean replicate = ctx.isDrEnabled();
+        final GridDhtAtomicNearResponse finalNearRes = nearRes;
 
-        boolean intercept = req.forceTransformBackups() && ctx.config().getInterceptor() != null;
+        StripedExecutor svc = ctx.kernalContext().getStripedExecutorService();
 
-        String taskName = ctx.kernalContext().task().resolveTaskName(req.taskNameHash());
+        BitSet stripes = new BitSet(svc.stripes());
+
+        for (int i = 0; i < req.size(); i++) {
+            KeyCacheObject key = req.key(i);
+
+            int part = key.partition();
+            int stripe = svc.stripe(part);
+
+            stripes.set(stripe);
+        }
+
+        AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
+
+        Runnable firstR = null;
+
+        IgniteThread t = (IgniteThread)Thread.currentThread();
+
+        int myStripe = t.stripe();
+
+        for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe + 1)) {
+            final int finalStripe = stripe;
+
+            Runnable r = () -> {
+                processStriped(req, nodeId, replicate, intercept, taskName, finalNearRes, finalStripe);
+
+                int res = cntr.decrementAndGet();
+
+                if (res == 0) {
+                    GridDhtAtomicUpdateResponse dhtRes = null;
+
+                    if (req.nearSize() > 0 || req.obsoleteNearKeysSize() > 0) {
+                        List<KeyCacheObject> nearEvicted = null;
+
+                        if (isNearEnabled(ctx))
+                            nearEvicted = ((GridNearAtomicCache<K, V>)near()).processDhtAtomicUpdateRequest(nodeId, req, finalNearRes);
+                        else if (req.nearSize() > 0) {
+                            nearEvicted = new ArrayList<>(req.nearSize());
+
+                            for (int i = 0; i < req.nearSize(); i++)
+                                nearEvicted.add(req.nearKey(i));
+                        }
+
+                        if (nearEvicted != null) {
+                            dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
+                                req.partition(),
+                                req.futureId(),
+                                ctx.deploymentEnabled());
+
+                            dhtRes.nearEvicted(nearEvicted);
+                        }
+                    }
+
+                    try {
+                        // TODO handle failure: probably drop the node from topology
+                        // TODO fire events only after successful fsync
+                        if (ctx.shared().wal() != null)
+                            ctx.shared().wal().flush(null, false);
+                    }
+                    catch (StorageException e) {
+                        if (dhtRes != null)
+                            dhtRes.onError(new IgniteCheckedException(e));
+
+                        if (finalNearRes != null)
+                            finalNearRes.onClassError(e);
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (dhtRes != null)
+                            dhtRes.onError(e);
+
+                        if (finalNearRes != null)
+                            finalNearRes.onClassError(e);
+                    }
+
+                    if (finalNearRes != null)
+                        sendDhtNearResponse(req, finalNearRes);
+
+                    if (dhtRes == null && req.replyWithoutDelay()) {
+                        dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
+                            req.partition(),
+                            req.futureId(),
+                            ctx.deploymentEnabled());
+                    }
+
+                    if (dhtRes != null)
+                        sendDhtPrimaryResponse(nodeId, req, dhtRes);
+                    else
+                        sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId());
+                }
+            };
+
+            if (myStripe == finalStripe)
+                firstR = r; // Delay execution.
+            else
+                ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
+        }
+
+        assert firstR != null;
+
+        firstR.run();
+    }
+
+    private void processStriped(GridDhtAtomicAbstractUpdateRequest req,
+        UUID nodeId,
+        boolean replicate,
+        boolean intercept,
+        String taskName,
+        GridDhtAtomicNearResponse nearRes,
+        int stripe
+    ) {
+        GridCacheVersion ver = req.writeVersion();
 
         ctx.shared().database().checkpointReadLock();
 
         try {
             for (int i = 0; i < req.size(); i++) {
                 KeyCacheObject key = req.key(i);
+
+                if (ctx.kernalContext().getStripedExecutorService().stripe(key.partition()) != stripe)
+                    continue;
 
                 try {
                     while (true) {
@@ -3481,66 +3589,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         finally {
             ctx.shared().database().checkpointReadUnlock();
         }
-
-        GridDhtAtomicUpdateResponse dhtRes = null;
-
-        if (req.nearSize() > 0 || req.obsoleteNearKeysSize() > 0) {
-            List<KeyCacheObject> nearEvicted = null;
-
-            if (isNearEnabled(ctx))
-                nearEvicted = ((GridNearAtomicCache<K, V>)near()).processDhtAtomicUpdateRequest(nodeId, req, nearRes);
-            else if (req.nearSize() > 0) {
-                nearEvicted = new ArrayList<>(req.nearSize());
-
-                for (int i = 0; i < req.nearSize(); i++)
-                    nearEvicted.add(req.nearKey(i));
-            }
-
-            if (nearEvicted != null) {
-                dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
-                    req.partition(),
-                    req.futureId(),
-                    ctx.deploymentEnabled());
-
-                dhtRes.nearEvicted(nearEvicted);
-            }
-        }
-
-        try {
-            // TODO handle failure: probably drop the node from topology
-            // TODO fire events only after successful fsync
-            if (ctx.shared().wal() != null)
-                ctx.shared().wal().flush(null, false);
-        }
-        catch (StorageException e) {
-            if (dhtRes != null)
-                dhtRes.onError(new IgniteCheckedException(e));
-
-            if (nearRes != null)
-                nearRes.onClassError(e);
-        }
-        catch (IgniteCheckedException e) {
-            if (dhtRes != null)
-                dhtRes.onError(e);
-
-            if (nearRes != null)
-                nearRes.onClassError(e);
-        }
-
-        if (nearRes != null)
-            sendDhtNearResponse(req, nearRes);
-
-        if (dhtRes == null && req.replyWithoutDelay()) {
-            dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
-                req.partition(),
-                req.futureId(),
-                ctx.deploymentEnabled());
-        }
-
-        if (dhtRes != null)
-            sendDhtPrimaryResponse(nodeId, req, dhtRes);
-        else
-            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId());
     }
 
     /**

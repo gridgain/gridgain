@@ -364,7 +364,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
     @Test
     public void testSinglePrimaryPutAll() throws Exception {
-        backups = 1;
+        backups = 2;
 
         try {
             IgniteEx crd = startGrids(2);
