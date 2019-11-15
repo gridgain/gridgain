@@ -34,7 +34,7 @@ import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 /**
  * Retryable sender with limited queue.
  */
-public class RetryableSender<T> extends GridProcessorAdapter implements Runnable {
+public class RetryableSender extends GridProcessorAdapter implements Runnable {
     /** Queue capacity. */
     private static final int DEFAULT_QUEUE_CAP = 500;
 
@@ -45,7 +45,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     private static final int BATCH_SIZE = 10;
 
     /** Queue. */
-    private final BlockingQueue<IgniteBiTuple<String, List<T>>> queue;
+    private final BlockingQueue<IgniteBiTuple<String, List<Object>>> queue;
 
     /** Executor service. */
     private final ExecutorService exSrvc;
@@ -68,7 +68,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /** {@inheritDoc} */
     @Override public void run() {
         while (true) {
-            IgniteBiTuple<String, List<T>> e = null;
+            IgniteBiTuple<String, List<Object>> e = null;
 
             try {
                 e = queue.take();
@@ -92,7 +92,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /**
      * @param elements Elements.
      */
-    boolean sendInternal(String dest, List<T> elements) throws InterruptedException {
+    boolean sendInternal(String dest, List<Object> elements) throws InterruptedException {
         Thread.sleep(Math.min(MAX_SLEEP_TIME_SECONDS, retryCnt) * 1000);
 
         WebSocketManager mgr = ((ManagementConsoleProcessor)ctx.managementConsole()).webSocketManager();
@@ -119,7 +119,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /**
      * @param element Element to send.
      */
-    public void send(String dest, T element) {
+    public void send(String dest, Object element) {
         if (element != null)
             addToQueue(new IgniteBiTuple<>(dest, Collections.singletonList(element)));
     }
@@ -127,7 +127,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /**
      * @param elements Elements to send.
      */
-    public void send(String dest, List<T> elements) {
+    public void sendList(String dest, List<?> elements) {
         if (elements != null)
             splitOnBatches(elements).stream().map(e -> new IgniteBiTuple<>(dest, e)).forEach(this::addToQueue);
     }
@@ -135,12 +135,12 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /**
      * @param list List.
      */
-    private List<List<T>> splitOnBatches(List<T> list) {
-        List<T> batch = new ArrayList<>();
+    private List<List<Object>> splitOnBatches(List<?> list) {
+        List<Object> batch = new ArrayList<>();
 
-        List<List<T>> res = new ArrayList<>();
+        List<List<Object>> res = new ArrayList<>();
 
-        for (T e : list) {
+        for (Object e : list) {
             batch.add(e);
 
             if (batch.size() >= BATCH_SIZE) {
@@ -158,7 +158,7 @@ public class RetryableSender<T> extends GridProcessorAdapter implements Runnable
     /**
      * @param msg Message.
      */
-    private void addToQueue(IgniteBiTuple<String, List<T>> msg) {
+    private void addToQueue(IgniteBiTuple<String, List<Object>> msg) {
         while (!queue.offer(msg))
             queue.poll();
     }
