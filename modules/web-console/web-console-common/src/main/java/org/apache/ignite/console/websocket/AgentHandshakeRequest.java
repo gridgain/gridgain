@@ -29,11 +29,8 @@ import static java.util.stream.Stream.of;
  * Handshake request from Web Console Agent.
  */
 public class AgentHandshakeRequest {
-    /** Version 8.8.0 Initial version. */
-    public static final String VER_2019_10_01 = "2019_10_01";
-
     /** Current version. */
-    public static final String CURRENT_VER = VER_2019_10_01;
+    public static final String CURRENT_VER = "2019_11_01";
 
     /** Supported versions. */
     public static final Set<String> SUPPORTED_VERS = of(CURRENT_VER).collect(toSet());
