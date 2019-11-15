@@ -1791,6 +1791,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         }
 
+        log.info("Following partitions were reserved for potential history rebalance [" +
+            grpPartsWithCnts.entrySet().stream().map(entry -> "groupId=" + entry.getKey() + " parts=" +
+                S.compact(entry.getValue().keySet())).collect(Collectors.joining(", ")) + ']');
+
         return grpPartsWithCnts;
     }
 

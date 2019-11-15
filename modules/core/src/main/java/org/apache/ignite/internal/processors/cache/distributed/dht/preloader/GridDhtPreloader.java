@@ -263,7 +263,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     assert part != null : "Partition was not created [grp=" + grp.name() + ", topVer=" + topVer + ", p=" + p + ']';
                 }
 
-                assert part.state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
+                if (part.state() != MOVING) {
+                    throw new AssertionError("Partition has invalid state for rebalance "
+                        + aff.topologyVersion() + " " + part);
+                }
 
                 ClusterNode histSupplier = null;
 
@@ -274,7 +277,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         histSupplier = ctx.discovery().node(nodeId);
                 }
 
-                if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
+                boolean partToBeCleared = exchFut.isClearingPartition(grp, p);
+
+                if (histSupplier != null && !partToBeCleared) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
 
@@ -292,6 +297,14 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     msg.partitions().addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
+                    if (histSupplier == null) {
+                        log.info("Unable to perform historical rebalance cause " +
+                            "history supplier is not available [part=" + p + ", topVer=" + topVer + ']');
+                    }
+                    if (partToBeCleared) {
+                        log.info("Unable to perform historical rebalance cause partition " +
+                            "is supposed to be cleared [part=" + p + ", topVer=" + topVer + ']');
+                    }
                     // If for some reason (for example if supplier fails and new supplier is elected) partition is
                     // assigned for full rebalance force clearing if not yet set.
                     if (grp.persistenceEnabled() && exchFut != null && !exchFut.isClearingPartition(grp, p))
