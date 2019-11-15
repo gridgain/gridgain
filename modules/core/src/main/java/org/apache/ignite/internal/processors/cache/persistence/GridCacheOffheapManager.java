@@ -110,6 +110,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
  * Used when persistence enabled.
@@ -1904,7 +1905,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             int grpId = grp.groupId();
             long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
 
-            long partMetaPage = pageMem.acquirePage(grpId, partMetaId);
+            AtomicBoolean metaPageAllocated = new AtomicBoolean(false);
+
+            long partMetaPage = pageMem.acquirePage(grpId, partMetaId, metaPageAllocated);
+
+            if (metaPageAllocated.get())
+                grp.metrics().incrementInitializedLocalPartitions();
+
             try {
                 boolean allocated = false;
                 boolean pendingTreeAllocated = false;
@@ -2786,19 +2793,4 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return partStorage;
         }
     }
-
-    /**
-     *
-     */
-    public static final GridCursor<CacheDataRow> EMPTY_CURSOR = new GridCursor<CacheDataRow>() {
-        /** {@inheritDoc} */
-        @Override public boolean next() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public CacheDataRow get() {
-            return null;
-        }
-    };
 }
