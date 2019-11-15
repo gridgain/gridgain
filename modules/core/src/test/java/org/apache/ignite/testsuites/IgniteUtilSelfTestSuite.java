@@ -30,6 +30,7 @@ import org.apache.ignite.internal.util.nio.GridNioSessionMetaKeySelfTest;
 import org.apache.ignite.internal.util.nio.GridNioSslSelfTest;
 import org.apache.ignite.internal.util.nio.impl.GridNioFilterChainSelfTest;
 import org.apache.ignite.internal.util.tostring.CircularStringBuilderSelfTest;
+import org.apache.ignite.internal.util.tostring.ExcludeSensitiveDataTest;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilderSelfTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveAtomicTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveTransactionalTest;
@@ -97,6 +98,7 @@ import org.junit.runners.Suite;
     // Sensitive toString.
     IncludeSensitiveAtomicTest.class,
     IncludeSensitiveTransactionalTest.class,
+    ExcludeSensitiveDataTest.class,
 
     // Metrics.
     ClusterMetricsSnapshotSerializeSelfTest.class,
