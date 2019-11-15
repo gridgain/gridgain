@@ -4995,7 +4995,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 // TODO IGNITE-7792 add generic mapping.
 
                 if (plc != PageMemoryImpl.ThrottlingPolicy.DISABLED) {
-                    if (pageMem.shouldThrottle()) {
+                    while (pageMem.shouldThrottle()) {
                         FullPageId fullId0 = pageMem.pageToDumpFirst(writePageIds0);
 
                         snapshotMgr.beforePageWrite(fullId);
@@ -5004,8 +5004,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         if (fullId0.equals(fullId))
                             fullId = null;
-                        else
-                            tmpWriteBuf.rewind();
+                        //else
+                        tmpWriteBuf.rewind();
                     }
                 }
 
