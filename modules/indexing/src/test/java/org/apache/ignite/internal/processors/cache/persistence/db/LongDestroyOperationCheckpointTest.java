@@ -32,6 +32,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 
 /**
@@ -149,6 +150,9 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         dropIndex.start();
 
+        for (int i = 0; i < 20_000; i += 10)
+            cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
+
         // Waiting for some modified pages
         doSleep(500);
 
@@ -169,11 +173,17 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             //cache.query(new SqlFieldsQuery("drop index t_idx")).getAll();
 
-            for (int i = 0; i < 20_000; i += 10)
-                cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
-        }
+            try {
+                for (int i = 0; i < 20_000; i += 10)
+                    cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
+            } catch (Exception ignored) {
+                // No-op: tree is concurrently destroyed.
+            }
 
-        dropIndex.join();
+            sleep(10000);
+        }
+        else
+            dropIndex.join();
 
         // Ensure that index is not used after it was dropped.
         plan = cache.query(new SqlFieldsQuery("explain select id, p from t where p = 0")).getAll()

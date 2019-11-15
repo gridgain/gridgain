@@ -2636,6 +2636,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         IgniteInClosure<L> c,
         AtomicLong cntr
     ) throws IgniteCheckedException {
+        if (pageId == 0)
+            return 0;
+
         long pagesCnt = 0;
 
         long page = acquirePage(pageId);
@@ -2658,8 +2661,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 if (!io.isLeaf()) {
                     // Recursively go down if we are on inner level.
-                    for (int i = 0; i < cnt; i++)
-                        pagesCnt += destroyDownPages(bag, inner(io).getLeft(pageAddr, i), inner(io).getRight(pageAddr, i), lvl - 1, c, cntr);
+                    for (int i = 0; i < cnt; i++) {
+                        long leftId = inner(io).getLeft(pageAddr, i);
+
+                        inner(io).setLeft(pageAddr, i, 0);
+
+                        pagesCnt += destroyDownPages(bag, leftId, inner(io).getRight(pageAddr, i), lvl - 1, c, cntr);
+                    }
 
                     if (fwdId != 0) {
                         // For the rightmost child ask neighbor.
