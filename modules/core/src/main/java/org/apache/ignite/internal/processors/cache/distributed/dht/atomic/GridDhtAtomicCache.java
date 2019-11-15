@@ -2049,6 +2049,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
             AtomicInteger cntr = new AtomicInteger(stripes.cardinality());
 
+            int myStripe = -1;
+
+            if (Thread.currentThread() instanceof IgniteThread)
+                myStripe = ((IgniteThread)Thread.currentThread()).stripe();
+
             Runnable delayed = null;
 
             for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe+1)) {
@@ -2112,19 +2117,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     }
                 };
 
-                if (delayed == null && Thread.currentThread() instanceof IgniteThread) {
-                    if (((IgniteThread)Thread.currentThread()).stripe() >= 0) {
-                        delayed = r;
-
-                        continue;
-                    }
-                }
-
-                ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
+                if (myStripe == finalStripe)
+                    delayed = r;
+                else
+                    ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
             }
 
             if (delayed != null)
-                delayed.run(); // Run after all tasks are submitted for better parallelism.
+                delayed.run();
         }
 
         return dhtUpdRes;
