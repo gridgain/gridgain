@@ -5217,7 +5217,9 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     private static class PendingDeleteObject implements Serializable {
-
+        PendingDeleteObjectType objectType;
+        String schemaName;
+        String objectName;
     }
 
     /**

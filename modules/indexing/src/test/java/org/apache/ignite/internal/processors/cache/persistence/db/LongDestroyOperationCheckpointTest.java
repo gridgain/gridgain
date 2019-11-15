@@ -150,9 +150,6 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         dropIndex.start();
 
-        for (int i = 0; i < 20_000; i += 10)
-            cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
-
         // Waiting for some modified pages
         doSleep(500);
 
