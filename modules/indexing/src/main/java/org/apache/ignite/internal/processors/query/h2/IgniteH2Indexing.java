@@ -2328,6 +2328,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             @Override public Object deserialize(byte[] bytes) throws Exception {
                 ClassLoader clsLdr = ctx != null ? U.resolveClassLoader(ctx.config()) : null;
 
+                if (true)
+                    throw new RuntimeException();
+
                 return U.unmarshal(marshaller, bytes, clsLdr);
             }
         };
