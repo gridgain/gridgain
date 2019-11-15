@@ -507,11 +507,8 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             }
             catch (IgniteCheckedException e) {
                 // Fail the whole thing.
-                if (e instanceof ClusterTopologyCheckedException) {
-                    log.error("Error sending message to remote node [node=" + n + ']', e);
-
+                if (e instanceof ClusterTopologyCheckedException)
                     fut.onNodeLeft((ClusterTopologyCheckedException)e);
-                }
                 else {
                     if (msgLog.isDebugEnabled()) {
                         msgLog.debug("DHT finish fut, failed to send request dht [txId=" + tx.nearXidVersion() +
