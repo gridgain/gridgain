@@ -30,6 +30,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.h2.api.ErrorCode;
+import org.h2.message.DbException;
 import org.h2.store.Data;
 import org.h2.store.DataHandler;
 import org.h2.value.Value;
@@ -97,6 +99,9 @@ public class ExternalResultData implements AutoCloseable {
     /** Data buffer. */
     private ByteBuffer readBuff;
 
+    /** */
+    private boolean closed;
+
     /**
      * @param log Logger.
      * @param workDir Work directory.
@@ -123,7 +128,11 @@ public class ExternalResultData implements AutoCloseable {
                 false
             ), fileName);
 
-            fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+            }
 
             if (log.isDebugEnabled())
                 log.debug("Created spill file " + file.getName());
@@ -147,7 +156,13 @@ public class ExternalResultData implements AutoCloseable {
             log = parent.log;
             file = parent.file;
             fileIOFactory = parent.fileIOFactory;
-            fileIo = fileIOFactory.create(file, READ);
+
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo = fileIOFactory.create(file, READ);
+            }
+
             writeBuff = parent.writeBuff;
             hnd = parent.hnd;
             if (parent.hashIdx != null)
@@ -243,8 +258,10 @@ public class ExternalResultData implements AutoCloseable {
      *
      * @param addr Row address.
      */
-    private void markRemoved(long addr) {
+    private synchronized void markRemoved(long addr) {
         try {
+            checkCancelled();
+
             fileIo.position(addr + TOMBSTONE_OFFSET); // Skip total length and go to the column count.
             fileIo.write(TOMBSTONE_BYTES, 0, TOMBSTONE_BYTES.length);
         }
@@ -357,8 +374,10 @@ public class ExternalResultData implements AutoCloseable {
      *
      * @param buff Buffer.
      */
-    private void readFromFile(ByteBuffer buff) {
+    private synchronized void readFromFile(ByteBuffer buff) {
         try {
+            checkCancelled();
+
             fileIo.readFully(buff);
         }
         catch (IOException e) {
@@ -374,8 +393,10 @@ public class ExternalResultData implements AutoCloseable {
      * @param buff Buffer.
      * @return Bytes written.
      */
-    private int writeToFile(Data buff) {
+    private synchronized int writeToFile(Data buff) {
         try {
+            checkCancelled();
+
             ByteBuffer byteBuff = ByteBuffer.wrap(buff.getBytes());
 
             byteBuff.limit(buff.length());
@@ -396,8 +417,10 @@ public class ExternalResultData implements AutoCloseable {
      *
      * @param pos Position to set.
      */
-    private void setFilePosition(long pos) {
+    private synchronized void setFilePosition(long pos) {
         try {
+            checkCancelled();
+
             fileIo.position(pos);
         }
         catch (IOException e) {
@@ -410,8 +433,10 @@ public class ExternalResultData implements AutoCloseable {
     /**
      * @return Current absolute position in the file.
      */
-    private long currentFilePosition() {
+    private synchronized long currentFilePosition() {
         try {
+            checkCancelled();
+
             return fileIo.position();
         }
         catch (IOException e) {
@@ -435,9 +460,25 @@ public class ExternalResultData implements AutoCloseable {
         return chunks;
     }
 
+    /**
+     * Checks if statement was closed (i.e. concurrently cancelled).
+     */
+    private void checkCancelled() {
+        if (closed)
+            throw DbException.get(ErrorCode.STATEMENT_WAS_CANCELED);
+    }
+
     /** {@inheritDoc} */
-    @Override public void close() {
-        U.closeQuiet(fileIo);
+    @Override public  void close() {
+        synchronized (this) {
+            if (closed)
+                return;
+
+            U.closeQuiet(fileIo);
+
+            closed = true;
+        }
+
         U.closeQuiet(hashIdx);
 
         file.delete();
