@@ -709,9 +709,27 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             CheckPrimitiveFields2(binObj);
 
+            // Overwrite with generic methods and type override.
+            binObj3 = binObj.ToBuilder()
+                .SetField<object>("fByte", (byte) 7)
+                .SetField<object>("fBool", false)
+                .SetField<object>("fShort", (short) 8)
+                .SetField<object>("fChar", 'b')
+                .SetField<object>("fInt", 9)
+                .SetField<object>("fLong", 10L)
+                .SetField<object>("fFloat", 11f)
+                .SetField<object>("fDouble", 12d)
+                .SetField<object>("fDecimal", 13.13m)
+                .Build();
+
+            CheckPrimitiveFields2(binObj);
+
             // Check equality.
             Assert.AreEqual(binObj, binObj2);
+            Assert.AreEqual(binObj, binObj3);
+            Assert.AreEqual(binObj2, binObj3);
             Assert.AreEqual(binObj.GetHashCode(), binObj2.GetHashCode());
+            Assert.AreEqual(binObj.GetHashCode(), binObj3.GetHashCode());
         }
 
         /// <summary>
