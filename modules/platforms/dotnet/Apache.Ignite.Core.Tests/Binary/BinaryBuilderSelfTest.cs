@@ -845,9 +845,26 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             CheckPrimitiveArrayFields1(binObj2);
 
+            // Generic SetField method with type override.
+            var binObj3 = _grid.GetBinary().GetBuilder(typeof(PrimitiveArrays))
+                .SetField<object>("fByte", new byte[] {1}, typeof(byte[]))
+                .SetField<Array>("fBool", new[] {true}, typeof(bool[]))
+                .SetField<object>("fShort", new short[] {2}, typeof(short[]))
+                .SetField<Array>("fChar", new[] {'a'}, typeof(char[]))
+                .SetField<object>("fInt", new[] {3}, typeof(int[]))
+                .SetField<Array>("fLong", new long[] {4}, typeof(long[]))
+                .SetField<object>("fFloat", new float[] {5}, typeof(float[]))
+                .SetField<Array>("fDouble", new double[] {6}, typeof(double[]))
+                .SetField<object>("fDecimal", new decimal?[] {7.7m}, typeof(decimal?[]))
+                .Build();
+
+            CheckPrimitiveArrayFields1(binObj);
+
             // Check equality.
             Assert.AreEqual(binObj, binObj2);
+            Assert.AreEqual(binObj, binObj3);
             Assert.AreEqual(binObj.GetHashCode(), binObj2.GetHashCode());
+            Assert.AreEqual(binObj.GetHashCode(), binObj3.GetHashCode());
 
             // Overwrite with generic setter.
             binObj = _grid.GetBinary().GetBuilder(binObj)
