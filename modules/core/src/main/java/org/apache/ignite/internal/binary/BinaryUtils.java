@@ -594,8 +594,7 @@ public class BinaryUtils {
      * @return Binary field type.
      */
     public static byte typeByClass(Class<?> cls) {
-        return GridBinaryMarshaller.UUID;
-        /*Byte type = PLAIN_CLASS_TO_FLAG.get(cls);
+        Byte type = PLAIN_CLASS_TO_FLAG.get(cls);
 
         if (type != null)
             return type;
@@ -613,7 +612,7 @@ public class BinaryUtils {
         if (isSpecialMap(cls))
             return GridBinaryMarshaller.MAP;
 
-        return GridBinaryMarshaller.OBJ;*/
+        return GridBinaryMarshaller.OBJ;
     }
 
     /**
