@@ -213,8 +213,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         internal static byte GetTypeId(Type type)
         {
-            return type == null ? Object : Guid;
-            /*byte res;
+            byte res;
 
             if (TypeIds.TryGetValue(type, out res))
                 return res;
@@ -225,7 +224,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             if (type.IsArray && BinaryUtils.IsIgniteEnum(type.GetElementType()))
                 return ArrayEnum;
 
-            return Object;*/
+            return Object;
         }
     }
 }

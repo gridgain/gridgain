@@ -659,7 +659,22 @@ namespace Apache.Ignite.Core.Tests.Binary
                 .Build();
 
             CheckPrimitiveFields1(binObj2);
+            
+            // Generic SetField with custom type and boxed values.
+            var binObj3 = _grid.GetBinary().GetBuilder(typeof(Primitives))
+                .SetField<object>("fByte", 1)
+                .SetField<object>("fBool", true)
+                .SetField<object>("fShort", 2)
+                .SetField<object>("fChar", 'a')
+                .SetField<object>("fInt", 3)
+                .SetField<object>("fLong", 4)
+                .SetField<object>("fFloat", 5)
+                .SetField<object>("fDouble", 6)
+                .SetField<object>("fDecimal", 7.7m)
+                .Build();
 
+            CheckPrimitiveFields1(binObj3);
+            
             // Check equality.
             Assert.AreEqual(binObj, binObj2);
             Assert.AreEqual(binObj.GetHashCode(), binObj2.GetHashCode());
