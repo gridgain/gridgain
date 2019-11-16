@@ -662,14 +662,14 @@ namespace Apache.Ignite.Core.Tests.Binary
             
             // Generic SetField with custom type and boxed values.
             var binObj3 = _grid.GetBinary().GetBuilder(typeof(Primitives))
-                .SetField<object>("fByte", 1, typeof(byte))
+                .SetField<object>("fByte", (byte) 1, typeof(byte))
                 .SetField<object>("fBool", true, typeof(bool))
-                .SetField<object>("fShort", 2, typeof(short))
+                .SetField<object>("fShort", (short) 2, typeof(short))
                 .SetField<object>("fChar", 'a', typeof(char))
                 .SetField<object>("fInt", 3, typeof(int))
-                .SetField<object>("fLong", 4, typeof(long))
-                .SetField<object>("fFloat", 5, typeof(float))
-                .SetField<object>("fDouble", 6, typeof(double))
+                .SetField<object>("fLong", 4L, typeof(long))
+                .SetField<object>("fFloat", 5f, typeof(float))
+                .SetField<object>("fDouble", 6d, typeof(double))
                 .SetField<object>("fDecimal", 7.7m, typeof(decimal))
                 .Build();
 
