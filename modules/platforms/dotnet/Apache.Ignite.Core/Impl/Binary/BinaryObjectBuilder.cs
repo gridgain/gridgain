@@ -123,20 +123,18 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritDoc /> */
         public IBinaryObjectBuilder SetField<T>(string fieldName, T val)
         {
-            // typeof(T) is used below because it works even if val is null.
-            // However, this does not work well when something is passed as object
-            return SetField0(fieldName,
-                new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(typeof (T))));
+            // typeof(T) is used instead of val.GetType():
+            // it works for nulls, and generic parameter is supposed to clearly show the intent of the user.
+            // When boxed values are being passed, the overload below should be used.
+            return SetField(fieldName, val, typeof(T));
         }
 
         /** <inheritDoc /> */
         public IBinaryObjectBuilder SetField<T>(string fieldName, T val, Type valType)
         {
-            // TODO: Why do we really need this overload? Why is metadata important?
             IgniteArgumentCheck.NotNull(valType, "valType");
             
-            return SetField0(fieldName,
-                new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(valType)));
+            return SetField0(fieldName, new BinaryBuilderField(valType, val, BinaryTypeId.GetTypeId(valType)));
         }
 
         /** <inheritDoc /> */
