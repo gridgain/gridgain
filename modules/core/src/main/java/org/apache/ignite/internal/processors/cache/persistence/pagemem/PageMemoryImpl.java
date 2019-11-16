@@ -2021,12 +2021,12 @@ public class PageMemoryImpl implements PageMemoryEx {
     @Override public FullPageId pageToDumpFirst(Set<FullPageId> pages) {
         long idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
 
-        long lastIdx = ThreadLocalRandom.current().nextLong(idx / 2, idx);
+        long lastIdx = 1; //ThreadLocalRandom.current().nextLong(idx / 2, idx);
 
         long searched = 0;
 
         //if (GridUnsafe.compareAndSwapLong(null, checkpointPool.lastAllocatedIdxPtr, lastIdx, lastIdx - 1)) {
-        while (--lastIdx > 1) {
+        while (++lastIdx < idx) {
             assert (lastIdx & SEGMENT_INDEX_MASK) == 0L;
 
             long relative = checkpointPool.relative(lastIdx);
@@ -2043,6 +2043,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                 continue;
 
             FullPageId pageOut = new FullPageId(pageId, grpId);
+
+            idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
 
             if (!pages.remove(pageOut))
                 continue;
