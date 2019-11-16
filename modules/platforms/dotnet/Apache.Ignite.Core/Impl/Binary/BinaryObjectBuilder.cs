@@ -123,6 +123,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritDoc /> */
         public IBinaryObjectBuilder SetField<T>(string fieldName, T val)
         {
+            // typeof(T) is used below because it works even if val is null.
+            // However, this does not work well when something is passed as object
             return SetField0(fieldName,
                 new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(typeof (T))));
         }
