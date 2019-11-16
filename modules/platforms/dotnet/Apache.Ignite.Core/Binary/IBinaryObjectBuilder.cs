@@ -52,6 +52,16 @@ namespace Apache.Ignite.Core.Binary
         IBinaryObjectBuilder SetField<T>(string fieldName, T val);
 
         /// <summary>
+        /// Set object field value. Value can be of any type including other
+        /// <see cref="IBinaryObject"/> and other builders.
+        /// </summary>
+        /// <param name="fieldName">Field name.</param>
+        /// <param name="val">Field value.</param>
+        /// <param name="valType">Field value type for metadata.</param>
+        /// <returns>Current builder instance.</returns>
+        IBinaryObjectBuilder SetField<T>(string fieldName, T val, Type valType);
+
+        /// <summary>
         /// Remove object field.
         /// </summary>
         /// <param name="fieldName">Field name.</param>

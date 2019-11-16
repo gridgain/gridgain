@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Binary builder implementation.
@@ -124,6 +125,16 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             return SetField0(fieldName,
                 new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(typeof (T))));
+        }
+
+        /** <inheritDoc /> */
+        public IBinaryObjectBuilder SetField<T>(string fieldName, T val, Type valType)
+        {
+            // TODO: Why do we really need this overload? Why is metadata important?
+            IgniteArgumentCheck.NotNull(valType, "valType");
+            
+            return SetField0(fieldName,
+                new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(valType)));
         }
 
         /** <inheritDoc /> */
