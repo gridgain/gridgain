@@ -896,9 +896,26 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             CheckPrimitiveArrayFields2(binObj);
 
+            // Overwrite with generic setter and type override.
+            binObj3 = _grid.GetBinary().GetBuilder(binObj)
+                .SetField<Array>("fByte", new byte[] { 7 })
+                .SetField<object>("fBool", new[] { false })
+                .SetField<Array>("fShort", new short[] { 8 })
+                .SetField<object>("fChar", new[] { 'b' })
+                .SetField<Array>("fInt", new[] { 9 })
+                .SetField<object>("fLong", new long[] { 10 })
+                .SetField<Array>("fFloat", new float[] { 11 })
+                .SetField<object>("fDouble", new double[] { 12 })
+                .SetField<Array>("fDecimal", new decimal?[] { 13.13m })
+                .Build();
+
+            CheckPrimitiveArrayFields2(binObj3);
+
             // Check equality.
             Assert.AreEqual(binObj, binObj2);
+            Assert.AreEqual(binObj, binObj3);
             Assert.AreEqual(binObj.GetHashCode(), binObj2.GetHashCode());
+            Assert.AreEqual(binObj.GetHashCode(), binObj3.GetHashCode());
         }
 
         /// <summary>
