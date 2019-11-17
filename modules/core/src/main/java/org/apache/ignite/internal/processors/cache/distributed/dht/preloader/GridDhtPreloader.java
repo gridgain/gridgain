@@ -45,6 +45,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
@@ -221,6 +222,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
+        List<Integer> skippedPartitionsLackHistSupplier = new ArrayList<>();
+
+        List<Integer> skippedPartitionsCleared = new ArrayList<>();
+
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingExchange()) {
                 if (log.isDebugEnabled())
@@ -297,14 +302,12 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     msg.partitions().addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
-                    if (histSupplier == null) {
-                        log.info("Unable to perform historical rebalance cause " +
-                            "history supplier is not available [part=" + p + ", topVer=" + topVer + ']');
-                    }
-                    if (partToBeCleared) {
-                        log.info("Unable to perform historical rebalance cause partition " +
-                            "is supposed to be cleared [part=" + p + ", topVer=" + topVer + ']');
-                    }
+                    if (histSupplier == null)
+                        skippedPartitionsLackHistSupplier.add(p);
+
+                    if (partToBeCleared)
+                        skippedPartitionsCleared.add(p);
+
                     // If for some reason (for example if supplier fails and new supplier is elected) partition is
                     // assigned for full rebalance force clearing if not yet set.
                     if (grp.persistenceEnabled() && exchFut != null && !exchFut.isClearingPartition(grp, p))
@@ -343,6 +346,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 }
             }
         }
+
+        if (! skippedPartitionsLackHistSupplier.isEmpty())
+            log.info("Unable to perform historical rebalance cause " +
+                "history supplier is not available [parts=" + S.compact(skippedPartitionsLackHistSupplier) +
+                ", topVer=" + topVer + ']');
+
+        if (! skippedPartitionsCleared.isEmpty())
+            log.info("Unable to perform historical rebalance cause partition " +
+                "is supposed to be cleared [part=" + S.compact(skippedPartitionsCleared) + ", topVer=" + topVer + ']');
 
         if (!assignments.isEmpty())
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());

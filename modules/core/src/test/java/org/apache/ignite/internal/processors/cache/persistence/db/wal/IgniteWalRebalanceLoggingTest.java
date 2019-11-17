@@ -28,6 +28,9 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+/**
+ * Tests for checking rebalance log messages.
+ */
 public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
     /** */
     public static final int CHECKPOINT_FREQUENCY = 100;
@@ -74,24 +77,104 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
+    /**
+     * Check that in case of Historical rebalance we log appropriate messages.
+     * <p>
+     *     <b>Steps:</b>
+     *     <ol>
+     *         <li>set IGNITE_PDS_WAL_REBALANCE_THRESHOLD to 1</li>
+     *         <li>Start two nodes.</li>
+     *         <li>Create two caches each in it's own cache group and populate them with some data.</li>
+     *         <li>Stop second node and add more data to both caches.</li>
+     *         <li>Wait checkpoint frequency * 2. This is required to guarantee that at least one checkpoint would be
+     *         created.</li>
+     *         <li>Start, previously stopped node and await for PME.</li>
+     *     </ol>
+     *  <p>
+     *      <b>Expected result:</b>
+     *      Assert that (after restarting second node) log would contain following messages expected number of times:
+     *      <ul>
+     *          <li>'Following partitions were reserved for potential history rebalance [groupId=1813188848
+     *          parts=[0-7], groupId=1813188847 parts=[0-7]]'
+     *          Meaning that partitions were reserved for history rebalance.</li>
+     *          <li>'Starting rebalance routine [cache_group1, topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0],
+     *          supplier=*, fullPartitions=[0], histPartitions=[0-7]]' Meaning that history rebalance started.</li>
+     *      </ul>
+     *      And assert that (after restarting second node) log would <b>not</b> contain following messages:
+     *      <ul>
+     *          <li>Unable to perform historical rebalance...</li>
+     *      </ul>
+     * @throws Exception If failed.
+     */
     @Test
-    public void testFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsgTest() throws Exception {
+    public void testHistoricalRebalanceLogMsg() throws Exception {
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "1");
 
-        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(
-            "Following partitions were reserved for potential history " +
-            "rebalance [groupId=1813188848 parts=[0-7], groupId=1813188847 parts=[0-7]]");
+        LogListener expMsgsLsnr = LogListener.
+            matches("Following partitions were reserved for potential history rebalance [groupId=1813188848 " +
+                "parts=[0-7], groupId=1813188847 parts=[0-7]]").times(4).
+            andMatches("fullPartitions=[], histPartitions=[0-7]").times(2).build();
+
+        LogListener unexpectedMessagesLsnr =
+            LogListener.matches("Unable to perform historical rebalance").build();
+
+        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr, unexpectedMessagesLsnr);
+
+        assertTrue(expMsgsLsnr.check());
+        assertFalse(unexpectedMessagesLsnr.check());
     }
 
+    /**
+     * Check that in case of Full rebalance we log appropriate messages.
+     * <p>
+     *     <b>Steps:</b>
+     *     <ol>
+     *         <li>restore IGNITE_PDS_WAL_REBALANCE_THRESHOLD to default 500000</li>
+     *         <li>Start two nodes.</li>
+     *         <li>Create two caches each in it's own cache group and populate them with some data.</li>
+     *         <li>Stop second node and add more data to both caches.</li>
+     *         <li>Wait checkpoint frequency * 2. This is required to guarantee that at least one checkpoint would be
+     *         created.</li>
+     *         <li>Start, previously stopped node and await for PME.</li>
+     *     </ol>
+     *  <p>
+     *      <b>Expected result:</b>
+     *      Assert that (after restarting second node) log would contain following messages expected number of times:
+     *      <ul>
+     *          <li>'Following partitions were reserved for potential history rebalance []'
+     *          Meaning that no partitions were reserved for history rebalance.</li>
+     *          <li>'Unable to perform historical rebalance cause history supplier is not available'</li>
+     *          <li>'Unable to perform historical rebalance cause partition is supposed to be cleared'</li>
+     *          <li>'Starting rebalance routine [cache_group1, topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0],
+     *          supplier=* fullPartitions=[0-7], histPartitions=[]]'</li>
+     *      </ul>
+     * @throws Exception If failed.
+     */
     @Test
-    public void testFollowingPpartitionsWereReservedForPotentialHistoryRebalanceNoPartitionsMsgTest() throws Exception {
-        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(
-            "Following partitions were reserved for potential history rebalance []");
+    public void testFullRebalanceLogMsgs() throws Exception {
+        System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "500000");
+        LogListener expMsgsLsnr = LogListener.
+            matches("Following partitions were reserved for potential history rebalance []").times(4).
+            andMatches("Unable to perform historical rebalance cause history supplier is not available [parts=[0-7]," +
+                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").times(2).
+            andMatches("Unable to perform historical rebalance cause partition is supposed to be cleared [part=[0-7]," +
+                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").times(2).
+            andMatches("fullPartitions=[0-7], histPartitions=[]").times(2).build();
+
+        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);
+
+        assertTrue(expMsgsLsnr.check());
     }
 
-    private void checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(String expectedLogMsg)
+    /**
+     * Test utility method.
+     *
+     * @param lsnrs Listeners to register with server logger.
+     * @throws Exception If failed.
+     */
+    private void checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(LogListener... lsnrs)
         throws Exception {
-        startGridsMultiThreaded(2).active(true);
+        startGridsMultiThreaded(2).cluster().active(true);
 
         IgniteCache<Integer, String> cache1 = createCache("cache1", "cache_group1");
         IgniteCache<Integer, String> cache2 = createCache("cache2", "cache_group2");
@@ -103,8 +186,6 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
 
         stopGrid(1);
 
-        awaitPartitionMapExchange();
-
         for (int i = KEYS_LOW_BORDER; i < KEYS_UPPER_BORDER; i++) {
             cache1.put(i, "abc" + i);
             cache2.put(i, "abc" + i);
@@ -112,21 +193,27 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
 
         Thread.sleep(CHECKPOINT_FREQUENCY * 2);
 
+        srvLog.clearListeners();
+
+        for (LogListener lsnr: lsnrs)
+            srvLog.registerListener(lsnr);
+
         startGrid(1);
 
-        LogListener lsnr = LogListener.matches(expectedLogMsg).times(2).build();
-
-        srvLog.registerListener(lsnr);
-
         awaitPartitionMapExchange();
-
-        assertTrue(lsnr.check());
     }
 
+    /**
+     * Create cache with specific name and group name.
+     * @param cacheName Cache name.
+     * @param cacheGrpName Cache group name.
+     * @return Created cache.
+     */
     private IgniteCache<Integer, String> createCache(String cacheName, String cacheGrpName) {
         return ignite(0).createCache(
             new CacheConfiguration<Integer, String>(cacheName).
-                setAffinity(new RendezvousAffinityFunction().setPartitions(8)).
-                setGroupName("Group1").setGroupName(cacheGrpName).setBackups(1));
+                setAffinity(new RendezvousAffinityFunction().setPartitions(8))
+                .setGroupName(cacheGrpName).
+                setBackups(1));
     }
 }
