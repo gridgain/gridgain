@@ -3988,6 +3988,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         tracker.onFsyncStart();
                     }
 
+                    for (DataRegion dr : chp.regions) {
+                        if (dr.pageMemory() instanceof PageMemoryImpl) {
+                            PageMemoryImpl pm = (PageMemoryImpl)dr.pageMemory();
+                            System.err.println("pages dumped: " + pm.cpBufDumped);
+                        }
+                    }
+
                     snapshotMgr.afterCheckpointPageWritten();
 
                     destroyedPartitionsCnt = destroyEvictedPartitions();

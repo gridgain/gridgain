@@ -2017,6 +2017,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         return U.safeAbs(hash) % segments;
     }
 
+    public AtomicLong cpBufDumped = new AtomicLong(0);
+
     /** */
     @Override public FullPageId pageToDumpFirst(Set<FullPageId> pages) {
         long idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
@@ -2048,6 +2050,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             if (!pages.remove(pageOut))
                 continue;
+
+            cpBufDumped.incrementAndGet();
 
             return pageOut;
         }
