@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Binary
         /// Set object field value. Value can be of any type including other
         /// <see cref="IBinaryObject"/> and other builders.
         /// <para />
-        /// Value type for metadata is determined as <code>typeof(T)</code>;
+        /// Value type for metadata is determined as <c>typeof(T)</c>;
         /// use <see cref="SetField{T}(string,T,Type)"/> overload to override.  
         /// </summary>
         /// <param name="fieldName">Field name.</param>
