@@ -3988,6 +3988,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         tracker.onFsyncStart();
                     }
 
+                    if (chp.regions != null)
                     for (DataRegion dr : chp.regions) {
                         if (dr.pageMemory() instanceof PageMemoryImpl) {
                             PageMemoryImpl pm = (PageMemoryImpl)dr.pageMemory();
