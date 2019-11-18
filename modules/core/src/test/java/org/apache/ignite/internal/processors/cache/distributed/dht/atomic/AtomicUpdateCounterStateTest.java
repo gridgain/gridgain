@@ -472,11 +472,13 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             List<Integer> keys = IntStream.range(0, 1000).boxed().collect(Collectors.toList());
 
-            IgniteInternalFuture<?> fut = doRandomUpdates(r, keys, client.cache(DEFAULT_CACHE_NAME), U.currentTimeMillis() + 10_000);
+            IgniteInternalFuture<?> fut = doRandomUpdates(r, keys, client.cache(DEFAULT_CACHE_NAME), U.currentTimeMillis() + 20_000);
 
             fut.get();
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            checkFutures();
         }
         finally {
             stopAllGrids();
@@ -490,6 +492,12 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         return true;
     }
 
+    /**
+     * @param r Random.
+     * @param primaryKeys Primary keys.
+     * @param cache Cache.
+     * @param stop Stop.
+     */
     private IgniteInternalFuture<?> doRandomUpdates(
         Random r,
         List<Integer> primaryKeys,
@@ -544,6 +552,6 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size());
 
-        }, 1, "atomic-update-thread");
+        }, Runtime.getRuntime().availableProcessors(), "atomic-update-thread");
     }
 }
