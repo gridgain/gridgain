@@ -485,14 +485,14 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
         return invokeArgs;
     }
 
-    /** */
-    @Nullable public GridCacheVersion[] versions() {
-        return versions;
+    /** {@inheritDoc} */
+    @Override public void initVersions(GridDhtAtomicAbstractUpdateFuture fut) {
+        this.versions = ((GridDhtAtomicUpdateFuture)fut).versions(); // TODO FIXME remove cast.
     }
 
     /** {@inheritDoc} */
-    @Override public void versions(GridCacheVersion[] versions) {
-        this.versions = versions;
+    @Override public @Nullable GridCacheVersion version(int stripe) {
+        return versions[stripe];
     }
 
     /** {@inheritDoc} */

@@ -121,7 +121,6 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
      * @param prevVal Previous value.
      * @param updateCntr Update counter.
      * @param cacheOp Corresponding cache operation.
-     * @param writeVer
      */
     @Override public void addWriteValue(KeyCacheObject key,
         @Nullable CacheObject val,
@@ -481,8 +480,14 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
         prevVal = null;
     }
 
-    @Override public void versions(GridCacheVersion[] versions) {
-        // No-op.
+    /** {@inheritDoc} */
+    @Override public void initVersions(GridDhtAtomicAbstractUpdateFuture fut) {
+        writeVer = fut.writeVer;
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable GridCacheVersion version(int stripe) {
+        return writeVer;
     }
 
     /** {@inheritDoc} */

@@ -461,7 +461,15 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
      */
     @Nullable public abstract Object[] invokeArguments();
 
-    public abstract void versions(GridCacheVersion[] versions);
+    /**
+     * Init versions.
+     *
+     * @param fut Future.
+     */
+    public abstract void initVersions(GridDhtAtomicAbstractUpdateFuture fut);
+
+    /** */
+    @Nullable public abstract GridCacheVersion version(int stripe);
 
     /**
      * Sets flag mask.

@@ -162,10 +162,9 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
      * @param prevVal Previous value.
      * @param updateCntr Partition update counter.
      * @param cacheOp Corresponding cache operation.
-     * @param writeVer Write version.
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
-    synchronized final void addWriteEntry(
+    void addWriteEntry(
         AffinityAssignment affAssignment,
         GridDhtCacheEntry entry,
         @Nullable CacheObject val,
@@ -176,8 +175,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp,
-        @Nullable GridCacheVersion writeVer
+        GridCacheOperation cacheOp
     ) {
         AffinityTopologyVersion topVer = updateReq.topologyVersion();
 
@@ -209,7 +207,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                     updateReq = createRequest(
                         node.id(),
                         futId,
-                        null,
+                        writeVer, // TODO FIXME null here
                         syncMode,
                         topVer,
                         ttl,
@@ -453,6 +451,12 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
     }
 
     /**
+     * @param ver Version.
+     * @param stripe Stripe.
+     */
+    abstract void version(GridCacheVersion ver, int stripe);
+
+    /**
      * @param dhtUpdRes Atomic update result.
      * @param nearNode Near node.
      * @param ret Return value.
@@ -465,7 +469,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         boolean sndRes
     ) {
         for (GridDhtAtomicAbstractUpdateRequest req : mappings.values()) {
-            req.versions(dhtUpdRes.versions());
+            req.initVersions(this);
 
             try {
                 assert !cctx.localNodeId().equals(req.nodeId()) : req;

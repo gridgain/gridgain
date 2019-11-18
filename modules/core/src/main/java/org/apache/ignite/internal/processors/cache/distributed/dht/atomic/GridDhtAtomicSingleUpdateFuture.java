@@ -71,6 +71,10 @@ class GridDhtAtomicSingleUpdateFuture extends GridDhtAtomicAbstractUpdateFuture 
             mappings = U.newHashMap(readers.length);
     }
 
+    @Override void version(GridCacheVersion ver, int stripe) {
+
+    }
+
     /** {@inheritDoc} */
     @Override protected GridDhtAtomicAbstractUpdateRequest createRequest(
         UUID nodeId,

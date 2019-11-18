@@ -18,10 +18,15 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -37,6 +42,9 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
     /** */
     private int updateCntr;
 
+    /** */
+    private final AtomicReferenceArray<GridCacheVersion> stripeVers;
+
     /**
      * @param cctx Cache context.
      * @param writeVer Write version.
@@ -48,6 +56,8 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
         GridNearAtomicAbstractUpdateRequest updateReq
     ) {
         super(cctx, writeVer, updateReq);
+
+        stripeVers = new AtomicReferenceArray<>(cctx.kernalContext().getStripedExecutorService().stripes());
 
         mappings = U.newHashMap(updateReq.size());
     }
@@ -67,6 +77,21 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
     /** {@inheritDoc} */
     @Override protected void addNearKey(KeyCacheObject key, GridDhtCacheEntry.ReaderId[] readers) {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override void version(GridCacheVersion ver, int stripe) {
+        stripeVers.set(stripe, ver);
+    }
+
+    /** */
+    GridCacheVersion[] versions() {
+        GridCacheVersion[] ret = new GridCacheVersion[stripeVers.length()];
+
+        for (int i = 0; i < stripeVers.length(); i++)
+            ret[i] = stripeVers.get(i);
+
+        return ret;
     }
 
     /** {@inheritDoc} */
@@ -94,6 +119,14 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
             updateReq.keepBinary(),
             updateReq.skipStore(),
             false);
+    }
+
+    /** {@inheritDoc} */
+    @Override synchronized void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
+        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
+        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
+        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
+        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
     }
 
     /** {@inheritDoc} */

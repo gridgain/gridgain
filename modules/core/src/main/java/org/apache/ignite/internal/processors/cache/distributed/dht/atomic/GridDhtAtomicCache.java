@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -1780,8 +1779,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             needRemap(req.topologyVersion(), top.readyTopologyVersion());
                     }
 
-                    // Registering the mvcc future will prevent topology version moving forward before completing atomic update.
-                    // This can cause multiple primaries.
+                    // Registering the mvcc future will prevent topology version moving forward before completing this
+                    // atomic update. Otherwise multiple primaries are possible for same partition.
                     if (!remap) {
                         dhtFut = createDhtFuture(null, req);
 
@@ -1874,19 +1873,19 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     dhtUpdRes.returnValue().marshalResult(ctx);
 
                                 //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
-                                Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
+                                //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
                                 IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
 
                                 //dhtUpdRes.dhtFuture().map(node, dhtUpdRes.returnValue(), res, completionCb);
 
                                 // TODO add to deferred per stripe.
-                                if (deleted != null) {
-                                    //assert !deleted.isEmpty();
-                                    assert ctx.deferredDelete() : this;
-
-                                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-                                        ctx.onDeferredDelete(e.get1(), e.get2());
-                                }
+//                                if (deleted != null) {
+//                                    //assert !deleted.isEmpty();
+//                                    assert ctx.deferredDelete() : this;
+//
+//                                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
+//                                        ctx.onDeferredDelete(e.get1(), e.get2());
+//                                }
 
                                 // TODO handle failure: probably drop the node from topology
                                 // TODO fire events only after successful fsync
@@ -1994,8 +1993,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateFuture dhtFut
     ) throws GridCacheEntryRemovedException {
         DhtAtomicUpdateResult dhtUpdRes = new DhtAtomicUpdateResult(new GridCacheReturn(node.isLocal()),
-            new CopyOnWriteArrayList<>(),
-            ctx.kernalContext().getStripedExecutorService().stripes());
+            null
+        );
 
         GridDhtPartitionTopology top = topology();
 
@@ -2066,10 +2065,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 int val = cntr.decrementAndGet();
 
+                // Last stripe finished processing locally.
                 if (val == 0) {
                     GridCacheReturn retVal = dhtUpdRes.returnValue();
-
-                    //GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
                     if (retVal == null)
                         retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
@@ -2107,7 +2105,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             if (myStripe == finalStripe)
                 delayed = r;
             else
-                ctx.kernalContext().getStripedExecutorService().execute(stripe, r);
+                svc.execute(stripe, r);
         }
 
         if (delayed != null)
@@ -2572,16 +2570,20 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         DhtAtomicUpdateResult dhtUpdRes,
         int stripe
     ) {
+        // Generate version for per-stripe updates.
         GridCacheVersion ver = ctx.versions().next(topology().readyTopologyVersion());
 
-        dhtUpdRes.version(ver, stripe);
-
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+
+        dhtFut.version(ver, stripe);
+
         //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
 
         AffinityTopologyVersion topVer = req.topologyVersion();
 
         boolean intercept = ctx.config().getInterceptor() != null;
+
+        Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = new ArrayList();
 
         ctx.shared().database().checkpointReadLock();
 
@@ -2593,7 +2595,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             // Avoid iterator creation.
             for (int i = 0; i < req.size(); i++) {
                 KeyCacheObject k = req.key(i);
-
 
                 if (srvc.stripe(k.partition()) != stripe)
                     continue;
@@ -2671,8 +2672,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     sndPrevVal,
                                     updRes.oldValue(),
                                     updRes.updateCounter(),
-                                    op,
-                                    ver);
+                                    op);
 
 //                                if (readers != null)
 //                                    dhtFut.addNearWriteEntries(
@@ -2723,7 +2723,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 //                        }
 
                         if (updRes.removeVersion() != null)
-                            dhtUpdRes.deleted().add(F.t(entry, updRes.removeVersion()));
+                            deleted.add(F.t(entry, updRes.removeVersion()));
 
                         if (op == TRANSFORM) {
                             assert !req.returnValue();
@@ -2772,6 +2772,15 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         }
         finally {
             ctx.shared().database().checkpointReadUnlock();
+
+            // TODO lazy create collection?
+            if (!deleted.isEmpty()) {
+                //assert !deleted.isEmpty();
+                assert ctx.deferredDelete() : this;
+
+                for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
+                    ctx.onDeferredDelete(e.get1(), e.get2());
+            }
         }
     }
 
@@ -2968,7 +2977,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             sndPrevVal,
                             updRes.oldValue(),
                             updRes.updateCounter(),
-                            op, ver);
+                            op);
 
                         if (readers != null)
                             dhtFut.addNearWriteEntries(
@@ -3486,7 +3495,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 if (ctx.kernalContext().getStripedExecutorService().stripe(key.partition()) != stripe)
                     continue;
 
-                GridCacheVersion ver = ((GridDhtAtomicUpdateRequest)req).versions()[stripe];
+                GridCacheVersion ver = req.version(stripe);
 
                 assert ver != null : stripe;
 

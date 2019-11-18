@@ -390,6 +390,58 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 
             checkFutures();
+
+            client.cache(DEFAULT_CACHE_NAME).removeAll(data.keySet());
+
+            part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+
+            assertEquals(0, part.dataStore().fullSize());
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            checkFutures();
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    @Test
+    public void testSinglePrimaryPutGet() throws Exception {
+        backups = 1;
+
+        try {
+            IgniteEx crd = startGrids(2);
+
+            crd.cluster().active(true);
+
+            IgniteEx client = startGrid("client");
+
+            client.cache(DEFAULT_CACHE_NAME).put(9, 0);
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+//            Object prev = client.cache(DEFAULT_CACHE_NAME).getAndPut(9, 1);
+//
+//            assertEquals(0, prev);
+//
+//            GridDhtLocalPartition part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+//
+//            assertEquals(0, part.internalSize());
+//
+//            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+//
+//            checkFutures();
+//
+//            client.cache(DEFAULT_CACHE_NAME).remove(0);
+//
+//            part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+//
+//            assertEquals(0, part.dataStore().fullSize());
+//
+//            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            checkFutures();
         }
         finally {
             stopAllGrids();
