@@ -228,8 +228,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                     addPrevVal,
                     prevVal,
                     updateCntr,
-                    cacheOp,
-                    writeVer);
+                    cacheOp);
             }
         }
     }
@@ -382,15 +381,18 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
     /**
      * Sends requests to remote nodes.
      *
+     * @param dhtUpdRes
      * @param nearNode Near node.
      * @param ret Cache operation return value.
      * @param updateRes Response.
      * @param completionCb Callback to invoke to send response to near node.
      */
-    final void map(ClusterNode nearNode,
+    final void map(DhtAtomicUpdateResult dhtUpdRes,
+        ClusterNode nearNode,
         GridCacheReturn ret,
         GridNearAtomicUpdateResponse updateRes,
-        GridDhtAtomicCache.UpdateReplyClosure completionCb) {
+        GridDhtAtomicCache.UpdateReplyClosure completionCb
+    ) {
         if (F.isEmpty(mappings)) {
             updateRes.mapping(Collections.<UUID>emptyList());
 
@@ -427,7 +429,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         }
 
         // If there are readers updates then nearNode should not finish before primary response received.
-        sendDhtRequests(nearNode, ret, !readersOnlyNodes);
+        sendDhtRequests(dhtUpdRes, nearNode, ret, !readersOnlyNodes);
 
         if (needReplyToNear)
             completionCb.apply(updateReq, updateRes);
@@ -451,12 +453,20 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
     }
 
     /**
+     * @param dhtUpdRes Atomic update result.
      * @param nearNode Near node.
-     * @param sndRes {@code True} if allow to send result from DHT nodes.
      * @param ret Return value.
+     * @param sndRes {@code True} if allow to send result from DHT nodes.
      */
-    private void sendDhtRequests(ClusterNode nearNode, GridCacheReturn ret, boolean sndRes) {
+    private void sendDhtRequests(
+        DhtAtomicUpdateResult dhtUpdRes,
+        ClusterNode nearNode,
+        GridCacheReturn ret,
+        boolean sndRes
+    ) {
         for (GridDhtAtomicAbstractUpdateRequest req : mappings.values()) {
+            req.versions(dhtUpdRes.versions());
+
             try {
                 assert !cctx.localNodeId().equals(req.nodeId()) : req;
 

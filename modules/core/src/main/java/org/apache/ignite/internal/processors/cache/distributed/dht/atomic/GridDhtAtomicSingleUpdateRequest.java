@@ -132,8 +132,7 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp,
-        GridCacheVersion writeVer)
+        GridCacheOperation cacheOp)
     {
         assert entryProcessor == null;
         assert ttl <= 0 : ttl;
@@ -480,6 +479,10 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
     @Override protected void cleanup() {
         val = null;
         prevVal = null;
+    }
+
+    @Override public void versions(GridCacheVersion[] versions) {
+        // No-op.
     }
 
     /** {@inheritDoc} */

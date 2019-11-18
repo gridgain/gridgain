@@ -279,7 +279,6 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
      * @param prevVal Previous value.
      * @param updateCntr Update counter.
      * @param cacheOp Corresponding cache operation.
-     * @param writeVer
      */
     public abstract void addWriteValue(KeyCacheObject key,
         @Nullable CacheObject val,
@@ -290,8 +289,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp,
-        @Nullable GridCacheVersion writeVer);
+        GridCacheOperation cacheOp);
 
     /**
      * @param key Key to add.
@@ -462,6 +460,8 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
      * @return Optional arguments for entry processor.
      */
     @Nullable public abstract Object[] invokeArguments();
+
+    public abstract void versions(GridCacheVersion[] versions);
 
     /**
      * Sets flag mask.
