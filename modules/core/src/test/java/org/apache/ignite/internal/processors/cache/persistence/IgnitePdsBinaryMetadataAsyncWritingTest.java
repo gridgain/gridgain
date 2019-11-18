@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -42,17 +43,21 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateAcceptedMessage;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.suppressException;
 
 /**
  * Tests for verification of binary metadata async writing to disk.
@@ -64,9 +69,15 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     /** */
     private FileIOFactory specialFileIOFactory;
 
+    /** */
+    private ListeningTestLogger listeningLog;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        if (listeningLog != null)
+            cfg.setGridLogger(listeningLog);
 
         if (igniteInstanceName.contains("client")) {
             cfg.setClientMode(true);
@@ -123,8 +134,20 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
         final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
 
+        listeningLog = new ListeningTestLogger(true, log);
+        LogListener submitMsgLsnr = LogListener.matches("Submitting task for async write for").build();
+        LogListener startOpMsgLsnr = LogListener.matches("Starting write operation for").build();
+        LogListener completeOpMsgLsnr = LogListener.matches(
+            Pattern.compile("Future for write operation for \\[typeId=-?\\d+, typeVer=-?\\d+\\] completed.")
+        ).build();
+        listeningLog.registerListener(submitMsgLsnr);
+        listeningLog.registerListener(startOpMsgLsnr);
+        listeningLog.registerListener(completeOpMsgLsnr);
+
         Ignite ig = startGrid(0);
         ig.cluster().active(true);
+
+        listeningLog = null;
 
         IgniteCache<Object, Object> cache = ig.cache(DEFAULT_CACHE_NAME);
         GridTestUtils.runAsync(() -> cache.put(0, new TestAddress(0, "USA", "NYC", "Park Ave")));
@@ -135,6 +158,10 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         waitForTopology(2);
 
         fileWriteLatch.countDown();
+
+        assertTrue(submitMsgLsnr.check());
+        assertTrue(startOpMsgLsnr.check());
+        assertTrue(completeOpMsgLsnr.check(5_000));
     }
 
     /**
@@ -192,7 +219,9 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
-     * @throws Exception
+     * Verifies that all updates are to metadata are handled even when no write operations are completed for them.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void testDiscoveryIsNotBlockedOnMetadataWrite() throws Exception {
@@ -224,6 +253,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     }
 
     /**
+     * Verifies that node is stopped by failure handler if an exception occurs during metadata writing.
      *
      * @throws Exception If failed.
      */
@@ -232,6 +262,9 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         IgniteEx ig0 = startGrid(0);
 
         specialFileIOFactory = new FailingFileIOFactory(new RandomAccessFileIOFactory());
+        listeningLog = new ListeningTestLogger(true, log);
+        LogListener cancelFutureLsnr = LogListener.matches("Cancelling future for write operation").build();
+        listeningLog.registerListener(cancelFutureLsnr);
 
         IgniteEx ig1 = startGrid(1);
 
@@ -244,6 +277,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         cache.put(ig1Key, new TestAddress(0, "USA", "NYC", "6th Ave"));
 
         waitForTopology(1, 10_000);
+
+        assertTrue(cancelFutureLsnr.check());
     }
 
     /**
@@ -307,14 +342,24 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             .setWriteSynchronizationMode(FULL_SYNC);
 
         IgniteEx ig0 = startGrid(0);
+        IgniteEx cl0 = startGrid("client0");
 
-        final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+        CountDownLatch fileWriteLatch = new CountDownLatch(1);
         IgniteEx ig1 = startGrid(1);
 
-        specialFileIOFactory = null;
-        IgniteEx ig2 = startGrid(2);
+        ig1.context().discovery().setCustomEventListener(
+            MetadataUpdateAcceptedMessage.class,
+            (topVer, snd, msg) -> suppressException(fileWriteLatch::await)
+        );
 
-        IgniteEx cl0 = startGrid("client0");
+        listeningLog = new ListeningTestLogger(true, log);
+        LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();
+        listeningLog.registerListener(waitingForWriteLsnr);
+
+        startGrid(2);
+
+        listeningLog = null;
+
         ig0.cluster().active(true);
         IgniteCache cache0 = cl0.createCache(testCacheCfg);
 
@@ -333,6 +378,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         fileWriteLatch.countDown();
 
         assertTrue(GridTestUtils.waitForCondition(() -> putFinished.get(), 5_000));
+
+        assertTrue(waitingForWriteLsnr.check());
     }
 
     /**
@@ -443,7 +490,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         //internal map in BinaryMetadataFileStore with futures awaiting write operations
         Map map = GridTestUtils.getFieldValue(
-            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(), "metadataFileStore", "writeOpFutures");
+            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(),  "metadataFileStore", "writer", "preparedWriteTasks");
 
         assertTrue(!map.isEmpty());
 
