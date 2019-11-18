@@ -1,7 +1,9 @@
 GridGain Management Console Agent Module
 ------------------------
 
-GridGain management console agent allows to connect to Management Console
-for collecting metrics and executing management operations on cluster.
+GridGain management console agent is a GridGain module that allows
+Management Console to retrieve metrics from and execute management
+operations in a GridGain cluster.
 
-To enable GridGain management console agent it should be available in node class path at startup.
+To enable the module, copy the module directory to '{GRIDGAIN_HOME}/libs/' or
+add the module's libraries to the classpath of your application.
