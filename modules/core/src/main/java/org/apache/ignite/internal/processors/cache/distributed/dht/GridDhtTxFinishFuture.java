@@ -486,25 +486,27 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             req.writeVersion(tx.writeVersion() != null ? tx.writeVersion() : tx.xidVersion());
 
             try {
-                if (isNull(cctx.discovery().getAlive(n.id()))){
+                if (isNull(cctx.discovery().getAlive(n.id()))) {
                     log.error("Unable to send message (node left topology): " + n);
 
                     fut.onNodeLeft(new ClusterTopologyCheckedException("Node left grid while sending message to: "
                         + n.id()));
                 }
+                else {
 
-                cctx.io().send(n, req, tx.ioPolicy());
+                    cctx.io().send(n, req, tx.ioPolicy());
 
-                if (msgLog.isDebugEnabled()) {
-                    msgLog.debug("DHT finish fut, sent request dht [txId=" + tx.nearXidVersion() +
-                        ", dhtTxId=" + tx.xidVersion() +
-                        ", node=" + n.id() + ']');
+                    if (msgLog.isDebugEnabled()) {
+                        msgLog.debug("DHT finish fut, sent request dht [txId=" + tx.nearXidVersion() +
+                            ", dhtTxId=" + tx.xidVersion() +
+                            ", node=" + n.id() + ']');
+                    }
+
+                    if (sync)
+                        res = true;
+                    else
+                        fut.onDone();
                 }
-
-                if (sync)
-                    res = true;
-                else
-                    fut.onDone();
             }
             catch (IgniteCheckedException e) {
                 // Fail the whole thing.
