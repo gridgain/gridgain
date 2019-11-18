@@ -57,4 +57,8 @@ public interface PagesWriteThrottlePolicy {
     default boolean shouldThrottle() { // fix it !!!
         return false;
     }
+
+    default boolean shouldThrottlePre() {
+        return false;
+    }
 }

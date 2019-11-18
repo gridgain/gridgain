@@ -2263,7 +2263,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     @Override public boolean shouldThrottle() {
-        return writeThrottle.shouldThrottle();
+        return writeThrottle.shouldThrottlePre();
     }
 
     /**

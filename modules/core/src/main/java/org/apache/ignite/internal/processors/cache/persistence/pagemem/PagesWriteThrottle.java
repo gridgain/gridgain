@@ -185,4 +185,10 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
         return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;
     }
+
+    @Override public boolean shouldThrottlePre() {
+        int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
+
+        return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit * 0.9;
+    }
 }
