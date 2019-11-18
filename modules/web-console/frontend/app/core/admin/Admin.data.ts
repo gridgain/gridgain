@@ -107,7 +107,7 @@ export default class IgniteAdminData {
      * @param userInfo
      */
     registerUser(userInfo) {
-        return this.$http.put('/api/v1/admin/users', userInfo)
+        return this.$http.put('/api/v1/admin/users', this.UserService.normalize(userInfo))
             .then(({ data }) => data)
             .catch(({data}) => {throw data;});
     }

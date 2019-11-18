@@ -50,8 +50,8 @@ export default class AuthService {
         private User: UserService
     ) {}
 
-    signup(userInfo: SignupUserInfo, loginAfterSignup: boolean = true) {
-        return this._auth('signup', userInfo, loginAfterSignup);
+    signup(userInfo: SignupUserInfo) {
+        return this._auth('signup', this.User.normalize(userInfo));
     }
 
     signin(signinInfo: SigninUserInfo) {
