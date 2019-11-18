@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -1080,6 +1081,9 @@ public class GridH2Table extends TableBase {
 
             Index targetIdx = (h2Idx instanceof GridH2ProxyIndex) ?
                 ((GridH2ProxyIndex)h2Idx).underlyingIndex() : h2Idx;
+
+            cacheContext().kernalContext().query()
+                .addPendingDeleteObject(new GridQueryProcessor.PendingDeleteObject(GridQueryProcessor.PendingDeleteObjectType.SQL_INDEX, h2Idx.getName(), getSchema().getName()));
 
             for (int i = pkIndexPos; i < idxs.size();) {
                 Index idx = idxs.get(i);

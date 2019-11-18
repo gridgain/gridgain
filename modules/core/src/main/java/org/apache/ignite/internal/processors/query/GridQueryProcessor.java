@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,9 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -57,6 +60,7 @@ import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -73,6 +77,9 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -97,6 +104,7 @@ import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexD
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridClosureException;
@@ -107,6 +115,7 @@ import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -117,6 +126,7 @@ import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
@@ -126,13 +136,16 @@ import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
 import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_COLUMN_EXISTS;
+import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
 
 /**
  * Indexing processor.
  */
-public class GridQueryProcessor extends GridProcessorAdapter {
+public class GridQueryProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
     /** Queries detail metrics eviction frequency. */
     private static final int QRY_DETAIL_METRICS_EVICTION_FREQ = 3_000;
+
+    private static final String STORE_PENDING_DELETE_PREFIX = "metastorage-pending-delete-";
 
     /** */
     private static final ThreadLocal<AffinityTopologyVersion> requestTopVer = new ThreadLocal<>();
@@ -211,6 +224,21 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    /** Metastorage. */
+    private volatile ReadWriteMetastorage metastorage;
+
+    /** Metastorage synchronization mutex. */
+    private final Object metaStorageMux = new Object();
+
+    /** */
+    private final Set<GridWorker> asyncSchemaWorkers = new GridConcurrentHashSet<>();
+
+    /** */
+    private final AtomicInteger asyncSchemaWorkersCnt = new AtomicInteger(0);
+
+    /** */
+    private final ConcurrentHashMap<String, PendingDeleteObject> pendingDeleteObjects = new ConcurrentHashMap<>();
+
     /**
      * @param ctx Kernal context.
      */
@@ -263,6 +291,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
 
         registerMetadataForRegisteredCaches();
+
+        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
     }
 
     /** {@inheritDoc} */
@@ -284,6 +314,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
 
         busyLock.block();
+
+        awaitForWorkersStop(cancel, asyncSchemaWorkers, log);
     }
 
     /** {@inheritDoc} */
@@ -311,6 +343,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             for (SchemaOperation schemaOp : schemaOps.values())
                 onSchemaPropose(schemaOp.proposeMessage());
         }
+
+        asyncSchemaCleanup();
     }
 
     /**
@@ -356,6 +390,49 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     onSchemaProposeDiscovery0(activeProposal);
             }
         }
+    }
+
+    private void asyncSchemaCleanup() {
+        assert pendingDeleteObjects != null;
+
+        for (PendingDeleteObject obj : pendingDeleteObjects.values()) {
+            switch (obj.type) {
+                case SQL_INDEX:
+                    asyncSchemaCleanupWorker(obj, () -> {
+                        idx.dynamicIndexDrop(obj.schemaName, obj.name, true);
+
+                        return null;
+                    });
+
+                    break;
+
+                default: log.warning("Unknown pending delete object type: " + obj.type.toString());
+            }
+        }
+    }
+
+    private void asyncSchemaCleanupWorker(PendingDeleteObject obj, Callable call) {
+        String workerName = "async-schema-cleanup-task-" + asyncSchemaWorkersCnt.getAndIncrement();
+
+        GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
+            @Override protected void body() {
+                try {
+                    call.call();
+                }
+                catch (Exception e) {
+                    log.warning("Could not clean up schema pending delete object: " + obj.name, e);
+                }
+                finally {
+                    asyncSchemaWorkers.remove(this);
+                }
+            }
+        };
+
+        asyncSchemaWorkers.add(worker);
+
+        Thread asyncTask = new IgniteThread(worker);
+
+        asyncTask.start();
     }
 
     /**
@@ -3169,6 +3246,108 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         return (key & cacheIdShifted) == cacheIdShifted;
     }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            if (pendingDeleteObjects.isEmpty()) {
+                try {
+                    metastorage.iterate(
+                        STORE_PENDING_DELETE_PREFIX,
+                        (key, val) -> pendingDeleteObjects.put(key, (PendingDeleteObject)val),
+                        true
+                    );
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException("Failed to iterate pending objects storage.", e);
+                }
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            try {
+                for (Map.Entry<String, PendingDeleteObject> entry : pendingDeleteObjects.entrySet()) {
+                    if (metastorage.readRaw(entry.getKey()) == null)
+                        metastorage.write(entry.getKey(), entry.getValue());
+                }
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException("Failed to read key from pending objects storage.", e);
+            }
+        }
+
+        this.metastorage = metastorage;
+    }
+
+    private String pendingDeleteObjectName(PendingDeleteObjectType type, String name) {
+        return new GridStringBuilder(STORE_PENDING_DELETE_PREFIX)
+            .a(type).a("-").a(name).toString();
+    }
+
+    public void addPendingDeleteObject(PendingDeleteObject obj) {
+        String objName = pendingDeleteObjectName(obj.type, obj.name);
+
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null) {
+                    pendingDeleteObjects.put(objName, obj);
+
+                    return;
+                }
+            }
+        }
+
+        ctx.cache().context().database().checkpointReadLock();
+
+        try {
+            metastorage.write(objName, obj);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
+        }
+    }
+
+    public PendingDeleteObject getPendingDeleteObject(PendingDeleteObjectType type, String name) {
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null)
+                    return pendingDeleteObjects.get(pendingDeleteObjectName(type, name));
+            }
+        }
+
+        try {
+            return (PendingDeleteObject) metastorage.read(pendingDeleteObjectName(type, name));
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to read value from pending objects storage.", e);
+        }
+    }
+
+    public enum PendingDeleteObjectType {
+        SQL_INDEX
+    }
+
+    public static class PendingDeleteObject implements Serializable {
+        PendingDeleteObjectType type;
+        String name;
+        String schemaName;
+
+        public PendingDeleteObject(PendingDeleteObjectType type, String name, String schemaName) {
+            this.type = type;
+            this.name = name;
+            this.schemaName = schemaName;
+        }
+
+        public PendingDeleteObject() {}
+    }
+
+
 
     /**
      * Schema operation.

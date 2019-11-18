@@ -11929,4 +11929,19 @@ public abstract class IgniteUtils {
             return sb.toString();
         }
     }
+
+    public static void awaitForWorkersStop(boolean cancel, Collection<GridWorker> workers, IgniteLogger log) {
+        for (GridWorker worker : workers) {
+            try {
+                if (cancel)
+                    worker.cancel();
+
+                worker.join();
+            }
+            catch (Exception e) {
+                log.warning(String.format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
+            }
+        }
+
+    }
 }

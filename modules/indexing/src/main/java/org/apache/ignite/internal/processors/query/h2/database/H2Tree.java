@@ -257,11 +257,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             columnIds[i] = cols[i].column.getColumnId();
 
         created = initNew;
-
-        boolean destroy = cctx.kernalContext().cache().getPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, name) != null;
-
-        if (destroy)
-            destroy();
     }
 
     /**
@@ -823,12 +818,5 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** {@inheritDoc} */
     @Override protected long maxLockHoldTime() {
         return cctx.kernalContext().workersRegistry().getSystemWorkerBlockedTimeout() / 10;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long destroy(IgniteInClosure<H2Row> c) throws IgniteCheckedException {
-        cctx.kernalContext().cache().addPendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, getName());
-
-        return super.destroy(c);
     }
 }
