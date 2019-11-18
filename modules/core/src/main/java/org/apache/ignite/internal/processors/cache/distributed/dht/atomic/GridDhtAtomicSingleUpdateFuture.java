@@ -72,7 +72,7 @@ class GridDhtAtomicSingleUpdateFuture extends GridDhtAtomicAbstractUpdateFuture 
     }
 
     @Override void version(GridCacheVersion ver, int stripe) {
-
+        this.writeVer = ver;
     }
 
     /** {@inheritDoc} */

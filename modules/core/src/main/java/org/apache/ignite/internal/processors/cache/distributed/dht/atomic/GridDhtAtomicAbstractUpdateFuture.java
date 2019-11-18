@@ -70,7 +70,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
     protected static IgniteLogger msgLog;
 
     /** Write version. */
-    protected final GridCacheVersion writeVer;
+    protected GridCacheVersion writeVer;
 
     /** Cache context. */
     protected final GridCacheContext cctx;
@@ -108,7 +108,6 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         this.cctx = cctx;
 
         this.updateReq = updateReq;
-        this.writeVer = writeVer;
 
         futId = cctx.mvcc().nextAtomicId();
 
