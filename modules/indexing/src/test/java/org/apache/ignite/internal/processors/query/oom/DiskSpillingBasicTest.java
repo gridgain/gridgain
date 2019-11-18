@@ -220,6 +220,9 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
 
         assertFalse(res.next().isEmpty());
 
+        while (res.hasNext())
+            res.next();
+
         List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 
         // Check files have been created but deleted later.
