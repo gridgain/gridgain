@@ -80,6 +80,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheP2pUnmarshallingQu
 import org.apache.ignite.internal.processors.cache.IgniteCachePrimitiveFieldsQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryH2IndexingLeakTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryIndexSelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteCacheQueryLargeRecordsOomTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryLoadSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlDmlErrorSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlInsertValidationSelfTest;
@@ -214,6 +215,8 @@ import org.apache.ignite.internal.processors.query.QueryJmxMetricsTest;
 import org.apache.ignite.internal.processors.query.RunningQueriesTest;
 import org.apache.ignite.internal.processors.query.SqlIllegalSchemaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlIncompatibleDataTypeExceptionTest;
+import org.apache.ignite.internal.processors.query.SqlIndexesSystemViewStaticCfgTest;
+import org.apache.ignite.internal.processors.query.SqlIndexesSystemViewTest;
 import org.apache.ignite.internal.processors.query.SqlMetricsOnWebConsoleSelfTest;
 import org.apache.ignite.internal.processors.query.SqlNestedQuerySelfTest;
 import org.apache.ignite.internal.processors.query.SqlPushDownFunctionTest;
@@ -388,6 +391,8 @@ import org.junit.runners.Suite;
     CacheDataPageScanQueryTest.class,
     QueryDataPageScanTest.class,
 
+    IgniteCacheQueryLargeRecordsOomTest.class,
+
     // DML.
     IgniteCacheMergeSqlQuerySelfTest.class,
     IgniteCacheInsertSqlQuerySelfTest.class,
@@ -518,6 +523,8 @@ import org.junit.runners.Suite;
     IgniteCheckClusterStateBeforeExecuteQueryTest.class,
     OptimizedMarshallerIndexNameTest.class,
     SqlSystemViewsSelfTest.class,
+    SqlIndexesSystemViewTest.class,
+    SqlIndexesSystemViewStaticCfgTest.class,
     SqlMetricsOnWebConsoleSelfTest.class,
 
     GridIndexRebuildSelfTest.class,
