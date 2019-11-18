@@ -1344,7 +1344,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         // No need to write if exception occurred.
         boolean canWrite = false;
 
-        // Page possibly loked by checkpoint buffer copy process: postWriteLockPage.
+        // Page possibly locked by checkpoint buffer copy process: postWriteLockPage.
         boolean locked = rwLock.tryWriteLock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
         if (!locked) {
@@ -2023,12 +2023,12 @@ public class PageMemoryImpl implements PageMemoryEx {
     @Override public FullPageId pageToDumpFirst(Set<FullPageId> pages) {
         long idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
 
-        long lastIdx = 1; //ThreadLocalRandom.current().nextLong(idx / 2, idx);
+        long lastIdx = ThreadLocalRandom.current().nextLong(idx / 2, idx);
 
         long searched = 0;
 
         //if (GridUnsafe.compareAndSwapLong(null, checkpointPool.lastAllocatedIdxPtr, lastIdx, lastIdx - 1)) {
-        while (++lastIdx < idx) {
+        while (--lastIdx > 1) { // todo : reread idx
             assert (lastIdx & SEGMENT_INDEX_MASK) == 0L;
 
             long relative = checkpointPool.relative(lastIdx);
@@ -2046,7 +2046,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             FullPageId pageOut = new FullPageId(pageId, grpId);
 
-            idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
+            //idx = GridUnsafe.getLong(checkpointPool.lastAllocatedIdxPtr);
 
             if (!pages.remove(pageOut))
                 continue;

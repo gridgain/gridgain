@@ -4962,9 +4962,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     @Override public int compare(FullPageId o1, FullPageId o2) {
                         int cmp = Long.compare(o1.groupId(), o2.groupId());
 
-                        if (cmp != 0)
-                            return cmp;
-
                         return cmp != 0 ? cmp : Long.compare(o1.effectivePageId(), o2.effectivePageId());
                     }
                 });
