@@ -146,6 +146,9 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
     public void testDeployDiffVersions() throws Exception {
         p2pEnabled = true;
 
+        //prime number bigger than the biggest key in cache
+        int scaleFactor = 13;
+
         localDiscoPort = 47500;
         IgniteEx ig0 = startGrid(0);
 
@@ -157,7 +160,7 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
         IgniteEx cl0 = startClientGrid(1);
         remoteDiscoPort = null;
 
-        QueryCursor query0 = cl0.cache(DEFAULT_CACHE_NAME).query(new ScanQuery<>(), loadTransformerClass(TEST_CLASS_LOADER_2, SCALE_FACTOR));
+        QueryCursor query0 = cl0.cache(DEFAULT_CACHE_NAME).query(new ScanQuery<>(), loadTransformerClass(TEST_CLASS_LOADER_2, scaleFactor));
         query0.getAll();
 
         localDiscoPort = 47505;
@@ -169,10 +172,10 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
         remoteDiscoPort = 47505;
         IgniteEx cl1 = startClientGrid(3);
 
-        QueryCursor query1 = cl1.cache(DEFAULT_CACHE_NAME).query(new ScanQuery<>(), loadTransformerClass(TEST_CLASS_LOADER_1, SCALE_FACTOR));
+        QueryCursor query1 = cl1.cache(DEFAULT_CACHE_NAME).query(new ScanQuery<>(), loadTransformerClass(TEST_CLASS_LOADER_1, scaleFactor));
         List all = query1.getAll();
 
-        assertBothTransformersApplied(all, initSum, SCALE_FACTOR);
+        assertBothTransformersApplied(all, initSum, scaleFactor);
     }
 
     /**
@@ -210,6 +213,8 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
     private void assertTransformerVer1Applied(List<Integer> values, int initialSum, int scaleFactorUsed) {
         int sum = values.stream().mapToInt(i -> i).sum();
 
+        //Transformer version1 is multiplying transformer,
+        // so sum of all keys must be initial sum multiplied by scale factor (the same as used in transformer).
         assertTrue(sum == initialSum * scaleFactorUsed);
     }
 
@@ -227,6 +232,14 @@ public class GridP2PScanQueryWithTransformerTest extends GridCommonAbstractTest 
         assertFalse(sum == initialSum * scaleFactorUsed);
         //False that only ver2 transformer is applied.
         assertFalse(sum == initialSum + values.size() * scaleFactorUsed);
+        //All values should be transformed,
+        // and as scale factor was used bigger than the biggest key (which is CACHE_SIZE - 1)
+        // the following checks must hold
+        for (Integer val : values) {
+            if (val != 0) {
+                assertTrue(val > CACHE_SIZE);
+            }
+        }
     }
 
     /**
