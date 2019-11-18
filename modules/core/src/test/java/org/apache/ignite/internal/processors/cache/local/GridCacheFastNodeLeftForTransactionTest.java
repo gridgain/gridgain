@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -61,9 +62,9 @@ import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.testframework.LogListener.matches;
 
 /**
- * Class for testing rollback transaction with local cache.
+ * Class for testing fast node left during transaction for cache.
  */
-public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
+public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractTest {
     /** Number of nodes. */
     private static final int NODES = 4;
 
@@ -109,7 +110,8 @@ public class GridCacheLocalRollbackSelfTest extends GridCommonAbstractTest {
             .setCacheConfiguration(
                 new CacheConfiguration(DEFAULT_CACHE_NAME)
                     .setAtomicityMode(TRANSACTIONAL)
-                    .setBackups(3)
+                    .setBackups(2)
+                    .setAffinity(new RendezvousAffinityFunction(false, 10))
             )
             .setGridLogger(listeningLog)
             .setConnectorConfiguration(new ConnectorConfiguration());
