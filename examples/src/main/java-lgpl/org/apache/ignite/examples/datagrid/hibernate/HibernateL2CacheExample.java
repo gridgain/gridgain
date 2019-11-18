@@ -92,7 +92,10 @@ public class HibernateL2CacheExample {
         Arrays.asList(User.class.getName(), Post.class.getName(), User.class.getName() + ".posts");
 
     /** Caches' names. */
-    private static final String UPDATE_TIMESTAMPS_CACHE_NAME = "org.hibernate.cache.spi.UpdateTimestampsCache";
+    /** Represents the name of timestamps region specific to hibernate 5.1 {@see HibernateTimestampsRegion}. */
+    private static final String UPDATE_TIMESTAMPS_CACHE_NAME_5_1 = "org.hibernate.cache.spi.UpdateTimestampsCache";
+    /** Represents the name of timestamps region specific to hibernate 5.3 {@see IgniteTimestampsRegion}. */
+    private static final String UPDATE_TIMESTAMPS_CACHE_NAME_5_3 = "default-update-timestamps-region";
     private static final String STANDART_QUERY_CACHE_NAME = "org.hibernate.cache.internal.StandardQueryCache";
     private static final String USER_CACHE_NAME = "org.apache.ignite.examples.datagrid.hibernate.User";
     private static final String USER_POSTS_CACHE_NAME = "org.apache.ignite.examples.datagrid.hibernate.User.posts";
@@ -116,11 +119,12 @@ public class HibernateL2CacheExample {
             // Auto-close cache at the end of the example.
             try (
                 // Create all required caches.
-                IgniteCache c1 = createCache(UPDATE_TIMESTAMPS_CACHE_NAME, ATOMIC);
-                IgniteCache c2 = createCache(STANDART_QUERY_CACHE_NAME, ATOMIC);
-                IgniteCache c3 = createCache(USER_CACHE_NAME, TRANSACTIONAL);
-                IgniteCache c4 = createCache(USER_POSTS_CACHE_NAME, TRANSACTIONAL);
-                IgniteCache c5 = createCache(POST_CACHE_NAME, TRANSACTIONAL)
+                IgniteCache c1 = createCache(UPDATE_TIMESTAMPS_CACHE_NAME_5_1, ATOMIC);
+                IgniteCache c2 = createCache(UPDATE_TIMESTAMPS_CACHE_NAME_5_3, ATOMIC);
+                IgniteCache c3 = createCache(STANDART_QUERY_CACHE_NAME, ATOMIC);
+                IgniteCache c4 = createCache(USER_CACHE_NAME, TRANSACTIONAL);
+                IgniteCache c5 = createCache(USER_POSTS_CACHE_NAME, TRANSACTIONAL);
+                IgniteCache c6 = createCache(POST_CACHE_NAME, TRANSACTIONAL)
             ) {
                 URL hibernateCfg = ExamplesUtils.url(HIBERNATE_CFG);
 
@@ -192,7 +196,8 @@ public class HibernateL2CacheExample {
             }
             finally {
                 // Distributed cache could be removed from cluster only by #destroyCache() call.
-                ignite.destroyCache(UPDATE_TIMESTAMPS_CACHE_NAME);
+                ignite.destroyCache(UPDATE_TIMESTAMPS_CACHE_NAME_5_1);
+                ignite.destroyCache(UPDATE_TIMESTAMPS_CACHE_NAME_5_3);
                 ignite.destroyCache(STANDART_QUERY_CACHE_NAME);
                 ignite.destroyCache(USER_CACHE_NAME);
                 ignite.destroyCache(USER_POSTS_CACHE_NAME);
