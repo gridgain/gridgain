@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -290,7 +291,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         IgniteConfiguration icfg = getConfiguration(getTestIgniteInstanceName(0));
 
         icfg.getDataStorageConfiguration().setWalSegmentSize(300_000_000);
-        icfg.getDataStorageConfiguration().setWalSegments(1);
+        icfg.getDataStorageConfiguration().setWalSegments(2);
 
         IgniteEx ig = (IgniteEx)startGrid(getTestIgniteInstanceName(0), optimize(icfg), null);
 
@@ -334,6 +335,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         while (walMgr.lastArchivedSegment() < 0 && (System.currentTimeMillis() - start < 15_000));
 
         assertTrue(System.currentTimeMillis() - start < 15_000);
+
+        while (walMgr.lastArchivedSegment() < 2)
+            cache.put(ThreadLocalRandom.current().nextInt(5000), new byte[20 * 1024]);
 
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
