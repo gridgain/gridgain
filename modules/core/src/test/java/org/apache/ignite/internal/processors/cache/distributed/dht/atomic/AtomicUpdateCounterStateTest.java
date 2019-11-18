@@ -16,13 +16,19 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -42,6 +48,7 @@ import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -426,24 +433,50 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
             assertEquals(0, prev);
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
-//
-//            GridDhtLocalPartition part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
-//
-//            assertEquals(0, part.internalSize());
-//
-//            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
-//
-//            checkFutures();
-//
-//            client.cache(DEFAULT_CACHE_NAME).remove(0);
-//
-//            part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
-//
-//            assertEquals(0, part.dataStore().fullSize());
-//
-//            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            GridDhtLocalPartition part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+
+            assertEquals(0, part.internalSize());
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 
             checkFutures();
+
+            client.cache(DEFAULT_CACHE_NAME).remove(0);
+
+            part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
+
+            assertEquals(0, part.dataStore().fullSize());
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            checkFutures();
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    @Test
+    public void testLoad() throws Exception {
+        backups = 1;
+
+        try {
+            IgniteEx crd = startGrids(2);
+
+            crd.cluster().active(true);
+
+            IgniteEx client = startGrid("client");
+
+            Random r = new Random();
+
+            List<Integer> keys = IntStream.range(0, 1000).boxed().collect(Collectors.toList());
+
+            IgniteInternalFuture<?> fut = doRandomUpdates(r, keys, client.cache(DEFAULT_CACHE_NAME), U.currentTimeMillis() + 10_000);
+
+            fut.get();
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
         }
         finally {
             stopAllGrids();
@@ -455,5 +488,62 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
      */
     private boolean persistenceEnabled() {
         return true;
+    }
+
+    private IgniteInternalFuture<?> doRandomUpdates(
+        Random r,
+        List<Integer> primaryKeys,
+        IgniteCache<Object, Object> cache,
+        long stop) throws Exception {
+        LongAdder puts = new LongAdder();
+        LongAdder removes = new LongAdder();
+
+        final int max = 100;
+
+        return multithreadedAsync(() -> {
+            while (U.currentTimeMillis() < stop) {
+                int rangeStart = r.nextInt(primaryKeys.size() - max);
+                int range = 5 + r.nextInt(max - 5);
+
+                List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + range);
+
+                List<Integer> insertedKeys = new ArrayList<>();
+                List<Integer> rmvKeys = new ArrayList<>();
+
+                boolean batch = r.nextFloat() > 0.3;
+
+                for (Integer key : keys) {
+                    if (!batch)
+                        cache.put(key, key);
+
+                    insertedKeys.add(key);
+
+                    puts.increment();
+                }
+
+                if (batch)
+                    cache.putAll(insertedKeys.stream().collect(Collectors.toMap(k -> k, v -> v, (o, o2) -> o, LinkedHashMap::new)));
+
+                for (Integer key : keys) {
+                    boolean rmv = r.nextFloat() < 0.4;
+                    if (rmv) {
+                        key = insertedKeys.get(r.nextInt(insertedKeys.size()));
+
+                        if (!batch)
+                            cache.remove(key);
+
+                        rmvKeys.add(key);
+
+                        removes.increment();
+                    }
+                }
+
+                if (batch)
+                    cache.removeAll(new LinkedHashSet<Object>(rmvKeys));
+            }
+
+            log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size());
+
+        }, 1, "atomic-update-thread");
     }
 }
