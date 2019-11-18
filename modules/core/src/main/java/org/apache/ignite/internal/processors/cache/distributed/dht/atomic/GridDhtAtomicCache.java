@@ -1876,17 +1876,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                 //Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = dhtUpdRes.deleted();
                                 IgniteCacheExpiryPolicy expiry = dhtUpdRes.expiryPolicy();
 
-                                //dhtUpdRes.dhtFuture().map(node, dhtUpdRes.returnValue(), res, completionCb);
-
-                                // TODO add to deferred per stripe.
-//                                if (deleted != null) {
-//                                    //assert !deleted.isEmpty();
-//                                    assert ctx.deferredDelete() : this;
-//
-//                                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-//                                        ctx.onDeferredDelete(e.get1(), e.get2());
-//                                }
-
                                 // TODO handle failure: probably drop the node from topology
                                 // TODO fire events only after successful fsync
                                 if (ctx.shared().wal() != null)
@@ -1992,9 +1981,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         UpdateReplyClosure completionCb,
         GridDhtAtomicAbstractUpdateFuture dhtFut
     ) throws GridCacheEntryRemovedException {
-        DhtAtomicUpdateResult dhtUpdRes = new DhtAtomicUpdateResult(new GridCacheReturn(node.isLocal()),
-            null
-        );
+        DhtAtomicUpdateResult dhtUpdRes = new DhtAtomicUpdateResult(null, null);
 
         GridDhtPartitionTopology top = topology();
 
@@ -2742,17 +2729,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     req.keepBinary());
                             }
                         }
-                        else {
-                            // Create only once.
-//                            if (retVal == null) {
-//                                CacheObject ret = updRes.oldValue();
-//
-//                                dhtUpdRes.returnValue(new GridCacheReturn(ctx,
-//                                    nearNode.isLocal(),
-//                                    req.keepBinary(),
-//                                    req.returnValue() ? ret : null,
-//                                    updRes.success()));
-//                            }
+                        else if (req.returnValue()) {
+                            dhtUpdRes.returnValue(new GridCacheReturn(ctx,
+                                nearNode.isLocal(),
+                                req.keepBinary(),
+                                updRes.oldValue(),
+                                updRes.success()));
                         }
 
                         break;

@@ -421,9 +421,11 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 
-//            Object prev = client.cache(DEFAULT_CACHE_NAME).getAndPut(9, 1);
-//
-//            assertEquals(0, prev);
+            Object prev = client.cache(DEFAULT_CACHE_NAME).getAndPut(9, 1);
+
+            assertEquals(0, prev);
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 //
 //            GridDhtLocalPartition part = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(0);
 //

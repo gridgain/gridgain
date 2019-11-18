@@ -132,7 +132,9 @@ class DhtAtomicUpdateResult {
      * @param retVal Result for operation.
      */
     GridCacheReturn returnValue(GridCacheReturn retVal) {
-        return this.retVal;
+        this.retVal = retVal;
+
+        return retVal;
     }
 
     /**
