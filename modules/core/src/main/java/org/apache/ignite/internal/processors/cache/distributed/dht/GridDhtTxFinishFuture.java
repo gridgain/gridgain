@@ -493,7 +493,6 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                         + n.id()));
                 }
                 else {
-
                     cctx.io().send(n, req, tx.ioPolicy());
 
                     if (msgLog.isDebugEnabled()) {
