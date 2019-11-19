@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.UUID;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlAbstractLocalSystemView;
 import org.apache.ignite.lang.IgniteUuid;
@@ -67,6 +68,11 @@ public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
 
     /** {@inheritDoc} */
     @Override public Iterator<Row> getRows(Session ses, SearchRow first, SearchRow last) {
+        String viewName = getTableName();
+
+        if ("SQL_QUERIES".equals(viewName) || "SQL_QUERIES_HISTORY".equals(viewName))
+            ctx.security().authorize(SecurityPermission.GET_QUERY_VIEWS);
+
         Iterator<R> rows = sysView.iterator();
 
         return new Iterator<Row>() {

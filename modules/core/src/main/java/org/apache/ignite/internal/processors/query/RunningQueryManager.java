@@ -42,15 +42,30 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.systemview.view.SqlQueryHistoryView;
+import org.apache.ignite.spi.systemview.view.SqlQueryView;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
  * Keep information about all running queries.
  */
 public class RunningQueryManager {
+    /** */
+    public static final String SQL_QRY_VIEW = metricName("sql", "queries");
+
+    /** */
+    public static final String SQL_QRY_VIEW_DESC = "Running SQL queries.";
+
+    /** */
+    public static final String SQL_QRY_HIST_VIEW = metricName("sql", "queries", "history");
+
+    /** */
+    public static final String SQL_QRY_HIST_VIEW_DESC = "SQL queries history.";
+
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
@@ -151,6 +166,16 @@ public class RunningQueryManager {
 
         oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
             "out of memory protection. This metric number included in the general 'failed' metric.");
+
+        ctx.systemView().registerView(SQL_QRY_VIEW, SQL_QRY_VIEW_DESC,
+            SqlQueryView.class,
+            runs.values(),
+            SqlQueryView::new);
+
+        ctx.systemView().registerView(SQL_QRY_HIST_VIEW, SQL_QRY_HIST_VIEW_DESC,
+            SqlQueryHistoryView.class,
+            qryHistTracker.queryHistory().values(),
+            SqlQueryHistoryView::new);
     }
 
     /**
@@ -166,7 +191,7 @@ public class RunningQueryManager {
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
         String qryInitiatorId) {
-        Long qryId = qryIdGen.incrementAndGet();
+        long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
             qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
@@ -291,7 +316,7 @@ public class RunningQueryManager {
         if (isSqlQuery(qry)) {
             qry.runningFuture().onDone();
 
-            qryHistTracker.collectMetrics(qry, failed);
+            qryHistTracker.collectHistory(qry, failed);
 
             if (!failed)
                 successQrsCnt.increment();
@@ -430,8 +455,8 @@ public class RunningQueryManager {
      *
      * @return Queries history statistics aggregated by query text, schema and local flag.
      */
-    public Map<QueryHistoryMetricsKey, QueryHistoryMetrics> queryHistoryMetrics() {
-        return qryHistTracker.queryHistoryMetrics();
+    public Map<QueryHistoryKey, QueryHistory> queryHistoryMetrics() {
+        return qryHistTracker.queryHistory();
     }
 
     /**
@@ -444,7 +469,7 @@ public class RunningQueryManager {
     }
 
     /**
-     * Reset query history metrics.
+     * Reset query history.
      */
     public void resetQueryHistoryMetrics() {
         qryHistTracker = new QueryHistoryTracker(histSz);
