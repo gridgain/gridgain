@@ -133,8 +133,4 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
     @Override public String toString() {
         return S.toString(GridDhtAtomicUpdateFuture.class, this, "super", super.toString());
     }
-
-    @Override protected boolean onDone(@Nullable Void res, @Nullable Throwable err, boolean cancel) {
-        return super.onDone(res, err, cancel);
-    }
 }
