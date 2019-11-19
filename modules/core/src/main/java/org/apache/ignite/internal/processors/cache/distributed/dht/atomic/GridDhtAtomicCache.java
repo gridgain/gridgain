@@ -2737,12 +2737,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                 updRes.success()));
                         }
 
-                        return;
+                        break;
                     }
-                    catch (IgniteCheckedException e) {
+                    catch (IgniteCheckedException e) { // TODO handle NodeStoppingEx right
                         res.addFailedKey(k, e);
 
-                        return;
+                        break;
                     }
                     catch (GridCacheEntryRemovedException e) {
                         entry = null;
