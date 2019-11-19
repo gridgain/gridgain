@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.ws;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -30,6 +29,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
+
+import static java.util.Collections.singletonList;
+import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
 
 /**
  * Retryable sender with limited queue.
@@ -121,14 +123,14 @@ public class RetryableSender extends GridProcessorAdapter implements Runnable {
      */
     public void send(String dest, Object element) {
         if (element != null)
-            addToQueue(new IgniteBiTuple<>(dest, Collections.singletonList(element)));
+            addToQueue(new IgniteBiTuple<>(dest, singletonList(element)));
     }
 
     /**
      * @param elements Elements to send.
      */
     public void sendList(String dest, List<?> elements) {
-        if (elements != null)
+        if (!isEmpty(elements))
             splitOnBatches(elements).stream().map(e -> new IgniteBiTuple<>(dest, e)).forEach(this::addToQueue);
     }
 
