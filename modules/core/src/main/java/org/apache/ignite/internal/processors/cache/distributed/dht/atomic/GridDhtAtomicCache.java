@@ -3447,7 +3447,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     if (dhtRes != null)
                         sendDhtPrimaryResponse(nodeId, req, dhtRes);
                     else
-                        sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId());
+                        sendDeferredUpdateResponse(finalStripe, nodeId, req.futureId());
                 }
             };
 
