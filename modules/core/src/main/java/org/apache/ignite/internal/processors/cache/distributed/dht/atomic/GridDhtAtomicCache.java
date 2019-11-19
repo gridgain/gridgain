@@ -2647,20 +2647,33 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                 EntryProcessor<Object, Object, Object> entryProcessor = null;
 
-                                // TODO remove synchronized on hot path.
-                                dhtFut.addWriteEntry(
+//                                dhtFut.addWriteEntry(
+//                                    affAssignment,
+//                                    entry,
+//                                    updRes.newValue(),
+//                                    entryProcessor,
+//                                    updRes.newTtl(),
+//                                    updRes.conflictExpireTime(),
+//                                    newConflictVer,
+//                                    sndPrevVal,
+//                                    updRes.oldValue(),
+//                                    updRes.updateCounter(),
+//                                    op);
+
+                                dhtFut.delayedWriteEntry(
                                     affAssignment,
-                                    entry,
+                                    k,
                                     updRes.newValue(),
-                                    entryProcessor,
+                                    null,
                                     updRes.newTtl(),
                                     updRes.conflictExpireTime(),
-                                    newConflictVer,
+                                    null,
                                     sndPrevVal,
                                     updRes.oldValue(),
                                     updRes.updateCounter(),
                                     op);
 
+                                // TODO remove synchronized on hot path.
 //                                if (readers != null)
 //                                    dhtFut.addNearWriteEntries(
 //                                        nearNode,

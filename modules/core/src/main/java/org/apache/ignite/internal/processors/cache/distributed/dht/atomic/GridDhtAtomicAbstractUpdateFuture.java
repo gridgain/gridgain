@@ -230,6 +230,73 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         }
     }
 
+    void addWriteEntry2(
+        AffinityAssignment affAssignment,
+        KeyCacheObject key,
+        @Nullable CacheObject val,
+        EntryProcessor<Object, Object, Object> entryProcessor,
+        long ttl,
+        long conflictExpireTime,
+        @Nullable GridCacheVersion conflictVer,
+        boolean addPrevVal,
+        @Nullable CacheObject prevVal,
+        long updateCntr,
+        GridCacheOperation cacheOp
+    ) {
+        AffinityTopologyVersion topVer = updateReq.topologyVersion();
+
+        List<ClusterNode> affNodes = affAssignment.get(key.partition());
+
+        // Client has seen that rebalancing finished, it is safe to use affinity mapping.
+        List<ClusterNode> dhtNodes = updateReq.affinityMapping() ?
+            affNodes : cctx.dht().topology().nodes(key.partition(), affAssignment, affNodes);
+
+        if (dhtNodes == null)
+            dhtNodes = affNodes;
+
+        if (log.isDebugEnabled())
+            log.debug("Mapping entry to DHT nodes [nodes=" + U.nodeIds(dhtNodes) + ", key=" + key + ']');
+
+        CacheWriteSynchronizationMode syncMode = updateReq.writeSynchronizationMode();
+
+        addDhtKey(key, dhtNodes);
+
+        for (int i = 0; i < dhtNodes.size(); i++) {
+            ClusterNode node = dhtNodes.get(i);
+
+            UUID nodeId = node.id();
+
+            if (!nodeId.equals(cctx.localNodeId())) {
+                GridDhtAtomicAbstractUpdateRequest updateReq = mappings.get(nodeId);
+
+                if (updateReq == null) {
+                    updateReq = createRequest(
+                        node.id(),
+                        futId,
+                        writeVer, // TODO FIXME null here
+                        syncMode,
+                        topVer,
+                        ttl,
+                        conflictExpireTime,
+                        conflictVer);
+
+                    mappings.put(nodeId, updateReq);
+                }
+
+                updateReq.addWriteValue(key,
+                    val,
+                    entryProcessor,
+                    ttl,
+                    conflictExpireTime,
+                    conflictVer,
+                    addPrevVal,
+                    prevVal,
+                    updateCntr,
+                    cacheOp);
+            }
+        }
+    }
+
     /**
      * @param key Key.
      * @param dhtNodes DHT nodes.
@@ -390,6 +457,9 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         GridNearAtomicUpdateResponse updateRes,
         GridDhtAtomicCache.UpdateReplyClosure completionCb
     ) {
+        // Process delayed writes.
+        flushDelayed();
+
         if (F.isEmpty(mappings)) {
             updateRes.mapping(Collections.<UUID>emptyList());
 
@@ -608,4 +678,20 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
             return S.toString(GridDhtAtomicAbstractUpdateFuture.class, this, "dhtRes", dhtRes);
         }
     }
+
+    protected abstract void flushDelayed();
+
+    protected abstract void delayedWriteEntry(
+        AffinityAssignment assignment,
+        KeyCacheObject k,
+        CacheObject newVal,
+        EntryProcessor<Object, Object, Object> o,
+        long newTtl,
+        long conflictExpireTime,
+        @Nullable GridCacheVersion newConflictVer,
+        boolean sndPrevVal,
+        CacheObject prevVal,
+        long updCntr,
+        GridCacheOperation op
+    );
 }

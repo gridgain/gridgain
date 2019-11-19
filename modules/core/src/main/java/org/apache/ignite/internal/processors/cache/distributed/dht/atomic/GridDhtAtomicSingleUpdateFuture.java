@@ -18,10 +18,14 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.List;
 import java.util.UUID;
+import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -135,5 +139,27 @@ class GridDhtAtomicSingleUpdateFuture extends GridDhtAtomicAbstractUpdateFuture 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridDhtAtomicSingleUpdateFuture.class, this, "super", super.toString());
+    }
+
+    @Override protected void flushDelayed() {
+        // No-op.
+    }
+
+    @Override public void delayedWriteEntry(AffinityAssignment assignment, KeyCacheObject k, CacheObject newVal,
+        EntryProcessor<Object, Object, Object> o, long newTtl, long conflictExpireTime, @Nullable GridCacheVersion newConflictVer,
+        boolean sndPrevVal, CacheObject prevVal, long updCntr, GridCacheOperation op) {
+        // Add immediately.
+        addWriteEntry2(
+            assignment,
+            k,
+            newVal,
+            o,
+            newTtl,
+            conflictExpireTime,
+            newConflictVer,
+            sndPrevVal,
+            prevVal,
+            updCntr,
+            op);
     }
 }

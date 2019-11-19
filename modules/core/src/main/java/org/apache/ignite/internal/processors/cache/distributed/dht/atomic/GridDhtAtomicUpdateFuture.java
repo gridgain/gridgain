@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.List;
+import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -120,17 +122,49 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
             updateReq.skipStore(),
             false);
     }
+//
+//    /** {@inheritDoc} */
+//    @Override void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
+//        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
+//        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
+//        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
+//        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
+//    }
 
-    /** {@inheritDoc} */
-    @Override synchronized void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
-        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
-        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
-        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
-        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
-    }
+    private Queue<Runnable> delayedEntries = new ConcurrentLinkedQueue<>();
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridDhtAtomicUpdateFuture.class, this, "super", super.toString());
+    }
+
+    @Override protected void flushDelayed() {
+        for (Runnable entry : delayedEntries)
+            entry.run();
+
+        delayedEntries = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void delayedWriteEntry(AffinityAssignment assignment, KeyCacheObject k, CacheObject newVal,
+        EntryProcessor<Object, Object, Object> o, long newTtl, long conflictExpireTime,
+        @Nullable GridCacheVersion newConflictVer, boolean sndPrevVal, CacheObject prevVal, long updCntr,
+        GridCacheOperation op) {
+        delayedEntries.add(new Runnable() {
+            @Override public void run() {
+                addWriteEntry2(
+                    assignment,
+                    k,
+                    newVal,
+                    o,
+                    newTtl,
+                    conflictExpireTime,
+                    newConflictVer,
+                    sndPrevVal,
+                    prevVal,
+                    updCntr,
+                    op);
+            }
+        });
     }
 }
