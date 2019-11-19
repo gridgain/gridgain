@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -55,6 +56,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.initLogger;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
@@ -107,12 +110,7 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClientMode(clientNode)
-            .setCacheConfiguration(
-                new CacheConfiguration(DEFAULT_CACHE_NAME)
-                    .setAtomicityMode(TRANSACTIONAL)
-                    .setBackups(2)
-                    .setAffinity(new RendezvousAffinityFunction(false, 10))
-            )
+            .setCacheConfiguration(createCacheConfigs())
             .setGridLogger(listeningLog)
             .setConnectorConfiguration(new ConnectorConfiguration());
     }
@@ -124,42 +122,44 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
      */
     @Test
     public void testRollbackTransactions() throws Exception {
-        String cacheName = DEFAULT_CACHE_NAME;
-
         int txCnt = TX_COUNT;
 
         int nodes = NODES;
 
         IgniteEx crd = createCluster(nodes);
 
-        IgniteCache<Object, Object> cache = crd.cache(cacheName);
+        for (CacheConfiguration cacheConfig : createCacheConfigs()) {
+            String cacheName = cacheConfig.getName();
 
-        List<Integer> keys = primaryKeys(cache, txCnt);
+            IgniteCache<Object, Object> cache = crd.cache(cacheName);
 
-        Map<Integer, Integer> cacheValues = range(0, txCnt / 2).boxed().collect(toMap(keys::get, identity()));
+            List<Integer> keys = primaryKeys(cache, txCnt);
 
-        cache.putAll(cacheValues);
+            Map<Integer, Integer> cacheValues = range(0, txCnt / 2).boxed().collect(toMap(keys::get, identity()));
 
-        Collection<Transaction> txs = createTxs(
-            grid(nodes),
-            cacheName,
-            range(txCnt / 2, txCnt).mapToObj(keys::get).collect(toList())
-        );
+            cache.putAll(cacheValues);
 
-        int stoppedNodeId = 2;
+            Collection<Transaction> txs = createTxs(
+                grid(nodes),
+                cacheName,
+                range(txCnt / 2, txCnt).mapToObj(keys::get).collect(toList())
+            );
 
-        stopGrid(stoppedNodeId);
+            int stoppedNodeId = 2;
 
-        LogListener logLsnr = newLogListener();
+            stopGrid(stoppedNodeId);
 
-        listeningLog.registerListener(logLsnr);
+            LogListener logLsnr = newLogListener();
 
-        for (Transaction tx : txs)
-            tx.rollback();
+            listeningLog.registerListener(logLsnr);
 
-        awaitPartitionMapExchange();
+            for (Transaction tx : txs)
+                tx.rollback();
 
-        check(cacheValues, cacheName, logLsnr, stoppedNodeId);
+            awaitPartitionMapExchange();
+
+            check(cacheValues, cacheName, logLsnr, stoppedNodeId);
+        }
     }
 
     /**
@@ -170,54 +170,56 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
      */
     @Test
     public void testRollbackTransactionsWithKeyOperationOutsideThem() throws Exception {
-        String cacheName = DEFAULT_CACHE_NAME;
-
         int txCnt = TX_COUNT;
 
         int nodes = NODES;
 
         IgniteEx crd = createCluster(nodes);
 
-        IgniteCache<Object, Object> cache = crd.cache(cacheName);
+        for (CacheConfiguration cacheConfig : createCacheConfigs()) {
+            String cacheName = cacheConfig.getName();
 
-        List<Integer> keys = primaryKeys(cache, txCnt);
+            IgniteCache<Object, Object> cache = crd.cache(cacheName);
 
-        Map<Integer, Integer> cacheValues = range(0, txCnt / 2).boxed().collect(toMap(keys::get, identity()));
+            List<Integer> keys = primaryKeys(cache, txCnt);
 
-        cache.putAll(cacheValues);
+            Map<Integer, Integer> cacheValues = range(0, txCnt / 2).boxed().collect(toMap(keys::get, identity()));
 
-        List<Integer> txKeys = range(txCnt / 2, txCnt).mapToObj(keys::get).collect(toList());
+            cache.putAll(cacheValues);
 
-        IgniteEx clientNode = grid(nodes);
+            List<Integer> txKeys = range(txCnt / 2, txCnt).mapToObj(keys::get).collect(toList());
 
-        Collection<Transaction> txs = createTxs(clientNode, cacheName, txKeys);
+            IgniteEx clientNode = grid(nodes);
 
-        int stoppedNodeId = 2;
+            Collection<Transaction> txs = createTxs(clientNode, cacheName, txKeys);
 
-        stopGrid(stoppedNodeId);
+            int stoppedNodeId = 2;
 
-        CountDownLatch latch = new CountDownLatch(1);
+            stopGrid(stoppedNodeId);
 
-        GridTestUtils.runAsync(() -> {
-            latch.countDown();
+            CountDownLatch latch = new CountDownLatch(1);
 
-            IgniteCache<Object, Object> clientCache = clientNode.cache(DEFAULT_CACHE_NAME);
+            GridTestUtils.runAsync(() -> {
+                latch.countDown();
 
-            txKeys.forEach(clientCache::get);
-        });
+                IgniteCache<Object, Object> clientCache = clientNode.cache(DEFAULT_CACHE_NAME);
 
-        LogListener logLsnr = newLogListener();
+                txKeys.forEach(clientCache::get);
+            });
 
-        listeningLog.registerListener(logLsnr);
+            LogListener logLsnr = newLogListener();
 
-        latch.await();
+            listeningLog.registerListener(logLsnr);
 
-        for (Transaction tx : txs)
-            tx.rollback();
+            latch.await();
 
-        awaitPartitionMapExchange();
+            for (Transaction tx : txs)
+                tx.rollback();
 
-        check(cacheValues, cacheName, logLsnr, stoppedNodeId);
+            awaitPartitionMapExchange();
+
+            check(cacheValues, cacheName, logLsnr, stoppedNodeId);
+        }
     }
 
     /**
@@ -291,6 +293,8 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     private IgniteEx createCluster(int nodes) throws Exception {
+        clientNode = false;
+
         IgniteEx crd = startGrids(nodes);
 
         clientNode = true;
@@ -345,5 +349,35 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
      */
     private LogListener newLogListener() {
         return matches("Unable to send message (node left topology):").build();
+    }
+
+    /**
+     * Creating a cache configurations.
+     *
+     * @return Cache configurations.
+     */
+    private CacheConfiguration[] createCacheConfigs() {
+        return new CacheConfiguration[] {
+            createCacheConfig(DEFAULT_CACHE_NAME + "_0", FULL_SYNC),
+            createCacheConfig(DEFAULT_CACHE_NAME + "_1", PRIMARY_SYNC)
+        };
+    }
+
+    /**
+     * Creating a cache configuration.
+     *
+     * @param cacheName Cache name.
+     * @param syncMode Sync mode.
+     * @return Cache configuration.
+     */
+    private CacheConfiguration createCacheConfig(String cacheName, CacheWriteSynchronizationMode syncMode) {
+        assert nonNull(cacheName);
+        assert nonNull(syncMode);
+
+        return new CacheConfiguration(cacheName)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(2)
+            .setAffinity(new RendezvousAffinityFunction(false, 10))
+            .setWriteSynchronizationMode(syncMode);
     }
 }
