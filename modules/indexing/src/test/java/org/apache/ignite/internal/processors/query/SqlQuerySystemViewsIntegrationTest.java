@@ -33,12 +33,15 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.spi.systemview.SqlViewExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 
 /**
  * Integration test for query ssystem views.
@@ -96,7 +99,7 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
     /** */
     private void waitUntilQueriesCompletes() throws IgniteInterruptedCheckedException {
         assertTrue(GridTestUtils.waitForCondition(() -> (Long)runSql(
-            "select count(*) from ignite.local_sql_running_queries",
+            "select count(*) from " + sysSchemaName() + ".sql_queries",
             -1
         ).get(0).get(0) == 1L, QUERY_WAIT_TIMEOUT));
     }
@@ -106,6 +109,7 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(defaultCacheConfiguration())
+            .setSystemViewExporterSpi(new SqlViewExporterSpi())
             .setSqlConfiguration(new SqlConfiguration()
                 .setSqlGlobalMemoryQuota("0")
                 .setSqlQueryMemoryQuota("0")
@@ -160,8 +164,8 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
 
         for (int i = 0; i < 3; i++) {
             List<List<?>> res = runSql(
-                "select memory_current, disk_allocation_total from ignite.local_sql_running_queries where sql like '%"
-                    + locQryId + "%' order by start_time",
+                "select memory_current, disk_allocation_total from " + sysSchemaName() +
+                        ".sql_queries where sql like '%" + locQryId + "%' order by start_time",
                 -1
             );
 
@@ -203,8 +207,8 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
 
         for (int i = 0; i < 3; i++) {
             List<List<?>> res = runSql(
-                "select disk_allocation_current, disk_allocation_total from ignite.local_sql_running_queries where sql like '%"
-                    + locQryId + "%' order by start_time",
+                "select disk_allocation_current, disk_allocation_total from " + sysSchemaName() +
+                        ".sql_queries where sql like '%" + locQryId + "%' order by start_time",
                 -1
             );
 
@@ -237,8 +241,8 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
             );
 
         List<List<?>> res = runSql(
-            "select memory_min, memory_max, disk_allocation_min, disk_allocation_max from ignite.local_sql_query_history where sql like '%"
-                + locQryId + "%'",
+            "select memory_min, memory_max, disk_allocation_min, disk_allocation_max from " + sysSchemaName() +
+                    ".sql_queries_history where sql like '%" + locQryId + "%'",
             -1
         );
 

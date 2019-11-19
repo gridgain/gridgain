@@ -717,7 +717,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "true")
     public void testLocalScanQuery() throws Exception {
-        try(IgniteEx g0 = startGrid(0)) {
+        try (IgniteEx g0 = startGrid(0)) {
             IgniteCache<Integer, Integer> cache1 = g0.createCache(
                 new CacheConfiguration<Integer, Integer>("cache1")
                     .setGroupName("group1"));
@@ -781,7 +781,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "true")
     public void testScanQuery() throws Exception {
-        try(IgniteEx g0 = startGrid(0);
+        try (IgniteEx g0 = startGrid(0);
             IgniteEx g1 = startGrid(1);
             IgniteEx client1 = startGrid("client-1");
             IgniteEx client2 = startGrid("client-2")) {
