@@ -715,6 +715,12 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsage(res, idxName));
 
+        //Check OR -> IN optimization is applied.
+        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
+            " where (LANG = ?1 OR LANG = ?2) and ADDRESS = 5").setArgs(3, 4), true).getAll();
+
+        assertTrue(checkIdxUsage(res, idxName));
+
         res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
             " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?4) ORDER BY LAST_NAME")
             .setArgs(3, 4, 5, 6), true).getAll();
