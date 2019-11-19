@@ -21,6 +21,7 @@ import java.util.Collections;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
+import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -67,6 +69,7 @@ public class PageMemoryImplNoLoadTest extends PageMemoryNoLoadSelfTest {
 
         cfg.setEncryptionSpi(new NoopEncryptionSpi());
         cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
         GridTestKernalContext cctx = new GridTestKernalContext(log, cfg);
 
@@ -74,6 +77,7 @@ public class PageMemoryImplNoLoadTest extends PageMemoryNoLoadSelfTest {
         cctx.add(new GridInternalSubscriptionProcessor(cctx));
         cctx.add(new GridEncryptionManager(cctx));
         cctx.add(new GridMetricManager(cctx));
+        cctx.add(new GridSystemViewManager(cctx));
 
         GridCacheSharedContext<Object, Object> sharedCtx = new GridCacheSharedContext<>(
             cctx,
