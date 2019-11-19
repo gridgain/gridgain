@@ -31,12 +31,14 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.spi.systemview.SqlViewExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,7 +93,13 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     /** */
     private static final String SELECT_RUNNING_QUERIES = "SELECT " + Arrays.stream(RunningQueriesViewField.values())
         .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " +
-        QueryUtils.sysSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES ORDER BY START_TIME";
+        QueryUtils.sysSchemaName() + ".SQL_QUERIES ORDER BY START_TIME";
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+                .setSystemViewExporterSpi(new SqlViewExporterSpi());
+    }
 
     /**
      * @return System schema name.
@@ -233,7 +241,7 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         String sqlHist = "SELECT " + Arrays.stream(QueriesHistoryViewField.values())
             .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " + systemSchemaName()
-            + ".LOCAL_SQL_QUERY_HISTORY ORDER BY LAST_START_TIME";
+            + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
 
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
@@ -473,11 +481,11 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
             assertFalse((Boolean)cur.get(1).get(RunningQueriesViewField.LOCAL.pos()));
         }
 
-        String sql = "SELECT * FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE DURATION > 100000";
+        String sql = "SELECT * FROM " + systemSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
 
         assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
 
-        sql = "SELECT * FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE QUERY_ID='UNKNOWN'";
+        sql = "SELECT * FROM " + systemSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
 
         assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
     }

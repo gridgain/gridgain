@@ -25,24 +25,24 @@ import org.jsr166.ConcurrentLinkedDeque8;
 /**
  * Query history metrics.
  */
-public class QueryHistoryMetrics {
+public class QueryHistory {
     /** Link to internal node in eviction deque. */
     @GridToStringExclude
-    private final AtomicReference<ConcurrentLinkedDeque8.Node<QueryHistoryMetrics>> linkRef;
+    private final AtomicReference<ConcurrentLinkedDeque8.Node<QueryHistory>> linkRef;
 
     /** Query history metrics immutable wrapper. */
     private volatile QueryHistoryMetricsValue val;
 
     /** Query history metrics group key. */
-    private final QueryHistoryMetricsKey key;
+    private final QueryHistoryKey key;
 
     /**
      * Constructor with metrics.
      *
      * @param failed {@code True} query executed unsuccessfully {@code false} otherwise.
      */
-    public QueryHistoryMetrics(GridRunningQueryInfo info, boolean failed) {
-        key = new QueryHistoryMetricsKey(info.query(), info.schemaName(), info.local());
+    public QueryHistory(GridRunningQueryInfo info, boolean failed) {
+        key = new QueryHistoryKey(info.query(), info.schemaName(), info.local());
 
         long failures = failed ? 1 : 0;
         long duration = System.currentTimeMillis() - info.startTime();
@@ -59,7 +59,7 @@ public class QueryHistoryMetrics {
     /**
      * @return Metrics group key.
      */
-    public QueryHistoryMetricsKey key() {
+    public QueryHistoryKey key() {
         return key;
     }
 
@@ -69,7 +69,7 @@ public class QueryHistoryMetrics {
      * @param m Other metrics to take into account.
      * @return Aggregated metrics.
      */
-    public QueryHistoryMetrics aggregateWithNew(QueryHistoryMetrics m) {
+    public QueryHistory aggregateWithNew(QueryHistory m) {
         val = new QueryHistoryMetricsValue(
             val.execs() + m.executions(),
             val.failures() + m.failures(),
@@ -210,7 +210,7 @@ public class QueryHistoryMetrics {
     /**
      * @return Link to internal node in eviction deque.
      */
-    @Nullable public ConcurrentLinkedDeque8.Node<QueryHistoryMetrics> link() {
+    @Nullable public ConcurrentLinkedDeque8.Node<QueryHistory> link() {
         return linkRef.get();
     }
 
@@ -221,13 +221,13 @@ public class QueryHistoryMetrics {
      * @param updatedLink New link which should be set.
      * @return {@code true} If link has been updated.
      */
-    public boolean replaceLink(ConcurrentLinkedDeque8.Node<QueryHistoryMetrics> expLink,
-        ConcurrentLinkedDeque8.Node<QueryHistoryMetrics> updatedLink) {
+    public boolean replaceLink(ConcurrentLinkedDeque8.Node<QueryHistory> expLink,
+        ConcurrentLinkedDeque8.Node<QueryHistory> updatedLink) {
         return linkRef.compareAndSet(expLink, updatedLink);
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(QueryHistoryMetrics.class, this);
+        return S.toString(QueryHistory.class, this);
     }
 }

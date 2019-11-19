@@ -87,7 +87,7 @@ public class SqlMetricsOnWebConsoleSelfTest extends AbstractIndexingCommonTest {
         cache.put(100, "200");
 
         String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME " +
-            "FROM " + systemSchemaName() + ".LOCAL_SQL_QUERY_HISTORY ORDER BY LAST_START_TIME";
+            "FROM " + systemSchemaName() + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
 
         // Execute query without cache context.
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();

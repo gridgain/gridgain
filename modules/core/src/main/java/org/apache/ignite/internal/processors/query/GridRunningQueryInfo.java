@@ -74,7 +74,7 @@ public class GridRunningQueryInfo {
      * @param qryInitiatorId Query's initiator identifier.
      */
     public GridRunningQueryInfo(
-        Long id,
+        long id,
         UUID nodeId,
         String qry,
         GridCacheQueryType qryType,
@@ -100,7 +100,7 @@ public class GridRunningQueryInfo {
     /**
      * @return Query ID.
      */
-    public Long id() {
+    public long id() {
         return id;
     }
 
@@ -180,6 +180,13 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /**
+     * @return Originating node ID.
+     */
+    public UUID nodeId() {
+        return nodeId;
     }
 
     /**

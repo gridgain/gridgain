@@ -31,15 +31,16 @@ import org.apache.ignite.internal.processors.query.NestedTxMode;
 import org.apache.ignite.internal.processors.query.QueryHistory;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridStringLogger;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
- * Jdbc thin transactional Partition Awareness test.
+ * Jdbc thin transactional affinity awareness test.
  */
-public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbstractSelfTest {
+public class JdbcThinAffinityAwarenessTransactionsSelfTest extends JdbcThinAbstractSelfTest {
     /** */
-    private static final String URL = "jdbc:ignite:thin://127.0.0.1:10800..10802?partitionAwareness=true";
+    private static final String URL = "jdbc:ignite:thin://127.0.0.1:10800..10802?affinityAwareness=true";
 
     /** Nodes count. */
     private static final int NODES_CNT = 3;
@@ -58,7 +59,8 @@ public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbst
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(cacheConfiguration(DEFAULT_CACHE_NAME).setNearConfiguration(null))
-            .setMarshaller(new BinaryMarshaller());
+            .setMarshaller(new BinaryMarshaller())
+            .setGridLogger(log = new GridStringLogger());
     }
 
     /**
@@ -181,7 +183,6 @@ public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbst
         checkNodesUsage("delete from Person where _key in (1000, 2000)", 0, true);
         stmt.execute("COMMIT");
     }
-
 
     /**
      * Utility method that:
