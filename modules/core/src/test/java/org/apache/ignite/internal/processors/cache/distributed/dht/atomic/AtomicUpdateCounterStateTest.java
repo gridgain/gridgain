@@ -468,7 +468,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             IgniteEx client = startGrid("client");
 
-            Random r = new Random();
+            Random r = new Random(1000);
 
             List<Integer> keys = IntStream.range(0, 1000).boxed().collect(Collectors.toList());
 
@@ -509,7 +509,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         final int max = 100;
 
         return multithreadedAsync(() -> {
-            while (U.currentTimeMillis() < stop) {
+            //while (U.currentTimeMillis() < stop) {
                 int rangeStart = r.nextInt(primaryKeys.size() - max);
                 int range = 5 + r.nextInt(max - 5);
 
@@ -548,10 +548,10 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
                 if (batch)
                     cache.removeAll(new LinkedHashSet<Object>(rmvKeys));
-            }
+            //}
 
             log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size());
 
-        }, Runtime.getRuntime().availableProcessors(), "atomic-update-thread");
+        }, 1, "atomic-update-thread");
     }
 }
