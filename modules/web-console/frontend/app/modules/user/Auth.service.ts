@@ -51,7 +51,7 @@ export default class AuthService {
     ) {}
 
     signup(userInfo: SignupUserInfo) {
-        return this._auth('signup', this.User.normalize(userInfo));
+        return this._auth('signup', userInfo);
     }
 
     signin(signinInfo: SigninUserInfo) {

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import isNil from 'lodash/isNil';
 import {ReplaySubject, Subject} from 'rxjs';
 import {StateService} from '@uirouter/angularjs';
 import {default as MessagesFactory} from 'app/services/Messages.service';
@@ -80,18 +79,6 @@ export default function UserFactory(
             delete Demo.enabled;
 
             sessionStorage.removeItem('demoMode');
-        },
-        normalize(user: Partial<User>): Partial<User> {
-            if (isNil(user.country))
-                user.country = 'Rest of the World';
-
-            if (isNil(user.industry))
-                user.industry = 'Other';
-
-            if (isNil(user.company))
-                user.company = '-';
-
-            return user;
         },
         async save(user: Partial<User>): Promise<User> {
             try {
