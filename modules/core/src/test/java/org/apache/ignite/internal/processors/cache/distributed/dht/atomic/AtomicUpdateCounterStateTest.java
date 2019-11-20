@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
@@ -78,6 +79,8 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setStripedPoolSize(8);
 
         cfg.setFailureDetectionTimeout(1000000000L);
         cfg.setClientFailureDetectionTimeout(1000000000L);
@@ -470,7 +473,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             Random r = new Random();
 
-            List<Integer> keys = IntStream.range(0, 1000).boxed().collect(Collectors.toList());
+            List<Integer> keys = IntStream.range(0, 100000).boxed().collect(Collectors.toList());
 
             IgniteInternalFuture<?> fut = doRandomUpdates(r, keys, client.cache(DEFAULT_CACHE_NAME), U.currentTimeMillis() + 20_000);
 
@@ -490,7 +493,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
      * @return {@code True} if persistence is enabled for tests.
      */
     private boolean persistenceEnabled() {
-        return true;
+        return false;
     }
 
     /**
@@ -507,12 +510,17 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         LongAdder puts = new LongAdder();
         LongAdder removes = new LongAdder();
 
-        final int max = 100;
+        final int max = 1000;
+
+        int threads = 16;
+
+        CyclicBarrier bar = new CyclicBarrier(threads,
+            () -> log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size()));
 
         return multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
                 int rangeStart = r.nextInt(primaryKeys.size() - max);
-                int range = 5 + r.nextInt(max - 5);
+                int range = 500 + r.nextInt(max - 500);
 
                 List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + range);
 
@@ -551,8 +559,8 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
                     cache.removeAll(new LinkedHashSet<Object>(rmvKeys));
             }
 
-            log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size());
+            U.awaitQuiet(bar);
 
-        }, Runtime.getRuntime().availableProcessors(), "atomic-update-thread");
+        }, threads, "atomic-update-thread");
     }
 }

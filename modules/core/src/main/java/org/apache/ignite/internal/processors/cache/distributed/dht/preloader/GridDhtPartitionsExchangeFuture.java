@@ -2216,6 +2216,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (log.isInfoEnabled()) {
             log.info("Finish exchange future [startVer=" + initialVersion() +
                 ", resVer=" + res +
+                ", unparked=" + cctx.kernalContext().getStripedExecutorService().unparks() +
                 ", err=" + err + ']');
         }
 

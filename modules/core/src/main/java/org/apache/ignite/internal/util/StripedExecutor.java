@@ -34,6 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -370,6 +371,15 @@ public class StripedExecutor implements ExecutorService {
         return res;
     }
 
+    public long unparks() {
+        long sum = 0;
+
+        for (Stripe stripe : stripes)
+            sum += stripe.unparkCntr.sum();
+
+        return sum;
+    }
+
     /**
      * Operation not supported.
      */
@@ -502,6 +512,9 @@ public class StripedExecutor implements ExecutorService {
 
         /** Critical failure handler. */
         private IgniteInClosure<Throwable> errHnd;
+
+        /** */
+        public LongAdder unparkCntr = new LongAdder();
 
         /**
          * @param igniteInstanceName Ignite instance name.
@@ -743,8 +756,11 @@ public class StripedExecutor implements ExecutorService {
         @Override void execute(Runnable cmd) {
             queue.add(cmd);
 
-            if (parked)
+            if (parked) {
+                unparkCntr.increment();
+
                 LockSupport.unpark(thread);
+            }
 
             if(others != null && queueSize() > IGNITE_TASKS_STEALING_THRESHOLD) {
                 for (Stripe other : others) {

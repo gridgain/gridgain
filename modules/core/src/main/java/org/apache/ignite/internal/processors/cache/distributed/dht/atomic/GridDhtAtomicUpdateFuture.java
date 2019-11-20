@@ -70,6 +70,14 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
     }
 
     /** {@inheritDoc} */
+    @Override synchronized void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
+        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
+        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
+        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
+        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
+    }
+
+    /** {@inheritDoc} */
     @Override protected void addDhtKey(KeyCacheObject key, List<ClusterNode> dhtNodes) {
         assert updateCntr < updateReq.size();
 
