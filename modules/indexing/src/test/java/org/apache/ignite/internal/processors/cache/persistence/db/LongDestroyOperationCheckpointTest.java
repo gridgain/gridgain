@@ -93,7 +93,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         BPlusTree.destroyClosure = () -> {
             doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
-            if (blockDestroy.get())
+            if (blockDestroy.compareAndSet(true, false))
                 throw new RuntimeException("Aborting destroy.");
         };
     }
@@ -115,18 +115,18 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    private void testLongIndexDeletion(boolean restart) throws Exception {
+    private void testLongIndexDeletion(boolean restart, boolean rebalance) throws Exception {
         Ignite ignite = startGrids(1);
 
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create table t (id integer primary key, p integer)")).getAll();
-        cache.query(new SqlFieldsQuery("create index t_idx on t (p)")).getAll();
+        cache.query(new SqlFieldsQuery("create table t (id integer primary key, p integer, f integer)")).getAll();
+        cache.query(new SqlFieldsQuery("create index t_idx on t (p, f)")).getAll();
 
         for (int i = 0; i < 20_000; i++)
-            cache.query(new SqlFieldsQuery("insert into t (id, p) values (" + i + ", " + i + ")")).getAll();
+            cache.query(new SqlFieldsQuery("insert into t (id, p, f) values (" + i + ", " + i + ", 1)")).getAll();
 
         forceCheckpoint();
 
@@ -204,7 +204,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletion() throws Exception {
-        testLongIndexDeletion(false);
+        testLongIndexDeletion(false, false);
     }
 
     /**
@@ -215,23 +215,17 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
-        testLongIndexDeletion(true);
+        testLongIndexDeletion(true, false);
     }
 
+    /**
+     * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
+     * operation. After deletion start one more node should be included in topology.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testLongIndexDeletion1() throws Exception {
-        Ignite ignite = startGrids(1);
-
-        ignite.cluster().active(true);
-
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        cache.query(new SqlFieldsQuery("create table t (id integer primary key, p integer)")).getAll();
-        cache.query(new SqlFieldsQuery("create index t_idx on t (p)")).getAll();
-
-        for (int i = 0; i < 2000; i++)
-            cache.query(new SqlFieldsQuery("insert into t (id, p) values (" + i + ", " + i + ")")).getAll();
-
-        cache.query(new SqlFieldsQuery("select count(*) from t")).getAll();
+    public void testLongIndexDeletionWithRebalance() throws Exception {
+        testLongIndexDeletion(true, true);
     }
 }

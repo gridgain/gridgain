@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,16 +24,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -60,6 +64,7 @@ import org.apache.ignite.internal.IgniteTransactionsEx;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
@@ -95,6 +100,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
@@ -125,6 +131,7 @@ import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.InitializationProtector;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -142,6 +149,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
@@ -159,6 +167,7 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -179,13 +188,14 @@ import static org.apache.ignite.internal.IgniteComponentType.JTA;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
+import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**
  * Cache processor.
  */
 @SuppressWarnings({"unchecked", "TypeMayBeWeakened", "deprecation"})
-public class GridCacheProcessor extends GridProcessorAdapter {
+public class GridCacheProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
     /** */
     private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
         "Cannot start/stop cache within lock or transaction [cacheNames=%s, operation=%s]";
@@ -200,6 +210,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** MBean group for cache group metrics */
     private static final String CACHE_GRP_METRICS_MBEAN_GRP = "Cache groups";
+
+    private static final String STORE_PENDING_DELETE_PREFIX = "metastorage-pending-delete-";
 
     /** Shared cache context. */
     private GridCacheSharedContext<?, ?> sharedCtx;
@@ -260,6 +272,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** Caches configured on local node but not presented in a cluster during node local join. */
     private volatile List<CacheData> onlyLocallyConfiguredCaches = Collections.emptyList();
+
+    /** Metastorage. */
+    private volatile ReadWriteMetastorage metastorage;
+
+    /** Metastorage synchronization mutex. */
+    private final Object metaStorageMux = new Object();
+
+    /** */
+    private final Set<GridWorker> asyncSchemaWorkers = new GridConcurrentHashSet<>();
+
+    /** */
+    private final AtomicInteger asyncSchemaWorkersCnt = new AtomicInteger(0);
+
+    /** */
+    private final ConcurrentHashMap<String, PendingDeleteObject> pendingDeleteObjects = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -552,6 +579,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         ctx.state().cacheProcessorStarted();
         ctx.authentication().cacheProcessorStarted();
+
+        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
     }
 
     /**
@@ -626,6 +655,57 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public void awaitStarted() throws IgniteCheckedException {
         U.await(cacheStartedLatch);
+    }
+
+    /**
+     * Starts the asynchronous operation of cleaning up pending delete objects.
+     */
+    private void asyncPendingDeleteCleanup() {
+        assert pendingDeleteObjects != null;
+
+        for (PendingDeleteObject obj : pendingDeleteObjects.values()) {
+            switch (obj.type) {
+                case SQL_INDEX:
+                    asyncPendingDeleteCleanupWorker(obj, () -> {
+                        ctx.query().getIndexing().dynamicIndexDrop(obj.schemaName, obj.name, true);
+
+                        return null;
+                    });
+
+                    break;
+
+                default: log.warning("Unknown pending delete object type: " + obj.type.toString());
+            }
+        }
+    }
+
+    /**
+     * Creates a worker to clean up one pending delete object.
+     * @param obj Object.
+     * @param call Callable that should be called to do the work.
+     */
+    private void asyncPendingDeleteCleanupWorker(PendingDeleteObject obj, Callable call) {
+        String workerName = "async-schema-cleanup-task-" + asyncSchemaWorkersCnt.getAndIncrement();
+
+        GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
+            @Override protected void body() {
+                try {
+                    call.call();
+                }
+                catch (Exception e) {
+                    log.warning("Could not clean up schema pending delete object: " + obj.name, e);
+                }
+                finally {
+                    asyncSchemaWorkers.remove(this);
+                }
+            }
+        };
+
+        asyncSchemaWorkers.add(worker);
+
+        Thread asyncTask = new IgniteThread(worker);
+
+        asyncTask.start();
     }
 
     /**
@@ -885,6 +965,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         exch.onKernalStop(cancel);
 
         sharedCtx.mvcc().onStop();
+
+        awaitForWorkersStop(cancel, asyncSchemaWorkers, log);
 
         for (CacheGroupContext grp : cacheGrps.values())
             grp.onKernalStop();
@@ -5116,6 +5198,120 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         return enricher;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            if (pendingDeleteObjects.isEmpty()) {
+                try {
+                    metastorage.iterate(
+                        STORE_PENDING_DELETE_PREFIX,
+                        (key, val) -> pendingDeleteObjects.put(key, (PendingDeleteObject)val),
+                        true
+                    );
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException("Failed to iterate pending objects storage.", e);
+                }
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
+        synchronized (metaStorageMux) {
+            try {
+                for (Map.Entry<String, PendingDeleteObject> entry : pendingDeleteObjects.entrySet()) {
+                    if (metastorage.readRaw(entry.getKey()) == null)
+                        metastorage.write(entry.getKey(), entry.getValue());
+                }
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException("Failed to read key from pending objects storage.", e);
+            }
+        }
+
+        this.metastorage = metastorage;
+    }
+
+    private String pendingDeleteObjectName(PendingDeleteObjectType type, String name) {
+        return new GridStringBuilder(STORE_PENDING_DELETE_PREFIX)
+            .a(type).a("-").a(name).toString();
+    }
+
+    public void addPendingDeleteObject(PendingDeleteObject obj) {
+        String objName = pendingDeleteObjectName(obj.type, obj.name);
+
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null) {
+                    pendingDeleteObjects.put(objName, obj);
+
+                    return;
+                }
+            }
+        }
+
+        ctx.cache().context().database().checkpointReadLock();
+
+        try {
+            metastorage.write(objName, obj);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
+        }
+    }
+
+    public PendingDeleteObject getPendingDeleteObject(PendingDeleteObjectType type, String name) {
+        if (metastorage == null) {
+            synchronized (metaStorageMux) {
+                if (metastorage == null)
+                    return pendingDeleteObjects.get(pendingDeleteObjectName(type, name));
+            }
+        }
+
+        try {
+            return (PendingDeleteObject) metastorage.read(pendingDeleteObjectName(type, name));
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to read value from pending objects storage.", e);
+        }
+    }
+
+    /**
+     *
+     */
+    public enum PendingDeleteObjectType {
+        SQL_INDEX
+    }
+
+    /**
+     *
+     */
+    public static class PendingDeleteObject implements Serializable {
+        /** */
+        private PendingDeleteObjectType type;
+
+        /** */
+        private String name;
+
+        /** */
+        private String schemaName;
+
+        /** */
+        public PendingDeleteObject() {}
+
+        /** */
+        public PendingDeleteObject(PendingDeleteObjectType type, String name, String schemaName) {
+            this.type = type;
+            this.name = name;
+            this.schemaName = schemaName;
+        }
+    }
+
     /**
      * Recovery lifecycle for caches.
      */
@@ -5177,6 +5373,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             GridCacheDatabaseSharedManager.RestoreLogicalState restoreState
         ) throws IgniteCheckedException {
             restorePartitionStates(cacheGroups(), restoreState.partitionRecoveryStates());
+        }
+
+        /** {@inheritDoc} */
+        @Override public void beforeResumeWalLogging(IgniteCacheDatabaseSharedManager mgr) {
+            asyncPendingDeleteCleanup();
         }
 
         /**
