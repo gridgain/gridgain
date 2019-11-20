@@ -17,31 +17,11 @@
 import {Selector, t} from 'testcafe';
 import {CustomFormField} from '../components/FormField';
 
-export const pageSignup = {
-    email: new CustomFormField({id: 'emailInput'}),
-    password: new CustomFormField({id: 'passwordInput'}),
-    passwordConfirm: new CustomFormField({id: 'confirmInput'}),
-    firstName: new CustomFormField({id: 'firstNameInput'}),
-    lastName: new CustomFormField({id: 'lastNameInput'}),
-    company: new CustomFormField({id: 'companyInput'}),
-    country: new CustomFormField({id: 'countryInput'}),
-    signupButton: Selector('button').withText('Sign Up'),
-    async fillSignupForm({
-        email,
-        password,
-        passwordConfirm,
-        firstName,
-        lastName,
-        company,
-        country
-    }) {
-        await t
-            .typeText(this.email.control, email, {replace: true})
-            .typeText(this.password.control, password, {replace: true})
-            .typeText(this.passwordConfirm.control, passwordConfirm, {replace: true})
-            .typeText(this.firstName.control, firstName, {replace: true})
-            .typeText(this.lastName.control, lastName, {replace: true})
-            .typeText(this.company.control, company, {replace: true});
-        await this.country.selectOption(country);
-    }
-};
+export const emailInput = new CustomFormField({id: 'emailInput'});
+export const passwordInput = new CustomFormField({id: 'passwordInput'});
+export const passwordConfirmInput = new CustomFormField({id: 'confirmInput'});
+export const firstNameInput = new CustomFormField({id: 'firstNameInput'});
+export const lastNameInput = new CustomFormField({id: 'lastNameInput'});
+export const companyInput = new CustomFormField({id: 'companyInput'});
+export const countryInput = new CustomFormField({id: 'countryInput'});
+export const signupButton = Selector('button').withText('Sign Up');
