@@ -34,7 +34,6 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .filter(config.filter || function() {return true;})
                     .run({ skipJsErrors: true });
             }
             catch (err) {
