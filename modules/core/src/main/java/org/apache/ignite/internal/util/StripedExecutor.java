@@ -384,6 +384,10 @@ public class StripedExecutor implements ExecutorService {
         return sum;
     }
 
+    public void addCounter(int stripe) {
+        stripes[stripe].addCounter();
+    }
+
     /**
      * Operation not supported.
      */
@@ -487,6 +491,18 @@ public class StripedExecutor implements ExecutorService {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(StripedExecutor.class, this);
+    }
+
+    public long[] counters() {
+        long[] cntrs = new long[stripes()];
+
+        for (int i = 0; i < stripes.length; i++) {
+            Stripe stripe = stripes[i];
+
+            cntrs[i] = stripe.counter(i);
+        }
+
+        return cntrs;
     }
 
     /**
@@ -638,6 +654,16 @@ public class StripedExecutor implements ExecutorService {
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Stripe.class, this);
+        }
+
+        private LongAdder cntr = new LongAdder();
+
+        public void addCounter() {
+            cntr.increment();
+        }
+
+        public long counter(int stripe) {
+            return cntr.sum();
         }
     }
 

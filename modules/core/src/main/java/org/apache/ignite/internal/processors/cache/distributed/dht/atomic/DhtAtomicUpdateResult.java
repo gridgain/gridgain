@@ -44,7 +44,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 /**
  *
  */
-class DhtAtomicUpdateResult {
+public class DhtAtomicUpdateResult {
     /** */
     private GridCacheReturn retVal;
 

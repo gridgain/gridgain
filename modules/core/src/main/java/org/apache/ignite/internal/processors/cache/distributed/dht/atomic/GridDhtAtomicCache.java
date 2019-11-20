@@ -160,13 +160,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             }
         };
 
-    /** */
-    private final ThreadLocal<List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>>> q = new ThreadLocal<List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>>>() {
-        @Override protected List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> initialValue() {
-            return new ArrayList<>();
-        }
-    };
-
     /** Update reply closure. */
     @GridToStringExclude
     private UpdateReplyClosure updateReplyClos;
@@ -2596,15 +2589,25 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         DhtAtomicUpdateResult dhtUpdRes0,
         int stripe,
         BitSet value) {
-        final List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> locBuf = q.get();
+        // TODO FIXME remove thread local.
+        final IgniteThread thread = (IgniteThread)Thread.currentThread();
 
-        if (locBuf.isEmpty())
-            ctx.time().addTimeoutObject(new Flusher(stripe));
+        List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> locBuf = thread.locBuf;
+
+        if (locBuf.isEmpty()) {
+            thread.flusher = new Flusher(stripe);
+
+            ctx.time().addTimeoutObject(thread.flusher);
+        }
 
         if (req0 != null) {
             locBuf.add(new T4<>(nearNode0, req0, dhtUpdRes0, value));
 
-            return;
+            if (locBuf.size() < 10)
+                return;
+
+            if (!ctx.time().removeTimeoutObject(thread.flusher))
+                return;
         }
 
         // Generate version for per-stripe updates.
@@ -2662,6 +2665,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                             // Get readers before innerUpdate (reader cleared after remove).
                             //GridDhtCacheEntry.ReaderId[] readers = entry.readersUnlocked(); // TODO separate flow with near entries.
+
+                            //srvc.addCounter(stripe);
 
                             GridCacheUpdateAtomicResult updRes = entry.innerUpdate(
                                 ver,
@@ -3994,7 +3999,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     /**
      *
      */
-    private class Flusher implements GridTimeoutObject, Runnable {
+    public class Flusher implements GridTimeoutObject, Runnable {
         /** */
         private final int stripe;
 
@@ -4009,7 +4014,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         Flusher(int stripe) {
             this.stripe = stripe;
 
-            endTime = System.currentTimeMillis() + 5;
+            endTime = System.currentTimeMillis() + 15;
 
             id = IgniteUuid.randomUuid();
         }
