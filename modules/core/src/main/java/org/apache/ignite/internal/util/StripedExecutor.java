@@ -371,6 +371,10 @@ public class StripedExecutor implements ExecutorService {
         return res;
     }
 
+    public boolean empty(int stripe) {
+        return stripes[stripe].empty();
+    }
+
     public long unparks() {
         long sum = 0;
 
@@ -624,6 +628,8 @@ public class StripedExecutor implements ExecutorService {
          */
         abstract int queueSize();
 
+        abstract boolean empty();
+
         /**
          * @return Stripe's queue to string presentation.
          */
@@ -780,6 +786,10 @@ public class StripedExecutor implements ExecutorService {
             return queue.size();
         }
 
+        @Override boolean empty() {
+            return queue.isEmpty();
+        }
+
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(StripeConcurrentQueue.class, this, super.toString());
@@ -837,6 +847,10 @@ public class StripedExecutor implements ExecutorService {
             return queue.size();
         }
 
+        @Override boolean empty() {
+            return queue.isEmpty();
+        }
+
         /** {@inheritDoc} */
         @Override String queueToString() {
             return String.valueOf(queue);
@@ -892,6 +906,10 @@ public class StripedExecutor implements ExecutorService {
         /** {@inheritDoc} */
         @Override int queueSize() {
             return queue.size();
+        }
+
+        @Override boolean empty() {
+            return queue.isEmpty();
         }
 
         /** {@inheritDoc} */

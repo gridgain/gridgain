@@ -2246,7 +2246,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         final boolean conflictResolve,
         final boolean intercept,
         @Nullable final UUID subjId,
-        final String taskName,
+        @Nullable final String taskName,
         @Nullable final CacheObject prevVal,
         @Nullable final Long updateCntr,
         @Nullable final GridDhtAtomicAbstractUpdateFuture fut,

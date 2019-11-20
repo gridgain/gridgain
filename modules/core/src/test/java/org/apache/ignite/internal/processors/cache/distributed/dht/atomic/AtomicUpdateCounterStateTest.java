@@ -462,7 +462,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
     @Test
     public void testLoad() throws Exception {
-        backups = 1;
+        backups = 0;
 
         try {
             IgniteEx crd = startGrids(2);
@@ -473,7 +473,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
             Random r = new Random();
 
-            List<Integer> keys = IntStream.range(0, 100000).boxed().collect(Collectors.toList());
+            List<Integer> keys = IntStream.range(0, 10000).boxed().collect(Collectors.toList());
 
             IgniteInternalFuture<?> fut = doRandomUpdates(r, keys, client.cache(DEFAULT_CACHE_NAME), U.currentTimeMillis() + 20_000);
 
@@ -527,7 +527,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
                 List<Integer> insertedKeys = new ArrayList<>();
                 List<Integer> rmvKeys = new ArrayList<>();
 
-                boolean batch = r.nextFloat() > 0.3;
+                boolean batch = false; // r.nextFloat() > 0.3;
 
                 for (Integer key : keys) {
                     if (!batch)
