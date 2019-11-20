@@ -91,10 +91,14 @@ export class CustomFormField extends FormField {
     static ERRORS_SELECTOR = '.form-field__errors';
     constructor(...args) {
         super(...args);
+        /** @type {Selector} */
         this.errors = this.errors.addCustomMethods({
             hasError(errors, errorMessage) {
                 return !!errors.querySelectorAll(`.form-field__error [data-title*="${errorMessage}"]`).length;
             }
         });
+    }
+    hasErrorIndicator() {
+        return this.errors.find('[ignite-icon="exclamation"]').exists;
     }
 }
