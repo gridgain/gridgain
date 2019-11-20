@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -81,6 +82,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setStripedPoolSize(8);
+        cfg.setSystemThreadPoolSize(8);
 
         cfg.setFailureDetectionTimeout(1000000000L);
         cfg.setClientFailureDetectionTimeout(1000000000L);
@@ -527,7 +529,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
                 List<Integer> insertedKeys = new ArrayList<>();
                 List<Integer> rmvKeys = new ArrayList<>();
 
-                boolean batch = false; // r.nextFloat() > 0.3;
+                boolean batch = true; // r.nextFloat() > 0.3;
 
                 for (Integer key : keys) {
                     if (!batch)
@@ -555,8 +557,11 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
                     }
                 }
 
-                if (batch)
+                if (batch) {
+                    Collections.sort(rmvKeys);
+
                     cache.removeAll(new LinkedHashSet<Object>(rmvKeys));
+                }
             }
 
             U.awaitQuiet(bar);

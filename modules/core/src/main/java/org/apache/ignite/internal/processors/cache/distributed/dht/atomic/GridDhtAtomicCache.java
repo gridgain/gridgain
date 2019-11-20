@@ -92,6 +92,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -105,6 +106,7 @@ import org.apache.ignite.internal.util.typedef.CO;
 import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.T4;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -159,8 +161,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         };
 
     /** */
-    private final ThreadLocal<List<T3<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult>>> q = new ThreadLocal<List<T3<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult>>>() {
-        @Override protected List<T3<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult>> initialValue() {
+    private final ThreadLocal<List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>>> q = new ThreadLocal<List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>>>() {
+        @Override protected List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> initialValue() {
             return new ArrayList<>();
         }
     };
@@ -2024,14 +2026,33 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         StripedExecutor svc = ctx.kernalContext().getStripedExecutorService();
 
-        BitSet stripes = new BitSet(svc.stripes());
+        //BitSet stripes = new BitSet(svc.stripes());
 
-        for (KeyCacheObject object : req.keys()) {
+        Map<Integer, BitSet> stripeMap = new HashMap<>();
+
+        for (int i = 0; i < req.keys().size(); i++) {
+            KeyCacheObject object = req.keys().get(i);
+
             int part = object.partition();
             int stripe = svc.stripe(part);
 
-            stripes.set(stripe);
+            BitSet list = stripeMap.get(stripe);
+
+            if (list == null) {
+                list = new BitSet(req.keys().size());
+
+                stripeMap.put(stripe, list);
+            }
+
+            list.set(i);
         }
+
+//        for (KeyCacheObject object : req.keys()) {
+//            int part = object.partition();
+//            int stripe = svc.stripe(part);
+//
+//            stripes.set(stripe);
+//        }
 
 //        int myStripe = -1;
 //
@@ -2040,22 +2061,23 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 //
 //        Runnable delayed = null;
 
-        dhtUpdRes.counter = new AtomicInteger(stripes.cardinality());
+        dhtUpdRes.counter = new AtomicInteger(stripeMap.size());
         dhtUpdRes.finishClo = new Runnable() {
             @Override public void run() {
                 onReady(dhtUpdRes, node, req, res, completionCb);
             }
         };
 
-        for (int stripe = stripes.nextSetBit(0); stripe >= 0; stripe = stripes.nextSetBit(stripe + 1)) {
-            final int finalStripe = stripe;
+        for (Map.Entry<Integer, BitSet> entry : stripeMap.entrySet()) {
+            final int finalStripe = entry.getKey();
 
-            svc.execute(stripe, () -> {
+            svc.execute(finalStripe, () -> {
                 updateSingleBatch(
                     node,
                     req,
                     dhtUpdRes,
-                    finalStripe
+                    finalStripe,
+                    entry.getValue()
                 );
             });
         }
@@ -2566,20 +2588,21 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param expiry Expiry policy.
      * @param sndPrevVal If {@code true} sends previous value to backups.
      * @param dhtUpdRes Dht update result
+     * @param value
      */
     private void updateSingleBatch(
         ClusterNode nearNode0,
         @Nullable GridNearAtomicAbstractUpdateRequest req0,
         DhtAtomicUpdateResult dhtUpdRes0,
-        int stripe
-    ) {
-        final List<T3<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult>> locBuf = q.get();
+        int stripe,
+        BitSet value) {
+        final List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> locBuf = q.get();
 
         if (locBuf.isEmpty())
             ctx.time().addTimeoutObject(new Flusher(stripe));
 
         if (req0 != null) {
-            locBuf.add(new T3<>(nearNode0, req0, dhtUpdRes0));
+            locBuf.add(new T4<>(nearNode0, req0, dhtUpdRes0, value));
 
             return;
         }
@@ -2605,15 +2628,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             //AffinityAssignment affAssignment = ctx.affinity().assignment(topVer);
             StripedExecutor srvc = ctx.kernalContext().getStripedExecutorService();
 
-            for (T3<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult> tuple : locBuf) {
+            for (T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet> tuple : locBuf) {
                 final ClusterNode nearNode = tuple.get1();
                 final GridNearAtomicAbstractUpdateRequest req = tuple.get2();
                 final DhtAtomicUpdateResult dhtUpdRes = tuple.get3();
+                final BitSet idxs = tuple.get4();
 
                 AffinityTopologyVersion topVer = req.topologyVersion();
 
                 // Avoid iterator creation.
-                for (int i = 0; i < req.size(); i++) {
+
+                for (int i = idxs.nextSetBit(0); i >= 0; i = idxs.nextSetBit(i+1)) {
                     KeyCacheObject k = req.key(i);
 
                     if (srvc.stripe(k.partition()) != stripe)
@@ -3984,7 +4009,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         Flusher(int stripe) {
             this.stripe = stripe;
 
-            endTime = U.currentTimeMillis() + 10;
+            endTime = System.currentTimeMillis() + 5;
 
             id = IgniteUuid.randomUuid();
         }
@@ -4001,7 +4026,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         /** {@inheritDoc} */
         @Override public void run() {
-            updateSingleBatch(null, null, null, stripe);
+            updateSingleBatch(null, null, null, stripe, null);
         }
 
         /** {@inheritDoc} */

@@ -763,7 +763,7 @@ public class StripedExecutor implements ExecutorService {
             queue.add(cmd);
 
             if (parked) {
-                unparkCntr.increment();
+                //unparkCntr.increment();
 
                 LockSupport.unpark(thread);
             }
