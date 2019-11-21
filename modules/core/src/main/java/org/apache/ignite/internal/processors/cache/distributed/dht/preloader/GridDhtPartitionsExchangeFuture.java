@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-import java.util.Arrays;
 import javax.cache.expiry.EternalExpiryPolicy;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -2217,7 +2216,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (log.isInfoEnabled()) {
             log.info("Finish exchange future [startVer=" + initialVersion() +
                 ", resVer=" + res +
-                ", counters=" + Arrays.stream(cctx.kernalContext().getStripedExecutorService().counters()).boxed().collect(Collectors.toList()) +
                 ", err=" + err + ']');
         }
 

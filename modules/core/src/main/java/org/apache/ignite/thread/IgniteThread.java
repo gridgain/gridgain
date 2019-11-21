@@ -16,16 +16,8 @@
 
 package org.apache.ignite.thread;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.DhtAtomicUpdateResult;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
-import org.apache.ignite.internal.util.typedef.T4;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -68,9 +60,6 @@ public class IgniteThread extends Thread {
 
     /** */
     private boolean forbiddenToRequestBinaryMetadata;
-
-    public GridDhtAtomicCache.Flusher flusher;
-    public List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> locBuf = new ArrayList<>();
 
     /**
      * Creates thread with given worker.

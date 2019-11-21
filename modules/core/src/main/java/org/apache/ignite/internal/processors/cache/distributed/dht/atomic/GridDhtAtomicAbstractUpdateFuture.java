@@ -458,7 +458,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         GridDhtAtomicCache.UpdateReplyClosure completionCb
     ) {
         // Process delayed writes.
-        //flushDelayed();
+        flushDelayed();
 
         if (F.isEmpty(mappings)) {
             updateRes.mapping(Collections.<UUID>emptyList());
