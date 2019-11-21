@@ -292,12 +292,12 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     @Override protected void onKernalStop0(boolean cancel) {
         busyLock.block();
 
-        cctx.events().removeListener(lsnr);
-
         if (cancel)
             onCancelAtStop();
         else
             onWaitAtStop();
+
+        cctx.events().removeListener(lsnr);
     }
 
     /**
