@@ -60,11 +60,22 @@ cd $testDir
 
 # Create project, install packages, copy test code, run
 dotnet new console
+if ($LastExitCode -ne 0) {
+    throw "Failed to create .NET Core project"
+}
+
 
 $packages | % { 
     $packageId = $_.Name -replace '(.*?)\.\d\.\d\.\d\.nupkg', '$1'
-    dotnet add package $packageId -s $dir 
+    dotnet add package $packageId -s $dir
+
+    if ($LastExitCode -ne 0) {
+        throw "Failed to install package $packageId"
+    }
 }
 
 # TODO: Copy code from parent dir
 dotnet run
+if ($LastExitCode -ne 0) {
+    throw "Failed to run the test program"
+}
