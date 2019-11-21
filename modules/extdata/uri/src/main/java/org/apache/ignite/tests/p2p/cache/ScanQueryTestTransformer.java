@@ -14,36 +14,28 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.dto.action;
+package org.apache.ignite.tests.p2p.cache;
 
-import org.apache.ignite.internal.util.typedef.internal.S;
+import javax.cache.Cache;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.Query;
+import org.apache.ignite.lang.IgniteClosure;
 
 /**
- * DTO for invalid request.
+ * Test class to verify p2p class loading for transformer of Scan Query
+ * (see {@link IgniteCache#query(Query, IgniteClosure)}).
  */
-public class InvalidRequest extends Request {
-    /** Cause. */
-    private Throwable cause;
+public class ScanQueryTestTransformer implements IgniteClosure<Cache.Entry<Integer, Integer>, Integer> {
+    /** */
+    private final int scaleFactor;
 
-    /**
-     * @return Cause.
-     */
-    public Throwable getCause() {
-        return cause;
-    }
-
-    /**
-     * @param cause Cause.
-     * @return {@code This} for chaining method calls.
-     */
-    public InvalidRequest setCause(Throwable cause) {
-        this.cause = cause;
-
-        return this;
+    /** */
+    public ScanQueryTestTransformer(int scaleFactor) {
+        this.scaleFactor = scaleFactor;
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(InvalidRequest.class, this);
+    @Override public Integer apply(Cache.Entry<Integer, Integer> entry) {
+        return entry.getValue() + scaleFactor;
     }
 }
