@@ -48,6 +48,9 @@ if ($packages.Length -eq 0) {
 }
 
 
+echo "Verifying $(packages.Length) packages from '$dir'..."  
+
+
 # Create test dir
 $testDir = Join-Path $PSScriptRoot "test-proj"
 mkdir -Force $testDir
