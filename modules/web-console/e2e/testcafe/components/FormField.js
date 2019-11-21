@@ -17,6 +17,8 @@
 import {Selector, t} from 'testcafe';
 import {AngularJSSelector} from 'testcafe-angular-selectors';
 
+export const errorTooltip = Selector('.tooltip--error');
+
 export class FormField {
     static ROOT_SELECTOR = '.form-field';
     static LABEL_SELECTOR = '.form-field__label';
@@ -97,8 +99,6 @@ export class CustomFormField extends FormField {
                 return !!errors.querySelectorAll(`.form-field__error [data-title*="${errorMessage}"]`).length;
             }
         });
-    }
-    hasErrorIndicator() {
-        return this.errors.find('[ignite-icon="exclamation"]').exists;
+        this.errorIndicator = this.errors.find('[ignite-icon="exclamation"]');
     }
 }
