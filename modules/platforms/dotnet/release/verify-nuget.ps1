@@ -77,7 +77,11 @@ $packages | % {
     }
 }
 
-# TODO: Copy code from parent dir
+
+$programFile = Join-Path $PSScriptRoot "Program.cs"
+Copy-Item $programFile $testDir -force
+
+
 dotnet run
 if ($LastExitCode -ne 0) {
     throw "Failed to run the test program"
