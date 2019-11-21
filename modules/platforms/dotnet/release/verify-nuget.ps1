@@ -55,9 +55,13 @@ del -Force $testDir\*.*
 cd $testDir
 
 
-# Create project and install all packages
+# Create project, install packages, copy test code, run
 dotnet new console
+
 $packages | % { 
     $packageId = $_.Name -replace "(.*?)\.\d\.\d\.\d\.nupkg", "$1"
     dotnet add package $packageId -s $packageDir 
 }
+
+# TODO: Copy code from parent dir
+dotnet run
