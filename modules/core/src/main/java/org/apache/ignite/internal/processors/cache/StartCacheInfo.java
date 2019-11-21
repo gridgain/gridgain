@@ -41,9 +41,6 @@ public class StartCacheInfo {
     /** Disable started cache after start or not. */
     private final boolean disabledAfterStart;
 
-//    /** Cache is client or not. */
-//    private final boolean clientCache;
-
     /**
      * @param desc Cache configuration for start.
      * @param reqNearCfg Near cache configuration for start.
@@ -85,7 +82,6 @@ public class StartCacheInfo {
         this.reqNearCfg = reqNearCfg;
         this.exchTopVer = exchTopVer;
         this.disabledAfterStart = disabledAfterStart;
-//        this.clientCache = clientCache;
     }
 
     /**
@@ -122,13 +118,6 @@ public class StartCacheInfo {
     public boolean isDisabledAfterStart() {
         return disabledAfterStart;
     }
-
-//    /**
-//     * @return Start cache on client or not.
-//     */
-//    public boolean isClientCache() {
-//        return clientCache;
-//    }
 
     /** {@inheritDoc} */
     @Override public String toString() {

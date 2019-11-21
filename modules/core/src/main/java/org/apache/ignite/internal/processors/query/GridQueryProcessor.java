@@ -708,9 +708,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-//            if (cacheInfo.isClientCache() && cacheInfo.isCacheContextInited() && idx.initCacheContext(cacheInfo.cacheContext()))
-//                return;
-
             synchronized (stateMux) {
                 boolean escape = cacheInfo.config().isSqlEscapeAll();
 
@@ -877,20 +874,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             idx.onDisconnected(reconnectFut);
     }
 
-//    /**
-//     * Initialize query infrastructure for not started cache.
-//     *
-//     * @param cacheDesc Cache descriptor.
-//     * @throws IgniteCheckedException If failed.
-//     */
-//    public void initQueryStructuresForNotStartedCache(DynamicCacheDescriptor cacheDesc) throws IgniteCheckedException {
-//        QuerySchema schema = cacheDesc.schema() != null ? cacheDesc.schema() : new QuerySchema();
-//
-//        GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cacheDesc);
-//
-//        onCacheStart(cacheInfo, schema, cacheDesc.sql());
-//    }
-
     /**
      * Handle cache start. Invoked either from GridCacheProcessor.onKernalStart() method or from exchange worker.
      * When called for the first time, we initialize topology thus understanding whether current node is coordinator
@@ -916,22 +899,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             busyLock.leaveBusy();
         }
     }
-
-//    /**
-//     * Destroy H2 structures for not started caches.
-//     *
-//     * @param cacheName Cache name.
-//     */
-//    public void onCacheStop(String cacheName) {
-//        if (idx == null)
-//            return;
-//
-//        GridCacheContextInfo cacheInfo = idx.registeredCacheInfo(cacheName);
-//
-//        if (cacheInfo != null)
-//            onCacheStop(cacheInfo, true);
-//    }
-
 
     /**
      * @param cacheInfo Cache context info.

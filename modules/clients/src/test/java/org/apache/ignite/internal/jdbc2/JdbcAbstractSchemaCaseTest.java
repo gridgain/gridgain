@@ -106,9 +106,11 @@ public abstract class JdbcAbstractSchemaCaseTest extends GridCommonAbstractTest 
     @Test
     public void testSchemaName() throws Exception {
         checkSchemaConnection("test0");
+        // TODO https://ggsystems.atlassian.net/browse/GG-25962
 //        checkSchemaConnection("test1");
 //        checkSchemaConnection("\"TestCase\"");
         checkSchemaConnection("\"TEST0\"");
+        // TODO https://ggsystems.atlassian.net/browse/GG-25962
 //        checkSchemaConnection("\"TEST1\"");
 
         GridTestUtils.assertThrows(log, new Callable<Object>() {
@@ -124,8 +126,7 @@ public abstract class JdbcAbstractSchemaCaseTest extends GridCommonAbstractTest 
      * Check case (in)sensitivity of schema name that is specified in the connection url.
      */
     @Test
-    // t0d0 ticket number here
-    @Ignore
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-25962")
     public void testSchemaNameWithCreateTableIfNotExists() throws Exception {
         createTableWithImplicitSchema("test0");
 

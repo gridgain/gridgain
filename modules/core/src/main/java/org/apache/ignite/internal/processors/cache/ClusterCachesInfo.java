@@ -170,13 +170,8 @@ class ClusterCachesInfo {
 
         filterLocalJoinStartCaches(locJoinStartCaches);
 
-//        List<DynamicCacheDescriptor> initCaches = locJoinCachesCtx.initCaches();
-//
-//        filterInitCaches(initCaches);
-
         locJoinCachesCtx = new LocalJoinCachesContext(
             locJoinStartCaches,
-//            initCaches,
             registeredCacheGrps,
             registeredCaches
         );
@@ -1596,7 +1591,6 @@ class ClusterCachesInfo {
 
         if (joinDiscoData != null) {
             List<T2<DynamicCacheDescriptor, NearCacheConfiguration>> locJoinStartCaches = new ArrayList<>();
-//            List<DynamicCacheDescriptor> locJoinInitCaches = new ArrayList<>();
             locCfgsForActivation = new HashMap<>();
 
             boolean active = ctx.state().clusterState().active();
@@ -1647,13 +1641,10 @@ class ClusterCachesInfo {
                     else
                         locCfgsForActivation.put(desc.cacheName(), new T2<>(desc.cacheConfiguration(), nearCfg));
                 }
-//                else
-//                    locJoinInitCaches.add(desc);
             }
 
             locJoinCachesCtx = new LocalJoinCachesContext(
                 locJoinStartCaches,
-//                locJoinInitCaches,
                 new HashMap<>(registeredCacheGrps),
                 new HashMap<>(registeredCaches));
         }

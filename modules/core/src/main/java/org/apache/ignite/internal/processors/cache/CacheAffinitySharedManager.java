@@ -454,7 +454,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     changeReq.nearCacheConfiguration(),
                     topVer,
                     changeReq.disabledAfterStart()
-//                    true
                 );
             }).collect(Collectors.toList());
 
@@ -964,8 +963,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     req
                 );
             }
-//            else
-//                cctx.kernalContext().cache().initQueryStructuresForNotStartedCache(cacheDesc);
         }
 
         Map<StartCacheInfo, IgniteCheckedException> failedCaches = cctx.cache().prepareStartCachesIfPossible(startCacheInfos.keySet());

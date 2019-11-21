@@ -1594,16 +1594,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             .map(cacheInfo -> new StartCacheInfo(cacheInfo.get1(), cacheInfo.get2(), exchTopVer, false))
             .collect(Collectors.toList());
 
-//        locJoinCtx.initCaches()
-//            .forEach(cacheDesc -> {
-//                try {
-//                    ctx.query().initQueryStructuresForNotStartedCache(cacheDesc);
-//                }
-//                catch (Exception e) {
-//                    log.error("Can't initialize query structures for not started cache [cacheName=" + cacheDesc.cacheName() + "]");
-//                }
-//            });
-
         prepareStartCaches(startCacheInfos);
 
         context().exchange().exchangerUpdateHeartbeat();
@@ -1712,7 +1702,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             cacheInfo.getReqNearCfg(),
                             cacheInfo.getExchangeTopVer(),
                             cacheInfo.isDisabledAfterStart()
-//                            cacheInfo.isClientCache()
                         );
 
                         return null;
@@ -1830,7 +1819,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         @Nullable NearCacheConfiguration reqNearCfg,
         AffinityTopologyVersion exchTopVer,
         boolean disabledAfterStart
-//        boolean clientCache
     ) throws IgniteCheckedException {
         GridCacheContext cacheCtx = prepareCacheContext(desc, reqNearCfg, exchTopVer, disabledAfterStart);
 
@@ -2483,9 +2471,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             return ctx;
         }
-//        else
-//            //Try to unregister query structures for not started caches.
-//            ctx.query().onCacheStop(cacheName);
 
         return null;
     }

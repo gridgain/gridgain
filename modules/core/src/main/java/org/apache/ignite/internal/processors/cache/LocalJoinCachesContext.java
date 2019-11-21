@@ -36,10 +36,6 @@ public class LocalJoinCachesContext {
     @GridToStringInclude
     private List<T2<DynamicCacheDescriptor, NearCacheConfiguration>> locJoinStartCaches;
 
-//    /** */
-//    @GridToStringInclude
-//    private List<DynamicCacheDescriptor> locJoinInitCaches;
-
     /** */
     @GridToStringInclude
     private Map<Integer, CacheGroupDescriptor> cacheGrpDescs;
@@ -55,12 +51,10 @@ public class LocalJoinCachesContext {
      */
     public LocalJoinCachesContext(
         List<T2<DynamicCacheDescriptor, NearCacheConfiguration>> locJoinStartCaches,
-//        List<DynamicCacheDescriptor> locJoinInitCaches,
         Map<Integer, CacheGroupDescriptor> cacheGrpDescs,
         Map<String, DynamicCacheDescriptor> cacheDescs
     ) {
         this.locJoinStartCaches = locJoinStartCaches;
-//        this.locJoinInitCaches = locJoinInitCaches;
         this.cacheGrpDescs = cacheGrpDescs;
         this.cacheDescs = cacheDescs;
     }
@@ -71,13 +65,6 @@ public class LocalJoinCachesContext {
     public List<T2<DynamicCacheDescriptor, NearCacheConfiguration>> caches() {
         return locJoinStartCaches;
     }
-
-//    /**
-//     * @return Cache descriptors to initialize query infrastructure without start of caches.
-//     */
-//    public List<DynamicCacheDescriptor> initCaches() {
-//        return locJoinInitCaches;
-//    }
 
     /**
      * @return Group descriptors.
@@ -107,15 +94,6 @@ public class LocalJoinCachesContext {
             if (cacheNames.contains(desc.cacheName()))
                 it.remove();
         }
-
-//        Iterator<DynamicCacheDescriptor> iter = locJoinInitCaches.iterator();
-//
-//        for (; iter.hasNext(); ) {
-//            DynamicCacheDescriptor desc = iter.next();
-//
-//            if (cacheNames.contains(desc.cacheName()))
-//                iter.remove();
-//        }
     }
 
     /**
@@ -123,7 +101,6 @@ public class LocalJoinCachesContext {
      */
     public boolean isEmpty() {
         return F.isEmpty(locJoinStartCaches)
-//            && F.isEmpty(locJoinInitCaches)
             && F.isEmpty(cacheGrpDescs) && F.isEmpty(cacheDescs);
     }
 

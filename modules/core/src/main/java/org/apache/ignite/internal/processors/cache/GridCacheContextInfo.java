@@ -26,9 +26,6 @@ import org.jetbrains.annotations.Nullable;
  */
 @GridToStringExclude
 public class GridCacheContextInfo<K, V> {
-//    /** Cache is client or not. */
-//    private final boolean clientCache;
-
     /** Dynamic cache deployment ID. */
     private final IgniteUuid dynamicDeploymentId;
 
@@ -55,24 +52,8 @@ public class GridCacheContextInfo<K, V> {
         groupId = cctx.groupId();
         cacheId = cctx.cacheId();
 
-//        this.clientCache = clientCache;
-
         this.cctx = cctx;
     }
-
-//    /**
-//     * Constructor of not started cache context.
-//     *
-//     * @param cacheDesc Cache descriptor.
-//     */
-//    public GridCacheContextInfo(DynamicCacheDescriptor cacheDesc) {
-//        config = cacheDesc.cacheConfiguration();
-//        dynamicDeploymentId = cacheDesc.deploymentId();
-//        groupId = cacheDesc.groupId();
-//        cacheId = CU.cacheId(config.getName());
-//
-//        clientCache = true;
-//    }
 
     /**
      * @return Cache configuration.
@@ -141,13 +122,6 @@ public class GridCacheContextInfo<K, V> {
 
         this.cctx = cctx;
     }
-
-//    /**
-//     * @return {@code true} For client cache.
-//     */
-//    public boolean isClientCache() {
-//        return clientCache;
-//    }
 
     /**
      * @return {@code true} If Cache context is initted.
