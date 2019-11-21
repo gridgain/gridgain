@@ -33,7 +33,9 @@ import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
-public class CacheStartStopSqlTest extends GridCommonAbstractTest {
+/** */
+public class SqlCacheStartStopTest extends GridCommonAbstractTest {
+    /** */
     public static final String[] CACHE_NAMES = new String[] {
         null,
         "SQL_C1",
@@ -50,10 +52,12 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
         "SQL_C12"
     };
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
     }
 
+    /** */
     @Test
     public void testClientCacheClose() throws Exception {
         int[] idxs = IntStream.rangeClosed(1, 9).toArray();
@@ -110,6 +114,7 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     @Test
     public void testServerCacheClose() throws Exception {
         int[] idxs = IntStream.rangeClosed(1, 11).toArray();
@@ -163,16 +168,19 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     @Test
     public void testClientCacheDestroy() throws Exception {
         checkDestroy(true);
     }
 
+    /** */
     @Test
     public void testServerCacheDestroy() throws Exception {
         checkDestroy(false);
     }
 
+    /** */
     private void checkDestroy(boolean client) throws Exception {
         int[] idxs = IntStream.rangeClosed(1, 9).toArray();
 
@@ -227,30 +235,34 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     private IgniteCache<Object, Object> createCache(IgniteEx ign, int i) {
         return ign.createCache(ccfg(i));
     }
 
+    /** */
     private void createTable(IgniteEx ign, int i) {
-        String name = CACHE_NAMES[i];
-
         execSql(ign, createTableQuery(i));
     }
 
+    /** */
     private String createTableQuery(int i) {
         String name = CACHE_NAMES[i];
 
         return "create table " + name + "(id varchar primary key, s varchar) with \"cache_name=" + name + "\"";
     }
 
+    /** */
     private List<List<?>> execSql(IgniteCache<?, ?> cache, String sql, Object... args) {
         return cache.query(new SqlFieldsQuery(sql).setArgs(args)).getAll();
     }
 
+    /** */
     private List<List<?>> execSql(IgniteEx ign, String sql, Object... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql).setArgs(args), false).getAll();
     }
 
+    /** */
     private CacheConfiguration<Object, Object> ccfg(int i) {
         String name = CACHE_NAMES[i];
 
@@ -260,27 +272,35 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
                 .setTableName(name)));
     }
 
+    /** */
     private CacheConfiguration<Object, Object> ccfgWithoutSql(int i) {
         return new CacheConfiguration<>(CACHE_NAMES[i]);
     }
 
+    /** */
     private IgniteCache<Object, Object> cache(Ignite ign, int i) {
         return ign.cache(CACHE_NAMES[i]);
     }
 
+    /** */
     public static class Key {
+        /** */
         @QuerySqlField
         private final String id;
 
+        /** */
         public Key(String id) {
             this.id = id;
         }
     }
 
+    /** */
     public static class Val {
+        /** */
         @QuerySqlField
         private final String s;
 
+        /** */
         public Val(String s) {
             this.s = s;
         }
