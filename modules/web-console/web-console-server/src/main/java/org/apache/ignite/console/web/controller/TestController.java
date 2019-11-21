@@ -27,6 +27,10 @@ import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -41,17 +45,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/test")
 @Test
 public class TestController {
-    /** Accounts service. */
-    protected AccountsService accountsSrv;
+    /** Authentication manager. */
+    private AuthenticationManager authMgr;
 
-    /** */
-    protected AdminService adminSrv;
+    /** Accounts service. */
+    private AccountsService accountsSrv;
+
+    /** Admin service. */
+    private AdminService adminSrv;
 
     /**
+     * @param authMgr Authentication manager.
      * @param accountsSrv Accounts server.
      * @param adminSrv Administration server.
      */
-    public TestController(AccountsService accountsSrv, AdminService adminSrv) {
+    public TestController(AuthenticationManager authMgr, AccountsService accountsSrv, AdminService adminSrv) {
+        this.authMgr = authMgr;
         this.accountsSrv = accountsSrv;
         this.adminSrv = adminSrv;
     }
@@ -59,20 +68,28 @@ public class TestController {
     /**
      * @param params SignUp params.
      */
-    @ApiOperation(value = "Register admin user.")
+    @ApiOperation(value = "Register and authenticate under admin user.")
     @PutMapping(path = "/admins")
     public ResponseEntity<Void> registerAdmin(@Valid @RequestBody SignUpRequest params) {
         Account acc = adminSrv.registerUser(params);
 
         accountsSrv.toggle(acc.getId(), true);
 
+        Authentication authentication = authMgr.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                params.getEmail(),
+                params.getPassword())
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
         return ResponseEntity.ok().build();
     }
 
     /**
-     * @param email Account email.
+     * @param email Email mask.
      */
-    @ApiOperation(value = "Delete test users.")
+    @ApiOperation(value = "Delete test users by mask.")
     @DeleteMapping(path = "/users/{email}")
     public ResponseEntity<Void> delete(@PathVariable("email") String email) {
         JsonArray accounts = adminSrv.list(U.currentTimeMillis(), U.currentTimeMillis());
