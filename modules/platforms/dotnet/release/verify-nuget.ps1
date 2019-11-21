@@ -32,4 +32,16 @@ Directory with nupkg files to verify, defaults to ..\nupkg.
 
 #>
 
-$
+param (
+    [string]$packageDir="..\nupkg"
+)
+
+$dir = Join-Path $PSScriptRoot $packageDir
+if (!(Test-Path $dir)) {
+    throw "Path does not exist: '$packageDir' (resolved to '$dir')"
+}
+
+$packages = ls $dir *.nupkg
+if ($packages.Length -eq 0) {
+    throw "nupkg files not found in '$dir'"
+}
