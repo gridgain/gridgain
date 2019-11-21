@@ -34,6 +34,11 @@ public enum CacheCommandList {
     IDLE_VERIFY("idle_verify", new IdleVerify()),
 
     /**
+     * Check consistency of primary and backup partitions assuming that there might be concurrent updated.
+     */
+    PARTITION_RECONCILIATION("partition_reconciliation", new PartitionReconciliation()),
+
+    /**
      * Prints info regarding caches, groups or sequences.
      */
     LIST("list", new CacheViewer()),
