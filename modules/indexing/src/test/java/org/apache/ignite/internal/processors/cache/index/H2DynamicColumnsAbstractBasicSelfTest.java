@@ -768,6 +768,31 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
         }
     }
 
+    /** */
+    @Test
+    public void testDropColumnPriorToCompoundPkIndex() throws Exception {
+        try {
+            run("CREATE TABLE test (a INT, b INT, id1 INT, id2 INT, PRIMARY KEY (id1, id2))");
+
+            run("INSERT INTO test (a, b, id1, id2) VALUES (1, 2, 3, 4)");
+
+            List<List<?>> res = run("SELECT * FROM test WHERE id1 = 3 AND id2 = 4");
+
+            assertEquals(1, res.size());
+
+            run("ALTER TABLE test DROP COLUMN b");
+
+            run("SELECT * FROM test WHERE id1 = 3 AND id2 = 4");
+
+            res = run("SELECT * FROM test WHERE id1 = 3 AND id2 = 4");
+
+            assertEquals(1, res.size());
+        }
+        finally {
+            run("DROP TABLE IF EXISTS test");
+        }
+    }
+
     /**
      * Test that {@code ADD COLUMN} fails for tables that have flat value.
      * @param tblName table name.
