@@ -56,6 +56,9 @@ $testDir = Join-Path $PSScriptRoot "test-proj"
 mkdir -Force $testDir
 del -Force $testDir\*.*
 cd $testDir
+if ($LastExitCode -ne 0) {
+    throw "Failed to create test dir"
+}
 
 
 # Create project, install packages, copy test code, run
