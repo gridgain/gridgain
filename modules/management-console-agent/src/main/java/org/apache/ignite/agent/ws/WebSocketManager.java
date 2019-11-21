@@ -36,6 +36,7 @@ import org.eclipse.jetty.client.Origin;
 import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
+import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.springframework.messaging.converter.CompositeMessageConverter;
@@ -94,6 +95,9 @@ public class WebSocketManager extends GridProcessorAdapter {
      */
     public WebSocketManager(GridKernalContext ctx) {
         super(ctx);
+
+        // Disable jetty log announcer.
+        Log.getProperties().setProperty("org.eclipse.jetty.util.log.announce", "false");
     }
 
     /**
