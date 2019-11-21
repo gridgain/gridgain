@@ -15,14 +15,18 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.Ignite;
+import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -33,6 +37,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 
 /**
@@ -115,30 +120,40 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    private void testLongIndexDeletion(boolean restart, boolean rebalance) throws Exception {
-        Ignite ignite = startGrids(1);
+    private void testLongIndexDeletion(
+        boolean restart,
+        boolean rebalance,
+        boolean multipleNodes,
+        boolean multicolumn
+    ) throws Exception {
+        int nodeCnt = 1;
+
+        IgniteEx ignite = startGrids(1);
+
+        if (multipleNodes) {
+            startGrid(1);
+
+            nodeCnt++;
+        }
 
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create table t (id integer primary key, p integer, f integer)")).getAll();
-        cache.query(new SqlFieldsQuery("create index t_idx on t (p, f)")).getAll();
+        query(cache, "create table t (id integer primary key, p integer, f integer, p integer)");
+
+        createIndex(cache, multicolumn);
 
         for (int i = 0; i < 20_000; i++)
-            cache.query(new SqlFieldsQuery("insert into t (id, p, f) values (" + i + ", " + i + ", 1)")).getAll();
+            query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
 
         forceCheckpoint();
 
-        // Ensure that index is used before drop.
-        String plan = cache.query(new SqlFieldsQuery("explain select id, p from t where p = 0")).getAll()
-            .get(0).get(0).toString();
-
-        assertTrue(plan, plan.toUpperCase().contains("T_IDX"));
+        checkSelectAndPlan(cache, true);
 
         final IgniteCache<Integer, Integer> finalCache = cache;
 
-        Thread dropIndex = new Thread(() -> {
+        Thread dropIdx = new Thread(() -> {
             testLog.info("Starting index drop");
 
             finalCache.query(new SqlFieldsQuery("drop index t_idx")).getAll();
@@ -148,12 +163,25 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         indexDropProcessListener.reset();
 
-        dropIndex.start();
+        dropIdx.start();
 
         // Waiting for some modified pages
         doSleep(500);
 
+        // Now checkpoint will happen during index deletion before it completes.
         forceCheckpoint();
+
+        if (rebalance) {
+            startGrid(nodeCnt);
+
+            nodeCnt++;
+
+            Collection<ClusterNode> blt = IntStream.range(0, nodeCnt)
+                .mapToObj(i -> grid(i).localNode())
+                .collect(toList());
+
+            ignite.cluster().setBaselineTopology(blt);
+        }
 
         if (restart) {
             blockDestroy.set(true);
@@ -162,38 +190,65 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             blockDestroy.set(false);
 
-            ignite = startGrids(1);
+            ignite = startGrid(0);
 
-            ignite.cluster().active(true);
+            if (!multipleNodes)
+                ignite.cluster().active(true);
 
             cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-            //cache.query(new SqlFieldsQuery("drop index t_idx")).getAll();
 
             try {
                 for (int i = 0; i < 20_000; i += 10)
                     cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
-            } catch (Exception ignored) {
+            }
+            catch (Exception ignored) {
                 // No-op: tree is concurrently destroyed.
             }
 
             sleep(10000);
         }
         else
-            dropIndex.join();
+            dropIdx.join();
 
+        assertFalse(blockedSystemCriticalThreadLsnr.check());
+
+        assertTrue(indexDropProcessListener.check());
+
+        checkSelectAndPlan(cache, false);
+
+        //Trying to recreate index.
+        createIndex(cache, multicolumn);
+
+        checkSelectAndPlan(cache, true);
+    }
+
+    /** */
+    private void checkSelectAndPlan(IgniteCache<Integer, Integer> cache, boolean idxShouldExist) {
         // Ensure that index is not used after it was dropped.
-        plan = cache.query(new SqlFieldsQuery("explain select id, p from t where p = 0")).getAll()
+        String plan = query(cache, "explain select id, p from t where p = 0")
             .get(0).get(0).toString();
 
-        assertFalse(plan, plan.toUpperCase().contains("T_IDX"));
+        assertEquals(plan, idxShouldExist, plan.toUpperCase().contains("T_IDX"));
 
         // Trying to do a select.
-        cache.query(new SqlFieldsQuery("select id, p from t where p = 0")).getAll();
+        String val = query(cache, "select p from t where p = 1000").get(0).get(0).toString();
 
-        //assertFalse(blockedSystemCriticalThreadLsnr.check());
+        assertEquals("1000", val);
+    }
 
-        //assertTrue(indexDropProcessListener.check());
+    /** */
+    private void createIndex(IgniteCache<Integer, Integer> cache, boolean multicolumn) {
+        query(cache, "create index t_idx on t (p" + (multicolumn ? ", f)" : ")"));
+    }
+
+    /** */
+    private List<List<?>> query(IgniteCache<Integer, Integer> cache, String qry) {
+        return cache.query(new SqlFieldsQuery(qry)).getAll();
+    }
+
+    /** */
+    private List<List<?>> query(IgniteCache<Integer, Integer> cache, String qry, Object... args) {
+        return cache.query(new SqlFieldsQuery(qry).setArgs(args)).getAll();
     }
 
     /**
@@ -204,7 +259,12 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false);
+        testLongIndexDeletion(false, false, false, false);
+    }
+
+    @Test
+    public void testLongMulticolumnIndexDeletion() throws Exception {
+        testLongIndexDeletion(false, false, false, true);
     }
 
     /**
@@ -215,7 +275,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
-        testLongIndexDeletion(true, false);
+        testLongIndexDeletion(true, false, false, false);
     }
 
     /**
@@ -226,6 +286,11 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRebalance() throws Exception {
-        testLongIndexDeletion(true, true);
+        testLongIndexDeletion(false, true, false, false);
+    }
+
+    @Test
+    public void testLongIndexDeletionWithMultipleNodes() throws Exception {
+        testLongIndexDeletion(true, false, true, false);
     }
 }
