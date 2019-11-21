@@ -48,7 +48,7 @@ if ($packages.Length -eq 0) {
 }
 
 
-echo "Verifying $(packages.Length) packages from '$dir'..."  
+echo "Verifying $($packages.Length) packages from '$dir'..."  
 
 
 # Create test dir
@@ -62,8 +62,8 @@ cd $testDir
 dotnet new console
 
 $packages | % { 
-    $packageId = $_.Name -replace "(.*?)\.\d\.\d\.\d\.nupkg", "$1"
-    dotnet add package $packageId -s $packageDir 
+    $packageId = $_.Name -replace '(.*?)\.\d\.\d\.\d\.nupkg', '$1'
+    dotnet add package $packageId -s $dir 
 }
 
 # TODO: Copy code from parent dir
