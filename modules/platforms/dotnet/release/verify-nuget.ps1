@@ -29,13 +29,14 @@ Requirements:
 .PARAMETER packageDir
 Directory with nupkg files to verify, defaults to ..\nupkg.
 
-
 #>
 
 param (
     [string]$packageDir="..\nupkg"
 )
 
+
+# Find NuGet packages (*.nupkg)
 $dir = Join-Path $PSScriptRoot $packageDir
 if (!(Test-Path $dir)) {
     throw "Path does not exist: '$packageDir' (resolved to '$dir')"
@@ -44,4 +45,19 @@ if (!(Test-Path $dir)) {
 $packages = ls $dir *.nupkg
 if ($packages.Length -eq 0) {
     throw "nupkg files not found in '$dir'"
+}
+
+
+# Create test dir
+$testDir = Join-Path $PSScriptRoot "test-proj"
+mkdir -Force $testDir
+del -Force $testDir\*.*
+cd $testDir
+
+
+# Create project and install all packages
+dotnet new console
+$packages | % { 
+    $packageId = $_.Name -replace "(.*?)\.\d\.\d\.\d\.nupkg", "$1"
+    dotnet add package $packageId -s $packageDir 
 }
