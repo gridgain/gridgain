@@ -2603,7 +2603,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (req0 != null) {
             locBuf.add(new T4<>(nearNode0, req0, dhtUpdRes0, value));
 
-            if (locBuf.size() < 100)
+            if (locBuf.size() < 10)
                 return;
 
             if (!ctx.time().removeTimeoutObject(thread.flusher))
@@ -4014,7 +4014,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         Flusher(int stripe) {
             this.stripe = stripe;
 
-            endTime = U.currentTimeMillis() + 50;
+            endTime = System.currentTimeMillis() + 15;
 
             id = IgniteUuid.randomUuid();
         }

@@ -80,6 +80,9 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setStripedPoolSize(8);
+        cfg.setSystemThreadPoolSize(8);
+
         cfg.setFailureDetectionTimeout(1000000000L);
         cfg.setClientFailureDetectionTimeout(1000000000L);
 
@@ -510,14 +513,14 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
         final int max = 100;
 
-        int threads = 128;
+        int threads = 16;
 
         CyclicBarrier bar = new CyclicBarrier(threads,
             () -> log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size()));
 
         return multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
-                int rangeStart = r.nextInt(primaryKeys.size() - max);
+                int rangeStart = r.nextInt(primaryKeys.size() - max + 1);
                 int range = max;
 
                 List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + range);
