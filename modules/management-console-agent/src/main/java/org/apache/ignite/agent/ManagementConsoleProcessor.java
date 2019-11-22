@@ -225,7 +225,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
-     * @return {@code true} if tracing is enable.
+     * @return {@code True} if tracing is enable.
      */
     boolean isTracingEnabled() {
         return IgniteFeatures.allNodesSupports(ctx, ctx.discovery().allNodes(), TRACING);
