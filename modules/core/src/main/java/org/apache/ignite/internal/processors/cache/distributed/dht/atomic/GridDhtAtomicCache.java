@@ -2603,25 +2603,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (req0 != null) {
             locBuf.add(new T4<>(nearNode0, req0, dhtUpdRes0, value));
 
-            if (locBuf.size() < 32)
+            if (locBuf.size() < 10)
                 return;
 
             if (!ctx.time().removeTimeoutObject(thread.flusher))
                 return;
         }
-        else {
-            if (locBuf.size() > thread.last && locBuf.size() != 32) {
-                thread.last = locBuf.size();
-
-                thread.flusher = new Flusher(stripe);
-
-                ctx.time().addTimeoutObject(thread.flusher);
-
-                return;
-            }
-        }
-
-        thread.last = 0;
 
         // Generate version for per-stripe updates.
         GridCacheVersion ver = ctx.versions().next(topology().readyTopologyVersion());
@@ -4027,7 +4014,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         Flusher(int stripe) {
             this.stripe = stripe;
 
-            endTime = System.currentTimeMillis() + 5;
+            endTime = System.currentTimeMillis() + 15;
 
             id = IgniteUuid.randomUuid();
         }
