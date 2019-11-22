@@ -89,8 +89,10 @@ public class IgnitePutAllBenchmark extends IgniteCacheAbstractBenchmark<Integer,
             if (args.singleStripe())
                 stripesMap = U.newHashMap(srvrCnt);
 
-            for (; vals.size() < args.batch(); ) {
-                int key = nextRandom(args.range());
+            int start = nextRandom(args.range() - args.batch() + 1);
+
+            for (int i = 0; i < args.batch(); i++) {
+                int key = start + i;
 
                 if (args.collocated() && !aff.isPrimary(
                     node,
