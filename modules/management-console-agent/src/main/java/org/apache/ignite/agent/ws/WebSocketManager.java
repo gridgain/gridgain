@@ -16,12 +16,9 @@
 
 package org.apache.ignite.agent.ws;
 
-import java.io.ByteArrayInputStream;
-import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.security.KeyStore;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteLogger;
@@ -30,14 +27,11 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.HttpProxy;
-import org.eclipse.jetty.client.Origin;
-import org.eclipse.jetty.client.ProxyConfiguration;
-import org.eclipse.jetty.client.Socks4Proxy;
-import org.eclipse.jetty.client.util.BasicAuthentication;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.websocket.client.WebSocketClient;
+import org.glassfish.tyrus.client.ClientManager;
+import org.glassfish.tyrus.client.ClientProperties;
+import org.glassfish.tyrus.client.SslContextConfigurator;
+import org.glassfish.tyrus.client.SslEngineConfigurator;
+import org.glassfish.tyrus.client.auth.Credentials;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
@@ -46,22 +40,25 @@ import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.WebSocketHttpHeaders;
-import org.springframework.web.socket.client.jetty.JettyWebSocketClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import static java.net.Proxy.NO_PROXY;
-import static java.net.Proxy.Type.SOCKS;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
-import static org.apache.ignite.agent.utils.AgentUtils.EMPTY;
-import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
+import static org.glassfish.tyrus.client.ClientManager.createClient;
+import static org.glassfish.tyrus.client.ClientProperties.PROXY_URI;
+import static org.glassfish.tyrus.client.ClientProperties.SSL_ENGINE_CONFIGURATOR;
+import static org.glassfish.tyrus.client.ThreadPoolConfig.defaultConfig;
+import static org.glassfish.tyrus.container.grizzly.client.GrizzlyClientProperties.SELECTOR_THREAD_POOL_CONFIG;
 
 /**
  * Web socket manager.
  */
 public class WebSocketManager extends GridProcessorAdapter {
+    /** Empty string array. */
+    private static final String[] EMPTY = new String[0];
+
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 
@@ -109,7 +106,7 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         Thread.sleep(reconnectCnt * 1000);
 
-        client = new WebSocketStompClient(createWebSocketClient(uri, cfg));
+        client = new WebSocketStompClient(new StandardWebSocketClient(createWebSocketClient(uri, cfg)));
 
         client.setMessageConverter(getMessageConverter());
 
@@ -214,42 +211,27 @@ public class WebSocketManager extends GridProcessorAdapter {
     /**
      * @param uri Uri.
      * @param cfg Config.
-     * @return Jetty websocket client.
+     * @return Tyrus client.
      */
-    private JettyWebSocketClient createWebSocketClient(URI uri, ManagementConfiguration cfg) throws Exception {
-        HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
-        
-        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
-        configureProxy(log, httpClient, uri);
+    private ClientManager createWebSocketClient(URI uri, ManagementConfiguration cfg) {
+        ClientManager client = createClient();
 
-        httpClient.setName("mgmt-console-http-client");
-        httpClient.addBean(httpClient.getExecutor());
+        client.getProperties().put(SELECTOR_THREAD_POOL_CONFIG, defaultConfig().setPoolName("mgmt-console-ws-client"));
 
-        WebSocketClient webSockClient = new WebSocketClient(httpClient);
+        if ("wss".equals(uri.getScheme()))
+            client.getProperties().put(SSL_ENGINE_CONFIGURATOR, createSslEngineConfigurator(log, cfg));
 
-        webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
-        webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
+        configureProxy(client, uri);
 
-        webSockClient.addBean(httpClient);
-
-        return new JettyWebSocketClient(webSockClient) {
-            @Override public void stop() {
-                try {
-                    webSockClient.stop();
-                }
-                catch (Exception ex) {
-                    throw new IllegalStateException("Failed to stop Jetty WebSocketClient", ex);
-                }
-            }
-        };
+        return client;
     }
 
     /**
      * @param log Logger.
      * @param cfg Config.
+     * @return SSL engine configurator.
      */
-    @SuppressWarnings("deprecation")
-    private SslContextFactory createServerSslFactory(IgniteLogger log, ManagementConfiguration cfg) {
+    private SslEngineConfigurator createSslEngineConfigurator(IgniteLogger log, ManagementConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
         if (trustAll && !F.isEmpty(cfg.getConsoleTrustStore())) {
@@ -259,136 +241,72 @@ public class WebSocketManager extends GridProcessorAdapter {
             trustAll = false;
         }
 
-        boolean ssl = trustAll || !F.isEmpty(cfg.getConsoleTrustStore()) || !F.isEmpty(cfg.getConsoleKeyStore());
+        boolean isNeedClientAuth = !F.isEmpty(cfg.getConsoleTrustStore()) || !F.isEmpty(cfg.getConsoleKeyStore());
 
-        if (!ssl)
-            return new SslContextFactory();
+        SslContextConfigurator sslCtxConfigurator = new SslContextConfigurator();
 
-        return sslContextFactory(
-                cfg.getConsoleKeyStore(),
-                cfg.getConsoleKeyStorePassword(),
-                trustAll,
-                cfg.getConsoleTrustStore(),
-                cfg.getConsoleTrustStorePassword(),
-                cfg.getCipherSuites()
-        );
+        if (!F.isEmpty(cfg.getConsoleTrustStore()))
+            sslCtxConfigurator.setTrustStoreFile(cfg.getConsoleTrustStore());
+
+        if (!F.isEmpty(cfg.getConsoleTrustStorePassword()))
+            sslCtxConfigurator.setTrustStorePassword(cfg.getConsoleTrustStorePassword());
+
+        if (!F.isEmpty(cfg.getConsoleKeyStore()))
+            sslCtxConfigurator.setKeyStoreFile(cfg.getConsoleKeyStore());
+
+        if (!F.isEmpty(cfg.getConsoleKeyStorePassword()))
+            sslCtxConfigurator.setKeyStorePassword(cfg.getConsoleKeyStorePassword());
+
+        SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(sslCtxConfigurator, true, isNeedClientAuth, false);
+
+        if (!F.isEmpty(cfg.getCipherSuites()))
+            sslEngineConfigurator.setEnabledCipherSuites(cfg.getCipherSuites().toArray(EMPTY));
+
+        if (trustAll)
+            sslEngineConfigurator.setHostnameVerifier((hostname, session) -> true);
+
+        return sslEngineConfigurator;
     }
 
     /**
-     * @param content Key store content.
-     * @param pwd Password.
-     */
-    private KeyStore keyStore(String content, String pwd) throws Exception {
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-
-        keyStore.load(new ByteArrayInputStream(content.getBytes(UTF_8)), pwd != null ? pwd.toCharArray() : null);
-
-        return keyStore;
-    }
-
-    /**
-     *
-     * @param keyStore Path to key store.
-     * @param keyStorePwd Optional key store password.
-     * @param trustAll Whether we should trust for self-signed certificate.
-     * @param trustStore Path to trust store.
-     * @param trustStorePwd Optional trust store password.
-     * @param ciphers Optional list of enabled cipher suites.
-     * @return SSL context factory.
-     */
-    @SuppressWarnings("deprecation")
-    private SslContextFactory sslContextFactory(
-            String keyStore,
-            String keyStorePwd,
-            boolean trustAll,
-            String trustStore,
-            String trustStorePwd,
-            List<String> ciphers
-    ) {
-        SslContextFactory sslCtxFactory = new SslContextFactory();
-
-        if (!F.isEmpty(keyStore)) {
-            try {
-                sslCtxFactory.setKeyStore(keyStore(keyStore, keyStorePwd));
-            }
-            catch (Exception e) {
-                log.warning("Failed to load server keyStore", e);
-            }
-        }
-
-        if (trustAll) {
-            // TODO GG-25519: sslCtxFactory.setHostnameVerifier((hostname, session) -> true); available in Jetty >= 9.4.15.x
-            sslCtxFactory.setTrustAll(true);
-        }
-        else if (!F.isEmpty(trustStore)) {
-            try {
-                sslCtxFactory.setKeyStore(keyStore(trustStore, trustStorePwd));
-            }
-            catch (Exception e) {
-                log.warning("Failed to load server keyStore", e);
-            }
-        }
-
-        if (!F.isEmpty(ciphers))
-            sslCtxFactory.setIncludeCipherSuites(ciphers.toArray(EMPTY));
-
-        return sslCtxFactory;
-    }
-
-    /**
+     * @param mgr Manager.
      * @param srvUri Server uri.
      */
-    private void configureProxy(IgniteLogger log, HttpClient httpClient, URI srvUri) {
-        try {
-            boolean secure = "https".equalsIgnoreCase(srvUri.getScheme());
+    private void configureProxy(ClientManager mgr, URI srvUri) {
+        Optional<String> proxyAddress = ProxySelector.getDefault().select(srvUri).stream()
+            .filter(p -> !p.equals(NO_PROXY))
+            .map(p -> p.address().toString()).findFirst();
 
-            List<ProxyConfiguration.Proxy> proxies = ProxySelector.getDefault().select(srvUri).stream()
-                .filter(p -> !p.equals(NO_PROXY))
-                .map(p -> {
-                    InetSocketAddress inetAddr = (InetSocketAddress)p.address();
+        if (proxyAddress.isPresent()) {
+            mgr.getProperties().put(PROXY_URI, proxyAddress.get());
 
-                    Origin.Address addr = new Origin.Address(inetAddr.getHostName(), inetAddr.getPort());
-
-                    if (p.type() == SOCKS)
-                        return new Socks4Proxy(addr, secure);
-
-                    return new HttpProxy(addr, secure);
-                })
-                .collect(toList());
-
-            httpClient.getProxyConfiguration().getProxies().addAll(proxies);
-
-            addAuthentication(httpClient, proxies);
-        }
-        catch (Exception e) {
-            log.warning("Failed to configure proxy.", e);
+            addAuthentication(mgr, proxyAddress.get());
         }
     }
 
     /**
-     * @param httpClient Http client.
-     * @param proxies Proxies.
+     * @param mgr Manager.
+     * @param proxyAddr Proxy address.
      */
-    private void addAuthentication(HttpClient httpClient, List<ProxyConfiguration.Proxy> proxies) {
-        proxies.forEach(p -> {
-            String user, pwd;
+    private void addAuthentication(ClientManager mgr, String proxyAddr) {
+        String user, pwd;
 
-            if (p instanceof HttpProxy) {
-                String scheme = p.getURI().getScheme();
+        if (proxyAddr.startsWith("http")) {
+            user = System.getProperty("http.proxyUsername");
 
-                user = System.getProperty(scheme + ".proxyUsername");
+            pwd = System.getProperty("http.proxyPassword");
+        }
+        else if (proxyAddr.startsWith("https")) {
+            user = System.getProperty("https.proxyUsername");
 
-                pwd = System.getProperty(scheme + ".proxyPassword");
-            }
-            else {
-                user = System.getProperty("java.net.socks.username");
+            pwd = System.getProperty("https.proxyPassword");
+        }
+        else {
+            user = System.getProperty("java.net.socks.username");
 
-                pwd = System.getProperty("java.net.socks.password");
-            }
+            pwd = System.getProperty("java.net.socks.password");
+        }
 
-            httpClient.getAuthenticationStore().addAuthentication(
-                new BasicAuthentication(p.getURI(), ANY_REALM, user, pwd)
-            );
-        });
+        mgr.getProperties().put(ClientProperties.CREDENTIALS, new Credentials(user, pwd));
     }
 }

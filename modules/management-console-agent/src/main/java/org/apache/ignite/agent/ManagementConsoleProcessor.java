@@ -46,7 +46,6 @@ import org.apache.ignite.internal.processors.management.ManagementConsoleProcess
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -262,8 +261,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                     break;
                 }
-                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
-                    EOFException.class, ConnectionLostException.class)) {
+                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, EOFException.class, ConnectionLostException.class)) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
