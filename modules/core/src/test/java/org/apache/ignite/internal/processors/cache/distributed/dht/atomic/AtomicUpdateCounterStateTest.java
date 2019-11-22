@@ -513,7 +513,7 @@ public class AtomicUpdateCounterStateTest extends GridCommonAbstractTest {
 
         final int max = 100;
 
-        int threads = 16;
+        int threads = 64;
 
         CyclicBarrier bar = new CyclicBarrier(threads,
             () -> log.info("Atomic: puts=" + puts.sum() + ", removes=" + removes.sum() + ", size=" + cache.size()));

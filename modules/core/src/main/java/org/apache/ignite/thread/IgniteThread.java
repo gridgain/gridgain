@@ -71,6 +71,8 @@ public class IgniteThread extends Thread {
 
     public GridDhtAtomicCache.Flusher flusher;
     public List<T4<ClusterNode, GridNearAtomicAbstractUpdateRequest, DhtAtomicUpdateResult, BitSet>> locBuf = new ArrayList<>();
+    public long last;
+
 
     /**
      * Creates thread with given worker.
