@@ -21,6 +21,7 @@ import { Bean } from './Beans';
 import AbstractTransformer from './AbstractTransformer';
 import StringBuilder from './StringBuilder';
 import VersionService from 'app/services/Version.service';
+import crawl from 'tree-crawl';
 
 const versionService = new VersionService();
 
@@ -604,6 +605,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @returns {StringBuilder}
      */
     static _setProperties(sb = new StringBuilder(), bean, vars = [], limitLines = false, id = bean.id) {
+        console.count('_setProperties');
         _.forEach(bean.properties, (prop, idx) => {
             switch (prop.clsName) {
                 case 'DATA_SOURCE':
@@ -799,6 +801,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     static _collectMapImports(prop) {
+        console.count('_collectMapImports');
         const imports = [];
 
         imports.push(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
@@ -814,7 +817,12 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         return imports;
     }
 
+    /**
+     * @returns {string[]}
+     */
     static collectBeanImports(bean) {
+        console.count('collectBeanImports');
+        console.log('bean', bean);
         const imports = [bean.clsName];
 
         _.forEach(bean.arguments, (arg) => {
@@ -842,6 +850,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         if (_.includes(STORE_FACTORY, bean.clsName))
             imports.push('javax.sql.DataSource', 'javax.cache.configuration.Factory');
 
+        console.log('imports', imports);
         return imports;
     }
 
@@ -850,6 +859,8 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @returns {Array.<String>}
      */
     static collectPropertiesImports(props) {
+        console.count('collectPropertiesImports');
+        console.log(props);
         const imports = [];
 
         _.forEach(props, (prop) => {
@@ -991,6 +1002,86 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     /**
+     * @returns {string[]}
+     */
+    static collectConfigurationImports(cfg) {
+        let visits = 0;
+        const count = () => visits += 1;
+        const imports = new Set();
+        const addImport = (value) => {
+            if (value) imports.add(value);
+        };
+        const getherImports = (prop) => {
+            if (!prop) return;
+            switch (prop.clsName) {
+                case 'DATA_SOURCE':
+                    addImport(prop.value.clsName);
+                    break;
+                case 'PROPERTY':
+                case 'PROPERTY_CHAR':
+                case 'PROPERTY_INT':
+                    addImport('java.io.InputStream');
+                    addImport('java.util.Properties');
+                    break;
+                case 'BEAN':
+                    addImport(prop.typeClsName);
+                    break;
+                case 'ARRAY':
+                    if (!prop.varArg) addImport(prop.typeClsName);
+                    break;
+                case 'COLLECTION':
+                    addImport(prop.typeClsName);
+                    break;
+                case 'ENUM_COLLECTION':
+                    addImport(prop.typeClsName);
+                    if (prop.implClsName === 'java.util.ArrayList')
+                        addImport('java.util.Arrays');
+                    else
+                        addImport(prop.implClsName);
+                    break;
+                case 'MAP':
+                    addImport(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
+                    addImport(prop.keyClsName);
+                    addImport(prop.valClsName);
+
+                    if (prop.keyClsGenericType)
+                        addImport(prop.keyClsGenericType);
+
+                    if (prop.valClsGenericType)
+                        addImport(prop.valClsGenericType);
+                    break;
+                default:
+                    addImport(prop.clsName);
+            }
+        };
+        const visit = (node) => {
+            count();
+            getherImports(node);
+        };
+        crawl(cfg, visit, {
+            getChildren: (node, context) => {
+                if (!node) return [];
+                if (node.clsName === 'BEAN') return [node.value];
+                if (node.clsName === 'ARRAY') return node.items;
+                const args = (node.arguments || []).map((arg) => {
+                    switch (arg.clasName) {
+                        case 'BEAN':
+                            return arg.value;
+                        default:
+                            return [];
+                    }
+                });
+                const props = (node.properties || []).map((arg) => {
+                    return arg;
+                });
+                return [...args, ...props];
+            }
+        });
+        console.log(visits);
+        return [...imports.values()];
+    }
+
+    /**
      * Build Java startup class with configuration.
      *
      * @param {Bean} cfg
@@ -1008,7 +1099,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         sb.append(`package ${pkg};`);
         sb.emptyLine();
 
-        const imports = this.collectBeanImports(cfg);
+        const imports = this.collectConfigurationImports(cfg);
 
         const nearCacheBeans = [];
 
@@ -1020,7 +1111,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
                 nearCacheBean.cacheName = cache.name;
 
-                imports.push(...this.collectBeanImports(nearCacheBean));
+                imports.push(...this.collectConfigurationImports(nearCacheBean));
 
                 nearCacheBeans.push(nearCacheBean);
             });
@@ -1170,6 +1261,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @returns {StringBuilder}
      */
     static pojo(fullClsName, fields, addConstructor) {
+        console.count('pojo');
         const dotIdx = fullClsName.lastIndexOf('.');
 
         const pkg = fullClsName.substring(0, dotIdx);
