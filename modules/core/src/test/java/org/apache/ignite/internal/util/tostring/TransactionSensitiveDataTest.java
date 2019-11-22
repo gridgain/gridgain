@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareFutureAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -46,6 +47,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -57,7 +60,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
     /** Listener log messages. */
-    private final ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+    private static ListeningTestLogger testLog;
 
     /** Network timeout. */
     private static final long NETWORK_TIMEOUT = 500;
@@ -69,10 +72,22 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     private boolean client;
 
     /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        setFieldValue(GridNearTxPrepareFutureAdapter.class, "log", null);
+        ((AtomicReference)getFieldValue(GridNearTxPrepareFutureAdapter.class, "logRef")).set(null);
+
+        testLog = new ListeningTestLogger(false, log);
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         testLog.clearListeners();
 
         stopAllGrids();
+
+        clearGridToStringClassCache();
 
         super.afterTest();
     }
@@ -180,7 +195,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         cache.put(0, binPerson);
 
         GridTestUtils.runAsync(() -> {
-            logLsnr.check(4 * NETWORK_TIMEOUT);
+            logLsnr.check(10 * NETWORK_TIMEOUT);
 
             tx.commit();
 
