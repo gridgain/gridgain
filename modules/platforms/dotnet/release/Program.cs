@@ -8,7 +8,6 @@ using Apache.Ignite.Core.Client;
 using Apache.Ignite.Core.Discovery.Tcp;
 using Apache.Ignite.Core.Discovery.Tcp.Static;
 using Apache.Ignite.Linq;
-using Apache.Ignite.NLog;
 
 namespace test_proj
 {
@@ -25,8 +24,7 @@ namespace test_proj
                         Endpoints = new[] {"127.0.0.1:47500"}
                     },
                     SocketTimeout = TimeSpan.FromSeconds(0.3)
-                },
-                Logger = new IgniteNLogLogger()
+                }
             };
 
             using (var ignite = Ignition.Start(cfg))
@@ -70,8 +68,10 @@ namespace test_proj
             Name = $"Person-{age}";
         }
 
+        [QuerySqlField]
         public string Name { get; }
         
+        [QuerySqlField]
         public int Age { get; }
     }
 }
