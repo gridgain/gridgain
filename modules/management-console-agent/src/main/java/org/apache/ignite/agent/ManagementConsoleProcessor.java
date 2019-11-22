@@ -139,7 +139,9 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         if (isTracingEnabled())
             this.spanExporter = new SpanExporter(ctx);
         else
-            U.quietAndWarn(log, "The trace feature is disabled because not all nodes support this");
+            U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
+                " and management console agent will not collect traces" +
+                " (consider adding ignite-opencensus module to classpath).");
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {

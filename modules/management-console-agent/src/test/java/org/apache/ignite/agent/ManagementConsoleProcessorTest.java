@@ -43,21 +43,26 @@ public class ManagementConsoleProcessorTest extends AbstractServiceTest {
 
         GridEventStorageManager evt = mock(GridEventStorageManager.class);
 
-        GridIoManager ioMgr = mock(GridIoManager.class);
+        when(ctx.event()).thenReturn(evt);
 
         ClusterNode node = mock(ClusterNode.class);
+
         when(node.isClient()).thenReturn(true);
 
         when(ctx.discovery().localNode()).thenReturn(node);
-        when(ctx.event()).thenReturn(evt);
+
+        GridIoManager ioMgr = mock(GridIoManager.class);
+
         when(ctx.io()).thenReturn(ioMgr);
 
         ManagementConsoleProcessor proc = spy(new ManagementConsoleProcessor(ctx));
+
         doReturn(false).when(proc).isTracingEnabled();
 
         proc.onKernalStart(true);
 
         IgniteLogger log = ctx.log(ManagementConsoleProcessor.class);
-        verify(log).warning("The trace feature is disabled because not all nodes support this", null);
+
+        verify(log).warning("Current Ignite configuration does not support tracing functionality and management console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
     }
 }
