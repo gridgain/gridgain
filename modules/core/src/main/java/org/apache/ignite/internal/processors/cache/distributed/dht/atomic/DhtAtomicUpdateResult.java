@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult;
@@ -28,14 +30,21 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheE
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.nio.GridNioBackPressureControl;
+import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 
 /**
  *
  */
-class DhtAtomicUpdateResult {
+public class DhtAtomicUpdateResult {
     /** */
     private GridCacheReturn retVal;
 
@@ -54,11 +63,9 @@ class DhtAtomicUpdateResult {
      */
     private int processedEntriesCount;
 
-    /** */
-    private Runnable finishClo;
+    public Runnable finishClo;
 
-    /** */
-    private AtomicInteger counter;
+    public AtomicInteger counter;
 
     /**
      *
@@ -172,14 +179,10 @@ class DhtAtomicUpdateResult {
     }
 
     /** */
-    public void onBatchReady() {
-        if (counter.decrementAndGet() == 0)
+    public void decrement() {
+        final int val = counter.decrementAndGet();
+
+        if (val == 0)
             finishClo.run();
-    }
-
-    public void init(int cardinality, Runnable onFinish) {
-        counter = new AtomicInteger(cardinality);
-
-        finishClo = onFinish;
     }
 }
