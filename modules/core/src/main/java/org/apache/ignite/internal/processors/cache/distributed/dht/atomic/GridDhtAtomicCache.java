@@ -2642,31 +2642,31 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                 EntryProcessor<Object, Object, Object> entryProcessor = null;
 
-//                                dhtFut.addWriteEntry(
-//                                    affAssignment,
-//                                    entry,
-//                                    updRes.newValue(),
-//                                    entryProcessor,
-//                                    updRes.newTtl(),
-//                                    updRes.conflictExpireTime(),
-//                                    newConflictVer,
-//                                    sndPrevVal,
-//                                    updRes.oldValue(),
-//                                    updRes.updateCounter(),
-//                                    op);
-
-                                dhtFut.delayedWriteEntry(
+                                dhtFut.addWriteEntry(
                                     affAssignment,
-                                    k,
+                                    entry,
                                     updRes.newValue(),
-                                    null,
+                                    entryProcessor,
                                     updRes.newTtl(),
                                     updRes.conflictExpireTime(),
-                                    null,
+                                    newConflictVer,
                                     sndPrevVal,
                                     updRes.oldValue(),
                                     updRes.updateCounter(),
                                     op);
+
+//                                dhtFut.delayedWriteEntry(
+//                                    affAssignment,
+//                                    k,
+//                                    updRes.newValue(),
+//                                    null,
+//                                    updRes.newTtl(),
+//                                    updRes.conflictExpireTime(),
+//                                    null,
+//                                    sndPrevVal,
+//                                    updRes.oldValue(),
+//                                    updRes.updateCounter(),
+//                                    op);
 
                                 // TODO remove synchronized on hot path.
 //                                if (readers != null)

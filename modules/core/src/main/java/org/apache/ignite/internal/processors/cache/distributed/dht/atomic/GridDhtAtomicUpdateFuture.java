@@ -122,16 +122,16 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
             updateReq.skipStore(),
             false);
     }
-//
-//    /** {@inheritDoc} */
-//    @Override void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
-//        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
-//        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
-//        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
-//        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
-//    }
 
-    private Queue<Runnable> delayedEntries = new ConcurrentLinkedQueue<>();
+    /** {@inheritDoc} */
+    @Override synchronized void addWriteEntry(AffinityAssignment affAssignment, GridDhtCacheEntry entry,
+        @Nullable CacheObject val, EntryProcessor<Object, Object, Object> entryProcessor, long ttl,
+        long conflictExpireTime, @Nullable GridCacheVersion conflictVer, boolean addPrevVal,
+        @Nullable CacheObject prevVal, long updateCntr, GridCacheOperation cacheOp) {
+        super.addWriteEntry(affAssignment, entry, val, entryProcessor, ttl, conflictExpireTime, conflictVer, addPrevVal, prevVal, updateCntr, cacheOp);
+    }
+
+    private Queue<Runnable> delayedEntries; // = new ConcurrentLinkedQueue<>();
 
     /** {@inheritDoc} */
     @Override public String toString() {
