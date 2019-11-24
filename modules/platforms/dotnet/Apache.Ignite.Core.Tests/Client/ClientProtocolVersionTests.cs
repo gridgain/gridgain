@@ -92,6 +92,28 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Test relational comparison.
+        /// </summary>
+        [Test]
+        public void TestRelationalComparison()
+        {
+            Assert.AreEqual(0, new ClientProtocolVersion(1, 2, 3)
+                .CompareTo(new ClientProtocolVersion(1, 2, 3)));
+            
+            Assert.AreEqual(1, new ClientProtocolVersion(1, 2, 3)
+                .CompareTo(new ClientProtocolVersion(1, 1, 1)));
+            
+            Assert.AreEqual(1, new ClientProtocolVersion(1, 2, 3)
+                .CompareTo(new ClientProtocolVersion(0, 100, 200)));
+            
+            Assert.AreEqual(-1, new ClientProtocolVersion(1, 2, 3)
+                .CompareTo(new ClientProtocolVersion(2, 0, 0)));
+            
+            Assert.AreEqual(-1, new ClientProtocolVersion(1, 2, 3)
+                .CompareTo(new ClientProtocolVersion(1, 2, 4)));
+        }
+
+        /// <summary>
         /// Tests GetHashCode method.
         /// </summary>
         [Test]
