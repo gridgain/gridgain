@@ -556,6 +556,10 @@ namespace Apache.Ignite.Core.Impl.Client
         private RequestMessage WriteMessage(Action<IBinaryStream> writeAction, ClientOp opId)
         {
             var requestId = Interlocked.Increment(ref _requestId);
+            
+            // Potential perf improvements:
+            // * ArrayPool<T>
+            // * Write to socket stream directly (not trivial because of unknown size) 
             var stream = new BinaryHeapStream(256);
 
             stream.WriteInt(0); // Reserve message size.
