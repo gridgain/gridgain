@@ -301,7 +301,7 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             ClientStatusCode statusCode;
 
-            if (ServerVersion.CompareTo(Ver140) >= 0)
+            if (ServerVersion >= Ver140)
             {
                 var flags = (ClientFlags) stream.ReadShort();
 
@@ -343,7 +343,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private void Handshake(IgniteClientConfiguration clientConfiguration, ClientProtocolVersion version)
         {
-            bool auth = version.CompareTo(Ver110) >= 0 && clientConfiguration.UserName != null;
+            bool auth = version >= Ver110 && clientConfiguration.UserName != null;
 
             // Send request.
             int messageLen;
@@ -384,7 +384,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (success)
                 {
-                    if (version.CompareTo(Ver140) >= 0)
+                    if (version >= Ver140)
                     {
                         ServerNodeId = BinaryUtils.Marshaller.Unmarshal<Guid>(stream);
                     }
@@ -413,7 +413,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 }
 
                 // Re-try if possible.
-                bool retry = ServerVersion.CompareTo(version) < 0 && ServerVersion.Equals(Ver100);
+                var retry = ServerVersion < version && ServerVersion >= Ver100;
 
                 if (retry)
                 {
