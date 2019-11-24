@@ -16,7 +16,9 @@
 
 namespace Apache.Ignite.Core.Impl.Client
 {
+    using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Extension methods for <see cref="ClientOp"/>.
@@ -45,7 +47,24 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private static Dictionary<ClientOp, ClientProtocolVersion> GetVersionMap()
         {
-            throw new System.NotImplementedException();
+            var res = new Dictionary<ClientOp, ClientProtocolVersion>();
+            
+            foreach (var memberInfo in typeof(ClientOp).GetMembers())
+            {
+                var attr = memberInfo.GetCustomAttributes(false)
+                    .OfType<MinVersionAttribute>()
+                    .SingleOrDefault();
+
+                if (attr == null)
+                {
+                    continue;
+                }
+
+                var clientOp = (ClientOp) Enum.Parse(typeof(ClientOp), memberInfo.Name);
+                res[clientOp] = attr.Version;
+            }
+
+            return res;
         }
     }
 }

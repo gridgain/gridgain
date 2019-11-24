@@ -34,5 +34,13 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             _version = new ClientProtocolVersion(major, minor, maintenance);
         }
+
+        /// <summary>
+        /// Gets the version.
+        /// </summary>
+        public ClientProtocolVersion Version
+        {
+            get { return _version; }
+        }
     }
 }
