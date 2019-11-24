@@ -16,11 +16,16 @@
 
 namespace Apache.Ignite.Core.Impl.Client
 {
+    using System.Collections.Generic;
+
     /// <summary>
     /// Extension methods for <see cref="ClientOp"/>.
     /// </summary>
     internal static class ClientOpExtensions
     {
+        /** */
+        private static readonly Dictionary<ClientOp, ClientProtocolVersion> VersionMap = GetVersionMap();
+
         /// <summary>
         /// Gets minimum protocol version that is required to perform specified operation.
         /// </summary>
@@ -28,8 +33,19 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <returns>Minimum protocol version.</returns>
         public static ClientProtocolVersion GetMinVersion(this ClientOp op)
         {
-            // TODO: Detect based on attributes.
-            return ClientSocket.Ver100;
+            ClientProtocolVersion minVersion;
+            
+            return VersionMap.TryGetValue(op, out minVersion) 
+                ? minVersion 
+                : ClientSocket.Ver100;
+        }
+        
+        /// <summary>
+        /// Gets the version map.
+        /// </summary>
+        private static Dictionary<ClientOp, ClientProtocolVersion> GetVersionMap()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }
