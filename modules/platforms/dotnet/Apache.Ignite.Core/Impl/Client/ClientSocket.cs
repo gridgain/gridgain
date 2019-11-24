@@ -746,14 +746,16 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             var minVersion = opId.GetMinVersion();
 
-            if (minVersion < ServerVersion)
+            if (minVersion >= ServerVersion)
             {
-                var message = string.Format("Operation {0} is not supported by protocol version {1}. " +
-                                            "Minimum protocol version required is {2}.", 
-                    opId, ServerVersion, minVersion);
-                
-                throw new IgniteClientException(message);
+                return;
             }
+
+            var message = string.Format("Operation {0} is not supported by protocol version {1}. " +
+                                        "Minimum protocol version required is {2}.", 
+                opId, ServerVersion, minVersion);
+                
+            throw new IgniteClientException(message);
         }
 
         /// <summary>

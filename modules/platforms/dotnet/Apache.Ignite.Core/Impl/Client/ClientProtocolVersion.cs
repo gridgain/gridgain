@@ -124,9 +124,21 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritdoc /> */
+        public static bool operator <=(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) <= 0;
+        }
+
+        /** <inheritdoc /> */
         public static bool operator >(ClientProtocolVersion left, ClientProtocolVersion right)
         {
             return left.CompareTo(right) > 0;
+        }
+
+        /** <inheritdoc /> */
+        public static bool operator >=(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) >= 0;
         }
 
         /** <inheritdoc /> */
