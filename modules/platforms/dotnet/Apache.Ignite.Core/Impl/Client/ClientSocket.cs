@@ -38,10 +38,10 @@ namespace Apache.Ignite.Core.Impl.Client
     internal sealed class ClientSocket : IClientSocket
     {
         /** Version 1.0.0. */
-        private static readonly ClientProtocolVersion Ver100 = new ClientProtocolVersion(1, 0, 0);
+        public static readonly ClientProtocolVersion Ver100 = new ClientProtocolVersion(1, 0, 0);
 
         /** Version 1.1.0. */
-        private static readonly ClientProtocolVersion Ver110 = new ClientProtocolVersion(1, 1, 0);
+        public static readonly ClientProtocolVersion Ver110 = new ClientProtocolVersion(1, 1, 0);
 
         /** Version 1.2.0. */
         public static readonly ClientProtocolVersion Ver120 = new ClientProtocolVersion(1, 2, 0);
@@ -555,6 +555,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private RequestMessage WriteMessage(Action<IBinaryStream> writeAction, ClientOp opId)
         {
+            ValidateOp(opId);
+            
             var requestId = Interlocked.Increment(ref _requestId);
             
             // Potential perf improvements:
@@ -733,6 +735,24 @@ namespace Apache.Ignite.Core.Impl.Client
                         req.CompletionSource.TrySetException(ex);
                     }
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Validates op code against current protocol version.
+        /// </summary>
+        /// <param name="opId"></param>
+        private void ValidateOp(ClientOp opId)
+        {
+            var minVersion = opId.GetMinVersion();
+
+            if (minVersion < ServerVersion)
+            {
+                var message = string.Format("Operation {0} is not supported by protocol version {1}. " +
+                                            "Minimum protocol version required is {2}.", 
+                    opId, ServerVersion, minVersion);
+                
+                throw new IgniteClientException(message);
             }
         }
 
