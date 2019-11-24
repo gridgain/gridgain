@@ -25,15 +25,47 @@ namespace Apache.Ignite.Core.Tests.Client
     public class ClientProtocolVersionTests
     {
         /// <summary>
+        /// Tests constructors.
+        /// </summary>
+        [Test]
+        public void TestConstructor()
+        {
+            var v0 = new ClientProtocolVersion();
+            Assert.AreEqual(0, v0.Major);
+            Assert.AreEqual(0, v0.Minor);
+            Assert.AreEqual(0, v0.Maintenance);
+            
+            var v1 = new ClientProtocolVersion(2, 4, 8);
+            Assert.AreEqual(2, v1.Major);
+            Assert.AreEqual(4, v1.Minor);
+            Assert.AreEqual(8, v1.Maintenance);
+        }
+        
+        /// <summary>
         /// Tests comparison for equality.
         /// </summary>
         [Test]
         public void TestEqualityComparison()
         {
             Assert.AreEqual(
+                new ClientProtocolVersion(), 
+                new ClientProtocolVersion());
+            
+            Assert.AreEqual(
                 new ClientProtocolVersion(1, 2, 3), 
                 new ClientProtocolVersion(1, 2, 3));
+            
+            Assert.AreNotEqual(
+                new ClientProtocolVersion(1, 2, 3), 
+                new ClientProtocolVersion(1, 2, 4));
+            
+            Assert.AreNotEqual(
+                new ClientProtocolVersion(1, 2, 3), 
+                new ClientProtocolVersion(1, 3, 3));
+            
+            Assert.AreNotEqual(
+                new ClientProtocolVersion(1, 2, 3), 
+                new ClientProtocolVersion(0, 2, 3));
         }
-        
     }
 }
