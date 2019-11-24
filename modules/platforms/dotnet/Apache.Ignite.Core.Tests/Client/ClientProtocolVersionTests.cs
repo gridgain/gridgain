@@ -52,29 +52,32 @@ namespace Apache.Ignite.Core.Tests.Client
                 new ClientProtocolVersion(), 
                 new ClientProtocolVersion());
             
-            Assert.True(new ClientProtocolVersion() == new ClientProtocolVersion());
+            Assert.IsTrue(new ClientProtocolVersion() == new ClientProtocolVersion());
             
             Assert.AreEqual(
                 new ClientProtocolVersion(1, 2, 3), 
                 new ClientProtocolVersion(1, 2, 3));
             
-            Assert.True(
+            Assert.IsTrue(
                 new ClientProtocolVersion(1, 2, 3) ==  
                 new ClientProtocolVersion(1, 2, 3));
 
-            Assert.True(
+            Assert.IsTrue(
                 new ClientProtocolVersion(1, 2, 3).Equals(
                     new ClientProtocolVersion(1, 2, 3)));
 
-            Assert.True(
+            Assert.IsTrue(
                 new ClientProtocolVersion(1, 2, 3).Equals(
                     (object) new ClientProtocolVersion(1, 2, 3)));
             
-            Assert.False(
+            Assert.IsTrue(
+                new ClientProtocolVersion(1, 2, 3).Equals(null));
+            
+            Assert.IsFalse(
                 new ClientProtocolVersion(1, 2, 3) !=  
                 new ClientProtocolVersion(1, 2, 3));
             
-            Assert.False(
+            Assert.IsFalse(
                 new ClientProtocolVersion(1, 2, 3) ==  
                 new ClientProtocolVersion(1, 2, 4));
             
@@ -111,6 +114,21 @@ namespace Apache.Ignite.Core.Tests.Client
             
             Assert.AreEqual(-1, new ClientProtocolVersion(1, 2, 3)
                 .CompareTo(new ClientProtocolVersion(1, 2, 4)));
+        }
+
+        /// <summary>
+        /// Test relational comparison operators.
+        /// </summary>
+        [Test]
+        public void TestRelationalComparisonOperators()
+        {
+            var v1 = new ClientProtocolVersion(1, 1, 1);
+            var v2 = new ClientProtocolVersion(1, 1, 2);
+            
+            Assert.IsTrue(v1 < v2);
+            Assert.IsTrue(v1 <= v2);
+            Assert.IsTrue(v2 > v1);
+            Assert.IsTrue(v2 >= v1);
         }
 
         /// <summary>
