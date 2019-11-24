@@ -40,5 +40,19 @@ namespace Apache.Ignite.Core.Tests.Client
                 Assert.IsTrue(minVersion <= ClientSocket.CurrentProtocolVersion);
             }
         }
+
+        /// <summary>
+        /// Tests that <see cref="ClientOpExtensions.GetMinVersion"/> returns a specific version for known new features.
+        /// </summary>
+        [Test]
+        public void TestGetMinVersionReturnsSpecificVersionForNewFeatures()
+        {
+            Assert.AreEqual(ClientSocket.Ver140, ClientOp.CachePartitions.GetMinVersion());
+
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterIsActive.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterChangeState.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterChangeWalState.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterGetWalState.GetMinVersion());
+        }
     }
 }
