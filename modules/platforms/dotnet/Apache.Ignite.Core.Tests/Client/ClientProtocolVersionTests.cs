@@ -105,5 +105,16 @@ namespace Apache.Ignite.Core.Tests.Client
                 new ClientProtocolVersion(1, 2, 3).GetHashCode(), 
                 new ClientProtocolVersion(1, 2, 5).GetHashCode());
         }
+
+        /// <summary>
+        /// Tests ToString method.
+        /// </summary>
+        [Test]
+        public void TestToString()
+        {
+            Assert.AreEqual(
+                "16.42.128", 
+                new ClientProtocolVersion(16, 42, 128).ToString());
+        }
     }
 }
