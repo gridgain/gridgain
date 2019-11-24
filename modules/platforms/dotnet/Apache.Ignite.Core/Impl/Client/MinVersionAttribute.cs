@@ -16,10 +16,13 @@
 
 namespace Apache.Ignite.Core.Impl.Client
 {
+    using System;
+
     /// <summary>
     /// Version attribute for <see cref="ClientOp"/>.
     /// </summary>
-    internal class MinVersionAttribute
+    [AttributeUsage(AttributeTargets.Field)]
+    internal class MinVersionAttribute : Attribute
     {
         /** */
         private ClientProtocolVersion _version;
