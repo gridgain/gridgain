@@ -90,5 +90,20 @@ namespace Apache.Ignite.Core.Tests.Client
                 new ClientProtocolVersion(1, 2, 3), 
                 new ClientProtocolVersion(0, 2, 3));
         }
+
+        /// <summary>
+        /// Tests GetHashCode method.
+        /// </summary>
+        [Test]
+        public void TestGetHashCode()
+        {
+            Assert.AreEqual(
+                new ClientProtocolVersion(1, 2, 3).GetHashCode(), 
+                new ClientProtocolVersion(1, 2, 3).GetHashCode());
+
+            Assert.AreNotEqual(
+                new ClientProtocolVersion(1, 2, 3).GetHashCode(), 
+                new ClientProtocolVersion(1, 2, 5).GetHashCode());
+        }
     }
 }
