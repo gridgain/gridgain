@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// ReSharper disable EqualExpressionComparison
 namespace Apache.Ignite.Core.Tests.Client
 {
     using Apache.Ignite.Core.Impl.Client;
@@ -51,9 +52,31 @@ namespace Apache.Ignite.Core.Tests.Client
                 new ClientProtocolVersion(), 
                 new ClientProtocolVersion());
             
+            Assert.True(new ClientProtocolVersion() == new ClientProtocolVersion());
+            
             Assert.AreEqual(
                 new ClientProtocolVersion(1, 2, 3), 
                 new ClientProtocolVersion(1, 2, 3));
+            
+            Assert.True(
+                new ClientProtocolVersion(1, 2, 3) ==  
+                new ClientProtocolVersion(1, 2, 3));
+
+            Assert.True(
+                new ClientProtocolVersion(1, 2, 3).Equals(
+                    new ClientProtocolVersion(1, 2, 3)));
+
+            Assert.True(
+                new ClientProtocolVersion(1, 2, 3).Equals(
+                    (object) new ClientProtocolVersion(1, 2, 3)));
+            
+            Assert.False(
+                new ClientProtocolVersion(1, 2, 3) !=  
+                new ClientProtocolVersion(1, 2, 3));
+            
+            Assert.False(
+                new ClientProtocolVersion(1, 2, 3) ==  
+                new ClientProtocolVersion(1, 2, 4));
             
             Assert.AreNotEqual(
                 new ClientProtocolVersion(1, 2, 3), 
