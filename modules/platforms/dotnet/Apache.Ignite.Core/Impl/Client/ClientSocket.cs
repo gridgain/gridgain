@@ -746,7 +746,7 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             var minVersion = opId.GetMinVersion();
 
-            if (minVersion >= ServerVersion)
+            if (ServerVersion >= minVersion)
             {
                 return;
             }
