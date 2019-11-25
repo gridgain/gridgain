@@ -292,10 +292,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
         cctx.events().removeListener(lsnr);
 
-        if (cancel)
-            onCancelAtStop();
-        else
-            onWaitAtStop();
+        onCancelAtStop();
     }
 
     /**
