@@ -67,7 +67,7 @@ public class IgnitePdsTestSuite4 {
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         List<Class<?>> suite = new ArrayList<>();
 
-        addRealPageStoreTestsNotForDirectIo(suite, ignoredTests);
+//        addRealPageStoreTestsNotForDirectIo(suite, ignoredTests);
 
 //        GridTestUtils.addTestIfNeeded(suite, FileDownloaderTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, IgnitePdsTaskCancelingTest.class, ignoredTests);
