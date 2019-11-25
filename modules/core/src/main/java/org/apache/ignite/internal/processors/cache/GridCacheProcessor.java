@@ -2574,6 +2574,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 if (ctx.query().getIndexing() != null)
                     ctx.query().getIndexing().registeredCacheInfo(cctx.name()).clearCacheContext();
+                else
+                    stopCacheSafely(cctx);
             }
             finally {
                 sharedCtx.io().writeUnlock();
