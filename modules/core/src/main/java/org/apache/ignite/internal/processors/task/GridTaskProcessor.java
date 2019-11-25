@@ -22,7 +22,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -66,8 +65,6 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
-import org.apache.ignite.internal.processors.security.IgniteSecurity;
-import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -83,8 +80,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.apache.ignite.plugin.security.SecurityPermissionSet;
-import org.apache.ignite.plugin.security.SecuritySubject;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_MANAGEMENT_TASK_STARTED;
@@ -102,8 +97,6 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBJ_ID;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_TASK_NAME;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_TIMEOUT;
-import static org.apache.ignite.plugin.security.SecurityPermission.ADMIN_OPS;
-import static org.apache.ignite.plugin.security.SecurityPermission.TASK_EXECUTE;
 
 /**
  * This class defines task processor.
@@ -594,19 +587,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             // Reset thread-local context.
             thCtx.set(null);
 
-        if (!map.containsKey(TC_SKIP_AUTH)) {
-            IgniteSecurity security = ctx.security();
-
-            SecurityPermission perm = Optional.of(security)
-                .map(IgniteSecurity::securityContext)
-                .map(SecurityContext::subject)
-                .map(SecuritySubject::permissions)
-                .map(SecurityPermissionSet::systemPermissions)
-                .map(permissions -> permissions.contains(ADMIN_OPS) ? ADMIN_OPS : null)
-                .orElse(TASK_EXECUTE);
-
-            security.authorize(taskClsName, perm);
-        }
+        if (map.get(TC_SKIP_AUTH) == null)
+            ctx.security().authorize(taskClsName, SecurityPermission.TASK_EXECUTE);
 
         Long timeout = (Long)map.get(TC_TIMEOUT);
 
