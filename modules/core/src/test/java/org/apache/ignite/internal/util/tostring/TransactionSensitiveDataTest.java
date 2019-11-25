@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.util.tostring;
 
-import java.io.Serializable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -102,7 +101,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             .setCacheConfiguration(
                 new CacheConfiguration<>(DEFAULT_CACHE_NAME)
                     .setAtomicityMode(TRANSACTIONAL)
-                    .setBackups(3)
+                    .setBackups(NODE_COUNT)
                     .setAffinity(new RendezvousAffinityFunction(false, 10))
             )
             .setNetworkTimeout(NETWORK_TIMEOUT);
@@ -117,7 +116,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @Test
     public void testHideSensitiveDataDuringExchange() throws Exception {
-        checkSensitiveDataDuringExchange((s1, s2) -> assertNotContains(log, s1, Person.class.getSimpleName()));
+        checkSensitiveDataDuringExchange((logStr, binPersonStr) -> assertNotContains(log, logStr, binPersonStr));
     }
 
     /**
@@ -129,7 +128,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     @Test
     public void testShowSensitiveDataDuringExchange() throws Exception {
-        checkSensitiveDataDuringExchange((s1, s2) -> assertContains(log, s1, s2));
+        checkSensitiveDataDuringExchange((logStr, binPersonStr) -> assertContains(log, logStr, binPersonStr));
     }
 
     /**
@@ -141,7 +140,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @Test
     public void testHideSensitiveDataDuringNodeLeft() throws Exception {
-        checkSensitiveDataDuringNodeLeft((s1, s2) -> assertNotContains(log, s1, Person.class.getSimpleName()));
+        checkSensitiveDataDuringNodeLeft((logStr, binPersonStr) -> assertNotContains(log, logStr, binPersonStr));
     }
 
     /**
@@ -153,7 +152,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     @Test
     public void testShowSensitiveDataDuringNodeLeft() throws Exception {
-        checkSensitiveDataDuringNodeLeft((s1, s2) -> assertContains(log, s1, s2));
+        checkSensitiveDataDuringNodeLeft((logStr, binPersonStr) -> assertContains(log, logStr, binPersonStr));
     }
 
     /**
@@ -299,7 +298,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     /**
      * Person class for cache storage.
      */
-    static class Person implements Serializable {
+    static class Person {
         /** Id organization. */
         int orgId;
 
