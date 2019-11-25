@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -122,11 +121,15 @@ import org.apache.ignite.internal.processors.datastructures.DataStructuresProces
 import org.apache.ignite.internal.processors.plugin.CachePluginManager;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.schema.SchemaExchangeWorkerTask;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
+import org.apache.ignite.internal.processors.query.schema.SchemaOperationWorker;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaAbstractDiscoveryMessage;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexDropOperation;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -667,7 +670,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             switch (obj.type) {
                 case SQL_INDEX:
                     asyncPendingDeleteCleanupWorker(obj, () -> {
-                        ctx.query().getIndexing().dynamicIndexDrop(obj.schemaName, obj.name, true);
+                        cleanupPendingDeleteIndex(obj);
 
                         return null;
                     });
@@ -677,6 +680,37 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
                 default: log.warning("Unknown pending delete object type: " + obj.type.toString());
             }
         }
+    }
+
+    /**
+     * Cleans up pending delete index. This is local operation. Scenario should be same as happens while using
+     * {@link SchemaOperationWorker}.
+     *
+     * @param obj Pending delete index object.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void cleanupPendingDeleteIndex(PendingDeleteObject obj) throws IgniteCheckedException {
+        DynamicCacheDescriptor cacheDesc = cacheDescriptor(obj.cacheName);
+
+        if (cacheDesc == null)
+            throw new IgniteException("Could not get cache descriptor for cache: " + cacheDesc);
+
+        CacheConfiguration ccfg = cacheConfiguration(obj.cacheName);
+
+        if (ccfg == null)
+            throw new IgniteException("Could not get cache configuration for cache: " + cacheDesc);
+
+        IgniteUuid depId = cacheDesc.deploymentId();
+
+        QueryTypeDescriptorImpl type =
+            new QueryTypeDescriptorImpl(obj.cacheName, ctx.cacheObjects().contextForCache(ccfg));
+
+        SchemaIndexDropOperation op =
+            new SchemaIndexDropOperation(UUID.randomUUID(), obj.cacheName, obj.schemaName, obj.name, true);
+
+        ctx.query().processSchemaOperationLocal(op, type, depId, new SchemaIndexOperationCancellationToken());
+
+        ctx.query().onLocalOperationFinished(op, type);
     }
 
     /**
@@ -5299,15 +5333,19 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         private String name;
 
         /** */
+        private String cacheName;
+
+        /** */
         private String schemaName;
 
         /** */
         public PendingDeleteObject() {}
 
         /** */
-        public PendingDeleteObject(PendingDeleteObjectType type, String name, String schemaName) {
+        public PendingDeleteObject(PendingDeleteObjectType type, String name, String cacheName, String schemaName) {
             this.type = type;
             this.name = name;
+            this.cacheName = cacheName;
             this.schemaName = schemaName;
         }
     }

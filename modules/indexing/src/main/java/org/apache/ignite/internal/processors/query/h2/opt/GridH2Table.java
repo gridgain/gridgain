@@ -1084,7 +1084,12 @@ public class GridH2Table extends TableBase {
                 ((GridH2ProxyIndex)h2Idx).underlyingIndex() : h2Idx;
 
             cacheContext().kernalContext().cache()
-                .addPendingDeleteObject(new GridCacheProcessor.PendingDeleteObject(GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX, h2Idx.getName(), getSchema().getName()));
+                .addPendingDeleteObject(new GridCacheProcessor.PendingDeleteObject(
+                    GridCacheProcessor.PendingDeleteObjectType.SQL_INDEX,
+                    h2Idx.getName(),
+                    cacheInfo.name(),
+                    getSchema().getName()
+                ));
 
             for (int i = pkIndexPos; i < idxs.size();) {
                 Index idx = idxs.get(i);
