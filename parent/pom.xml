@@ -140,6 +140,8 @@
         <opencensus.version>0.22.0</opencensus.version>
         <commons.lang3.version>3.9</commons.lang3.version>
         <awaitility.version>3.1.6</awaitility.version>
+        <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
+        <reflections.version>0.9.11</reflections.version>
 
 
         <!-- Maven plugins versions -->

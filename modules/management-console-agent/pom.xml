@@ -51,7 +51,7 @@
         <dependency>
             <groupId>org.glassfish.tyrus.bundles</groupId>
             <artifactId>tyrus-standalone-client</artifactId>
-            <version>1.15</version>
+            <version>${tyrus.standalon.client.version}</version>
         </dependency>
 
         <dependency>
@@ -87,7 +87,7 @@
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
-            <version>0.9.11</version>
+            <version>${reflections.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.guava</groupId>
