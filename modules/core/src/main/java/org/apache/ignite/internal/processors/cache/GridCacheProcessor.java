@@ -894,13 +894,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         return null;
     }
 
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
+        stopCache(cache, cancel, destroy, false);
+    }
     /**
      * @param cache Cache to stop.
      * @param cancel Cancel flag.
      * @param destroy Destroy data flag. Setting to <code>true</code> will remove all cache data.
      */
     @SuppressWarnings({"unchecked"})
-    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean keepIndexing) {
         GridCacheContext ctx = cache.context();
 
         try {
@@ -920,7 +923,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
-            ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
+            if (keepIndexing)
+                ctx.kernalContext().query().getIndexing().registeredCacheInfo(ctx.name()).clearCacheContext();
+            else
+                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
 
             if (isNearEnabled(ctx)) {
                 GridDhtCacheAdapter dht = ctx.near().dht();
@@ -1928,10 +1934,19 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cctx Cache context.
      */
     private void stopCacheSafely(GridCacheContext<?, ?> cctx) {
+        stopCacheSafely(cctx, false);
+    }
+
+    /**
+     * Stops cache under checkpoint lock.
+     *
+     * @param cctx Cache context.
+     */
+    private void stopCacheSafely(GridCacheContext<?, ?> cctx, boolean keepIndexing) {
         sharedCtx.database().checkpointReadLock();
 
         try {
-            prepareCacheStop(cctx.name(), false);
+            prepareCacheStop(cctx.name(), false, keepIndexing);
 
             if (!cctx.group().hasCaches())
                 stopCacheGroup(cctx.group().groupId());
@@ -2468,6 +2483,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Stopped cache context.
      */
     public GridCacheContext<?, ?> prepareCacheStop(String cacheName, boolean destroy) {
+        return prepareCacheStop(cacheName, destroy, false);
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @param destroy Cache data destroy flag. Setting to <code>true</code> will remove all cache data.
+     * @return Stopped cache context.
+     */
+    public GridCacheContext<?, ?> prepareCacheStop(String cacheName, boolean destroy, boolean keepIndexing) {
         assert sharedCtx.database().checkpointLockIsHeldByThread();
 
         GridCacheAdapter<?, ?> cache = caches.remove(cacheName);
@@ -2479,7 +2503,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             onKernalStop(cache, true);
 
-            stopCache(cache, true, destroy);
+            stopCache(cache, true, destroy, keepIndexing);
 
             return ctx;
         }
@@ -2572,15 +2596,23 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 jCacheProxies.remove(cctx.name());
 
-                if (ctx.query().getIndexing() != null)
-                    ctx.query().getIndexing().registeredCacheInfo(cctx.name()).clearCacheContext();
-                else
-                    stopCacheSafely(cctx);
+                closeCacheOnNotAffinityNode(cctx);
             }
             finally {
                 sharedCtx.io().writeUnlock();
             }
         }
+    }
+
+    /**
+     * @param cctx Cache context to close.
+     */
+    private void closeCacheOnNotAffinityNode(GridCacheContext cctx) {
+        if (ctx.query().getIndexing() != null) {
+            stopCacheSafely(cctx, true);
+        }
+        else
+            stopCacheSafely(cctx);
     }
 
     /**

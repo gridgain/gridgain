@@ -541,6 +541,27 @@ public class H2Utils {
     }
 
     /**
+     * @param select
+     * @param dml
+     * @param command
+     */
+    public static void checkAndStartNotStartedCache(
+        GridKernalContext ctx,
+        QueryParserResultSelect select,
+        QueryParserResultDml dml,
+        QueryParserResultCommand command) {
+        if (select != null) {
+            for(QueryTable tbl : select.twoStepQuery().tables()) {
+                GridH2Table h2tbl = ((IgniteH2Indexing)ctx.query().getIndexing()).schemaManager()
+                    .dataTable(tbl.schema(), tbl.table());
+
+                checkAndStartNotStartedCache(ctx, h2tbl);
+            }
+        }
+    }
+
+
+    /**
      * Check that given table has not started cache and start it for such case.
      *
      * @param tbl Table to check on not started cache.

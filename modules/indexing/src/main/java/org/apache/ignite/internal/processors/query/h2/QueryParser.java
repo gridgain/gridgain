@@ -144,7 +144,9 @@ public class QueryParser {
 
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
-        if (cached != null)
+        if (cached != null) {
+            H2Utils.checkAndStartNotStartedCache(idx.kernalContext(), cached.select(), cached.dml(), cached.command());
+
             return new QueryParserResult(
                 qryDesc,
                 QueryParameters.fromQuery(qry),
@@ -154,6 +156,7 @@ public class QueryParser {
                 cached.dml(),
                 cached.command()
             );
+        }
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
