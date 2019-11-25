@@ -37,7 +37,7 @@ param (
 
 
 # Find NuGet packages (*.nupkg)
-$dir = Join-Path $PSScriptRoot $packageDir
+$dir = If ([System.IO.Path]::IsPathRooted($packageDir)) { $packageDir } Else { Join-Path $PSScriptRoot $packageDir }
 if (!(Test-Path $dir)) {
     throw "Path does not exist: '$packageDir' (resolved to '$dir')"
 }
