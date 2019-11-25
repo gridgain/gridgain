@@ -46,8 +46,8 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
         Map<String, String> params = new LinkedHashMap<>();
 
         params.put(ACTIVE.toString(), "Activate cluster.");
-        params.put(INACTIVE.toString(), "Deactivate cluster");
-        params.put(ACTIVE_READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString());
+        params.put(INACTIVE.toString(), "Deactivate cluster.");
+        params.put(ACTIVE_READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString() + ".");
 
         Command.usage(log, "Change cluster state:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
     }
