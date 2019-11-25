@@ -45,27 +45,27 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ManagementConsoleProcessorTest.class,
+    SessionRegistryTest.class,
+    ActionControllerAnnotationProcessorTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,
-    CacheChangesProcessorTest.class,
     ClusterActionsControllerTest.class,
-    ClusterInfoProcessorTest.class,
-    ManagementConsoleMessagesProcessorTest.class,
-    IgniteConfigurationWrapperTest.class,
-    MetricsProcessorTest.class,
     QueryActionsControllerTest.class,
     QueryActionsControllerWithParametersTest.class,
-    QueryRegistryTest.class,
-    SessionRegistryTest.class,
     SecurityActionsControllerTest.class,
-    ActionControllerAnnotationProcessorTest.class,
-    SpanExporterTest.class,
-    EventsExporterTest.class,
-    RetryableSenderTest.class,
+    QueryRegistryTest.class,
+    IgniteConfigurationWrapperTest.class,
     RequestDeserializerTest.class,
     TopologySnapshotTest.class,
-    ManagementConsoleProcessorTest.class
+    CacheChangesProcessorTest.class,
+    ClusterInfoProcessorTest.class,
+    ManagementConsoleMessagesProcessorTest.class,
+    EventsExporterTest.class,
+    SpanExporterTest.class,
+    MetricsProcessorTest.class,
+    RetryableSenderTest.class
 })
 public class AgentTestSuite {
 }
