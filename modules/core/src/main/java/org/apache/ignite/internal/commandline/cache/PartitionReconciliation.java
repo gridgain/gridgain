@@ -125,6 +125,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         VisorPartitionReconciliationTaskArg taskArg = new VisorPartitionReconciliationTaskArg(
             args.caches,
             args.fixMode,
+            args.verbose,
             args.throttlingIntervalMillis,
             args.batchSize,
             args.recheckAttempts
@@ -144,11 +145,12 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
         boolean fixMode = false;
+        boolean verbose = false;
         int throttlingIntervalMillis = -1;
         int batchSize = DEFAULT_BATCH_SIZE;
         int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
 
-        int partReconciliationArgsCnt = 5;
+        int partReconciliationArgsCnt = 6;
 
         while (argIter.hasNextSubArg() && partReconciliationArgsCnt-- > 0) {
             String nextArg = argIter.nextArg("");
@@ -165,6 +167,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 switch (arg) {
                     case FIX_MODE:
                         fixMode = true;
+
+                        break;
+
+                    case VERBOSE:
+                        verbose = true;
 
                         break;
 
@@ -201,7 +208,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts);
+        args = new Arguments(cacheNames, fixMode, verbose, throttlingIntervalMillis, batchSize, recheckAttempts);
     }
 
     // TODO: 20.11.19 Idle verify has exactly same method.
@@ -232,6 +239,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         private boolean fixMode;
 
         /** */
+        private boolean verbose;
+
+        /** */
         private int throttlingIntervalMillis;
 
         /** */
@@ -245,14 +255,17 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          *
          * @param caches Caches.
          * @param fixMode Fix inconsistency if {@code True}.
+         * @param verbose Print key and value to result log if {@code True}.
          * @param throttlingIntervalMillis Throttling interval millis.
          * @param batchSize Batch size.
          * @param recheckAttempts Amount of recheck attempts.
          */
-        public Arguments(Set<String> caches, boolean fixMode, int throttlingIntervalMillis, int batchSize,
+        public Arguments(Set<String> caches, boolean fixMode, boolean verbose, int throttlingIntervalMillis,
+            int batchSize,
             int recheckAttempts) {
             this.caches = caches;
             this.fixMode = fixMode;
+            this.verbose = verbose;
             this.throttlingIntervalMillis = throttlingIntervalMillis;
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
@@ -291,6 +304,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          */
         public int recheckAttempts() {
             return recheckAttempts;
+        }
+
+        /**
+         * @return Verbose.
+         */
+        public boolean verbose() {
+            return verbose;
         }
     }
 }

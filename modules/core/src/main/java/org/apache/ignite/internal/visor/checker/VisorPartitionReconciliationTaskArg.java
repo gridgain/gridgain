@@ -27,7 +27,6 @@ import java.util.Set;
 /**
  * Partition reconciliation task arguments.
  */
-// TODO: 21.11.19 In case of problems consicder using VisorDataTransferObject, cause IdleVerify use it.
 public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
@@ -37,6 +36,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     private boolean fixMode;
+
+    /** If {@code true} - print data to result with sensitive information: keys and values. */
+    private boolean verbose;
 
     /** Interval in milliseconds between running partition reconciliation jobs. */
     private int throttlingIntervalMillis;
@@ -58,9 +60,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * Constructor.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, int throttlingIntervalMillis,
-        int batchSize, int recheckAttempts) {
+    public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose,
+        int throttlingIntervalMillis, int batchSize, int recheckAttempts) {
         this.caches = caches;
+        this.verbose = verbose;
         this.fixMode = fixMode;
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
@@ -72,6 +75,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         U.writeCollection(out, caches);
 
         out.writeBoolean(fixMode);
+
+        out.writeBoolean(verbose);
 
         out.writeInt(throttlingIntervalMillis);
 
@@ -87,6 +92,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         caches = U.readSet(in);
 
         fixMode = in.readBoolean();
+
+        verbose = in.readBoolean();
 
         throttlingIntervalMillis = in.readInt();
 
@@ -128,5 +135,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public int recheckAttempts() {
         return recheckAttempts;
+    }
+
+    /**
+     * @return If  - print data to result with sensitive information: keys and values.
+     */
+    public boolean verbose() {
+        return verbose;
     }
 }

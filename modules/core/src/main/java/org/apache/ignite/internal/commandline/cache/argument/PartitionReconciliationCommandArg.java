@@ -27,6 +27,9 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     FIX_MODE("--fix-mode"),
 
+    /** If {@code true} - print data to result with sensitive information: keys and values. */
+    VERBOSE("--verbose"),
+
     /** Interval in milliseconds between running partition reconciliation jobs. */
     THROTTLING_INTERVAL_MILLIS ("--throttling-interval-millis"),
 
