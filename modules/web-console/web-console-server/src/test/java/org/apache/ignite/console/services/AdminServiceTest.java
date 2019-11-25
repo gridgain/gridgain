@@ -162,30 +162,6 @@ public class AdminServiceTest {
     }
 
     /**
-     * Should list users.
-     */
-    @Test
-    public void shouldLinkAccountToSessionOnlyOnce() {
-        Account acc = adminSrvc.registerUser(signUpRequest("admin@test.com"));
-
-        ExpiringSession ses = createSession(acc);
-
-        sesRepo.save(ses);
-
-        Account acc1 = adminSrvc.registerUser(signUpRequest("user@test.com"));
-
-        SecurityContext ctx = ses.getAttribute(SPRING_SECURITY_CONTEXT);
-
-        Authentication auth = new UsernamePasswordAuthenticationToken(acc1, acc1.getPassword());
-
-        ctx.setAuthentication(auth);
-
-        sesRepo.save(ses);
-
-        assertEquals(acc.getEmail(), ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME));
-    }
-
-    /**
      * @param acc Account.
      */
     private ExpiringSession createSession(Account acc) {

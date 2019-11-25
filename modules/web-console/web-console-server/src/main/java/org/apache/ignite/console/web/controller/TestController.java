@@ -42,18 +42,18 @@ import org.springframework.web.bind.annotation.RestController;
 @Test
 public class TestController {
     /** Accounts service. */
-    protected AccountsService accountsSrv;
+    protected AccountsService accountsSrvc;
 
-    /** */
+    /** Administration service. */
     protected AdminService adminSrv;
 
     /**
-     * @param accountsSrv Accounts server.
-     * @param adminSrv Administration server.
+     * @param accountsSrvc Accounts service.
+     * @param adminSrvc Administration service.
      */
-    public TestController(AccountsService accountsSrv, AdminService adminSrv) {
-        this.accountsSrv = accountsSrv;
-        this.adminSrv = adminSrv;
+    public TestController(AccountsService accountsSrvc, AdminService adminSrvc) {
+        this.accountsSrvc = accountsSrvc;
+        this.adminSrv = adminSrvc;
     }
 
     /**
@@ -64,7 +64,7 @@ public class TestController {
     public ResponseEntity<Void> registerAdmin(@Valid @RequestBody SignUpRequest params) {
         Account acc = adminSrv.registerUser(params);
 
-        accountsSrv.toggle(acc.getId(), true);
+        accountsSrvc.toggle(acc.getId(), true);
 
         return ResponseEntity.ok().build();
     }
