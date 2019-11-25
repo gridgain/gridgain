@@ -17,6 +17,8 @@
 #ifndef _IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL
 #define _IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 #include <ignite/guid.h>
@@ -59,7 +61,7 @@ namespace ignite
                  *
                  * @return Collection of addresses this node is known by.
                  */
-                std::vector<std::string> GetAddresses();
+                const std::vector<std::string>& GetAddresses() const;
 
                 /**
                  * Check if node attribute is set.
@@ -67,7 +69,7 @@ namespace ignite
                  * @param name Node attribute name.
                  * @return True if set.
                  */
-                bool IsAttributeSet(std::string name);
+                bool IsAttributeSet(std::string name) const;
 
                 /**
                  * Get a node attribute.
@@ -79,7 +81,7 @@ namespace ignite
                  * or if template type is not compatible with attribute.
                  */
                 template<typename T>
-                T GetAttribute(std::string name)
+                T GetAttribute(std::string name) const
                 {
                     if (attrs.Get()->find(name) == attrs.Get()->end())
                     {
@@ -87,7 +89,7 @@ namespace ignite
                         throw IgniteError(IgniteError::IGNITE_ERR_ILLEGAL_ARGUMENT, msg);
                     }
 
-                    interop::InteropInputStream stream(mem.Get());
+                    interop::InteropInputStream stream(const_cast<interop::InteropMemory*>(mem.Get()));
                     stream.Position(attrs.Get()->find(name)->second);
 
                     binary::BinaryReaderImpl reader(&stream);
@@ -100,63 +102,63 @@ namespace ignite
                  *
                  * @return Node attributes names collection.
                  */
-                std::vector<std::string> GetAttributes();
+                std::vector<std::string> GetAttributes() const;
 
                 /**
                  * Get Cluster Node consistent ID.
                  *
                  * @return Cluster Node consistent ID.
                  */
-                std::string GetConsistentId();
+                std::string GetConsistentId() const;
 
                 /**
                  * Get collection of host names this node is known by.
                  *
                  * @return Collection of host names this node is known by.
                  */
-                std::vector<std::string> GetHostNames();
+                const std::vector<std::string>& GetHostNames() const;
 
                 /**
-                 * Gets globally unique ID.
+                 * Get globally unique ID.
                  *
                  * @return Cluster Node Guid.
                  */
-                Guid GetId();
+                Guid GetId() const;
 
                 /**
                  * Check if cluster node started in client mode.
                  *
                  * @return True if in client mode and false otherwise.
                  */
-                bool IsClient();
+                bool IsClient() const;
 
                 /**
                  * Check whether or not this node is a daemon.
                  *
                  * @return True if is daemon and false otherwise.
                  */
-                bool IsDaemon();
+                bool IsDaemon() const;
 
                 /**
                  * Check whether or not this node is a local.
                  *
                  * @return True if is local and false otherwise.
                  */
-                bool IsLocal();
+                bool IsLocal() const;
 
                 /**
                  * Node order within grid topology.
                  *
                  * @return Node order.
                  */
-                long GetOrder();
+                int64_t GetOrder() const;
 
                 /**
                  * Get node version.
                  *
                  * @return Prodcut version.
                  */
-                const IgniteProductVersion& GetVersion();
+                const IgniteProductVersion& GetVersion() const;
 
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterNodeImpl);
@@ -221,7 +223,7 @@ namespace ignite
                 bool isLocal;
 
                 /** Order. */
-                long order;
+                int64_t order;
 
                 /** Consistent ID */
                 common::concurrent::SharedPointer<std::string> consistentId;
@@ -233,4 +235,5 @@ namespace ignite
     }
 }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL

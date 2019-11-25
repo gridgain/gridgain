@@ -77,6 +77,7 @@ panel-collapsible(opened=`::true` ng-form=form)
                     label: 'Value type:',
                     model: `${model}.valueType`,
                     name: '"valueType"',
+                    required: 'true',
                     placeholder: '{{ ' + generatePojo +' ? "Enter fully qualified class name" : "Value type name" }}',
                     tip: 'Value class used to store value in cache',
                     validationActive: generatePojo

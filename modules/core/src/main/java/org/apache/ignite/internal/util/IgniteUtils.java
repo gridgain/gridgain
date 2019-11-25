@@ -3692,6 +3692,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Converts size in bytes to human-readable size in megabytes.
+     *
+     * @param sizeInBytes Size of any object (file, memory region etc) in bytes.
+     * @return Size converted to megabytes.
+     */
+    public static int sizeInMegabytes(long sizeInBytes) {
+        return (int)(sizeInBytes / MB);
+    }
+
+    /**
      * Deletes file or directory with all sub-directories and files.
      *
      * @param path File or directory to delete.
@@ -7548,6 +7558,19 @@ public abstract class IgniteUtils {
         x.initCause(e);
 
         return x;
+    }
+
+    /**
+     * Ignore {@link RuntimeException}.
+     *
+     * @param runnable Runnable.
+     */
+    public static void ignoreRuntimeException(Runnable runnable) {
+        try {
+            runnable.run();
+        }
+        catch (RuntimeException ignore) {
+        }
     }
 
     /**

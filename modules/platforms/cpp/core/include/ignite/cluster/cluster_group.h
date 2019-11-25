@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
- /**
-  * @file
-  * Declares ignite::cluster::ClusterGroup class.
-  */
-
 #ifndef _IGNITE_CLUSTER_CLUSTER_GROUP
 #define _IGNITE_CLUSTER_CLUSTER_GROUP
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
+/**
+ * @file
+ * Declares ignite::cluster::ClusterGroup class.
+ */
 
 #include <ignite/cluster/cluster_node.h>
 
@@ -73,6 +75,13 @@ namespace ignite
             ClusterGroup ForClientNodes(std::string cacheName);
 
             /**
+             * Get a cluster group of nodes started in client mode.
+             *
+             * @return Cluster group over nodes that started in client mode.
+             */
+            ClusterGroup ForClients();
+
+            /**
              * Get cluster group consisting from the daemon nodes.
              *
              * @return Cluster group consisting from the daemon nodes.
@@ -93,7 +102,23 @@ namespace ignite
              * @param node Cluster node.
              * @return Cluster group residing on the same host as the given node.
              */
-            ClusterGroup ForHost(ignite::cluster::ClusterNode node);
+            ClusterGroup ForHost(ClusterNode node);
+
+            /**
+             * Get cluster group consisting from the nodes running on the host specified.
+             *
+             * @param hostName Host name.
+             * @return Cluster group over nodes that have requested host name.
+             */
+            ClusterGroup ForHost(std::string hostName);
+
+            /**
+             * Get cluster group consisting from the nodes running on the hosts specified.
+             *
+             * @param hostNames Container of host names.
+             * @return Cluster group over nodes that have requested host names.
+             */
+            ClusterGroup ForHosts(std::vector<std::string> hostNames);
 
             /**
              * Get cluster group for the given node.
@@ -101,7 +126,7 @@ namespace ignite
              * @param node Cluster node.
              * @return Cluster group for the given node.
              */
-            ClusterGroup ForNode(ignite::cluster::ClusterNode node);
+            ClusterGroup ForNode(ClusterNode node);
 
             /**
              * Get cluster group for a node with the specified ID.
@@ -125,15 +150,24 @@ namespace ignite
              * @param nodes Cluster nodes.
              * @return Cluster group over a given set of nodes.
              */
-            ClusterGroup ForNodes(std::vector<ignite::cluster::ClusterNode> nodes);
+            ClusterGroup ForNodes(std::vector<ClusterNode> nodes);
 
             /**
              * Get cluster group with one oldest node from the current cluster group.
              *
-             * @param nodes Cluster nodes.
              * @return Cluster group with one oldest node from the current cluster group.
              */
             ClusterGroup ForOldest();
+
+            /**
+             * Create a new cluster group which includes all nodes that pass the given predicate filter.
+             *
+             * @param pred Pointer to predicate heap object. User should NOT free the memory used by object.
+             * @return Newly created cluster group.
+             *
+             * @throw IgniteError if there are no nodes in the cluster group.
+             */
+            ClusterGroup ForPredicate(IgnitePredicate<ClusterNode>* pred);
 
             /**
              * Get cluster group with one random node from the current cluster group.
@@ -177,7 +211,7 @@ namespace ignite
              *
              * @throw IgniteError if there are no nodes in the cluster group.
              */
-            ignite::cluster::ClusterNode GetNode();
+            ClusterNode GetNode();
 
             /**
              * Get node for given ID from this cluster group.
@@ -187,14 +221,21 @@ namespace ignite
              *
              * @throw IgniteError if there is no node with specified ID.
              */
-            ignite::cluster::ClusterNode GetNode(Guid nid);
+            ClusterNode GetNode(Guid nid);
 
             /**
-             * Gets the vector of nodes in this cluster group.
+             * Get the vector of nodes in this cluster group.
              *
              * @return All nodes in this cluster group.
              */
             std::vector<ClusterNode> GetNodes();
+
+            /**
+             * Get predicate that defines a subset of nodes for this cluster group.
+             *
+             * @return Pointer to predicate.
+             */
+            IgnitePredicate<ClusterNode>* GetPredicate();
 
         private:
             impl::cluster::SP_ClusterGroupImpl impl;
@@ -202,5 +243,7 @@ namespace ignite
         };
     }
 }
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
 #endif //_IGNITE_CLUSTER_CLUSTER_GROUP

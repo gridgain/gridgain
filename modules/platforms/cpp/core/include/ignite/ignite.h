@@ -26,6 +26,7 @@
 
 #include <ignite/ignite_configuration.h>
 #include <ignite/cache/cache.h>
+#include <ignite/cache/cache_affinity.h>
 #include <ignite/transactions/transactions.h>
 #include <ignite/compute/compute.h>
 #include <ignite/cluster/ignite_cluster.h>
@@ -53,7 +54,29 @@ namespace ignite
          * Constructor.
          */
         Ignite(impl::IgniteImpl* impl);
-        
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+        /**
+         * Get affinity service to provide information about data partitioning and distribution.
+         *
+         * @tparam K Cache affinity key type.
+         *
+         * @param cacheName Cache name.
+         * @return Cache data affinity service.
+         */
+        template<typename K>
+        cache::CacheAffinity<K> GetAffinity(const std::string& cacheName)
+        {
+            IgniteError err;
+
+            cache::CacheAffinity<K> ret(impl.Get()->GetAffinity(cacheName, err));
+
+            IgniteError::ThrowIfNeeded(err);
+
+            return ret;
+        }
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+
         /**
          * Get Ignite instance name.
          *
@@ -205,6 +228,8 @@ namespace ignite
          */
         transactions::Transactions GetTransactions();
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
         /**
          * Get cluster.
          *
@@ -214,6 +239,8 @@ namespace ignite
          */
         cluster::IgniteCluster GetCluster();
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+
         /**
          * Gets compute instance over all cluster nodes started in server mode.
          *
@@ -222,6 +249,8 @@ namespace ignite
          * @return Compute class instance.
          */
         compute::Compute GetCompute();
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
         /**
          * Gets compute instance over the specified cluster group. All operations
@@ -234,6 +263,8 @@ namespace ignite
          * @return Compute class instance over the specified cluster group.
          */
         compute::Compute GetCompute(cluster::ClusterGroup grp);
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
         /**
          * Get ignite binding.
