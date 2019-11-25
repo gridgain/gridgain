@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 
 /**
  *
@@ -94,19 +94,19 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testActivationWithReadOnly() {
-        changeStateAndCheckBehaviour(INACTIVE, READ_ONLY);
+        changeStateAndCheckBehaviour(INACTIVE, ACTIVE_READ_ONLY);
     }
 
     /** */
     @Test
     public void testEnablingReadOnly() {
-        changeStateAndCheckBehaviour(ACTIVE, READ_ONLY);
+        changeStateAndCheckBehaviour(ACTIVE, ACTIVE_READ_ONLY);
     }
 
     /** */
     @Test
     public void testDisablingReadOnly() {
-        changeStateAndCheckBehaviour(READ_ONLY, ACTIVE);
+        changeStateAndCheckBehaviour(ACTIVE_READ_ONLY, ACTIVE);
     }
 
     /** */
@@ -118,7 +118,7 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testDeactivationFromReadOnly() {
-        changeStateAndCheckBehaviour(READ_ONLY, INACTIVE);
+        changeStateAndCheckBehaviour(ACTIVE_READ_ONLY, INACTIVE);
     }
 
     /**

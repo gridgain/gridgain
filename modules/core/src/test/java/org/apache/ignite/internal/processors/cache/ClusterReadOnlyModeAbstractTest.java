@@ -66,6 +66,6 @@ public class ClusterReadOnlyModeAbstractTest extends GridCommonAbstractTest {
      * @param readOnly Read only.
      */
     protected void changeClusterReadOnlyMode(boolean readOnly) {
-        grid(0).cluster().state(readOnly ? ClusterState.READ_ONLY : ClusterState.ACTIVE);
+        grid(0).cluster().state(readOnly ? ClusterState.ACTIVE_READ_ONLY : ClusterState.ACTIVE);
     }
 }

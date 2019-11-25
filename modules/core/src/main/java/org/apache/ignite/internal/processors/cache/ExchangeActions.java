@@ -29,7 +29,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.active;
 
 /**
@@ -218,7 +218,7 @@ public class ExchangeActions {
      * @return {@code True} if has enable cluster read-only request.
      */
     public boolean readOnlyEnabled() {
-        return stateChangeReq != null && stateChangeReq.prevState() != READ_ONLY && stateChangeReq.state() == READ_ONLY;
+        return stateChangeReq != null && stateChangeReq.prevState() != ACTIVE_READ_ONLY && stateChangeReq.state() == ACTIVE_READ_ONLY;
     }
 
     /**

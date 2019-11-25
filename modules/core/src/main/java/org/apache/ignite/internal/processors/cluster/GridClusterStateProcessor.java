@@ -100,7 +100,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
@@ -690,10 +690,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /**
      * @param state Cluster state
-     * @return {@code True} passed {@code state} is {@link ClusterState#READ_ONLY}, and {@code False} otherwise.
+     * @return {@code True} passed {@code state} is {@link ClusterState#ACTIVE_READ_ONLY}, and {@code False} otherwise.
      */
     private static boolean readOnly(ClusterState state) {
-        return state == READ_ONLY;
+        return state == ACTIVE_READ_ONLY;
     }
 
     /**
@@ -1162,7 +1162,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (node.isClient() || node.isDaemon())
             return null;
 
-        if (globalState.state() == READ_ONLY && !IgniteFeatures.nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
+        if (globalState.state() == ACTIVE_READ_ONLY && !IgniteFeatures.nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
             String msg = "Node not supporting cluster read-only mode is not allowed to join the cluster with enabled" +
                 " read-only mode";
 
@@ -1836,7 +1836,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             case INACTIVE:
                 return "deactivate cluster";
 
-            case READ_ONLY:
+            case ACTIVE_READ_ONLY:
                 return "activate cluster in read-only mode";
 
             default:

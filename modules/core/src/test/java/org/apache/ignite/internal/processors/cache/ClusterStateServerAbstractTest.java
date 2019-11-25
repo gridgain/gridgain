@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.ENTRY_CNT;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 
@@ -62,7 +62,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
      */
     @Test
     public void testReadOnlyWithPendingLock() {
-        changeClusterStateWithPendingLock(READ_ONLY, FAILED_READ_ONLY_MSG);
+        changeClusterStateWithPendingLock(ACTIVE_READ_ONLY, FAILED_READ_ONLY_MSG);
     }
 
     /**
@@ -80,12 +80,12 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     }
 
     /**
-     * Tests that change cluster mode from {@link ClusterState#READ_ONLY} to {@link ClusterState#INACTIVE} is prohibited
+     * Tests that change cluster mode from {@link ClusterState#ACTIVE_READ_ONLY} to {@link ClusterState#INACTIVE} is prohibited
      * if transaction is active in current thread.
      */
     @Test
     public void testDeactivateFromReadonlyWithPendingTransaction() {
-        grid(0).cluster().state(READ_ONLY);
+        grid(0).cluster().state(ACTIVE_READ_ONLY);
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
             for (TransactionIsolation isolation : TransactionIsolation.values())
@@ -94,7 +94,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
     }
 
     /**
-     * Tests that change cluster mode from {@link ClusterState#ACTIVE} to {@link ClusterState#READ_ONLY} is prohibited
+     * Tests that change cluster mode from {@link ClusterState#ACTIVE} to {@link ClusterState#ACTIVE_READ_ONLY} is prohibited
      * if transaction is active in current thread.
      */
     @Test
@@ -103,17 +103,17 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
             for (TransactionIsolation isolation : TransactionIsolation.values())
-                changeStateWithPendingTransaction(READ_ONLY, concurrency, isolation, FAILED_READ_ONLY_MSG);
+                changeStateWithPendingTransaction(ACTIVE_READ_ONLY, concurrency, isolation, FAILED_READ_ONLY_MSG);
         }
     }
 
     /**
-     * Tests that change cluster mode from {@link ClusterState#READ_ONLY} to {@link ClusterState#ACTIVE} is prohibited
+     * Tests that change cluster mode from {@link ClusterState#ACTIVE_READ_ONLY} to {@link ClusterState#ACTIVE} is prohibited
      * if transaction is active in current thread.
      */
     @Test
     public void testDisableReadonlyWithPendingTransaction() {
-        grid(0).cluster().state(READ_ONLY);
+        grid(0).cluster().state(ACTIVE_READ_ONLY);
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
             for (TransactionIsolation isolation : TransactionIsolation.values())
@@ -154,7 +154,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
         assertNotSame(state, grid(0).cluster().state());
 
         try (Transaction ignore = grid(0).transactions().txStart(concurrency, isolation)) {
-            if (grid(0).cluster().state() != READ_ONLY)
+            if (grid(0).cluster().state() != ACTIVE_READ_ONLY)
                 cache0.put(1, "1");
 
             //noinspection ThrowableNotThrown
@@ -163,7 +163,7 @@ public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstrac
 
         assertNotSame(state, grid(0).cluster().state());
 
-        if (grid(0).cluster().state() != READ_ONLY)
+        if (grid(0).cluster().state() != ACTIVE_READ_ONLY)
             assertNull(cache0.get(1));
 
         assertNull(grid(0).transactions().tx());

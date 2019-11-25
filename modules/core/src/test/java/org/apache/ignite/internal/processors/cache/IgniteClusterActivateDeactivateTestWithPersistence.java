@@ -49,7 +49,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.testframework.GridTestUtils.assertActive;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
@@ -95,7 +95,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testActivateReadOnlyCachesRestore_SingleNode() throws Exception {
-        activateCachesRestore(1, false, READ_ONLY);
+        activateCachesRestore(1, false, ACTIVE_READ_ONLY);
     }
 
     /**
@@ -111,7 +111,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testActivateReadOnlyCachesRestore_SingleNode_WithNewCaches() throws Exception {
-        activateCachesRestore(1, true, READ_ONLY);
+        activateCachesRestore(1, true, ACTIVE_READ_ONLY);
     }
 
     /**
@@ -127,7 +127,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testActivateReadOnlyCachesRestore_5_Servers() throws Exception {
-        activateCachesRestore(5, false, READ_ONLY);
+        activateCachesRestore(5, false, ACTIVE_READ_ONLY);
     }
 
     /**
@@ -143,7 +143,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testActivateReadOnlyCachesRestore_5_Servers_WithNewCaches() throws Exception {
-        activateCachesRestore(5, true, READ_ONLY);
+        activateCachesRestore(5, true, ACTIVE_READ_ONLY);
     }
 
     /**
@@ -163,7 +163,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testDeactivateInactiveClusterReadOnly() throws Exception {
-        checkDeactivateInactiveCluster(READ_ONLY);
+        checkDeactivateInactiveCluster(ACTIVE_READ_ONLY);
     }
 
     /** */
@@ -317,7 +317,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
     /** */
     @Test
     public void testClientJoinsWhenActivationReanOnlyIsInProgress() throws Exception {
-        checkClientJoinsWhenActivationIsInProgress(READ_ONLY);
+        checkClientJoinsWhenActivationIsInProgress(ACTIVE_READ_ONLY);
     }
 
     /** */
@@ -396,7 +396,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testActivateReadOnlyCacheRestoreConfigurationConflict() throws Exception {
-        checkActivateCacheRestoreConfigurationConflict(READ_ONLY);
+        checkActivateCacheRestoreConfigurationConflict(ACTIVE_READ_ONLY);
     }
 
     /** */

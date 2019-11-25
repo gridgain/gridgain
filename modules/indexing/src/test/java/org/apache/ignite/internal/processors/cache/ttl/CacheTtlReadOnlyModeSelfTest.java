@@ -32,7 +32,7 @@ import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.assertCachesReadOnlyMode;
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.assertDataStreamerReadOnlyMode;
 import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.cacheConfigurations;
@@ -77,7 +77,7 @@ public class CacheTtlReadOnlyModeSelfTest extends GridCommonAbstractTest {
 
         assertEquals(ACTIVE, grid.cluster().state());
 
-        assertCachesReadOnlyMode(grid.cluster().state() == READ_ONLY, CACHE_NAMES);
+        assertCachesReadOnlyMode(grid.cluster().state() == ACTIVE_READ_ONLY, CACHE_NAMES);
 
         for (String cacheName : CACHE_NAMES) {
             assertEquals(cacheName, 0, grid.cache(cacheName).size());
@@ -88,11 +88,11 @@ public class CacheTtlReadOnlyModeSelfTest extends GridCommonAbstractTest {
             assertEquals(cacheName, 10, grid.cache(cacheName).size());
         }
 
-        grid.cluster().state(READ_ONLY);
-        assertEquals(READ_ONLY, grid.cluster().state());
+        grid.cluster().state(ACTIVE_READ_ONLY);
+        assertEquals(ACTIVE_READ_ONLY, grid.cluster().state());
 
-        assertCachesReadOnlyMode(grid.cluster().state() == READ_ONLY, CACHE_NAMES);
-        assertDataStreamerReadOnlyMode(grid.cluster().state() == READ_ONLY, CACHE_NAMES);
+        assertCachesReadOnlyMode(grid.cluster().state() == ACTIVE_READ_ONLY, CACHE_NAMES);
+        assertDataStreamerReadOnlyMode(grid.cluster().state() == ACTIVE_READ_ONLY, CACHE_NAMES);
 
         SECONDS.sleep(EXPIRATION_TIMEOUT + 1);
 

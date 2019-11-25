@@ -372,7 +372,7 @@ public class CommandHandlerParsingTest {
                     break;
                 }
                 case SET_STATE: {
-                    for (String newState : asList("READ_ONLY", "ACTIVE", "INACTIVE")) {
+                    for (String newState : asList("ACTIVE_READ_ONLY", "ACTIVE", "INACTIVE")) {
                         args = parseArgs(asList(cmdL.text(), newState, "--yes"));
 
                         checkCommonParametersCorrectlyParsed(cmdL, args, true);

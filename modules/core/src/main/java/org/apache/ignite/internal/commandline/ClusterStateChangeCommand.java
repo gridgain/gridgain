@@ -25,7 +25,7 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
@@ -47,7 +47,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
 
         params.put(ACTIVE.toString(), "Activate cluster.");
         params.put(INACTIVE.toString(), "Deactivate cluster");
-        params.put(READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString());
+        params.put(ACTIVE_READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString());
 
         Command.usage(log, "Change cluster state:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
     }
@@ -106,7 +106,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
             case INACTIVE:
                 return "deactivate";
 
-            case READ_ONLY:
+            case ACTIVE_READ_ONLY:
                 return "enable read-only mode on";
 
             default:

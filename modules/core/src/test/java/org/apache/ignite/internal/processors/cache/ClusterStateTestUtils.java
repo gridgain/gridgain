@@ -103,7 +103,7 @@ public class ClusterStateTestUtils {
 
                     break;
 
-                case READ_ONLY:
+                case ACTIVE_READ_ONLY:
                     assertNotNull(assertThrowsWithCause(
                         () -> crd.cache(cacheName).put(0, 0),
                         IgniteClusterReadOnlyException.class

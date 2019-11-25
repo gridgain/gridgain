@@ -29,7 +29,7 @@ public enum ClusterState {
     ACTIVE,
 
     /** Cluster activated. Only read from cache operations are allowed. */
-    READ_ONLY;
+    ACTIVE_READ_ONLY;
 
     /** Enumerated values. */
     private static final ClusterState[] VALS = values();
@@ -55,7 +55,7 @@ public enum ClusterState {
     /**
      * @param state1 First given state.
      * @param state2 Second given state.
-     * @return Lesser of given states. The order: {@link #ACTIVE} > {@link #READ_ONLY} > {@link #INACTIVE}.
+     * @return Lesser of given states. The order: {@link #ACTIVE} > {@link #ACTIVE_READ_ONLY} > {@link #INACTIVE}.
      */
     public static ClusterState lesserOf(ClusterState state1, ClusterState state2) {
         if (state1 == state2)
@@ -64,8 +64,8 @@ public enum ClusterState {
         if (state1 == INACTIVE || state2 == INACTIVE)
             return INACTIVE;
 
-        if (state1 == READ_ONLY || state2 == READ_ONLY)
-            return READ_ONLY;
+        if (state1 == ACTIVE_READ_ONLY || state2 == ACTIVE_READ_ONLY)
+            return ACTIVE_READ_ONLY;
 
         throw new IllegalArgumentException("Unknown cluster states. state1: " + state1 + ", state2: " + state2);
     }

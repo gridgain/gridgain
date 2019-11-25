@@ -72,13 +72,13 @@ public class GridClusterStateChangeSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testInactiveReadOnly() {
-        testStateChanged(ClusterState.INACTIVE, ClusterState.READ_ONLY);
+        testStateChanged(ClusterState.INACTIVE, ClusterState.ACTIVE_READ_ONLY);
     }
 
     /** */
     @Test
     public void testActiveReadOnly() {
-        testStateChanged(ClusterState.ACTIVE, ClusterState.READ_ONLY);
+        testStateChanged(ClusterState.ACTIVE, ClusterState.ACTIVE_READ_ONLY);
     }
 
     /** */
@@ -96,7 +96,7 @@ public class GridClusterStateChangeSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSetSameStateReadOnly() {
-        testSetSameState(ClusterState.READ_ONLY);
+        testSetSameState(ClusterState.ACTIVE_READ_ONLY);
     }
 
     /** */

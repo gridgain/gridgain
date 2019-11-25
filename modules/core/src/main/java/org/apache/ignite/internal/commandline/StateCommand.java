@@ -65,7 +65,7 @@ public class StateCommand implements Command<Void> {
 
                     break;
 
-                case READ_ONLY:
+                case ACTIVE_READ_ONLY:
                     log.info("Cluster is active (read-only)");
 
                     break;

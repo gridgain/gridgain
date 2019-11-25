@@ -107,7 +107,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
@@ -209,11 +209,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--set-state", "READ_ONLY"));
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE_READ_ONLY"));
 
-        assertEquals(READ_ONLY, ignite.cluster().state());
+        assertEquals(ACTIVE_READ_ONLY, ignite.cluster().state());
 
-        assertContains(log, testOut.toString(), "Cluster state changed to READ_ONLY");
+        assertContains(log, testOut.toString(), "Cluster state changed to ACTIVE_READ_ONLY");
 
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
 
@@ -405,11 +405,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
 
-        ignite.cluster().state(READ_ONLY);
+        ignite.cluster().state(ACTIVE_READ_ONLY);
 
         awaitPartitionMapExchange();
 
-        assertEquals(READ_ONLY, ignite.cluster().state());
+        assertEquals(ACTIVE_READ_ONLY, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
@@ -439,13 +439,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         // INACTIVE -> INACTIVE.
         setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
-        // INACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+        // INACTIVE -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
-        // READ_ONLY -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+        // ACTIVE_READ_ONLY -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
-        // READ_ONLY -> ACTIVE.
+        // ACTIVE_READ_ONLY -> ACTIVE.
         setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
         // ACTIVE -> ACTIVE.
@@ -457,10 +457,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         // INACTIVE -> ACTIVE.
         setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
-        // ACTIVE -> READ_ONLY.
-        setState(ignite, READ_ONLY, "READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+        // ACTIVE -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
 
-        // READ_ONLY -> INACTIVE.
+        // ACTIVE_READ_ONLY -> INACTIVE.
         setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
     }
 

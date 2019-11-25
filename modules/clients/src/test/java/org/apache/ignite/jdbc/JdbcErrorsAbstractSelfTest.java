@@ -756,7 +756,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }
         }
 
-        grid(0).cluster().state(ClusterState.READ_ONLY);
+        grid(0).cluster().state(ClusterState.ACTIVE_READ_ONLY);
 
         try {
             checkErrorState((conn) -> {
@@ -783,7 +783,7 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
             }
         }
 
-        grid(0).cluster().state(ClusterState.READ_ONLY);
+        grid(0).cluster().state(ClusterState.ACTIVE_READ_ONLY);
 
         try {
             checkErrorState((conn) -> {
