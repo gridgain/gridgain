@@ -17,10 +17,10 @@
 import _ from 'lodash';
 
 export const taskResult = (result) => ({
-    data: {result},
+    response: {result},
     error: null,
     sessionToken: null,
-    status: 0
+    successStatus: 0
 });
 
 /**
