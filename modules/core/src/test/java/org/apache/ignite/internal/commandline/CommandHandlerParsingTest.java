@@ -285,7 +285,8 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
-            cmd == CommandList.SET_STATE;
+            cmd == CommandList.SET_STATE ||
+            cmd == CommandList.MANAGEMENT;
     }
 
 

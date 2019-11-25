@@ -78,13 +78,13 @@
         <jackson1.version>1.9.13</jackson1.version>
         <jaxb.api.version>2.1</jaxb.api.version>
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
-        <javassist.version>3.20.0-GA</javassist.version>
+        <javassist.version>3.21.0-GA</javassist.version>
         <javax.cache.bundle.version>1.0.0_1</javax.cache.bundle.version>
         <javax.cache.tck.version>1.1.0</javax.cache.tck.version>
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.18.v20190429</jetty.version>
+        <jetty.version>9.4.22.v20191022</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
@@ -128,7 +128,7 @@
         <spring.data-2.0.version>2.0.9.RELEASE</spring.data-2.0.version> <!-- don't forget to update spring-5.0 version -->
         <spring-5.0.version>5.0.8.RELEASE</spring-5.0.version><!-- don't forget to update spring-data-2.0 version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
-        <storm.version>1.1.3</storm.version>
+        <storm.version>1.2.3</storm.version>
         <tomcat.version>9.0.21</tomcat.version>
         <twitter.hbc.version>2.2.0</twitter.hbc.version>
         <yammer.metrics.annotation.version>2.2.0</yammer.metrics.annotation.version>
@@ -139,6 +139,7 @@
         <zstd.version>1.3.7-2</zstd.version>
         <opencensus.version>0.22.0</opencensus.version>
         <commons.lang3.version>3.9</commons.lang3.version>
+        <awaitility.version>3.1.6</awaitility.version>
 
 
         <!-- Maven plugins versions -->
@@ -550,6 +551,10 @@
                             <group>
                                 <title>OpenCensus Tracing Integration</title>
                                 <packages>org.apache.ignite.spi.tracing.opencensus*</packages>
+                            </group>
+                            <group>
+                                <title>Management Console</title>
+                                <packages>org.apache.ignite.agent*</packages>
                             </group>
                         </groups>
                         <bottom>
