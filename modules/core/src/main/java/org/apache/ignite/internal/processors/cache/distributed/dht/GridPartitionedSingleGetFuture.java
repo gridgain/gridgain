@@ -434,7 +434,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         boolean evt = !skipVals;
 
         while (true) {
-            cctx.shared().database().checkpointReadLock();
+//            cctx.shared().database().checkpointReadLock();
 
             try {
                 CacheObject v = null;
@@ -563,7 +563,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                 return true;
             }
             finally {
-                cctx.shared().database().checkpointReadUnlock();
+//                cctx.shared().database().checkpointReadUnlock();
             }
         }
     }
