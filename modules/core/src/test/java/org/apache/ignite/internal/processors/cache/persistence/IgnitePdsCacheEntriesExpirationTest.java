@@ -40,7 +40,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *
+ * Class contains various tests related to cache entry expiration feature.
  */
 public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
@@ -84,6 +84,12 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
     }
 
     /**
+     * Verifies scenario of a deadlock between thread, modifying a cache entry (acquires cp read lock and entry lock),
+     * ttl thread, expiring the entry (acquires cp read lock and entry lock)
+     * and checkpoint thread (acquires cp write lock).
+     *
+     * Checkpoint thread in not used but emulated by the test to avoid test hang (interruptible API for acquiring
+     * write lock is used).
      *
      * @throws Exception If failed.
      */
