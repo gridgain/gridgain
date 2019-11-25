@@ -145,6 +145,13 @@ public class GridCacheContextInfo<K, V> {
     }
 
     /**
+     */
+    public void clearCacheContext( ) {
+        if (dynamicDeploymentId != null)
+            cctx = null;
+    }
+
+    /**
      * @return {@code true} For client cache.
      */
     public boolean isClientCache() {
