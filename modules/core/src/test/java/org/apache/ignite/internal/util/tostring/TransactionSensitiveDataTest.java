@@ -61,9 +61,6 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     /** Listener log messages. */
     private static ListeningTestLogger testLog;
 
-    /** Network timeout. */
-    private static final long NETWORK_TIMEOUT = 500;
-
     /** Node count. */
     private static final int NODE_COUNT = 2;
 
@@ -103,8 +100,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
                     .setAtomicityMode(TRANSACTIONAL)
                     .setBackups(NODE_COUNT)
                     .setAffinity(new RendezvousAffinityFunction(false, 10))
-            )
-            .setNetworkTimeout(NETWORK_TIMEOUT);
+            );
     }
 
     /**
@@ -194,7 +190,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         cache.put(0, binPerson);
 
         GridTestUtils.runAsync(() -> {
-            logLsnr.check(10 * NETWORK_TIMEOUT);
+            logLsnr.check(10 * crd.configuration().getNetworkTimeout());
 
             tx.commit();
 
