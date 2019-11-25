@@ -397,18 +397,18 @@ public final class GridTestUtils {
     }
 
     /**
-     * Checks that collection {@param col} contains string {@param str}. Logs collection, string
+     * Checks that collection {@param col} contains element {@param elem}. Logs collection, element
      * and throws {@link java.lang.AssertionError}, if not.
      *
      * @param log Logger (optional).
      * @param col Collection.
-     * @param str String.
+     * @param elem Element.
      */
-    public static  <C extends Collection<String>> void assertContains(@Nullable IgniteLogger log, C col, String str) {
+    public static  <C extends Collection<T>, T> void assertContains(@Nullable IgniteLogger log, C col, T elem) {
         try {
-            assertTrue(col.contains(str));
+            assertTrue(col.contains(elem));
         } catch (AssertionError e) {
-            U.warn(log, String.format("Collection does not contain string: '%s':", str));
+            U.warn(log, String.format("Collection does not contain: '%s':", elem));
             U.warn(log, "Collection:");
             U.warn(log, col);
 
@@ -417,18 +417,18 @@ public final class GridTestUtils {
     }
 
     /**
-     * Checks that collection {@param col} doesn't contains string {@param str}. Logs collection, string
+     * Checks that collection {@param col} doesn't contains element {@param str}. Logs collection, element
      * and throws {@link java.lang.AssertionError}, if contains.
      *
      * @param log Logger (optional).
      * @param col Collection.
-     * @param str String.
+     * @param elem Element.
      */
-    public static <C extends Collection<String>> void assertNotContains(@Nullable IgniteLogger log, C col, String str) {
+    public static <C extends Collection<T>, T> void assertNotContains(@Nullable IgniteLogger log, C col, T elem) {
         try {
-            assertFalse(col.contains(str));
+            assertFalse(col.contains(elem));
         } catch (AssertionError e) {
-            U.warn(log, String.format("Collection contain string: '%s' but shouldn't:", str));
+            U.warn(log, String.format("Collection contain element: '%s' but shouldn't:", elem));
             U.warn(log, "Collection:");
             U.warn(log, col);
 
