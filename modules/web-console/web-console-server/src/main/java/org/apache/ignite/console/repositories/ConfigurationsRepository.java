@@ -51,6 +51,12 @@ import static org.apache.ignite.console.utils.Utils.toJson;
 @Repository
 public class ConfigurationsRepository {
     /** */
+    public static final String CACHES_CNT = "cachesCount";
+
+    /** */
+    public static final String MODELS_CNT = "modelsCount";
+
+    /** */
     protected final TransactionManager txMgr;
 
     /** Messages accessor. */
@@ -134,8 +140,8 @@ public class ConfigurationsRepository {
             .add("id", cluster.getId())
             .add("name", cluster.name())
             .add("discovery", cluster.discovery())
-            .add("cachesCount", cachesCnt)
-            .add("modelsCount", modelsCnt);
+            .add(CACHES_CNT, cachesCnt)
+            .add(MODELS_CNT, modelsCnt);
     }
 
     /**
