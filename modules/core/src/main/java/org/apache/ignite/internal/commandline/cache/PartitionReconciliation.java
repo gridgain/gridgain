@@ -31,7 +31,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
-import org.apache.ignite.internal.visor.checker.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationResult;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
@@ -122,7 +122,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         GridClientConfiguration clientCfg,
         Logger log
     ) throws GridClientException {
-
         VisorPartitionReconciliationTaskArg taskArg = new VisorPartitionReconciliationTaskArg(
             args.caches,
             args.fixMode,
@@ -134,6 +133,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         PartitionReconciliationResult res =
             executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
 
+        System.out.println("!!!");
         // TODO: 20.11.19 Important! implement.
 //        logParsedArgs(taskArg, log::info);
 //
@@ -148,10 +148,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         int batchSize = DEFAULT_BATCH_SIZE;
         int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
 
-        // TODO: 21.11.19 Use proper value.
-        int idleVerifyArgsCnt = 5;
+        int partReconciliationArgsCnt = 5;
 
-        while (argIter.hasNextSubArg() && idleVerifyArgsCnt-- > 0) {
+        while (argIter.hasNextSubArg() && partReconciliationArgsCnt-- > 0) {
             String nextArg = argIter.nextArg("");
 
             PartitionReconciliationCommandArg arg =

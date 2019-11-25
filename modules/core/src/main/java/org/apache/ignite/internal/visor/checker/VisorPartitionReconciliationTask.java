@@ -16,13 +16,18 @@
 
 package org.apache.ignite.internal.visor.checker;
 
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationProcessorTask;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 
 /**
  * Visor partition reconciliation task.
  */
-public class VisorPartitionReconciliationTask extends VisorOneNodeTask<VisorPartitionReconciliationTaskArg, PartitionReconciliationResult> {
+@GridInternal
+public class VisorPartitionReconciliationTask extends VisorOneNodeTask<VisorPartitionReconciliationTaskArg,
+    PartitionReconciliationResult> {
     /** */
     private static final long serialVersionUID = 0L;
 

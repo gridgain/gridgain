@@ -48,8 +48,14 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     private int recheckAttempts;
 
     /**
+     * Default constructor.
+     */
+    public VisorPartitionReconciliationTaskArg() {
+        // No-op.
+    }
+
+    /**
      * Constructor.
-     *
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, int throttlingIntervalMillis,
@@ -87,5 +93,40 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         batchSize = in.readInt();
 
         recheckAttempts = in.readInt();
+    }
+
+    /**
+     * @return Caches.
+     */
+    public Set<String> caches() {
+        return caches;
+    }
+
+    /**
+     * @return If  - Partition Reconciliation&Fix: update from Primary partition.
+     */
+    public boolean fixMode() {
+        return fixMode;
+    }
+
+    /**
+     * @return Interval in milliseconds between running partition reconciliation jobs.
+     */
+    public int throttlingIntervalMillis() {
+        return throttlingIntervalMillis;
+    }
+
+    /**
+     * @return Amount of keys to retrieve within one job.
+     */
+    public int batchSize() {
+        return batchSize;
+    }
+
+    /**
+     * @return Amount of potentially inconsistent keys recheck attempts.
+     */
+    public int recheckAttempts() {
+        return recheckAttempts;
     }
 }
