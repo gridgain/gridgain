@@ -21,6 +21,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +38,11 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
@@ -49,10 +53,12 @@ import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
+import static org.springframework.http.HttpMethod.POST;
 
 /**
  * Security settings provider.
@@ -198,20 +204,26 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /**
      * @param ignite Ignite.
      * @param txMgr Transaction manager.
+     * @return Sessions repository.
      */
     @Bean
-    public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite, @Autowired TransactionManager txMgr) {
+    public FindByIndexNameSessionRepository<ExpiringSession> sessionRepository(
+        @Autowired Ignite ignite,
+        @Autowired TransactionManager txMgr
+    ) {
         return new IgniteSessionRepository(sesExpirationTimeout, ignite, txMgr);
     }
 
     /**
      * Custom filter for retrieve credentials.
+     *
+     * @return  Authentication filter.
      */
     private BodyReaderAuthenticationFilter authenticationFilter() throws Exception {
         BodyReaderAuthenticationFilter authenticationFilter = new BodyReaderAuthenticationFilter();
 
         authenticationFilter.setAuthenticationManager(authenticationManagerBean());
-        authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, "POST"));
+        authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, POST.name()));
         authenticationFilter.setAuthenticationSuccessHandler(this::successHandler);
 
         return authenticationFilter;
@@ -228,7 +240,23 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         filter.setUsernameParameter("email");
         filter.setSwitchUserUrl(SWITCH_USER_URL);
         filter.setExitUserUrl(EXIT_USER_URL);
+        filter.setFailureHandler(new BecomeThisUserFailureHandler());
 
         return filter;
+    }
+
+    /** Failure handler for "Become this user" filter. */
+    private static class BecomeThisUserFailureHandler implements AuthenticationFailureHandler {
+        /** Messages accessor. */
+        private final WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
+        /** {@inheritDoc} */
+        @Override public void onAuthenticationFailure(
+            HttpServletRequest req,
+            HttpServletResponse res,
+            AuthenticationException e
+        ) throws IOException {
+            res.sendError(SC_INTERNAL_SERVER_ERROR, messages.getMessageWithArgs("err.become.failed", e.getMessage()));
+        }
     }
 }
