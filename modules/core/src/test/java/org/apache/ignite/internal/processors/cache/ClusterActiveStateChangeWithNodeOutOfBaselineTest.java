@@ -87,7 +87,7 @@ public class ClusterActiveStateChangeWithNodeOutOfBaselineTest extends GridCommo
 
     /** */
     @Test
-    public void testActiveRadOnly() {
+    public void testActiveReadOnly() {
         check(ACTIVE, ACTIVE_READ_ONLY);
     }
 
