@@ -22,7 +22,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Configuration;
-    using Apache.Ignite.Core.Impl;
     using NUnit.Framework;
 
     /// <summary>
@@ -49,7 +48,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         private static readonly TimeSpan CheckpointFrequency = TimeSpan.FromSeconds(5);
 
         /** Temp dir for PDS. */
-        private static readonly string TempDir = IgniteUtils.GetTempDirectoryName();
+        private static readonly string TempDir = PathUtils.GetTempDirectoryName();
 
         /// <summary>
         /// Tests the memory metrics.

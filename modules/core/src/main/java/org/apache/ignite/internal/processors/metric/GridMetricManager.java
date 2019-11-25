@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -54,11 +53,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_SYSTEM_TIME_HISTOGRAM;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_TIME_BUCKETS;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_TOTAL_SYSTEM_TIME;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_TOTAL_USER_TIME;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_USER_TIME_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -186,6 +180,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Metric registry creation listeners. */
     private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
 
+    /** Metric registry remove listeners. */
+    private final List<Consumer<MetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
+
     /** Metrics update worker. */
     private GridTimeoutProcessor.CancelableTask metricsUpdateTask;
 
@@ -238,8 +235,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
             "Histogram of cache operations blocked PME durations in milliseconds.");
-
-        registerTransactionMetrics();
     }
 
     /** {@inheritDoc} */
@@ -271,12 +266,19 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      */
     public MetricRegistry registry(String name) {
         return registries.computeIfAbsent(name, n -> {
-            MetricRegistry mreg = new MetricRegistry(name, log);
+            MetricRegistry mreg = new MetricRegistry(name, name, log);
 
             notifyListeners(mreg, metricRegCreationLsnrs);
 
             return mreg;
         });
+    }
+
+    /**
+     * @return Registries snapshot.
+     */
+    public Map<String, MetricRegistry> registries() {
+        return registries;
     }
 
     /** {@inheritDoc} */
@@ -289,13 +291,21 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         metricRegCreationLsnrs.add(lsnr);
     }
 
+    /** {@inheritDoc} */
+    @Override public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr) {
+        metricRegRemoveLsnrs.add(lsnr);
+    }
+
     /**
-     * Removes group.
+     * Removes metric registry.
      *
-     * @param grpName Group name.
+     * @param regName Metric registry name.
      */
-    public void remove(String grpName) {
-        registries.remove(grpName);
+    public void remove(String regName) {
+        MetricRegistry mreg = registries.remove(regName);
+
+        if (mreg != null)
+            notifyListeners(mreg, metricRegRemoveLsnrs);
     }
 
     /**
@@ -331,6 +341,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      */
     public void registerThreadPools(
@@ -348,6 +359,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         // Executors
@@ -362,6 +374,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
         monitorExecutor("GridQueryExecutor", qryExecSvc);
         monitorExecutor("GridSchemaExecutor", schemaExecSvc);
+        monitorExecutor("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             monitorExecutor("GridIndexingExecutor", idxExecSvc);
@@ -532,25 +545,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         catch (RuntimeException ignored) {
             return -1;
         }
-    }
-
-    /** */
-    private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(TX_METRICS);
-
-        reg.longAdderMetric(METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
-        reg.longAdderMetric(METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
-
-        reg.histogram(
-            METRIC_SYSTEM_TIME_HISTOGRAM,
-            METRIC_TIME_BUCKETS,
-            "Transactions system times on node represented as histogram."
-        );
-        reg.histogram(
-            METRIC_USER_TIME_HISTOGRAM,
-            METRIC_TIME_BUCKETS,
-            "Transactions user times on node represented as histogram."
-        );
     }
 
     /** */

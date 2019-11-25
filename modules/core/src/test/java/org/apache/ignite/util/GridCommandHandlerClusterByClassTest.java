@@ -84,12 +84,16 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IL
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
+import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.testframework.GridTestUtils.LOCAL_DATETIME_REGEXP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertMatches;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.readResource;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -102,6 +106,9 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * {@link GridCommandHandlerTest}
  */
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
+    /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */
+    private static final String ANY = "<!any!>";
+
     /**
      * Very basic tests for running the command in different enviroment which other command are running in.
      */
@@ -312,7 +319,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testCacheHelp() {
+    public void testCacheHelp() throws Exception {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "help"));
@@ -330,12 +337,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                         assertTrue(cmd + " " + arg, output.contains(arg.toString()));
 
             }
-            else {
+            else
                 assertContains(log, output, CommandHandler.UTILITY_NAME);
-
-                assertNotContains(log, output, "control.sh");
-            }
         }
+
+        checkHelp(output, "org.apache.ignite.util/control.sh_cache_help.output");
     }
 
     /** */
@@ -354,7 +360,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testHelp() {
+    public void testHelp() throws Exception {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--help"));
@@ -364,10 +370,47 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         for (CommandList cmd : CommandList.values())
             assertContains(log, testOutStr, cmd.toString());
 
-        assertContains(log, testOutStr, "Control utility script");
-        assertContains(log, testOutStr, CommandHandler.UTILITY_NAME);
-
         assertNotContains(log, testOutStr, "Control.sh");
+
+        checkHelp(testOutStr, "org.apache.ignite.util/control.sh_help.output");
+    }
+
+    /**
+     * Checks that golden copy of output and current output are same.
+     *
+     * @param output Current output.
+     * @param resourceName Name of resource with golden copy on output.
+     * @throws Exception If something goes wrong.
+     */
+    private void checkHelp(String output, String resourceName) throws Exception {
+        String correctOutput = new String(readResource(getClass().getClassLoader(), resourceName));
+
+        try {
+            // Split by lines.
+            List<String> correctOutputLines = U.sealList(correctOutput.split("\\r?\\n"));
+            List<String> outputLines = U.sealList(output.split("\\r?\\n"));
+
+            assertEquals("Wrong number of lines! Golden copy resource: " + resourceName, correctOutputLines.size(), outputLines.size());
+
+            for (int i = 0; i < correctOutputLines.size(); i++) {
+                String cLine = correctOutputLines.get(i);
+                // Remove all spaces from end of line.
+                String line = outputLines.get(i).replaceAll("\\s+$", "");
+
+                if (cLine.contains(ANY)) {
+                    String cuttedCLine = cLine.substring(0, cLine.length() - ANY.length());
+
+                    assertTrue("line: " + i, line.startsWith(cuttedCLine));
+                }
+                else
+                    assertEquals("line: " + i, cLine, line);
+            }
+        }
+        catch (AssertionError e) {
+            log.info("Correct output is: " + correctOutput);
+
+            throw e;
+        }
     }
 
     /** */
@@ -379,7 +422,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         String testOutStr = testOut.toString();
 
-        assertContains(log, testOutStr, "Control utility has completed execution at: ");
+        assertMatches(log, testOutStr, "Time: " + LOCAL_DATETIME_REGEXP);
+        assertMatches(log, testOutStr, "Control utility has completed execution at: " + LOCAL_DATETIME_REGEXP);
+        assertMatches(log, testOutStr, "Execution time: \\d+ ms");
+
     }
 
     /** */
@@ -1515,6 +1561,37 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         of("print", "delete")
             .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
+            .forEach(c -> assertContains(log, testOut.toString(), warning));
+    }
+
+    /**
+     * Don't show management commands by --help in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
+    public void testHideManagementCommandsInHelpWhenDisableExperimentalCommand() {
+        injectTestSystemOut();
+
+        execute("--help");
+
+        assertNotContains(log, testOut.toString(), MANAGEMENT.text());
+    }
+
+    /**
+     * Management commands should ignored and print warning in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
+    public void testManagementCommandsInCaseDisableExperimentalCommand() {
+        injectTestSystemOut();
+
+        String warning = String.format("For use experimental command add %s=true to JVM_OPTS in %s",
+            IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME);
+
+        of("on", "off", "uri", "status")
+            .peek(c -> assertEquals(EXIT_CODE_OK, execute(MANAGEMENT.text(), c)))
             .forEach(c -> assertContains(log, testOut.toString(), warning));
     }
 }

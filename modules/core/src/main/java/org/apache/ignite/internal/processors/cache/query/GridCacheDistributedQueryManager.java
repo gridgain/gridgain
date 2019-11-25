@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -50,7 +51,6 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteReducer;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -537,6 +537,9 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             Boolean dataPageScanEnabled = qry.query().isDataPageScanEnabled();
             MvccSnapshot mvccSnapshot = qry.query().mvccSnapshot();
 
+            boolean deployFilterOrTransformer = (qry.query().scanFilter() != null || qry.query().transform() != null)
+                && cctx.gridDeploy().enabled();
+
             final GridCacheQueryRequest req = new GridCacheQueryRequest(
                 cctx.cacheId(),
                 reqId,
@@ -559,7 +562,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 queryTopologyVersion(),
                 mvccSnapshot,
                 // Force deployment anyway if scan query is used.
-                cctx.deploymentEnabled() || (qry.query().scanFilter() != null && cctx.gridDeploy().enabled()),
+                cctx.deploymentEnabled() || deployFilterOrTransformer,
                 dataPageScanEnabled);
 
             addQueryFuture(req.id(), fut);

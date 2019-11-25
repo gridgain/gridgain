@@ -28,11 +28,11 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -89,10 +89,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
+import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 import static org.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -272,11 +274,13 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         AtomicInteger maxCalculatedInlineSize = new AtomicInteger();
 
-        IoStatisticsHolder stats = new IoStatisticsHolderIndex(
+        IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
             SORTED_INDEX,
             cctx.name(),
             idxName,
-            cctx.kernalContext().metric());
+            cctx.kernalContext().metric(),
+            cctx.group().statisticsHolderData()
+        );
 
         for (int i = 0; i < segments.length; i++) {
             db.checkpointReadLock();
@@ -418,8 +422,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             return (H2CacheRow)tree.put(row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -439,8 +445,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             return tree.putx(row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -462,8 +470,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             return tree.removex((H2Row)row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -834,7 +844,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             GridCursor<H2Row> range = ((BPlusTree)t).find(first, last, filter, null);
 
             if (range == null)
-                range = H2Utils.EMPTY_CURSOR;
+                range = EMPTY_CURSOR;
 
             H2Cursor cur = new H2Cursor(range);
 

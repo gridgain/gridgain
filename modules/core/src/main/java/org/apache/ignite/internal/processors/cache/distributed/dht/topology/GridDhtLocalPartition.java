@@ -25,7 +25,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -80,6 +79,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.FINISHED;
 
 /**
  * Key partition.
@@ -139,10 +139,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** Create time. */
     @GridToStringExclude
     private final long createTime = U.currentTimeMillis();
-
-    /** Lock. */
-    @GridToStringExclude
-    private final ReentrantLock lock = new ReentrantLock();
 
     /** */
     @GridToStringExclude
@@ -396,7 +392,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * TODO FIXME Get rid of deferred delete queue https://issues.apache.org/jira/browse/IGNITE-11704
      */
-    public void cleanupRemoveQueue() {
+    void cleanupRemoveQueue() {
         if (state() == MOVING) {
             if (rmvQueue.sizex() >= rmvQueueMaxSize) {
                 LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
@@ -441,21 +437,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         cleanupRemoveQueue();
 
         rmvQueue.add(new RemovedEntryHolder(cacheId, key, ver, rmvdEntryTtl));
-    }
-
-    /**
-     * Locks partition.
-     */
-    @SuppressWarnings({"LockAcquiredButNotSafelyReleased"})
-    public void lock() {
-        lock.lock();
-    }
-
-    /**
-     * Unlocks partition.
-     */
-    public void unlock() {
-        lock.unlock();
     }
 
     /**
@@ -1229,7 +1210,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             if (forceTestCheckpointOnEviction) {
                 if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-                    ctx.database().forceCheckpoint("test").finishFuture().get();
+                    ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
 
                     log.warning("Forced checkpoint by test reasons for partition: " + this);
 
@@ -1319,12 +1300,20 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return id;
+        return 31 * id + grp.groupId();
     }
 
     /** {@inheritDoc} */
-    @Override public boolean equals(Object obj) {
-        return obj instanceof GridDhtLocalPartition && (obj == this || ((GridDhtLocalPartition)obj).id() == id);
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        GridDhtLocalPartition part = (GridDhtLocalPartition)o;
+
+        return id == part.id && grp.groupId() == part.group().groupId();
     }
 
     /** {@inheritDoc} */
