@@ -18,7 +18,7 @@ import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools
 import {createRegularUser} from '../../roles';
 import {agentStat, AGENT_ONLY_NO_CLUSTER, errorResponseForEventType} from '../../mocks/agentTasks';
 import {WebSocketHook} from '../../mocks/WebSocketHook';
-import {importDBButton, importDBDialog, importDBImpossibleMsg} from '../../page-models/importFromDatabaseDialog'
+import {importDBButton, importDBDialog, importDBImpossibleMsg} from '../../page-models/importFromDatabaseDialog';
 import {errorNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();
@@ -31,7 +31,7 @@ fixture('Import from database dialog')
     .beforeEach(async(t) =>
         await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`))
     )
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     await t.addRequestHooks(
