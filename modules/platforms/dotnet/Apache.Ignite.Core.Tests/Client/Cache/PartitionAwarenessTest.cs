@@ -261,7 +261,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             _cache.Get(1);
             _cache.Get(1);
 
-            var requests = GetCacheRequestNames(_loggers[1]).ToArray();
+            var requests = _loggers.SelectMany(GetCacheRequestNames).ToArray();
 
             var expectedRequests = new[]
             {
@@ -271,7 +271,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 "Get"
             };
 
-            Assert.AreEqual(expectedRequests, requests);
+            CollectionAssert.AreEquivalent(expectedRequests, requests);
         }
 
         [Test]
