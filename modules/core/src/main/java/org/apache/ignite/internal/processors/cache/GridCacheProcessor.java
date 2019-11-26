@@ -894,13 +894,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         return null;
     }
 
-    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
-        stopCache(cache, cancel, destroy, false);
-    }
     /**
      * @param cache Cache to stop.
      * @param cancel Cancel flag.
      * @param destroy Destroy data flag. Setting to <code>true</code> will remove all cache data.
+     */
+    @SuppressWarnings({"unchecked"})
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
+        stopCache(cache, cancel, destroy, false);
+    }
+
+    /**
+     * @param cache Cache to stop.
+     * @param cancel Cancel flag.
+     * @param destroy Destroy data flag. Setting to <code>true</code> will remove all cache data.
+     * @param keepIndexing If {@code true} DB objects don't removed (used for cache.close() on client node).
      */
     @SuppressWarnings({"unchecked"})
     private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean keepIndexing) {
@@ -1941,6 +1949,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Stops cache under checkpoint lock.
      *
      * @param cctx Cache context.
+     * @param keepIndexing If {@code true} DB objects don't removed (used for cache.close() on client node).
      */
     private void stopCacheSafely(GridCacheContext<?, ?> cctx, boolean keepIndexing) {
         sharedCtx.database().checkpointReadLock();
@@ -2489,6 +2498,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * @param cacheName Cache name.
      * @param destroy Cache data destroy flag. Setting to <code>true</code> will remove all cache data.
+     * @param keepIndexing If {@code true} DB objects don't removed (used for cache.close() on client node).
      * @return Stopped cache context.
      */
     public GridCacheContext<?, ?> prepareCacheStop(String cacheName, boolean destroy, boolean keepIndexing) {
@@ -2608,11 +2618,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cctx Cache context to close.
      */
     private void closeCacheOnNotAffinityNode(GridCacheContext cctx) {
-        if (ctx.query().getIndexing() != null) {
+        if (ctx.query().moduleEnabled())
             stopCacheSafely(cctx, true);
-        }
         else
-            stopCacheSafely(cctx);
+            stopCacheSafely(cctx, false);
     }
 
     /**

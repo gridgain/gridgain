@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -29,16 +28,14 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
-import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
  */
-public class CacheStartStopSqlTest extends GridCommonAbstractTest {
+public class SqlCacheStartStopTest extends GridCommonAbstractTest {
     public static final String[] CACHE_NAMES = new String[] {
         null,
         "SQL_C1",
@@ -73,19 +70,19 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
 
         IgniteEx cli = startGrid(getConfiguration("client")
             .setClientMode(true)
-//            .setCacheConfiguration(
-//                ccfg(1))
+            .setCacheConfiguration(
+                ccfg(1))
         );
 
         execSql(srv, "insert into " + CACHE_NAMES[1] + "(id, s) values(?, ?)", "cli", "cli");
 
 //        cli.cache(CACHE_NAMES[1]);
-        log.info("+++ CREATE");
-        assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
-        execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
-        log.info("+++ DROP");
-        execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
-
+//        log.info("+++ CREATE");
+//        assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
+//        execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
+//        log.info("+++ DROP");
+//        execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
+//
 
         cli.cache(CACHE_NAMES[1]).close();
 //        srv.cache(CACHE_NAMES[1]).destroy();
@@ -100,50 +97,50 @@ public class CacheStartStopSqlTest extends GridCommonAbstractTest {
     }
 
 
-    /**
-     */
-    @Test
-    public void testClientCloseQueryConcurrent() throws Exception {
-        IgniteConfiguration srvCfg = getConfiguration("server")
-            .setCacheConfiguration(
-                ccfg(1)
-            );
-
-        IgniteEx srv = startGrid(srvCfg);
-
-        IgniteEx cli = startGrid(getConfiguration("client")
-                .setClientMode(true)
+//    /**
+//     */
+//    @Test
+//    public void testClientCloseQueryConcurrent() throws Exception {
+//        IgniteConfiguration srvCfg = getConfiguration("server")
 //            .setCacheConfiguration(
-//                ccfg(1))
-        );
-
-        execSql(srv, "insert into " + CACHE_NAMES[1] + "(id, s) values(?, ?)", "cli", "cli");
-
-        log.info("+++ CREATE");
-        assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
-        execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
-        log.info("+++ DROP");
-        execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
-
-        AtomicBoolean end = new AtomicBoolean();
-
-        IgniteInternalFuture fut = runAsync(() -> {
-            while (!end.get())
-                cli.cache(CACHE_NAMES[1]).close();
-        });
-
-        for (int i = 0; i < 100000; ++i) {
-            assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
-            log.info("+++ CREATE");
-            execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
-            log.info("+++ DROP");
-            execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
-        }
-
-        end.set(true);
-
-        fut.get(1000);
-    }
+//                ccfg(1)
+//            );
+//
+//        IgniteEx srv = startGrid(srvCfg);
+//
+//        IgniteEx cli = startGrid(getConfiguration("client")
+//                .setClientMode(true)
+////            .setCacheConfiguration(
+////                ccfg(1))
+//        );
+//
+//        execSql(srv, "insert into " + CACHE_NAMES[1] + "(id, s) values(?, ?)", "cli", "cli");
+//
+//        log.info("+++ CREATE");
+//        assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
+//        execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
+//        log.info("+++ DROP");
+//        execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
+//
+//        AtomicBoolean end = new AtomicBoolean();
+//
+//        IgniteInternalFuture fut = runAsync(() -> {
+//            while (!end.get())
+//                cli.cache(CACHE_NAMES[1]).close();
+//        });
+//
+//        for (int i = 0; i < 100000; ++i) {
+//            assertEquals(1, execSql(cli, "SELECT * FROM " + CACHE_NAMES[1]).size());
+//            log.info("+++ CREATE");
+//            execSql(cli, "create index idx_" + CACHE_NAMES[1] + " on " + CACHE_NAMES[1] + "(s)");
+//            log.info("+++ DROP");
+//            execSql(cli, "drop index idx_" + CACHE_NAMES[1]);
+//        }
+//
+//        end.set(true);
+//
+//        fut.get(1000);
+//    }
 
     /**
      */

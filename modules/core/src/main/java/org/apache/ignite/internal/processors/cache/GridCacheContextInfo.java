@@ -147,8 +147,7 @@ public class GridCacheContextInfo<K, V> {
     /**
      */
     public void clearCacheContext( ) {
-        if (dynamicDeploymentId != null)
-            cctx = null;
+        cctx = null;
     }
 
     /**

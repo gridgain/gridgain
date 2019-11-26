@@ -145,8 +145,6 @@ public class QueryParser {
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
         if (cached != null) {
-            H2Utils.checkAndStartNotStartedCache(idx.kernalContext(), cached.select(), cached.dml(), cached.command());
-
             return new QueryParserResult(
                 qryDesc,
                 QueryParameters.fromQuery(qry),
