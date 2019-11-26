@@ -17,9 +17,12 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -28,15 +31,16 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.testframework.CallbackExecutorLogListener;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThread;
 import org.junit.Test;
 
-import static java.lang.Thread.sleep;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 
@@ -48,17 +52,24 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOC
 )
 public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     /** */
-    private final LogListener blockedSystemCriticalThreadLsnr =
+    private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
 
     /** */
-    private final LogListener indexDropProcessListener =
+    private final LogListener idxDropProcLsnr =
         new MessageOrderLogListener(
             ".*?Starting index drop",
             ".*?Checkpoint started.*",
             ".*?Checkpoint finished.*",
             ".*?Index drop completed"
         );
+
+    /** */
+    private CountDownLatch pendingDelLatch;
+
+    /** */
+    private final LogListener pendingDelFinishedLsnr =
+        new CallbackExecutorLogListener(".*?Cleaned up pending delete object.*", () -> pendingDelLatch.countDown());
 
     /** */
     private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
@@ -68,7 +79,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
     /** */
     private final ListeningTestLogger testLog =
-        new ListeningTestLogger(false, log(), blockedSystemCriticalThreadLsnr, indexDropProcessListener);
+        new ListeningTestLogger(false, log(), blockedSysCriticalThreadLsnr, idxDropProcLsnr, pendingDelFinishedLsnr);
 
     /** */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -98,18 +109,24 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         BPlusTree.destroyClosure = () -> {
             doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
-            if (blockDestroy.compareAndSet(true, false))
-                throw new RuntimeException("Aborting destroy.");
+            if (Thread.currentThread() instanceof IgniteThread) {
+                IgniteThread thread = (IgniteThread)Thread.currentThread();
+
+                if (thread.getIgniteInstanceName().endsWith("0") && blockDestroy.compareAndSet(true, false))
+                    throw new RuntimeException("Aborting destroy.");
+            }
         };
 
-        blockedSystemCriticalThreadLsnr.reset();
-        indexDropProcessListener.reset();
+        blockedSysCriticalThreadLsnr.reset();
+        idxDropProcLsnr.reset();
+
+        pendingDelLatch = new CountDownLatch(1);
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        blockedSystemCriticalThreadLsnr.reset();
-        indexDropProcessListener.reset();
+        blockedSysCriticalThreadLsnr.reset();
+        idxDropProcLsnr.reset();
 
         stopAllGrids();
 
@@ -131,18 +148,11 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     private void testLongIndexDeletion(
         boolean restart,
         boolean rebalance,
-        boolean multipleNodes,
         boolean multicolumn
     ) throws Exception {
-        int nodeCnt = 1;
+        int nodeCnt = 2;
 
-        IgniteEx ignite = startGrids(1);
-
-        if (multipleNodes) {
-            startGrid(1);
-
-            nodeCnt++;
-        }
+        IgniteEx ignite = startGrids(nodeCnt);
 
         ignite.cluster().active(true);
 
@@ -169,7 +179,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             testLog.info("Index drop completed");
         });
 
-        indexDropProcessListener.reset();
+        idxDropProcLsnr.reset();
 
         dropIdx.start();
 
@@ -200,20 +210,14 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             ignite = startGrid(0);
 
-            if (!multipleNodes)
-                ignite.cluster().active(true);
-
             cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-            try {
-                for (int i = 0; i < 20_000; i += 10)
-                    cache.query(new SqlFieldsQuery("select id, p from t where p = " + i)).getAll();
-            }
-            catch (Exception ignored) {
-                // No-op: tree is concurrently destroyed.
-            }
+            awaitPartitionMapExchange();
 
-            sleep(10000);
+            pendingDelLatch.await(60, TimeUnit.SECONDS);
+
+            if (pendingDelLatch.getCount() > 0)
+                fail("Test timed out: failed to await for cleaning up pending delete object.");
         }
         else
             dropIdx.join();
@@ -221,7 +225,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         //assertFalse(blockedSystemCriticalThreadLsnr.check());
 
         if (!restart)
-            assertTrue(indexDropProcessListener.check());
+            assertTrue(idxDropProcLsnr.check());
 
         checkSelectAndPlan(cache, false);
 
@@ -292,7 +296,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false, false, false);
+        testLongIndexDeletion(false, false, false);
     }
 
     /**
@@ -303,7 +307,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongMulticolumnIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false, false, true);
+        testLongIndexDeletion(false, false, true);
     }
 
     /**
@@ -314,7 +318,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
-        testLongIndexDeletion(true, false, false, false);
+        testLongIndexDeletion(true, false, false);
     }
 
     /**
@@ -325,18 +329,6 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRebalance() throws Exception {
-        testLongIndexDeletion(false, true, false, false);
-    }
-
-    /**
-     * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
-     * operation. After checkpoint node should restart without fully deleted index tree and after that, complete
-     * deletion process, working along with other node that had deleted index normally.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLongIndexDeletionWithMultipleNodes() throws Exception {
-        testLongIndexDeletion(true, false, true, false);
+        testLongIndexDeletion(false, true, false);
     }
 }

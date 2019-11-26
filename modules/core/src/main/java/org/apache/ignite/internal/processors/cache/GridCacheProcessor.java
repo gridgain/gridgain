@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -98,6 +97,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.PendingDeleteObject;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -666,19 +666,23 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     private void asyncPendingDeleteCleanup() {
         assert pendingDeleteObjects != null;
 
-        for (PendingDeleteObject obj : pendingDeleteObjects.values()) {
-            switch (obj.type) {
-                case SQL_INDEX:
-                    asyncPendingDeleteCleanupWorker(obj, () -> {
+        Set<PendingDeleteObject> objs = new HashSet<>(pendingDeleteObjects.values());
+
+        log.info("Objects count to clean up: " + objs.size());
+
+        for (PendingDeleteObject obj : objs) {
+            asyncPendingDeleteCleanupWorker(obj, () -> {
+                switch (obj.type()) {
+                    case SQL_INDEX:
                         cleanupPendingDeleteIndex(obj);
 
-                        return null;
-                    });
+                        break;
 
-                    break;
+                    default: log.warning("Unknown pending delete object type: " + obj.type().toString());
+                }
 
-                default: log.warning("Unknown pending delete object type: " + obj.type.toString());
-            }
+                return null;
+            });
         }
     }
 
@@ -690,12 +694,12 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @throws IgniteCheckedException If failed.
      */
     private void cleanupPendingDeleteIndex(PendingDeleteObject obj) throws IgniteCheckedException {
-        DynamicCacheDescriptor cacheDesc = cacheDescriptor(obj.cacheName);
+        DynamicCacheDescriptor cacheDesc = cacheDescriptor(obj.cacheName());
 
         if (cacheDesc == null)
             throw new IgniteException("Could not get cache descriptor for cache: " + cacheDesc);
 
-        CacheConfiguration ccfg = cacheConfiguration(obj.cacheName);
+        CacheConfiguration ccfg = cacheConfiguration(obj.cacheName());
 
         if (ccfg == null)
             throw new IgniteException("Could not get cache configuration for cache: " + cacheDesc);
@@ -703,14 +707,16 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         IgniteUuid depId = cacheDesc.deploymentId();
 
         QueryTypeDescriptorImpl type =
-            new QueryTypeDescriptorImpl(obj.cacheName, ctx.cacheObjects().contextForCache(ccfg));
+            new QueryTypeDescriptorImpl(obj.cacheName(), ctx.cacheObjects().contextForCache(ccfg));
 
         SchemaIndexDropOperation op =
-            new SchemaIndexDropOperation(UUID.randomUUID(), obj.cacheName, obj.schemaName, obj.name, true);
+            new SchemaIndexDropOperation(UUID.randomUUID(), obj.cacheName(), obj.schemaName(), obj.name(), true);
 
         ctx.query().processSchemaOperationLocal(op, type, depId, new SchemaIndexOperationCancellationToken());
 
         ctx.query().onLocalOperationFinished(op, type);
+
+        removePendingDeleteObject(obj);
     }
 
     /**
@@ -724,10 +730,14 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
             @Override protected void body() {
                 try {
+                    log.info("Cleaning up pending delete object: " + obj.toString());
+
                     call.call();
+
+                    log.info("Cleaned up pending delete object: " + obj.toString());
                 }
                 catch (Exception e) {
-                    log.warning("Could not clean up schema pending delete object: " + obj.name, e);
+                    log.warning("Could not clean up schema pending delete object: " + obj.toString(), e);
                 }
                 finally {
                     asyncSchemaWorkers.remove(this);
@@ -5268,13 +5278,24 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         this.metastorage = metastorage;
     }
 
-    private String pendingDeleteObjectName(PendingDeleteObjectType type, String name) {
+    /**
+     * Builds a metastorage key for pending delete object.
+     *
+     * @param obj Object.
+     * @return Metastorage key.
+     */
+    private String pendingDeleteObjectMetastorageKey(PendingDeleteObject obj) {
         return new GridStringBuilder(STORE_PENDING_DELETE_PREFIX)
-            .a(type).a("-").a(name).toString();
+            .a(obj.toString()).toString();
     }
 
+    /**
+     * Adds pending delete object.
+     *
+     * @param obj Object.
+     */
     public void addPendingDeleteObject(PendingDeleteObject obj) {
-        String objName = pendingDeleteObjectName(obj.type, obj.name);
+        String objName = pendingDeleteObjectMetastorageKey(obj);
 
         if (metastorage == null) {
             synchronized (metaStorageMux) {
@@ -5299,54 +5320,34 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         }
     }
 
-    public PendingDeleteObject getPendingDeleteObject(PendingDeleteObjectType type, String name) {
+    /**
+     * Removes pending delete object.
+     *
+     * @param obj Object.
+     */
+    public void removePendingDeleteObject(PendingDeleteObject obj) {
+        String objName = pendingDeleteObjectMetastorageKey(obj);
+
         if (metastorage == null) {
             synchronized (metaStorageMux) {
-                if (metastorage == null)
-                    return pendingDeleteObjects.get(pendingDeleteObjectName(type, name));
+                if (metastorage == null) {
+                    pendingDeleteObjects.remove(objName);
+
+                    return;
+                }
             }
         }
 
+        ctx.cache().context().database().checkpointReadLock();
+
         try {
-            return (PendingDeleteObject) metastorage.read(pendingDeleteObjectName(type, name));
+            metastorage.remove(objName);
         }
         catch (IgniteCheckedException e) {
-            throw new IgniteException("Failed to read value from pending objects storage.", e);
+            throw new IgniteException(e);
         }
-    }
-
-    /**
-     *
-     */
-    public enum PendingDeleteObjectType {
-        SQL_INDEX
-    }
-
-    /**
-     *
-     */
-    public static class PendingDeleteObject implements Serializable {
-        /** */
-        private PendingDeleteObjectType type;
-
-        /** */
-        private String name;
-
-        /** */
-        private String cacheName;
-
-        /** */
-        private String schemaName;
-
-        /** */
-        public PendingDeleteObject() {}
-
-        /** */
-        public PendingDeleteObject(PendingDeleteObjectType type, String name, String cacheName, String schemaName) {
-            this.type = type;
-            this.name = name;
-            this.cacheName = cacheName;
-            this.schemaName = schemaName;
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
         }
     }
 
