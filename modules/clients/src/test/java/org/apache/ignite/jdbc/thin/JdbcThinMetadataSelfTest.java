@@ -52,8 +52,8 @@ import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.metric.sql.SqlViewMetricExporterSpi;
-import org.junit.Assert;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static java.sql.Types.DATE;
@@ -864,6 +864,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.TABLES.VALUE_ALIAS.null.2147483647",
                 "IGNITE.TABLES.KEY_TYPE_NAME.null.2147483647",
                 "IGNITE.TABLES.VALUE_TYPE_NAME.null.2147483647",
+                "IGNITE.TABLES.IS_INDEX_REBUILD_IN_PROGRESS.null.1",
                 "IGNITE.METRICS.NAME.null.2147483647",
                 "IGNITE.METRICS.VALUE.null.2147483647",
                 "IGNITE.METRICS.DESCRIPTION.null.2147483647",
