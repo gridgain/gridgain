@@ -98,6 +98,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             return;
         }
 
+        beforeExecute();
+
         AtomicBoolean stop = new AtomicBoolean();
 
         GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> buildIdxCompoundFut =
@@ -178,6 +180,14 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         }
 
         return res.toString();
+    }
+
+    /**
+     * This method is called before creating or rebuilding indexes.
+     * Used only for test.
+     */
+    protected void beforeExecute() {
+        // No-op.
     }
 
     /** {@inheritDoc} */

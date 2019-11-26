@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -347,6 +348,12 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rebalanceClearingPartitions = mreg.longMetric("RebalanceClearingPartitionsLeft",
             "Number of partitions need to be cleared before actual rebalance start.");
+
+        mreg.register("IsIndexRebuildInProgress", () -> {
+            IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+
+            return fut != null && !fut.isDone();
+        }, "True if index rebuild is in progress.");
 
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
