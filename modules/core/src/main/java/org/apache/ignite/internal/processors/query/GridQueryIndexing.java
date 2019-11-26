@@ -415,10 +415,11 @@ public interface GridQueryIndexing {
     @Nullable public GridCacheContextInfo registeredCacheInfo(String cacheName);
 
     /**
-     * Clear cache info on call cache.close() on client node.
+     * Clear cache info and clear parser cache on call cache.close() on client node.
+     *
      * @param cacheName Cache name to clear.
      */
-    public void clearCacheInfo(String cacheName);
+    public void closeCacheOnClient(String cacheName);
 
     /**
      * Initialize table's cache context created for not started cache.

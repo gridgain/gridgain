@@ -932,7 +932,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
             if (!clearDbObjects)
-                ctx.kernalContext().query().getIndexing().clearCacheInfo(ctx.name());
+                ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
             else
                 ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
 
@@ -1950,6 +1950,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      *
      * @param cctx Cache context.
      * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
+     * The parameters was added due to make differ between cache.close() on client node and distributed destroy cache
+     * (e.g. call cache.destroy()).
+     *
+     * Before add the parameter {@code clearDbObjects}:
+     * when on client node is joined we initialize H2 objects for all caches in cluster,
+     * but on client cache.close() we destroy part of created objects,
+     * making impossible running SQL queries on that cache;
+     * clientCache.close() should restore status quo of state right after client join instead).
      */
     private void stopCacheSafely(GridCacheContext<?, ?> cctx, boolean clearDbObjects) {
         sharedCtx.database().checkpointReadLock();

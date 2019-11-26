@@ -151,6 +151,11 @@ public class SqlCacheStartStopTest extends GridCommonAbstractTest {
         for (int i : idxs) {
             String cacheName = CACHE_NAMES[i];
 
+            execSql(cli, "select * from " + cacheName);
+            execSql(cli, "create index idx_" + cacheName + " on " + cacheName + "(s)");
+            execSql(cli, "select count(*) from " + cacheName);
+            execSql(cli, "drop index idx_" + cacheName);
+
             execSql(c10, "select * from " + cacheName);
             execSql(c10, "create index idx_" + cacheName + " on " + cacheName + "(s)");
             execSql(c11, "select count(*) from " + cacheName);

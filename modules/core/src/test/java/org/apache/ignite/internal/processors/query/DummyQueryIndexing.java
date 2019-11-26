@@ -302,7 +302,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void clearCacheInfo(String cacheName) {
+    @Override public void closeCacheOnClient(String cacheName) {
         // No-op.
     }
 
