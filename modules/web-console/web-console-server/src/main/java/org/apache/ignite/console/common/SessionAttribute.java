@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.common;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.web.socket.WebSocketSession;
 
 import static org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor.HTTP_SESSION_ID_ATTR_NAME;
@@ -59,5 +60,10 @@ public class SessionAttribute {
      */
     public String getName() {
         return name;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(SessionAttribute.class, this);
     }
 }
