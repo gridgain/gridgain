@@ -931,8 +931,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
-            if (keepIndexing)
-                ctx.kernalContext().query().getIndexing().registeredCacheInfo(ctx.name()).clearCacheContext();
+            if (keepIndexing) {
+                GridCacheContextInfo idxCacheInfo = ctx.kernalContext().query().getIndexing().registeredCacheInfo(ctx.name());
+
+                if (idxCacheInfo != null)
+                    cacheInfo.clearCacheContext();
+            }
             else
                 ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
 
