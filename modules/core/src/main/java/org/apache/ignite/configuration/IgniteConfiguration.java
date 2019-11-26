@@ -2589,8 +2589,8 @@ public class IgniteConfiguration {
      * <p>
      * Default value is {@link #DFLT_ACTIVE_ON_START}.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
-     * cluster is always inactive on start when Ignite Persistence is enabled.
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @return Active on start flag value.
      * @deprecated Use {@link #getClusterStateOnStart()}  instead.
@@ -2607,8 +2607,8 @@ public class IgniteConfiguration {
      * <p>
      * Default value is {@link #DFLT_STATE_ON_START}.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
-     * cluster is always inactive on start when Ignite Persistence is enabled.
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
      *
      * @return State of cluster on start.
      */
@@ -2637,16 +2637,19 @@ public class IgniteConfiguration {
 
     /**
      * Sets state of cluster on start. This value should be the same on all
-     * nodes in the cluster.
+     * nodes in the cluster. The state can't be null.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
-     * cluster is always inactive on start when Ignite Persistence is enabled.
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
      *
      * @param state Cluster state on start value.
      * @return {@code this} instance.
      * @see #getClusterStateOnStart()
      */
     public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
+        if (state == null)
+            throw new NullPointerException("Cluster state on start can't be null.");
+
         this.clusterStateOnStart = state;
         this.activeOnStart = ClusterState.active(state);
 
