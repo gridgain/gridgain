@@ -668,8 +668,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         Set<PendingDeleteObject> objs = new HashSet<>(pendingDeleteObjects.values());
 
-        log.info("Objects count to clean up: " + objs.size());
-
         for (PendingDeleteObject obj : objs) {
             asyncPendingDeleteCleanupWorker(obj, () -> {
                 switch (obj.type()) {
@@ -694,17 +692,17 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @throws IgniteCheckedException If failed.
      */
     private void cleanupPendingDeleteIndex(PendingDeleteObject obj) throws IgniteCheckedException {
-        DynamicCacheDescriptor cacheDesc = cacheDescriptor(obj.cacheName());
+        GridCacheContextInfo cacheInfo = ctx.query().getIndexing().registeredCacheInfo(obj.cacheName());
 
-        if (cacheDesc == null)
-            throw new IgniteException("Could not get cache descriptor for cache: " + cacheDesc);
+        if (cacheInfo == null)
+            throw new IgniteException("Could not get cache info for cache: " + obj.cacheName());
+
+        IgniteUuid depId = cacheInfo.dynamicDeploymentId();
 
         CacheConfiguration ccfg = cacheConfiguration(obj.cacheName());
 
         if (ccfg == null)
-            throw new IgniteException("Could not get cache configuration for cache: " + cacheDesc);
-
-        IgniteUuid depId = cacheDesc.deploymentId();
+            throw new IgniteException("Could not get cache configuration for cache: " + obj.cacheName());
 
         QueryTypeDescriptorImpl type =
             new QueryTypeDescriptorImpl(obj.cacheName(), ctx.cacheObjects().contextForCache(ccfg));

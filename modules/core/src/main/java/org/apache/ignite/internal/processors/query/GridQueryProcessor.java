@@ -1476,6 +1476,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void onLocalOperationFinished(SchemaAbstractOperation op, @Nullable QueryTypeDescriptorImpl type) {
         synchronized (stateMux) {
+            log.info("finishing local operation op=" + op);
             if (disconnected)
                 return;
 
@@ -1526,6 +1527,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 U.warn(log, "Failed to finish index operation [opId=" + op.id() + " op=" + op + ']', e);
             }
         }
+        log.info("finished local operation op=" + op);
+
     }
 
     /**
@@ -1575,6 +1578,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         String cacheName = op.cacheName();
 
         GridCacheContextInfo cacheInfo = idx.registeredCacheInfo(cacheName);
+
+        log.info("Started schema operation=" + op + ", cacheInfo=" + cacheInfo + ", depId=" + depId + ", cacheInfoDepId=" + cacheInfo.dynamicDeploymentId() + ", depIdEqual=" + F.eq(depId, cacheInfo.dynamicDeploymentId()));
 
         if (cacheInfo == null || !F.eq(depId, cacheInfo.dynamicDeploymentId()))
             throw new SchemaOperationException(SchemaOperationException.CODE_CACHE_NOT_FOUND, cacheName);

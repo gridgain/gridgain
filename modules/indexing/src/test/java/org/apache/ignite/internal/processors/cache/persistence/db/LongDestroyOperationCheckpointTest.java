@@ -52,6 +52,15 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOC
 )
 public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     /** */
+    private static final int NODES_COUNT = 2;
+
+    /** */
+    private static final int RESTARTED_NODE_NUM = 0;
+
+    /** */
+    private static final int ALWAYS_ALIVE_NODE_NUM = 1;
+
+    /** */
     private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
 
@@ -91,10 +100,11 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
                         .setInitialSize(10 * 1024L * 1024L)
                         .setMaxSize(50 * 1024L * 1024L)
                 )
-                    .setCheckpointFrequency(Long.MAX_VALUE / 2)
+                .setCheckpointFrequency(Long.MAX_VALUE / 2)
             )
             .setCacheConfiguration(
                 new CacheConfiguration(DEFAULT_CACHE_NAME)
+                    .setBackups(1)
                     .setSqlSchema("PUBLIC")
             )
             .setGridLogger(testLog);
@@ -112,7 +122,8 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             if (Thread.currentThread() instanceof IgniteThread) {
                 IgniteThread thread = (IgniteThread)Thread.currentThread();
 
-                if (thread.getIgniteInstanceName().endsWith("0") && blockDestroy.compareAndSet(true, false))
+                if (thread.getIgniteInstanceName().endsWith(String.valueOf(RESTARTED_NODE_NUM))
+                    && blockDestroy.compareAndSet(true, false))
                     throw new RuntimeException("Aborting destroy.");
             }
         };
@@ -148,9 +159,10 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     private void testLongIndexDeletion(
         boolean restart,
         boolean rebalance,
-        boolean multicolumn
+        boolean multicolumn,
+        boolean checkWhenOneNodeStopped
     ) throws Exception {
-        int nodeCnt = 2;
+        int nodeCnt = NODES_COUNT;
 
         IgniteEx ignite = startGrids(nodeCnt);
 
@@ -204,13 +216,25 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         if (restart) {
             blockDestroy.set(true);
 
-            stopGrid(0, true);
+            stopGrid(RESTARTED_NODE_NUM, true);
 
-            blockDestroy.set(false);
+            if (checkWhenOneNodeStopped) {
+                cache = grid(ALWAYS_ALIVE_NODE_NUM).cache(DEFAULT_CACHE_NAME);
 
-            ignite = startGrid(0);
+                doSleep(10000);
 
-            cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+                //checkSelectAndPlan(cache, false);
+
+                createIndex(cache, multicolumn);
+
+                checkSelectAndPlan(cache, true);
+            }
+
+            ignite = startGrid(RESTARTED_NODE_NUM);
+
+            cache = ignite.cache(DEFAULT_CACHE_NAME);
+
+            checkSelectAndPlan(cache, false);
 
             awaitPartitionMapExchange();
 
@@ -296,7 +320,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false, false);
+        testLongIndexDeletion(false, false, false, false);
     }
 
     /**
@@ -307,7 +331,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongMulticolumnIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false, true);
+        testLongIndexDeletion(false, false, true, false);
     }
 
     /**
@@ -318,7 +342,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
-        testLongIndexDeletion(true, false, false);
+        testLongIndexDeletion(true, false, false, false);
     }
 
     /**
@@ -329,6 +353,18 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRebalance() throws Exception {
-        testLongIndexDeletion(false, true, false);
+        testLongIndexDeletion(false, true, false, false);
+    }
+
+    /**
+     * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
+     * operation. After checkpoint node should restart without fully deleted index tree. While node is stopped,
+     * we should check index and try to recreate it.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongIndexDeletionCheckWhenOneNodeStopped() throws Exception {
+        testLongIndexDeletion(true, false, false, true);
     }
 }
