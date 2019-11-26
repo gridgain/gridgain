@@ -2479,104 +2479,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     public long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
-        /*if (!markDestroyed())
-            return 0;
-
-        if (reuseList == null)
-            return -1;
-
-        LongListReuseBag bag = new LongListReuseBag();
-
-        long pagesCnt = 0;
-
-        long lockHoldStartTime = U.currentTimeMillis();
-
-        long lockMaxTime = maxLockHoldTime();
-
-        long cntr = 0;
-
-        long metaPage = acquirePage(metaPageId);
-
-        try {
-            long metaPageAddr = writeLock(metaPageId, metaPage); // No checks, we must be out of use.
-
-            assert metaPageAddr != 0L;
-
-            Iterable<Long> firstPageIds = getFirstPageIds(metaPageAddr);
-
-            bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
-
-            pagesCnt++;
-
-            try {
-                for (long pageId : firstPageIds) {
-                    assert pageId != 0;
-
-                    do {
-                        cntr++;
-
-                        if (cntr % 100 == 0) {
-                            if (U.currentTimeMillis() - lockHoldStartTime > lockMaxTime) {
-                                temporaryReleaseLock();
-
-                                lockHoldStartTime = U.currentTimeMillis();
-                            }
-                        }
-
-                        final long pId = pageId;
-
-                        long page = acquirePage(pId);
-
-                        if (destroyClosure != null)
-                            destroyClosure.run();
-
-                        try {
-                            long pageAddr = writeLock(pId, page); // No checks, we must be out of use.
-
-                            try {
-                                BPlusIO<L> io = io(pageAddr);
-
-                                if (c != null && io.isLeaf())
-                                    io.visit(pageAddr, c);
-
-
-                                long fwdPageId = io.getForward(pageAddr);
-
-                                bag.addFreePage(recyclePage(pageId, page, pageAddr, null));
-                                pagesCnt++;
-
-                                pageId = fwdPageId;
-                            }
-                            finally {
-                                writeUnlock(pId, page, pageAddr, true);
-                            }
-                        }
-                        finally {
-                            releasePage(pId, page);
-                        }
-
-                        if (bag.size() == 128) {
-                            reuseList.addForRecycle(bag);
-
-                            assert bag.isEmpty() : bag.size();
-                        }
-                    }
-                    while (pageId != 0);
-                }
-            }
-            finally {
-                writeUnlock(metaPageId, metaPage, metaPageAddr, true);
-            }
-        }
-        finally {
-            releasePage(metaPageId, metaPage);
-        }
-
-        reuseList.addForRecycle(bag);
-
-        assert bag.isEmpty() : bag.size();
-
-        return pagesCnt;*/
         if (!markDestroyed())
             return 0;
 
@@ -2585,12 +2487,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         LongListReuseBag bag = new LongListReuseBag();
 
-        long rootPageId;
-        int rootLvl;
-
         long pagesCnt = 0;
 
-        AtomicLong cntr = new AtomicLong(0);
+        AtomicLong lockHoldStartTime = new AtomicLong(U.currentTimeMillis());
+
+        final long lockMaxTime = maxLockHoldTime();
 
         long metaPage = acquirePage(metaPageId);
 
@@ -2600,14 +2501,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             try {
                 assert metaPageAddr != 0L;
 
-                rootLvl = getRootLevel(metaPageAddr);
+                int rootLvl = getRootLevel(metaPageAddr);
 
                 if (rootLvl < 0)
                     fail("Root level: " + rootLvl);
 
-                rootPageId = getFirstPageId(metaPageId, metaPage, rootLvl, metaPageAddr);
+                long rootPageId = getFirstPageId(metaPageId, metaPage, rootLvl, metaPageAddr);
 
-                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c, cntr);
+                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c, lockHoldStartTime, lockMaxTime);
 
                 bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
 
@@ -2628,13 +2529,28 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return pagesCnt;
     }
 
+    /**
+     * Recursively destroys tree pages. Should be initially called with id of root page as {@code pageId}
+     * and root level as {@code lvl}.
+     *
+     * @param bag Reuse bag.
+     * @param pageId Page id.
+     * @param fwdId Forward page id.
+     * @param lvl Current level of tree.
+     * @param c Visitor closure. Visits only leaf pages.
+     * @param lockHoldStartTime When lock has been aquired last time.
+     * @param lockMaxTime Maximum time to hold the lock.
+     * @return Count of destroyed pages.
+     * @throws IgniteCheckedException If failed.
+     */
     private long destroyDownPages(
         LongListReuseBag bag,
         long pageId,
         long fwdId,
         int lvl,
         IgniteInClosure<L> c,
-        AtomicLong cntr
+        AtomicLong lockHoldStartTime,
+        long lockMaxTime
     ) throws IgniteCheckedException {
         if (pageId == 0)
             return 0;
@@ -2666,7 +2582,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         inner(io).setLeft(pageAddr, i, 0);
 
-                        pagesCnt += destroyDownPages(bag, leftId, inner(io).getRight(pageAddr, i), lvl - 1, c, cntr);
+                        pagesCnt += destroyDownPages(
+                            bag,
+                            leftId,
+                            inner(io).getRight(pageAddr, i),
+                            lvl - 1,
+                            c,
+                            lockHoldStartTime,
+                            lockMaxTime
+                        );
                     }
 
                     if (fwdId != 0) {
@@ -2691,7 +2615,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     long leftId = inner(io).getLeft(pageAddr, cnt); // The same as io.getRight(cnt - 1) but works for routing pages.
 
-                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c, cntr);
+                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c, lockHoldStartTime, lockMaxTime);
                 }
 
                 if (c != null && io.isLeaf())
@@ -2708,14 +2632,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 writeUnlock(pageId, page, pageAddr, true);
             }
 
-            cntr.incrementAndGet();
-
-            if (cntr.get() % 100 == 0) {
-                //if (U.currentTimeMillis() - lockHoldStartTime > lockMaxTime) {
+            if (U.currentTimeMillis() - lockHoldStartTime.get() > lockMaxTime) {
                 temporaryReleaseLock();
 
-                //    lockHoldStartTime = U.currentTimeMillis();
-                //}
+                lockHoldStartTime.set(U.currentTimeMillis());
             }
 
         }

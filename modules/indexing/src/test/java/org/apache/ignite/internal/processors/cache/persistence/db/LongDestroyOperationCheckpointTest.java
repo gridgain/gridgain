@@ -61,7 +61,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         );
 
     /** */
-    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 40;
+    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
 
     /** */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
@@ -101,10 +101,16 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             if (blockDestroy.compareAndSet(true, false))
                 throw new RuntimeException("Aborting destroy.");
         };
+
+        blockedSystemCriticalThreadLsnr.reset();
+        indexDropProcessListener.reset();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        blockedSystemCriticalThreadLsnr.reset();
+        indexDropProcessListener.reset();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -116,7 +122,9 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
      * operation. Node can restart without fully deleted index tree.
      *
-     * @param restart Whether do restart.
+     * @param restart Whether do the restart of one node.
+     * @param rebalance Whether add to topology one more node while the index is being deleted.
+     * @param multicolumn Is index multicolumn.
      *
      * @throws Exception If failed.
      */
@@ -144,7 +152,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         createIndex(cache, multicolumn);
 
-        for (int i = 0; i < 20_000; i++)
+        for (int i = 0; i < 5_000; i++)
             query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
 
         forceCheckpoint();
@@ -223,7 +231,13 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         checkSelectAndPlan(cache, true);
     }
 
-    /** */
+    /**
+     * Checks that select from table "t" is successful and correctness of index usage.
+     * Table should be already created.
+     *
+     * @param cache Cache.
+     * @param idxShouldExist Should index exist or not.
+     */
     private void checkSelectAndPlan(IgniteCache<Integer, Integer> cache, boolean idxShouldExist) {
         // Ensure that index is not used after it was dropped.
         String plan = query(cache, "explain select id, p from t where p = 0")
@@ -237,17 +251,35 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         assertEquals("1000", val);
     }
 
-    /** */
+    /**
+     * Creates index on table "t", which should be already created.
+     *
+     * @param cache Cache.
+     * @param multicolumn Whether index is multicolumn.
+     */
     private void createIndex(IgniteCache<Integer, Integer> cache, boolean multicolumn) {
         query(cache, "create index t_idx on t (p" + (multicolumn ? ", f)" : ")"));
     }
 
-    /** */
+    /**
+     * Does single query.
+     *
+     * @param cache Cache.
+     * @param qry Query.
+     * @return Query result.
+     */
     private List<List<?>> query(IgniteCache<Integer, Integer> cache, String qry) {
         return cache.query(new SqlFieldsQuery(qry)).getAll();
     }
 
-    /** */
+    /**
+     * Does parametrized query.
+     *
+     * @param cache Cache.
+     * @param qry Query.
+     * @param args Arguments.
+     * @return Query result.
+     */
     private List<List<?>> query(IgniteCache<Integer, Integer> cache, String qry, Object... args) {
         return cache.query(new SqlFieldsQuery(qry).setArgs(args)).getAll();
     }
@@ -263,6 +295,12 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         testLongIndexDeletion(false, false, false, false);
     }
 
+    /**
+     * Tests case when long multicolumn index deletion operation happens. Checkpoint should run in the middle
+     * of index deletion operation.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testLongMulticolumnIndexDeletion() throws Exception {
         testLongIndexDeletion(false, false, false, true);
@@ -290,6 +328,13 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         testLongIndexDeletion(false, true, false, false);
     }
 
+    /**
+     * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
+     * operation. After checkpoint node should restart without fully deleted index tree and after that, complete
+     * deletion process, working along with other node that had deleted index normally.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testLongIndexDeletionWithMultipleNodes() throws Exception {
         testLongIndexDeletion(true, false, true, false);
