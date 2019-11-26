@@ -206,24 +206,32 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_BINARY_TYPE_PUT = 3003;
 
+    /** Start new transaction. Reserved for IGNITE-9410. */
+    @SuppressWarnings("unused")
+    private static final short OP_TX_START = 4000;
+
+    /** Commit transaction. Reserved for IGNITE-9410. */
+    @SuppressWarnings("unused")
+    private static final short OP_TX_END = 4001;
+
     /* Cluster operations. */
     /** */
-    private static final short OP_CLUSTER_IS_ACTIVE = 4000;
+    private static final short OP_CLUSTER_IS_ACTIVE = 5000;
 
     /** */
-    private static final short OP_CLUSTER_CHANGE_STATE = 4001;
+    private static final short OP_CLUSTER_CHANGE_STATE = 5001;
 
     /** */
-    private static final short OP_CLUSTER_CHANGE_WAL_STATE = 4002;
+    private static final short OP_CLUSTER_CHANGE_WAL_STATE = 5002;
 
     /** */
-    private static final short OP_CLUSTER_GET_WAL_STATE = 4003;
+    private static final short OP_CLUSTER_GET_WAL_STATE = 5003;
 
     /** */
-    private static final short OP_CLUSTER_GROUP_GET_NODE_IDS = 4100;
+    private static final short OP_CLUSTER_GROUP_GET_NODE_IDS = 5100;
 
     /** */
-    private static final short OP_CLUSTER_GROUP_GET_NODE_INFO = 4101;
+    private static final short OP_CLUSTER_GROUP_GET_NODE_INFO = 5101;
 
     /* Custom queries working through processors registry. */
     /** */

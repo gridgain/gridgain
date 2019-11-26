@@ -30,6 +30,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     [TestFixture]
     public class ClientClusterGroupTests : ClientTestBase
     {
+        private const string ExpectedErrorMessage =
+            "'name' argument should not be null or empty.\r\nParameter name: name";
+
         /// <summary>
         /// Test thin client cluster group returns the same nodes collection as thick one.
         /// </summary>
@@ -203,8 +206,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             TestDelegate action = () => Client.GetCluster().ForAttribute(null, null);
 
-            var ex = Assert.Throws<ArgumentNullException>(action);
-            Assert.AreEqual("Value cannot be null.\r\nParameter name: name", ex.Message);
+            var ex = Assert.Throws<ArgumentException>(action);
+            Assert.AreEqual(ExpectedErrorMessage, ex.Message);
         }
 
 
@@ -217,8 +220,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             TestDelegate action = () => Client.GetCluster().ForAttribute(string.Empty, null);
 
-            var ex = Assert.Throws<ArgumentNullException>(action);
-            Assert.AreEqual("Value cannot be null.\r\nParameter name: name", ex.Message);
+            var ex = Assert.Throws<ArgumentException>(action);
+            Assert.AreEqual(ExpectedErrorMessage, ex.Message);
         }
     }
 }

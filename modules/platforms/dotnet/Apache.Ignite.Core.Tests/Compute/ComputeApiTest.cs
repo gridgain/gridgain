@@ -21,8 +21,10 @@ namespace Apache.Ignite.Core.Tests.Compute
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Compute;
     using Apache.Ignite.Core.Events;
@@ -50,6 +52,9 @@ namespace Apache.Ignite.Core.Tests.Compute
         /** Third node. */
         private IIgnite _grid3;
 
+        /** Thin client. */
+        private IIgniteClient _igniteClient;
+
         /// <summary>
         /// Initialization routine.
         /// </summary>
@@ -66,6 +71,9 @@ namespace Apache.Ignite.Core.Tests.Compute
             var events = _grid1.GetEvents();
             events.EnableLocal(EventType.CacheRebalanceStopped);
             events.WaitForLocal(EventType.CacheRebalanceStopped);
+
+            // Start thin client.
+            _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
         }
 
         /// <summary>
@@ -77,6 +85,19 @@ namespace Apache.Ignite.Core.Tests.Compute
                 "Config\\Compute\\compute-grid1.xml",
                 "Config\\Compute\\compute-grid2.xml",
                 "Config\\Compute\\compute-grid3.xml");
+        }
+
+
+        /// <summary>
+        /// Gets the thin client configuration.
+        /// </summary>
+        private static IgniteClientConfiguration GetThinClientConfiguration()
+        {
+            return new IgniteClientConfiguration
+            {
+                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
+                SocketTimeout = TimeSpan.FromSeconds(15)
+            };
         }
 
         /// <summary>
@@ -522,12 +543,39 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Tests thin client ForServers projection.
+        /// </summary>
+        [Test]
+        public void TestThinClientForServers()
+        {
+            var cluster = _igniteClient.GetCluster();
+
+            var servers = cluster.ForServers().GetNodes();
+            Assert.AreEqual(2, servers.Count);
+            Assert.IsTrue(servers.All(x => !x.IsClient));
+        }
+
+        /// <summary>
         /// Test for attribute projection.
         /// </summary>
         [Test]
         public void TestForAttribute()
         {
             ICollection<IClusterNode> nodes = _grid1.GetCluster().GetNodes();
+
+            IClusterGroup prj = _grid1.GetCluster().ForAttribute("my_attr", "value1");
+            Assert.AreEqual(1, prj.GetNodes().Count);
+            Assert.IsTrue(nodes.Contains(prj.GetNode()));
+            Assert.AreEqual("value1", prj.GetNodes().First().GetAttribute<string>("my_attr"));
+        }
+
+        /// <summary>
+        /// Test thin client for attribute projection.
+        /// </summary>
+        [Test]
+        public void TestClientForAttribute()
+        {
+            ICollection<IClusterNode> nodes = _igniteClient.GetCluster().GetNodes();
 
             IClusterGroup prj = _grid1.GetCluster().ForAttribute("my_attr", "value1");
             Assert.AreEqual(1, prj.GetNodes().Count);
@@ -564,7 +612,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.AreEqual(0, prjClient.GetNodes().Count);
         }
-        
+
         /// <summary>
         /// Test for cache predicate.
         /// </summary>
@@ -575,6 +623,25 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(2, prj1.GetNodes().Count);
 
             IClusterGroup prj2 = prj1.ForPredicate(new NotAttributePredicate("value2").Apply);
+            Assert.AreEqual(1, prj2.GetNodes().Count);
+
+            string val;
+
+            prj2.GetNodes().First().TryGetAttribute("my_attr", out val);
+
+            Assert.IsTrue(val == null || (!val.Equals("value1") && !val.Equals("value2")));
+        }
+
+        /// <summary>
+        /// Test thin client for cache predicate.
+        /// </summary>
+        [Test]
+        public void TestClientForPredicate()
+        {
+            var prj1 = _igniteClient.GetCluster().ForPredicate(new NotAttributePredicate("value1").Apply);
+            Assert.AreEqual(2, prj1.GetNodes().Count);
+
+            var prj2 = prj1.ForPredicate(new NotAttributePredicate("value2").Apply);
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
             string val;

@@ -70,11 +70,11 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryTypePut = 3003,
 
         // Cluster.
-        ClusterIsActive = 4000,
-        ClusterChangeState = 4001,
-        ClusterChangeWalState = 4002,
-        ClusterGetWalState = 4003,
-        ClusterGroupGetNodeIds = 4100,
-        ClusterGroupGetNodesInfo = 4101
+        ClusterIsActive = 5000,
+        ClusterChangeState = 5001,
+        ClusterChangeWalState = 5002,
+        ClusterGetWalState = 5003,
+        ClusterGroupGetNodeIds = 5100,
+        ClusterGroupGetNodesInfo = 5101
     }
 }
