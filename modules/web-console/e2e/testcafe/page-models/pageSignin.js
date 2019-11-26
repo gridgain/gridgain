@@ -16,6 +16,7 @@
 
 import {Selector, t} from 'testcafe';
 import {CustomFormField} from '../components/FormField';
+import {activeLoadingOverlay} from '../components/ignite-loading'
 
 export const pageSignin = {
     email: new CustomFormField({model: '$ctrl.data.email'}),
@@ -24,6 +25,7 @@ export const pageSignin = {
     selector: Selector('page-signin'),
     async login(email, password) {
         return await t
+            .expect(activeLoadingOverlay.exists).notOk()
             .typeText(this.email.control, email)
             .typeText(this.password.control, password)
             .click(this.signinButton);
