@@ -2630,6 +2630,8 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
+        log.warning("Property activeOnStart deprecated. Use clusterStateOnStart instead.");
+
         return setClusterStateOnStart(activeOnStart ? ClusterState.ACTIVE : ClusterState.INACTIVE);
     }
 
