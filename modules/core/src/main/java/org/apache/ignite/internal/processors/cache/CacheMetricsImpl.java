@@ -362,6 +362,12 @@ public class CacheMetricsImpl implements CacheMetrics {
         mreg.register("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
             "True if index rebuild is in progress.");
 
+        mreg.register("IsIndexRebuildInProgress", () -> {
+            IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+
+            return fut != null && !fut.isDone();
+        }, "True if index rebuild is in progress.");
+
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
         putTime = mreg.histogram("PutTime", HISTOGRAM_BUCKETS, "Put time in nanoseconds.");
