@@ -1792,6 +1792,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public void clearCacheInfo(String cacheName) {
         GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
 
+        assert Objects.nonNull(cacheInfo) : "CacheInfo isn't registered [cacheName=" + cacheName + ']';
+
         parser.clearCache();
 
         cacheInfo.clearCacheContext();
