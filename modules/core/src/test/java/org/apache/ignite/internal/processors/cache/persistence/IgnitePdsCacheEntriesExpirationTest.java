@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
@@ -35,6 +35,9 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -60,9 +63,9 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setAffinity(new RendezvousAffinityFunction(false, 1))
-            .setBackups(1)
-            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 250)));
+            .setAffinity(new RendezvousAffinityFunction(false, 2))
+            .setBackups(0)
+            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 350)));
 
         cfg.setCacheConfiguration(ccfg);
 
@@ -95,77 +98,175 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
      */
     @Test
     public void testDeadlockBetweenCachePutAndEntryExpiration() throws Exception {
-        IgniteEx srv0 = startGrid(0);
+        IgniteEx srv0 = startGrids(2);
 
         srv0.cluster().active(true);
 
         awaitPartitionMapExchange();
 
-        GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)srv0.context().cache().context().database();
+        srv0.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        GridDhtPartitionTopologyImpl top =
+            (GridDhtPartitionTopologyImpl)srv0.cachex(DEFAULT_CACHE_NAME).context().topology();
+
+        AtomicReference dbRef = new AtomicReference();
+
+        AtomicBoolean cpWriteLocked = new AtomicBoolean(false);
+
+        AtomicInteger partId = new AtomicInteger();
+
+        CountDownLatch ttlLatch = new CountDownLatch(2);
+
+        top.partitionFactory((ctx, grp, id) -> {
+            partId.set(id);
+            return new GridDhtLocalPartition(ctx, grp, id, false) {
+                @Override public IgniteCacheOffheapManager.CacheDataStore dataStore() {
+                    Thread t = Thread.currentThread();
+                    String tName = t.getName();
+
+                    if (tName == null || !tName.contains("updater"))
+                        return super.dataStore();
+
+                    boolean unswapFoundInST = false;
+
+                    for (StackTraceElement e : t.getStackTrace()) {
+                        if (e.getMethodName().contains("unswap")) {
+                            unswapFoundInST = true;
+
+                            break;
+                        }
+                    }
+
+                    if (!unswapFoundInST)
+                        return super.dataStore();
+
+                    while (!cpWriteLocked.get()) {
+                        try {
+                            Thread.sleep(10);
+                        }
+                        catch (InterruptedException e) {
+                            // No-op.
+                        }
+                    }
+
+                    System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] unswap after cp writeLock");
+
+                    ttlLatch.countDown();
+
+                    return super.dataStore();
+                }
+
+                @Override public boolean reserve() {
+                    Thread t = Thread.currentThread();
+                    String tName = t.getName();
+
+                    if (tName == null || !tName.contains("ttl-cleanup-worker"))
+                        return super.reserve();
+
+                    boolean purgeExpiredFoundInST = false;
+
+                    for (StackTraceElement e : t.getStackTrace()) {
+                        if (e.getMethodName().contains("purgeExpiredInternal")) {
+                            purgeExpiredFoundInST = true;
+
+                            break;
+                        }
+                    }
+
+                    if (!purgeExpiredFoundInST)
+                        return super.reserve();
+
+                    GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)dbRef.get();
+
+                    System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] reserve called " + db.checkpointLockIsHeldByThread());
+
+                    ttlLatch.countDown();
+
+                    try {
+                        ttlLatch.await();
+
+                        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] ttlLatch released");
+                    }
+                    catch (InterruptedException e) {
+                        // No-op.
+                    }
+
+                    return super.reserve();
+                }
+            };
+        });
+
+        stopGrid(1);
+
+        srv0.cluster().setBaselineTopology(srv0.cluster().topologyVersion());
+
+        Thread.sleep(500);
 
         IgniteCache<Object, Object> cache = srv0.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)srv0.context().cache().context().database();
+
+        dbRef.set(db);
 
         AtomicBoolean timeoutReached = new AtomicBoolean(false);
 
         long timeout = 10_000;
 
-        AtomicInteger keysBatch = new AtomicInteger(0);
-        int keysCnt = 10_000;
+        int key = 0;
 
-        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
-            while (!timeoutReached.get()) {
-                Map<Integer, byte[]> keys = new TreeMap<>();
+        while (true) {
+            if (srv0.affinity(DEFAULT_CACHE_NAME).partition(key) != partId.get())
+                key++;
+            else break;
+        }
 
-                int nextBatch = keysBatch.getAndIncrement();
+        cache.put(key, 1);
 
-                for (int i = nextBatch * keysCnt; i < (nextBatch + 1) * keysCnt; i++)
-                    keys.put(i, new byte[546]);
-
-                cache.putAll(keys);
-
-                doSleep(250);
-            }
-        }, "loader-thread");
+        int finalKey = key;
 
         IgniteInternalFuture updateFut = GridTestUtils.runAsync(() -> {
+            int i = 10;
+
             while (!timeoutReached.get()) {
-                int maxKey = (keysBatch.get() - 1) * keysCnt;
+                cache.put(finalKey, i++);
 
-                if (maxKey > 0) {
-                    for (int i = 0; i < maxKey; i++) {
-                        if (i % 2 == 0 || i % 3 == 0) {
-                            byte[] arr = (byte[])cache.get(i);
-
-                            if (arr != null)
-                                cache.put(i, new byte[arr.length + 1]);
-                        }
-                    }
+                try {
+                    Thread.sleep(300);
                 }
-
-                doSleep(100);
+                catch (InterruptedException e) {
+                    // No-op.
+                }
             }
         }, "updater-thread");
 
-        IgniteInternalFuture lockUnlockCPWLFut = GridTestUtils.runAsync(() -> {
-            while (!timeoutReached.get()) {
-                doSleep(10);
-
+        GridTestUtils.runAsync(() -> {
+            while (ttlLatch.getCount() != 1) {
                 try {
-                    db.checkpointLock.writeLock().lockInterruptibly();
+                    Thread.sleep(20);
                 }
                 catch (InterruptedException e) {
-                    break;
+                    // No-op.
                 }
-
-                try {
-                    doSleep(50);
-                }
-                finally {
-                    db.checkpointLock.writeLock().unlock();
-                }
-
             }
-        }, "lock-unlock-cp-write-lock-thread");
+
+            try {
+                cpWriteLocked.set(true);
+
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] cp write locked");
+
+                db.checkpointLock.writeLock().lockInterruptibly();
+
+                ttlLatch.await();
+            }
+            catch (InterruptedException e) {
+                // No-op.
+            }
+            finally {
+                db.checkpointLock.writeLock().unlock();
+            }
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] cp write lock holder exiting...");
+        }, "cp-write-lock-holder");
 
         GridTestUtils.runAsync(() -> {
             long start = System.currentTimeMillis();
@@ -178,13 +279,11 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
         });
 
         try {
-            loadFut.get(timeout * 2);
+//            loadFut.get(timeout * 2);
             updateFut.get(timeout * 2);
-            lockUnlockCPWLFut.get(timeout * 2);
+//            lockUnlockCPWLFut.get(timeout * 4);
         }
         catch (IgniteFutureTimeoutCheckedException ignored) {
-            lockUnlockCPWLFut.cancel();
-
             fail("Failed to wait for futures for doubled timeout");
         }
     }
