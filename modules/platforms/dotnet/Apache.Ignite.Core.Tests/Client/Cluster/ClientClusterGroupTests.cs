@@ -162,6 +162,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test cluster group throws exception if predicate is null.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupForPredicateThrowsExceptionIfItNull()
+        {
+            TestDelegate action = () => Client.GetCluster().ForPredicate(null);
+
+            var ex = Assert.Throws<ArgumentNullException>(action);
+            Assert.AreEqual("Value cannot be null.\r\nParameter name: p", ex.Message);
+        }
+
+        /// <summary>
         /// Test cluster group applies a native predicate to nodes result set.
         /// </summary>
         [Test]

@@ -116,6 +116,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritDoc /> */
         public IClientClusterGroup ForPredicate(Func<IClusterNode, bool> p)
         {
+            IgniteArgumentCheck.NotNull(p, "p");
+
             var newPredicate = _predicate == null ? p : node => _predicate(node) && p(node);
             return new ClientClusterGroup(_ignite, _marsh, _projection, newPredicate);
         }
