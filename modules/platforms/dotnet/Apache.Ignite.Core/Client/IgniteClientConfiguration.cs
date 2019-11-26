@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Client
     using System.Xml;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
@@ -216,6 +217,11 @@ namespace Apache.Ignite.Core.Client
         /// Gets or sets custom binary processor. Internal property for tests.
         /// </summary>
         internal IBinaryProcessor BinaryProcessor { get; set; }
+
+        /// <summary>
+        /// Gets or sets protocol version. Internal property for tests.
+        /// </summary>
+        internal ClientProtocolVersion? ProtocolVersion { get; set; }
 
         /// <summary>
         /// Serializes this instance to the specified XML writer.

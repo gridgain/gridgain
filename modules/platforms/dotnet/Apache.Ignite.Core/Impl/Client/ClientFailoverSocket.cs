@@ -284,8 +284,8 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 try
                 {
-                    _socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, null,
-                        OnAffinityTopologyVersionChange);
+                    _socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, 
+                        _config.ProtocolVersion, OnAffinityTopologyVersionChange);
 
                     endPoint.Socket = _socket;
 
@@ -483,8 +483,8 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     try
                     {
-                        var socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, null,
-                            OnAffinityTopologyVersionChange);
+                        var socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, 
+                            _config.ProtocolVersion, OnAffinityTopologyVersionChange);
 
                         endPoint.Socket = socket;
                     }
