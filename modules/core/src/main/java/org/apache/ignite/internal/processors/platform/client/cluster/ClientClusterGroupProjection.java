@@ -82,7 +82,7 @@ public class ClientClusterGroupProjection {
     }
 
     /**
-     * Appleis projection.
+     * Apply projection.
      *
      * @param clusterGrp Cluster group before projection.
      * @return Cluster group after projection.

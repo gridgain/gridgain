@@ -16,13 +16,10 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
-import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 
-import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -47,8 +44,8 @@ public class ClientClusterGroupGetNodeIdsResponse extends ClientResponse {
         this.nodeIds = nodeIds;
     }
 
-    @Override
-    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+    /** {@inheritDoc} */
+    @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         super.encode(ctx, writer);
 
         writer.writeBoolean(true);

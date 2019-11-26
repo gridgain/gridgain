@@ -48,8 +48,7 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public ClientResponse process(ClientConnectionContext ctx) {
+    @Override public ClientResponse process(ClientConnectionContext ctx) {
 
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
         long curTopVer = cluster.topologyVersion();

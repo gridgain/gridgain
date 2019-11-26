@@ -41,8 +41,8 @@ public class ClientClusterGroupGetNodesInfoResponse extends ClientResponse {
         this.nodes = nodes;
     }
 
-    @Override
-    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+    /** {@inheritDoc} */
+    @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         super.encode(ctx, writer);
 
         writer.writeInt(nodes.size());

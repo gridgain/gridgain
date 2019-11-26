@@ -37,8 +37,7 @@ public class ClientClusterIsActiveRequest extends ClientRequest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public ClientResponse process(ClientConnectionContext ctx) {
+    @Override public ClientResponse process(ClientConnectionContext ctx) {
         IgniteCluster cluster = ctx.kernalContext().grid().cluster();
         return new ClientBooleanResponse(requestId(), cluster.active());
     }

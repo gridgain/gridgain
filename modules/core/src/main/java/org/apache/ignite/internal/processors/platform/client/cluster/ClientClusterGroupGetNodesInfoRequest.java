@@ -43,11 +43,10 @@ public class ClientClusterGroupGetNodesInfoRequest extends ClientRequest {
         nodeIds = reader.readUuidArray();
     }
 
-    @Override
-    public ClientResponse process(ClientConnectionContext ctx) {
-        // todo: is it ok to re-use cluster API?
+    /** {@inheritDoc} */
+    @Override public ClientResponse process(ClientConnectionContext ctx) {
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
-        ClusterGroup clusterGroup = cluster.forNodeIds(Arrays.asList(nodeIds));
-        return new ClientClusterGroupGetNodesInfoResponse(requestId(), clusterGroup.nodes());
+        ClusterGroup clusterGrp = cluster.forNodeIds(Arrays.asList(nodeIds));
+        return new ClientClusterGroupGetNodesInfoResponse(requestId(), clusterGrp.nodes());
     }
 }
