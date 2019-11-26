@@ -30,7 +30,7 @@ import static java.util.stream.Stream.of;
  */
 public class AgentHandshakeRequest {
     /** Current version. */
-    public static final String CURRENT_VER = "2019_11_01";
+    public static final String CURRENT_VER = "2019_12_00";
 
     /** Supported versions. */
     public static final Set<String> SUPPORTED_VERS = of(CURRENT_VER).collect(toSet());
