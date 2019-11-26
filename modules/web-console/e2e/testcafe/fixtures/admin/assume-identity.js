@@ -26,11 +26,13 @@ const regularUser = createRegularUser();
 fixture('Assumed identity')
     .beforeEach(async(t) => {
         await dropTestDB();
+        await dropTestDB(admin.TEST_USER);
         await insertTestUser();
         await insertTestUser(admin.TEST_USER);
         await t.useRole(regularUser);
     })
     .afterEach(async() => {
+        await dropTestDB(admin.TEST_USER);
         await dropTestDB();
     });
 
@@ -45,6 +47,11 @@ test('Become user', async(t) => {
         .expect(userMenu.menuItem.withText('Log out').exists).notOk();
     await userMenu.clickOption('Profile');
     await t
+        .expect(profile.firstName.control.value).eql(admin.TEST_USER.firstName)
+        .expect(profile.lastName.control.value).eql(admin.TEST_USER.lastName)
+        .expect(profile.email.control.value).eql(admin.TEST_USER.email)
+        .expect(profile.country.control.value).eql(admin.TEST_USER.country)
+        .expect(profile.company.control.value).eql(admin.TEST_USER.company)
         .expect(notifications.assumedUserFullName.innerText).eql('User Name')
         .typeText(profile.firstName.control, '1')
         .click(profile.saveChangesButton)
