@@ -122,6 +122,7 @@ public class ClusterActiveStateChangeWithNodeOutOfBaselineTest extends GridCommo
         checkBaseline();
     }
 
+    /** */
     private void checkBaseline() {
         Collection<BaselineNode> bltNodes = grid(0).cluster().currentBaselineTopology();
 
