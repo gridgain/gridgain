@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 new ClientProtocolVersion(1, 2, 3).Equals(
                     (object) new ClientProtocolVersion(1, 2, 3)));
             
-            Assert.IsTrue(
+            Assert.IsFalse(
                 new ClientProtocolVersion(1, 2, 3).Equals(null));
             
             Assert.IsFalse(
