@@ -35,6 +35,7 @@ import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessorTest;
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
+import org.apache.ignite.agent.utils.AgentUtilsTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -63,7 +64,8 @@ import org.junit.runners.Suite;
     EventsExporterTest.class,
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
-    TopologySnapshotTest.class
+    TopologySnapshotTest.class,
+    AgentUtilsTest.class,
 })
 public class AgentTestSuite {
 }
