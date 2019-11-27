@@ -44,9 +44,6 @@ import org.junit.Test;
  *
  */
 public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbstractTest {
-    /** First partition. */
-    private static final int FIRST_PARTITION = 1;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -182,6 +179,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
     }
 
     /**
+     *
      */
     @Test
     public void testShouldReturnKeysByBatches() throws Exception {

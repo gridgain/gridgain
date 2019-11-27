@@ -138,10 +138,10 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         private final RecheckRequest recheckRequest;
 
         /**
-         * @param recheckRequest
+         * @param recheckReq
          */
-        public CollectRecheckJob(RecheckRequest recheckRequest) {
-            this.recheckRequest = recheckRequest;
+        public CollectRecheckJob(RecheckRequest recheckReq) {
+            this.recheckRequest = recheckReq;
         }
 
         /** {@inheritDoc} */
@@ -163,7 +163,8 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
                     CacheDataRow row = grpCtx.offheap().dataStore(part).find(cctx, key);
 
-                    recheckedKeys.add(new PartitionKeyVersion(ignite.localNode().id(), row.key(), row.version()));
+                    if (row != null)
+                        recheckedKeys.add(new PartitionKeyVersion(ignite.localNode().id(), row.key(), row.version()));
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Recheck key [" + recheckKey + "] was skipped.", e);

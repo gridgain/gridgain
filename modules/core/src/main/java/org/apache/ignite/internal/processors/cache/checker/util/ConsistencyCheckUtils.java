@@ -30,7 +30,9 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
  *
  */
 public class ConsistencyCheckUtils {
-
+    /**
+     *
+     */
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> actualKeys
@@ -38,13 +40,11 @@ public class ConsistencyCheckUtils {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
         // Actual keys are a subset of old keys.
-
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
             Map<UUID, GridCacheVersion> newVer = actualKeys.get(keyEntry.getKey());
 
             if (newVer != null) {
                 // Elements with min GridCacheVersion should increment
-
                 if (!checkConsistency(keyEntry.getValue(), newVer))
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
             }
@@ -54,14 +54,13 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     * @param oldKeyVer
-     * @param actualKeyVer
-     * @return
+     *
      */
-    public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVer, Map<UUID, GridCacheVersion> actualKeyVer) {
+    public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVer,
+        Map<UUID, GridCacheVersion> actualKeyVer) {
         assert oldKeyVer.size() > 1;
 
-        if(actualKeyVer.isEmpty())
+        if (actualKeyVer.isEmpty())
             return true;
 
         //TODO Possible you can check it use only one iteration.
@@ -73,10 +72,11 @@ public class ConsistencyCheckUtils {
             GridCacheVersion lastMaxVer = oldKeyVer.get(maxVersions.iterator().next());
             GridCacheVersion curVer = entry.getValue();
 
-            if(curVer.isGreater(lastMaxVer)) {
+            if (curVer.isGreater(lastMaxVer)) {
                 maxVersions.clear();
                 maxVersions.add(entry.getKey());
-            } else if(curVer.equals(lastMaxVer))
+            }
+            else if (curVer.equals(lastMaxVer))
                 maxVersions.add(entry.getKey());
         }
 
@@ -84,7 +84,7 @@ public class ConsistencyCheckUtils {
 
         for (UUID maxVerOwner : maxVersions) {
             GridCacheVersion ver = actualKeyVer.get(maxVerOwner);
-            if(ver == null || maxVer.isLess(ver))
+            if (ver == null || maxVer.isLess(ver))
                 return true;
         }
 
@@ -92,7 +92,7 @@ public class ConsistencyCheckUtils {
 
         for (Map.Entry<UUID, GridCacheVersion> entry : oldKeyVer.entrySet()) {
             GridCacheVersion actualVer = actualKeyVer.get(entry.getKey());
-            if(!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.isGreaterEqual(maxVer))) {
+            if (!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.isGreaterEqual(maxVer))) {
                 allNonMaxChanged = false;
 
                 break;
@@ -102,8 +102,9 @@ public class ConsistencyCheckUtils {
         return allNonMaxChanged;
     }
 
-    public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey, GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
-        if(unmarshalKey == null)
+    public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey,
+        GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
+        if (unmarshalKey == null)
             return null;
 
         unmarshalKey.finishUnmarshal(cctx.cacheObjectContext(), null);

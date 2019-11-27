@@ -53,6 +53,9 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
      */
     protected static final int EMPTY = 0;
 
+    /** First partition. */
+    protected static final int FIRST_PARTITION = 0;
+
     /**
      *
      */
@@ -107,7 +110,7 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
     /**
      *
      */
-    protected KeyCacheObjectImpl key(int key, CacheObjectContext ctxo) throws IgniteCheckedException {
+    protected KeyCacheObjectImpl key(Object key, CacheObjectContext ctxo) throws IgniteCheckedException {
         KeyCacheObjectImpl keyObj = new KeyCacheObjectImpl(key, null, 1);
 
         keyObj.prepareMarshal(ctxo);
