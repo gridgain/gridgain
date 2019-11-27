@@ -23,7 +23,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests for <see cref="ClientProtocolVersion"/>.
     /// </summary>
-    public class ClientProtocolVersionTests
+    public class ClientProtocolVersionTest
     {
         /// <summary>
         /// Tests constructors.

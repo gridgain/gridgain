@@ -23,7 +23,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests for <see cref="ClientOpExtensions"/> class.
     /// </summary>
-    public class ClientOpExtensionsTests
+    public class ClientOpExtensionsTest
     {
         /// <summary>
         /// Tests that <see cref="ClientOpExtensions.GetMinVersion"/> returns a version
