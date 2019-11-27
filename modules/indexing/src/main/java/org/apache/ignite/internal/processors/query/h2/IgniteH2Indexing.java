@@ -1796,11 +1796,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (started) {
             GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
 
-            assert Objects.nonNull(cacheInfo) : "CacheInfo isn't registered [cacheName=" + cacheName + ']';
+            if (cacheInfo != null) {
+                parser.clearCache();
 
-            parser.clearCache();
-
-            cacheInfo.clearCacheContext();
+                cacheInfo.clearCacheContext();
+            }
         }
     }
 
