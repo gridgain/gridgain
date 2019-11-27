@@ -48,7 +48,9 @@ import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_LOGOUT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -200,6 +202,58 @@ public class BrowsersServiceSelfTest {
 
         assertEquals("user", params.get("user"));
         assertEquals("password", params.get("password"));
+        assertEquals("testToken", params.get("sessionToken"));
+    }
+
+    /** */
+    @Test
+    public void shouldNotAddPasswordIfNotPassed() throws Exception {
+        String clusterId = UUID.randomUUID().toString();
+
+        WebSocketRequest req = new WebSocketRequest();
+
+        req.setRequestId(UUID.randomUUID().toString());
+        req.setEventType(NODE_VISOR);
+
+        req.setPayload(toJson(new JsonObject(
+            Stream.<Map.Entry<String, Object>>of(
+                entry("clusterId", clusterId),
+                entry("params", F.asMap("taskId", "querySql", "user", "user"))
+            ).collect(entriesToMap()))
+        ));
+
+        WebSocketSession ses = mock(WebSocketSession.class);
+
+        Account acc = new Account(null, null, null, null, null, null, null);
+
+        when(sesSrvc.get(any(SessionAttribute.class))).thenReturn("testToken");
+
+        when(ses.getPrincipal()).thenReturn(new PreAuthenticatedAuthenticationToken(acc, null));
+
+        TopologySnapshot top = new TopologySnapshot();
+        top.setSecured(true);
+
+        when(clustersRepo.get(eq(clusterId))).thenReturn(top);
+
+        browsersSrvc.handleEvent(ses, req);
+
+        ArgumentCaptor<AgentRequest> captor = ArgumentCaptor.forClass(AgentRequest.class);
+
+        verify(agentsSrvc, times(1)).sendLocally(captor.capture());
+
+        assertEquals(ignite.cluster().localNode().id(), captor.getValue().getSrcNid());
+        assertEquals(new AgentKey(acc.getId(), clusterId), captor.getValue().getKey());
+
+        WebSocketRequest req0 = captor.getValue().getEvent();
+
+        assertEquals(req.getRequestId(), req0.getRequestId());
+        assertEquals(req.getEventType(), req0.getEventType());
+
+        JsonObject payload = fromJson(req0.getPayload());
+        JsonObject params = payload.getJsonObject("params");
+
+        assertEquals("user", params.get("user"));
+        assertNull(params.get("password"));
         assertEquals("testToken", params.get("sessionToken"));
     }
 }
