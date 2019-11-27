@@ -45,7 +45,7 @@ fixture('Advanced SQL scheme configuration')
             .useRole(regularUser)
             .navigateTo(resolveUrl('/configuration/new/advanced/models'));
     })
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test('Base required fields checked on save.', async(t) => {
     await t.click(createModelButton)
