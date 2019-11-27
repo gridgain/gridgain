@@ -1,0 +1,113 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.processors.cache.checker.util;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+
+/**
+ *
+ */
+public class ConsistencyCheckUtils {
+
+    public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> actualKeys
+    ) {
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
+
+        // Actual keys are a subset of old keys.
+
+        for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
+            Map<UUID, GridCacheVersion> newVer = actualKeys.get(keyEntry.getKey());
+
+            if (newVer != null) {
+                // Elements with min GridCacheVersion should increment
+
+                if (!checkConsistency(keyEntry.getValue(), newVer))
+                    keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
+            }
+        }
+
+        return keysWithConflicts;
+    }
+
+    /**
+     * @param oldKeyVer
+     * @param actualKeyVer
+     * @return
+     */
+    public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVer, Map<UUID, GridCacheVersion> actualKeyVer) {
+        assert oldKeyVer.size() > 1;
+
+        if(actualKeyVer.isEmpty())
+            return true;
+
+        //TODO Possible you can check it use only one iteration.
+        Set<UUID> maxVersions = new HashSet<>();
+
+        maxVersions.add(oldKeyVer.keySet().iterator().next());
+
+        for (Map.Entry<UUID, GridCacheVersion> entry : oldKeyVer.entrySet()) {
+            GridCacheVersion lastMaxVer = oldKeyVer.get(maxVersions.iterator().next());
+            GridCacheVersion curVer = entry.getValue();
+
+            if(curVer.isGreater(lastMaxVer)) {
+                maxVersions.clear();
+                maxVersions.add(entry.getKey());
+            } else if(curVer.equals(lastMaxVer))
+                maxVersions.add(entry.getKey());
+        }
+
+        GridCacheVersion maxVer = oldKeyVer.get(maxVersions.iterator().next());
+
+        for (UUID maxVerOwner : maxVersions) {
+            GridCacheVersion ver = actualKeyVer.get(maxVerOwner);
+            if(ver == null || maxVer.isLess(ver))
+                return true;
+        }
+
+        boolean allNonMaxChanged = true;
+
+        for (Map.Entry<UUID, GridCacheVersion> entry : oldKeyVer.entrySet()) {
+            GridCacheVersion actualVer = actualKeyVer.get(entry.getKey());
+            if(!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.isGreaterEqual(maxVer))) {
+                allNonMaxChanged = false;
+
+                break;
+            }
+        }
+
+        return allNonMaxChanged;
+    }
+
+    public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey, GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
+        if(unmarshalKey == null)
+            return null;
+
+        unmarshalKey.finishUnmarshal(cctx.cacheObjectContext(), null);
+
+        return unmarshalKey;
+    }
+}

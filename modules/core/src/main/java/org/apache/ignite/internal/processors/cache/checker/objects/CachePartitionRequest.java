@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.checker;
+package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.compute.ComputeJobAdapter;
+import java.io.Serializable;
 
-// TODO: 21.11.19 Tmp class, only for test purposes, will be substituted with Max's class.
-public class JobProvidedByMaxThatDoAllWork extends ComputeJobAdapter {
-    /** */
-    private static final long serialVersionUID = 0L;
+/**
+ * Uses for requests that work with partition.
+ */
+public abstract class CachePartitionRequest implements Serializable {
+    /**
+     * @return partition id.
+     */
+    public abstract int partitionId();
 
-    @Override public Object execute() throws IgniteException {
-        return null;
-    }
+    /**
+     * @return cache name.
+     */
+    public abstract String cacheName();
 }

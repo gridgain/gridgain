@@ -28,7 +28,9 @@ import java.util.Set;
  * Partition reconciliation task arguments.
  */
 public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** Caches. */

@@ -31,7 +31,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
-import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
