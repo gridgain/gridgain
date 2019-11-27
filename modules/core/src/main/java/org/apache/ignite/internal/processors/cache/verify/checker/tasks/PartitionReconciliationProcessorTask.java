@@ -32,6 +32,7 @@
 
 package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,9 +131,12 @@ public class PartitionReconciliationProcessorTask extends
 
         /** {@inheritDoc} */
         @Override public Object execute() throws IgniteException {
+            Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
+                ignite.context().cache().publicCacheNames(): reconciliationTaskArg.caches();
+
             return new PartitionReconciliationProcessor(
                 ignite,
-                reconciliationTaskArg.caches(),
+                caches,
                 reconciliationTaskArg.fixMode(),
                 reconciliationTaskArg.throttlingIntervalMillis(),
                 reconciliationTaskArg.batchSize(),

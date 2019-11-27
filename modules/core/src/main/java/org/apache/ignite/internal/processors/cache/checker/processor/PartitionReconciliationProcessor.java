@@ -58,7 +58,7 @@ public class PartitionReconciliationProcessor {
     private final int RECHECK_DELAY = 10;
 
     /** Caches. */
-    private final Set<String> caches;
+    private final Collection<String> caches;
 
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     private final boolean fixMode;
@@ -95,7 +95,7 @@ public class PartitionReconciliationProcessor {
      */
     public PartitionReconciliationProcessor(
         IgniteEx ignite,
-        Set<String> caches,
+        Collection<String> caches,
         boolean fixMode,
         int throttlingIntervalMillis,
         int batchSize,
