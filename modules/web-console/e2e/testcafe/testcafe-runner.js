@@ -26,7 +26,7 @@ const startTestcafe = (config) => {
             try {
                 testcafe = tc;
 
-                const runner = testcafe.createLiveModeRunner();
+                const runner = testcafe.createRunner();
 
                 console.log('Start E2E testing!');
 
@@ -34,7 +34,6 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    // .concurrency(8)
                     .run({ skipJsErrors: true });
             }
             catch (err) {

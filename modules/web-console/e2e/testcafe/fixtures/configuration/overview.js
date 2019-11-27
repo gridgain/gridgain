@@ -39,7 +39,7 @@ fixture('Configuration overview')
     .beforeEach(async(t) => {
         await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
     })
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 const overviewPage = new PageConfigurationOverview();
 const basicConfigPage = new PageConfigurationBasic();
