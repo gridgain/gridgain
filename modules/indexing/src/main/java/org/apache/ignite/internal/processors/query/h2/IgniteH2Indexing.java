@@ -1796,6 +1796,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (started) {
             GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
 
+            // Only for SQL caches.
             if (cacheInfo != null) {
                 parser.clearCache();
 
