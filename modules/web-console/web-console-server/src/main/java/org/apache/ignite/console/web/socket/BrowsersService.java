@@ -417,7 +417,10 @@ public class BrowsersService extends AbstractSocketHandler {
         if (!F.isEmpty(args))
             args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
 
-        Stream.of("user", "password").forEach(p -> exeParams.add(p, params.get(p)));
+        Stream.of("user", "password").forEach(p -> {
+            if (params.get(p) != null)
+                exeParams.add(p, params.get(p));
+        });
 
         return exeParams;
     }
