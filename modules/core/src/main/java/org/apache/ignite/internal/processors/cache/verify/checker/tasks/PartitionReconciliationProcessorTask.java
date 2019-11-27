@@ -77,7 +77,7 @@ public class PartitionReconciliationProcessorTask extends
 
     @Override public PartitionReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         // TODO: 22.11.19 Mock
-        Map<String, Map<PartitionReconciliationDataRowMeta, Map<UUID, GridCacheVersion>>> inconsistentDataMeta= new HashMap<>();
+        Map<String, Map<PartitionReconciliationDataRowMeta, Map<UUID, GridCacheVersion>>> inconsistentDataMeta = new HashMap<>();
 
         Map<UUID, GridCacheVersion> versionsOfInconsistentKeysForKey1 = new HashMap<>();
         versionsOfInconsistentKeysForKey1.put(
@@ -93,9 +93,9 @@ public class PartitionReconciliationProcessorTask extends
 
         Map<PartitionReconciliationDataRowMeta, Map<UUID, GridCacheVersion>> keysForCache1 = new HashMap();
 
-        PartitionReconciliationDataRowMeta dataRow1ForCache1 = new PartitionReconciliationDataRowMeta(new PartitionReconciliationKeyMeta(new byte[]{1, 2, 3}, "key1", new GridCacheVersion(1, 10, 100)), new PartitionReconciliationValueMeta(new byte[]{4,5,6}, "value1"));
+        PartitionReconciliationDataRowMeta dataRow1ForCache1 = new PartitionReconciliationDataRowMeta(new PartitionReconciliationKeyMeta(new byte[] {1, 2, 3}, "key1", new GridCacheVersion(1, 10, 100)), new PartitionReconciliationValueMeta(new byte[] {4, 5, 6}, "value1"));
 
-        PartitionReconciliationDataRowMeta dataRow1ForCache2 = new PartitionReconciliationDataRowMeta(new PartitionReconciliationKeyMeta(new byte[]{7, 8, 9}, "key2", new GridCacheVersion(2, 20, 200)), new PartitionReconciliationValueMeta(new byte[]{10,11,12}, "value2"));
+        PartitionReconciliationDataRowMeta dataRow1ForCache2 = new PartitionReconciliationDataRowMeta(new PartitionReconciliationKeyMeta(new byte[] {7, 8, 9}, "key2", new GridCacheVersion(2, 20, 200)), new PartitionReconciliationValueMeta(new byte[] {10, 11, 12}, "value2"));
 
         keysForCache1.put(dataRow1ForCache1, versionsOfInconsistentKeysForKey1);
 
@@ -119,25 +119,25 @@ public class PartitionReconciliationProcessorTask extends
         /**
          *
          */
-        private final PartitionReconciliationProcessor processor;
+        private final VisorPartitionReconciliationTaskArg reconciliationTaskArg;
 
         /**
          * @param arg
          */
         public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg) {
-            this.processor = new PartitionReconciliationProcessor(
-                ignite,
-                arg.caches(),
-                arg.fixMode(),
-                arg.throttlingIntervalMillis(),
-                arg.batchSize(),
-                arg.recheckAttempts()
-            );
+            this.reconciliationTaskArg = arg;
         }
 
         /** {@inheritDoc} */
         @Override public Object execute() throws IgniteException {
-            return processor.execute();
+            return new PartitionReconciliationProcessor(
+                ignite,
+                reconciliationTaskArg.caches(),
+                reconciliationTaskArg.fixMode(),
+                reconciliationTaskArg.throttlingIntervalMillis(),
+                reconciliationTaskArg.batchSize(),
+                reconciliationTaskArg.recheckAttempts()
+            ).execute();
         }
     }
 }
