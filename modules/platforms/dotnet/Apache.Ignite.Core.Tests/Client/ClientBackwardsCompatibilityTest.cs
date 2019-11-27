@@ -31,6 +31,17 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             // TODO
         }
-        
+
+        [Test]
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150()
+        {
+            
+        }
+
+        [Test]
+        public void TestAffinityAwarenessDisablesAutomaticallyOnVersionsOlderThan140()
+        {
+            
+        }
     }
 }
