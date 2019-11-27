@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
@@ -811,10 +812,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         try {
-            final Object val1 = values[0];
-            final Object val2 = values[1];
-            final Object val3 = values[2];
-            final Object val4 = values[3];
+            final int rnd = ThreadLocalRandom.current().nextInt(values.length);
+            final Object val1 = values[(rnd) % values.length];
+            final Object val2 = values[(rnd + 1) % values.length];
+            final Object val3 = values[(rnd + 2) % values.length];
+            final Object val4 = values[(rnd + 3) % values.length];
 
             final String qry = "explain select " + proj + " from " + TEST_TBL_NAME + " where ";
 
