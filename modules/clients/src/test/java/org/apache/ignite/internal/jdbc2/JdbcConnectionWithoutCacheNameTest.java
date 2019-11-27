@@ -48,6 +48,7 @@ public class JdbcConnectionWithoutCacheNameTest extends GridCommonAbstractTest {
         cache.setBackups(1);
         cache.setWriteSynchronizationMode(FULL_SYNC);
         cache.setSqlSchema("\"default\"");
+        cache.setIndexedTypes(Integer.class, Integer.class);
 
         cfg.setCacheConfiguration(cache);
 

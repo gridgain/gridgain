@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -262,6 +264,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public PreparedStatement prepareNativeStatement(String schemaName, String sql) throws SQLException {
+        return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public Collection<GridRunningQueryInfo> runningQueries(long duration) {
         return null;
     }
@@ -299,11 +306,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public @Nullable GridCacheContextInfo registeredCacheInfo(String cacheName) {
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean initCacheContext(GridCacheContext ctx) throws IgniteCheckedException {
-        return false;
     }
 
     /** {@inheritDoc} */

@@ -311,6 +311,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public PreparedStatement prepareNativeStatement(String schemaName, String sql) throws SQLException {
+        return connMgr.connection(schemaName).prepareStatement(sql);
+    }
+
+    /** {@inheritDoc} */
     @Override public List<JdbcParameterMeta> parameterMetaData(String schemaName, SqlFieldsQuery qry)
         throws IgniteSQLException {
         assert qry != null;
@@ -2339,23 +2344,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         if (tx != null)
             cmdProc.doRollback(tx);
-    }
-
-    /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
-    @Override public boolean initCacheContext(GridCacheContext cacheCtx) {
-        GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheCtx.name());
-
-        if (cacheInfo != null) {
-            assert !cacheInfo.isCacheContextInited() : cacheInfo.name();
-            assert cacheInfo.name().equals(cacheCtx.name()) : cacheInfo.name() + " != " + cacheCtx.name();
-
-            cacheInfo.initCacheContext(cacheCtx);
-
-            return true;
-        }
-
-        return false;
     }
 
     /** {@inheritDoc} */

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -356,6 +357,15 @@ public interface GridQueryIndexing {
     public void onDisconnected(IgniteFuture<?> reconnectFut);
 
     /**
+     * Prepare native statement to retrieve JDBC metadata from.
+     *
+     * @param schemaName Schema name.
+     * @param sql Query.
+     * @return {@link PreparedStatement} from underlying engine to supply metadata to Prepared - most likely H2.
+     */
+    public PreparedStatement prepareNativeStatement(String schemaName, String sql) throws SQLException;
+
+    /**
      * Collect queries that already running more than specified duration.
      *
      * @param duration Duration to check.
@@ -413,16 +423,6 @@ public interface GridQueryIndexing {
      * @return Cache context for registered cache or {@code null} in case the cache has not been registered.
      */
     @Nullable public GridCacheContextInfo registeredCacheInfo(String cacheName);
-
-    /**
-     * Initialize table's cache context created for not started cache.
-     *
-     * @param ctx Cache context.
-     * @throws IgniteCheckedException If failed.
-     *
-     * @return {@code true} If context has been initialized.
-     */
-    public boolean initCacheContext(GridCacheContext ctx) throws IgniteCheckedException;
 
     /**
      * Register SQL JMX beans.

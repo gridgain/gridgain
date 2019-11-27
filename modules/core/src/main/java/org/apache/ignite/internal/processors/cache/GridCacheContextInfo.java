@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,9 +26,6 @@ import org.jetbrains.annotations.Nullable;
  */
 @GridToStringExclude
 public class GridCacheContextInfo<K, V> {
-    /** Cache is client or not. */
-    private final boolean clientCache;
-
     /** Dynamic cache deployment ID. */
     private final IgniteUuid dynamicDeploymentId;
 
@@ -49,31 +45,14 @@ public class GridCacheContextInfo<K, V> {
      * Constructor of full cache context.
      *
      * @param cctx Cache context.
-     * @param clientCache Client cache or not.
      */
-    public GridCacheContextInfo(GridCacheContext<K, V> cctx, boolean clientCache) {
+    public GridCacheContextInfo(GridCacheContext<K, V> cctx) {
         config = cctx.config();
         dynamicDeploymentId = null;
         groupId = cctx.groupId();
         cacheId = cctx.cacheId();
 
-        this.clientCache = clientCache;
-
         this.cctx = cctx;
-    }
-
-    /**
-     * Constructor of not started cache context.
-     *
-     * @param cacheDesc Cache descriptor.
-     */
-    public GridCacheContextInfo(DynamicCacheDescriptor cacheDesc) {
-        config = cacheDesc.cacheConfiguration();
-        dynamicDeploymentId = cacheDesc.deploymentId();
-        groupId = cacheDesc.groupId();
-        cacheId = CU.cacheId(config.getName());
-
-        clientCache = true;
     }
 
     /**
@@ -142,13 +121,6 @@ public class GridCacheContextInfo<K, V> {
         assert cctx != null;
 
         this.cctx = cctx;
-    }
-
-    /**
-     * @return {@code true} For client cache.
-     */
-    public boolean isClientCache() {
-        return clientCache;
     }
 
     /**
