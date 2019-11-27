@@ -310,6 +310,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return ctx;
     }
 
+    /** True if the component started. */
+    private volatile boolean started;
+
     /** {@inheritDoc} */
     @Override public List<JdbcParameterMeta> parameterMetaData(String schemaName, SqlFieldsQuery qry)
         throws IgniteSQLException {
@@ -1790,13 +1793,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void closeCacheOnClient(String cacheName) {
-        GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
+        if (started) {
+            GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
 
-        assert Objects.nonNull(cacheInfo) : "CacheInfo isn't registered [cacheName=" + cacheName + ']';
+            assert Objects.nonNull(cacheInfo) : "CacheInfo isn't registered [cacheName=" + cacheName + ']';
 
-        parser.clearCache();
+            parser.clearCache();
 
-        cacheInfo.clearCacheContext();
+            cacheInfo.clearCacheContext();
+        }
     }
 
     /** {@inheritDoc} */
@@ -2129,6 +2134,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             U.warn(log, "Custom H2 serialization is already configured, will override.");
 
         JdbcUtils.serializer = h2Serializer();
+
+        started = true;
     }
 
     /**
