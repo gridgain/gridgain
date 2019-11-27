@@ -459,8 +459,6 @@ export default class AgentManager {
                 if (__dbg)
                     console.log('Received response: ', evt);
 
-                console.log(evt);
-
                 if (evt.eventType === 'error')
                     latch.reject(evt.payload);
                 else if (evt.eventType === 'disconnected')
