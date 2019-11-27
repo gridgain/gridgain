@@ -113,6 +113,9 @@ public class PartitionReconciliationProcessorTask extends
      *
      */
     private static class PartitionReconciliationJob extends ComputeJobAdapter {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Ignite instance. */
         @IgniteInstanceResource
         private IgniteEx ignite;

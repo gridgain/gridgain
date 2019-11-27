@@ -60,6 +60,9 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /**
      *
      */

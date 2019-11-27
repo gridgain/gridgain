@@ -28,6 +28,9 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
  * The data object describes a version of key stored at a node.
  */
 public class PartitionKeyVersion extends IgniteDataTransferObject {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Node id. */
     private UUID nodeId;
 
