@@ -429,13 +429,13 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param evt Event.
      */
     void processResponse(WebSocketEvent evt) {
-        SessionAttribute sesAttr = sesTokRequests.remove(evt.getRequestId());
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
+        SessionAttribute sesAttr = sesTokRequests.remove(evt.getRequestId());
 
         if (sesAttr != null && !evt.getEventType().equals(ERROR)) {
-            WebSocketRequest evt0 = (WebSocketRequest)evt;
-
             try {
+                WebSocketRequest evt0 = (WebSocketRequest)evt;
+
                 RestResult res = fromJson(evt0.getPayload(), RestResult.class);
 
                 switch (res.getSuccessStatus()) {
@@ -457,13 +457,14 @@ public class BrowsersService extends AbstractSocketHandler {
 
                 res.clearSessionToken();
 
-                sendMessageQuiet(ses, evt0.response(res));
+                evt = evt0.response(res);
             }
             catch (Exception ignored) {
-                sendMessageQuiet(ses, evt);
+                // No-op.
             }
         }
-        else if (ses != null)
+        
+        if (ses != null)
             sendMessageQuiet(ses, evt);
     }
 
