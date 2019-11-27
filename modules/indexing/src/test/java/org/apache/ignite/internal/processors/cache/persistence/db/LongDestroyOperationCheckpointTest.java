@@ -16,13 +16,22 @@
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.stream.IntStream;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -31,6 +40,11 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
+import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask;
+import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskArg;
+import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
 import org.apache.ignite.testframework.CallbackExecutorLogListener;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -61,6 +75,15 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     private static final int ALWAYS_ALIVE_NODE_NUM = 1;
 
     /** */
+    private static final String HOST = "127.0.0.1";
+
+    /** */
+    private static final int PORT = 11211;
+
+    /** */
+    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
+
+    /** */
     private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
 
@@ -74,6 +97,9 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         );
 
     /** */
+    private final LogListener validateNoIssuesLsnr = LogListener.matches("no issues found").build();
+
+    /** */
     private CountDownLatch pendingDelLatch;
 
     /** */
@@ -81,14 +107,18 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         new CallbackExecutorLogListener(".*?Cleaned up pending delete object.*", () -> pendingDelLatch.countDown());
 
     /** */
-    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
-
-    /** */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
 
     /** */
     private final ListeningTestLogger testLog =
         new ListeningTestLogger(false, log(), blockedSysCriticalThreadLsnr, idxDropProcLsnr, pendingDelFinishedLsnr);
+
+    /** */
+    private final ListeningTestLogger validateIndexesListeningLog =
+        new ListeningTestLogger(false, log(), validateNoIssuesLsnr);
+
+    /** */
+    private Logger validateIndexesLog = logger();
 
     /** */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -218,19 +248,31 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             stopGrid(RESTARTED_NODE_NUM, true);
 
+            awaitPartitionMapExchange();
+
             if (checkWhenOneNodeStopped) {
-                cache = grid(ALWAYS_ALIVE_NODE_NUM).cache(DEFAULT_CACHE_NAME);
+                Ignite aliveNode = grid(ALWAYS_ALIVE_NODE_NUM);
 
-                doSleep(10000);
+                cache = aliveNode.cache(DEFAULT_CACHE_NAME);
 
-                //checkSelectAndPlan(cache, false);
+                //checking that select by id is successfull
+                query(cache, "select * from t where id = 0").get(0).get(0).toString();
+
+                checkSelectAndPlan(cache, false);
 
                 createIndex(cache, multicolumn);
 
                 checkSelectAndPlan(cache, true);
+
+                query(cache, "drop index t_idx");
+
+                aliveNode.cluster().active(false);
             }
 
             ignite = startGrid(RESTARTED_NODE_NUM);
+
+            if (checkWhenOneNodeStopped)
+                ignite.cluster().active(true);
 
             cache = ignite.cache(DEFAULT_CACHE_NAME);
 
@@ -257,6 +299,40 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         createIndex(cache, multicolumn);
 
         checkSelectAndPlan(cache, true);
+
+        validateIndexes(ignite);
+    }
+
+    /** */
+    private void validateIndexes(Ignite ignite) {
+        Set<UUID> nodeIds = new HashSet<UUID>() {{
+            add(grid(RESTARTED_NODE_NUM).cluster().localNode().id());
+            add(grid(ALWAYS_ALIVE_NODE_NUM).cluster().localNode().id());
+        }};
+
+        VisorValidateIndexesTaskArg taskArg =
+            new VisorValidateIndexesTaskArg(Collections.singleton("SQL_PUBLIC_T"), nodeIds, 0, 1);
+
+        VisorValidateIndexesTaskResult taskRes =
+            ignite.compute().execute(VisorValidateIndexesTask.class.getName(), new VisorTaskArgument<>(nodeIds, taskArg, false));
+
+        assertTrue(taskRes.exceptions().isEmpty());
+
+        for (VisorValidateIndexesJobResult res : taskRes.results().values())
+            assertFalse(res.hasIssues());
+    }
+
+    /** */
+    private Logger logger() {
+        Logger log = Logger.getAnonymousLogger();
+
+        log.setLevel(Level.INFO);
+
+        log.setUseParentHandlers(false);
+
+        log.addHandler(new ListeningHandler(s -> validateIndexesLog.info(s)));
+
+        return log;
     }
 
     /**
@@ -366,5 +442,28 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     @Test
     public void testLongIndexDeletionCheckWhenOneNodeStopped() throws Exception {
         testLongIndexDeletion(true, false, false, true);
+    }
+
+    /**
+     *
+     */
+    private static class ListeningHandler extends Handler {
+        private final Consumer<String> consumer;
+
+        private ListeningHandler(Consumer<String> consumer) {
+            this.consumer = consumer;
+        }
+
+        @Override public void publish(LogRecord record) {
+            consumer.accept(record.getMessage());
+        }
+
+        @Override public void flush() {
+
+        }
+
+        @Override public void close() throws SecurityException {
+
+        }
     }
 }
