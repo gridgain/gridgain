@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Client.Cache;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
     /// Socket wrapper with reconnect/failover functionality: reconnects on failure.
@@ -97,7 +98,19 @@ namespace Apache.Ignite.Core.Impl.Client
                 throw new IgniteClientException("Failed to resolve all specified hosts.");
             }
 
+            if (_config.Logger == null)
+            {
+                _config.Logger = new ConsoleLogger();
+            }
+
             Connect();
+
+            if (_config.EnablePartitionAwareness &&
+                _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
+            {
+                _config.EnablePartitionAwareness = false;
+                _config.Logger.Warn("TODO");
+            }
         }
 
         /** <inheritdoc /> */

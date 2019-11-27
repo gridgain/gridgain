@@ -26,6 +26,7 @@ namespace Apache.Ignite.Core.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
     /// Ignite thin client configuration.
@@ -212,6 +213,11 @@ namespace Apache.Ignite.Core.Client
         /// To do so, connection is established to every known server node at all times.
         /// </summary>
         public bool EnablePartitionAwareness { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the logger.
+        /// </summary>
+        public ILogger Logger { get; set; }
 
         /// <summary>
         /// Gets or sets custom binary processor. Internal property for tests.
