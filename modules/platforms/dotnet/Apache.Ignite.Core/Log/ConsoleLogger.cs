@@ -17,12 +17,45 @@
 namespace Apache.Ignite.Core.Log
 {
     using System;
+    using System.Text;
 
     /// <summary>
     /// Logs to Console.
+    /// <para />
+    /// Simple logger implementation without dependencies, provided out of the box for convenience.
+    /// For anything more complex please use NLog/log4net integrations.
     /// </summary>
     public class ConsoleLogger : ILogger
     {
+        /** Minimum level to log. */
+        private readonly LogLevel _minLevel;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
+        /// Uses <see cref="LogLevel.Warn"/> minimum level.
+        /// </summary>
+        public ConsoleLogger() : this (LogLevel.Warn)
+        {
+            // No-op.
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
+        /// </summary>
+        /// <param name="minLevel">Minimum level to be logged. Any levels lower than that are ignored.</param>
+        public ConsoleLogger(LogLevel minLevel)
+        {
+            _minLevel = minLevel;
+        }
+
+        /// <summary>
+        /// Gets the minimum level to be logged. Any levels lower than that are ignored.
+        /// </summary>
+        public LogLevel MinLevel
+        {
+            get { return _minLevel; }
+        }
+
         /// <summary>
         /// Logs the specified message.
         /// </summary>
@@ -37,7 +70,29 @@ namespace Apache.Ignite.Core.Log
         public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
             string nativeErrorInfo, Exception ex)
         {
-            throw new NotImplementedException();
+            if (!IsEnabled(level))
+            {
+                return;
+            }
+
+            var sb = new StringBuilder()
+                .AppendFormat("[{0:HH:mm:ss}] [{1}]", DateTime.Now, level);
+            
+            if (args != null)
+            {
+                sb.AppendFormat(formatProvider, message, args);
+            }
+            else
+            {
+                sb.Append(message);
+            }
+
+            if (ex != null)
+            {
+                sb.AppendFormat(" (exception: {0})", ex);
+            }
+            
+            Console.WriteLine(sb.ToString());
         }
 
         /// <summary>
@@ -47,7 +102,7 @@ namespace Apache.Ignite.Core.Log
         /// <returns>Value indicating whether the specified log level is enabled</returns>
         public bool IsEnabled(LogLevel level)
         {
-            throw new NotImplementedException();
+            return level >= _minLevel;
         }
     }
 }
