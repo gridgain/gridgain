@@ -29,5 +29,17 @@ namespace Apache.Ignite.Core.Tests.Log
         {
             // TODO: Parametrized test with variants
         }
+
+        [Test]
+        public void TestLogWritesToConsole()
+        {
+            
+        }
+
+        [Test]
+        public void TestLogDoesNotWriteToConsoleWhenLevelIsNotEnabled()
+        {
+            
+        }
     }
 }
