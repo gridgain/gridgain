@@ -179,6 +179,8 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
                             "for cp write lock to be locked");
                     }
 
+                    doSleep(5);
+
                     ttlLatch.countDown();
 
                     return super.dataStore();
