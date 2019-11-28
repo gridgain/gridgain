@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,12 +35,11 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -112,74 +112,59 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
-        CacheObjectContext ctxo = ignite.context().cache().cache(partBatch.cacheName()).context().cacheObjectContext();
+        GridCacheContext<Object, Object> ctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> totalRes = new HashMap<>();
 
-        // N = PartCount * batchSize; Time: O( N * logN ), space: 2 * N;
-        // TODO use just HashMap;
-        List<PartitionKeyVersion> temp = new ArrayList<>();
+        KeyCacheObject lastKey = null;
 
-        int partNum = 0;
+        int owners = 0;
 
-        for (ComputeJobResult res : results) {
-            T2<GridDhtPartitionState, List<PartitionKeyVersion>> nodeRes = res.getData();
-            temp.addAll(nodeRes.get2());
+        for (int i = 0; i < results.size(); i++) {
+            T2<GridDhtPartitionState, List<PartitionKeyVersion>> nodeRes = results.get(i).getData();
 
-            if (nodeRes.get1() == GridDhtPartitionState.OWNING)
-                partNum++;
-        }
+            if (nodeRes.get1() == GridDhtPartitionState.OWNING) {
+                owners++;
 
-        Iterator<PartitionKeyVersion> iter = temp.iterator();
+                for (PartitionKeyVersion partKeyVer : nodeRes.get2()) {
+                    try {
+                        KeyCacheObject key = unmarshalKey(partKeyVer.getKey(), ctx);
 
-        while (iter.hasNext()) {
-            PartitionKeyVersion partKeyVer = iter.next();
-            try {
-                partKeyVer.getKey().finishUnmarshal(ctxo, null);
-            }
-            catch (IgniteCheckedException e) {
-                iter.remove();
+                        if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
+                            lastKey = key;
 
-                U.error(log, "Key cache object can't unashamed.", e);
-            }
-        }
+                        Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
+                        map.put(partKeyVer.getNodeId(), partKeyVer.getVersion());
 
-        if (temp.isEmpty())
-            return new T2<>(null, totalRes);
+                        if (i == (results.size() - 1) && map.size() == owners && !hasConflict(map.values()))
+                            totalRes.remove(key);
 
-        temp.sort((o1, o2) -> KEY_COMPARATOR.compare(o1.getKey(), o2.getKey()));
-
-        boolean needRmv = true;
-
-        //TODO last iteration
-        for (int i = 0; i < temp.size() - 1; i++) {
-            PartitionKeyVersion cur = temp.get(i);
-            PartitionKeyVersion next = temp.get(i + 1);
-
-            totalRes.computeIfAbsent(cur.getKey(), k -> new HashMap<>())
-                .put(cur.getNodeId(), cur.getVersion());
-
-            if (KEY_COMPARATOR.compare(cur.getKey(), next.getKey()) == 0) {
-                if (!cur.getVersion().equals(next.getVersion()))
-                    needRmv = false;
-            }
-            else { // finish pair
-                if (needRmv && totalRes.get(cur.getKey()).size() == partNum)
-                    totalRes.remove(cur.getKey());
-                else
-                    needRmv = true;
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Key cache object can't unashamed.", e);
+                    }
+                }
             }
         }
-
-        final PartitionKeyVersion lastElement = temp.get(temp.size() - 1);
-        final KeyCacheObject lastKey = lastElement.getKey();
-
-        totalRes.computeIfAbsent(lastKey, k -> new HashMap<>()).put(lastElement.getNodeId(), lastElement.getVersion());
-
-        if (needRmv && totalRes.get(lastKey).size() == partNum)
-            totalRes.remove(lastKey);
 
         return new T2<>(lastKey, totalRes);
+    }
+
+    /**
+     *
+     */
+    private boolean hasConflict(Collection<GridCacheVersion> keyVersions) {
+        assert !keyVersions.isEmpty();
+
+        Iterator<GridCacheVersion> iter = keyVersions.iterator();
+        GridCacheVersion ver = iter.next();
+
+        while (iter.hasNext()) {
+            if (!ver.equals(iter.next()))
+                return true;
+        }
+
+        return false;
     }
 
     /**
@@ -231,8 +216,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 return new T2<>(part.state(), Collections.emptyList());
 
             try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
-                grpCtx.offheap().dataStore(part).cursor(cctx.groupId()) :
-                grpCtx.offheap().dataStore(part).cursor(cctx.groupId(), lowerKey, null)) {
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId()) :
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
 
                 List<PartitionKeyVersion> partEntryHashRecords = new ArrayList<>();
 
