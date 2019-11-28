@@ -20,6 +20,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
@@ -95,6 +97,21 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
     }
 
     /**
+     * Checks that a certain method is presented in call stack of current thread.
+     *
+     * @param methodName Method name to seek in stack trace.
+     * @return {@code True} if method was found.
+     */
+    private static boolean isCalledFrom(String methodName) {
+        for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
+            if (e.getMethodName().contains(methodName))
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Verifies scenario of a deadlock between thread, modifying a cache entry (acquires cp read lock and entry lock),
      * ttl thread, expiring the entry (acquires cp read lock and entry lock)
      * and checkpoint thread (acquires cp write lock).
@@ -121,7 +138,7 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
     public void testDeadlockBetweenCachePutAndEntryExpiration() throws Exception {
         AtomicBoolean timeoutReached = new AtomicBoolean(false);
 
-        AtomicBoolean cpWriteLocked = new AtomicBoolean(false);
+        CountDownLatch cpWriteLockedLatch = new CountDownLatch(1);
 
         AtomicInteger partId = new AtomicInteger();
 
@@ -151,33 +168,15 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
                  * (by counting down ttLatch, see next overridden method) and reproduce deadlock scenario.
                  */
                 @Override public IgniteCacheOffheapManager.CacheDataStore dataStore() {
-                    Thread t = Thread.currentThread();
-                    String tName = t.getName();
-
-                    if (tName == null || !tName.contains("updater"))
+                    if (!Thread.currentThread().getName().contains("updater") || !isCalledFrom("unswap"))
                         return super.dataStore();
 
-                    boolean unswapFoundInST = false;
-
-                    for (StackTraceElement e : t.getStackTrace()) {
-                        if (e.getMethodName().contains("unswap")) {
-                            unswapFoundInST = true;
-
-                            break;
-                        }
+                    try {
+                        cpWriteLockedLatch.await();
                     }
-
-                    if (!unswapFoundInST)
-                        return super.dataStore();
-
-                    while (!cpWriteLocked.get()) {
-                        try {
-                            Thread.sleep(10);
-                        }
-                        catch (InterruptedException ignored) {
-                            log.warning(">>> Thread caught InterruptedException while waiting " +
-                                "for cp write lock to be locked");
-                        }
+                    catch (InterruptedException ignored) {
+                        log.warning(">>> Thread caught InterruptedException while waiting " +
+                            "for cp write lock to be locked");
                     }
 
                     ttlLatch.countDown();
@@ -196,23 +195,10 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
                  * So situation of three threads stuck in deadlock is reproduced.
                  */
                 @Override public boolean reserve() {
-                    Thread t = Thread.currentThread();
-                    String tName = t.getName();
-
-                    if (tName == null || !tName.contains("ttl-cleanup-worker"))
-                        return super.reserve();
-
-                    boolean purgeExpiredFoundInST = false;
-
-                    for (StackTraceElement e : t.getStackTrace()) {
-                        if (e.getMethodName().contains("purgeExpiredInternal")) {
-                            purgeExpiredFoundInST = true;
-
-                            break;
-                        }
-                    }
-
-                    if (!purgeExpiredFoundInST)
+                    if (
+                        !Thread.currentThread().getName().contains("ttl-cleanup-worker")
+                        || !isCalledFrom("purgeExpiredInternal")
+                    )
                         return super.reserve();
 
                     ttlLatch.countDown();
@@ -282,7 +268,7 @@ public class IgnitePdsCacheEntriesExpirationTest extends GridCommonAbstractTest 
             }
 
             try {
-                cpWriteLocked.set(true);
+                cpWriteLockedLatch.countDown();
 
                 db.checkpointLock.writeLock().lockInterruptibly();
 
