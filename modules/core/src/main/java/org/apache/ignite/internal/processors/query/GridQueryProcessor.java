@@ -1476,7 +1476,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void onLocalOperationFinished(SchemaAbstractOperation op, @Nullable QueryTypeDescriptorImpl type) {
         synchronized (stateMux) {
-            log.info("finishing local operation op=" + op);
             if (disconnected)
                 return;
 
@@ -1527,8 +1526,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 U.warn(log, "Failed to finish index operation [opId=" + op.id() + " op=" + op + ']', e);
             }
         }
-        log.info("finished local operation op=" + op);
-
     }
 
     /**
