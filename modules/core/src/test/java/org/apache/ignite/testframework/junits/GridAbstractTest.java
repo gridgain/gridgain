@@ -2393,8 +2393,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Clear {@link S#classCache}. Use if necessary to test sensitive data
-     * in the test.
+     * Clear S#classCache. Use if necessary to test sensitive data
+     * in the test. https://ggsystems.atlassian.net/browse/GG-25182
      */
     protected void clearGridToStringClassCache() {
         ((Map)getFieldValueHierarchy(S.class, "classCache")).clear();
