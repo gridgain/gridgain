@@ -31,6 +31,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
     /// Wrapper over framework socket for Ignite thin client operations.
@@ -107,6 +108,9 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Topology version update callback. */
         private readonly Action<AffinityTopologyVersion> _topVerCallback;
 
+        /** Logger. */
+        private readonly ILogger _logger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientSocket" /> class.
         /// </summary>
@@ -123,8 +127,12 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _topVerCallback = topVerCallback;
             _timeout = clientConfiguration.SocketTimeout;
+            _logger = clientConfiguration.Logger.GetLogger(GetType());
 
             _socket = Connect(clientConfiguration, endPoint);
+            _logger.Debug("Socket connection established: {0} -> {1}", 
+                _socket.LocalEndPoint, _socket.RemoteEndPoint);
+            
             _stream = GetSocketStream(_socket, clientConfiguration, host);
 
             ServerVersion = version ?? CurrentProtocolVersion;
