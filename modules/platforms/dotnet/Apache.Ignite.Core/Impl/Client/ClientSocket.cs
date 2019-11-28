@@ -646,7 +646,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 socket.ReceiveBufferSize = cfg.SocketReceiveBufferSize;
             }
 
-            logger.Debug("Socket connection attempt: {0}", socket.LocalEndPoint);
+            logger.Debug("Socket connection attempt: {0}", endPoint);
 
             socket.Connect(endPoint);
             
