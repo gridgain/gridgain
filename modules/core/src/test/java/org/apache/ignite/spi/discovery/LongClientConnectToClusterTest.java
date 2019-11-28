@@ -19,7 +19,9 @@ package org.apache.ignite.spi.discovery;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -36,8 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * Test client connects to two nodes cluster during time more than the
- * {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
+ * Test client connects to two nodes cluster during time more than the {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
  */
 public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
     /** Client instance name. */
@@ -110,19 +111,23 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
 
             /** {@inheritDoc} */
             @Override public IgniteFuture<?> onDiscovery(
-                DiscoveryNotification notification
+                int type,
+                long topVer,
+                ClusterNode node,
+                Collection<ClusterNode> topSnapshot,
+                Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
             ) {
-                if (EventType.EVT_NODE_METRICS_UPDATED == notification.type()) {
-                    log.info("Metrics update message catched from node " + notification.getNode());
+                if (EventType.EVT_NODE_METRICS_UPDATED == type) {
+                    log.info("Metrics update message catched from node " + node);
 
                     assertFalse(locNode.isClient());
 
-                    if (notification.getNode().isClient())
+                    if (node.isClient())
                         clientMetricsUpdateCnt++;
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(notification);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
 
                 return new IgniteFinishedFutureImpl<>();
             }
