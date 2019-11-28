@@ -129,10 +129,7 @@ namespace Apache.Ignite.Core.Impl.Client
             _timeout = clientConfiguration.SocketTimeout;
             _logger = clientConfiguration.Logger.GetLogger(GetType());
 
-            _socket = Connect(clientConfiguration, endPoint);
-            _logger.Debug("Socket connection established: {0} -> {1}", 
-                _socket.LocalEndPoint, _socket.RemoteEndPoint);
-            
+            _socket = Connect(clientConfiguration, endPoint, _logger);
             _stream = GetSocketStream(_socket, clientConfiguration, host);
 
             ServerVersion = version ?? CurrentProtocolVersion;
@@ -620,7 +617,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "Socket is returned from this method.")]
-        private static Socket Connect(IgniteClientConfiguration cfg, EndPoint endPoint)
+        private static Socket Connect(IgniteClientConfiguration cfg, EndPoint endPoint, ILogger logger)
         {
             var socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
             {
@@ -640,7 +637,11 @@ namespace Apache.Ignite.Core.Impl.Client
                 socket.ReceiveBufferSize = cfg.SocketReceiveBufferSize;
             }
 
+            logger.Debug("Socket connection attempt: {0}", socket.LocalEndPoint);
+
             socket.Connect(endPoint);
+            
+            logger.Debug("Socket connection established: {0} -> {1}", socket.LocalEndPoint, socket.RemoteEndPoint);
 
             return socket;
         }
