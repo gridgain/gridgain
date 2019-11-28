@@ -327,7 +327,7 @@ namespace Apache.Ignite.Core.Log
             IgniteArgumentCheck.NotNull(logger, "logger");
             IgniteArgumentCheck.NotNull(category, "category");
 
-            return new CategoryLogger(logger, category.FullName);
+            return new CategoryLogger(logger, category.Name);
         }
     }
 }

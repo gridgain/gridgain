@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Log
                 return;
             }
 
-            var sb = new StringBuilder().AppendFormat("[{0:HH:mm:ss}] [{1}] ", DateTime.Now, level);
+            var sb = new StringBuilder().AppendFormat("[{0:HH:mm:ss}] [{1}] [{2}] ", DateTime.Now, level, category);
             
             if (args != null)
             {
