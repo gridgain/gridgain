@@ -395,6 +395,9 @@ namespace Apache.Ignite.Core.Impl.Client
                     }
 
                     ServerVersion = version;
+                    
+                    _logger.Debug("Handshake completed on {0}, protocol version = {1}", 
+                        _socket.RemoteEndPoint, version);
 
                     return;
                 }
@@ -410,6 +413,9 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     errCode = (ClientStatusCode) stream.ReadInt();
                 }
+                
+                _logger.Debug("Handshake failed on {0}, server protocol version = {1}, status = {2}, message = {3}", 
+                    _socket.RemoteEndPoint, version, errCode, errMsg);
 
                 // Authentication error is handled immediately.
                 if (errCode == ClientStatusCode.AuthenticationFailed)
@@ -422,6 +428,9 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (retry)
                 {
+                    _logger.Debug("Retrying handshake on {0} with protocol version {1}", 
+                        _socket.RemoteEndPoint, ServerVersion);
+                    
                     Handshake(clientConfiguration, ServerVersion);
                 }
                 else
