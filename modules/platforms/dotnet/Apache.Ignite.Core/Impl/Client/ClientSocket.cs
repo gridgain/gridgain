@@ -127,7 +127,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _topVerCallback = topVerCallback;
             _timeout = clientConfiguration.SocketTimeout;
-            _logger = clientConfiguration.Logger.GetLogger(GetType());
+            _logger = (clientConfiguration.Logger ?? new ConsoleLogger()).GetLogger(GetType());
 
             _socket = Connect(clientConfiguration, endPoint, _logger);
             _stream = GetSocketStream(_socket, clientConfiguration, host);
