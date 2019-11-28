@@ -79,6 +79,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** {@code True} If index need to be created throught static config. */
     private static boolean createIdx = true;
 
+    /** {@code True} If composite index required. */
+    private static boolean createCompositeIdx;
+
     /** {@code True} If cache nedd to be created throught static config. */
     private static boolean createStaticCache = true;
 
@@ -186,6 +189,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cleanPersistenceDir();
 
         srvLog = clientLog = null;
+
+        createCompositeIdx = false;
 
         super.afterTest();
     }
@@ -698,80 +703,74 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         GridQueryProcessor qryProc = ignite.context().query();
 
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
+
+        // Same checks for composite index.
+        createCompositeIdx = true;
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
+    }
+
+    private void checkInWithEqualsIdxUsageForDifferentTypes(final GridQueryProcessor qryProc) {
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.INT,
             "val * 3",
-            1, 2, -3, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+            1, 2, -3, null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.BIGINT,
             null,
-            0L, Long.MAX_VALUE, Long.MIN_VALUE, 1L, -1L);
+            0L, Long.MAX_VALUE, Long.MIN_VALUE, null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.VARCHAR,
             "_val",
             new Quoted(""),
             new Quoted("whatever"),
             new Quoted("CamelCase"),
-            new Quoted("UPPER_CASE"),
-            new Quoted("lower_case"));
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DATE,
             "_key",
             new Dated(Date.valueOf("2001-09-11")),
             new Dated(Date.valueOf("1806-08-12")),
             new Dated(Date.valueOf("2051-11-21")),
-            new Dated(Date.valueOf("2018-12-31")),
-            new Dated(Date.valueOf("2019-01-01")));
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.TIME,
             "fld, val",
             new Timed(Time.valueOf("00:00:01")),
             new Timed(Time.valueOf("12:00:00")),
             new Timed(Time.valueOf("23:59:59")),
-            new Timed(Time.valueOf("00:00:00")),
-            new Timed(Time.valueOf("23:59:58")),
-            new Timed(Time.valueOf("13:00:00")));
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.TIMESTAMP,
             "val, fld",
             new Dated(Timestamp.valueOf("2019-01-01 00:00:00")),
-            new Dated(Timestamp.valueOf("2018-12-31 23:59:59")),
-            new Dated(Timestamp.valueOf("2051-11-21 00:00:01")),
+            new Dated(Timestamp.valueOf("2051-12-31 23:59:59")),
             new Dated(Timestamp.valueOf("1806-08-12 12:00:00")),
-            new Dated(Timestamp.valueOf("2019-01-30 13:00:00")));
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DOUBLE,
             "*, _key",
-            1.0d, 1e-7d, 0L, -0.9d, Double.MIN_VALUE, Double.MAX_VALUE,
-            new Quoted(Double.NEGATIVE_INFINITY), new Quoted(Double.POSITIVE_INFINITY),
-            new Quoted(Double.NaN));
+            -1.0d, 1e-7d, new Quoted(Double.NEGATIVE_INFINITY), null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.UUID,
             "val",
-            new Quoted("00000000-0000-0000-0000-000000000000"),
             new Quoted("d9bc480e-1107-11ea-8d71-362b9e155667"),
             new Quoted(UUID.fromString("d9bc4354-1107-11ea-8d71-362b9e155667")),
             new Quoted(UUID.randomUUID()),
-            new Quoted(IgniteUuid.randomUuid().globalId())
-        );
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DECIMAL,
             "ROUND(val + 0.05, 1)",
             "10.2",
-            "10.01",
+            new BigDecimal("10.01"),
             new BigDecimal(123.123),
-            BigDecimal.ONE,
-            BigDecimal.ZERO,
-            BigDecimal.valueOf(123456789, 0),
-            BigDecimal.valueOf(123456789, 3)
-        );
+            null);
 
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.BINARY,
             "BIT_LENGTH(val)",
             new ByteArrayed(new byte[] {}),
             new ByteArrayed(new byte[] {0, 1}),
             new ByteArrayed(new byte[] {1, 2, 3}),
-            new ByteArrayed(new byte[] {3, 2, 1})
-        );
+            null);
     }
 
     /**
@@ -801,7 +800,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         final String idxName = "IDX_VAL";
 
         qryProc.querySqlFields(new SqlFieldsQuery(
-            "CREATE INDEX \"" + idxName + "\" ON " + TEST_TBL_NAME + "(val)"), true);
+            "CREATE INDEX \"" + idxName + "\" ON " + TEST_TBL_NAME +
+                (createCompositeIdx ? "(val, fld)" : "(val)")), true);
 
         for (int i = 0; i < values.length; i++) {
             Object valToPut = toObjVal(values[i]);
@@ -818,70 +818,70 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             final Object val3 = values[(rnd + 2) % values.length];
             final Object val4 = values[(rnd + 3) % values.length];
 
-            final String qry = "explain select " + proj + " from " + TEST_TBL_NAME + " where ";
+            final String qry = "explain select " + proj + " from " + TEST_TBL_NAME + " ";
 
             List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "val in (?1, ?2) and (fld = ?1 or fld = ?2)")
+                "where val in (?1, ?2) and (fld = ?1 or fld = ?2)")
                 .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
             res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "val in (select fld from " + TEST_TBL_NAME + " where fld in(?1, ?2)) " +
+                "where val in (select fld from " + TEST_TBL_NAME + " where fld in(?1, ?2)) " +
                 "and (fld = ?1 or fld = ?2)")
                 .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
             res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "val in (?1, ?2) and (fld = ?3 or fld = ?3)")
+                "where val in (?1, ?2) and (fld = ?3 or fld = ?3)")
                 .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
             res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "val in (?1, ?2) and fld = ?3")
+                "where val in (?1, ?2) and fld = ?3")
                 .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
             res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "val in (" + toStringVal(val1) + ", " + toStringVal(val2) + ") and " +
+                "where val in (" + toStringVal(val1) + ", " + toStringVal(val2) + ") and " +
                 "fld = " + toStringVal(val3)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
             //Check OR -> IN optimization is applied.
             res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "(val = ?1 OR val = ?2) and fld = " + toStringVal(val3))
+                "where (val = ?1 OR val = ?2) and fld = " + toStringVal(val3))
                 .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
             assertTrue(checkIdxUsage(res, idxName));
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-                " where val in (?1, ?2) and (fld = ?3 or fld = ?4) ORDER BY fld")
+            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
+                "where val in (?1, ?2) and (fld = ?3 or fld = ?4) ORDER BY fld")
                 .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3), toObjVal(val4)), true).getAll();
 
-            assertEquals(0, res.size());
+            assertTrue(checkIdxUsage(res, idxName));
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-                " where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld")
+            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
+                "where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld")
                 .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
 
-            assertEquals(1, res.size());
+            assertTrue(checkIdxUsage(res, idxName));
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-                " where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld")
+            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
+                "where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld")
                 .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
-            assertEquals(2, res.size());
+            assertTrue(checkIdxUsage(res, idxName));
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-                " where val in (" + toStringVal(val2) + ", " + toStringVal(val1) +
+            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
+                "where val in (" + toStringVal(val2) + ", " + toStringVal(val1) +
                 ") and (fld = " + toStringVal(val1) + " or fld = " + toStringVal(val2) +
                 ") ORDER BY fld"), true).getAll();
 
-            assertEquals(2, res.size());
+            assertTrue(checkIdxUsage(res, idxName));
         }
         finally {
             qryProc.querySqlFields(new SqlFieldsQuery("DROP TABLE " + TEST_TBL_NAME + ";"), true);
