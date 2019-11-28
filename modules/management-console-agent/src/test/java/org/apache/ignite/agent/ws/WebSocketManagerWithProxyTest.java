@@ -23,6 +23,9 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.containers.GenericContainer;
+
+import static java.lang.String.valueOf;
 
 /**
  * Websocket manager tests with proxy.
@@ -34,12 +37,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
     @Test
     @WithSystemProperty(key = "test.withProxy", value = "true")
     public void shouldConnectWithProxy() throws Exception {
-        System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
-        System.setProperty("http.proxyPort", String.valueOf(proxy.getFirstMappedPort()));
+        try (GenericContainer proxy = startProxy()) {
+            System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
+            System.setProperty("http.proxyPort", valueOf(proxy.getFirstMappedPort()));
 
-        IgniteEx ignite = startGrid(0);
+            IgniteEx ignite = startGrid(0);
 
-        changeManagementConsoleConfig(ignite);
+            changeManagementConsoleConfig(ignite);
+        }
     }
 
     /**
@@ -48,12 +53,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
     @Test
     @WithSystemProperty(key = "test.withProxy", value = "true")
     public void shouldConnectWithHttpsProxy() throws Exception {
-        System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
-        System.setProperty("http.proxyPort", String.valueOf(httpsProxy.getFirstMappedPort()));
+        try (GenericContainer httpsProxy = startHttpsProxy()) {
+            System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
+            System.setProperty("http.proxyPort", valueOf(httpsProxy.getFirstMappedPort()));
 
-        IgniteEx ignite = startGrid(0);
+            IgniteEx ignite = startGrid(0);
 
-        changeManagementConsoleConfig(ignite);
+            changeManagementConsoleConfig(ignite);
+        }
     }
 
     /**
@@ -62,15 +69,17 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
     @Test
     @WithSystemProperty(key = "test.withProxy", value = "true")
     public void shouldConnectWithAuthProxy() throws Exception {
-        System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
-        System.setProperty("http.proxyPort", String.valueOf(authProxy.getFirstMappedPort()));
+        try (GenericContainer authProxy = startProxyWithCreds()) {
+            System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
+            System.setProperty("http.proxyPort", valueOf(authProxy.getFirstMappedPort()));
 
-        System.setProperty("http.proxyUsername", "user");
-        System.setProperty("http.proxyPassword", "123456");
+            System.setProperty("http.proxyUsername", "user");
+            System.setProperty("http.proxyPassword", "123456");
 
-        IgniteEx ignite = startGrid(0);
+            IgniteEx ignite = startGrid(0);
 
-        changeManagementConsoleConfig(ignite);
+            changeManagementConsoleConfig(ignite);
+        }
     }
 
     /**
@@ -85,12 +94,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withProxy", value = "true")
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         public void shouldConnectWithProxy() throws Exception {
-            System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(proxy.getFirstMappedPort()));
+            try (GenericContainer proxy = startProxy()) {
+                System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(proxy.getFirstMappedPort()));
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
 
         /**
@@ -100,12 +111,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withProxy", value = "true")
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         public void shouldConnectWithHttpsProxy() throws Exception {
-            System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(httpsProxy.getFirstMappedPort()));
+            try (GenericContainer httpsProxy = startHttpsProxy()) {
+                System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(httpsProxy.getFirstMappedPort()));
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
 
         /**
@@ -115,15 +128,17 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withProxy", value = "true")
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         public void shouldConnectWithAuthProxy() throws Exception {
-            System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(authProxy.getFirstMappedPort()));
+            try (GenericContainer authProxy = startProxyWithCreds()) {
+                System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(authProxy.getFirstMappedPort()));
 
-            System.setProperty("http.proxyUsername", "user");
-            System.setProperty("http.proxyPassword", "123456");
+                System.setProperty("http.proxyUsername", "user");
+                System.setProperty("http.proxyPassword", "123456");
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
     }
 
@@ -141,12 +156,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         @WithSystemProperty(key = "test.withKeyStore", value = "true")
         public void shouldConnectWithProxy() throws Exception {
-            System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(proxy.getFirstMappedPort()));
+            try (GenericContainer proxy = startProxy()) {
+                System.setProperty("http.proxyHost", proxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(proxy.getFirstMappedPort()));
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
 
         /**
@@ -157,12 +174,14 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         @WithSystemProperty(key = "test.withKeyStore", value = "true")
         public void shouldConnectWithHttpsProxy() throws Exception {
-            System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(httpsProxy.getFirstMappedPort()));
+            try (GenericContainer httpsProxy = startHttpsProxy()) {
+                System.setProperty("http.proxyHost", httpsProxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(httpsProxy.getFirstMappedPort()));
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
 
         /**
@@ -173,15 +192,17 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
         @WithSystemProperty(key = "test.withTrustStore", value = "true")
         @WithSystemProperty(key = "test.withKeyStore", value = "true")
         public void shouldConnectWithAuthProxy() throws Exception {
-            System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
-            System.setProperty("http.proxyPort", String.valueOf(authProxy.getFirstMappedPort()));
+            try (GenericContainer authProxy = startProxyWithCreds()) {
+                System.setProperty("http.proxyHost", authProxy.getContainerIpAddress());
+                System.setProperty("http.proxyPort", valueOf(authProxy.getFirstMappedPort()));
 
-            System.setProperty("http.proxyUsername", "user");
-            System.setProperty("http.proxyPassword", "123456");
+                System.setProperty("http.proxyUsername", "user");
+                System.setProperty("http.proxyPassword", "123456");
 
-            IgniteEx ignite = startGrid(0);
+                IgniteEx ignite = startGrid(0);
 
-            changeManagementConsoleConfig(ignite);
+                changeManagementConsoleConfig(ignite);
+            }
         }
     }
 }

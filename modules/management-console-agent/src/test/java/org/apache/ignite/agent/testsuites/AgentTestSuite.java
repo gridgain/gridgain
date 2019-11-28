@@ -39,9 +39,6 @@ import org.apache.ignite.agent.ws.RetryableSenderTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerTwoWaySSLTest;
-import org.apache.ignite.agent.ws.WebSocketManagerWithProxyTest;
-import org.apache.ignite.agent.ws.WebSocketManagerWithProxyTest.WebSocketManagerWithSslAndProxyTest;
-import org.apache.ignite.agent.ws.WebSocketManagerWithProxyTest.WebSocketManagerWithTwoWaySslAndProxyTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -50,12 +47,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    WebSocketManagerTest.class,
-    WebSocketManagerSSLTest.class,
-    WebSocketManagerTwoWaySSLTest.class,
-    WebSocketManagerWithProxyTest.class,
-    WebSocketManagerWithSslAndProxyTest.class,
-    WebSocketManagerWithTwoWaySslAndProxyTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,
@@ -76,6 +67,9 @@ import org.junit.runners.Suite;
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
     TopologySnapshotTest.class,
+    WebSocketManagerTest.class,
+    WebSocketManagerSSLTest.class,
+    WebSocketManagerTwoWaySSLTest.class
 })
 public class AgentTestSuite {
 }

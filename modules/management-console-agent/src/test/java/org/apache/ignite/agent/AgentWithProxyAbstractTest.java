@@ -17,7 +17,6 @@
 package org.apache.ignite.agent;
 
 import org.junit.After;
-import org.junit.Rule;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 
@@ -27,15 +26,6 @@ import static org.testcontainers.containers.BindMode.READ_ONLY;
  * Agent with proxt abstract test.
  */
 public abstract class AgentWithProxyAbstractTest extends AgentCommonAbstractTest {
-    /** HTTP proxy. */
-    protected GenericContainer proxy;
-
-    /** HTTP proxy with authorization. */
-    protected GenericContainer authProxy;
-
-    /** HTTPS proxy. */
-    protected GenericContainer httpsProxy;
-
     /**
      * Clear proxy properties.
      */
@@ -51,14 +41,15 @@ public abstract class AgentWithProxyAbstractTest extends AgentCommonAbstractTest
     /**
      * Start HTTP proxy.
      */
-    @Rule
-    public GenericContainer upProxy() {
+    public GenericContainer startProxy() {
         Testcontainers.exposeHostPorts(port);
 
-        proxy = new GenericContainer<>("salrashid123/squidproxy")
+        GenericContainer proxy = new GenericContainer<>("salrashid123/squidproxy")
             .withClasspathResourceMapping("proxy/squid.conf", "/etc/squid/squid.conf", READ_ONLY)
             .withCommand("/apps/squid/sbin/squid -NsY -f /etc/squid/squid.conf")
             .withExposedPorts(3128);
+
+        proxy.start();
 
         return proxy;
     }
@@ -66,29 +57,31 @@ public abstract class AgentWithProxyAbstractTest extends AgentCommonAbstractTest
     /**
      * Start HTTP proxy with authorization.
      */
-    @Rule
-    public GenericContainer upProxyWithCreds() {
-        authProxy = new GenericContainer<>("salrashid123/squidproxy")
+    public GenericContainer startProxyWithCreds() {
+        GenericContainer proxy = new GenericContainer<>("salrashid123/squidproxy")
             .withClasspathResourceMapping("proxy/squid-auth.conf", "/etc/squid/squid.conf", READ_ONLY)
             .withClasspathResourceMapping("proxy/passwords", "/etc/squid3/passwords", READ_ONLY)
             .withCommand("/apps/squid/sbin/squid -NsY -f /etc/squid/squid.conf")
             .withExposedPorts(3128);
 
-        return authProxy;
+        proxy.start();
+
+        return proxy;
     }
 
     /**
      * Start HTTPS proxy.
      */
-    @Rule
-    public GenericContainer upHttpsProxy() {
-        httpsProxy = new GenericContainer<>("salrashid123/squidproxy")
+    public GenericContainer startHttpsProxy() {
+        GenericContainer proxy = new GenericContainer<>("salrashid123/squidproxy")
             .withClasspathResourceMapping("proxy/squid-https.conf", "/etc/squid/squid.conf", READ_ONLY)
             .withClasspathResourceMapping("ssl/ca.crt", "/etc/squid3/ca.crt", READ_ONLY)
             .withClasspathResourceMapping("ssl/ca.key", "/etc/squid3/ca.key", READ_ONLY)
             .withCommand("/apps/squid/sbin/squid -NsY -f /etc/squid/squid.conf")
             .withExposedPorts(3128);
 
-        return httpsProxy;
+        proxy.start();
+
+        return proxy;
     }
 }
