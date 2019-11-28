@@ -70,6 +70,9 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Distribution map locker. */
         private readonly object _distributionMapSyncRoot = new object();
 
+        /** Logger. */
+        private readonly ILogger _logger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientFailoverSocket"/> class.
         /// </summary>
@@ -103,13 +106,15 @@ namespace Apache.Ignite.Core.Impl.Client
                 _config.Logger = new ConsoleLogger();
             }
 
+            _logger = _logger.GetLogger(GetType());
+
             Connect();
 
             if (_config.EnablePartitionAwareness &&
                 _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
             {
                 _config.EnablePartitionAwareness = false;
-                _config.Logger.Warn("Affinity awareness has been disabled: server protocol version {0} " +
+                _logger.Warn("Affinity awareness has been disabled: server protocol version {0} " +
                                     "is lower than required {1}",
                     ClientOp.CachePartitions.GetMinVersion(),
                     _socket.ServerVersion
