@@ -1,0 +1,19 @@
+[req]
+prompt                 = no
+distinguished_name     = dn
+req_extensions         = req_ext
+[ dn ]
+countryName            = RU
+stateOrProvinceName    = Moscow
+localityName           = Moscow
+organizationName       = test
+commonName             = localhost
+organizationalUnitName = IT
+emailAddress           = client@test.local
+[ req_ext ]
+subjectAltName         = @alt_names
+[ alt_names ]
+DNS.1                  = localhost
+DNS.2                  = host.docker.internal
+DNS.3                  = host.testcontainers.internal
+IP.1                   = 127.0.0.1

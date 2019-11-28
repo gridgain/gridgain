@@ -16,11 +16,20 @@
 
 package org.apache.ignite.agent.ws;
 
-import java.net.ProxySelector;
 import java.net.URI;
-import java.util.Optional;
+import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -31,7 +40,6 @@ import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.client.ClientProperties;
 import org.glassfish.tyrus.client.SslContextConfigurator;
 import org.glassfish.tyrus.client.SslEngineConfigurator;
-import org.glassfish.tyrus.client.auth.Credentials;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
@@ -43,7 +51,6 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
-import static java.net.Proxy.NO_PROXY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.glassfish.tyrus.client.ClientManager.createClient;
@@ -51,6 +58,7 @@ import static org.glassfish.tyrus.client.ClientProperties.PROXY_URI;
 import static org.glassfish.tyrus.client.ClientProperties.SSL_ENGINE_CONFIGURATOR;
 import static org.glassfish.tyrus.client.ThreadPoolConfig.defaultConfig;
 import static org.glassfish.tyrus.container.grizzly.client.GrizzlyClientProperties.SELECTOR_THREAD_POOL_CONFIG;
+import static org.springframework.util.Base64Utils.encodeToString;
 
 /**
  * Web socket manager.
@@ -118,12 +126,10 @@ public class WebSocketManager extends GridProcessorAdapter {
     }
 
     /**
-     * TODO GG-24630: Remove synchronized and make the send method non-blocking.
-     *
      * @param dest Destination.
      * @param payload Payload.
      */
-    public synchronized boolean send(String dest, byte[] payload) {
+    public boolean send(String dest, byte[] payload) {
         boolean connected = ses != null && ses.isConnected();
 
         // TODO: workaround of spring-messaging bug with send byte array data.
@@ -140,12 +146,10 @@ public class WebSocketManager extends GridProcessorAdapter {
     }
 
     /**
-     * TODO GG-24630: Remove synchronized and make the send method non-blocking.
-     *
      * @param dest Destination.
      * @param payload Payload.
      */
-    public synchronized boolean send(String dest, Object payload) {
+    public boolean send(String dest, Object payload) {
         boolean connected = connected();
 
         if (connected)
@@ -218,10 +222,13 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         client.getProperties().put(SELECTOR_THREAD_POOL_CONFIG, defaultConfig().setPoolName("mgmt-console-ws-client"));
 
-        if ("wss".equals(uri.getScheme()))
+        if (uri.getScheme().startsWith("wss"))
             client.getProperties().put(SSL_ENGINE_CONFIGURATOR, createSslEngineConfigurator(log, cfg));
 
-        configureProxy(client, uri);
+        configureProxy(client);
+
+        client.setDefaultMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
+        client.setDefaultMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
 
         return client;
     }
@@ -241,7 +248,7 @@ public class WebSocketManager extends GridProcessorAdapter {
             trustAll = false;
         }
 
-        boolean isNeedClientAuth = !F.isEmpty(cfg.getConsoleTrustStore()) || !F.isEmpty(cfg.getConsoleKeyStore());
+        boolean isNeedClientAuth = !F.isEmpty(cfg.getConsoleKeyStore()) || !F.isEmpty(cfg.getConsoleKeyStorePassword());
 
         SslContextConfigurator sslCtxConfigurator = new SslContextConfigurator();
 
@@ -257,56 +264,86 @@ public class WebSocketManager extends GridProcessorAdapter {
         if (!F.isEmpty(cfg.getConsoleKeyStorePassword()))
             sslCtxConfigurator.setKeyStorePassword(cfg.getConsoleKeyStorePassword());
 
-        SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(sslCtxConfigurator, true, isNeedClientAuth, false);
+        SslEngineConfigurator sslEngineConfigurator = trustAll
+            ? createTrustAllSslEngineConfigurator()
+            : new SslEngineConfigurator(sslCtxConfigurator, true, isNeedClientAuth, false);
 
         if (!F.isEmpty(cfg.getCipherSuites()))
             sslEngineConfigurator.setEnabledCipherSuites(cfg.getCipherSuites().toArray(EMPTY));
-
-        if (trustAll)
-            sslEngineConfigurator.setHostnameVerifier((hostname, session) -> true);
 
         return sslEngineConfigurator;
     }
 
     /**
-     * @param mgr Manager.
-     * @param srvUri Server uri.
+     * @return SSL engine configurator with trust all manager and disabled hostname verification.
      */
-    private void configureProxy(ClientManager mgr, URI srvUri) {
-        Optional<String> proxyAddress = ProxySelector.getDefault().select(srvUri).stream()
-            .filter(p -> !p.equals(NO_PROXY))
-            .map(p -> p.address().toString()).findFirst();
+    private SslEngineConfigurator createTrustAllSslEngineConfigurator() {
+        try {
+            SSLContext ctx = SSLContext.getInstance("TLS");
 
-        if (proxyAddress.isPresent()) {
-            mgr.getProperties().put(PROXY_URI, proxyAddress.get());
+            ctx.init(null, new TrustManager[] {new TrustAllManager()}, null);
 
-            addAuthentication(mgr, proxyAddress.get());
+            SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(ctx, true, false, false);
+
+            sslEngineConfigurator.setHostVerificationEnabled(false);
+
+            return sslEngineConfigurator;
+        }
+        catch (NoSuchAlgorithmException | KeyManagementException e) {
+            throw new IgniteException(e);
         }
     }
 
     /**
      * @param mgr Manager.
-     * @param proxyAddr Proxy address.
      */
-    private void addAuthentication(ClientManager mgr, String proxyAddr) {
-        String user, pwd;
+    private void configureProxy(ClientManager mgr) {
+        String proxyHost = System.getProperty("http.proxyHost");
 
-        if (proxyAddr.startsWith("http")) {
-            user = System.getProperty("http.proxyUsername");
+        String proxyPort = System.getProperty("http.proxyPort");
 
-            pwd = System.getProperty("http.proxyPassword");
+        if (!F.isEmpty(proxyHost) && !F.isEmpty(proxyPort)) {
+            mgr.getProperties().put(PROXY_URI, "http://" + proxyHost + ':' + proxyPort);
+
+            addAuthentication(mgr);
         }
-        else if (proxyAddr.startsWith("https")) {
-            user = System.getProperty("https.proxyUsername");
+    }
 
-            pwd = System.getProperty("https.proxyPassword");
+    /**
+     * @param mgr Manager.
+     */
+    private void addAuthentication(ClientManager mgr) {
+        String user = System.getProperty("http.proxyUsername");
+
+        String pwd = System.getProperty("http.proxyPassword");
+
+        if (!F.isEmpty(user) || !F.isEmpty(pwd)) {
+            Map<String, String> proxyHeaders = new HashMap<>();
+
+            proxyHeaders.put("Proxy-Authorization", "Basic " +
+                encodeToString((user + ':' + pwd).getBytes(Charset.forName("UTF-8"))));
+
+            mgr.getProperties().put(ClientProperties.PROXY_HEADERS, proxyHeaders);
         }
-        else {
-            user = System.getProperty("java.net.socks.username");
+    }
 
-            pwd = System.getProperty("java.net.socks.password");
+    /**
+     * Trust all manager.
+     */
+    private static class TrustAllManager implements X509TrustManager {
+        /** {@inheritDoc} */
+        @Override public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+
         }
 
-        mgr.getProperties().put(ClientProperties.CREDENTIALS, new Credentials(user, pwd));
+        /** {@inheritDoc} */
+        @Override public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public X509Certificate[] getAcceptedIssuers() {
+            return null;
+        }
     }
 }

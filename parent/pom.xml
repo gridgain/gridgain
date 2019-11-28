@@ -142,6 +142,7 @@
         <awaitility.version>3.1.6</awaitility.version>
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
         <reflections.version>0.9.11</reflections.version>
+        <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
 
 
         <!-- Maven plugins versions -->
@@ -1039,6 +1040,13 @@
                                         <exclude>**/*.ps1</exclude>
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
+                                        <!-- Management console agent -->
+                                        <exclude>src/test/resources/**/*.crt</exclude>
+                                        <exclude>src/test/resources/**/*.jks</exclude>
+                                        <exclude>src/test/resources/**/*.key</exclude>
+                                        <exclude>src/test/resources/**/*.p12</exclude>
+                                        <exclude>src/test/resources/**/*.csr</exclude>
+                                        <exclude>src/test/resources/**/*.cnf</exclude>
                                         <!-- H2 forked module. -->
                                         <exclude>**/org/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>

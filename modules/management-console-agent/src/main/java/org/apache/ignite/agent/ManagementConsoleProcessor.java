@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
@@ -261,7 +262,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                     break;
                 }
-                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, EOFException.class, ConnectionLostException.class)) {
+                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, EOFException.class, ConnectionLostException.class, DeploymentException.class)) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
