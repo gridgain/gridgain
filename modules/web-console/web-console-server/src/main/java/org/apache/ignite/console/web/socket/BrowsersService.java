@@ -43,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -122,7 +123,7 @@ public class BrowsersService extends AbstractSocketHandler {
         AgentsService agentsSrvc,
         TransitionService transitionSrvc,
         ClustersRepository clustersRepo,
-        SessionsService sesSrvc
+        @Lazy SessionsService sesSrvc
     ) {
         this.agentsSrvc = agentsSrvc;
         this.transitionSrvc = transitionSrvc;
