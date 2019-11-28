@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 _config.Logger = new ConsoleLogger();
             }
 
-            _logger = _logger.GetLogger(GetType());
+            _logger = _config.Logger.GetLogger(GetType());
 
             Connect();
 
