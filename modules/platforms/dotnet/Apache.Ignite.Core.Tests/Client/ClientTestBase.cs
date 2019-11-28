@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
+    using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -142,7 +143,8 @@ namespace Apache.Ignite.Core.Tests.Client
             return new IgniteClientConfiguration
             {
                 Endpoints = new List<string> { IPAddress.Loopback.ToString() },
-                SocketTimeout = TimeSpan.FromSeconds(15)
+                SocketTimeout = TimeSpan.FromSeconds(15),
+                Logger = new ConsoleLogger(LogLevel.Trace)
             };
         }
 
