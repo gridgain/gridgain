@@ -115,6 +115,7 @@ namespace Apache.Ignite.Core.Client
             Endpoints = cfg.Endpoints == null ? null : cfg.Endpoints.ToList();
             ReconnectDisabled = cfg.ReconnectDisabled;
             EnablePartitionAwareness = cfg.EnablePartitionAwareness;
+            Logger = cfg.Logger;
         }
 
         /// <summary>

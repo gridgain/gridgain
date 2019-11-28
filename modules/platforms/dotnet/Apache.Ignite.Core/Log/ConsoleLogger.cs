@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Log
         /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
         /// Uses <see cref="LogLevel.Warn"/> minimum level.
         /// </summary>
-        public ConsoleLogger() : this (LogLevel.Warn)
+        public ConsoleLogger() : this(LogLevel.Warn)
         {
             // No-op.
         }
