@@ -256,7 +256,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             HttpServletResponse res,
             AuthenticationException e
         ) throws IOException {
-            res.sendError(SC_INTERNAL_SERVER_ERROR, messages.getMessageWithArgs("err.become.failed", e.getMessage()));
+            res.sendError(SC_INTERNAL_SERVER_ERROR, message("err.become.failed", e.getMessage()));
         }
     }
 }
