@@ -605,7 +605,6 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @returns {StringBuilder}
      */
     static _setProperties(sb = new StringBuilder(), bean, vars = [], limitLines = false, id = bean.id) {
-        console.count('_setProperties');
         _.forEach(bean.properties, (prop, idx) => {
             switch (prop.clsName) {
                 case 'DATA_SOURCE':
@@ -800,134 +799,8 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         return sb;
     }
 
-    static _collectMapImports(prop) {
-        console.count('_collectMapImports');
-        const imports = [];
-
-        imports.push(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
-        imports.push(prop.keyClsName);
-        imports.push(prop.valClsName);
-
-        if (prop.keyClsGenericType)
-            imports.push(prop.keyClsGenericType);
-
-        if (prop.valClsGenericType)
-            imports.push(prop.valClsGenericType);
-
-        return imports;
-    }
-
-    /**
-     * @returns {string[]}
-     */
-    static collectBeanImports(bean) {
-        console.count('collectBeanImports');
-        console.log('bean', bean);
-        const imports = [bean.clsName];
-
-        _.forEach(bean.arguments, (arg) => {
-            switch (arg.clsName) {
-                case 'BEAN':
-                    imports.push(...this.collectBeanImports(arg.value));
-
-                    break;
-                case 'java.lang.Class':
-                    imports.push(this.javaTypes.fullClassName(arg.value));
-
-                    break;
-
-                case 'MAP':
-                    imports.push(...this._collectMapImports(arg));
-
-                    break;
-                default:
-                    imports.push(arg.clsName);
-            }
-        });
-
-        imports.push(...this.collectPropertiesImports(bean.properties));
-
-        if (_.includes(STORE_FACTORY, bean.clsName))
-            imports.push('javax.sql.DataSource', 'javax.cache.configuration.Factory');
-
-        console.log('imports', imports);
-        return imports;
-    }
-
-    /**
-     * @param {Array.<Object>} props
-     * @returns {Array.<String>}
-     */
-    static collectPropertiesImports(props) {
-        console.count('collectPropertiesImports');
-        console.log(props);
-        const imports = [];
-
-        _.forEach(props, (prop) => {
-            switch (prop.clsName) {
-                case 'DATA_SOURCE':
-                    imports.push(prop.value.clsName);
-
-                    break;
-                case 'PROPERTY':
-                case 'PROPERTY_CHAR':
-                case 'PROPERTY_INT':
-                    imports.push('java.io.InputStream', 'java.util.Properties');
-
-                    break;
-                case 'BEAN':
-                    imports.push(...this.collectBeanImports(prop.value));
-
-                    break;
-                case 'ARRAY':
-                    if (!prop.varArg)
-                        imports.push(prop.typeClsName);
-
-                    if (this._isBean(prop.typeClsName))
-                        _.forEach(prop.items, (item) => imports.push(...this.collectBeanImports(item)));
-
-                    if (prop.typeClsName === 'java.lang.Class')
-                        _.forEach(prop.items, (item) => imports.push(item));
-
-                    break;
-                case 'COLLECTION':
-                    imports.push(prop.typeClsName);
-
-                    if (this._isBean(prop.typeClsName)) {
-                        _.forEach(prop.items, (item) => imports.push(...this.collectBeanImports(item)));
-
-                        imports.push(prop.implClsName);
-                    }
-                    else if (prop.implClsName === 'java.util.ArrayList')
-                        imports.push('java.util.Arrays');
-                    else
-                        imports.push(prop.implClsName);
-
-                    break;
-                case 'ENUM_COLLECTION':
-                    imports.push(prop.typeClsName);
-
-                    if (prop.implClsName === 'java.util.ArrayList')
-                        imports.push('java.util.Arrays');
-                    else
-                        imports.push(prop.implClsName);
-
-                    break;
-                case 'MAP':
-                    imports.push(...this._collectMapImports(prop));
-
-                    break;
-                default:
-                    if (!this.javaTypesNonEnum.nonEnum(prop.clsName))
-                        imports.push(prop.clsName);
-            }
-        });
-
-        return imports;
-    }
-
     static _prepareImports(imports) {
-        return _.sortedUniq(_.sortBy(_.filter(imports, (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.'))));
+        return _.sortBy(_.filter(imports, (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.')));
     }
 
     /**
@@ -1002,43 +875,62 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     /**
-     * @returns {string[]}
+     * @returns {Set.<String>}
      */
-    static collectConfigurationImports(cfg) {
-        let visits = 0;
-        const count = () => visits += 1;
-        const imports = new Set();
+    static collectConfigurationImports(cfg, imports = new Set()) {
         const addImport = (value) => {
-            if (value) imports.add(value);
+            if (value)
+                imports.add(value);
         };
+
         const getherImports = (prop) => {
-            if (!prop) return;
+            if (!prop || !prop.clsName)
+                return;
+
             switch (prop.clsName) {
                 case 'DATA_SOURCE':
                     addImport(prop.value.clsName);
                     break;
+
                 case 'PROPERTY':
                 case 'PROPERTY_CHAR':
                 case 'PROPERTY_INT':
                     addImport('java.io.InputStream');
                     addImport('java.util.Properties');
                     break;
+
                 case 'BEAN':
                     addImport(prop.typeClsName);
                     break;
+
                 case 'ARRAY':
-                    if (!prop.varArg) addImport(prop.typeClsName);
+                    if (!prop.varArg)
+                        addImport(prop.typeClsName);
+
                     break;
+
                 case 'COLLECTION':
                     addImport(prop.typeClsName);
+
+                    if (this._isBean(prop.typeClsName))
+                        addImport(prop.implClsName);
+                    else if (prop.implClsName === 'java.util.ArrayList')
+                        addImport('java.util.Arrays');
+                    else
+                        addImport(prop.implClsName);
+
                     break;
+
                 case 'ENUM_COLLECTION':
                     addImport(prop.typeClsName);
+
                     if (prop.implClsName === 'java.util.ArrayList')
                         addImport('java.util.Arrays');
                     else
                         addImport(prop.implClsName);
+
                     break;
+
                 case 'MAP':
                     addImport(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
                     addImport(prop.keyClsName);
@@ -1049,36 +941,45 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
                     if (prop.valClsGenericType)
                         addImport(prop.valClsGenericType);
+
                     break;
+
+                case 'java.lang.Class':
+                    addImport(this.javaTypes.fullClassName(prop.value));
+                    break;
+
                 default:
                     addImport(prop.clsName);
             }
+
+            if (_.includes(STORE_FACTORY, prop.clsName)) {
+                addImport('javax.sql.DataSource');
+                addImport('javax.cache.configuration.Factory');
+            }
         };
-        const visit = (node) => {
-            count();
-            getherImports(node);
-        };
-        crawl(cfg, visit, {
+
+        crawl(cfg, getherImports, {
             getChildren: (node, context) => {
-                if (!node) return [];
-                if (node.clsName === 'BEAN') return [node.value];
-                if (node.clsName === 'ARRAY') return node.items;
-                const args = (node.arguments || []).map((arg) => {
-                    switch (arg.clasName) {
-                        case 'BEAN':
-                            return arg.value;
-                        default:
-                            return [];
-                    }
-                });
-                const props = (node.properties || []).map((arg) => {
-                    return arg;
-                });
-                return [...args, ...props];
+                if (!node)
+                    return [];
+
+                if (node.clsName === 'BEAN')
+                    return [node.value];
+
+                if (node.clsName === 'ARRAY' || node.clsName === 'COLLECTION')
+                    return node.items;
+
+                if (node.clsName === 'MAP')
+                    return node.entries;
+
+                return [...(node.arguments || []), ...(node.properties || [])];
             }
         });
-        console.log(visits);
-        return [...imports.values()];
+
+        if (imports.has('oracle.jdbc.pool.OracleDataSource'))
+            imports.add('java.sql.SQLException');
+
+        return imports;
     }
 
     /**
@@ -1103,29 +1004,19 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
         const nearCacheBeans = [];
 
-        if (nonEmpty(clientNearCaches)) {
-            imports.push('org.apache.ignite.configuration.NearCacheConfiguration');
+        _.forEach(clientNearCaches, (cache) => {
+            const nearCacheBean = this.generator.cacheNearClient(cache, available);
 
-            _.forEach(clientNearCaches, (cache) => {
-                const nearCacheBean = this.generator.cacheNearClient(cache, available);
+            nearCacheBean.cacheName = cache.name;
 
-                nearCacheBean.cacheName = cache.name;
+            this.collectConfigurationImports(nearCacheBean, imports);
 
-                imports.push(...this.collectConfigurationImports(nearCacheBean));
+            nearCacheBeans.push(nearCacheBean);
+        });
 
-                nearCacheBeans.push(nearCacheBean);
-            });
-        }
+        const hasProps = imports.has('java.util.Properties');
 
-        if (_.includes(imports, 'oracle.jdbc.pool.OracleDataSource'))
-            imports.push('java.sql.SQLException');
-
-        const hasProps = this.hasProperties(cfg);
-
-        if (hasProps)
-            imports.push('java.util.Properties', 'java.io.InputStream');
-
-        _.forEach(this._prepareImports(imports), (cls) => sb.append(`import ${cls};`));
+        _.forEach(this._prepareImports([...imports.values()]), (cls) => sb.append(`import ${cls};`));
 
         sb.emptyLine();
 
@@ -1261,7 +1152,6 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
      * @returns {StringBuilder}
      */
     static pojo(fullClsName, fields, addConstructor) {
-        console.count('pojo');
         const dotIdx = fullClsName.lastIndexOf('.');
 
         const pkg = fullClsName.substring(0, dotIdx);
