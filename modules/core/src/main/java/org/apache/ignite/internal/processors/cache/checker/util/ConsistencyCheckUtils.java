@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
@@ -35,13 +36,13 @@ public class ConsistencyCheckUtils {
      */
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> actualKeys
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
     ) {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
         // Actual keys are a subset of old keys.
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
-            Map<UUID, GridCacheVersion> newVer = actualKeys.get(keyEntry.getKey());
+            Map<UUID, VersionedValue> newVer = actualKeys.get(keyEntry.getKey());
 
             if (newVer != null) {
                 // Elements with min GridCacheVersion should increment
@@ -57,7 +58,7 @@ public class ConsistencyCheckUtils {
      *
      */
     public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVer,
-        Map<UUID, GridCacheVersion> actualKeyVer) {
+        Map<UUID, VersionedValue> actualKeyVer) {
         assert oldKeyVer.size() > 1;
 
         if (actualKeyVer.isEmpty())
@@ -83,16 +84,16 @@ public class ConsistencyCheckUtils {
         GridCacheVersion maxVer = oldKeyVer.get(maxVersions.iterator().next());
 
         for (UUID maxVerOwner : maxVersions) {
-            GridCacheVersion ver = actualKeyVer.get(maxVerOwner);
-            if (ver == null || maxVer.isLess(ver))
+            VersionedValue verVal = actualKeyVer.get(maxVerOwner);
+            if (verVal == null || maxVer.isLess(verVal.getVer()))
                 return true;
         }
 
         boolean allNonMaxChanged = true;
 
         for (Map.Entry<UUID, GridCacheVersion> entry : oldKeyVer.entrySet()) {
-            GridCacheVersion actualVer = actualKeyVer.get(entry.getKey());
-            if (!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.isGreaterEqual(maxVer))) {
+            VersionedValue actualVer = actualKeyVer.get(entry.getKey());
+            if (!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.getVer().isGreaterEqual(maxVer))) {
                 allNonMaxChanged = false;
 
                 break;

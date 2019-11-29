@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.checker.tasks;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -41,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatc
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -60,7 +58,9 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /**
@@ -118,31 +118,24 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         KeyCacheObject lastKey = null;
 
-        int owners = 0;
-
         for (int i = 0; i < results.size(); i++) {
-            T2<GridDhtPartitionState, List<PartitionKeyVersion>> nodeRes = results.get(i).getData();
+            List<PartitionKeyVersion> nodeRes = results.get(i).getData();
 
-            if (nodeRes.get1() == GridDhtPartitionState.OWNING) {
-                owners++;
+            for (PartitionKeyVersion partKeyVer : nodeRes) {
+                try {
+                    KeyCacheObject key = unmarshalKey(partKeyVer.getKey(), ctx);
 
-                for (PartitionKeyVersion partKeyVer : nodeRes.get2()) {
-                    try {
-                        KeyCacheObject key = unmarshalKey(partKeyVer.getKey(), ctx);
+                    if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
+                        lastKey = key;
 
-                        if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
-                            lastKey = key;
+                    Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
+                    map.put(partKeyVer.getNodeId(), partKeyVer.getVersion());
 
-                        Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
-                        map.put(partKeyVer.getNodeId(), partKeyVer.getVersion());
-
-                        if (i == (results.size() - 1) && map.size() == owners && !hasConflict(map.values()))
-                            totalRes.remove(key);
-
-                    }
-                    catch (IgniteCheckedException e) {
-                        U.error(log, "Key cache object can't unashamed.", e);
-                    }
+                    if (i == (results.size() - 1) && map.size() == results.size() && !hasConflict(map.values()))
+                        totalRes.remove(key);
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Key cache object can't unashamed.", e);
                 }
             }
         }
@@ -195,7 +188,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         }
 
         /** {@inheritDoc} */
-        @Override public T2<GridDhtPartitionState, List<PartitionKeyVersion>> execute() throws IgniteException {
+        @Override public List<PartitionKeyVersion> execute() throws IgniteException {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -212,8 +205,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
-            if (part.state() != GridDhtPartitionState.OWNING)
-                return new T2<>(part.state(), Collections.emptyList());
+            assert part != null;
+
+            part.reserve();
 
             try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId()) :
@@ -231,13 +225,16 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             row.version()
                         ));
                     else
-                        i--; //TODO fix it.
+                        i--;
                 }
 
-                return new T2<>(part.state(), partEntryHashRecords);
+                return partEntryHashRecords;
             }
             catch (Exception e) {
                 throw new IgniteException("Batch [" + partBatch + "] can't processed. Broken cursor.", e);
+            }
+            finally {
+                part.release();
             }
         }
     }

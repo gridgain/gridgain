@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,10 +34,10 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionDataRow;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -50,10 +49,12 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
-public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> {
-    /** */
+public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, Map<KeyCacheObject, Map<UUID, VersionedValue>>> {
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
-    
+
     /** Injected logger. */
     @LoggerResource
     private IgniteLogger log;
@@ -97,19 +98,22 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
     }
 
     /** {@inheritDoc} */
-    @Override public Map<KeyCacheObject, Map<UUID, GridCacheVersion>> reduce(
+    @Override public Map<KeyCacheObject, Map<UUID, VersionedValue>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> res = new HashMap<>();
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
 
         GridCacheContext<Object, Object> ctx = ignite.cachex(recheckRequest.cacheName()).context();
 
         for (ComputeJobResult result : results) {
-            List<PartitionKeyVersion> partKeys = result.getData();
+            List<PartitionDataRow> partKeys = result.getData();
 
-            for (PartitionKeyVersion key : partKeys) {
+            for (PartitionDataRow key : partKeys) {
                 try {
                     KeyCacheObject keyObj = unmarshalKey(key.getKey(), ctx);
-                    res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(key.getNodeId(), key.getVersion());
+                    res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(
+                        key.getNodeId(),
+                        new VersionedValue(key.getVal(), key.getVersion(), key.getUpdateCounter(), key.getRecheckStartTime())
+                    );
                 }
                 catch (Exception e) {
                     U.error(log, "Updated recheck key [" + key + "] was skipped.", e);
@@ -148,33 +152,42 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         }
 
         /** {@inheritDoc} */
-        @Override public List<PartitionKeyVersion> execute() throws IgniteException {
+        @Override public List<PartitionDataRow> execute() throws IgniteException {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(recheckRequest.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(recheckRequest.partitionId());
 
-            if (part.state() != GridDhtPartitionState.OWNING)
-                return Collections.emptyList();
+            assert part != null;
 
-            List<PartitionKeyVersion> recheckedKeys = new ArrayList<>();
+            part.reserve();
 
-            for (KeyCacheObject recheckKey : recheckRequest.recheckKeys()) {
-                try {
-                    KeyCacheObject key = unmarshalKey(recheckKey, cctx);
+            List<PartitionDataRow> recheckedKeys = new ArrayList<>();
 
-                    CacheDataRow row = grpCtx.offheap().dataStore(part).find(cctx, key);
+            long updateCntr = part.updateCounter();
+            long recheckStartTime = System.currentTimeMillis();
 
-                    if (row != null)
-                        recheckedKeys.add(new PartitionKeyVersion(ignite.localNode().id(), row.key(), row.version()));
+            try {
+                for (KeyCacheObject recheckKey : recheckRequest.recheckKeys()) {
+                    try {
+                        KeyCacheObject key = unmarshalKey(recheckKey, cctx);
+
+                        CacheDataRow row = grpCtx.offheap().dataStore(part).find(cctx, key);
+
+                        if (row != null)
+                            recheckedKeys.add(new PartitionDataRow(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Recheck key [" + recheckKey + "] was skipped.", e);
+                    }
                 }
-                catch (IgniteCheckedException e) {
-                    U.error(log, "Recheck key [" + recheckKey + "] was skipped.", e);
-                }
+
+                return recheckedKeys;
             }
-
-            return recheckedKeys;
+            finally {
+                part.release();
+            }
         }
     }
 }

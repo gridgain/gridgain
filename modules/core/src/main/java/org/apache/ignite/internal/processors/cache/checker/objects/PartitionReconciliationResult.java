@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.verify.checker.objects;
+package org.apache.ignite.internal.processors.cache.checker.objects;
 
 import java.io.IOException;
 import java.io.ObjectInput;

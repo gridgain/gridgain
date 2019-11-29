@@ -31,16 +31,15 @@ import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -64,7 +63,8 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
     /**
      *
      */
-    protected List<ComputeJobResult> valuesDiffVersion(int[][] keys, CacheObjectContext ctxo) throws IgniteCheckedException {
+    protected List<ComputeJobResult> valuesDiffVersion(int[][] keys,
+        CacheObjectContext ctxo) throws IgniteCheckedException {
         return values(keys, ctxo, true);
     }
 
@@ -122,10 +122,14 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
      *
      */
     protected static class ComputeJobResultStub<T> implements ComputeJobResult {
-        /** */
+        /**
+         *
+         */
         private final List<T> data;
 
-        /** */
+        /**
+         *
+         */
         private ComputeJobResultStub(List<T> data) {
             this.data = data;
         }
@@ -135,9 +139,9 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
             throw new IllegalStateException("Unsupported!");
         }
 
-        /** {@inheritDoc} */
-        @Override public T2<GridDhtPartitionState, List<T>> getData() {
-            return new T2<>(GridDhtPartitionState.OWNING, data);
+        /** {@inheritDocl} */
+        @Override public List<T> getData() {
+            return data;
         }
 
         /** {@inheritDoc} */
@@ -159,6 +163,13 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         @Override public boolean isCancelled() {
             throw new IllegalStateException("Unsupported!");
         }
+    }
+
+    /**
+     *
+     */
+    protected AffinityTopologyVersion lastTopologyVersion(IgniteEx node) throws IgniteCheckedException {
+        return node.context().cache().context().exchange().lastTopologyFuture().get();
     }
 
     /**

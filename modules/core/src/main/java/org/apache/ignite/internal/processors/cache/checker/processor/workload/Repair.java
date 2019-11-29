@@ -18,10 +18,9 @@ package org.apache.ignite.internal.processors.cache.checker.processor.workload;
 
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
-import org.apache.ignite.internal.util.typedef.T2;
 
 /**
  *
@@ -40,30 +39,16 @@ public class Repair implements PipelineWorkload {
     /**
      *
      */
-    private Map<UUID, T2<KeyCacheObject, CacheObject>> data;
-
-    /**
-     *
-     */
-    private long recheckUpdateCounter;
-
-    /**
-     *
-     */
-    private long recheckStartTime;
+    private Map<KeyCacheObject, Map<UUID, VersionedValue>> data;
 
     /** */
     public Repair(String cacheName,
         int partId,
-        Map<UUID, T2<KeyCacheObject, CacheObject>> data,
-        long recheckUpdateCntr,
-        long recheckStartTime
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> data
     ) {
         this.cacheName = cacheName;
         this.partId = partId;
         this.data = data;
-        this.recheckUpdateCounter = recheckUpdateCntr;
-        this.recheckStartTime = recheckStartTime;
     }
 
     /**
@@ -83,21 +68,7 @@ public class Repair implements PipelineWorkload {
     /**
      *
      */
-    public Map<UUID, T2<KeyCacheObject, CacheObject>> getData() {
+    public Map<KeyCacheObject, Map<UUID, VersionedValue>> getData() {
         return data;
-    }
-
-    /**
-     *
-     */
-    public long getRecheckUpdateCounter() {
-        return recheckUpdateCounter;
-    }
-
-    /**
-     *
-     */
-    public long getRecheckStartTime() {
-        return recheckStartTime;
     }
 }

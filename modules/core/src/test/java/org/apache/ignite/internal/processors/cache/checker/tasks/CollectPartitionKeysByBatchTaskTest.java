@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -81,10 +82,12 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         node.cluster().active(true);
 
+        AffinityTopologyVersion ver = lastTopologyVersion(node);
+
         CacheObjectContext ctxo = node.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheObjectContext();
 
         CollectPartitionKeysByBatchTask task = new CollectPartitionKeysByBatchTask();
-        task.map(Collections.EMPTY_LIST, new PartitionBatchRequest(DEFAULT_CACHE_NAME, 1, 1000, null));
+        task.map(Collections.EMPTY_LIST, new PartitionBatchRequest(DEFAULT_CACHE_NAME, 1, 1000, null, ver));
         Field igniteField = U.findField(task.getClass(), "ignite");
         igniteField.set(task, node);
 
@@ -187,6 +190,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         node.cluster().active(true);
 
+        AffinityTopologyVersion ver = lastTopologyVersion(node);
+
         IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
         List<Integer> keys = new ArrayList<>();
 
@@ -216,7 +221,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> firstBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null)
+            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, ver)
         );
 
         fetched.addAll(firstBatch.get2().keySet());
@@ -225,7 +230,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> secondBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey)
+            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, ver)
         );
 
         KeyCacheObject secondMaxKey = secondBatch.get1();
@@ -234,7 +239,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> thirdBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey)
+            new PartitionBatchRequest(DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, ver)
         );
 
         assertNull(thirdBatch.get1());

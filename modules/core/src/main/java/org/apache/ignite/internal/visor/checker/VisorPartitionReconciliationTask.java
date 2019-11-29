@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.visor.checker;
 
-import org.apache.ignite.internal.processors.cache.verify.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;

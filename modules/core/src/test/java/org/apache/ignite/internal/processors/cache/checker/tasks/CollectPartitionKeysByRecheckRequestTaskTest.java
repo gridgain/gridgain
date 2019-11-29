@@ -31,7 +31,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.junit.Test;
 
 /**
@@ -81,9 +81,9 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
         recheckKeys.add(key(1, ctx));
         recheckKeys.add(key(2, ctx));
 
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> res = node.compute(group(node, nodes)).execute(
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION)
+            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         );
 
         assertEquals(2, res.size());
@@ -104,9 +104,9 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         List<KeyCacheObject> recheckKeys = new ArrayList<>();
 
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> res = node.compute(group(node, nodes)).execute(
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION)
+            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         );
 
         assertTrue(res.isEmpty());
@@ -131,9 +131,9 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         recheckKeys.add(key);
 
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> res = node.compute(group(node, nodes)).execute(
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION)
+            new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         );
 
         assertTrue(res.isEmpty());

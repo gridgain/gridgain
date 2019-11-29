@@ -18,29 +18,39 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -82,6 +92,16 @@ public class PartitionReconciliationProcessor {
      */
     private final AtomicInteger liveListeners = new AtomicInteger();
 
+    /**
+     *
+     */
+    private final Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys = new HashMap<>();
+
+    /**
+     *
+     */
+    private final Map<String, Map<Integer, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> fixedKeys = new HashMap<>();
+
     /** Ignite instance. */
     private final IgniteEx ignite;
 
@@ -93,6 +113,16 @@ public class PartitionReconciliationProcessor {
     /**
      *
      */
+    private final AffinityTopologyVersion startTopVer;
+
+    /**
+     *
+     */
+    private final GridCachePartitionExchangeManager<Object, Object> exchMgr;
+
+    /**
+     *
+     */
     public PartitionReconciliationProcessor(
         IgniteEx ignite,
         Collection<String> caches,
@@ -100,8 +130,10 @@ public class PartitionReconciliationProcessor {
         int throttlingIntervalMillis,
         int batchSize,
         int recheckAttempts
-    ) {
+    ) throws IgniteCheckedException {
         this.ignite = ignite;
+        this.exchMgr = ignite.context().cache().context().exchange();
+        this.startTopVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
         this.log = ignite.log().getLogger(this);
         this.caches = caches;
         this.fixMode = fixMode;
@@ -114,8 +146,9 @@ public class PartitionReconciliationProcessor {
      * @return
      * @throws IgniteException
      */
-    public Object execute() throws IgniteException {
+    public PartitionReconciliationResult execute() throws IgniteException {
         try {
+            //TODO skip ttl caches
             for (String cache : caches) {
                 int partitions = ignite.affinity(cache).partitions();
 
@@ -124,6 +157,14 @@ public class PartitionReconciliationProcessor {
             }
 
             while (!queue.isEmpty() || liveListeners.get() != 0) {
+                AffinityTopologyVersion currVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
+
+                if (!startTopVer.equals(currVer)) {
+                    log.warning("Topology was changed. Partition reconciliation task was stopped.");
+
+                    return new PartitionReconciliationResult(Collections.emptyMap());
+                }
+
                 if (queue.isEmpty() && liveListeners.get() != 0) {
                     Thread.sleep(1_000);
 
@@ -142,12 +183,20 @@ public class PartitionReconciliationProcessor {
                     throw new RuntimeException("TODO Unsupported type: " + workload);
             }
 
-            return null;
+            if (fixMode)
+                return null;
+            else
+                return prepareResult();
         }
         catch (InterruptedException e) {
             log.warning("Partition reconciliation was interrupted.", e);
 
-            return null;
+            return new PartitionReconciliationResult(Collections.emptyMap());
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Unexpected error.", e);
+
+            return new PartitionReconciliationResult(Collections.emptyMap());
         }
     }
 
@@ -157,7 +206,7 @@ public class PartitionReconciliationProcessor {
     private void handle(Batch workload) {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey()),
+            new PartitionBatchRequest(workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
             futRes -> {
                 T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> res = futRes.get();
 
@@ -183,9 +232,9 @@ public class PartitionReconciliationProcessor {
     private void handle(Recheck workload) {
         compute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(), workload.partitionId()),
+            new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(), workload.partitionId(), startTopVer),
             futRes -> {
-                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> actualKeys = futRes.get();
+                Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys = futRes.get();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
                     = checkConflicts(workload.recheckKeys(), actualKeys);
@@ -202,8 +251,10 @@ public class PartitionReconciliationProcessor {
                             TimeUnit.SECONDS
                         );
                     }
-//                    else if (fixMode)
-//                        schedule(new Repair(notResolvingConflicts, workload.cacheName(), workload.partitionId()));
+                    else if (fixMode)
+                        schedule(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys));
+                    else
+                        addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts);
                 }
             });
     }
@@ -213,6 +264,77 @@ public class PartitionReconciliationProcessor {
      */
     private void handle(Repair workload) {
         //TODO repair task code.
+    }
+
+    /**
+     *
+     */
+    private Repair repair(
+        String cacheName,
+        int partId,
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts,
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
+    ) {
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
+
+        for (KeyCacheObject key : notResolvingConflicts.keySet()) {
+            Map<UUID, VersionedValue> versionedByNodes = actualKeys.get(key);
+            if (versionedByNodes != null)
+                res.put(key, versionedByNodes);
+        }
+
+        return new Repair(cacheName, partId, res);
+    }
+
+    /**
+     *
+     */
+    private void addToPrintResult(
+        String cacheName,
+        int partId,
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts
+    ) {
+        CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+
+        synchronized (inconsistentKeys) {
+            List<Map<UUID, PartitionReconciliationDataRowMeta>> brokenKeys = new ArrayList<>();
+
+            for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> entry : conflicts.entrySet()) {
+                KeyCacheObject key = entry.getKey();
+
+                Map<UUID, PartitionReconciliationDataRowMeta> map = new HashMap<>();
+
+                for (Map.Entry<UUID, GridCacheVersion> versionEntry : entry.getValue().entrySet()) {
+                    UUID nodeId = versionEntry.getKey();
+
+                    try {
+                        map.put(nodeId,
+                            new PartitionReconciliationDataRowMeta(
+                                new PartitionReconciliationKeyMeta(key.valueBytes(ctx), key.toString(), versionEntry.getValue()),
+                                null
+                            ));
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.error("Broken key can't be added to result. ", e);
+                    }
+                }
+
+                brokenKeys.add(map);
+            }
+
+            inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
+                .computeIfAbsent(partId, k -> new ArrayList<>())
+                .addAll(brokenKeys);
+        }
+    }
+
+    /**
+     *
+     */
+    private PartitionReconciliationResult prepareResult() {
+        synchronized (inconsistentKeys) {
+            return new PartitionReconciliationResult(inconsistentKeys);
+        }
     }
 
     /**
@@ -265,7 +387,7 @@ public class PartitionReconciliationProcessor {
      *
      */
     private ClusterGroup partOwners(String cacheName, int partId) {
-        Collection<ClusterNode> nodes = ignite.affinity(cacheName).mapPartitionToPrimaryAndBackups(partId);
+        Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
         return ignite.cluster().forNodeIds(nodes.stream().map(ClusterNode::id).collect(toList()));
     }
