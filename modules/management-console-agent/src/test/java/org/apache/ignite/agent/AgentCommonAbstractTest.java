@@ -135,12 +135,11 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
 
         if (!isProxyEnabled)
             cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://localhost:" + port));
-        else {
-            if (isWindows() || isMac())
-                cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.docker.internal:" + port));
-            else
-                cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.testcontainers.internal:" + port));
-        }
+        else if (isWindows() || isMac())
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.docker.internal:" + port));
+        else
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.testcontainers.internal:" + port));
+
 
         ignite.context().managementConsole().configuration(cfg);
 
