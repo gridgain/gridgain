@@ -31,5 +31,5 @@ import org.junit.runners.Suite;
     WebSocketManagerWithSslAndProxyTest.class,
     WebSocketManagerWithTwoWaySslAndProxyTest.class,
 })
-public class ManualAgentTestSuite {
+public class TestContainersTestSuite {
 }
