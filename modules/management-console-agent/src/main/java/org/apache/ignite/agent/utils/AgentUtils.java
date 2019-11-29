@@ -41,6 +41,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
+import static org.springframework.util.StringUtils.trimTrailingCharacter;
 
 /**
  * Utility methods.
@@ -64,7 +65,7 @@ public final class AgentUtils {
      * @param clusterId Cluster ID.
      */
     public static String monitoringUri(String srvUri, UUID clusterId) {
-        return srvUri.replaceAll("/+$", "") + "/clusters/" + clusterId + "/monitoring-dashboard";
+        return trimTrailingCharacter(srvUri, '/') + "/clusters/" + clusterId + "/monitoring-dashboard";
     }
 
     /**
