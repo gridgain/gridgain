@@ -43,7 +43,7 @@ const insertTestUser = (user = testUser) => {
  * Removes users and their data
  * @param user User email mask
  */
-const dropTestDB = (user = '@example.com') => {
+const dropTestDB = (mask = '@example.com') => {
     return request({
         method: 'DELETE',
         uri: resolveUrl(`/api/v1/test/users/${user}`)
