@@ -34,8 +34,8 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("18ea4c71-a11d-4ab1-8042-418f7559d84f")]
 
-[assembly: AssemblyVersion("8.8.0.36920")]
-[assembly: AssemblyFileVersion("8.8.0.36920")]
-[assembly: AssemblyInformationalVersion("8.8.0")]
+[assembly: AssemblyVersion("8.7.8.42302")]
+[assembly: AssemblyFileVersion("8.7.8.42302")]
+[assembly: AssemblyInformationalVersion("8.7.8")]
 
 [assembly: CLSCompliant(true)]
