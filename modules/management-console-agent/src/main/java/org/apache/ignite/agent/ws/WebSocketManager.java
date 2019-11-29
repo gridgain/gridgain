@@ -53,6 +53,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
+import static org.apache.ignite.agent.utils.AgentUtils.EMPTY;
 import static org.glassfish.tyrus.client.ClientManager.createClient;
 import static org.glassfish.tyrus.client.ClientProperties.PROXY_URI;
 import static org.glassfish.tyrus.client.ClientProperties.SSL_ENGINE_CONFIGURATOR;
@@ -64,9 +65,6 @@ import static org.springframework.util.Base64Utils.encodeToString;
  * Web socket manager.
  */
 public class WebSocketManager extends GridProcessorAdapter {
-    /** Empty string array. */
-    private static final String[] EMPTY = new String[0];
-
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 
@@ -281,7 +279,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         try {
             SSLContext ctx = SSLContext.getInstance("TLS");
 
-            ctx.init(null, new TrustManager[] {new TrustAllManager()}, null);
+            ctx.init(null, new TrustManager[] {new DisabledX509TrustManager()}, null);
 
             SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(ctx, true, false, false);
 
@@ -328,22 +326,25 @@ public class WebSocketManager extends GridProcessorAdapter {
     }
 
     /**
-     * Trust all manager.
+     * Disabled trust manager, will skip all certificate checks.
      */
-    private static class TrustAllManager implements X509TrustManager {
+    private static class DisabledX509TrustManager implements X509TrustManager {
+        /** Empty certificate array. */
+        private static final X509Certificate[] CERTS = new X509Certificate[0];
+
         /** {@inheritDoc} */
         @Override public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
+            // No-op, all clients are trusted.
         }
 
         /** {@inheritDoc} */
         @Override public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
+            // No-op, all clients are trusted.
         }
 
         /** {@inheritDoc} */
         @Override public X509Certificate[] getAcceptedIssuers() {
-            return null;
+            return CERTS;
         }
     }
 }

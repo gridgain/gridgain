@@ -29,7 +29,7 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 import org.springframework.web.socket.handler.WebSocketHandlerDecoratorFactory;
 
 /**
- * Websocket decorated factory for tests.
+ * Factory of decorated websockets for tests.
  */
 public class TestWebsocketDecoratedFactory implements WebSocketHandlerDecoratorFactory {
     /** Sessions. */
@@ -68,7 +68,7 @@ public class TestWebsocketDecoratedFactory implements WebSocketHandlerDecoratorF
     }
 
     /**
-     * @return Count of connected clients.
+     * @return Number of connected clients.
      */
     public int getConnectedSessionsCount() {
         return sessions.entrySet().size();

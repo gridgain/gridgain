@@ -262,7 +262,16 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                     break;
                 }
-                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, EOFException.class, ConnectionLostException.class, DeploymentException.class)) {
+                else if (
+                    X.hasCause(
+                        e,
+                        TimeoutException.class,
+                        ConnectException.class,
+                        EOFException.class,
+                        ConnectionLostException.class,
+                        DeploymentException.class
+                    )
+                ) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
@@ -360,7 +369,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
+            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: "
+                + cluster.id());
 
             clusterProc.sendInitialState();
 
@@ -396,7 +406,13 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         }
 
         /** {@inheritDoc} */
-        @Override public void handleException(StompSession ses, StompCommand cmd, StompHeaders headers, byte[] payload, Throwable e) {
+        @Override public void handleException(
+            StompSession ses,
+            StompCommand cmd,
+            StompHeaders headers,
+            byte[] payload,
+            Throwable e
+        ) {
             log.warning("Failed to process a STOMP frame", e);
         }
 
