@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.cache.verify.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
@@ -34,7 +34,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    private Map<String, Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>>> inconsistentKeys;
+    private Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys;
 
     private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches;
 
@@ -48,12 +48,12 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult (
-        Map<String, Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
+        Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys) {
         this.inconsistentKeys = inconsistentKeys;
     }
 
     public PartitionReconciliationResult(
-        Map<String, Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>>> inconsistentKeys,
+        Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
             skippedEntries) {
@@ -85,34 +85,37 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
         if (!inconsistentKeys.isEmpty()) {
             printer.accept("\nINCONSISTENT KEYS:\n\n");
 
-            for (Map.Entry<String, Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>>>
+            for (Map.Entry<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>>
                 cacheBoundedInconsistentKeysEntry : inconsistentKeys.entrySet()) {
 
                 String cacheName = cacheBoundedInconsistentKeysEntry.getKey();
 
-                for (Map.Entry<Integer, Map<UUID, PartitionReconciliationDataRowMeta>> partitionBoundedInconsistentKeysEntry
+                for (Map.Entry<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>> partitionBoundedInconsistentKeysEntry
                     : cacheBoundedInconsistentKeysEntry.getValue().entrySet()) {
-                    StringBuilder recordBuilder = new StringBuilder();
+                    for (Map<UUID, PartitionReconciliationDataRowMeta> inconsistentKey: partitionBoundedInconsistentKeysEntry.getValue()) {
+                        StringBuilder recordBuilder = new StringBuilder();
 
-                    Integer part = partitionBoundedInconsistentKeysEntry.getKey();
+                        Integer part = partitionBoundedInconsistentKeysEntry.getKey();
 
-                    recordBuilder.append("Inconsistent key found: [cache='").append(cacheName).append("'");
+                        recordBuilder.append("Inconsistent key found: [cache='").append(cacheName).append("'");
 
-                    recordBuilder.append(", partition=").append(part);
+                        recordBuilder.append(", partition=").append(part);
 
-                    for (Map.Entry<UUID, PartitionReconciliationDataRowMeta> nodesBoundedInconsistentKeysEntry
-                        : partitionBoundedInconsistentKeysEntry.getValue().entrySet()) {
-                        UUID nodeId = nodesBoundedInconsistentKeysEntry.getKey();
+                        for (Map.Entry<UUID, PartitionReconciliationDataRowMeta> nodesBoundedInconsistentKeysEntry
+                            : inconsistentKey.entrySet()) {
+                            UUID nodeId = nodesBoundedInconsistentKeysEntry.getKey();
 
-                        PartitionReconciliationDataRowMeta dataRow = nodesBoundedInconsistentKeysEntry.getValue();
+                            PartitionReconciliationDataRowMeta dataRow = nodesBoundedInconsistentKeysEntry.getValue();
 
-                        recordBuilder.append(", nodeId=").append(nodeId);
+                            recordBuilder.append(", nodeId=").append(nodeId);
 
-                        recordBuilder.append(", dataRow=").append(dataRow);
+                            recordBuilder.append(", dataRow=").append(dataRow);
+                        }
+
+                        recordBuilder.append("]\n");
+
+                        printer.accept(recordBuilder.toString());
                     }
-                    recordBuilder.append("]\n");
-
-                    printer.accept(recordBuilder.toString());
                 }
             }
         }

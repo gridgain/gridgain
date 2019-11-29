@@ -32,6 +32,7 @@
 
 package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -82,7 +83,7 @@ public class PartitionReconciliationProcessorTask extends
 
     @Override public PartitionReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         // TODO: 22.11.19 Mock
-        Map<String, Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
+        Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys = new HashMap<>();
 
         Map<UUID, PartitionReconciliationDataRowMeta> versionsOfInconsistentKeysForKey1 = new HashMap<>();
 
@@ -106,14 +107,20 @@ public class PartitionReconciliationProcessorTask extends
         versionsOfInconsistentKeysForKey2.put(UUID.randomUUID(), dataRow1ForCache2);
         versionsOfInconsistentKeysForKey2.put(UUID.randomUUID(), dataRow1ForCache2);
 
-        Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>> partToMeta = new HashMap<>();
+        Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>> partToMeta = new HashMap<>();
 
-        partToMeta.put(1, versionsOfInconsistentKeysForKey1);
-        partToMeta.put(10, versionsOfInconsistentKeysForKey1);
+        partToMeta.put(1, Collections.singletonList(versionsOfInconsistentKeysForKey1));
+        partToMeta.put(10, Collections.singletonList(versionsOfInconsistentKeysForKey1));
 
-        Map<Integer, Map<UUID, PartitionReconciliationDataRowMeta>> partToMeta2 = new HashMap<>();
+        Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>> partToMeta2 = new HashMap<>();
 
-        partToMeta2.put(11, versionsOfInconsistentKeysForKey2);
+        List l = new ArrayList();
+
+        l.add(versionsOfInconsistentKeysForKey2);
+        l.add(versionsOfInconsistentKeysForKey2);
+        l.add(versionsOfInconsistentKeysForKey2);
+
+        partToMeta2.put(11, l);
 
         inconsistentKeys.put("cache1", partToMeta);
 
