@@ -37,19 +37,19 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_A
  */
 public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
     /** */
-    private final static int RECORDS_CNT = 10000;
+    private static final int RECORDS_CNT = 10000;
 
     /** */
-    private final static int ACK_THRESHOLD = 100;
+    private static final int ACK_THRESHOLD = 100;
 
     /** */
-    private final static String REMOTE_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
+    private static final String REMOTE_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
 
     /** */
-    private final static String LOCAL_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$LocalRoutineInfo";
+    private static final String LOCAL_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$LocalRoutineInfo";
 
     /** */
-    private final static String BATCH_CLASS_NAME = "org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryEventBuffer$Batch";
+    private static final String BATCH_CLASS_NAME = "org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryEventBuffer$Batch";
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -130,7 +130,7 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
 
         CacheContinuousQueryHandler hnd;
 
-        if (rmtInfos.values().size() == 0) {
+        if (rmtInfos.values().isEmpty()) {
             ConcurrentMap<UUID, Object> locInfos = GridTestUtils.getFieldValue(contProc, GridContinuousProcessor.class, "locInfos");
 
             Object localRoutineInfo = locInfos.values().toArray()[0];
