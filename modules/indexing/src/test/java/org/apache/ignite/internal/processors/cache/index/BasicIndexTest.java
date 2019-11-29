@@ -707,13 +707,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     private void checkInWithEqualsIdxUsageForDifferentTypes(final GridQueryProcessor qryProc) {
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.OTHER,
-            null,
-            new UserObject(new Pojo(1)),
-            new UserObject(new Pojo(2)),
-            new UserObject(new Pojo(-3)),
-            null);
-
         checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.INT,
             "val * 3",
             1, 2, -3, null);
@@ -773,6 +766,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             new ByteArrayed(new byte[] {}),
             new ByteArrayed(new byte[] {0, 1}),
             new ByteArrayed(new byte[] {1, 2, 3}),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.OTHER,
+            null,
+            new UserObject(new Pojo(1)),
+            new UserObject(new Pojo(2)),
+            new UserObject(new Pojo(-3)),
             null);
     }
 
@@ -1794,13 +1794,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         UUID(UUID.class),
 
         /** */
-        BINARY(byte[].class),
-
-        /**
-         * Please pay attention that point is just an example of GEOMETRY data types.
-         * It might have sense to add few more Geometry data types to check when basic functionality will be fixed.
-         */
-        GEOMETRY(org.locationtech.jts.geom.Point.class);
+        BINARY(byte[].class);
 
         /**
          * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
