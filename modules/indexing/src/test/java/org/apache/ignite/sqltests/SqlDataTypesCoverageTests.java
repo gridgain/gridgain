@@ -455,7 +455,7 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
      * Supported sql data types with corresponding java mappings.
      * https://apacheignite-sql.readme.io/docs/data-types
      */
-    public enum SqlDataType {
+    protected enum SqlDataType {
         /** */
         BOOLEAN(Boolean.class),
 

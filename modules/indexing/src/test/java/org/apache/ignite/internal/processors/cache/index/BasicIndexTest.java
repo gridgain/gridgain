@@ -169,9 +169,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         return igniteCfg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -180,9 +178,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
@@ -711,61 +707,68 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     private void checkInWithEqualsIdxUsageForDifferentTypes(final GridQueryProcessor qryProc) {
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.INT,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.OTHER,
+            null,
+            new UserObject(new Pojo(1)),
+            new UserObject(new Pojo(2)),
+            new UserObject(new Pojo(-3)),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.INT,
             "val * 3",
             1, 2, -3, null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.BIGINT,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BIGINT,
             null,
             0L, Long.MAX_VALUE, Long.MIN_VALUE, null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.VARCHAR,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.VARCHAR,
             "_val",
             new Quoted(""),
             new Quoted("whatever"),
             new Quoted("CamelCase"),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DATE,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DATE,
             "_key",
             new Dated(Date.valueOf("2001-09-11")),
             new Dated(Date.valueOf("1806-08-12")),
             new Dated(Date.valueOf("2051-11-21")),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.TIME,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIME,
             "fld, val",
             new Timed(Time.valueOf("00:00:01")),
             new Timed(Time.valueOf("12:00:00")),
             new Timed(Time.valueOf("23:59:59")),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.TIMESTAMP,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIMESTAMP,
             "val, fld",
             new Dated(Timestamp.valueOf("2019-01-01 00:00:00")),
             new Dated(Timestamp.valueOf("2051-12-31 23:59:59")),
             new Dated(Timestamp.valueOf("1806-08-12 12:00:00")),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DOUBLE,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DOUBLE,
             "*, _key",
             -1.0d, 1e-7d, new Quoted(Double.NEGATIVE_INFINITY), null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.UUID,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.UUID,
             "val",
             new Quoted("d9bc480e-1107-11ea-8d71-362b9e155667"),
             new Quoted(UUID.fromString("d9bc4354-1107-11ea-8d71-362b9e155667")),
             new Quoted(UUID.randomUUID()),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.DECIMAL,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DECIMAL,
             "ROUND(val + 0.05, 1)",
             "10.2",
             new BigDecimal("10.01"),
             new BigDecimal(123.123),
             null);
 
-        checkInWithEqualsIdxUsageForType(qryProc, SqlDataTypesCoverageTests.SqlDataType.BINARY,
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BINARY,
             "BIT_LENGTH(val)",
             new ByteArrayed(new byte[] {}),
             new ByteArrayed(new byte[] {0, 1}),
@@ -783,7 +786,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      */
     private void checkInWithEqualsIdxUsageForType(
         final GridQueryProcessor qryProc,
-        SqlDataTypesCoverageTests.SqlDataType dataType,
+        SqlDataType dataType,
         @Nullable String proj,
         @NotNull Object... values) {
         assert values.length  >= 4;
@@ -1538,17 +1541,17 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cache.indexReadyFuture().get();
     }
 
-    /** */
+    /** Key object factory method. */
     private static Key key(long i) {
         return new Key(String.format("foo%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /** Value object factory method.*/
     private static Val val(long i) {
         return new Val(String.format("bar%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /** Key object. */
     private static class Key {
         /** */
         private String keyStr;
@@ -1566,9 +1569,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             keyPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1583,22 +1584,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(keyPojo, key.keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(keyStr, keyLong, keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Key.class, this);
         }
     }
 
-    /** */
+    /** Value object. */
     private static class Val {
         /** */
         private String valStr;
@@ -1616,9 +1613,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             valPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1633,22 +1628,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(valPojo, val.valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(valStr, valLong, valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Val.class, this);
         }
     }
 
-    /** */
+    /** User object. */
     private static class Pojo {
         /** */
         private long pojoLong;
@@ -1658,9 +1649,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             this.pojoLong = pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1673,18 +1662,91 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             return pojoLong == pojo.pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(pojoLong);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Pojo.class, this);
+        }
+    }
+
+
+    /** User object converter. */
+    static class UserObject implements SqlStrConvertedValHolder{
+        /** User object. */
+        private Object obj;
+
+        /** Constructor. */
+        public UserObject(Object obj) {
+            this.obj = obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object originalVal() {
+            return obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String sqlStrVal() {
+            return null; // UserObject has no string representation.
+        }
+    }
+
+    /**
+     * Supported sql data types with corresponding java mappings.
+     * https://apacheignite-sql.readme.io/docs/data-types
+     */
+    private enum SqlDataType {
+        /** */
+        INT(Integer.class),
+
+        /** */
+        BIGINT(Long.class),
+
+        /** */
+        DECIMAL(BigDecimal.class),
+
+        /** */
+        DOUBLE(Double.class),
+
+        /** */
+        TIME(java.sql.Time.class),
+
+        /** */
+        DATE(java.sql.Date.class),
+
+        /** */
+        TIMESTAMP(java.sql.Timestamp.class),
+
+        /** */
+        VARCHAR(String.class),
+
+        /** */
+        OTHER(Pojo.class),
+
+        /** */
+        UUID(UUID.class),
+
+        /** */
+        BINARY(byte[].class),
+
+        /**
+         * Please pay attention that point is just an example of GEOMETRY data types.
+         * It might have sense to add few more Geometry data types to check when basic functionality will be fixed.
+         */
+        GEOMETRY(org.locationtech.jts.geom.Point.class);
+
+        /**
+         * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+         */
+        private Object javaType;
+
+        /** */
+        SqlDataType(Object javaType) {
+            this.javaType = javaType;
         }
     }
 }
