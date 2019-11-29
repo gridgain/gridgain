@@ -254,7 +254,7 @@ public class JdbcThinAffinityAwarenessTransactionsSelfTest extends JdbcThinAbstr
 
         assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= 1" +
                 "], got [" + nonEmptyMetricsCntr + "]",
-            nonEmptyMetricsCntr == 1);
+                nonEmptyMetricsCntr == 1);
 
         assertEquals("Executions count doesn't match expeted value: expected [" +
                 NODES_CNT * QUERY_EXECUTION_MULTIPLIER + "], got [" + qryExecutionsCntr + "]",
