@@ -96,6 +96,9 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /** */
     private final HitRateMetric pageReplaceAge;
 
+    /** Total throttling threads time in milliseconds. */
+    private final LongAdderMetric totalThrottlingTime;
+
     /** */
     private final DataRegionConfiguration memPlcCfg;
 
@@ -179,6 +182,10 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
             dataRegionMetricsProvider::emptyDataPages,
             "Calculates empty data pages count for region. It counts only totally free pages that can be reused " +
                 "(e. g. pages that are contained in reuse bucket of free list).");
+
+        totalThrottlingTime = mreg.longAdderMetric("TotalThrottlingTime",
+            "Total throttling threads time in milliseconds. The Ignite throttles threads that generate " +
+                "dirty pages during the ongoing checkpoint.");
     }
 
     /** {@inheritDoc} */
@@ -558,6 +565,12 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         evictRate.reset();
         pageReplaceRate.reset();
         pageReplaceAge.reset();
+    }
+
+    /** @param time Time to add to {@code totalThrottlingTime} metric in milliseconds. */
+    public void addThrottlingTime(long time) {
+        if (metricsEnabled)
+            totalThrottlingTime.add(time);
     }
 
     /**

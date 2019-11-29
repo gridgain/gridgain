@@ -54,11 +54,13 @@ import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.plugin.PluginProvider;
@@ -515,6 +517,12 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         }
 
         memory.finishCheckpoint();
+
+        LongAdderMetric totalThrottlingTime = U.field(memory.metrics(), "totalThrottlingTime");
+
+        assertNotNull(totalThrottlingTime);
+
+        assertTrue(totalThrottlingTime.value() > 0);
     }
 
     /**
@@ -678,6 +686,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 return pageId;
             }
         };
+
+        mem.metrics().enableMetrics();
 
         mem.start();
 
