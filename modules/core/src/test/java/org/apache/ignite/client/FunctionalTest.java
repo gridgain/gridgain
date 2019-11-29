@@ -37,11 +37,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
@@ -54,8 +60,10 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -198,15 +206,16 @@ public class FunctionalTest extends GridCommonAbstractTest {
                             SimpleEntry::getKey, SimpleEntry::getValue, (a, b) -> a, LinkedHashMap::new
                         ))
                     )
-                    // During query normalization null keyFields become empty set.
-                    // Set empty collection for comparator.
-                    .setKeyFields(Collections.emptySet())
-                    .setKeyFieldName("id")
-                    .setNotNullFields(Collections.singleton("id"))
-                    .setDefaultFieldValues(Collections.singletonMap("id", 0))
-                    .setIndexes(Collections.singletonList(new QueryIndex("id", true, "IDX_EMPLOYEE_ID")))
-                    .setAliases(Stream.of("id", "orgId").collect(Collectors.toMap(f -> f, String::toUpperCase)))
-                );
+                        // During query normalization null keyFields become empty set.
+                        // Set empty collection for comparator.
+                        .setKeyFields(Collections.emptySet())
+                        .setKeyFieldName("id")
+                        .setNotNullFields(Collections.singleton("id"))
+                        .setDefaultFieldValues(Collections.singletonMap("id", 0))
+                        .setIndexes(Collections.singletonList(new QueryIndex("id", true, "IDX_EMPLOYEE_ID")))
+                        .setAliases(Stream.of("id", "orgId").collect(Collectors.toMap(f -> f, String::toUpperCase)))
+                )
+                    .setExpiryPolicy(new PlatformExpiryPolicy(10, 20, 30));
 
             ClientCache cache = client.createCache(cacheCfg);
 
@@ -1149,11 +1158,116 @@ public class FunctionalTest extends GridCommonAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * Test cache with expire policy.
+     */
+    @Test
+    public void testExpirePolicy() throws Exception {
+        long ttl = 600L;
+        int MAX_RETRIES = 5;
+
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, Object> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+
+            Duration dur = new Duration(TimeUnit.MILLISECONDS, ttl);
+
+            ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(dur));
+            ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(dur));
+            ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(dur));
+
+            for (int i = 0; i < MAX_RETRIES; i++) {
+                cache.clear();
+
+                long ts = U.currentTimeMillis();
+
+                cache.put(0, 0);
+                cachePlcCreated.put(1, 1);
+                cachePlcUpdated.put(2, 2);
+                cachePlcAccessed.put(3, 3);
+
+                U.sleep(ttl / 3 * 2);
+
+                boolean containsKey0 = cache.containsKey(0);
+                boolean containsKey1 = cache.containsKey(1);
+                boolean containsKey2 = cache.containsKey(2);
+                boolean containsKey3 = cache.containsKey(3);
+
+                if (U.currentTimeMillis() - ts >= ttl) // Retry if this block execution takes too long.
+                    continue;
+
+                assertTrue(containsKey0);
+                assertTrue(containsKey1);
+                assertTrue(containsKey2);
+                assertTrue(containsKey3);
+
+                ts = U.currentTimeMillis();
+
+                cachePlcCreated.put(1, 2);
+                cachePlcCreated.get(1); // Update and access key with created expire policy.
+                cachePlcUpdated.put(2, 3); // Update key with modified expire policy.
+                cachePlcAccessed.get(3); // Access key with accessed expire policy.
+
+                U.sleep(ttl / 3 * 2);
+
+                containsKey0 = cache.containsKey(0);
+                containsKey1 = cache.containsKey(1);
+                containsKey2 = cache.containsKey(2);
+                containsKey3 = cache.containsKey(3);
+
+                if (U.currentTimeMillis() - ts >= ttl) // Retry if this block execution takes too long.
+                    continue;
+
+                assertTrue(containsKey0);
+                assertFalse(containsKey1);
+                assertTrue(containsKey2);
+                assertTrue(containsKey3);
+
+                U.sleep(ttl / 3 * 2);
+
+                cachePlcUpdated.get(2); // Access key with updated expire policy.
+
+                U.sleep(ttl / 3 * 2);
+
+                assertTrue(cache.containsKey(0));
+                assertFalse(cache.containsKey(1));
+                assertFalse(cache.containsKey(2));
+                assertFalse(cache.containsKey(3));
+
+                // Expire policy, keep binary and transactional flags together.
+                ClientCache<Integer, Object> binCache = cachePlcCreated.withKeepBinary();
+
+                try (ClientTransaction tx = client.transactions().txStart()) {
+                    binCache.put(4, new T2<>("test", "test"));
+
+                    tx.commit();
+                }
+
+                assertTrue(binCache.get(4) instanceof BinaryObject);
+                assertFalse(cache.get(4) instanceof BinaryObject);
+
+                U.sleep(ttl / 3 * 4);
+
+                assertFalse(cache.containsKey(4));
+
+                return;
+            }
+
+            fail("Failed to check expire policy within " + MAX_RETRIES + " retries (block execution takes too long)");
+        }
+    }
+
+    /**
+     *
+     */
     private static ClientConfiguration getClientConfiguration() {
         return new ClientConfiguration()
-            .setAddresses(Config.SERVER)
-            .setSendBufferSize(0)
-            .setReceiveBufferSize(0);
+                .setAddresses(Config.SERVER)
+                .setSendBufferSize(0)
+                .setReceiveBufferSize(0);
     }
 }

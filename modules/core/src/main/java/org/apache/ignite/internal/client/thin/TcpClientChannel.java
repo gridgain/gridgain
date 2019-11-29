@@ -85,6 +85,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.*;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
 
 /**
  * Implements {@link ClientChannel} over TCP.

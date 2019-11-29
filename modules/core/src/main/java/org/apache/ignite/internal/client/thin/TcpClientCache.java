@@ -25,6 +25,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
@@ -41,40 +43,80 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.client.thin.TcpClientTransactions.TcpClientTransaction;
 
 import static java.util.AbstractMap.SimpleEntry;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
+import static org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy.convertDuration;
 
 /**
  * Implementation of {@link ClientCache} over TCP protocol.
  */
 class TcpClientCache<K, V> implements ClientCache<K, V> {
-    /** "Keep binary" flag mask. */
+    /**
+     * "Keep binary" flag mask.
+     */
     private static final byte KEEP_BINARY_FLAG_MASK = 0x01;
 
-    /** "Transactional" flag mask. */
+    /**
+     * "Transactional" flag mask.
+     */
     private static final byte TRANSACTIONAL_FLAG_MASK = 0x02;
 
-    /** Cache id. */
+    /**
+     * "With expiry policy" flag mask.
+     */
+    private static final byte WITH_EXPIRY_POLICY_FLAG_MASK = 0x04;
+
+    /**
+     * Cache id.
+     */
     private final int cacheId;
 
-    /** Channel. */
+    /**
+     * Channel.
+     */
     private final ReliableChannel ch;
 
-    /** Cache name. */
+    /**
+     * Cache name.
+     */
     private final String name;
 
-    /** Marshaller. */
+    /**
+     * Marshaller.
+     */
     private final ClientBinaryMarshaller marsh;
 
-    /** Transactions facade. */
+    /**
+     * Transactions facade.
+     */
     private final TcpClientTransactions transactions;
 
-    /** Serializer/deserializer. */
+    /**
+     * Serializer/deserializer.
+     */
     private final ClientUtils serDes;
 
-    /** Indicates if cache works with Ignite Binary format. */
-    private boolean keepBinary = false;
+    /**
+     * Indicates if cache works with Ignite Binary format.
+     */
+    private final boolean keepBinary;
 
-    /** Constructor. */
+    /**
+     * Expiry policy.
+     */
+    private final ExpiryPolicy expiryPlc;
+
+    /**
+     * Constructor.
+     */
     TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh, TcpClientTransactions transactions) {
+        this(name, ch, marsh, transactions, false, null);
+    }
+
+    /**
+     * Constructor.
+     */
+    TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh, TcpClientTransactions transactions,
+                   boolean keepBinary, ExpiryPolicy expiryPlc) {
         this.name = name;
         this.cacheId = ClientUtils.cacheId(name);
         this.ch = ch;
@@ -82,6 +124,9 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         this.transactions = transactions;
 
         serDes = new ClientUtils(marsh);
+
+        this.keepBinary = keepBinary;
+        this.expiryPlc = expiryPlc;
     }
 
     /** {@inheritDoc} */
@@ -348,41 +393,39 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         return cacheSingleKeyOperation(
             key,
             ClientOperation.CACHE_PUT_IF_ABSENT,
-            req -> writeObject(req, val),
-            res -> res.in().readBoolean()
+                req -> writeObject(req, val),
+                res -> res.in().readBoolean()
         );
     }
 
-    /** {@inheritDoc} */
-    @Override public void clear() throws ClientException {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void clear() throws ClientException {
         ch.request(ClientOperation.CACHE_CLEAR, this::writeCacheInfo);
     }
 
-    /** {@inheritDoc} */
-    @Override public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
-        TcpClientCache<K1, V1> binCache;
-
-        if (keepBinary) {
-            try {
-                binCache = (TcpClientCache<K1, V1>)this;
-            }
-            catch (ClassCastException ex) {
-                throw new IllegalStateException(
-                    "Trying to enable binary mode on already binary cache with different key/value type arguments.",
-                    ex
-                );
-            }
-        }
-        else {
-            binCache = new TcpClientCache<>(name, ch, marsh, transactions);
-
-            binCache.keepBinary = true;
-        }
-
-        return binCache;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
+        return keepBinary ? (ClientCache<K1, V1>) this :
+                new TcpClientCache<>(name, ch, marsh, transactions, true, expiryPlc);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expirePlc) {
+        return new TcpClientCache<>(name, ch, marsh, transactions, keepBinary, expirePlc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @SuppressWarnings("unchecked")
     @Override public <R> QueryCursor<R> query(Query<R> qry) {
         if (qry == null)
@@ -501,10 +544,12 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         // Transactional operation cannot be executed on affinity node, it should be executed on node started
         // the transaction.
         return transactions.tx() == null ? ch.affinityService(cacheId, key, op, payloadWriter, payloadReader) :
-            ch.service(op, payloadWriter, payloadReader);
+                ch.service(op, payloadWriter, payloadReader);
     }
 
-    /** Write cache ID and flags. */
+    /**
+     * Write cache ID and flags.
+     */
     private void writeCacheInfo(PayloadOutputChannel payloadCh) {
         BinaryOutputStream out = payloadCh.out();
 
@@ -514,19 +559,34 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
 
         TcpClientTransaction tx = transactions.tx();
 
-        if (tx != null) {
-            flags |= TRANSACTIONAL_FLAG_MASK;
-
-            if (tx.clientChannel() != payloadCh.clientChannel()) {
-                throw new ClientException("Transaction context has been lost due to connection errors. " +
-                    "Cache operations are prohibited until current transaction closed.");
+        if (expiryPlc != null) {
+            if (payloadCh.clientChannel().serverVersion().compareTo(V1_6_0) < 0) {
+                throw new ClientProtocolError(String.format("Expire policies have not supported by the server " +
+                        "version %s, required version %s", payloadCh.clientChannel().serverVersion(), V1_6_0));
             }
 
-            out.writeByte(flags);
-            out.writeInt(tx.txId());
+            flags |= WITH_EXPIRY_POLICY_FLAG_MASK;
         }
-        else
-            out.writeByte(flags);
+
+        if (tx != null) {
+            if (tx.clientChannel() != payloadCh.clientChannel()) {
+                throw new ClientException("Transaction context has been lost due to connection errors. " +
+                        "Cache operations are prohibited until current transaction closed.");
+            }
+
+            flags |= TRANSACTIONAL_FLAG_MASK;
+        }
+
+        out.writeByte(flags);
+
+        if ((flags & WITH_EXPIRY_POLICY_FLAG_MASK) != 0) {
+            out.writeLong(convertDuration(expiryPlc.getExpiryForCreation()));
+            out.writeLong(convertDuration(expiryPlc.getExpiryForUpdate()));
+            out.writeLong(convertDuration(expiryPlc.getExpiryForAccess()));
+        }
+
+        if ((flags & TRANSACTIONAL_FLAG_MASK) != 0)
+            out.writeInt(tx.txId());
     }
 
     /** */
