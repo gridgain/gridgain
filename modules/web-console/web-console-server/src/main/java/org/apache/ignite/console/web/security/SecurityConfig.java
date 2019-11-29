@@ -21,8 +21,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.config.ActivationConfiguration;
-import org.apache.ignite.console.messages.WebConsoleMessageSource;
-import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +54,7 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 import static org.springframework.http.HttpMethod.POST;
@@ -247,9 +246,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** Failure handler for "Become this user" filter. */
     private static class BecomeThisUserFailureHandler implements AuthenticationFailureHandler {
-        /** Messages accessor. */
-        private final WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
-
         /** {@inheritDoc} */
         @Override public void onAuthenticationFailure(
             HttpServletRequest req,

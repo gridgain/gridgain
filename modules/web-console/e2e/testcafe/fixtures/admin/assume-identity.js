@@ -26,13 +26,13 @@ const regularUser = createRegularUser();
 fixture('Assumed identity')
     .beforeEach(async(t) => {
         await dropTestDB();
-        await dropTestDB(admin.TEST_USER);
+        await dropTestDB(admin.TEST_USER.email);
         await insertTestUser();
         await insertTestUser(admin.TEST_USER);
         await t.useRole(regularUser);
     })
     .afterEach(async() => {
-        await dropTestDB(admin.TEST_USER);
+        await dropTestDB(admin.TEST_USER.email);
         await dropTestDB();
     });
 

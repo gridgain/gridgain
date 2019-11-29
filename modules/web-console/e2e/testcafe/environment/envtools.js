@@ -39,10 +39,10 @@ const insertTestUser = (user = testUser) => {
         .catch((err) => {throw err.message;});
 };
 
-const dropTestDB = (user = testUser) => {
+const dropTestDB = (mask = '@example.com') => {
     return request({
         method: 'DELETE',
-        uri: resolveUrl(`/api/v1/test/users/${user.email}`)
+        uri: resolveUrl(`/api/v1/test/users/${mask}`)
     })
         .catch((err) => {throw err.message;});
 };
