@@ -37,7 +37,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     BATCH_SIZE ("--batch-size"),
 
     /** Amount of potentially inconsistent keys recheck attempts. */
-    RECHECK_ATTEMPTS ("--recheck-attempts");
+    RECHECK_ATTEMPTS ("--recheck-attempts"),
+
+    /** File to write output report to. */
+    OUTPUT_FILE ("--file");
 
     /** Option name. */
     private final String name;

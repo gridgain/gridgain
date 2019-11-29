@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.verify;
 
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -54,5 +55,10 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
         ClassNotFoundException {
         keyMeta = (PartitionReconciliationKeyMeta) in.readObject();
         valMeta = (PartitionReconciliationValueMeta) in.readObject();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(PartitionReconciliationDataRowMeta.class, this);
     }
 }

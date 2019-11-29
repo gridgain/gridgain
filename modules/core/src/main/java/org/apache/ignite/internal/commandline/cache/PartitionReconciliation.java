@@ -16,10 +16,14 @@
 
 package org.apache.ignite.internal.commandline.cache;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -32,6 +36,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.processors.cache.verify.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
@@ -134,11 +139,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         PartitionReconciliationResult res =
             executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
 
-        System.out.println("!!!");
-        // TODO: 20.11.19 Important! implement.
-//        logParsedArgs(taskArg, log::info);
-//
-//        res.print(log::info);
+        print(res, log::info, args.outputFile);
     }
 
     /** {@inheritDoc} */
@@ -149,8 +150,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         int throttlingIntervalMillis = -1;
         int batchSize = DEFAULT_BATCH_SIZE;
         int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
+        String outputFile = null;
 
-        int partReconciliationArgsCnt = 6;
+        int partReconciliationArgsCnt = 7;
 
         while (argIter.hasNextSubArg() && partReconciliationArgsCnt-- > 0) {
             String nextArg = argIter.nextArg("");
@@ -204,11 +206,17 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         recheckAttempts = Integer.valueOf(recheckAttemptsStr);
 
                         break;
+
+                    case OUTPUT_FILE:
+                        // TODO: 29.11.19 Propper message and optionality.
+                        outputFile = argIter.nextArg("");
+
+                        break;
                 }
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, verbose, throttlingIntervalMillis, batchSize, recheckAttempts);
+        args = new Arguments(cacheNames, fixMode, verbose, throttlingIntervalMillis, batchSize, recheckAttempts, outputFile);
     }
 
     // TODO: 20.11.19 Idle verify has exactly same method.
@@ -225,6 +233,46 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 throw new IgniteException(format("Invalid cache name regexp '%s': %s", s, e.getMessage()));
             }
         });
+    }
+
+    private String prepareHeaderMeta() {
+        SB options = new SB("partition_reconciliation task was executed with the following args: ");
+
+        options
+            .a("caches=[")
+            .a(args.caches() == null ? "" : String.join(", ", args.caches()))
+            .a("], fix-mode=[" + args.fixMode)
+            .a("], verbose=[" + args.verbose)
+            .a("], throttling-interval-millis=[" + args.throttlingIntervalMillis)
+            .a("], batch-size=[" + args.batchSize)
+            .a("], recheck-attempts=[" + args.recheckAttempts)
+            .a("], file=[" + args.outputFile + "]")
+            .a("\n");
+
+        return options.toString();
+    }
+
+    private void print(PartitionReconciliationResult res, Consumer<String> printer, String outputFile) {
+        printer.accept(prepareHeaderMeta());
+
+        if (args.outputFile != null) {
+            File f = new File(outputFile);
+
+            try (PrintWriter pw = new PrintWriter(f)) {
+                ((Consumer<String>)(pw::write)).accept(prepareHeaderMeta());
+
+                res.print(pw::write);
+
+                pw.flush();
+            }
+            catch (FileNotFoundException e) {
+                printer.accept("Unable to write report to file " + f.getAbsolutePath() + " " + e.getMessage() + "\n");
+
+                res.print(printer);
+            }
+        }
+        else
+            res.print(printer);
     }
 
     /**
@@ -250,6 +298,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         /** */
         private int recheckAttempts;
 
+        /** */
+        private String outputFile;
+
         /**
          * Constructor.
          *
@@ -259,16 +310,17 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          * @param throttlingIntervalMillis Throttling interval millis.
          * @param batchSize Batch size.
          * @param recheckAttempts Amount of recheck attempts.
+         * @param outputFile File to write output report to.
          */
         public Arguments(Set<String> caches, boolean fixMode, boolean verbose, int throttlingIntervalMillis,
-            int batchSize,
-            int recheckAttempts) {
+            int batchSize, int recheckAttempts, String outputFile) {
             this.caches = caches;
             this.fixMode = fixMode;
             this.verbose = verbose;
             this.throttlingIntervalMillis = throttlingIntervalMillis;
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
+            this.outputFile = outputFile;
         }
 
         /**

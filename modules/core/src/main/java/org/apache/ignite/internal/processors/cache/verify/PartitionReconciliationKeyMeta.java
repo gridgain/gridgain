@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.verify;
 
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import java.io.IOException;
@@ -61,5 +62,10 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
         binaryView = U.readByteArray(in);
         strView = U.readString(in);
         keyVer = (GridCacheVersion) in.readObject();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(PartitionReconciliationKeyMeta.class, this);
     }
 }

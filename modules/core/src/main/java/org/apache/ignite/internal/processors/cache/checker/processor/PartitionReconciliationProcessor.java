@@ -202,8 +202,8 @@ public class PartitionReconciliationProcessor {
                             TimeUnit.SECONDS
                         );
                     }
-                    else if (fixMode)
-                        schedule(new Repair(notResolvingConflicts, workload.cacheName(), workload.partitionId()));
+//                    else if (fixMode)
+//                        schedule(new Repair(notResolvingConflicts, workload.cacheName(), workload.partitionId()));
                 }
             });
     }
