@@ -821,70 +821,133 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             final Object val3 = values[(rnd + 2) % values.length];
             final Object val4 = values[(rnd + 3) % values.length];
 
-            final String qry = "explain select " + proj + " from " + TEST_TBL_NAME + " ";
+            final String qry = "select " + proj + " from " + TEST_TBL_NAME + " ";
 
-            List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and (fld = ?1 or fld = ?2)")
-                .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2)";
 
-            assertTrue(checkIdxUsage(res, idxName));
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (select fld from " + TEST_TBL_NAME + " where fld in(?1, ?2)) " +
-                "and (fld = ?1 or fld = ?2)")
-                .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+                assertTrue(checkIdxUsage(res, idxName));
 
-            assertTrue(checkIdxUsage(res, idxName));
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and (fld = ?3 or fld = ?3)")
-                .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            {
+                final String sql = qry + "where val in (select fld from " +
+                    TEST_TBL_NAME + " where fld in(?1, ?2)) and (fld = ?1 or fld = ?2)";
 
-            assertTrue(checkIdxUsage(res, idxName));
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and fld = ?3")
-                .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+                assertTrue(checkIdxUsage(res, idxName));
 
-            assertTrue(checkIdxUsage(res, idxName));
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (" + toStringVal(val1) + ", " + toStringVal(val2) + ") and " +
-                "fld = " + toStringVal(val3)), true).getAll();
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?3)";
 
-            assertTrue(checkIdxUsage(res, idxName));
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
 
-            //Check OR -> IN optimization is applied.
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where (val = ?1 OR val = ?2) and fld = " + toStringVal(val3))
-                .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+                assertTrue(checkIdxUsage(res, idxName));
 
-            assertTrue(checkIdxUsage(res, idxName));
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and (fld = ?3 or fld = ?4) ORDER BY fld")
-                .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3), toObjVal(val4)), true).getAll();
+            {
+                final String sql = qry + "where val in (?1, ?2) and fld = ?3";
 
-            assertTrue(checkIdxUsage(res, idxName));
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld")
-                .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+                assertTrue(checkIdxUsage(res, idxName));
 
-            assertTrue(checkIdxUsage(res, idxName));
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld")
-                .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            {
+                final String sql = qry + "where val in (" + toStringVal(val1) + ", "
+                    + toStringVal(val2) + ") and " + "fld = " + toStringVal(val3);
 
-            assertTrue(checkIdxUsage(res, idxName));
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql),true).getAll();
 
-            res = qryProc.querySqlFields(new SqlFieldsQuery(qry +
-                "where val in (" + toStringVal(val2) + ", " + toStringVal(val1) +
-                ") and (fld = " + toStringVal(val1) + " or fld = " + toStringVal(val2) +
-                ") ORDER BY fld"), true).getAll();
+                assertTrue(checkIdxUsage(res, idxName));
 
-            assertTrue(checkIdxUsage(res, idxName));
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
+
+            {//Check OR -> IN optimization is applied.
+                final String sql = qry + "where (val = ?1 OR val = ?2) and fld = " +
+                    toStringVal(val3);
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and " +
+                    "(fld = ?3 or fld = ?4) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (" + toStringVal(val2) + ", " +
+                    toStringVal(val1) + ") and (fld = " + toStringVal(val1) +
+                    " or fld = " + toStringVal(val2) + ") ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
         }
         finally {
             qryProc.querySqlFields(new SqlFieldsQuery("DROP TABLE " + TEST_TBL_NAME + ";"), true);
