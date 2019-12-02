@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientConnectionCon
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -33,6 +34,7 @@ import java.util.UUID;
 public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
     /** Topology version. */
     private final long topVer;
+
     /** Client cluster group projection. */
     private ClientClusterGroupProjection prj;
 
@@ -56,8 +58,19 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
         if (curTopVer <= topVer)
             return new ClientBooleanResponse(requestId(), false);
 
-        ClusterGroup clusterGrp = prj.Apply(cluster);
-        UUID[] nodeIds = clusterGrp.nodes().stream().map(ClusterNode::id).toArray(UUID[]::new);
+        ClusterGroup clusterGrp = prj.apply(cluster);
+        UUID[] nodeIds = getNodeIds(clusterGrp);
         return new ClientClusterGroupGetNodeIdsResponse(requestId(), curTopVer, nodeIds);
+    }
+
+    /** Tansform nodes collection to node ids array. */
+    private UUID[] getNodeIds(ClusterGroup clusterGrp){
+        Collection<ClusterNode> nodes = clusterGrp.nodes();
+        UUID[] nodeIds = new UUID[nodes.size()];
+        int i = 0;
+        for(ClusterNode node : nodes){
+            nodeIds[i++] = node.id();
+        }
+        return nodeIds;
     }
 }

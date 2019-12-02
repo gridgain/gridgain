@@ -55,11 +55,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** Topology version. */
         private long _topVer = TopVerInit;
 
+        /** Locker. */
+        private readonly object _syncRoot = new object();
+
         /** Current projection. */
         private readonly ClientClusterGroupProjection _projection;
 
         /** Predicate. */
-        private readonly Func<IClusterNode, bool> _predicate;
+        private readonly Func<IClientClusterNode, bool> _predicate;
 
         /** Node ids collection. */
         private IList<Guid> _nodeIds;
@@ -82,7 +85,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="projection">Projection.</param>
         /// <param name="predicate">Predicate.</param>
         private ClientClusterGroup(IgniteClient ignite, Marshaller marsh,
-            ClientClusterGroupProjection projection, Func<IClusterNode, bool> predicate = null)
+            ClientClusterGroupProjection projection, Func<IClientClusterNode, bool> predicate = null)
         {
             Debug.Assert(ignite != null);
             Debug.Assert(marsh != null);
@@ -110,11 +113,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritDoc /> */
         public IClientClusterGroup ForServers()
         {
-            return new ClientClusterGroup(_ignite, _marsh, _projection.ForServerNodes());
+            return new ClientClusterGroup(_ignite, _marsh, _projection.ForServerNodes(true));
         }
 
         /** <inheritDoc /> */
-        public IClientClusterGroup ForPredicate(Func<IClusterNode, bool> p)
+        public IClientClusterGroup ForPredicate(Func<IClientClusterNode, bool> p)
         {
             IgniteArgumentCheck.NotNull(p, "p");
 
@@ -123,13 +126,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public ICollection<IClusterNode> GetNodes()
+        public ICollection<IClientClusterNode> GetNodes()
         {
             return RefreshNodes();
         }
 
         /** <inheritDoc /> */
-        public IClusterNode GetNode(Guid id)
+        public IClientClusterNode GetNode(Guid id)
         {
             if (id == Guid.Empty)
             {
@@ -140,7 +143,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClusterNode GetNode()
+        public IClientClusterNode GetNode()
         {
             return GetNodes().FirstOrDefault();
         }
@@ -149,7 +152,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// Refresh projection nodes.
         /// </summary>
         /// <returns>Nodes.</returns>
-        private IList<IClusterNode> RefreshNodes()
+        private IList<IClientClusterNode> RefreshNodes()
         {
             long oldTopVer = Interlocked.Read(ref _topVer);
 
@@ -157,20 +160,24 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             if (topology != null)
             {
                 UpdateTopology(topology.Item1, topology.Item2);
-                UpdateNodesInfo(topology.Item2);
+                RequestNodesInfo(topology.Item2);
             }
 
             // No topology changes.
             Debug.Assert(_nodeIds != null, "At least one topology update should have occurred.");
 
             // Local lookup with a native predicate is a trade off between complexity and consistency.
-            var nodes = _nodeIds.Select(id => _ignite.GetNode(id)).Cast<IClusterNode>();
-            if (_predicate != null)
+            var nodesList = new List<IClientClusterNode>(_nodeIds.Count);
+            foreach (Guid nodeId in _nodeIds)
             {
-                nodes = nodes.Where(_predicate);
+                IClientClusterNode node = _ignite.GetClientNode(nodeId);
+                if (_predicate == null || _predicate(node))
+                {
+                    nodesList.Add(node);
+                }
             }
 
-            return nodes.ToList();
+            return nodesList;
         }
 
         /// <summary>
@@ -209,7 +216,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="nodeIds">Node ids.</param>
         internal void UpdateTopology(long remoteTopVer, List<Guid> nodeIds)
         {
-            lock (this)
+            lock (_syncRoot)
             {
                 // If another thread already advanced topology version further, we still
                 // can safely return currently received nodes, but we will not assign them.
@@ -223,15 +230,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 
         /// <summary>
         /// Gets nodes information.
+        /// This method will filter only unknown node ids that
+        /// have not been serialized inside IgniteClient before.
         /// </summary>
         /// <param name="nodeIds">Node ids collection.</param>
         /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
-        private void UpdateNodesInfo(IEnumerable<Guid> nodeIds)
+        private void RequestNodesInfo(IEnumerable<Guid> nodeIds)
         {
             var unknownNodes = nodeIds.Where(nodeId => !_ignite.ContainsNode(nodeId)).ToList();
             if (unknownNodes.Count > 0)
             {
-                RequestRemoteNodesInfo(unknownNodes);
+                RequestRemoteNodesDetails(unknownNodes);
             }
         }
 
@@ -239,7 +248,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// Make remote API call to fetch node information.
         /// </summary>
         /// <param name="ids">Node identifiers.</param>
-        private void RequestRemoteNodesInfo(List<Guid> ids)
+        private void RequestRemoteNodesDetails(List<Guid> ids)
         {
             Action<IBinaryRawWriter> writeAction = writer =>
             {
@@ -249,9 +258,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Func<IBinaryRawReader, bool> readFunc = reader =>
             {
                 var cnt = reader.ReadInt();
+                _ignite.SaveClientClusterNode(reader);
                 for (var i = 0; i < cnt; i++)
                 {
-                    _ignite.UpdateNodeInfo(reader);
                 }
 
                 return true;
@@ -273,7 +282,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Writes the request.
         /// </summary>
-        protected void WriteRequest(Action<IBinaryRawWriter> writeAction, IBinaryStream stream)
+        private void WriteRequest(Action<IBinaryRawWriter> writeAction, IBinaryStream stream)
         {
             if (writeAction != null)
             {

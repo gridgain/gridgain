@@ -199,9 +199,21 @@ public class PlatformContextImpl implements PlatformContext {
             PlatformOutputStream out = mem0.output();
             BinaryRawWriterEx w = writer(out);
 
-            PlatformUtils.writeNodeInfo(w, node);
+            w.writeUuid(node.id());
+            PlatformUtils.writeNodeAttributes(w, node.attributes());
+            w.writeCollection(node.addresses());
+            w.writeCollection(node.hostNames());
+            w.writeLong(node.order());
+            w.writeBoolean(node.isLocal());
+            w.writeBoolean(node.isDaemon());
+            w.writeBoolean(node.isClient());
+            w.writeObjectDetached(node.consistentId());
+            PlatformUtils.writeNodeVersion(w, node.version());
+
+            writeClusterMetrics(w, node.metrics());
 
             out.synchronize();
+
             gateway().nodeInfo(mem0.pointer());
         }
 

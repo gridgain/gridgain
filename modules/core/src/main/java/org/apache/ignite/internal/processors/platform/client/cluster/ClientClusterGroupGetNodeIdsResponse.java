@@ -28,6 +28,7 @@ import java.util.UUID;
 public class ClientClusterGroupGetNodeIdsResponse extends ClientResponse {
     /** Topology version. */
     private final long topVer;
+
     /** Node ids. */
     private final UUID[] nodeIds;
 

@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
-    using System;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Binary;
 
@@ -29,12 +28,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private const int Attribute = 1;
 
         /** */
-        private const int ServerNode = 2;
+        private const int ServerNodes = 2;
 
         /** Filter value mappings. */
-        private readonly Dictionary<int, object> _filter;
+        private readonly List<IProjectionItem> _filter;
 
-        private ClientClusterGroupProjection(Dictionary<int, object> filter)
+        private ClientClusterGroupProjection(List<IProjectionItem> filter)
         {
             _filter = filter;
         }
@@ -47,29 +46,18 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Projection instance.</returns>
         public ClientClusterGroupProjection ForAttribute(string name, string value)
         {
-            var filter = new Dictionary<int, object>(_filter);
-            object attributes;
-            if (filter.TryGetValue(Attribute, out attributes))
-            {
-                ((Dictionary<string, string>) attributes)[name] = value;
-            }
-            else
-            {
-                filter[Attribute] = new Dictionary<string, string> {{name, value}};
-            }
-
-            return new ClientClusterGroupProjection(filter);
+            _filter.Add(new ForAttributeProjectionItem(name, value));
+            return new ClientClusterGroupProjection(_filter);
         }
 
         /// <summary>
         /// Creates a new projection with server nodes only.
         /// </summary>
         /// <returns>Projection instance.</returns>
-        public ClientClusterGroupProjection ForServerNodes()
+        public ClientClusterGroupProjection ForServerNodes(bool value)
         {
-            var filter = new Dictionary<int, object>(_filter);
-            filter[ServerNode] = true;
-            return new ClientClusterGroupProjection(filter);
+            _filter.Add(new ForServerNodesProjectionItem(value));
+            return new ClientClusterGroupProjection(_filter);
         }
 
         /// <summary>
@@ -77,7 +65,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         public static ClientClusterGroupProjection Empty
         {
-            get { return new ClientClusterGroupProjection(new Dictionary<int, object>()); }
+            get { return new ClientClusterGroupProjection(new List<IProjectionItem>()); }
         }
 
         /// <summary>
@@ -97,29 +85,75 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 
             foreach (var item in _filter)
             {
-                switch (item.Key)
-                {
-                    case Attribute:
-                    {
-                        writer.WriteShort(Attribute);
-                        var attributes = (Dictionary<string, string>) item.Value;
-                        writer.WriteInt(attributes.Count);
-                        foreach (var attr in attributes)
-                        {
-                            writer.WriteString(attr.Key);
-                            writer.WriteString(attr.Value);
-                        }
+                item.Write(writer);
+            }
+        }
 
-                        break;
-                    }
-                    case ServerNode:
-                    {
-                        writer.WriteShort(ServerNode);
-                        break;
-                    }
-                    default:
-                        throw new NotSupportedException(string.Format("Unknown filter code: {0}", item.Key));
-                }
+        /// <summary>
+        /// Projection item.
+        /// </summary>
+        private interface IProjectionItem
+        {
+            /// <summary>
+            /// Writes the projection item to output fuffer.
+            /// </summary>
+            /// <param name="writer">Binary writer.</param>
+            void Write(IBinaryRawWriter writer);
+        }
+
+        /// <summary>
+        /// Represents attribute projection item.
+        /// </summary>
+        private sealed class ForAttributeProjectionItem : IProjectionItem
+        {
+            /** */
+            private readonly string _key;
+            /** */
+            private readonly string _value;
+
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="key">Attribute key.</param>
+            /// <param name="value">Attribute value.</param>
+            public ForAttributeProjectionItem(string key, string value)
+            {
+                _key = key;
+                _value = value;
+            }
+
+            /** <inheritDoc /> */
+            public void Write(IBinaryRawWriter writer)
+            {
+                writer.WriteShort(Attribute);
+                writer.WriteString(_key);
+                writer.WriteString(_value);
+            }
+        }
+
+        /// <summary>
+        /// Represents server nodes only projection item.
+        /// </summary>
+        private sealed class ForServerNodesProjectionItem : IProjectionItem
+        {
+            /** */
+            private readonly bool _value;
+
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            /// <param name="value"><c>True</c> for server nodes only.
+            /// <c>False</c> for client nodes only.</param>
+            public ForServerNodesProjectionItem(bool value)
+            {
+                _value = value;
+            }
+
+            /** <inheritDoc /> */
+            public void Write(IBinaryRawWriter writer)
+            {
+                writer.WriteShort(ServerNodes);
+                writer.WriteBoolean(_value);
             }
         }
     }

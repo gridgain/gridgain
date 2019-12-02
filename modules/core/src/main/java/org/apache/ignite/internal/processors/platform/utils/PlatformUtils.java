@@ -1303,28 +1303,6 @@ public class PlatformUtils {
     }
 
     /**
-     * Write binary node information.
-     *
-     * @param out Writer.
-     * @param node Cluster node.
-     */
-    public static void  writeNodeInfo(BinaryRawWriterEx out, ClusterNode node){
-        out.writeUuid(node.id());
-        writeNodeAttributes(out, node.attributes());
-        out.writeCollection(node.addresses());
-        out.writeCollection(node.hostNames());
-        out.writeLong(node.order());
-        out.writeBoolean(node.isLocal());
-        out.writeBoolean(node.isDaemon());
-        out.writeBoolean(node.isClient());
-        out.writeObjectDetached(node.consistentId());
-        writeNodeVersion(out, node.version());
-
-        //todo: to decide whether metrics should be included by a flag.
-        writeClusterMetrics(out, node.metrics());
-    }
-
-    /**
      * Write binary cluster metrics.
      *
      * @param writer

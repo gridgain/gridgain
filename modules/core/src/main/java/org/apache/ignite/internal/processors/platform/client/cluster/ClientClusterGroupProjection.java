@@ -19,29 +19,28 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cluster.ClusterGroup;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Client cluster group projection representation.
- * Decodes a remote client's projection request.
+ * Decodes a remote projection request from a client node.
  */
 public class ClientClusterGroupProjection {
     /** */
-    private static final short ATTRIBUTES = 1;
-    /** */
-    private static final short SERVER_NODE = 2;
+    private static final short ATTRIBUTE = 1;
+
+    private static final short SERVER_NODES = 2;
 
     /** Filter value mappings. */
-    private final Map<Short, Object> mappings;
+    private final Function<ClusterGroup, ClusterGroup> clusterGrpFactory;
 
     /**
      * Constructor.
      *
-     * @param mappings Mappings.
+     * @param clusterGrpFactory Cluster Group factory.
      */
-    private ClientClusterGroupProjection(Map<Short, Object> mappings){
-        this.mappings = mappings;
+    private ClientClusterGroupProjection(Function<ClusterGroup, ClusterGroup> clusterGrpFactory){
+        this.clusterGrpFactory = clusterGrpFactory;
     }
 
     /**
@@ -49,36 +48,35 @@ public class ClientClusterGroupProjection {
      * @param reader Reader.
      * @return Projection.
      */
-    public static ClientClusterGroupProjection read(BinaryRawReader reader)
-    {
-        if(!reader.readBoolean())
-            return new ClientClusterGroupProjection(new HashMap<>());
+    public static ClientClusterGroupProjection read(BinaryRawReader reader) {
+        if (!reader.readBoolean())
+            return new ClientClusterGroupProjection(null);
 
-        int cnt = reader.readInt();
-        Map<Short, Object> mappings = new HashMap<>(cnt);
-        for(int i = 0; i < cnt; i++){
-            short code = reader.readShort();
-            switch (code){
-                case ATTRIBUTES:{
-                    HashMap<String, String> attrs = new HashMap<>();
-                    int attrsCnt = reader.readInt();
-                    for(int j = 0; j < attrsCnt; j++){
-                        String attrName = reader.readString();
+        Function<ClusterGroup, ClusterGroup> factory = clusterGrp ->
+        {
+            int cnt = reader.readInt();
+            for (int i = 0; i < cnt; i++) {
+                short code = reader.readShort();
+                switch (code) {
+                    case ATTRIBUTE: {
+                        String attName = reader.readString();
                         String attrVal = reader.readString();
-                        attrs.put(attrName, attrVal);
+                        clusterGrp = clusterGrp.forAttribute(attName, attrVal);
+                        break;
                     }
-                    mappings.put(ATTRIBUTES, attrs);
-                    break;
+                    case SERVER_NODES: {
+                        clusterGrp = reader.readBoolean()
+                                ? clusterGrp.forServers()
+                                : clusterGrp.forClients();
+                        break;
+                    }
+                    default:
+                        throw new UnsupportedOperationException("Unknown code: " + code);
                 }
-                case SERVER_NODE:{
-                    mappings.put(SERVER_NODE, true);
-                    break;
-                }
-                default:
-                    throw new IllegalArgumentException("Unknown code: " + code);
             }
-        }
-        return new ClientClusterGroupProjection(mappings);
+            return clusterGrp;
+        };
+        return new ClientClusterGroupProjection(factory);
     }
 
     /**
@@ -87,24 +85,10 @@ public class ClientClusterGroupProjection {
      * @param clusterGrp Cluster group before projection.
      * @return Cluster group after projection.
      */
-    public ClusterGroup Apply(ClusterGroup clusterGrp){
-        for (Map.Entry<Short, Object> entry : mappings.entrySet()) {
-            short code = entry.getKey();
-            switch (code){
-                case ATTRIBUTES:{
-                    Map<String, String> attrs = (Map<String, String>)entry.getValue();
-                    for (Map.Entry<String, String> attr : attrs.entrySet())
-                        clusterGrp = clusterGrp.forAttribute(attr.getKey(), attr.getValue());
-                    break;
-                }
-                case SERVER_NODE:{
-                    clusterGrp = clusterGrp.forServers();
-                    break;
-                }
-                default:
-                    throw new IllegalArgumentException("Unknown code: " + code);
-            }
-        }
-        return clusterGrp;
+    public ClusterGroup apply(ClusterGroup clusterGrp){
+        if(clusterGrpFactory == null)
+            return clusterGrp;
+
+        return clusterGrpFactory.apply(clusterGrp);
     }
 }

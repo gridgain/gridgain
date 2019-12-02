@@ -575,12 +575,11 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestClientForAttribute()
         {
-            ICollection<IClusterNode> nodes = _igniteClient.GetCluster().GetNodes();
+            IClientClusterGroup clientPrj = _igniteClient.GetCluster().ForAttribute("my_attr", "value1");
+            Assert.AreEqual(1,clientPrj.GetNodes().Count);
 
-            IClusterGroup prj = _grid1.GetCluster().ForAttribute("my_attr", "value1");
-            Assert.AreEqual(1, prj.GetNodes().Count);
-            Assert.IsTrue(nodes.Contains(prj.GetNode()));
-            Assert.AreEqual("value1", prj.GetNodes().First().GetAttribute<string>("my_attr"));
+            var nodeId = _grid1.GetCluster().ForAttribute("my_attr", "value1").GetNodes().Single().Id;
+            Assert.AreEqual(nodeId, clientPrj.GetNode().Id);
         }
         
         /// <summary>
@@ -638,15 +637,13 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestClientForPredicate()
         {
-            var prj1 = _igniteClient.GetCluster().ForPredicate(new NotAttributePredicate("value1").Apply);
+            var prj1 = _igniteClient.GetCluster().ForPredicate(node => node.Attributes.Any(attr => attr.Value.Equals("value1")));
             Assert.AreEqual(2, prj1.GetNodes().Count);
 
-            var prj2 = prj1.ForPredicate(new NotAttributePredicate("value2").Apply);
+            var prj2 = prj1.ForPredicate(node => node.Attributes.Any(attr => attr.Value.Equals("value2")));
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
-            string val;
-
-            prj2.GetNodes().First().TryGetAttribute("my_attr", out val);
+            var val = (string)prj2.GetNodes().First().Attributes.First(attr => attr.Key == "my_attr").Value;
 
             Assert.IsTrue(val == null || (!val.Equals("value1") && !val.Equals("value2")));
         }
@@ -678,8 +675,6 @@ namespace Apache.Ignite.Core.Tests.Compute
                 return val == null || !val.Equals(_attrVal);
             }
         }
-
-
 
         /// <summary>
         /// Tests the action broadcast.

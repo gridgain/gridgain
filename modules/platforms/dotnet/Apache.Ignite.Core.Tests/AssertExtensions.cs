@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Asserts equality with reflection recursively.
         /// </summary>
-        public static void ReflectionEqual(object x, object y, string propertyPath = null, 
+        public static void ReflectionEqual(object x, object y, string propertyPath = null,
             HashSet<string> ignoredProperties = null)
         {
             if (x == null && y == null)
@@ -46,8 +46,8 @@ namespace Apache.Ignite.Core.Tests
             var isCollection = type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
             if (isCollection)
             {
-                var xCol = ((IEnumerable)x).OfType<object>().ToList();
-                var yCol = ((IEnumerable)y).OfType<object>().ToList();
+                var xCol = ((IEnumerable) x).OfType<object>().ToList();
+                var yCol = ((IEnumerable) y).OfType<object>().ToList();
 
                 Assert.AreEqual(xCol.Count, yCol.Count, propertyPath);
 
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Tests
 
                 return;
             }
-            
+
             Assert.AreEqual(type, y.GetType());
 
             propertyPath = propertyPath ?? type.Name;
@@ -71,10 +71,10 @@ namespace Apache.Ignite.Core.Tests
                     if (baseType == typeof(KeyValuePair<,>))
                     {
                         ReflectionEqual(
-                            GetReflectionValue(type, x, "Key"), 
+                            GetReflectionValue(type, x, "Key"),
                             GetReflectionValue(type, y, "Key"));
                         ReflectionEqual(
-                            GetReflectionValue(type, x, "Value"), 
+                            GetReflectionValue(type, x, "Value"),
                             GetReflectionValue(type, y, "Value"));
                         return;
                     }

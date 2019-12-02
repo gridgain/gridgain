@@ -19,8 +19,15 @@ namespace Apache.Ignite.Core.Client
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using Apache.Ignite.Core.Cluster;
 
+    /// <summary>
+    /// Defines grid projection which represents a common functionality over a group of nodes.
+    /// Grid projection allows to group Ignite nodes into various subgroups to perform distributed
+    /// operations on them. All ForXXX(...)' methods will create a child grid projection
+    /// from existing projection. If you create a new projection from current one, then the resulting
+    /// projection will include a subset of nodes from current projection. The following code snippet
+    /// shows how to create grid projections.
+    /// </summary>
     public interface IClientClusterGroup
     {
         /// <summary>
@@ -33,9 +40,9 @@ namespace Apache.Ignite.Core.Client
         IClientClusterGroup ForAttribute(string name, string val);
 
         /// <summary>
-        /// Creates grid projection for nodes supporting .Net, i.e. for nodes started with Apache.Ignite.exe.
+        /// Creates grid projection for nodes supporting .NET, i.e. for nodes started with Apache.Ignite.exe.
         /// </summary>
-        /// <returns>Grid projection for nodes supporting .Net.</returns>
+        /// <returns>Grid projection for nodes supporting .NET.</returns>
         IClientClusterGroup ForDotNet();
 
         /// <summary>
@@ -49,14 +56,14 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="p">Predicate filter for nodes to include into this projection.</param>
         /// <returns>Grid projection for nodes that passed the predicate filter.</returns>
-        IClientClusterGroup ForPredicate(Func<IClusterNode, bool> p);
+        IClientClusterGroup ForPredicate(Func<IClientClusterNode, bool> p);
 
         /// <summary>
         /// Gets read-only collections of nodes in this projection.
         /// </summary>
         /// <returns>All nodes in this projection.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        ICollection<IClusterNode> GetNodes();
+        ICollection<IClientClusterNode> GetNodes();
 
         /// <summary>
         /// Gets a node for given ID from this grid projection.
@@ -64,13 +71,13 @@ namespace Apache.Ignite.Core.Client
         /// <param name="id">Node ID.</param>
         /// <returns>Node with given ID from this projection or null if such node does not 
         /// exist in this projection.</returns>
-        IClusterNode GetNode(Guid id);
+        IClientClusterNode GetNode(Guid id);
 
         /// <summary>
         /// Gets first node from the list of nodes in this projection.
         /// </summary>
         /// <returns>Node.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        IClusterNode GetNode();
+        IClientClusterNode GetNode();
     }
 }

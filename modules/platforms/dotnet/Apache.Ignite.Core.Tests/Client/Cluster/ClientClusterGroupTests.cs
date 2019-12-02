@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             Assert.IsNotEmpty(nodes);
             Assert.IsNotEmpty(clientNodes);
-            AssertExtensions.ReflectionEqual(nodes, clientNodes);
+            AssertNodesAreEqual(nodes, clientNodes);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             var node = Ignition.GetIgnite().GetCluster().GetNode();
             var clientNode = Client.GetCluster().GetNode();
 
-            AssertExtensions.ReflectionEqual(node, clientNode);
+            AssertNodesAreEqual(node, clientNode);
         }
 
         /// <summary>
@@ -80,10 +80,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         public void TestClusterGroupReturnsNodeById()
         {
             var node = Ignition.GetIgnite().GetCluster().GetNode();
-
             var clientNode = Client.GetCluster().GetNode(node.Id);
 
-            AssertExtensions.ReflectionEqual(node, clientNode);
+            AssertNodesAreEqual(node, clientNode);
         }
 
         /// <summary>
@@ -116,12 +115,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                 var clientNodesNew = Client.GetCluster().GetNodes();
 
                 Assert.AreEqual(2, clientNodesNew.Count);
-                AssertExtensions.ReflectionEqual(nodesNew, clientNodesNew);
+                AssertNodesAreEqual(nodesNew, clientNodesNew);
 
                 var newNode = nodesNew.Single(x => x.Id == nodes.Single().Id);
                 var newClientNode = clientNodesNew.Single(x => x.Id == clientNodes.Single().Id);
 
-                AssertExtensions.ReflectionEqual(newNode, newClientNode);
+                AssertNodesAreEqual(newNode, newClientNode);
             }
         }
 
@@ -142,17 +141,19 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             TestDelegate action = () => clusterGroup.GetNode();
 
-            Assert.Throws<KeyNotFoundException>(action);
+            ArgumentException exception = Assert.Throws<ArgumentException>(action);
+            Assert.AreEqual("Unable to find node with id='00000000-0000-0000-0000-000000000000'",
+                exception.Message);
         }
 
         /// <summary>
         /// Test cluster group doesn't update properties if no changes have been detected.
         /// </summary>
         [Test]
-        public void TestClusterGroupDoNotUpdateTopologyIfNoChangesDetected()
+        public void TestClusterGroupDoesNotUpdateTopologyIfNoChangesDetected()
         {
             var clusterGroup = (ClientClusterGroup) Client.GetCluster();
-            IClusterNode node = clusterGroup.GetNode();
+            IClientClusterNode node = clusterGroup.GetNode();
 
             // Set the wrong ids, but keep the same topology version.
             var invalidNodeIds = new List<Guid> {Guid.NewGuid(), Guid.Empty};
@@ -199,7 +200,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             var node = Ignition.GetIgnite().GetCluster().ForDotNet().GetNode();
             var clientNode = Client.GetCluster().ForDotNet().GetNode();
 
-            AssertExtensions.ReflectionEqual(node, clientNode);
+            AssertNodesAreEqual(node, clientNode);
 
             const string attrName = "unknownAttr";
             var unknownNode = Ignition.GetIgnite().GetCluster().ForAttribute(attrName, null).GetNode();
@@ -234,6 +235,44 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             var ex = Assert.Throws<ArgumentException>(action);
             Assert.AreEqual(ExpectedErrorMessage, ex.Message);
+        }
+
+        /// <summary>
+        /// Asserts that client and server node representations are equals.
+        /// </summary>
+        /// <param name="clusterNode"></param>
+        /// <param name="clientNode"></param>
+        private static void AssertNodesAreEqual(IClusterNode clusterNode, IClientClusterNode clientNode)
+        {
+            AssertExtensions.ReflectionEqual(clusterNode.Id, clientNode.Id);
+            AssertExtensions.ReflectionEqual(clusterNode.Addresses, clientNode.Addresses);
+            AssertExtensions.ReflectionEqual(clusterNode.HostNames, clientNode.HostNames);
+            AssertExtensions.ReflectionEqual(clusterNode.IsClient, clientNode.IsClient);
+            AssertExtensions.ReflectionEqual(clusterNode.IsDaemon, clientNode.IsDaemon);
+            AssertExtensions.ReflectionEqual(clusterNode.IsLocal, clientNode.IsLocal);
+            AssertExtensions.ReflectionEqual(clusterNode.Order, clientNode.Order);
+            AssertExtensions.ReflectionEqual(clusterNode.Version, clientNode.Version);
+            AssertExtensions.ReflectionEqual(clusterNode.Attributes, clientNode.Attributes);
+        }
+
+        /// <summary>
+        /// Asserts that client and server nodes collections are equals.
+        /// </summary>
+        /// <param name="clusterNodes"></param>
+        /// <param name="clientNodes"></param>
+        private static void AssertNodesAreEqual(ICollection<IClusterNode> clusterNodes,
+            ICollection<IClientClusterNode> clientNodes)
+        {
+            Assert.AreEqual(clusterNodes.Count, clientNodes.Count);
+
+            using (IEnumerator<IClusterNode> enumServer = clusterNodes.GetEnumerator())
+            using (IEnumerator<IClientClusterNode> enumClient = clientNodes.GetEnumerator())
+            {
+                while (enumServer.MoveNext() && enumClient.MoveNext())
+                {
+                    AssertNodesAreEqual(enumServer.Current, enumClient.Current);
+                }
+            }
         }
     }
 }

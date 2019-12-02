@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Globalization;
     using System.Net;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
@@ -56,8 +57,8 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly IgniteClientConfiguration _configuration;
 
         /** Node info cache. */
-        private readonly ConcurrentDictionary<Guid, ClusterNodeImpl> _nodes =
-            new ConcurrentDictionary<Guid, ClusterNodeImpl>();
+        private readonly ConcurrentDictionary<Guid, IClientClusterNode> _nodes =
+            new ConcurrentDictionary<Guid, IClientClusterNode>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IgniteClient"/> class.
@@ -219,7 +220,23 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         public ClusterNodeImpl GetNode(Guid? id)
         {
-            return id == null ? null : _nodes[id.Value];
+            throw GetClientNotSupportedException();
+        }
+
+        /// <summary>
+        /// Gets client node from the internal cache.
+        /// </summary>
+        /// <param name="id">Node Id.</param>
+        /// <returns>Client node.</returns>
+        public IClientClusterNode GetClientNode(Guid id)
+        {
+            IClientClusterNode result;
+            if (!_nodes.TryGetValue(id, out result))
+            {
+                throw new ArgumentException(string.Format(
+                    CultureInfo.InvariantCulture, "Unable to find node with id='{0}'", id));
+            }
+            return result;
         }
 
         /// <summary>
@@ -259,12 +276,12 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /// <summary>
-        /// Updates the node information from stream.
+        /// Saves the node information from stream to internal cache.
         /// </summary>
         /// <param name="reader">Reader.</param>
-        public void UpdateNodeInfo(IBinaryRawReader reader)
+        public void SaveClientClusterNode(IBinaryRawReader reader)
         {
-            var node = new ClusterNodeImpl(reader);
+            var node = new ClientClusterNode(reader);
             _nodes[node.Id] = node;
         }
 

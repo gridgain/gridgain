@@ -48,7 +48,16 @@ public class ClientClusterGroupGetNodesInfoResponse extends ClientResponse {
         writer.writeInt(nodes.size());
 
         for (ClusterNode node: nodes){
-            PlatformUtils.writeNodeInfo(writer, node);
+            writer.writeUuid(node.id());
+            PlatformUtils.writeNodeAttributes(writer, node.attributes());
+            writer.writeCollection(node.addresses());
+            writer.writeCollection(node.hostNames());
+            writer.writeLong(node.order());
+            writer.writeBoolean(node.isLocal());
+            writer.writeBoolean(node.isDaemon());
+            writer.writeBoolean(node.isClient());
+            writer.writeObjectDetached(node.consistentId());
+            PlatformUtils.writeNodeVersion(writer, node.version());
         }
     }
 }
