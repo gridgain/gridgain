@@ -265,6 +265,8 @@ public class AgentsService extends AbstractSocketHandler {
      * Send request to locally connected agent.
      * @param req Request.
      * @throws IllegalStateException If connected agent not founded.
+     * @throws IllegalArgumentException If received request with duplicated ID.
+     * @throws IOException If failed to send message.
      */
     void sendLocally(AgentRequest req) throws IllegalStateException, IllegalArgumentException, IOException {
         WebSocketSession ses = findLocalAgent(req.getKey()).orElseThrow(IllegalStateException::new);
