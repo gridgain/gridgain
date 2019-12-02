@@ -114,6 +114,9 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
+    /***/
+    MANAGEMENT_CONSOLE(28);
+
     /** Support of DR clear sender store from  Web Console. */
     WC_DR_CLEAR_SENDER_STORE(29);
 
@@ -227,6 +230,10 @@ public enum IgniteFeatures {
 
             // Add only when tracing is enabled.
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
+                continue;
+
+            // Add only when management console is enabled.
+            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             // Add only when scheduling is disabled.

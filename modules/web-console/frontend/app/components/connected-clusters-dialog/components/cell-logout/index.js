@@ -30,7 +30,7 @@ class controller {
     }
 
     logout() {
-        this.agentMgr.clustersSecrets.reset(this.clusterId);
+        this.agentMgr.logout(this.clusterId);
     }
 }
 
