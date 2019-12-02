@@ -26,7 +26,19 @@ namespace Apache.Ignite.Core.Client
     /// operations on them. All ForXXX(...)' methods will create a child grid projection
     /// from existing projection. If you create a new projection from current one, then the resulting
     /// projection will include a subset of nodes from current projection. The following code snippet
-    /// shows how to create grid projections.
+    /// shows how to create grid projections:
+    /// <code>
+    /// var g = Ignition.StartClient();
+    /// 
+    /// // Projection over .NET nodes.
+    /// var remoteNodes = g.ForDotNet();
+    /// 
+    /// // Projection over server nodes.
+    /// var randomNode = g.ForServers();
+    /// 
+    /// // Projection over all nodes that have user attribute "group" set to value "worker".
+    /// var workerNodes = g.ForAttribute("group", "worker");
+    /// </code>
     /// </summary>
     public interface IClientClusterGroup
     {
