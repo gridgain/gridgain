@@ -977,7 +977,7 @@ namespace Apache.Ignite.Core.Impl
 
             var node = new ClusterNodeImpl(reader);
             
-            node.Init(new ClusterNodeDataProvider(this));
+            node.Init(this);
 
             _nodes[node.Id] = node;
         }
