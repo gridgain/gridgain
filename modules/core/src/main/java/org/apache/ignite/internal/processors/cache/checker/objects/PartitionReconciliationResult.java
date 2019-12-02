@@ -82,7 +82,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     public void print(Consumer<String> printer) {
-        if (!inconsistentKeys.isEmpty()) {
+        if (inconsistentKeys != null && !inconsistentKeys.isEmpty()) {
             printer.accept("\nINCONSISTENT KEYS:\n\n");
 
             for (Map.Entry<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>>
@@ -120,7 +120,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
             }
         }
 
-        if (!skippedCaches.isEmpty()) {
+        if (skippedCaches != null && !skippedCaches.isEmpty()) {
             printer.accept("\nSKIPPED CACHES:\n\n");
 
             for (PartitionReconciliationSkippedEntityHolder<String> skippedCache : skippedCaches) {
@@ -129,7 +129,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
             }
         }
 
-        if (!skippedEntries.isEmpty()) {
+        if (skippedEntries != null && !skippedEntries.isEmpty()) {
             printer.accept("\nSKIPPED ENTRIES:\n\n");
 
             for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
