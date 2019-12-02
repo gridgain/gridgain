@@ -16,6 +16,9 @@
 
 package org.apache.ignite.agent.processor;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
@@ -24,7 +27,11 @@ import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.cache.CacheInfo;
 import org.apache.ignite.agent.dto.cache.CacheSqlIndexMetadata;
 import org.apache.ignite.agent.dto.cache.CacheSqlMetadata;
+import org.apache.ignite.agent.fixtures.Country;
+import org.apache.ignite.agent.fixtures.CountryWithAnnotations;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
@@ -313,5 +320,130 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
 
             return cacheMeta != null && idxes.isEmpty();
         });
+    }
+
+    /**
+     * Should send sql metadata for cache which was created by cache configuration.
+     */
+    @Test
+    public void shouldSendSqlMetadataForCacheCreatedByCacheConfiguration() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        ignite.getOrCreateCache(getCountryCacheConfig());
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "Country".equals(i.getName()));
+        });
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (F.isEmpty(metadata))
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "Country".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            return cacheMeta != null &&
+                "java.lang.Integer".equals(cacheMeta.getFields().get("ID")) &&
+                "java.lang.String".equals(cacheMeta.getFields().get("NAME")) &&
+                "java.lang.Integer".equals(cacheMeta.getFields().get("POPULATION"));
+        });
+    }
+
+    /**
+     * Should send sql metadata for cache which was created by cache configuration with query annotations.
+     */
+    @Test
+    public void shouldSendSqlMetadataForCacheCreatedByCacheConfigurationWithAnnotations() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleUri(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        ignite.getOrCreateCache(getCountryWithAnnotationsCacheConfig());
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "CountryWithAnnotations".equals(i.getName()));
+        });
+
+        assertWithPoll(() -> {
+            List<CacheSqlMetadata> metadata =
+                interceptor.getListPayload(buildClusterCachesSqlMetaDest(cluster.id()), CacheSqlMetadata.class);
+
+            if (F.isEmpty(metadata))
+                return false;
+
+            CacheSqlMetadata cacheMeta = metadata.stream()
+                .filter(m -> "CountryWithAnnotations".equals(m.getCacheName()))
+                .findFirst()
+                .get();
+
+            return cacheMeta != null &&
+                "java.lang.Integer".equals(cacheMeta.getFields().get("ID")) &&
+                "java.lang.String".equals(cacheMeta.getFields().get("NAME")) &&
+                "java.lang.Integer".equals(cacheMeta.getFields().get("POPULATION")) &&
+                cacheMeta.getIndexes().size() == 1;
+        });
+    }
+
+    /**
+     * @return Country cache configuration.
+     */
+    private CacheConfiguration<Integer, Country> getCountryCacheConfig() throws Exception {
+        CacheConfiguration ccfg = new CacheConfiguration("Country");
+
+        ccfg.setSqlSchema("Country");
+
+        Collection<QueryEntity> qryEntities = new ArrayList<>();
+
+        QueryEntity qryEntity = new QueryEntity();
+
+        qryEntity.setKeyType(Integer.class.getName());
+        qryEntity.setValueType(Country.class.getName());
+
+        qryEntities.add(qryEntity);
+
+        // Query fields for COUNTRY.
+        LinkedHashMap<String, String> qryFlds = new LinkedHashMap<>();
+
+        qryFlds.put("id", "java.lang.Integer");
+        qryFlds.put("name", "java.lang.String");
+        qryFlds.put("population", "java.lang.Integer");
+
+        qryEntity.setFields(qryFlds);
+
+        ccfg.setQueryEntities(qryEntities);
+
+        return ccfg;
+    }
+
+    /**
+     * @return Country with annotation cache configuration.
+     */
+    private CacheConfiguration<Integer, CountryWithAnnotations> getCountryWithAnnotationsCacheConfig() throws Exception {
+        CacheConfiguration ccfg = new CacheConfiguration("CountryWithAnnotations");
+
+        ccfg.setSqlSchema("CountryWithAnnotations");
+
+        ccfg.setIndexedTypes(Integer.class, CountryWithAnnotations.class);
+
+        return ccfg;
     }
 }
