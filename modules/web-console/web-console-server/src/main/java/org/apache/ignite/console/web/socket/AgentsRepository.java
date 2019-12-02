@@ -44,7 +44,7 @@ public class AgentsRepository {
 
     /**
      * @param ignite Ignite.
-     * @param txMgr Tx manager.
+     * @param txMgr Transactions manager.
      */
     public AgentsRepository(Ignite ignite, TransactionManager txMgr) {
         this.ignite = ignite;

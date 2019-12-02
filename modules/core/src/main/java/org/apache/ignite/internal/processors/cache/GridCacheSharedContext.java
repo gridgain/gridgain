@@ -1174,7 +1174,7 @@ public class GridCacheSharedContext<K, V> {
 
     /**
      * For test purposes.
-     * @param txMgr Tx manager.
+     * @param txMgr Transactions manager.
      */
     public void setTxManager(IgniteTxManager txMgr) {
         this.txMgr = txMgr;

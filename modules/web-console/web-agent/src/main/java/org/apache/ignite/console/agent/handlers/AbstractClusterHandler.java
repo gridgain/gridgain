@@ -18,7 +18,7 @@ package org.apache.ignite.console.agent.handlers;
 
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.rest.RestExecutor;
-import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.json.JsonObject;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
