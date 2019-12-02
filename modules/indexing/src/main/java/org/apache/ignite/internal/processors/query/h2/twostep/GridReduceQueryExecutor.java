@@ -393,17 +393,18 @@ public class GridReduceQueryExecutor {
 
         for (int attempt = 0;; attempt++) {
             try {
-                cancel.checkCancelled();
+                cancel.checkCancelled();;
             }
             catch (QueryCancelledException cancelEx) {
                 throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
             }
 
             if (attempt > 0 && retryTimeout > 0 && (U.currentTimeMillis() - startTime > retryTimeout)) {
+                if (lastRun == null || lastRun.retryCause() == null)
+                    throw new CacheException("Failed to map SQL query to topology during timeout: " + retryTimeout + "ms");
+
                 UUID retryNodeId = lastRun.retryNodeId();
                 String retryCause = lastRun.retryCause();
-
-                assert !F.isEmpty(retryCause);
 
                 throw new CacheException("Failed to map SQL query to topology on data node [dataNodeId=" + retryNodeId +
                     ", msg=" + retryCause + ']');
