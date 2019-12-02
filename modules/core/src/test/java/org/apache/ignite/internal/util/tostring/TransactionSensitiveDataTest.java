@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.util.tostring;
 
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -72,7 +72,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         super.beforeTestsStarted();
 
         setFieldValue(GridNearTxPrepareFutureAdapter.class, "log", null);
-        ((AtomicReference)getFieldValue(GridNearTxPrepareFutureAdapter.class, "logRef")).set(null);
+        ((AtomicReference<IgniteLogger>)getFieldValue(GridNearTxPrepareFutureAdapter.class, "logRef")).set(null);
 
         testLog = new ListeningTestLogger(false, log);
     }
@@ -112,7 +112,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @Test
     public void testHideSensitiveDataDuringExchange() throws Exception {
-        checkSensitiveDataDuringExchange((logStr, binPersonStr) -> assertNotContains(log, logStr, binPersonStr));
+        checkSensitiveDataDuringExchange((logStr, binObjStr) -> assertNotContains(log, logStr, binObjStr));
     }
 
     /**
@@ -124,7 +124,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     @Test
     public void testShowSensitiveDataDuringExchange() throws Exception {
-        checkSensitiveDataDuringExchange((logStr, binPersonStr) -> assertContains(log, logStr, binPersonStr));
+        checkSensitiveDataDuringExchange((logStr, binObjStr) -> assertContains(log, logStr, binObjStr));
     }
 
     /**
@@ -136,7 +136,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @Test
     public void testHideSensitiveDataDuringNodeLeft() throws Exception {
-        checkSensitiveDataDuringNodeLeft((logStr, binPersonStr) -> assertNotContains(log, logStr, binPersonStr));
+        checkSensitiveDataDuringNodeLeft((logStr, binObjStr) -> assertNotContains(log, logStr, binObjStr));
     }
 
     /**
@@ -148,7 +148,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     @Test
     public void testShowSensitiveDataDuringNodeLeft() throws Exception {
-        checkSensitiveDataDuringNodeLeft((logStr, binPersonStr) -> assertContains(log, logStr, binPersonStr));
+        checkSensitiveDataDuringNodeLeft((logStr, binObjStr) -> assertContains(log, logStr, binObjStr));
     }
 
     /**
@@ -181,13 +181,16 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> cache = crd.getOrCreateCache(DEFAULT_CACHE_NAME).withKeepBinary();
 
-        BinaryObject binPerson = createPersonBinObj(crd);
+        IgniteBinary binary = crd.binary();
 
-        cache.put(0, binPerson);
+        BinaryObject binKey = binary.toBinary(new Key(0));
+        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1"));
+
+        cache.put(binKey, binPerson);
 
         Transaction tx = crd.transactions().txStart();
 
-        cache.put(0, binPerson);
+        cache.put(binKey, binPerson);
 
         GridTestUtils.runAsync(() -> {
             logLsnr.check(10 * crd.configuration().getNetworkTimeout());
@@ -199,7 +202,8 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         startGrid(NODE_COUNT);
 
-        check.accept(strToCheckRef.get(), toStr(binPerson));
+        check.accept(maskIdHash(strToCheckRef.get()), maskIdHash(toStr(binKey, Key.class)));
+        check.accept(maskIdHash(strToCheckRef.get()), maskIdHash(toStr(binPerson, Person.class)));
     }
 
     /**
@@ -248,10 +252,13 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> cache = clientNode.getOrCreateCache(cacheName).withKeepBinary();
 
-        BinaryObject binPerson = createPersonBinObj(clientNode);
+        IgniteBinary binary = clientNode.binary();
+
+        BinaryObject binKey = binary.toBinary(new Key(primaryKey(grid(stopGridId).cache(cacheName))));
+        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1"));
 
         try (Transaction tx = clientNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-            cache.put(primaryKey(grid(stopGridId).cache(cacheName)), binPerson);
+            cache.put(binKey, binPerson);
 
             tx.commit();
         }
@@ -259,36 +266,60 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             //ignore
         }
 
-        String binPersonStr = toStr(binPerson);
+        String strFailedSndStr = maskIdHash(strFailedSndRef.get());
+        String strReceivedErrorStr = maskIdHash(strReceivedErrorRef.get());
 
-        check.accept(strFailedSndRef.get(), binPersonStr);
-        check.accept(strReceivedErrorRef.get(), binPersonStr);
+        String binKeyStr = maskIdHash(toStr(binKey, Key.class));
+        String binPersonStr = maskIdHash(toStr(binPerson, Person.class));
+
+        check.accept(strFailedSndStr, binKeyStr);
+        check.accept(strFailedSndStr, binPersonStr);
+
+        check.accept(strReceivedErrorStr, binKeyStr);
+        check.accept(strReceivedErrorStr, binPersonStr);
     }
 
     /**
-     * Create a string to search for a Person’s BinaryObject in the log.
+     * Removes a idHash from a string.
+     *
+     * @param s String.
+     * @return String without a idHash.
+     */
+    private String maskIdHash(String s) {
+        assert nonNull(s);
+
+        return s.replaceAll("idHash=[0-9]*", "idHash=NO");
+    }
+
+    /**
+     * Create a string to search for BinaryObject in the log.
      *
      * @param binPerson BinaryObject.
+     * @param cls Class of BinaryObject.
      * @return String representation of BinaryObject.
      */
-    private String toStr(BinaryObject binPerson) {
+    private String toStr(BinaryObject binPerson, Class<?> cls) {
         assert nonNull(binPerson);
+        assert nonNull(cls);
 
-        return binPerson.toString().replace(Person.class.getName(), Person.class.getSimpleName());
+        return binPerson.toString().replace(cls.getName(), cls.getSimpleName());
     }
 
     /**
-     * Create a new BinaryObject for Person class.
-     *
-     * @param node Node to create an BinaryObject.
-     * @return BinaryObject.
+     * Key for mapping value in cache.
      */
-    private BinaryObject createPersonBinObj(Ignite node) {
-        assert nonNull(node);
+    static class Key {
+        /** Id. */
+        int id;
 
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-
-        return node.binary().toBinary(new Person(random.nextInt(), "name_" + random.nextInt()));
+        /**
+         * Constructor.
+         *
+         * @param id Id.
+         */
+        public Key(int id) {
+            this.id = id;
+        }
     }
 
     /**
