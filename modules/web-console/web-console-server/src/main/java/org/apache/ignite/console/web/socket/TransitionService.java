@@ -70,7 +70,7 @@ public class TransitionService {
     /**
      * @param ignite Ignite.
      * @param agentsRepo Agents repository.
-     * @param clustersRepo Clusters repository.
+     * @param clustersRepo Repository to work with clusters.
      * @param agentsSrvc Agents service.
      * @param browsersSrvc Browsers service.
      */
