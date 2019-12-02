@@ -17,6 +17,8 @@
 #ifndef _IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL
 #define _IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 
@@ -88,6 +90,20 @@ namespace ignite
                 bool IsWalEnabled(std::string cacheName);
 
                 /**
+                 * Get a cluster group consisting from the local node.
+                 *
+                 * @return Cluster group consisting from the local node.
+                 */
+                ignite::cluster::ClusterGroup ForLocal();
+
+                /**
+                 * Get local grid node.
+                 *
+                 * @return Local node.
+                 */
+                ignite::cluster::ClusterNode GetLocalNode();
+
+                /**
                  * Set baseline topology constructed from the cluster topology of the given version.
                  * The method succeeds only if the cluster topology has not changed.
                  *
@@ -142,4 +158,5 @@ namespace ignite
     }
 }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL

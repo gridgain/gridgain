@@ -35,10 +35,10 @@ export default class ClusterLoginService {
 
     /**
      * @param {import('../../types/ClusterSecrets').ClusterSecrets} baseSecrets
-     * @param {Error} reason Error that bring to opening of dialog.
+     * @param authErrMsg Authentication failure message.
      * @returns {ng.IPromise<import('../../types/ClusterSecrets').ClusterSecrets>}
      */
-    askCredentials(baseSecrets, reason) {
+    askCredentials(baseSecrets, authErrMsg) {
         if (this.deferred)
             return this.deferred.promise;
 
@@ -70,8 +70,8 @@ export default class ClusterLoginService {
             show: true
         });
 
-        if (reason)
-            this.Messages.showError('Authentication failed: ', reason);
+        if (authErrMsg)
+            this.Messages.showError('Authentication failed: ', authErrMsg);
 
         return modal.$promise
             .then(() => this.deferred.promise)

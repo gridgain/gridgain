@@ -151,7 +151,12 @@ namespace ignite
             };
 
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), nodesLock(), topVer(0),
+                InteropTarget(env, javaRef),
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+                nodes(new std::vector<ClusterNode>()),
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+                nodesLock(),
+                topVer(0),
                 predHolder(new ClusterNodePredicateHolder)
             {
                 computeImpl = InternalGetCompute();
@@ -179,6 +184,8 @@ namespace ignite
 
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
             }
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForCacheNodes(std::string cacheName)
             {
@@ -409,6 +416,8 @@ namespace ignite
                 return FromTarget(res);
             }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForServers()
             {
                 IgniteError err;
@@ -420,9 +429,23 @@ namespace ignite
                 return FromTarget(res);
             }
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForCpp()
             {
                 return ForAttribute(attrPlatform, platform);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForLocal()
+            {
+                return ForNodeId(GetLocalNode().GetId());
+            }
+
+            ClusterNode ClusterGroupImpl::GetLocalNode()
+            {
+                RefreshNodes();
+
+                return ClusterNode(GetEnvironment().GetLocalNode());
             }
 
             ClusterNode ClusterGroupImpl::GetNode()
@@ -467,15 +490,21 @@ namespace ignite
                 return RefreshNodes();
             }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+
             ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute()
             {
                 return computeImpl;
             }
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
             ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute(ClusterGroup grp)
             {
                 return grp.GetImpl().Get()->GetCompute();
             }
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
             bool ClusterGroupImpl::IsActive()
             {
@@ -496,6 +525,8 @@ namespace ignite
 
                 IgniteError::ThrowIfNeeded(err);
             }
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
             void ClusterGroupImpl::DisableWal(std::string cacheName)
             {
@@ -600,6 +631,8 @@ namespace ignite
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
             }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
+
             SP_ClusterGroupImpl ClusterGroupImpl::FromTarget(jobject javaRef)
             {
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), javaRef));
@@ -611,6 +644,8 @@ namespace ignite
 
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
             }
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
             ClusterGroupImpl::SP_ClusterNodes ClusterGroupImpl::ReadNodes(binary::BinaryReaderImpl& reader)
             {
@@ -661,6 +696,8 @@ namespace ignite
 
                 return *nodes.Get();
             }
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
             void ClusterGroupImpl::SetPredicate(SP_PredicateHolder predHolder)
             {

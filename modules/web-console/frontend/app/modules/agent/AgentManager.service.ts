@@ -74,18 +74,6 @@ const RESERVED_CACHE_NAMES = [
     'TxLog'
 ];
 
-/** Error codes from o.a.i.internal.processors.restGridRestResponse.java */
-const SuccessStatus = {
-    /** Command succeeded. */
-    STATUS_SUCCESS: 0,
-    /** Command failed. */
-    STATUS_FAILED: 1,
-    /** Authentication failure. */
-    AUTH_FAILED: 2,
-    /** Security check failed. */
-    SECURITY_CHECK_FAILED: 3
-};
-
 /**
  * Save in local storage ID of specified cluster.
  *
@@ -373,8 +361,7 @@ export default class AgentManager {
         const oldCluster = _.find(conn.clusters, (cluster) => cluster.id === newCluster.id);
 
         if (oldCluster) {
-            oldCluster.nids = newCluster.nids;
-            oldCluster.addresses = newCluster.addresses;
+            oldCluster.nodes = newCluster.nodes;
             oldCluster.clusterVersion = this.getClusterVersion(newCluster);
             oldCluster.active = newCluster.active;
 
@@ -435,22 +422,20 @@ export default class AgentManager {
     /**
      * Send message.
      *
-     * @param {String} eventType
-     * @param {Object} data
-     * @returns {ng.IPromise}
-     * @private
+     * @param event Event type.
+     * @param params Request payload.
      */
-    _sendToAgent(eventType, data = {}) {
+    private sendToAgent<T>(event: string, params = {}): ng.IPromise<T> {
         if (!this.ws)
             return this.$q.reject('Failed to connect to server');
 
-        const latch = this.$q.defer();
+        const latch = this.$q.defer<T>();
 
         // Generate unique request ID in order to process response.
         const requestId = uuidv4();
 
         if (__dbg)
-            console.log(`Sending request: ${eventType}, ${requestId}`);
+            console.log(`Sending request: ${event}, ${requestId}`);
 
         const reply$ = this.wsSubject.pipe(
             filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
@@ -469,7 +454,7 @@ export default class AgentManager {
         ).subscribe(() => {});
 
         try {
-            this._sendWebSocketEvent(requestId, eventType, data);
+            this._sendWebSocketEvent(requestId, event, params);
         } catch (ignored) {
             reply$.unsubscribe();
 
@@ -480,7 +465,7 @@ export default class AgentManager {
     }
 
     drivers() {
-        return this._sendToAgent('schemaImport:drivers');
+        return this.sendToAgent('schemaImport:drivers');
     }
 
     /**
@@ -490,7 +475,7 @@ export default class AgentManager {
     schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, importSamples}) {
         const info = {user, password};
 
-        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples});
+        return this.sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples});
     }
 
     /**
@@ -500,110 +485,81 @@ export default class AgentManager {
     tables({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, schemas, tablesOnly}) {
         const info = {user, password};
 
-        return this._sendToAgent('schemaImport:metadata', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, schemas, tablesOnly});
+        return this.sendToAgent('schemaImport:metadata', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, schemas, tablesOnly});
     }
 
     /**
-     * @param {Object} cluster
-     * @param {Object} credentials
-     * @param {String} event
-     * @param {Object} params
-     * @returns {ng.IPromise}
-     * @private
+     * @param event Event type.
+     * @param params Request params.
+     * @param authErrMsg Authentication failure message.
      */
-    _restOnActiveCluster(cluster, credentials, event, params) {
-        return this._sendToAgent(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
-            .then((res) => {
-                const {status = SuccessStatus.STATUS_SUCCESS} = res;
-
-                switch (status) {
-                    case SuccessStatus.STATUS_SUCCESS:
-                        if (cluster.secured)
-                            this.clustersSecrets.get(cluster.id).sessionToken = res.sessionToken;
-
-                        return res.data;
-
-                    case SuccessStatus.STATUS_FAILED:
-                        if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {
-                            this.clustersSecrets.get(cluster.id).resetSessionToken();
-
-                            return this._restOnCluster(event, params);
-                        }
-
-                        throw new Error(res.error);
-
-                    case SuccessStatus.AUTH_FAILED:
-                        this.clustersSecrets.get(cluster.id).resetCredentials();
-
-                        return this._restOnCluster(event, params, new Error('Incorrect user and/or password.'));
-
-                    case SuccessStatus.SECURITY_CHECK_FAILED:
-                        throw new Error('Access denied. You are not authorized to access this functionality.');
-
-                    default:
-                        throw new Error('Illegal status in node response');
-                }
-            });
-    }
-
-    /**
-     * @param {String} event
-     * @param {Object} params
-     * @returns {Promise}
-     * @private
-     */
-    _executeOnCluster(event, params) {
-        return this._restOnCluster(event, params)
-            .then((res) => res.result);
-    }
-
-    /**
-     * @param {String} event
-     * @param {Object} params
-     * @param {Error} repeatReason Error with reason of execution repeat.
-     * @returns {Promise}
-     * @private
-     */
-    _restOnCluster(event, params, repeatReason) {
-        return this.connectionSbj.pipe(first()).toPromise()
+    private restOnActiveCluster<T>(event: string, params: Object, authErrMsg: string = null): Promise<T> {
+        return this.connectionSbj.pipe(first()).toPromise<ConnectionState>()
             .then(({cluster}) => {
                 if (_.isNil(cluster))
                     throw new Error('Failed to execute request on cluster.');
 
-                if (cluster.secured) {
-                    return Promise.resolve(this.clustersSecrets.get(cluster.id))
-                        .then((secrets) => {
-                            if (secrets.hasCredentials())
+                if (_.isNil(authErrMsg))
+                    return {cluster, credentials: {}};
+
+                return Promise.resolve(this.clustersSecrets.get(cluster.id))
+                    .then((secrets) => {
+                        if (secrets.hasCredentials() && _.isEmpty(authErrMsg))
+                            return secrets;
+
+                        return this.ClusterLoginSrv.askCredentials(secrets, authErrMsg)
+                            .then((secrets) => {
+                                this.clustersSecrets.put(cluster.id, secrets);
+
                                 return secrets;
-
-                            return this.ClusterLoginSrv.askCredentials(secrets, repeatReason)
-                                .then((secrets) => {
-                                    this.clustersSecrets.put(cluster.id, secrets);
-
-                                    return secrets;
-                                });
-                        })
-                        .then((secrets) => ({cluster, credentials: secrets.getCredentials()}));
-                }
-
-                return {cluster, credentials: {}};
+                            });
+                    })
+                    .then((secrets) => ({cluster, credentials: secrets.getCredentials()}));
             })
-            .then(({cluster, credentials}) => this._restOnActiveCluster(cluster, credentials, event, params));
+            .then(({cluster, credentials}) => this.sendToAgent<AgentTypes.GridRestResponse<T>>(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
+                .then((res) => {
+                    switch (res.successStatus) {
+                        case AgentTypes.SuccessStatus.SUCCESS:
+                            return res.response;
+
+                        case AgentTypes.SuccessStatus.FAILED:
+                            if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)'))
+                                return this.restOnActiveCluster(event, params, 'Unknown or expired session.');
+
+                            throw new Error(res.error);
+
+                        case AgentTypes.SuccessStatus.AUTH_FAILED:
+                            this.clustersSecrets.get(cluster.id).resetCredentials();
+
+                            return this.restOnActiveCluster(event, params, 'Incorrect user and/or password.');
+
+                        case AgentTypes.SuccessStatus.SECURITY_CHECK_FAILED:
+                            throw new Error('Access denied. You are not authorized to access this functionality.');
+
+                        default:
+                            throw new Error('Illegal status in node response');
+                    }
+                })
+            );
+    }
+
+    logout(clusterId: string) {
+        return this.sendToAgent('cluster:logout', clusterId)
+            .then(() => this.clustersSecrets.reset(clusterId));
     }
 
     /**
-     * @param {boolean} [attr] Collect node attributes.
-     * @param {boolean} [mtr] Collect node metrics.
-     * @param {boolean} [caches] Collect node caches descriptors.
-     * @returns {Promise}
+     * @param attr Collect node attributes.
+     * @param mtr Collect node metrics.
+     * @param caches Collect node caches descriptors.
      */
-    topology(attr = false, mtr = false, caches = false) {
-        return this._restOnCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
+    topology(attr = false, mtr = false, caches = false): Promise<any> {
+        return this.restOnActiveCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
     }
 
-    collectCacheNames(nid: string) {
+    collectCacheNames(): Promise<AgentTypes.CacheNamesCollectorTaskResponse> {
         if (this.available(COLLECT_BY_CACHE_GROUPS_SINCE))
-            return this.visorTask<AgentTypes.CacheNamesCollectorTaskResponse>('cacheNamesCollectorTask', nid);
+            return this.visorTask('cacheNamesCollectorTask', null);
 
         return Promise.resolve({cacheGroupsNotAvailable: true});
     }
@@ -632,7 +588,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     metadata() {
-        return this._restOnCluster(EVENT_REST, {cmd: 'metadata'})
+        return this.restOnActiveCluster(EVENT_REST, {cmd: 'metadata'})
             .then((caches) => {
                 let types = [];
 
@@ -726,16 +682,17 @@ export default class AgentManager {
     }
 
     /**
-     * @param {String} taskId
-     * @param {Array.<String>|String} nids
-     * @param {Array.<Object>} args
+     * @param taskId
+     * @param nids
+     * @param args
      */
-    visorTask<T>(taskId, nids, ...args): Promise<T> {
+    visorTask<T>(taskId: string, nids: Array<string> | string | null, ...args: Array<any>): Promise<T> {
         args = _.map(args, (arg) => maskNull(arg));
 
         nids = _.isArray(nids) ? nids.join(';') : maskNull(nids);
 
-        return this._executeOnCluster(EVENT_VISOR, {taskId, nids, args});
+        return this.restOnActiveCluster<{result: T}>(EVENT_VISOR, {taskId, nids, args})
+            .then((res) => res.result);
     }
 
     /**
@@ -942,9 +899,8 @@ export default class AgentManager {
      *
      * @param base64 Base64 string.
      * @return Result byte array.
-     * @private
      */
-    _base64ToArrayBuffer(base64: string): Uint8Array {
+    private _base64ToArrayBuffer(base64: string): Uint8Array {
         const binary_string =  window.atob(base64);
         const len = binary_string.length;
         const bytes = new Uint8Array( len );

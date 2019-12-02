@@ -63,7 +63,7 @@ public class ClustersRepository {
 
     /**
      * @param ignite Ignite.
-     * @param txMgr Tx manager.
+     * @param txMgr Transactions manager.
      */
     public ClustersRepository(Ignite ignite, TransactionManager txMgr) {
         this.ignite = ignite;

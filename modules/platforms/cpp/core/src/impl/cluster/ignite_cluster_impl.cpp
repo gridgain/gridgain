@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
+#include "ignite/cluster/cluster_group.h"
+
 #include "ignite/impl/cluster/ignite_cluster_impl.h"
 
 using namespace ignite::jni::java;
@@ -62,6 +66,16 @@ namespace ignite
                 return impl.Get()->IsWalEnabled(cacheName);
             }
 
+            ClusterGroup IgniteClusterImpl::ForLocal()
+            {
+                return impl.Get()->ForLocal();
+            }
+
+            ClusterNode IgniteClusterImpl::GetLocalNode()
+            {
+                return impl.Get()->GetLocalNode();
+            }
+
             void IgniteClusterImpl::SetBaselineTopologyVersion(int64_t topVer)
             {
                 impl.Get()->SetBaselineTopologyVersion(topVer);
@@ -94,3 +108,5 @@ namespace ignite
         }
     }
 }
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
