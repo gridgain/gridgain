@@ -23,8 +23,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.cluster.ClusterMetrics;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
@@ -1300,86 +1298,6 @@ public class PlatformUtils {
         out.writeString(productVersion.stage());
         out.writeLong(productVersion.revisionTimestamp());
         out.writeByteArray(productVersion.revisionHash());
-    }
-
-    /**
-     * Write binary cluster metrics.
-     *
-     * @param writer
-     * @param metrics
-     */
-    private static void writeClusterMetrics(BinaryRawWriterEx writer, @Nullable ClusterMetrics metrics) {
-        if (metrics == null)
-            writer.writeBoolean(false);
-        else {
-            writer.writeBoolean(true);
-
-            writer.writeLong(metrics.getLastUpdateTime());
-            writer.writeTimestamp(new java.sql.Timestamp(metrics.getLastUpdateTime()));
-            writer.writeInt(metrics.getMaximumActiveJobs());
-            writer.writeInt(metrics.getCurrentActiveJobs());
-            writer.writeFloat(metrics.getAverageActiveJobs());
-            writer.writeInt(metrics.getMaximumWaitingJobs());
-
-            writer.writeInt(metrics.getCurrentWaitingJobs());
-            writer.writeFloat(metrics.getAverageWaitingJobs());
-            writer.writeInt(metrics.getMaximumRejectedJobs());
-            writer.writeInt(metrics.getCurrentRejectedJobs());
-            writer.writeFloat(metrics.getAverageRejectedJobs());
-
-            writer.writeInt(metrics.getTotalRejectedJobs());
-            writer.writeInt(metrics.getMaximumCancelledJobs());
-            writer.writeInt(metrics.getCurrentCancelledJobs());
-            writer.writeFloat(metrics.getAverageCancelledJobs());
-            writer.writeInt(metrics.getTotalCancelledJobs());
-
-            writer.writeInt(metrics.getTotalExecutedJobs());
-            writer.writeLong(metrics.getMaximumJobWaitTime());
-            writer.writeLong(metrics.getCurrentJobWaitTime());
-            writer.writeDouble(metrics.getAverageJobWaitTime());
-            writer.writeLong(metrics.getMaximumJobExecuteTime());
-
-            writer.writeLong(metrics.getCurrentJobExecuteTime());
-            writer.writeDouble(metrics.getAverageJobExecuteTime());
-            writer.writeInt(metrics.getTotalExecutedTasks());
-            writer.writeLong(metrics.getTotalIdleTime());
-            writer.writeLong(metrics.getCurrentIdleTime());
-
-            writer.writeInt(metrics.getTotalCpus());
-            writer.writeDouble(metrics.getCurrentCpuLoad());
-            writer.writeDouble(metrics.getAverageCpuLoad());
-            writer.writeDouble(metrics.getCurrentGcCpuLoad());
-            writer.writeLong(metrics.getHeapMemoryInitialized());
-
-            writer.writeLong(metrics.getHeapMemoryUsed());
-            writer.writeLong(metrics.getHeapMemoryCommitted());
-            writer.writeLong(metrics.getHeapMemoryMaximum());
-            writer.writeLong(metrics.getHeapMemoryTotal());
-            writer.writeLong(metrics.getNonHeapMemoryInitialized());
-
-            writer.writeLong(metrics.getNonHeapMemoryUsed());
-            writer.writeLong(metrics.getNonHeapMemoryCommitted());
-            writer.writeLong(metrics.getNonHeapMemoryMaximum());
-            writer.writeLong(metrics.getNonHeapMemoryTotal());
-            writer.writeLong(metrics.getUpTime());
-
-            writer.writeTimestamp(new java.sql.Timestamp(metrics.getStartTime()));
-            writer.writeTimestamp(new java.sql.Timestamp(metrics.getNodeStartTime()));
-            writer.writeInt(metrics.getCurrentThreadCount());
-            writer.writeInt(metrics.getMaximumThreadCount());
-            writer.writeLong(metrics.getTotalStartedThreadCount());
-
-            writer.writeInt(metrics.getCurrentDaemonThreadCount());
-            writer.writeLong(metrics.getLastDataVersion());
-            writer.writeInt(metrics.getSentMessagesCount());
-            writer.writeLong(metrics.getSentBytesCount());
-            writer.writeInt(metrics.getReceivedMessagesCount());
-
-            writer.writeLong(metrics.getReceivedBytesCount());
-            writer.writeInt(metrics.getOutboundMessagesQueueSize());
-
-            writer.writeInt(metrics.getTotalNodes());
-        }
     }
 
     /**

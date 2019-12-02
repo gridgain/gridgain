@@ -25,9 +25,9 @@ import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import java.util.Collection;
 
 /**
- * Cluster group get nodes information response.
+ * Cluster group get nodes details response.
  */
-public class ClientClusterGroupGetNodesInfoResponse extends ClientResponse {
+public class ClientClusterGroupGetNodesDetailsResponse extends ClientResponse {
     /** Nodes collection. */
     private final Collection<ClusterNode> nodes;
 
@@ -36,7 +36,7 @@ public class ClientClusterGroupGetNodesInfoResponse extends ClientResponse {
      *
      * @param reqId Request identifier.
      */
-    public ClientClusterGroupGetNodesInfoResponse(long reqId, Collection<ClusterNode> nodes) {
+    public ClientClusterGroupGetNodesDetailsResponse(long reqId, Collection<ClusterNode> nodes) {
         super(reqId);
         this.nodes = nodes;
     }

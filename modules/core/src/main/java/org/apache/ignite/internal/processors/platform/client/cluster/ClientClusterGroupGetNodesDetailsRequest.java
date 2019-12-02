@@ -27,9 +27,9 @@ import java.util.Arrays;
 import java.util.UUID;
 
 /**
- * Cluster group get nodes information request.
+ * Cluster group get nodes details request.
  */
-public class ClientClusterGroupGetNodesInfoRequest extends ClientRequest {
+public class ClientClusterGroupGetNodesDetailsRequest extends ClientRequest {
     /** Node ids. */
     private final UUID[] nodeIds;
 
@@ -38,7 +38,7 @@ public class ClientClusterGroupGetNodesInfoRequest extends ClientRequest {
      *
      * @param reader Reader.
      */
-    public ClientClusterGroupGetNodesInfoRequest(BinaryRawReader reader) {
+    public ClientClusterGroupGetNodesDetailsRequest(BinaryRawReader reader) {
         super(reader);
         nodeIds = reader.readUuidArray();
     }
@@ -47,6 +47,6 @@ public class ClientClusterGroupGetNodesInfoRequest extends ClientRequest {
     @Override public ClientResponse process(ClientConnectionContext ctx) {
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
         ClusterGroup clusterGrp = cluster.forNodeIds(Arrays.asList(nodeIds));
-        return new ClientClusterGroupGetNodesInfoResponse(requestId(), clusterGrp.nodes());
+        return new ClientClusterGroupGetNodesDetailsResponse(requestId(), clusterGrp.nodes());
     }
 }

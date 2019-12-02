@@ -72,7 +72,7 @@ import org.apache.ignite.internal.processors.platform.client.cluster.ClientClust
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodeIdsRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodesInfoRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodesDetailsRequest;
 
 /**
  * Thin client message parser.
@@ -432,7 +432,7 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientClusterGroupGetNodeIdsRequest(reader);
 
             case OP_CLUSTER_GROUP_GET_NODE_INFO:
-                return new ClientClusterGroupGetNodesInfoRequest(reader);
+                return new ClientClusterGroupGetNodesDetailsRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);

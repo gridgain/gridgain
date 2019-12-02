@@ -51,10 +51,10 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-
         IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
         long curTopVer = cluster.topologyVersion();
 
+        // No topology changes, return false.
         if (curTopVer <= topVer)
             return new ClientBooleanResponse(requestId(), false);
 
@@ -63,7 +63,7 @@ public class ClientClusterGroupGetNodeIdsRequest extends ClientRequest {
         return new ClientClusterGroupGetNodeIdsResponse(requestId(), curTopVer, nodeIds);
     }
 
-    /** Tansform nodes collection to node ids array. */
+    /** Tansforms nodes collection to node ids array. */
     private UUID[] getNodeIds(ClusterGroup clusterGrp){
         Collection<ClusterNode> nodes = clusterGrp.nodes();
         UUID[] nodeIds = new UUID[nodes.size()];

@@ -29,15 +29,16 @@ public class ClientClusterGroupProjection {
     /** */
     private static final short ATTRIBUTE = 1;
 
+    /** */
     private static final short SERVER_NODES = 2;
 
-    /** Filter value mappings. */
+    /** Cluster group factory method. */
     private final Function<ClusterGroup, ClusterGroup> clusterGrpFactory;
 
     /**
      * Constructor.
      *
-     * @param clusterGrpFactory Cluster Group factory.
+     * @param clusterGrpFactory Cluster Group builder.
      */
     private ClientClusterGroupProjection(Function<ClusterGroup, ClusterGroup> clusterGrpFactory){
         this.clusterGrpFactory = clusterGrpFactory;
@@ -80,10 +81,10 @@ public class ClientClusterGroupProjection {
     }
 
     /**
-     * Apply projection.
+     * Applies projection.
      *
-     * @param clusterGrp Cluster group before projection.
-     * @return Cluster group after projection.
+     * @param clusterGrp Source cluster group.
+     * @return New cluster group instance with the projection.
      */
     public ClusterGroup apply(ClusterGroup clusterGrp){
         if(clusterGrpFactory == null)

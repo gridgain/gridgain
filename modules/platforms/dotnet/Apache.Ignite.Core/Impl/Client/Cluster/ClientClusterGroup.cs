@@ -258,9 +258,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Func<IBinaryRawReader, bool> readFunc = reader =>
             {
                 var cnt = reader.ReadInt();
-                _ignite.SaveClientClusterNode(reader);
                 for (var i = 0; i < cnt; i++)
                 {
+                    _ignite.SaveClientClusterNode(reader);
                 }
 
                 return true;
