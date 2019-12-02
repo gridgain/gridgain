@@ -22,11 +22,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -35,6 +37,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -51,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -66,6 +70,11 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 public class PartitionReconciliationProcessor {
     /** Recheck delay seconds. */
     private final int RECHECK_DELAY = 10;
+
+    /**
+     * Number of tasks works parallel.
+     */
+    private final int PARALLELISM_LEVEL = 100;
 
     /** Caches. */
     private final Collection<String> caches;
@@ -87,10 +96,13 @@ public class PartitionReconciliationProcessor {
      */
     private final BlockingQueue<DelayedHolder<? extends PipelineWorkload>> queue = new DelayQueue<>();
 
+    /** High priority queue. */
+    private final BlockingQueue<DelayedHolder<? extends PipelineWorkload>> highPriorityQueue = new LinkedBlockingQueue<>();
+
     /**
      *
      */
-    private final AtomicInteger liveListeners = new AtomicInteger();
+    private final Semaphore liveListeners = new Semaphore(PARALLELISM_LEVEL);
 
     /**
      *
@@ -156,7 +168,9 @@ public class PartitionReconciliationProcessor {
                     schedule(new Batch(cache, i, null));
             }
 
-            while (!queue.isEmpty() || liveListeners.get() != 0) {
+            boolean live = false;
+
+            while (!isEmpty() || (live = hasLiveHandlers())) {
                 AffinityTopologyVersion currVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
 
                 if (!startTopVer.equals(currVer)) {
@@ -165,13 +179,13 @@ public class PartitionReconciliationProcessor {
                     return new PartitionReconciliationResult(Collections.emptyMap());
                 }
 
-                if (queue.isEmpty() && liveListeners.get() != 0) {
+                if (isEmpty() && live) {
                     Thread.sleep(1_000);
 
                     continue;
                 }
 
-                PipelineWorkload workload = queue.take().getTask();
+                PipelineWorkload workload = takeTask();
 
                 if (workload instanceof Batch)
                     handle((Batch)workload);
@@ -203,7 +217,7 @@ public class PartitionReconciliationProcessor {
     /**
      * @param workload
      */
-    private void handle(Batch workload) {
+    private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
@@ -229,7 +243,7 @@ public class PartitionReconciliationProcessor {
     /**
      * @param workload
      */
-    private void handle(Recheck workload) {
+    private void handle(Recheck workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(), workload.partitionId(), startTopVer),
@@ -252,9 +266,9 @@ public class PartitionReconciliationProcessor {
                         );
                     }
                     else if (fixMode)
-                        schedule(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys));
+                        scheduleHighPriority(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys));
                     else
-                        addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts);
+                        addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys);
                 }
             });
     }
@@ -289,10 +303,35 @@ public class PartitionReconciliationProcessor {
     /**
      *
      */
+    private boolean hasLiveHandlers() {
+        return PARALLELISM_LEVEL != liveListeners.availablePermits();
+    }
+
+    /**
+     *
+     */
+    private boolean isEmpty() {
+        return highPriorityQueue.isEmpty() && queue.isEmpty();
+    }
+
+    /**
+     *
+     */
+    private PipelineWorkload takeTask() throws InterruptedException {
+        if (!highPriorityQueue.isEmpty())
+            return highPriorityQueue.take().getTask();
+        else
+            return queue.take().getTask();
+    }
+
+    /**
+     *
+     */
     private void addToPrintResult(
         String cacheName,
         int partId,
-        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
     ) {
         CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
 
@@ -308,10 +347,27 @@ public class PartitionReconciliationProcessor {
                     UUID nodeId = versionEntry.getKey();
 
                     try {
+                        Optional<CacheObject> cacheObjOpt = Optional.ofNullable(actualKeys.get(key))
+                            .flatMap(keyVersions -> Optional.ofNullable(keyVersions.get(nodeId)))
+                            .map(VersionedValue::getVal);
+
+                        Optional<String> valStr = cacheObjOpt
+                            .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))
+                            .map(Object::toString);
+
+                        Object keyVal = key.value(ctx, false);
+
                         map.put(nodeId,
                             new PartitionReconciliationDataRowMeta(
-                                new PartitionReconciliationKeyMeta(key.valueBytes(ctx), key.toString(), versionEntry.getValue()),
-                                null
+                                new PartitionReconciliationKeyMeta(
+                                    key.valueBytes(ctx),
+                                    keyVal != null ? keyVal.toString() : null,
+                                    versionEntry.getValue()
+                                ),
+                                new PartitionReconciliationValueMeta(
+                                    cacheObjOpt.isPresent() ? cacheObjOpt.get().valueBytes(ctx) : null,
+                                    valStr.orElse(null)
+                                )
                             ));
                     }
                     catch (IgniteCheckedException e) {
@@ -343,15 +399,15 @@ public class PartitionReconciliationProcessor {
      * @param lsnr Listener.
      */
     private <T extends CachePartitionRequest, R> void compute(Class<? extends ComputeTask<T, R>> taskCls, T arg,
-        IgniteInClosure<? super IgniteFuture<R>> lsnr) {
-        liveListeners.incrementAndGet();
+        IgniteInClosure<? super IgniteFuture<R>> lsnr) throws InterruptedException {
+        liveListeners.acquire();
 
         ignite.compute(partOwners(arg.cacheName(), arg.partitionId())).executeAsync(taskCls, arg).listen(futRes -> {
             try {
                 lsnr.apply(futRes);
             }
             finally {
-                liveListeners.decrementAndGet();
+                liveListeners.release();
             }
         });
     }
@@ -363,6 +419,18 @@ public class PartitionReconciliationProcessor {
      */
     private void schedule(PipelineWorkload task) {
         schedule(task, 0, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     *
+     */
+    private void scheduleHighPriority(PipelineWorkload task) {
+        try {
+            highPriorityQueue.put(new DelayedHolder<>(-1, task));
+        }
+        catch (InterruptedException e) { // This queue unbounded as result the exception isn't reachable.
+            throw new IgniteException(e);
+        }
     }
 
     /**
