@@ -29,6 +29,7 @@ public class CacheInfo {
     /** Deployment id. */
     private IgniteUuid deploymentId;
 
+    /** Created by sql. */
     private boolean createdBySql;
 
     /** Cache group. */
