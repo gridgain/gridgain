@@ -976,12 +976,12 @@ namespace Apache.Ignite.Core.Impl
             IBinaryRawReader reader = Marshaller.StartUnmarshal(stream, false);
 
             var node = new ClusterNodeImpl(reader);
-            
+
             node.Init(this);
 
             _nodes[node.Id] = node;
         }
-        
+
         /// <summary>
         /// Returns instance of Ignite Transactions to mark a transaction with a special label.
         /// </summary>

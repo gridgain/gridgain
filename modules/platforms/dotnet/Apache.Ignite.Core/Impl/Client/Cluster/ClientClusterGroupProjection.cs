@@ -33,6 +33,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** Filter value mappings. */
         private readonly List<IProjectionItem> _filter;
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="filter">Filter.</param>
         private ClientClusterGroupProjection(List<IProjectionItem> filter)
         {
             _filter = filter;
