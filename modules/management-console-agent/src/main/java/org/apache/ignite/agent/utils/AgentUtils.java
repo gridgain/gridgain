@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.authentication.AuthorizationContext
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -213,5 +214,41 @@ public final class AgentUtils {
                 // No-op.
             }
         }
+    }
+
+    /**
+     * @return Host of HTTP/HTTP proxy.
+     */
+    public static String getProxyHost() {
+        String httpsProxyHost = System.getProperty("https.proxyHost");
+
+        return F.isEmpty(httpsProxyHost) ? System.getProperty("http.proxyHost") : httpsProxyHost;
+    }
+
+    /**
+     * @return Port of HTTP/HTTP proxy.
+     */
+    public static String getProxyPort() {
+        String httpsProxyPort = System.getProperty("https.proxyPort");
+
+        return F.isEmpty(httpsProxyPort) ? System.getProperty("http.proxyPort") : httpsProxyPort;
+    }
+
+    /**
+     * @return Username of HTTP/HTTP proxy.
+     */
+    public static String getProxyUsername() {
+        String httpsProxyUsername = System.getProperty("https.proxyUsername");
+
+        return F.isEmpty(httpsProxyUsername) ? System.getProperty("http.proxyUsername") : httpsProxyUsername;
+    }
+
+    /**
+     * @return Password of HTTP/HTTP proxy.
+     */
+    public static String getProxyPassword() {
+        String httpsProxyPwd = System.getProperty("https.proxyPassword");
+
+        return F.isEmpty(httpsProxyPwd) ? System.getProperty("http.proxyPassword") : httpsProxyPwd;
     }
 }

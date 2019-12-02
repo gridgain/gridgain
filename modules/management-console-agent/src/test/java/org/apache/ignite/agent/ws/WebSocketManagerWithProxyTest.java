@@ -83,6 +83,57 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
     }
 
     /**
+     * Should connect with HTTP proxy.
+     */
+    @Test
+    @WithSystemProperty(key = "test.withProxy", value = "true")
+    public void shouldConnectWithProxyFromHttpsProperty() throws Exception {
+        try (GenericContainer proxy = startProxy()) {
+            System.setProperty("https.proxyHost", proxy.getContainerIpAddress());
+            System.setProperty("https.proxyPort", valueOf(proxy.getFirstMappedPort()));
+
+            IgniteEx ignite = startGrid(0);
+
+            changeManagementConsoleConfig(ignite);
+        }
+    }
+
+    /**
+     * Should connect with HTTPS proxy.
+     */
+    @Test
+    @WithSystemProperty(key = "test.withProxy", value = "true")
+    public void shouldConnectWithHttpsProxyFromHttpsProperty() throws Exception {
+        try (GenericContainer httpsProxy = startHttpsProxy()) {
+            System.setProperty("https.proxyHost", httpsProxy.getContainerIpAddress());
+            System.setProperty("https.proxyPort", valueOf(httpsProxy.getFirstMappedPort()));
+
+            IgniteEx ignite = startGrid(0);
+
+            changeManagementConsoleConfig(ignite);
+        }
+    }
+
+    /**
+     * Should connect with HTTP proxy with authorization.
+     */
+    @Test
+    @WithSystemProperty(key = "test.withProxy", value = "true")
+    public void shouldConnectWithAuthProxyFromHttpsProperty() throws Exception {
+        try (GenericContainer authProxy = startProxyWithCreds()) {
+            System.setProperty("https.proxyHost", authProxy.getContainerIpAddress());
+            System.setProperty("https.proxyPort", valueOf(authProxy.getFirstMappedPort()));
+
+            System.setProperty("https.proxyUsername", "user");
+            System.setProperty("https.proxyPassword", "123456");
+
+            IgniteEx ignite = startGrid(0);
+
+            changeManagementConsoleConfig(ignite);
+        }
+    }
+
+    /**
      * Weboscket manager test with proxy and secured backend.
      */
     @ActiveProfiles("ssl")

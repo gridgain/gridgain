@@ -20,14 +20,11 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -54,6 +51,11 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.apache.ignite.agent.utils.AgentUtils.EMPTY;
+import static org.apache.ignite.agent.utils.AgentUtils.getProxyHost;
+import static org.apache.ignite.agent.utils.AgentUtils.getProxyPassword;
+import static org.apache.ignite.agent.utils.AgentUtils.getProxyPort;
+import static org.apache.ignite.agent.utils.AgentUtils.getProxyUsername;
+import static org.apache.ignite.ssl.SslContextFactory.getDisabledTrustManager;
 import static org.glassfish.tyrus.client.ClientManager.createClient;
 import static org.glassfish.tyrus.client.ClientProperties.PROXY_URI;
 import static org.glassfish.tyrus.client.ClientProperties.SSL_ENGINE_CONFIGURATOR;
@@ -279,7 +281,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         try {
             SSLContext ctx = SSLContext.getInstance("TLS");
 
-            ctx.init(null, new TrustManager[] {new DisabledX509TrustManager()}, null);
+            ctx.init(null, new TrustManager[] {getDisabledTrustManager()}, null);
 
             SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(ctx, true, false, false);
 
@@ -296,12 +298,12 @@ public class WebSocketManager extends GridProcessorAdapter {
      * @param mgr Manager.
      */
     private void configureProxy(ClientManager mgr) {
-        String proxyHost = System.getProperty("http.proxyHost");
+        String proxyHost = getProxyHost();
 
-        String proxyPort = System.getProperty("http.proxyPort");
+        String proxyPort = getProxyPort();
 
         if (!F.isEmpty(proxyHost) && !F.isEmpty(proxyPort)) {
-            mgr.getProperties().put(PROXY_URI, "http://" + proxyHost + ':' + proxyPort);
+            mgr.getProperties().put(PROXY_URI, "non_used_schema://" + proxyHost + ':' + proxyPort);
 
             addAuthentication(mgr);
         }
@@ -311,9 +313,9 @@ public class WebSocketManager extends GridProcessorAdapter {
      * @param mgr Manager.
      */
     private void addAuthentication(ClientManager mgr) {
-        String user = System.getProperty("http.proxyUsername");
+        String user = getProxyUsername();
 
-        String pwd = System.getProperty("http.proxyPassword");
+        String pwd = getProxyPassword();
 
         if (!F.isEmpty(user) || !F.isEmpty(pwd)) {
             Map<String, String> proxyHeaders = new HashMap<>();
@@ -322,29 +324,6 @@ public class WebSocketManager extends GridProcessorAdapter {
                 encodeToString((user + ':' + pwd).getBytes(Charset.forName("UTF-8"))));
 
             mgr.getProperties().put(ClientProperties.PROXY_HEADERS, proxyHeaders);
-        }
-    }
-
-    /**
-     * Disabled trust manager, will skip all certificate checks.
-     */
-    private static class DisabledX509TrustManager implements X509TrustManager {
-        /** Empty certificate array. */
-        private static final X509Certificate[] CERTS = new X509Certificate[0];
-
-        /** {@inheritDoc} */
-        @Override public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // No-op, all clients are trusted.
-        }
-
-        /** {@inheritDoc} */
-        @Override public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // No-op, all clients are trusted.
-        }
-
-        /** {@inheritDoc} */
-        @Override public X509Certificate[] getAcceptedIssuers() {
-            return CERTS;
         }
     }
 }
