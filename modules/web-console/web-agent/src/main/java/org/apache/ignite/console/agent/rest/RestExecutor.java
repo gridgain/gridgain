@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Response;
