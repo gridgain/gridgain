@@ -16,15 +16,23 @@
 
 package org.apache.ignite.internal.processors.cache.checker.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
@@ -103,6 +111,9 @@ public class ConsistencyCheckUtils {
         return allNonMaxChanged;
     }
 
+    /**
+     *
+     */
     public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey,
         GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
         if (unmarshalKey == null)
@@ -111,5 +122,53 @@ public class ConsistencyCheckUtils {
         unmarshalKey.finishUnmarshal(cctx.cacheObjectContext(), null);
 
         return unmarshalKey;
+    }
+
+    /**
+     *
+     */
+    public static List<Map<UUID, PartitionReconciliationDataRowMeta>> mapPartitionReconciliation(
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
+        CacheObjectContext ctx
+    ) throws IgniteCheckedException {
+        List<Map<UUID, PartitionReconciliationDataRowMeta>> brokenKeys = new ArrayList<>();
+
+        for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> entry : conflicts.entrySet()) {
+            KeyCacheObject key = entry.getKey();
+
+            Map<UUID, PartitionReconciliationDataRowMeta> map = new HashMap<>();
+
+            for (Map.Entry<UUID, GridCacheVersion> versionEntry : entry.getValue().entrySet()) {
+                UUID nodeId = versionEntry.getKey();
+
+                Optional<CacheObject> cacheObjOpt = Optional.ofNullable(actualKeys.get(key))
+                    .flatMap(keyVersions -> Optional.ofNullable(keyVersions.get(nodeId)))
+                    .map(VersionedValue::getVal);
+
+                Optional<String> valStr = cacheObjOpt
+                    .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))
+                    .map(Object::toString);
+
+                Object keyVal = key.value(ctx, false);
+
+                map.put(nodeId,
+                    new PartitionReconciliationDataRowMeta(
+                        new PartitionReconciliationKeyMeta(
+                            key.valueBytes(ctx),
+                            keyVal != null ? keyVal.toString() : null,
+                            versionEntry.getValue()
+                        ),
+                        new PartitionReconciliationValueMeta(
+                            cacheObjOpt.isPresent() ? cacheObjOpt.get().valueBytes(ctx) : null,
+                            valStr.orElse(null)
+                        )
+                    ));
+            }
+
+            brokenKeys.add(map);
+        }
+
+        return brokenKeys;
     }
 }
