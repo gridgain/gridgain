@@ -393,13 +393,15 @@ public class GridReduceQueryExecutor {
 
         for (int attempt = 0;; attempt++) {
             try {
-                cancel.checkCancelled();;
+                cancel.checkCancelled();
             }
             catch (QueryCancelledException cancelEx) {
                 throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
             }
 
             if (attempt > 0 && retryTimeout > 0 && (U.currentTimeMillis() - startTime > retryTimeout)) {
+                //TODO: GG-23176: To be reafactored. Retry logic looks too complicated.
+                // There are few cases when 'retryCause' can be undefined, so we should throw exception with proper message here.
                 if (lastRun == null || lastRun.retryCause() == null)
                     throw new CacheException("Failed to map SQL query to topology during timeout: " + retryTimeout + "ms");
 
