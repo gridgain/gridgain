@@ -17,9 +17,11 @@
 package org.apache.ignite.agent.utils;
 
 import java.util.UUID;
+import org.apache.ignite.IgniteAuthenticationException;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.*;
 
 /**
@@ -46,5 +48,11 @@ public class AgentUtilsTest {
         String uriWithTrailingSlashes = monitoringUri("http://host:80///", clusterId);
 
         assertEquals(expUri, uriWithTrailingSlashes);
+
+        assertThrows(null, () -> {
+            monitoringUri("http://host super:80", clusterId);
+            return null;
+        }, IllegalArgumentException.class, "Illegal character in authority at index 7: " +
+            "http://host super:80/clusters/" + clusterId + "/monitoring-dashboard");
     }
 }
