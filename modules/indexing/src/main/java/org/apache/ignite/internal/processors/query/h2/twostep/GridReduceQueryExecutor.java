@@ -400,7 +400,7 @@ public class GridReduceQueryExecutor {
             }
 
             if (attempt > 0 && retryTimeout > 0 && (U.currentTimeMillis() - startTime > retryTimeout)) {
-                //TODO: GG-23176: To be reafactored. Retry logic looks too complicated.
+                //TODO: GG-23176: Retry logic looks too complicated.
                 // There are few cases when 'retryCause' can be undefined, so we should throw exception with proper message here.
                 if (lastRun == null || lastRun.retryCause() == null)
                     throw new CacheException("Failed to map SQL query to topology during timeout: " + retryTimeout + "ms");
@@ -469,10 +469,8 @@ public class GridReduceQueryExecutor {
                 partsMap = nodesParts.partitionsMap();
                 qryMap = nodesParts.queryPartitionsMap();
 
-                if (nodes == null)
+                if (F.isEmpty(nodes))
                     continue; // Retry.
-
-                assert !nodes.isEmpty();
 
                 if (isReplicatedOnly || qry.explain()) {
                     ClusterNode locNode = ctx.discovery().localNode();
