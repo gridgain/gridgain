@@ -238,6 +238,40 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test that derived cluster group has no affect on it's parent.
+        /// </summary>
+        [Test]
+        public void TestClusterGroupFiltersDoesNotAffectEachOther()
+        {
+            const string nodeAttrKey = "myAttr";
+            const string nodeAttrVal = "myVal";
+            var cfg = TestUtils.GetTestConfiguration();
+            cfg.UserAttributes = new Dictionary<string, object> {{nodeAttrKey, nodeAttrVal}};
+            cfg.AutoGenerateIgniteInstanceName = true;
+
+            using (Ignition.Start(cfg))
+            {
+                var dotNetNodes = Client.GetCluster().ForServers().ForDotNet();
+                Assert.AreEqual(2, dotNetNodes.GetNodes().Count);
+
+                var dotNetWithMyAttr = dotNetNodes.ForAttribute(nodeAttrKey, nodeAttrVal);
+                Assert.AreEqual(1, dotNetWithMyAttr.GetNodes().Count);
+
+                // Start client node and force topology changes.
+                var clientCfg = TestUtils.GetTestConfiguration(name: "clientNode");
+                clientCfg.ClientMode = true;
+                using (Ignition.Start(clientCfg))
+                {
+                    var newNodes = Client.GetCluster().ForServers().ForDotNet().GetNodes();
+                    Assert.AreEqual(2, newNodes.Count);
+
+                    // Initial projection should keep it's result set.
+                    Assert.AreEqual(newNodes.Count, dotNetNodes.GetNodes().Count);
+                }
+            }
+        }
+
+        /// <summary>
         /// Asserts that client and server node representations are equals.
         /// </summary>
         /// <param name="clusterNode"></param>

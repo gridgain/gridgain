@@ -34,12 +34,21 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly List<IProjectionItem> _filter;
 
         /// <summary>
+        /// Empty constructor.
+        /// </summary>
+        private ClientClusterGroupProjection()
+        {
+            _filter = new List<IProjectionItem>();
+        }
+
+        /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="filter">Filter.</param>
-        private ClientClusterGroupProjection(List<IProjectionItem> filter)
+        /// <param name="proj">Source projection.</param>
+        /// <param name="item">New item.</param>
+        private ClientClusterGroupProjection(ClientClusterGroupProjection proj, IProjectionItem item)
         {
-            _filter = filter;
+            _filter = new List<IProjectionItem>(proj._filter) {item};
         }
 
         /// <summary>
@@ -50,8 +59,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Projection instance.</returns>
         public ClientClusterGroupProjection ForAttribute(string name, string value)
         {
-            _filter.Add(new ForAttributeProjectionItem(name, value));
-            return new ClientClusterGroupProjection(_filter);
+            return new ClientClusterGroupProjection(this, new ForAttributeProjectionItem(name, value));
         }
 
         /// <summary>
@@ -60,8 +68,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Projection instance.</returns>
         public ClientClusterGroupProjection ForServerNodes(bool value)
         {
-            _filter.Add(new ForServerNodesProjectionItem(value));
-            return new ClientClusterGroupProjection(_filter);
+            return new ClientClusterGroupProjection(this, new ForServerNodesProjectionItem(value));
         }
 
         /// <summary>
@@ -69,7 +76,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         public static ClientClusterGroupProjection Empty
         {
-            get { return new ClientClusterGroupProjection(new List<IProjectionItem>()); }
+            get { return new ClientClusterGroupProjection(); }
         }
 
         /// <summary>
@@ -112,6 +119,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             /** */
             private readonly string _key;
+
             /** */
             private readonly string _value;
 
