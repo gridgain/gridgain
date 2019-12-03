@@ -115,7 +115,7 @@ public enum IgniteFeatures {
     TRACING(26),
 
     /***/
-    MANAGEMENT_CONSOLE(28);
+    MANAGEMENT_CONSOLE(28),
 
     /** Support of DR clear sender store from  Web Console. */
     WC_DR_CLEAR_SENDER_STORE(29);

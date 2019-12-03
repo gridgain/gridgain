@@ -85,6 +85,16 @@ export class Table {
         await t.hover(this.actionsButton).click(Selector('.dropdown-menu a').withText(label));
     }
 
+    /** Actions button is disabled. */
+    async actionsIsDisabled() {
+        await t.expect(this.actionsButton.hasAttribute('disabled')).ok();
+    }
+
+    /** Actions button is hided */
+    async actionsIsHided() {
+        await t.expect(this.actionsButton.exists).notOk();
+    }
+
     /** @param {string} group */
     async switchColumnGroup(group) {
         await t.click(this._selector.find('grid-column-selector'))

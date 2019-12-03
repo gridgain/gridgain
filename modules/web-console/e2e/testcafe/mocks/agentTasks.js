@@ -88,6 +88,7 @@ export const simeplFakeSQLQuery = (nid, response) => (ws) => {
 };
 
 export const WC_SCHEDULING_NOT_AVAILABLE = 24;
+export const WC_DR_CLEAR_SENDER_STORE = 29;
 
 const CLUSTER_1 = {
     id: '70831a7c-2b5e-4c11-8c08-5888911d5962',
