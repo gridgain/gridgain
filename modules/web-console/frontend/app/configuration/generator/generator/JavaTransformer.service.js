@@ -883,7 +883,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 imports.add(value);
         };
 
-        const getherImports = (prop) => {
+        const gatherImports = (prop) => {
             if (!prop || !prop.clsName)
                 return;
 
@@ -958,7 +958,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
             }
         };
 
-        crawl(cfg, getherImports, {
+        crawl(cfg, gatherImports, {
             getChildren: (node, context) => {
                 if (!node)
                     return [];
