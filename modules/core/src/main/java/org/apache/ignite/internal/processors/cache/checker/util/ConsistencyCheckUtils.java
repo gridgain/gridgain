@@ -93,7 +93,7 @@ public class ConsistencyCheckUtils {
 
         for (UUID maxVerOwner : maxVersions) {
             VersionedValue verVal = actualKeyVer.get(maxVerOwner);
-            if (verVal == null || maxVer.isLess(verVal.getVer()))
+            if (verVal == null || maxVer.isLess(verVal.version()))
                 return true;
         }
 
@@ -101,7 +101,7 @@ public class ConsistencyCheckUtils {
 
         for (Map.Entry<UUID, GridCacheVersion> entry : oldKeyVer.entrySet()) {
             VersionedValue actualVer = actualKeyVer.get(entry.getKey());
-            if (!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.getVer().isGreaterEqual(maxVer))) {
+            if (!maxVersions.contains(entry.getKey()) && (actualVer == null || !actualVer.version().isGreaterEqual(maxVer))) {
                 allNonMaxChanged = false;
 
                 break;
@@ -144,7 +144,7 @@ public class ConsistencyCheckUtils {
 
                 Optional<CacheObject> cacheObjOpt = Optional.ofNullable(actualKeys.get(key))
                     .flatMap(keyVersions -> Optional.ofNullable(keyVersions.get(nodeId)))
-                    .map(VersionedValue::getVal);
+                    .map(VersionedValue::value);
 
                 Optional<String> valStr = cacheObjOpt
                     .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))

@@ -33,12 +33,14 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -73,6 +75,9 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** Amount of potentially inconsistent keys recheck attempts. */
     private final int recheckAttempts;
 
+    /** Amount of potentially inconsistent keys repair attempts. */
+    private final int repairAttempts;
+
     /**
      *
      */
@@ -97,7 +102,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         boolean fixMode,
         int throttlingIntervalMillis,
         int batchSize,
-        int recheckAttempts
+        int recheckAttempts,
+        int repairAttempts
     ) throws IgniteCheckedException {
         super(ignite, PARALLELISM_LEVEL);
         this.log = ignite.log().getLogger(this);
@@ -106,6 +112,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
+        this.repairAttempts = repairAttempts;
     }
 
     /**
@@ -228,8 +235,36 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @param workload
      */
-    private void handle(Repair workload) {
+    private void handle(Repair workload) throws InterruptedException {
         //TODO repair task code.
+        compute(
+            RepairRequestTask.class,
+            new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer),
+            futRes -> {
+//                // TODO: 03.12.19 rename
+//                Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys = futRes.get();
+//
+//                // TODO: 03.12.19 Is it valid to skip checkConflicts, seems true, cause versions should not change, during last recheck.
+////                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
+////                    = checkConflicts(workload.recheckKeys(), actualKeys);
+//
+//                if (!actualKeys.isEmpty()) {
+//                    if (workload.attempt() < recheckAttempts) {
+//                        schedule(new Recheck(
+//                            actualKeys.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e2 ->  e2.getValue().version())))),
+//                                workload.cacheName(),
+//                                workload.partitionId(),
+//                                workload.attempt() + 1
+//                            ),
+//                            0,
+//                            TimeUnit.SECONDS
+//                        );
+//                    }
+//                }
+//                else {
+//                    // TODO: 03.12.19 fix with majority.
+//                }
+            });
     }
 
     /**
@@ -249,7 +284,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 res.put(key, versionedByNodes);
         }
 
-        return new Repair(cacheName, partId, res);
+        // TODO: 03.12.19 Decrement or increment attempt.
+        return new Repair(cacheName, partId, res, 1);
     }
 
     /**

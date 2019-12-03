@@ -261,18 +261,22 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             try (PrintWriter pw = new PrintWriter(f)) {
                 ((Consumer<String>)(pw::write)).accept(prepareHeaderMeta());
 
-                res.print(pw::write);
+                if (res != null)
+                    res.print(pw::write);
 
                 pw.flush();
             }
             catch (FileNotFoundException e) {
                 printer.accept("Unable to write report to file " + f.getAbsolutePath() + " " + e.getMessage() + "\n");
 
-                res.print(printer);
+                if (res != null)
+                    res.print(printer);
             }
         }
-        else
-            res.print(printer);
+        else {
+            if (res != null)
+                res.print(printer);
+        }
     }
 
     /**

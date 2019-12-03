@@ -36,39 +36,52 @@ public class Repair implements PipelineWorkload {
      */
     private int partId;
 
+    /** Attempt number. */
+    private int attempt;
+
     /**
      *
      */
     private Map<KeyCacheObject, Map<UUID, VersionedValue>> data;
 
     /** */
-    public Repair(String cacheName,
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public Repair(String cacheName,
         int partId,
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> data
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> data,
+        int attempt
     ) {
         this.cacheName = cacheName;
         this.partId = partId;
         this.data = data;
+        this.attempt = attempt;
     }
 
     /**
-     *
+     * @return Cache name.
      */
-    public String getCacheName() {
+    public String cacheName() {
         return cacheName;
     }
 
     /**
-     *
+     * @return Partition id.
      */
-    public int getPartId() {
+    public int partitionId() {
         return partId;
     }
 
     /**
-     *
+     * @return Data.
      */
-    public Map<KeyCacheObject, Map<UUID, VersionedValue>> getData() {
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public Map<KeyCacheObject, Map<UUID, VersionedValue>> data() {
         return data;
+    }
+
+    /**
+     * @return Attempt number.
+     */
+    public int attempt() {
+        return attempt;
     }
 }

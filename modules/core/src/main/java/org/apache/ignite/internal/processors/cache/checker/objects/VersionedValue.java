@@ -38,7 +38,7 @@ public class VersionedValue implements Serializable {
     /**
      *
      */
-    private long updateCounter;
+    private long updateCntr;
 
     /**
      *
@@ -48,38 +48,38 @@ public class VersionedValue implements Serializable {
     /**
      *
      */
-    public VersionedValue(CacheObject val, GridCacheVersion ver, long updateCounter, long recheckStartTime) {
+    public VersionedValue(CacheObject val, GridCacheVersion ver, long updateCntr, long recheckStartTime) {
         this.val = val;
         this.ver = ver;
-        this.updateCounter = updateCounter;
+        this.updateCntr = updateCntr;
         this.recheckStartTime = recheckStartTime;
     }
 
     /**
-     *
+     * @return Value.
      */
-    public CacheObject getVal() {
+    public CacheObject value() {
         return val;
     }
 
     /**
-     *
+     * @return Version.
      */
-    public GridCacheVersion getVer() {
+    public GridCacheVersion version() {
         return ver;
     }
 
     /**
-     *
+     * @return Update counter.
      */
-    public long getUpdateCounter() {
-        return updateCounter;
+    public long updateCounter() {
+        return updateCntr;
     }
 
     /**
-     *
+     * @return Recheck start time.
      */
-    public long getRecheckStartTime() {
+    public long recheckStartTime() {
         return recheckStartTime;
     }
 }

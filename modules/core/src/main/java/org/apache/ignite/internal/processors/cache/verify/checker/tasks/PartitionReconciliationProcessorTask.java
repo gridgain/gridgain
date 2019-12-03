@@ -106,6 +106,7 @@ public class PartitionReconciliationProcessorTask extends
             Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
                 ignite.context().cache().publicCacheNames(): reconciliationTaskArg.caches();
 
+            // TODO: 03.12.19 Use proper repair attempts instead of constant here.
             try {
                 return new PartitionReconciliationProcessor(
                     ignite,
@@ -113,7 +114,8 @@ public class PartitionReconciliationProcessorTask extends
                     reconciliationTaskArg.fixMode(),
                     reconciliationTaskArg.throttlingIntervalMillis(),
                     reconciliationTaskArg.batchSize(),
-                    reconciliationTaskArg.recheckAttempts()
+                    reconciliationTaskArg.recheckAttempts(),
+                    5
                 ).execute();
             }
             catch (IgniteCheckedException e) {
