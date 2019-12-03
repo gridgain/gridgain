@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly Marshaller _marsh;
 
         /** Topology version. */
-        private long _topVer = TopVerInit;
+        private long _topVer;
 
         /** Locker. */
         private readonly object _syncRoot = new object();
