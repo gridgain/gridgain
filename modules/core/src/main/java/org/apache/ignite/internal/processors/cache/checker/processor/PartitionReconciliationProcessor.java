@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
@@ -93,13 +94,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     public PartitionReconciliationProcessor(
         IgniteEx ignite,
+        GridCachePartitionExchangeManager<Object, Object> exchMgr,
         Collection<String> caches,
         boolean fixMode,
         int throttlingIntervalMillis,
         int batchSize,
         int recheckAttempts
     ) throws IgniteCheckedException {
-        super(ignite, PARALLELISM_LEVEL);
+        super(ignite, exchMgr, PARALLELISM_LEVEL);
         this.log = ignite.log().getLogger(this);
         this.caches = caches;
         this.fixMode = fixMode;
@@ -179,6 +181,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 KeyCacheObject nextBatchKey = res.get1();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.get2();
+
+                assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 if (nextBatchKey != null)
                     schedule(new Batch(workload.cacheName(), workload.partitionId(), nextBatchKey));

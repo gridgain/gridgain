@@ -76,8 +76,12 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
-    public AbstractPipelineProcessor(IgniteEx ignite, int parallelismLevel) throws IgniteCheckedException {
-        this.exchMgr = ignite.context().cache().context().exchange();
+    public AbstractPipelineProcessor(
+        IgniteEx ignite,
+        GridCachePartitionExchangeManager<Object, Object> exchMgr,
+        int parallelismLevel
+    ) throws IgniteCheckedException {
+        this.exchMgr = exchMgr;
         this.startTopVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
         this.parallelismLevel = parallelismLevel;
         this.liveListeners = new Semaphore(parallelismLevel);
