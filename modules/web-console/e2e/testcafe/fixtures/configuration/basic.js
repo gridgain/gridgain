@@ -32,7 +32,7 @@ fixture('Basic configuration')
             .useRole(regularUser)
             .navigateTo(resolveUrl('/configuration/new/basic'));
     })
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test('Check selector picker version list', async(t) => {
     const knownSupportedVersions = ['Ignite 2.7', 'Ignite 2.6', 'Ignite 2.5', 'Ignite 2.4', 'Ignite 2.3', 'Ignite 2.1', 'Ignite 2.0', 'Ignite 1.x'];

@@ -194,6 +194,14 @@ public class Utils {
     }
 
     /**
+     * @param email Source e-mail.
+     * @return Normalized e-mail.
+     */
+    public static String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    /**
      * Static helper that can be used to run a {@link SpringApplication} from the specified source using default
      * settings.
      *
