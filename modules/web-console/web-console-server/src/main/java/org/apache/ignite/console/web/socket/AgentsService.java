@@ -47,6 +47,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
@@ -157,7 +158,7 @@ public class AgentsService extends AbstractSocketHandler {
                     if (nid != null)
                         transitionSrvc.sendResponse(nid, evt);
                     else
-                        log.warn("Detected response with duplicated or unexpected ID: " + evt);
+                        log.warn("Detected response with unexpected ID: " + evt);
                 }
                 catch (ClusterGroupEmptyException ignored) {
                     // No-op.
@@ -264,17 +265,30 @@ public class AgentsService extends AbstractSocketHandler {
      * Send request to locally connected agent.
      * @param req Request.
      * @throws IllegalStateException If connected agent not founded.
+     * @throws IllegalArgumentException If received request with duplicated ID.
+     * @throws IOException If failed to send message.
      */
-    void sendLocally(AgentRequest req) throws IllegalStateException, IOException {
+    void sendLocally(AgentRequest req) throws IllegalStateException, IllegalArgumentException, IOException {
         WebSocketSession ses = findLocalAgent(req.getKey()).orElseThrow(IllegalStateException::new);
 
         WebSocketEvent evt = req.getEvent();
 
-        log.debug("Found local agent session [session={}, event={}]", ses, evt);
+        try {
+            if (srcOfRequests.putIfAbsent(evt.getRequestId(), req.getSrcNid()) != null) {
+                log.warn("Detected request with duplicated ID: {}", evt.getRequestId());
 
-        sendMessage(ses, evt);
+                throw new IllegalArgumentException(message("err.duplicated-request-id"));
+            }
 
-        srcOfRequests.put(evt.getRequestId(), req.getSrcNid());
+            log.debug("Found local agent session [session={}, event={}]", ses, evt);
+
+            sendMessage(ses, evt);
+        }
+        catch (IOException e) {
+            srcOfRequests.remove(evt.getRequestId());
+
+            throw e;
+        }
     }
 
     /**
