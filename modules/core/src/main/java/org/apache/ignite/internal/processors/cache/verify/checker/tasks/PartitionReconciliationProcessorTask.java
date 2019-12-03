@@ -110,6 +110,7 @@ public class PartitionReconciliationProcessorTask extends
             try {
                 return new PartitionReconciliationProcessor(
                     ignite,
+                    ignite.context().cache().context().exchange(),
                     caches,
                     reconciliationTaskArg.fixMode(),
                     reconciliationTaskArg.throttlingIntervalMillis(),
