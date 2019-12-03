@@ -31,7 +31,7 @@ fixture('Import from database dialog')
     .beforeEach(async(t) =>
         await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`))
     )
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     await t.addRequestHooks(
