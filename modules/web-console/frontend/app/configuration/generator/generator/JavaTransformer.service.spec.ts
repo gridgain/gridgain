@@ -1080,7 +1080,7 @@ suite('Java transformer tests', () => {
     test('Should generate list of imports for big configuration without exceptions', () => {
         const configuration = cloneDeep(TEST_CONFIGURATION);
 
-        _addCacheConfiguration(configuration, TEST_CACHE, 5000);
+        _addCacheConfiguration(configuration, TEST_CACHE, 10000);
 
         IgniteJavaTransformer.collectConfigurationImports(configuration);
     }).timeout(0);
