@@ -618,10 +618,12 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestForPredicate()
         {
-            IClusterGroup prj1 = _grid1.GetCluster().ForPredicate(new NotAttributePredicate("value1").Apply);
+            IClusterGroup prj1 = _grid1.GetCluster()
+                .ForPredicate(new NotAttributePredicate<IClusterNode>("value1").Apply);
             Assert.AreEqual(2, prj1.GetNodes().Count);
 
-            IClusterGroup prj2 = prj1.ForPredicate(new NotAttributePredicate("value2").Apply);
+            IClusterGroup prj2 = prj1
+                .ForPredicate(new NotAttributePredicate<IClusterNode>("value2").Apply);
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
             string val;
@@ -637,13 +639,15 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestClientForPredicate()
         {
-            var prj1 = _igniteClient.GetCluster().ForPredicate(node => node.Attributes.Any(attr => attr.Value.Equals("value1")));
+            var prj1 = _igniteClient.GetCluster()
+                .ForPredicate(new NotAttributePredicate<IClientClusterNode>("value1").Apply);
             Assert.AreEqual(2, prj1.GetNodes().Count);
 
-            var prj2 = prj1.ForPredicate(node => node.Attributes.Any(attr => attr.Value.Equals("value2")));
+            var prj2 = prj1
+                .ForPredicate(new NotAttributePredicate<IClientClusterNode>("value2").Apply);
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
-            var val = (string)prj2.GetNodes().First().Attributes.First(attr => attr.Key == "my_attr").Value;
+            var val = (string) prj2.GetNodes().First().Attributes.FirstOrDefault(attr => attr.Key == "my_attr").Value;
 
             Assert.IsTrue(val == null || (!val.Equals("value1") && !val.Equals("value2")));
         }
@@ -651,7 +655,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// <summary>
         /// Attribute predicate.
         /// </summary>
-        private class NotAttributePredicate
+        private class NotAttributePredicate<T> where T: IBaselineNode
         {
             /** Required attribute value. */
             private readonly string _attrVal;
@@ -666,11 +670,11 @@ namespace Apache.Ignite.Core.Tests.Compute
             }
 
             /** <inhreitDoc /> */
-            public bool Apply(IClusterNode node)
+            public bool Apply(T node)
             {
-                string val;
+                object val;
 
-                node.TryGetAttribute("my_attr", out val);
+                node.Attributes.TryGetValue("my_attr", out val);
 
                 return val == null || !val.Equals(_attrVal);
             }
