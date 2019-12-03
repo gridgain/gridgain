@@ -1325,6 +1325,13 @@ public final class IgniteSystemProperties {
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /**
+     * Batch size for logging broken TrackingPage of incremental snapshots.
+     * Default value is <code>0</code>.
+     */
+    public static final String IGNITE_BROKEN_TRACKING_PAGE_LOG_BATCH_SIZE =
+        "IGNITE_BROKEN_TRACKING_PAGE_LOG_BATCH_SIZE";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
