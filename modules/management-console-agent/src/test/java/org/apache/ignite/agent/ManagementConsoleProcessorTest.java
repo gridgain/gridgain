@@ -63,6 +63,7 @@ public class ManagementConsoleProcessorTest extends AbstractServiceTest {
 
         IgniteLogger log = ctx.log(ManagementConsoleProcessor.class);
 
-        verify(log).warning("Current Ignite configuration does not support tracing functionality and management console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
+        verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
+            " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
     }
 }
