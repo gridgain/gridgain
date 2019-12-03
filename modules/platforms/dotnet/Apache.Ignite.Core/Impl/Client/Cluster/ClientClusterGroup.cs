@@ -40,12 +40,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** Platform. */
         private const string Platform = "dotnet";
 
-        /**
-         * Initial topology version; invalid from Java perspective,
-         * so update will be triggered when this value is met.
-         */
-        private const int TopVerInit = 0;
-
         /** Ignite. */
         private readonly IgniteClient _ignite;
 
