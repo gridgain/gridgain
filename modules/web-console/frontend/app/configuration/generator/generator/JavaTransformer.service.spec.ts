@@ -17,12 +17,12 @@
 import IgniteJavaTransformer from './JavaTransformer.service';
 import {assert} from 'chai';
 import {outdent} from 'outdent/lib';
-import cloneDeep from 'lodash/cloneDeep'
-import filter from 'lodash/filter'
-import find from 'lodash/find'
-import forEach from 'lodash/forEach'
-import startsWith from 'lodash/startsWith'
-import includes from 'lodash/includes'
+import cloneDeep from 'lodash/cloneDeep';
+import filter from 'lodash/filter';
+import find from 'lodash/find';
+import forEach from 'lodash/forEach';
+import startsWith from 'lodash/startsWith';
+import includes from 'lodash/includes';
 
 suite('Java transformer tests', () => {
     const caches = [{
@@ -941,10 +941,8 @@ suite('Java transformer tests', () => {
     const _addCacheConfiguration = (cfg, cacheCfg, count = 1) => {
         const caches = find(cfg.properties, {name: 'cacheConfiguration'});
 
-        console.log(JSON.stringify(caches));
-
         if (caches) {
-            for (let i = 0; i < count; i ++) {
+            for (let i = 0; i < count; i++) {
                 const nameProp = {
                     clsName: 'java.lang.String',
                     name: 'name',
@@ -954,7 +952,7 @@ suite('Java transformer tests', () => {
                 const cache = cloneDeep(cacheCfg);
 
                 cache.properties.push(nameProp);
-                caches.items.push(cache)
+                caches.items.push(cache);
             }
         }
     };
@@ -1085,5 +1083,5 @@ suite('Java transformer tests', () => {
         _addCacheConfiguration(configuration, TEST_CACHE, 1000);
 
         IgniteJavaTransformer.collectConfigurationImports(configuration);
-    });
+    }).timeout(0);
 });
