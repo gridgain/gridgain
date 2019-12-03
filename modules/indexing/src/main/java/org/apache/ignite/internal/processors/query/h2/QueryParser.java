@@ -144,7 +144,7 @@ public class QueryParser {
 
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
-        if (cached != null)
+        if (cached != null) {
             return new QueryParserResult(
                 qryDesc,
                 QueryParameters.fromQuery(qry),
@@ -154,6 +154,7 @@ public class QueryParser {
                 cached.dml(),
                 cached.command()
             );
+        }
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
