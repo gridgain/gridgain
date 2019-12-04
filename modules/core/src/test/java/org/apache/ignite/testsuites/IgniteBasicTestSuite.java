@@ -68,6 +68,10 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheConcurre
 import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestoreTest;
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
+import org.apache.ignite.internal.processors.cache.checker.ConsistencyCheckUtilsTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessorTest;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskTest;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTaskTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.DropCacheContextDuringEvictionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictionTaskFailureHandlerTest;
@@ -282,7 +286,14 @@ import org.junit.runners.Suite;
 
     ClassPathContentLoggingTest.class,
 
-    IncompleteDeserializationExceptionTest.class
+    IncompleteDeserializationExceptionTest.class,
+
+    ConsistencyCheckUtilsTest.class,
+    CollectPartitionKeysByRecheckRequestTaskTest.class,
+    CollectPartitionKeysByBatchTaskTest.class,
+    PartitionReconciliationProcessorTest.class
+
+
 })
 public class IgniteBasicTestSuite {
 }
