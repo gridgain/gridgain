@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.agent.rest;
+package org.apache.ignite.console.rest;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,33 +27,33 @@ import org.apache.ignite.console.json.RawContentDeserializer;
  */
 public class RestResult {
     /** REST http code. */
-    private int status;
+    private int successStatus;
 
     /** The field contains description of error if server could not handle the request. */
     private String error;
 
     /** The field contains result of command. */
-    private String data;
+    private String res;
 
     /** Session token string representation. */
     private String sesTok;
 
     /**
-     * @param status REST http code.
+     * @param successStatus REST http code.
      * @param error The field contains description of error if server could not handle the request.
      * @param sesTok The field contains session token.
-     * @param data The field contains result of command.
+     * @param res The field contains result of command.
      */
     @JsonCreator
     private RestResult(
-        @JsonProperty("successStatus") int status,
+        @JsonProperty("successStatus") int successStatus,
         @JsonProperty("error") String error,
         @JsonProperty("sessionToken") String sesTok,
-        @JsonProperty("response") @JsonDeserialize(using = RawContentDeserializer.class) String data
+        @JsonProperty("response") @JsonDeserialize(using = RawContentDeserializer.class) String res
     ) {
-        this.status = status;
+        this.successStatus = successStatus;
         this.error = error;
-        this.data = data;
+        this.res = res;
         this.sesTok = sesTok;
     }
 
@@ -69,8 +69,8 @@ public class RestResult {
     /**
      * @return REST http code.
      */
-    public int getStatus() {
-        return status;
+    public int getSuccessStatus() {
+        return successStatus;
     }
 
     /**
@@ -84,8 +84,8 @@ public class RestResult {
      * @return The field contains result of command.
      */
     @JsonRawValue
-    public String getData() {
-        return data;
+    public String getResponse() {
+        return res;
     }
 
     /**
@@ -93,5 +93,12 @@ public class RestResult {
      */
     public String getSessionToken() {
         return sesTok;
+    }
+
+    /**
+     * Clear session token.
+     */
+    public void clearSessionToken() {
+        this.sesTok = null;
     }
 }

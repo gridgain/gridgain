@@ -33,7 +33,7 @@ fixture('Cluster configuration form change detection')
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
     })
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test.skip('New cluster change detection', async(t) => {
     const overview = new PageConfigurationOverview();
