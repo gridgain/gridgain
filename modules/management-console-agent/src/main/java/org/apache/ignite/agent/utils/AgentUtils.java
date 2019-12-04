@@ -217,24 +217,6 @@ public final class AgentUtils {
     }
 
     /**
-     * @return Host of HTTP/HTTP proxy.
-     */
-    public static String getProxyHost() {
-        String httpsProxyHost = System.getProperty("https.proxyHost");
-
-        return F.isEmpty(httpsProxyHost) ? System.getProperty("http.proxyHost") : httpsProxyHost;
-    }
-
-    /**
-     * @return Port of HTTP/HTTP proxy.
-     */
-    public static String getProxyPort() {
-        String httpsProxyPort = System.getProperty("https.proxyPort");
-
-        return F.isEmpty(httpsProxyPort) ? System.getProperty("http.proxyPort") : httpsProxyPort;
-    }
-
-    /**
      * @return Username of HTTP/HTTP proxy.
      */
     public static String getProxyUsername() {

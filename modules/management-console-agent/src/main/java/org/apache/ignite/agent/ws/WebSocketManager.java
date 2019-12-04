@@ -16,12 +16,15 @@
 
 package org.apache.ignite.agent.ws;
 
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -48,12 +51,11 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+import static java.net.Proxy.NO_PROXY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.apache.ignite.agent.utils.AgentUtils.EMPTY;
-import static org.apache.ignite.agent.utils.AgentUtils.getProxyHost;
 import static org.apache.ignite.agent.utils.AgentUtils.getProxyPassword;
-import static org.apache.ignite.agent.utils.AgentUtils.getProxyPort;
 import static org.apache.ignite.agent.utils.AgentUtils.getProxyUsername;
 import static org.apache.ignite.ssl.SslContextFactory.getDisabledTrustManager;
 import static org.glassfish.tyrus.client.ClientManager.createClient;
@@ -225,7 +227,7 @@ public class WebSocketManager extends GridProcessorAdapter {
         if (uri.getScheme().startsWith("wss"))
             client.getProperties().put(SSL_ENGINE_CONFIGURATOR, createSslEngineConfigurator(log, cfg));
 
-        configureProxy(client);
+        configureProxy(client, uri);
 
         client.setDefaultMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
         client.setDefaultMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
@@ -296,14 +298,28 @@ public class WebSocketManager extends GridProcessorAdapter {
 
     /**
      * @param mgr Manager.
+     * @param uri Uri.
      */
-    private void configureProxy(ClientManager mgr) {
-        String proxyHost = getProxyHost();
+    private void configureProxy(ClientManager mgr, URI uri) {
+        URI httpUri = URI.create("http:" + uri.getSchemeSpecificPart());
+        URI httpsUri = URI.create("https:" + uri.getSchemeSpecificPart());
 
-        String proxyPort = getProxyPort();
+        Optional<Proxy> httpProxy = ProxySelector.getDefault().select(httpUri).stream()
+            .filter(p -> !p.equals(NO_PROXY)).findFirst();
 
-        if (!F.isEmpty(proxyHost) && !F.isEmpty(proxyPort)) {
-            mgr.getProperties().put(PROXY_URI, "non_used_schema://" + proxyHost + ':' + proxyPort);
+        Optional<Proxy> httpsProxy = ProxySelector.getDefault().select(httpsUri).stream()
+            .filter(p -> !p.equals(NO_PROXY)).findFirst();
+
+        String proxyAddr = null;
+
+        if (httpsProxy.isPresent())
+            proxyAddr = httpsProxy.get().address().toString();
+
+        if (F.isEmpty(proxyAddr) && httpProxy.isPresent())
+            proxyAddr = httpProxy.get().address().toString();
+
+        if (!F.isEmpty(proxyAddr)) {
+            mgr.getProperties().put(PROXY_URI, "non_used_schema://" + proxyAddr);
 
             addAuthentication(mgr);
         }
