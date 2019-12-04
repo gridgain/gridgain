@@ -16,6 +16,7 @@
 
 import {Selector, t} from 'testcafe';
 import {CustomFormField} from '../components/FormField';
+import { globalProgressIndicator } from '../components/globalProgressIndicator';
 
 export const emailInput = new CustomFormField({id: 'emailInput'});
 export const passwordInput = new CustomFormField({id: 'passwordInput'});
@@ -25,3 +26,5 @@ export const lastNameInput = new CustomFormField({id: 'lastNameInput'});
 export const companyInput = new CustomFormField({id: 'companyInput'});
 export const countryInput = new CustomFormField({id: 'countryInput'});
 export const signupButton = Selector('button').withText('Sign Up');
+
+export const progressIndicator = globalProgressIndicator;
