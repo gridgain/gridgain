@@ -424,6 +424,9 @@ namespace Apache.Ignite.Core.Impl.Client
                 }
 
                 // Re-try if possible.
+                // TODO: This is broken - we should retry in any case:
+                // 1) Server is newer - use our own latest version
+                // 2) Server is older - use server version
                 var retry = ServerVersion < version && ServerVersion >= Ver100;
 
                 if (retry)
