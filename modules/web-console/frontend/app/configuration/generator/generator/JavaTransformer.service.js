@@ -884,13 +884,14 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     /**
-     * Collect list of imports.
+     * Collect list of imports for specified configuration.
      *
-     * @param {Bean} bean Configuration metadata object.
-     * @param {Set.<String>} imports Set to store used imports.
-     * @returns {Set.<String>} Set of imports.
+     * @param {Bean} cfg Configuration metadata object.
+     * @returns {Set.<String>} Set of used imports.
      */
-    static collectConfigurationImports(cfg, imports = new Set()) {
+    static collectConfigurationImports(cfg) {
+        const imports = new Set();
+
         const addImport = (value) => {
             if (value)
                 imports.add(value);
@@ -1026,7 +1027,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
             nearCacheBean.cacheName = cache.name;
 
-            this.collectConfigurationImports(nearCacheBean, imports);
+            this.collectConfigurationImports(nearCacheBean).forEach((imp) => imports.add(imp));
 
             nearCacheBeans.push(nearCacheBean);
         });
