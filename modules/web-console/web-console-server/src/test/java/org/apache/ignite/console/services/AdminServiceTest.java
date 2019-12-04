@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.dto.Account;
@@ -23,6 +24,7 @@ import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.IgniteSessionRepository;
 import org.junit.AfterClass;
@@ -62,6 +64,10 @@ public class AdminServiceTest {
     /** Activities service. */
     @Autowired
     private AdminService adminSrvc;
+
+    /** Configuration service. */
+    @Autowired
+    private ConfigurationsService cfgSrvc;
 
     /** Event publisher. */
     @MockBean
@@ -129,6 +135,59 @@ public class AdminServiceTest {
     }
 
     /**
+     * Generate cluster to check account counters.
+     *
+     * @return JSON cluster presentation to save.
+     */
+    private JsonObject testCluster() {
+        JsonObject changedItems = new JsonObject();
+
+        // Configure minimal cluster.
+        JsonObject cluster = new JsonObject();
+
+        cluster.add("id", UUID.randomUUID());
+        cluster.add("name", "Cluster");
+
+        JsonObject discovery = new JsonObject();
+
+        discovery.add("kind", "Vm");
+        cluster.add("discovery", discovery);
+
+        changedItems.add("cluster", cluster);
+
+        JsonArray caches = new JsonArray();
+
+        for (int i = 0; i < 2; i++) {
+            JsonObject cache = new JsonObject();
+
+            cache.add("id", UUID.randomUUID());
+            cache.add("name", "Cache" + i);
+
+            caches.add(cache);
+        }
+
+        changedItems.add("caches", caches);
+
+        JsonArray models = new JsonArray();
+
+        for (int i = 0; i < 3; i++) {
+            JsonObject model = new JsonObject();
+
+            model.add("id", UUID.randomUUID());
+            model.add("generatePojo", false);
+            model.add("queryMetadata", "Annotations");
+            model.add("keyType", "java.math.BigDecimal");
+            model.add("valueType", "my.cls.Name");
+
+            models.add(model);
+        }
+
+        changedItems.add("models", models);
+
+        return changedItems;
+    }
+
+    /**
      * Should list users.
      */
     @Test
@@ -147,6 +206,8 @@ public class AdminServiceTest {
 
         sesRepo.save(ses);
 
+        cfgSrvc.saveAdvancedCluster(new ConfigurationKey(acc.getId(), false), testCluster());
+
         long now = System.currentTimeMillis();
 
         JsonArray list = adminSrvc.list(now - MILLIS_IN_A_DAY, now + MILLIS_IN_A_DAY);
@@ -161,6 +222,12 @@ public class AdminServiceTest {
 
                 assertTrue(json.getLong("lastLogin", -1L) > 0);
                 assertTrue(json.getLong("lastActivity", -1L) > 0);
+
+                JsonObject counters = json.getJsonObject("counters");
+
+                assertEquals(Integer.valueOf(1), counters.getInteger("clusters"));
+                assertEquals(Integer.valueOf(2), counters.getInteger("caches"));
+                assertEquals(Integer.valueOf(3), counters.getInteger("models"));
             }
         });
 
