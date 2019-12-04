@@ -50,7 +50,7 @@ public class StripedExecutorMXBeanAdapter implements StripedExecutorMXBean {
 
     /** {@inheritDoc} */
     @Override public int getStripesCount() {
-        return exec.stripes();
+        return exec.stripesCount();
     }
 
     /** {@inheritDoc} */
