@@ -93,7 +93,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener pendingDelFinishedLsnr =
-        new CallbackExecutorLogListener(".*?Cleaned up pending delete object.*", () -> pendingDelLatch.countDown());
+        new CallbackExecutorLogListener(".*?Execution of pending task completed.*", () -> pendingDelLatch.countDown());
 
     /** */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
@@ -187,6 +187,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         createIndex(cache, multicolumn);
 
         for (int i = 0; i < 5_000; i++)
+        //for (int i = 0; i < 111; i++)
             query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
 
         forceCheckpoint();
@@ -318,9 +319,9 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         assertEquals(plan, idxShouldExist, plan.toUpperCase().contains("T_IDX"));
 
         // Trying to do a select.
-        String val = query(cache, "select p from t where p = 1000").get(0).get(0).toString();
+        String val = query(cache, "select p from t where p = 100").get(0).get(0).toString();
 
-        assertEquals("1000", val);
+        assertEquals("100", val);
     }
 
     /**

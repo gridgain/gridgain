@@ -13,10 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.cache.persistence.metastorage;
+package org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask;
 
-public enum PendingDeleteObjectType {
-    SQL_TABLE,
-    SQL_INDEX,
-    CACHE
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAbstractOperation;
+
+public abstract class AbstractSchemaChangePendingTask extends AbstractPendingNodeTask {
+    /** */
+    protected SchemaAbstractOperation schemaOperation;
+
+    public AbstractSchemaChangePendingTask() {
+        /* No op. */
+    }
+
+    public AbstractSchemaChangePendingTask(SchemaAbstractOperation schemaOperation) {
+        this.schemaOperation = schemaOperation;
+    }
 }

@@ -73,6 +73,8 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractPendingNodeTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.PendingNodeTaskFactory;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -211,6 +213,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    /** */
+    private final PendingNodeTaskFactory pendingNodeTaskFactory;
+
     /**
      * @param ctx Kernal context.
      */
@@ -240,6 +245,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     U.warn(log, "Unsupported IO message: " + msg);
             }
         };
+
+        pendingNodeTaskFactory = new PendingNodeTaskFactory(ctx);
     }
 
     /** {@inheritDoc} */
@@ -462,6 +469,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             SchemaProposeDiscoveryMessage oldDesc = activeProposals.put(msg.operation().id(), msg);
 
             assert oldDesc == null;
+
+            AbstractPendingNodeTask pendingNodeTask = pendingNodeTaskFactory.buildTaskIfNeeded(msg.operation(), msg.deploymentId());
+
+            if (pendingNodeTask != null)
+                ctx.cache().addPendingNodeTask(pendingNodeTask);
 
             // Create schema operation and either trigger it immediately from exchange thread or append to already
             // running operation.
@@ -1631,6 +1643,19 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 throw (SchemaOperationException)e;
             else
                 throw new SchemaOperationException("Schema change operation failed: " + e.getMessage(), e);
+        }
+    }
+
+    public void localIndexRename(String schemaName, String idxName, String newName) throws IgniteCheckedException {
+        synchronized (stateMux) {
+            QueryIndexDescriptorImpl idxDesc = idxs.remove(new QueryIndexKey(schemaName, idxName));
+
+            idxs.put(
+                new QueryIndexKey(schemaName, newName),
+                new QueryIndexDescriptorImpl(idxDesc.typeDescriptor(), newName, idxDesc.type(), idxDesc.inlineSize())
+            );
+
+            idx.dynamicIndexRename(schemaName, idxName, newName);
         }
     }
 

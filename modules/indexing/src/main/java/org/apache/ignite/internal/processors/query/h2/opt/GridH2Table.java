@@ -39,8 +39,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.PendingDeleteObject;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.PendingDeleteObjectType;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
@@ -1082,16 +1080,6 @@ public class GridH2Table extends TableBase {
             Index targetIdx = (h2Idx instanceof GridH2ProxyIndex) ?
                 ((GridH2ProxyIndex)h2Idx).underlyingIndex() : h2Idx;
 
-            PendingDeleteObject pendingDelIdx = new PendingDeleteObject(
-                PendingDeleteObjectType.SQL_INDEX,
-                h2Idx.getName(),
-                cacheInfo.name(),
-                getSchema().getName(),
-                getName()
-            );
-
-            cacheContext().kernalContext().cache().addPendingDeleteObject(pendingDelIdx);
-
             for (int i = pkIndexPos; i < idxs.size();) {
                 Index idx = idxs.get(i);
 
@@ -1122,8 +1110,6 @@ public class GridH2Table extends TableBase {
 
                 i++;
             }
-
-            cacheContext().kernalContext().cache().removePendingDeleteObject(pendingDelIdx);
 
             this.idxs = idxs;
         }

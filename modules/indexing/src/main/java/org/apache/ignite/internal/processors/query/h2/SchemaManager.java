@@ -622,6 +622,20 @@ public class SchemaManager {
     }
 
     /**
+     * Allows to rename index.
+     * @param schemaName Schema name.
+     * @param idxName Index name.
+     * @param newName New index name.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void renameIndex(final String schemaName, final String idxName, final String newName)
+        throws IgniteCheckedException{
+        String sql = H2Utils.indexRenameSql(schemaName, idxName, newName);
+
+        connMgr.executeStatement(schemaName, sql);
+    }
+
+    /**
      * Add column.
      *
      * @param schemaName Schema name.
