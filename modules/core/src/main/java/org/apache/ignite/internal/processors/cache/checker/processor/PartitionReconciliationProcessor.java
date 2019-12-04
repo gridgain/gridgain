@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
@@ -195,7 +197,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     schedule(new Batch(workload.cacheName(), workload.partitionId(), nextBatchKey));
 
                 if (!recheckKeys.isEmpty())
-                    schedule(new Recheck(recheckKeys, workload.cacheName(), workload.partitionId(), 0),
+                    schedule(
+                        new Recheck(recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
                         RECHECK_DELAY,
                         TimeUnit.SECONDS
                     );
@@ -222,14 +225,17 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 notResolvingConflicts,
                                 workload.cacheName(),
                                 workload.partitionId(),
-                                workload.attempt() + 1
+                                workload.attempt() + 1,
+                                workload.repairAttempt()
                             ),
                             10,
                             TimeUnit.SECONDS
                         );
                     }
-                    else if (fixMode)
-                        scheduleHighPriority(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys));
+                    else if (fixMode) {
+                        scheduleHighPriority(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts,
+                            actualKeys, workload.repairAttempt()));
+                    }
                     else
                         addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys);
                 }
@@ -240,34 +246,44 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @param workload
      */
     private void handle(Repair workload) throws InterruptedException {
-        //TODO repair task code.
         compute(
             RepairRequestTask.class,
             new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer),
             futRes -> {
-//                // TODO: 03.12.19 rename
-//                Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys = futRes.get();
-//
-//                // TODO: 03.12.19 Is it valid to skip checkConflicts, seems true, cause versions should not change, during last recheck.
-////                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
-////                    = checkConflicts(workload.recheckKeys(), actualKeys);
-//
-//                if (!actualKeys.isEmpty()) {
-//                    if (workload.attempt() < recheckAttempts) {
-//                        schedule(new Recheck(
-//                            actualKeys.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e2 ->  e2.getValue().version())))),
-//                                workload.cacheName(),
-//                                workload.partitionId(),
-//                                workload.attempt() + 1
-//                            ),
-//                            0,
-//                            TimeUnit.SECONDS
-//                        );
-//                    }
-//                }
-//                else {
-//                    // TODO: 03.12.19 fix with majority.
-//                }
+                Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRecheckAndRepair = futRes.get();
+
+                // TODO: 04.12.19 Merge finish unmarshal with lambda.
+                if (!keysToRecheckAndRepair.isEmpty()) {
+                    for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry: keysToRecheckAndRepair.entrySet()) {
+                        try {
+                            dataEntry.getKey().getKey().finishUnmarshal(ignite.cachex(workload.cacheName()).context().cacheObjectContext(), null);
+                        }
+                        catch (IgniteCheckedException e) {
+                            // TODO: 04.12.19
+                            e.printStackTrace();
+                        }
+                    }
+
+                    Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys =
+                        keysToRecheckAndRepair.entrySet().stream().collect(Collectors.toMap(
+                            e -> e.getKey().getKey(),
+                            e -> e.getValue().entrySet().stream().
+                                collect(Collectors.toMap(Map.Entry::getKey, e2 -> e2.getValue().version()))));
+
+                    if (workload.attempt() < repairAttempts) {
+                        schedule(
+                            new Recheck(
+                                recheckKeys,
+                                workload.cacheName(),
+                                workload.partitionId(),
+                                recheckAttempts,
+                                workload.attempt() + 1
+                            ));
+                    }
+                }
+                else {
+                    // TODO: 04.12.19 Fix with majority.
+                }
             });
     }
 
@@ -278,7 +294,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts,
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
+        int repairAttempts
     ) {
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
 
@@ -288,8 +305,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 res.put(key, versionedByNodes);
         }
 
-        // TODO: 03.12.19 Decrement or increment attempt.
-        return new Repair(cacheName, partId, res, 1);
+        return new Repair(cacheName, partId, res, repairAttempts);
     }
 
     /**

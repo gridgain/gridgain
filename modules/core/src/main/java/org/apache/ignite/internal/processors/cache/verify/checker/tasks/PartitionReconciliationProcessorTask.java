@@ -51,8 +51,6 @@ import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
-// TODO: 21.11.19 Tmp class only for test purposes, will be substituted with Max's class.
-// TODO: 19.11.19 Consider extending ComputeTaskSplitAdapter
 @GridInternal
 public class PartitionReconciliationProcessorTask extends
     ComputeTaskAdapter<VisorPartitionReconciliationTaskArg, PartitionReconciliationResult> {

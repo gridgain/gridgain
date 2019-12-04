@@ -38,15 +38,19 @@ public class Recheck implements PipelineWorkload {
     /** Attempt number. */
     private final int attempt;
 
+    /** Repair attempt. */
+    private final int repairAttempt;
+
     /**
      *
      */
     public Recheck(Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
-        int partitionId, int attempt) {
+        int partitionId, int attempt, int repairAttempt) {
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
         this.partitionId = partitionId;
         this.attempt = attempt;
+        this.repairAttempt = repairAttempt;
     }
 
     /**
@@ -75,5 +79,12 @@ public class Recheck implements PipelineWorkload {
      */
     public int attempt() {
         return attempt;
+    }
+
+    /**
+     * @return Repair attempt.
+     */
+    public int repairAttempt() {
+        return repairAttempt;
     }
 }

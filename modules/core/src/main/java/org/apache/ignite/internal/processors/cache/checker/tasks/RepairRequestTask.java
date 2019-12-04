@@ -52,7 +52,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
-public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<KeyCacheObject, Map<UUID, VersionedValue>>> {
+public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<PartitionKeyVersion, Map<UUID, VersionedValue>>> {
     /**
      *
      */
@@ -151,31 +151,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Key
     }
 
     /** {@inheritDoc} */
-    @Override public Map<KeyCacheObject, Map<UUID, VersionedValue>> reduce(
+    @Override public Map<PartitionKeyVersion, Map<UUID, VersionedValue>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
+        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> res = new HashMap<>();
 
-//        GridCacheContext<Object, Object> ctx = ignite.cachex(repairRequest.cacheName()).context();
-//
-//        for (ComputeJobResult result : results) {
-////            List<Map<KeyCacheObject, Map<UUID, VersionedValue>>> partKeys = result.getData();
-//
-//            res.putAll(result.getData());
-//            // TODO: 03.12.19 finish unmarshal.
-//            // TODO: 03.12.19 Seems that below is not necessary.
-////            for (PartitionDataRow key : partKeys) {
-////                try {
-////                    KeyCacheObject keyObj = unmarshalKey(key.getKey(), ctx);
-////                    res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(
-////                        key.getNodeId(),
-////                        new VersionedValue(key.getVal(), key.getVersion(), key.getUpdateCounter(), key.getRecheckStartTime())
-////                    );
-////                }
-////                catch (Exception e) {
-////                    U.error(log, "Updated recheck key [" + key + "] was skipped.", e);
-////                }
-////            }
-//        }
+        for (ComputeJobResult result : results)
+            res.putAll(result.getData());
 
         return res;
     }
@@ -209,8 +190,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Key
 
         /** {@inheritDoc} */
         // TODO: 02.12.19
-        @Override public  Map<KeyCacheObject, Map<UUID, VersionedValue>> execute() throws IgniteException {
-            Map<KeyCacheObject, Map<UUID, VersionedValue>> recheckedKeys = new HashMap<>();
+        @Override public  Map<PartitionKeyVersion, Map<UUID, VersionedValue>> execute() throws IgniteException {
+            Map<PartitionKeyVersion, Map<UUID, VersionedValue>> recheckedKeys = new HashMap<>();
 
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry: data.entrySet()) {
 
@@ -252,8 +233,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Key
                     new RepairEntryProcessor(maxVal, nodeToVersionedValue, removeQueueMaxSize));
 
                 if (!keyWasSuccessfullyFixed) {
-                    // TODO: 03.12.19 Return keys that were not fixed for another recheck-repair iteration.
-//                    recheckedKeys.put(dataEntry.getKey(), dataEntry.getValue());
+                    recheckedKeys.put(dataEntry.getKey(), dataEntry.getValue());
                 }
             }
 
@@ -291,6 +271,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Key
                 if (entry.exists()) {
                     if (currKeyGridCacheVer.compareTo(versionedValue.version()) == 0)
                         entry.setValue(val);
+
                     return true;
                 }
                 else {
