@@ -76,6 +76,11 @@ public class PartitionReconciliationProcessorTest {
     /**
      *
      */
+    private static final int MAX_REPAIR_ATTEPMTS = 3;
+
+    /**
+     *
+     */
     @Test
     public void testBatchDoesNotHaveElementsNothingSchedule() throws IgniteCheckedException {
         MockedProcessor processor = MockedProcessor.create(false);
@@ -259,7 +264,8 @@ public class PartitionReconciliationProcessorTest {
 
             when(igniteMock.log()).thenReturn(Mockito.mock(IgniteLogger.class));
 
-            return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0, 10, MAX_RECHECK_ATTEPMTS);
+            return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0,
+                10, MAX_RECHECK_ATTEPMTS, MAX_REPAIR_ATTEPMTS);
         }
 
         /**
@@ -268,8 +274,8 @@ public class PartitionReconciliationProcessorTest {
         public MockedProcessor(IgniteEx ignite,
             GridCachePartitionExchangeManager<Object, Object> exchMgr,
             Collection<String> caches, boolean fixMode, int throttlingIntervalMillis, int batchSize,
-            int recheckAttempts) throws IgniteCheckedException {
-            super(ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts);
+            int recheckAttempts, int repairAttempts) throws IgniteCheckedException {
+            super(ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, repairAttempts);
         }
 
         /** {@inheritDoc} */
