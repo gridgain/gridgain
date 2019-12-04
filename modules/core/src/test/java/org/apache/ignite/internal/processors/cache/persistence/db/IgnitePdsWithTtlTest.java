@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,14 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
-import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -45,14 +46,14 @@ import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 
 /**
  * Test TTL worker with persistence enabled
  */
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, value = "5")
 public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     /** */
     public static final String CACHE_NAME = "expirableCache";
@@ -71,16 +72,12 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -168,6 +165,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
         waitAndCheckExpired(srv, srv.cache(CACHE_NAME + "-" + (cacheCnt - 1)));
 
+        srv.cluster().active(false);
+
         stopAllGrids();
     }
 
@@ -189,7 +188,7 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
         fillCache(srv.cache(CACHE_NAME));
 
         if (restartGrid) {
-            srv.context().cache().context().database().wakeupForCheckpoint("test-checkpoint");
+            srv.context().cache().context().database().waitForCheckpoint("test-checkpoint");
 
             stopGrid(0);
             srv = startGrid(0);
@@ -202,6 +201,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
         waitAndCheckExpired(srv, cache);
 
+        srv.cluster().active(false);
+
         stopAllGrids();
     }
 
@@ -211,6 +212,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     @Test
     public void testRebalancingWithTtlExpirable() throws Exception {
         IgniteEx srv = startGrid(0);
+
+        srv.cluster().baselineAutoAdjustEnabled(false);
         srv.cluster().active(true);
 
         fillCache(srv.cache(CACHE_NAME));
@@ -226,6 +229,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
         waitAndCheckExpired(srv, cache);
 
+        srv.cluster().active(false);
+
         stopAllGrids();
     }
 
@@ -236,6 +241,9 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     public void testStartStopAfterRebalanceWithTtlExpirable() throws Exception {
         try {
             IgniteEx srv = startGrid(0);
+
+            srv.cluster().baselineAutoAdjustEnabled(false);
+
             startGrid(1);
             srv.cluster().active(true);
 
@@ -264,6 +272,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
 
             stopGrid(1);
             startGrid(1);
+
+            srv.cluster().active(false);
         }
         finally {
             stopAllGrids();

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteDiagnosticAware;
 import org.apache.ignite.internal.IgniteDiagnosticPrepareContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -49,8 +50,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 
+import static java.util.Objects.isNull;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
 
 /**
@@ -355,7 +360,8 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                 false,
                 false,
                 tx.mvccSnapshot(),
-                cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n));
+                IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
+                cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n) : null);
 
             try {
                 cctx.io().send(n, req, tx.ioPolicy());
@@ -436,10 +442,17 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
 
             add(fut); // Append new future.
 
-            Collection<Long> updCntrs = new ArrayList<>(dhtMapping.entries().size());
+            Collection<Long> updCntrs = null;
 
-            for (IgniteTxEntry e : dhtMapping.entries())
-                updCntrs.add(e.updateCounter());
+            if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER)) {
+                updCntrs = new ArrayList<>(dhtMapping.entries().size());
+
+                for (IgniteTxEntry e : dhtMapping.entries()) {
+                    assert e.op() != CREATE && e.op() != UPDATE && e.op() != DELETE || e.updateCounter() != 0 : e;
+
+                    updCntrs.add(e.updateCounter());
+                }
+            }
 
             GridDhtTxFinishRequest req = new GridDhtTxFinishRequest(
                 tx.nearNodeId(),
@@ -473,18 +486,26 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
             req.writeVersion(tx.writeVersion() != null ? tx.writeVersion() : tx.xidVersion());
 
             try {
-                cctx.io().send(n, req, tx.ioPolicy());
+                if (isNull(cctx.discovery().getAlive(n.id()))) {
+                    log.error("Unable to send message (node left topology): " + n);
 
-                if (msgLog.isDebugEnabled()) {
-                    msgLog.debug("DHT finish fut, sent request dht [txId=" + tx.nearXidVersion() +
-                        ", dhtTxId=" + tx.xidVersion() +
-                        ", node=" + n.id() + ']');
+                    fut.onNodeLeft(new ClusterTopologyCheckedException("Node left grid while sending message to: "
+                        + n.id()));
                 }
+                else {
+                    cctx.io().send(n, req, tx.ioPolicy());
 
-                if (sync)
-                    res = true;
-                else
-                    fut.onDone();
+                    if (msgLog.isDebugEnabled()) {
+                        msgLog.debug("DHT finish fut, sent request dht [txId=" + tx.nearXidVersion() +
+                            ", dhtTxId=" + tx.xidVersion() +
+                            ", node=" + n.id() + ']');
+                    }
+
+                    if (sync)
+                        res = true;
+                    else
+                        fut.onDone();
+                }
             }
             catch (IgniteCheckedException e) {
                 // Fail the whole thing.

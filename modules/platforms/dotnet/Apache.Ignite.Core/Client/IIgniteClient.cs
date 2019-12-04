@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -88,6 +88,12 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <returns>Collection of names of currently available caches.</returns>
         ICollection<string> GetCacheNames();
+
+        /// <summary>
+        /// Gets Ignite cluster.
+        /// </summary>
+        /// <returns>Instance of <see cref="IClientCluster" /> interface.</returns>
+        IClientCluster GetCluster();
 
         /// <summary>
         /// Destroys dynamically created (with <see cref="CreateCache{TK,TV}(string)"/> or 

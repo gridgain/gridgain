@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.CacheInvokeEntry;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -39,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteExternalizableExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.lang.GridAbsClosureX;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -98,13 +100,14 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     /** Owning transaction. */
     @GridToStringExclude
     @GridDirectTransient
-    private IgniteInternalTx tx;
+    public IgniteInternalTx tx;
 
     /** Cache key. */
-    @GridToStringInclude
+    @GridToStringExclude
     private KeyCacheObject key;
 
     /** Cache ID. */
+    @GridToStringExclude
     private int cacheId;
 
     /** Transient tx key. */
@@ -210,6 +213,11 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
 
     /** */
     private GridCacheVersion serReadVer;
+
+    /** */
+    @GridDirectTransient
+    @GridToStringExclude
+    private transient @Nullable GridAbsClosureX cqNotifyC;
 
     /**
      * Required by {@link Externalizable}
@@ -933,9 +941,10 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         if (this.ctx == null) {
             GridCacheContext<?, ?> cacheCtx = ctx.cacheContext(cacheId);
 
-            assert cacheCtx != null : "Failed to find cache context [cacheId=" + cacheId +
-                ", readyTopVer=" + ctx.exchange().readyAffinityVersion() + ']';
-
+            if (cacheCtx == null)
+                throw new CacheInvalidStateException(
+                    "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
+            
             if (cacheCtx.isNear() && !near)
                 cacheCtx = cacheCtx.near().dht().context();
             else if (!cacheCtx.isNear() && near)
@@ -1259,6 +1268,19 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         // First of all check classes that may be loaded by class loader other than application one.
         return key != null && !clsLdr.equals(key.getClass().getClassLoader()) ?
             key.getClass() : val != null ? val.getClass() : getClass();
+    }
+
+    /**
+     */
+    public GridAbsClosureX cqNotifyClosure() {
+        return cqNotifyC;
+    }
+
+    /**
+     * @param clo Clo.
+     */
+    public void cqNotifyClosure(GridAbsClosureX clo) {
+        cqNotifyC = clo;
     }
 
     /** {@inheritDoc} */

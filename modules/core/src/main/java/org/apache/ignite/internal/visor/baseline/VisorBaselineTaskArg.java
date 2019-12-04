@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,8 +40,11 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     /** */
     private List<String> consistentIds;
 
-    /** */
-    private VisorBaselineAutoAdjustSettings autoAdjustSettings;
+    /** Baseline auto adjust enable flag. */
+    private Boolean autoAdjustEnabled;
+
+    /** Awaiting time of baseline auto adjust after last topology event in ms. */
+    private Long autoAdjustAwaitingTime;
 
     /**
      * Default constructor.
@@ -51,20 +54,38 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     }
 
     /**
+     * This constructor is required by Web Console.
+     * Do not remove or change signature.
+     *
      * @param topVer Topology version.
      * @param consistentIds Consistent ids.
-     * @param autoAdjustSettings Baseline autoadjustment settings.
+     */
+    public VisorBaselineTaskArg(
+        VisorBaselineOperation op,
+        long topVer,
+        List<String> consistentIds
+    ) {
+        this(op, topVer, consistentIds, null, null);
+    }
+
+    /**
+     * @param topVer Topology version.
+     * @param consistentIds Consistent ids.
+     * @param autoAdjustEnabled Baseline auto adjust enable flag.
+     * @param autoAdjustAwaitingTime Await time of baseline auto adjust after last topology event in ms.
      */
     public VisorBaselineTaskArg(
         VisorBaselineOperation op,
         long topVer,
         List<String> consistentIds,
-        VisorBaselineAutoAdjustSettings autoAdjustSettings
+        Boolean autoAdjustEnabled,
+        Long autoAdjustAwaitingTime
     ) {
         this.op = op;
         this.topVer = topVer;
         this.consistentIds = consistentIds;
-        this.autoAdjustSettings = autoAdjustSettings;
+        this.autoAdjustEnabled = autoAdjustEnabled;
+        this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
     }
 
     /**
@@ -94,10 +115,17 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     }
 
     /**
-     * @return Baseline autoadjustment settings.
+     * @return Baseline auto adjust enable flag.
      */
-    public VisorBaselineAutoAdjustSettings getAutoAdjustSettings() {
-        return autoAdjustSettings;
+    public Boolean isAutoAdjustEnabled() {
+        return autoAdjustEnabled;
+    }
+
+    /**
+     * @return Await time of baseline auto adjust after last topology event in ms.
+     */
+    public Long getAutoAdjustAwaitingTime() {
+        return autoAdjustAwaitingTime;
     }
 
     /** {@inheritDoc} */
@@ -105,7 +133,8 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         U.writeEnum(out, op);
         out.writeLong(topVer);
         U.writeCollection(out, consistentIds);
-        out.writeObject(autoAdjustSettings);
+        out.writeObject(autoAdjustEnabled);
+        out.writeObject(autoAdjustAwaitingTime);
     }
 
     /** {@inheritDoc} */
@@ -114,8 +143,10 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         topVer = in.readLong();
         consistentIds = U.readList(in);
 
-        if (protoVer > V1)
-            autoAdjustSettings = (VisorBaselineAutoAdjustSettings)in.readObject();
+        if (protoVer > V1) {
+            autoAdjustEnabled = (Boolean)in.readObject();
+            autoAdjustAwaitingTime = (Long)in.readObject();
+        }
     }
 
     /** {@inheritDoc} */

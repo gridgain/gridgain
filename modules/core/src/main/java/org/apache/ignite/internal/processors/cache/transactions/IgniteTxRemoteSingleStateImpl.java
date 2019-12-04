@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -117,7 +117,7 @@ public class IgniteTxRemoteSingleStateImpl extends IgniteTxRemoteStateAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidPartition(int part) {
+    @Override public void invalidPartition(int cacheId, int part, GridCacheVersion ver) {
         if (entry != null && entry.context().affinity().partition(entry.key()) == part)
             entry = null;
     }
@@ -125,20 +125,5 @@ public class IgniteTxRemoteSingleStateImpl extends IgniteTxRemoteStateAdapter {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IgniteTxRemoteSingleStateImpl.class, this);
-    }
-
-    /** {@inheritDoc} */
-    @Override public Collection<CacheStoreManager> stores(GridCacheSharedContext cctx) {
-        if (entry == null)
-            return null;
-
-        CacheStoreManager store = entry.context().store();
-
-        if (store.configured()
-            && store.isLocal()) { // Only local stores take part at tx on backup node.
-            return Collections.singleton(store);
-        }
-
-        return null;
     }
 }

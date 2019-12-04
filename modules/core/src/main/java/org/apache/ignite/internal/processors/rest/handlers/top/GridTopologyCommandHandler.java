@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,7 +57,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_ADDR
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_HOST_NAMES;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_PORT;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE;
@@ -293,7 +292,6 @@ public class GridTopologyCommandHandler extends GridRestCommandHandlerAdapter {
 
             attrs.remove(ATTR_CACHE);
             attrs.remove(ATTR_TX_CONFIG);
-            attrs.remove(ATTR_SECURITY_SUBJECT);
             attrs.remove(ATTR_SECURITY_SUBJECT_V2);
             attrs.remove(ATTR_SECURITY_CREDENTIALS);
             attrs.remove(ATTR_BINARY_CONFIGURATION);

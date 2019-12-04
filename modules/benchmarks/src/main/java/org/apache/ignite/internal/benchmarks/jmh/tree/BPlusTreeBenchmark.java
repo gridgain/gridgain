@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,6 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -38,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersion
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.logger.java.JavaLogger;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -174,8 +174,20 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
          */
         TestTree(ReuseList reuseList, int cacheId, PageMemory pageMem, long metaPageId)
             throws IgniteCheckedException {
-            super("test", cacheId, pageMem, null, new AtomicLong(), metaPageId, reuseList,
-                new IOVersions<>(new LongInnerIO()), new IOVersions<>(new LongLeafIO()), null);
+            super(
+                "test",
+                cacheId,
+                null,
+                pageMem,
+                null,
+                new AtomicLong(),
+                metaPageId,
+                reuseList,
+                new IOVersions<>(new LongInnerIO()),
+                new IOVersions<>(new LongLeafIO()),
+                null,
+                null
+            );
 
             PageIO.registerTest(latestInnerIO(), latestLeafIO());
 
@@ -216,7 +228,7 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,12 +27,14 @@ import org.apache.ignite.cache.affinity.AffinityHistoryCleanupTest;
 import org.apache.ignite.cache.affinity.local.LocalAffinityFunctionTest;
 import org.apache.ignite.internal.GridCachePartitionExchangeManagerHistSizeTest;
 import org.apache.ignite.internal.processors.cache.CacheSerializableTransactionsTest;
+import org.apache.ignite.internal.processors.cache.ClientSlowDiscoveryTransactionRemapTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.cache.ClusterStatePartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.ClusterStateReplicatedSelfTest;
 import org.apache.ignite.internal.processors.cache.ConcurrentCacheStartTest;
 import org.apache.ignite.internal.processors.cache.EntryVersionConsistencyReadThroughTest;
 import org.apache.ignite.internal.processors.cache.IgniteCachePutStackOverflowSelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteCacheReadThroughEvictionsVariationsSuite;
 import org.apache.ignite.internal.processors.cache.IgniteCacheStoreCollectionTest;
 import org.apache.ignite.internal.processors.cache.PartitionsExchangeOnDiscoveryHistoryOverflowTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheLateAffinityAssignmentNodeJoinValidationTest;
@@ -86,6 +88,8 @@ public class IgniteCacheMvccTestSuite5 {
         ignoredTests.add(PartitionsExchangeOnDiscoveryHistoryOverflowTest.class);
         ignoredTests.add(GridCachePartitionExchangeManagerHistSizeTest.class);
         ignoredTests.add(ConcurrentCacheStartTest.class);
+        ignoredTests.add(IgniteCacheReadThroughEvictionsVariationsSuite.class);
+        ignoredTests.add(ClientSlowDiscoveryTransactionRemapTest.class);
 
         return IgniteCacheTestSuite5.suite(ignoredTests);
     }

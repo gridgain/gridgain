@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiSecondCacheSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiSelfTest;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpiStartStopSelfTest;
+import org.apache.ignite.spi.checkpoint.cache.CheckCheckpointStartLoggingTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiCustomConfigSelfTest;
 import org.apache.ignite.spi.checkpoint.jdbc.JdbcCheckpointSpiDefaultConfigSelfTest;
@@ -40,6 +41,7 @@ import org.junit.runners.Suite;
     CacheCheckpointSpiSelfTest.class,
     CacheCheckpointSpiStartStopSelfTest.class,
     CacheCheckpointSpiSecondCacheSelfTest.class,
+    CheckCheckpointStartLoggingTest.class,
 
     // JDBC.
     JdbcCheckpointSpiConfigSelfTest.class,

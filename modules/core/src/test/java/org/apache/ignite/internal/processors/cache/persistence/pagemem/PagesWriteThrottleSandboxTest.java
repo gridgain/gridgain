@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
-import org.apache.ignite.internal.processors.cache.ratemetrics.HitRateMetrics;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -113,7 +113,7 @@ public class PagesWriteThrottleSandboxTest extends GridCommonAbstractTest {
 
             final AtomicBoolean run = new AtomicBoolean(true);
 
-            final HitRateMetrics getRate = new HitRateMetrics(5000, 5);
+            final HitRateMetric getRate = new HitRateMetric("getRate", "", 5000, 5);
 
             GridTestUtils.runMultiThreadedAsync(new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -124,14 +124,14 @@ public class PagesWriteThrottleSandboxTest extends GridCommonAbstractTest {
 
                         ignite(0).cache(CACHE_NAME).get(key);
 
-                        getRate.onHit();
+                        getRate.increment();
                     }
 
                     return null;
                 }
             }, 2, "read-loader");
 
-            final HitRateMetrics putRate = new HitRateMetrics(1000, 5);
+            final HitRateMetric putRate = new HitRateMetric("putRate", "", 1000, 5);
 
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
@@ -159,7 +159,7 @@ public class PagesWriteThrottleSandboxTest extends GridCommonAbstractTest {
                             e.printStackTrace();
                         }
 
-                        System.out.println("@@@ putsPerSec=," + (putRate.getRate()) + ", getsPerSec=," + (getRate.getRate()) + ", dirtyPages=," + dirtyPages + ", cpWrittenPages=," + cpWrittenPages + ", cpBufPages=," + cpBufPages);
+                        System.out.println("@@@ putsPerSec=," + (putRate.value()) + ", getsPerSec=," + (getRate.value()) + ", dirtyPages=," + dirtyPages + ", cpWrittenPages=," + cpWrittenPages + ", cpBufPages=," + cpBufPages);
 
                         try {
                             Thread.sleep(1000);
@@ -178,7 +178,7 @@ public class PagesWriteThrottleSandboxTest extends GridCommonAbstractTest {
                     ds.addData(ThreadLocalRandom.current().nextInt(keyCnt), new TestValue(ThreadLocalRandom.current().nextInt(),
                         ThreadLocalRandom.current().nextInt()));
 
-                    putRate.onHit();
+                    putRate.increment();
                 }
             }
 

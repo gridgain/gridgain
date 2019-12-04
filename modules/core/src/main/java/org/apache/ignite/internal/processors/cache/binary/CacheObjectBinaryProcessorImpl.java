@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -238,6 +238,12 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                     );
                 }
 
+                @Override
+                public void addMetaLocally(int typeId, BinaryType meta, boolean failIfUnregistered)
+                    throws BinaryObjectException {
+                    CacheObjectBinaryProcessorImpl.this.addMetaLocally(typeId, meta);
+                }
+
                 @Override public BinaryType metadata(int typeId) throws BinaryObjectException {
                     return CacheObjectBinaryProcessorImpl.this.metadata(typeId);
                 }
@@ -318,6 +324,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Override public void stop(boolean cancel) {
         if (transport != null)
             transport.stop();
+
+        if (metadataFileStore != null)
+            metadataFileStore.stop();
     }
 
     /** {@inheritDoc} */
@@ -569,6 +578,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             if (res.rejected())
                 throw res.error();
+            else if (!ctx.clientNode())
+                metadataFileStore.waitForWriteCompletion(typeId, res.typeVersion());
         }
         catch (IgniteCheckedException e) {
             IgniteCheckedException ex = e;
@@ -643,6 +654,30 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /**
+     * Forces caller thread to wait for binary metadata write operation for given type ID.
+     *
+     * In case of in-memory mode this method becomes a No-op as no binary metadata is written to disk in this mode.
+     *
+     * @param typeId ID of binary type to wait for metadata write operation.
+     */
+    public void waitMetadataWriteIfNeeded(final int typeId) {
+        if (metadataFileStore == null)
+            return;
+
+        BinaryMetadataHolder hldr = metadataLocCache.get(typeId);
+
+        if (hldr != null) {
+            try {
+                metadataFileStore.waitForWriteCompletion(typeId, hldr.pendingVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + hldr.acceptedVersion() + ']', e);
+            }
+        }
+    }
+
+    /**
      * @param typeId Type ID.
      * @return Metadata.
      * @throws IgniteException In case of error.
@@ -683,6 +718,17 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 }
                 catch (IgniteCheckedException ignored) {
                     // No-op.
+                }
+            }
+            else if (metadataFileStore != null) {
+                try {
+                    metadataFileStore.waitForWriteCompletion(typeId, holder.pendingVersion());
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                        ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                    return null;
                 }
             }
 
@@ -796,6 +842,18 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + holder.pendingVersion()
                         + ", acceptedVer=" + holder.acceptedVersion() + ']');
+            }
+        }
+
+        if (holder != null && metadataFileStore != null) {
+            try {
+                metadataFileStore.waitForWriteCompletion(typeId, holder.pendingVersion());
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Failed to wait for metadata write operation for [typeId=" + typeId +
+                    ", typeVer=" + holder.acceptedVersion() + ']', e);
+
+                return null;
             }
         }
 
@@ -960,8 +1018,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         boolean storeVal = !ccfg.isCopyOnRead() || (!isBinaryEnabled(ccfg) &&
             (QueryUtils.isEnabled(ccfg) || ctx.config().isPeerClassLoadingEnabled()));
 
-        boolean binaryEnabled = marsh instanceof BinaryMarshaller && !GridCacheUtils.isSystemCache(ccfg.getName()) &&
-            !GridCacheUtils.isIgfsCache(ctx.config(), ccfg.getName());
+        boolean binaryEnabled = marsh instanceof BinaryMarshaller && !GridCacheUtils.isSystemCache(ccfg.getName());
 
         AffinityKeyMapper cacheAffMapper = ccfg.getAffinityMapper();
 

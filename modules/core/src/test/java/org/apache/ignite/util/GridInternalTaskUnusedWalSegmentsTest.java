@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import org.apache.ignite.internal.visor.misc.VisorWalTask;
 import org.apache.ignite.internal.visor.misc.VisorWalTaskArg;
 import org.apache.ignite.internal.visor.misc.VisorWalTaskOperation;
 import org.apache.ignite.internal.visor.misc.VisorWalTaskResult;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import java.io.File;
@@ -74,15 +75,11 @@ public class GridInternalTaskUnusedWalSegmentsTest extends GridCommonAbstractTes
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         cleanPersistenceDir();
-
-        System.setProperty(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, "2");
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         cleanPersistenceDir();
-
-        System.clearProperty(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE);
     }
 
     /**
@@ -91,6 +88,7 @@ public class GridInternalTaskUnusedWalSegmentsTest extends GridCommonAbstractTes
      * @throws Exception if failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, value = "2")
     public void testCorrectnessOfDeletionTaskSegments() throws Exception {
         try {
             IgniteEx ig0 = (IgniteEx)startGrids(4);

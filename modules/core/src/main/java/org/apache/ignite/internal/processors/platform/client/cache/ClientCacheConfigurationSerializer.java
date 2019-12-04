@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,9 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import java.util.ArrayList;
 import java.util.Collection;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
+import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
 
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_5_0;
 import static org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils.readQueryEntity;
 import static org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils.writeEnumInt;
 import static org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils.writeQueryEntity;
@@ -129,6 +131,9 @@ public class ClientCacheConfigurationSerializer {
     /** */
     private static final short STATISTICS_ENABLED = 406;
 
+    /** */
+    private static final short EXPIRY_POLICY = 407;
+
 
     /**
      * Writes the cache configuration.
@@ -196,6 +201,9 @@ public class ClientCacheConfigurationSerializer {
         } else
             writer.writeInt(0);
 
+        if (ver.compareTo(VER_1_5_0) >= 0)
+            PlatformConfigurationUtils.writeExpiryPolicyFactory(writer, cfg.getExpiryPolicyFactory());
+
         // Write length (so that part of the config can be skipped).
         writer.writeInt(pos, writer.out().position() - pos - 4);
     }
@@ -240,6 +248,10 @@ public class ClientCacheConfigurationSerializer {
 
                 case EAGER_TTL:
                     cfg.setEagerTtl(reader.readBoolean());
+                    break;
+
+                case EXPIRY_POLICY:
+                    cfg.setExpiryPolicyFactory(PlatformConfigurationUtils.readExpiryPolicyFactory(reader));
                     break;
 
                 case STATISTICS_ENABLED:

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.spi.collision;
 
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.spi.IgniteSpi;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Collision SPI allows to regulate how grid jobs get executed when they arrive on a
@@ -85,7 +84,7 @@ public interface CollisionSpi extends IgniteSpi {
      * Note that most collision SPI's might not have external collisions. In that case,
      * they should simply ignore this method and do nothing when listener is set.
      *
-     * @param lsnr Listener for external collision events.
+     * @param lsnr Listener for external collision events ({@code null} to unset the listener).
      */
-    public void setExternalCollisionListener(@Nullable CollisionExternalListener lsnr);
+    public void setExternalCollisionListener(CollisionExternalListener lsnr);
 }

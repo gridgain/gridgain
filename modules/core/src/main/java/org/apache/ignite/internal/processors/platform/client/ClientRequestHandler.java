@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.plugin.security.SecurityException;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_3_0;
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_4_0;
 
 /**
  * Thin client request handler.
@@ -83,7 +83,7 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     @Override public void writeHandshake(BinaryWriterExImpl writer) {
         writer.writeBoolean(true);
 
-        if (ver.compareTo(VER_1_3_0) >= 0) {
+        if (ver.compareTo(VER_1_4_0) >= 0) {
             writer.writeUuid(ctx.kernalContext().localNodeId());
         }
     }
@@ -93,6 +93,10 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
         return false;
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean isCancellationSupported() {
+        return false;
+    }
 
     /** {@inheritDoc} */
     @Override public void registerRequest(long reqId, int cmdType) {

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@
 #include <ignite/jni/java.h>
 #include <ignite/jni/utils.h>
 #include <ignite/ignite_configuration.h>
+#include <ignite/guid.h>
 
 #include <ignite/impl/interop/interop_memory.h>
 #include <ignite/impl/binary/binary_type_manager.h>
@@ -28,17 +29,28 @@
 
 namespace ignite
 {
+    /* Forward declaration. */
+    class Ignite;
+
     namespace impl
     {
         /* Forward declarations. */
+        class IgniteEnvironment;
         class IgniteBindingImpl;
         class ModuleManager;
+        class ClusterNodesHolder;
+        namespace cluster {
+            class ClusterNodeImpl;
+        }
+
+        typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
 
         /**
          * Defines environment in which Ignite operates.
          */
         class IGNITE_IMPORT_EXPORT IgniteEnvironment
         {
+            typedef common::concurrent::SharedPointer<cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
         public:
             /**
              * Default memory block allocation size.
@@ -190,6 +202,20 @@ namespace ignite
             binary::BinaryTypeUpdater* GetTypeUpdater();
 
             /**
+             * Get local cluster node implementation.
+             *
+             * @return Cluster node implementation or NULL if does not exist.
+             */
+            SP_ClusterNodeImpl GetLocalNode();
+
+            /**
+             * Get cluster node implementation by id.
+             *
+             * @return Cluster node implementation or NULL if does not exist.
+             */
+            SP_ClusterNodeImpl GetNode(Guid Id);
+
+            /**
              * Notify processor that Ignite instance has started.
              */
             void ProcessorReleaseStart();
@@ -277,6 +303,23 @@ namespace ignite
              */
             int32_t ComputeTaskJobResult(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
+            /**
+             * Get pointer to ignite node.
+             *
+             * @return Pointer to ignite node.
+             */
+            ignite::Ignite* GetIgnite();
+
+            /**
+             * InLongOutLong callback.
+             * Allow access to private nodes member.
+             *
+             * @param target Target environment.
+             * @param type Operation type.
+             * @param val Value.
+             */
+            friend long long IGNITE_CALL InLongOutLong(void* target, int type, long long val);
+
         private:
             /** Node configuration. */
             IgniteConfiguration* cfg;
@@ -307,6 +350,12 @@ namespace ignite
 
             /** Module manager. */
             common::concurrent::SharedPointer<ModuleManager> moduleMgr;
+
+            /** Cluster nodes. */
+            common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
+
+            /** Ignite node. */
+            ignite::Ignite* ignite;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

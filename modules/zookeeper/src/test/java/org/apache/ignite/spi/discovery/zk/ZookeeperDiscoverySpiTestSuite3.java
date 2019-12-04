@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,8 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Gri
 import org.apache.ignite.internal.processors.cache.distributed.replicated.GridCacheReplicatedNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.multijvm.GridCacheAtomicMultiJvmFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.multijvm.GridCachePartitionedMultiJvmFullApiSelfTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryLongP2PTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryOperationP2PTest;
 import org.apache.ignite.internal.processors.continuous.GridEventConsumeSelfTest;
 import org.apache.ignite.p2p.GridP2PContinuousDeploymentSelfTest;
 import org.junit.BeforeClass;
@@ -42,7 +44,9 @@ import org.junit.runners.Suite;
     GridCachePartitionedSequenceApiSelfTest.class,
     GridCacheAtomicMultiJvmFullApiSelfTest.class,
     GridCachePartitionedMultiJvmFullApiSelfTest.class,
-    GridP2PContinuousDeploymentSelfTest.class
+    GridP2PContinuousDeploymentSelfTest.class,
+    CacheContinuousQueryOperationP2PTest.class,
+    CacheContinuousQueryLongP2PTest.class
 })
 public class ZookeeperDiscoverySpiTestSuite3 {
     /** */

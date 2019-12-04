@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -420,8 +420,12 @@ public class WebSessionFilter implements Filter {
     private String doFilterV1(HttpServletRequest httpReq, ServletResponse res, FilterChain chain) throws IOException,
         ServletException, CacheException {
         WebSession cached = null;
+        String sesId;
 
-        String sesId = httpReq.getRequestedSessionId();
+        if (httpReq.getSession(false) != null)
+            sesId = httpReq.getSession(false).getId();
+        else
+            sesId = httpReq.getRequestedSessionId();
 
         if (sesId != null) {
             sesId = transformSessionId(sesId);
@@ -502,8 +506,12 @@ public class WebSessionFilter implements Filter {
     private String doFilterV2(HttpServletRequest httpReq, ServletResponse res, FilterChain chain)
         throws IOException, ServletException, CacheException {
         WebSessionV2 cached = null;
+        String sesId;
 
-        String sesId = httpReq.getRequestedSessionId();
+        if (httpReq.getSession(false) != null)
+            sesId = httpReq.getSession(false).getId();
+        else
+            sesId = httpReq.getRequestedSessionId();
 
         if (sesId != null) {
             sesId = transformSessionId(sesId);

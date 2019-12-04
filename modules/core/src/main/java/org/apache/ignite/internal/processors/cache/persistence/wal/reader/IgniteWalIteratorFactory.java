@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,13 +22,16 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteOrder;
 import java.nio.file.FileVisitResult;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.TreeSet;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -172,7 +175,8 @@ public class IgniteWalIteratorFactory {
     ) throws IgniteCheckedException, IllegalArgumentException {
         iteratorParametersBuilder.validate();
 
-        return new StandaloneWalRecordsIterator(log,
+        return new StandaloneWalRecordsIterator(
+            iteratorParametersBuilder.log == null ? log : iteratorParametersBuilder.log,
             iteratorParametersBuilder.sharedCtx == null ? prepareSharedCtx(iteratorParametersBuilder) :
                 iteratorParametersBuilder.sharedCtx,
             iteratorParametersBuilder.ioFactory,
@@ -223,9 +227,18 @@ public class IgniteWalIteratorFactory {
     ) throws IllegalArgumentException {
         iteratorParametersBuilder.validate();
 
-        List<T2<Long, Long>> gaps = new ArrayList<>();
+        return hasGaps(resolveWalFiles(iteratorParametersBuilder));
+    }
 
-        List<FileDescriptor> descriptors = resolveWalFiles(iteratorParametersBuilder);
+    /**
+     * @param descriptors File descriptors.
+     * @return List of tuples, low and high index segments with gap.
+     */
+    public List<T2<Long, Long>> hasGaps(
+         @NotNull  List<FileDescriptor> descriptors
+    ) throws IllegalArgumentException {
+
+        List<T2<Long, Long>> gaps = new ArrayList<>();
 
         Iterator<FileDescriptor> it = descriptors.iterator();
 
@@ -265,19 +278,23 @@ public class IgniteWalIteratorFactory {
         if (filesOrDirs == null || filesOrDirs.length == 0)
             return Collections.emptyList();
 
-        final FileIOFactory ioFactory = iteratorParametersBuilder.ioFactory;
-
         final TreeSet<FileDescriptor> descriptors = new TreeSet<>();
 
         for (File file : filesOrDirs) {
             if (file.isDirectory()) {
                 try {
                     walkFileTree(file.toPath(), new SimpleFileVisitor<Path>() {
-                        @Override
-                        public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
-                            addFileDescriptor(path.toFile(), ioFactory, descriptors);
+                        @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+                            addFileDescriptor(path.toFile(), descriptors, iteratorParametersBuilder);
 
                             return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                            if (exc instanceof NoSuchFileException)
+                                return FileVisitResult.CONTINUE;
+
+                            return super.visitFileFailed(file, exc);
                         }
                     });
                 }
@@ -288,31 +305,42 @@ public class IgniteWalIteratorFactory {
                 continue;
             }
 
-            addFileDescriptor(file, ioFactory, descriptors);
+            addFileDescriptor(file, descriptors, iteratorParametersBuilder);
         }
 
         return new ArrayList<>(descriptors);
     }
 
     /**
+     * @param file File
+     * @param descriptors List of descriptors
+     * @param params IteratorParametersBuilder.
+     */
+    private void addFileDescriptor(
+        File file,
+        Collection<FileDescriptor> descriptors,
+        IteratorParametersBuilder params)
+    {
+        Optional.ofNullable(getFileDescriptor(file, params.ioFactory))
+            .filter(desc -> desc.idx() >= params.lowBound.index() && desc.idx() <= params.highBound.index())
+            .ifPresent(descriptors::add);
+    }
+
+    /**
      * @param file File.
      * @param ioFactory IO factory.
-     * @param descriptors List of descriptors.
      */
-    private void addFileDescriptor(File file, FileIOFactory ioFactory, TreeSet<FileDescriptor> descriptors) {
+    private FileDescriptor getFileDescriptor(File file, FileIOFactory ioFactory) {
         if (file.length() < HEADER_RECORD_SIZE)
-            return; // Filter out this segment as it is too short.
+            return null; // Filter out this segment as it is too short.
 
         String fileName = file.getName();
 
         if (!WAL_NAME_PATTERN.matcher(fileName).matches() &&
             !WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(fileName).matches())
-            return;  // Filter out this because it is not segment file.
+            return null;  // Filter out this because it is not segment file.
 
-        FileDescriptor desc = readFileDescriptor(file, ioFactory);
-
-        if (desc != null)
-            descriptors.add(desc);
+        return readFileDescriptor(file, ioFactory);
     }
 
     /**
@@ -368,7 +396,7 @@ public class IgniteWalIteratorFactory {
             kernalCtx, null, null, null,
             null, null, null, dbMgr, null,
             null, null, null, null, null,
-            null,null, null, null, null
+            null, null, null, null, null, null
         );
     }
 
@@ -376,6 +404,8 @@ public class IgniteWalIteratorFactory {
      * Wal iterator parameter builder.
      */
     public static class IteratorParametersBuilder {
+        /** Logger. */
+        private IgniteLogger log;
         /** */
         public static final FileWALPointer DFLT_LOW_BOUND = new FileWALPointer(Long.MIN_VALUE, 0, 0);
 
@@ -429,6 +459,25 @@ public class IgniteWalIteratorFactory {
 
         /** Use strict bounds check for WAL segments. */
         private boolean strictBoundsCheck;
+
+        /**
+         * Factory method for {@link IgniteWalIteratorFactory.IteratorParametersBuilder}.
+         *
+         * @return Instance of {@link IgniteWalIteratorFactory.IteratorParametersBuilder}.
+         */
+        public static IteratorParametersBuilder withIteratorParameters() {
+            return new IteratorParametersBuilder();
+        }
+
+        /**
+         * @param log Logger.
+         * @return IteratorParametersBuilder Self reference.
+         */
+        public IteratorParametersBuilder log(IgniteLogger log){
+            this.log = log;
+
+            return this;
+        }
 
         /**
          * @param filesOrDirs Paths to files or directories.
@@ -532,6 +581,16 @@ public class IgniteWalIteratorFactory {
          */
         public IteratorParametersBuilder filter(IgniteBiPredicate<RecordType, WALPointer> filter) {
             this.filter = filter;
+
+            return this;
+        }
+
+        /**
+         * @param filter Record filter for skip records during iteration.
+         * @return IteratorParametersBuilder Self reference.
+         */
+        public IteratorParametersBuilder addFilter(IgniteBiPredicate<RecordType, WALPointer> filter) {
+            this.filter = this.filter == null ? filter : this.filter.and(filter);
 
             return this;
         }

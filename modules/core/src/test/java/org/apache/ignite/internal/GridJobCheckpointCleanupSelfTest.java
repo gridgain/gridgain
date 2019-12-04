@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,6 +36,7 @@ import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.apache.ignite.spi.checkpoint.CheckpointListener;
 import org.apache.ignite.spi.checkpoint.CheckpointSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -144,7 +145,7 @@ public class GridJobCheckpointCleanupSelfTest extends GridCommonAbstractTest {
     @ComputeTaskSessionFullSupport
     private static class CheckpointCountingTestTask extends ComputeTaskAdapter<ClusterNode, Object> {
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, @Nullable ClusterNode arg) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, @Nullable ClusterNode arg) {
             for (ClusterNode node : subgrid) {
                 if (node.id().equals(arg.id()))
                     return Collections.singletonMap(new ComputeJobAdapter() {

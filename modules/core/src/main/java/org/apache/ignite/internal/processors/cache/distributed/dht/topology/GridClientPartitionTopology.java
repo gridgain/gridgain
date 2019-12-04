@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -728,7 +728,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         @Nullable CachePartitionFullCountersMap cntrMap,
         Set<Integer> partsToReload,
         @Nullable Map<Integer, Long> partSizes,
-        @Nullable AffinityTopologyVersion msgTopVer) {
+        @Nullable AffinityTopologyVersion msgTopVer,
+        @Nullable GridDhtPartitionsExchangeFuture exchFut) {
         if (log.isDebugEnabled())
             log.debug("Updating full partition map [exchVer=" + exchangeVer + ", parts=" + fullMapString() + ']');
 
@@ -1161,8 +1162,12 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public Map<UUID, Set<Integer>> resetOwners(Map<Integer, Set<UUID>> ownersByUpdCounters, Set<Integer> haveHistory) {
-        Map<UUID, Set<Integer>> result = new HashMap<>();
+    @Override public Map<UUID, Set<Integer>> resetOwners(
+        Map<Integer, Set<UUID>> ownersByUpdCounters,
+        Set<Integer> haveHist,
+        GridDhtPartitionsExchangeFuture exchFut
+    ) {
+        Map<UUID, Set<Integer>> res = new HashMap<>();
 
         lock.writeLock().lock();
 
@@ -1186,19 +1191,19 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
                         partMap.updateSequence(partMap.updateSequence() + 1, partMap.topologyVersion());
 
-                        result.computeIfAbsent(remoteNodeId, n -> new HashSet<>());
-                        result.get(remoteNodeId).add(part);
+                        res.computeIfAbsent(remoteNodeId, n -> new HashSet<>());
+                        res.get(remoteNodeId).add(part);
                     }
                 }
             }
 
-            for (Map.Entry<UUID, Set<Integer>> entry : result.entrySet()) {
+            for (Map.Entry<UUID, Set<Integer>> entry : res.entrySet()) {
                 UUID nodeId = entry.getKey();
                 Set<Integer> partsToRebalance = entry.getValue();
 
                 if (!partsToRebalance.isEmpty()) {
                     Set<Integer> historical = partsToRebalance.stream()
-                        .filter(haveHistory::contains)
+                        .filter(haveHist::contains)
                         .collect(Collectors.toSet());
 
                     // Filter out partitions having WAL history.
@@ -1220,7 +1225,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             lock.writeLock().unlock();
         }
 
-        return result;
+        return res;
     }
 
     /** {@inheritDoc} */

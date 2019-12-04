@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -139,7 +139,7 @@ public class GridDhtTxPrepareRequest extends GridDistributedTxPrepareRequest {
      * @param storeWriteThrough Cache store write through flag.
      * @param retVal Need return value flag
      * @param mvccSnapshot Mvcc snapshot.
-     * @param updCntrs Update counters for mvcc Tx.
+     * @param updCntrs Update counters. Null is possible due to compatibility issues.
      */
     public GridDhtTxPrepareRequest(
         IgniteUuid futId,
@@ -159,7 +159,7 @@ public class GridDhtTxPrepareRequest extends GridDistributedTxPrepareRequest {
         boolean storeWriteThrough,
         boolean retVal,
         MvccSnapshot mvccSnapshot,
-        Collection<PartitionUpdateCountersMessage> updCntrs) {
+        @Nullable Collection<PartitionUpdateCountersMessage> updCntrs) {
         super(tx,
             timeout,
             null,

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,19 +58,6 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean isMultiJvm() {
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected boolean isRemoteJvm(String igniteInstanceName) {
-        if(igniteInstanceName.equals("client") || igniteInstanceName.equals("server"))
-            return false;
-        else
-            return super.isRemoteJvm(igniteInstanceName);
-    }
-
-    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
@@ -87,7 +74,7 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
      */
     @Test
     public void testScanQueryWithFailedClosures() throws Exception {
-        Ignite srv = startGrids(4);
+        Ignite srv = startGridsMultiThreaded(4);
         Ignite client = startGrid("client");
 
         CacheConfiguration cfg = new CacheConfiguration(DEFAULT_CACHE_NAME).setCacheMode(PARTITIONED);
@@ -106,7 +93,7 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
      */
     @Test
     public void testScanQueryOverLocalCacheWithFailedClosures() throws Exception {
-        Ignite srv = startGrids(4);
+        Ignite srv = startGridsMultiThreaded(4);
 
         queryCachesWithFailedPredicates(srv, new CacheConfiguration(LOCAL_CACHE_NAME).setCacheMode(LOCAL));
 

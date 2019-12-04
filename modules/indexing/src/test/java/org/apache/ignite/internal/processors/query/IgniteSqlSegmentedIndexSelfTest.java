@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,6 +33,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -209,6 +210,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-11839")
     @Test
     public void testSegmentedPartitionedWithReplicated() throws Exception {
         ignite(0).createCache(cacheConfig(PERSON_CAHE_NAME, true, PersonKey.class, Person.class));

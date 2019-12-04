@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,10 +19,13 @@ package org.apache.ignite.internal.processors.platform.client.cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+
+import javax.cache.expiry.ExpiryPolicy;
 
 /**
  * Cache get request.
@@ -31,11 +34,17 @@ class ClientCacheRequest extends ClientRequest {
     /** Flag: keep binary. */
     private static final byte FLAG_KEEP_BINARY = 1;
 
+    /** Flag: with expiry policy. */
+    private static final byte FLAG_WITH_EXPIRY_POLICY = 2;
+
     /** Cache ID. */
     private final int cacheId;
 
     /** Flags. */
     private final byte flags;
+
+    /** Expiry policy. */
+    private final ExpiryPolicy expiryPolicy;
 
     /**
      * Constructor.
@@ -48,6 +57,10 @@ class ClientCacheRequest extends ClientRequest {
         cacheId = reader.readInt();
 
         flags = reader.readByte();
+
+        expiryPolicy = withExpiryPolicy()
+                ? new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong())
+                : null;
     }
 
     /**
@@ -70,6 +83,15 @@ class ClientCacheRequest extends ClientRequest {
     }
 
     /**
+     *  Gets a value indicating whether expiry policy is set in this request.
+     *
+     * @return expiry policy flag value.
+     */
+    private boolean withExpiryPolicy() {
+        return (flags & FLAG_WITH_EXPIRY_POLICY) == FLAG_WITH_EXPIRY_POLICY;
+    }
+
+    /**
      * Gets the cache for current cache id, ignoring any flags.
      *
      * @param ctx Kernal context.
@@ -80,7 +102,11 @@ class ClientCacheRequest extends ClientRequest {
 
         String cacheName = cacheDesc.cacheName();
 
-        return ctx.kernalContext().grid().cache(cacheName);
+        IgniteCache<Object, Object> cache = ctx.kernalContext().grid().cache(cacheName);
+        if (withExpiryPolicy())
+            cache = cache.withExpiryPolicy(expiryPolicy);
+        
+        return cache;
     }
 
     /**

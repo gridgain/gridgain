@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -37,10 +38,10 @@ public class IgnitePdsCacheDestroyDuringCheckpointTest extends GridCommonAbstrac
     private static final String NAME_PREFIX = "CACHE-";
 
     /** */
-    private static final int NUM_ITERATIONS = 10;
+    private static final int NUM_ITERATIONS = SF.applyLB(5, 3);
 
     /** */
-    private static final int NUM_CACHES = 10;
+    private static final int NUM_CACHES = SF.applyLB(10, 3);
 
     /** */
     private static final int NUM_ENTRIES_PER_CACHE = 200;

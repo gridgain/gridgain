@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,51 +20,60 @@ import org.apache.ignite.scalar.examples._
 import org.apache.ignite.scalar.examples.spark._
 import org.apache.ignite.scalar.scalar
 import org.apache.ignite.testframework.junits.common.GridAbstractExamplesTest
-import org.scalatest.junit.JUnitSuiteLike
+import org.junit.Test
+import org.scalatest.Suite
 
 /**
  * Scalar examples self test.
  */
-class ScalarExamplesSelfTest extends GridAbstractExamplesTest with JUnitSuiteLike {
+class ScalarExamplesSelfTest extends GridAbstractExamplesTest with Suite {
     /** */
     private def EMPTY_ARGS = Array.empty[String]
 
     /** */
+    @Test
     def testScalarCacheAffinitySimpleExample() {
         ScalarCacheAffinityExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarCacheEntryProcessorExample() {
         ScalarCacheEntryProcessorExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarCacheExample() {
         ScalarCacheExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarCacheQueryExample() {
         ScalarCacheQueryExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarClosureExample() {
         ScalarClosureExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarContinuationExample() {
         ScalarContinuationExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarCreditRiskExample() {
         ScalarCreditRiskExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarPingPongExample() {
         scalar("modules/scalar/src/test/resources/spring-ping-pong-partner.xml") {
             ScalarPingPongExample.main(EMPTY_ARGS)
@@ -72,31 +81,37 @@ class ScalarExamplesSelfTest extends GridAbstractExamplesTest with JUnitSuiteLik
     }
 
     /** */
+    @Test
     def testScalarPopularNumbersRealTimeExample() {
         ScalarCachePopularNumbersExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarPrimeExample() {
         ScalarPrimeExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarTaskExample() {
         ScalarTaskExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarWorldShortestMapReduceExample() {
         ScalarWorldShortestMapReduce.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarSnowflakeSchemaExample() {
         ScalarSnowflakeSchemaExample.main(EMPTY_ARGS)
     }
 
     /** */
+    @Test
     def testScalarSharedRDDExample() {
         ScalarSharedRDDExample.main(EMPTY_ARGS)
     }

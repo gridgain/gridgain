@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client.Cache;
 
@@ -348,6 +349,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         public ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>()
         {
             return _cache.WithKeepBinary<TK1, TV1>();
+        }
+
+        /** <inheritDoc /> */
+        public ICacheClient<TK, TV> WithExpiryPolicy(IExpiryPolicy plc)
+        {
+            return _cache.WithExpiryPolicy(plc);
         }
     }
 }

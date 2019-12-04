@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -76,7 +76,7 @@ public class SpringEncryptedCacheRestartTest extends EncryptedCacheRestartTest {
         for (String cacheName : cacheNames) {
             IgniteInternalCache<Object, Object> enc = g.get1().cachex(cacheName);
 
-            assertNotNull(enc);
+            assertNotNull("Cache is null for " + cacheName, enc);
 
             int grpId = CU.cacheGroupId(enc.name(), enc.configuration().getGroupName());
 

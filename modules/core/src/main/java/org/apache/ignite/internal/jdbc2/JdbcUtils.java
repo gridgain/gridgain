@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,6 +57,12 @@ import static java.sql.Types.VARCHAR;
 public class JdbcUtils {
     /** The only possible name for catalog. */
     public static final String CATALOG_NAME = "IGNITE";
+
+    /** Name of TABLE type. */
+    public static final String TYPE_TABLE = "TABLE";
+
+    /** Name of VIEW type. */
+    public static final String TYPE_VIEW = "VIEW";
 
     /**
      * Converts Java class name to type from {@link Types}.
@@ -189,8 +195,12 @@ public class JdbcUtils {
         Throwable t = e;
 
         while (sqlEx == null && t != null) {
-            if (t instanceof SQLException)
-                return (SQLException)t;
+            if (t instanceof SQLException) {
+                if (t.getCause() instanceof IgniteSQLException)
+                    return ((IgniteSQLException)t.getCause()).toJdbcException();
+                else
+                    return (SQLException)t;
+            }
             else if (t instanceof IgniteSQLException)
                 return ((IgniteSQLException)t).toJdbcException();
 
@@ -299,7 +309,7 @@ public class JdbcUtils {
         row.add(CATALOG_NAME);
         row.add(tblMeta.schemaName());
         row.add(tblMeta.tableName());
-        row.add("TABLE");
+        row.add(tblMeta.tableType());
         row.add(null);
         row.add(null);
         row.add(null);

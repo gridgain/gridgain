@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,13 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.platform.PlatformPluginExtension;
 import org.apache.ignite.platform.plugin.cache.PlatformTestCachePluginProvider;
-import org.apache.ignite.plugin.*;
+import org.apache.ignite.plugin.CachePluginContext;
+import org.apache.ignite.plugin.CachePluginProvider;
+import org.apache.ignite.plugin.ExtensionRegistry;
+import org.apache.ignite.plugin.IgnitePlugin;
+import org.apache.ignite.plugin.PluginContext;
+import org.apache.ignite.plugin.PluginProvider;
+import org.apache.ignite.plugin.PluginValidationException;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Serializable;
@@ -62,10 +68,12 @@ public class PlatformTestPluginProvider implements PluginProvider<PlatformTestPl
         // No-op.
     }
 
+    /** {@inheritDoc} */
     @Override public void onIgniteStart() throws IgniteCheckedException {
         // No-op.
     }
 
+    /** {@inheritDoc} */
     @Override public void onIgniteStop(boolean cancel) {
         // No-op.
     }

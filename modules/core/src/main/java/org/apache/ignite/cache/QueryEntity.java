@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,7 +48,6 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Query entity is a description of {@link org.apache.ignite.IgniteCache cache} entry (composed of key and value)
@@ -166,7 +165,7 @@ public class QueryEntity implements Serializable {
      * @param target Query entity to which this entity should be expanded.
      * @return Patch which contains operations for expanding this entity.
      */
-    @NotNull public QueryEntityPatch makePatch(QueryEntity target) {
+    public QueryEntityPatch makePatch(QueryEntity target) {
         if (target == null)
             return QueryEntityPatch.empty();
 
@@ -222,7 +221,7 @@ public class QueryEntity implements Serializable {
      * @param conflicts Storage of conflicts.
      * @return Indexes which exist in target and not exist in local.
      */
-    @NotNull private Collection<QueryIndex> checkIndexes(QueryEntity target, StringBuilder conflicts) {
+    private Collection<QueryIndex> checkIndexes(QueryEntity target, StringBuilder conflicts) {
         HashSet<QueryIndex> indexesToAdd = new HashSet<>();
 
         Map<String, QueryIndex> currentIndexes = new HashMap<>();
@@ -508,7 +507,7 @@ public class QueryEntity implements Serializable {
      *
      * @return Collection of index entities.
      */
-    @NotNull public Collection<QueryIndex> getIndexes() {
+    public Collection<QueryIndex> getIndexes() {
         return idxs == null ? Collections.<QueryIndex>emptyList() : idxs;
     }
 
@@ -572,17 +571,18 @@ public class QueryEntity implements Serializable {
      *
      * @return Set of names of fields that must have non-null values.
      */
-    @Nullable public Set<String> getNotNullFields() {
+    public Set<String> getNotNullFields() {
         return _notNullFields;
     }
 
     /**
      * Sets names of fields that must checked for null.
      *
-     * @param notNullFields Set of names of fields that must have non-null values.
+     * @param notNullFields Set of names of fields that must have non-null values. If {@code null},
+     *      will clear previously set fields.
      * @return {@code this} for chaining.
      */
-    public QueryEntity setNotNullFields(@Nullable Set<String> notNullFields) {
+    public QueryEntity setNotNullFields(Set<String> notNullFields) {
         this._notNullFields = notNullFields;
 
         return this;
@@ -755,13 +755,10 @@ public class QueryEntity implements Serializable {
      * @return Type descriptor.
      */
     private static QueryEntityTypeDescriptor processKeyAndValueClasses(
-        Class<?> keyCls,
-        Class<?> valCls
+        @NotNull Class<?> keyCls,
+        @NotNull Class<?> valCls
     ) {
-        QueryEntityTypeDescriptor d = new QueryEntityTypeDescriptor();
-
-        d.keyClass(keyCls);
-        d.valueClass(valCls);
+        QueryEntityTypeDescriptor d = new QueryEntityTypeDescriptor(keyCls, valCls);
 
         processAnnotationsInClass(true, d.keyClass(), d, null);
         processAnnotationsInClass(false, d.valueClass(), d, null);
@@ -778,7 +775,7 @@ public class QueryEntity implements Serializable {
      * @param parent Parent in case of embeddable.
      */
     private static void processAnnotationsInClass(boolean key, Class<?> cls, QueryEntityTypeDescriptor type,
-        @Nullable QueryEntityClassProperty parent) {
+        QueryEntityClassProperty parent) {
         if (U.isJdk(cls) || QueryUtils.isGeometryClass(cls)) {
             if (parent == null && !key && QueryUtils.isSqlType(cls)) { // We have to index primitive _val.
                 String idxName = cls.getSimpleName() + "_" + QueryUtils.VAL_FIELD_NAME + "_idx";

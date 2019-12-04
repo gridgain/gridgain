@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import javax.management.InstanceNotFoundException;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,23 +26,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.management.InstanceNotFoundException;
-
 import org.apache.ignite.DataRegionMetrics;
+import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.DataStorageMetrics;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -52,23 +54,28 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.evict.FairFifoPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.NoOpPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.Random2LruPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.RandomLruPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
-import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeListImpl;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
 import org.jetbrains.annotations.Nullable;
@@ -118,10 +125,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     protected DataRegion dfltDataRegion;
 
     /** */
-    protected Map<String, CacheFreeListImpl> freeListMap;
+    protected Map<String, CacheFreeList> freeListMap;
 
     /** */
-    private CacheFreeListImpl dfltFreeList;
+    private CacheFreeList dfltFreeList;
 
     /** Page size from memory configuration, may be set only for fake(standalone) IgniteCacheDataBaseSharedManager */
     private int pageSize;
@@ -244,18 +251,24 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         for (DataRegion memPlc : dataRegionMap.values()) {
             DataRegionConfiguration memPlcCfg = memPlc.config();
 
-            DataRegionMetricsImpl memMetrics = (DataRegionMetricsImpl) memMetricsMap.get(memPlcCfg.getName());
+            DataRegionMetricsImpl memMetrics = (DataRegionMetricsImpl)memMetricsMap.get(memPlcCfg.getName());
 
             boolean persistenceEnabled = memPlcCfg.isPersistenceEnabled();
 
-            CacheFreeListImpl freeList = new CacheFreeListImpl(0,
-                    cctx.igniteInstanceName(),
-                    memMetrics,
-                    memPlc,
-                    null,
-                    persistenceEnabled ? cctx.wal() : null,
-                    0L,
-                    true);
+            String freeListName = memPlcCfg.getName() + "##FreeList";
+
+            PageLockListener lsnr = cctx.diagnostic().pageLockTracker().createPageLockTracker(freeListName);
+
+            CacheFreeList freeList = new CacheFreeList(
+                0,
+                freeListName,
+                memMetrics,
+                memPlc,
+                persistenceEnabled ? cctx.wal() : null,
+                0L,
+                true,
+                lsnr
+            );
 
             freeListMap.put(memPlcCfg.getName(), freeList);
         }
@@ -354,8 +367,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         if (dfltMemPlcName == null)
             dfltMemPlcName = DFLT_DATA_REG_DEFAULT_NAME;
 
-        DataRegionMetricsImpl memMetrics =
-                new DataRegionMetricsImpl(dataRegionCfg, dataRegionMetricsProvider(dataRegionCfg));
+        DataRegionMetricsImpl memMetrics = new DataRegionMetricsImpl(
+            dataRegionCfg,
+            cctx.kernalContext().metric(),
+            dataRegionMetricsProvider(dataRegionCfg));
 
         DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable);
 
@@ -383,11 +398,11 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         final String dataRegName = dataRegCfg.getName();
 
         return new IgniteOutClosure<Long>() {
-            private CacheFreeListImpl freeList;
+            private CacheFreeList freeList;
 
             @Override public Long apply() {
                 if (freeList == null) {
-                    CacheFreeListImpl freeList0 = freeListMap.get(dataRegName);
+                    CacheFreeList freeList0 = freeListMap.get(dataRegName);
 
                     if (freeList0 == null)
                         return 0L;
@@ -410,9 +425,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         final String dataRegName = dataRegCfg.getName();
 
         return new DataRegionMetricsProvider() {
-            private CacheFreeListImpl freeList;
+            private CacheFreeList freeList;
 
-            private CacheFreeListImpl getFreeList() {
+            private CacheFreeList getFreeList() {
+                if (freeListMap == null)
+                    return null;
+
                 if (freeList == null)
                     freeList = freeListMap.get(dataRegName);
 
@@ -420,13 +438,13 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             }
 
             @Override public long partiallyFilledPagesFreeSpace() {
-                CacheFreeListImpl freeList0 = getFreeList();
+                CacheFreeList freeList0 = getFreeList();
 
                 return freeList0 == null ? 0L : freeList0.freeSpace();
             }
 
             @Override public long emptyDataPages() {
-                CacheFreeListImpl freeList0 = getFreeList();
+                CacheFreeList freeList0 = getFreeList();
 
                 return freeList0 == null ? 0L : freeList0.emptyDataPages();
             }
@@ -700,7 +718,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      */
     public void dumpStatistics(IgniteLogger log) {
         if (freeListMap != null) {
-            for (CacheFreeListImpl freeList : freeListMap.values())
+            for (CacheFreeList freeList : freeListMap.values())
                 freeList.dumpStatistics(log);
         }
     }
@@ -872,7 +890,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      *
      * @param reason Reason.
      */
-    @Nullable public CheckpointFuture forceCheckpoint(String reason) {
+    @Nullable public CheckpointProgress forceCheckpoint(String reason) {
         return null;
     }
 
@@ -882,6 +900,20 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @throws IgniteCheckedException If failed.
      */
     public void waitForCheckpoint(String reason) throws IgniteCheckedException {
+        waitForCheckpoint(reason, null);
+    }
+
+    /**
+     * Waits until current state is checkpointed and execution listeners after finish.
+     *
+     * @param reason Reason for checkpoint wakeup if it would be required.
+     * @param lsnr Listeners which should be called in checkpoint thread after current checkpoint finished.
+     * @throws IgniteCheckedException If failed.
+     */
+    public <R> void waitForCheckpoint(
+        String reason,
+        IgniteInClosure<? super IgniteInternalFuture<R>> lsnr
+    ) throws IgniteCheckedException {
         // No-op
     }
 
@@ -896,9 +928,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * Perform memory restore before {@link GridDiscoveryManager} start.
      *
      * @param kctx Current kernal context.
+     * @param startTimer Holder of start time of stages.
      * @throws IgniteCheckedException If fails.
      */
-    public void startMemoryRestore(GridKernalContext kctx) throws IgniteCheckedException {
+    public void startMemoryRestore(GridKernalContext kctx, TimeBag startTimer) throws IgniteCheckedException {
         // No-op.
     }
 
@@ -974,6 +1007,73 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
+     * Checks that the given {@code region} has enough space for putting a new entry.
+     *
+     * This method makes sense then and only then
+     * the data region is not persisted {@link DataRegionConfiguration#isPersistenceEnabled()}
+     * and page eviction is disabled {@link DataPageEvictionMode#DISABLED}.
+     *
+     * The non-persistent region should reserve a number of pages to support a free list {@link AbstractFreeList}.
+     * For example, removing a row from underlying store may require allocating a new data page
+     * in order to move a tracked page from one bucket to another one which does not have a free space for a new stripe.
+     * See {@link AbstractFreeList#removeDataRowByLink}.
+     * Therefore, inserting a new entry should be prevented in case of some threshold is exceeded.
+     *
+     * @param region Data region to be checked.
+     * @param row Data row to be inserted.
+     * @throws IgniteOutOfMemoryException In case of the given data region does not have enough free space
+     * for putting a new entry.
+     * @throws IgniteCheckedException If size of the given {@code row} cannot be calculated.
+     */
+    public void ensureFreeSpaceForInsert(
+        DataRegion region,
+        CacheDataRow row
+    ) throws IgniteOutOfMemoryException, IgniteCheckedException {
+        if (region == null)
+            return;
+
+        DataRegionConfiguration regCfg = region.config();
+
+        if (regCfg.getPageEvictionMode() != DataPageEvictionMode.DISABLED || regCfg.isPersistenceEnabled())
+            return;
+
+        long memorySize = regCfg.getMaxSize();
+
+        PageMemory pageMem = region.pageMemory();
+
+        CacheFreeList freeList = freeListMap.get(regCfg.getName());
+
+        long nonEmptyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
+
+        // The maximum number of pages that can be allocated (memorySize / systemPageSize)
+        // should be greater or equal to pages required for inserting a new entry plus
+        // the current number of non-empty pages plus the number of pages that may be required in order to move
+        // all pages to a reuse bucket, that is equal to nonEmptyPages * 8 / pageSize, where 8 is the size of a link.
+        // Note that the whole page cannot be used to storing links (there is obvious overhead),
+        // see PagesListNodeIO and PagesListMetaIO#getCapacity(), so we pessimistically multiply the result on 1.5,
+        // in any way, the number of required pages is less than 1 percent.
+        boolean oomThreshold = (memorySize / pageMem.systemPageSize()) <
+            ((double)row.size() / pageMem.pageSize() + nonEmptyPages * (8.0 * 1.5 / pageMem.pageSize() + 1) + 256 /*one page per bucket*/);
+
+        if (oomThreshold) {
+            IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
+                "name=" + regCfg.getName() +
+                ", initSize=" + U.readableSize(regCfg.getInitialSize(), false) +
+                ", maxSize=" + U.readableSize(regCfg.getMaxSize(), false) +
+                ", persistenceEnabled=" + regCfg.isPersistenceEnabled() + "] Try the following:" + U.nl() +
+                "  ^-- Increase maximum off-heap memory size (DataRegionConfiguration.maxSize)" + U.nl() +
+                "  ^-- Enable Ignite persistence (DataRegionConfiguration.persistenceEnabled)" + U.nl() +
+                "  ^-- Enable eviction or expiration policies"
+            );
+
+            if (cctx.kernalContext() != null)
+                cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, oom));
+
+            throw oom;
+        }
+    }
+
+    /**
      * See {@link GridCacheMapEntry#ensureFreeSpace()}
      *
      * @param memPlc data region.
@@ -993,12 +1093,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
         int sysPageSize = pageMem.systemPageSize();
 
-        CacheFreeListImpl freeListImpl = freeListMap.get(plcCfg.getName());
+        CacheFreeList freeList = freeListMap.get(plcCfg.getName());
 
         for (;;) {
             long allocatedPagesCnt = pageMem.loadedPages();
 
-            int emptyDataPagesCnt = freeListImpl.emptyDataPages();
+            int emptyDataPagesCnt = freeList.emptyDataPages();
 
             boolean shouldEvict = allocatedPagesCnt > (memorySize / sysPageSize * plcCfg.getEvictionThreshold()) &&
                 emptyDataPagesCnt < plcCfg.getEmptyPagesPoolSize();
@@ -1144,7 +1244,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             cctx,
             memCfg.getPageSize(),
             memPlcCfg,
-            memMetrics,
+            memMetrics.totalAllocatedPages(),
             false
         );
 
@@ -1198,7 +1298,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         String igniteHomeStr = U.getIgniteHome();
 
         File workDir = igniteHomeStr == null ? new File(path) : U.resolveWorkDirectory(igniteHomeStr, path, false);
-
 
         return new File(workDir, consId);
     }
@@ -1269,7 +1368,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 MBEAN_GROUP_NAME,
                 region.memoryMetrics().getName()
             );
-            }
+        }
 
         dataRegionMap.clear();
 

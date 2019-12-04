@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,8 +28,11 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.tracing.NoopTracing;
+import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -102,6 +105,9 @@ abstract class TcpDiscoveryImpl {
         }
     };
 
+    /** Tracing. */
+    protected Tracing tracing;
+
     /**
      * Upcasts collection type.
      *
@@ -121,6 +127,11 @@ abstract class TcpDiscoveryImpl {
         this.spi = spi;
 
         log = spi.log;
+
+        if (spi.ignite() instanceof IgniteEx)
+            tracing = ((IgniteEx) spi.ignite()).context().tracing();
+        else
+            tracing = new NoopTracing();
     }
 
     /**
@@ -349,9 +360,11 @@ abstract class TcpDiscoveryImpl {
      * @throws IgniteSpiException If failed.
      */
     protected final void registerLocalNodeAddress() throws IgniteSpiException {
+        long spiJoinTimeout = spi.getJoinTimeout();
+
         // Make sure address registration succeeded.
         // ... but limit it if join timeout is configured.
-        long start = spi.getJoinTimeout() > 0 ? U.currentTimeMillis() : 0;
+        long startNanos = spiJoinTimeout > 0 ? System.nanoTime() : 0;
 
         while (true) {
             try {
@@ -371,12 +384,12 @@ abstract class TcpDiscoveryImpl {
                     "change 'reconnectDelay' to configure the frequency of retries).");
             };
 
-            if (start > 0 && (U.currentTimeMillis() - start) > spi.getJoinTimeout())
+            if (spiJoinTimeout > 0 && U.millisSinceNanos(startNanos) > spiJoinTimeout)
                 throw new IgniteSpiException(
                     "Failed to register local addresses with IP finder within join timeout " +
                         "(make sure IP finder configuration is correct, and operating system firewalls are disabled " +
                         "on all host machines, or consider increasing 'joinTimeout' configuration property) " +
-                        "[joinTimeout=" + spi.getJoinTimeout() + ']');
+                        "[joinTimeout=" + spiJoinTimeout + ']');
 
             try {
                 U.sleep(spi.getReconnectDelay());

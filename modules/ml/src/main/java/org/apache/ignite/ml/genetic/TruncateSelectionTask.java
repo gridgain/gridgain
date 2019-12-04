@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.ml.genetic.parameter.GAGridConstants;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Responsible for performing truncate selection.
@@ -106,12 +107,8 @@ public class TruncateSelectionTask extends ComputeTaskAdapter<List<Long>, Boolea
         return list;
     }
 
-    /**
-     * @param nodes List of ClusterNode.
-     * @param chromosomeKeys Primary keys for respective chromosomes.
-     * @return Map of nodes to jobs.
-     */
-    @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
+    /** {@inheritDoc} */
+    @NotNull @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
         Map<ComputeJob, ClusterNode> map = new HashMap<>();
         Affinity affinity = ignite.affinity(GAGridConstants.POPULATION_CACHE);
 
@@ -128,21 +125,12 @@ public class TruncateSelectionTask extends ComputeTaskAdapter<List<Long>, Boolea
         return map;
     }
 
-    /**
-     * We return TRUE if success, else Exception is thrown.
-     *
-     * @param list List of ComputeJobResult.
-     * @return Boolean value.
-     */
+    /** {@inheritDoc} */
     @Override public Boolean reduce(List<ComputeJobResult> list) throws IgniteException {
         return Boolean.TRUE;
     }
 
-    /**
-     * @param res ComputeJobResult.
-     * @param rcvd List of ComputeJobResult.
-     * @return ComputeJobResultPolicy.
-     */
+    /** {@inheritDoc} */
     @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
         IgniteException err = res.getException();
 

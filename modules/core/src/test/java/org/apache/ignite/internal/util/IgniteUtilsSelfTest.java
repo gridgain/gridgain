@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.annotation.Documented;
@@ -33,6 +34,7 @@ import java.lang.annotation.Target;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -60,7 +62,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
@@ -89,7 +90,8 @@ import static org.junit.Assert.assertArrayEquals;
 public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     /** */
     public static final int[] EMPTY = new int[0];
-
+    /** Maximum string length to be written at once. */
+    private static final int MAX_STR_LEN = 0xFFFF / 4;
     /**
      * @return 120 character length string.
      */
@@ -689,6 +691,27 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test getLocalHost() always return physical interface, if present.
+     */
+    @Test
+    public void testGetLocalHost() {
+        try {
+            InetAddress locAddr = U.getLocalHost();
+
+            NetworkInterface netInt = NetworkInterface.getByInetAddress(locAddr);
+
+            assertFalse(netInt.isVirtual());
+            assertFalse(netInt.isLoopback());
+            assertFalse(netInt.isPointToPoint());
+            assertTrue(netInt.isUp());
+            assertFalse(netInt.getName().contains("docker"));
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Test InetAddress Comparator.
      */
     @Test
@@ -790,13 +813,73 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutput dout = new DataOutputStream(baos);
 
-        IgfsUtils.writeUTF(dout, s0);
+        writeUTF(dout, s0);
 
         DataInput din = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
 
-        String s1 = IgfsUtils.readUTF(din);
+        String s1 = readUTF(din);
 
         assertEquals(s0, s1);
+    }
+
+    /**
+     * Write UTF string which can be {@code null}.
+     *
+     * @param out Output stream.
+     * @param val Value.
+     * @throws IOException If failed.
+     */
+    public static void writeUTF(DataOutput out, @Nullable String val) throws IOException {
+        if (val == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(val.length());
+
+            if (val.length() <= MAX_STR_LEN)
+                out.writeUTF(val); // Optimized write in 1 chunk.
+            else {
+                int written = 0;
+
+                while (written < val.length()) {
+                    int partLen = Math.min(val.length() - written, MAX_STR_LEN);
+
+                    String part = val.substring(written, written + partLen);
+
+                    out.writeUTF(part);
+
+                    written += partLen;
+                }
+            }
+        }
+    }
+
+    /**
+     * Read UTF string which can be {@code null}.
+     *
+     * @param in Input stream.
+     * @return Value.
+     * @throws IOException If failed.
+     */
+    public static String readUTF(DataInput in) throws IOException {
+        int len = in.readInt(); // May be zero.
+
+        if (len < 0)
+            return null;
+        else {
+            if (len <= MAX_STR_LEN)
+                return in.readUTF();
+
+            StringBuilder sb = new StringBuilder(len);
+
+            do {
+                sb.append(in.readUTF());
+            }
+            while (sb.length() < len);
+
+            assert sb.length() == len;
+
+            return sb.toString();
+        }
     }
 
     /**
@@ -842,11 +925,14 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         assertEquals(1 << 26, U.ceilPow2((1 << 26) - 100));
         assertEquals(1 << 26, U.ceilPow2(1 << 26));
         assertEquals(1 << 27, U.ceilPow2((1 << 26) + 100));
+        assertEquals((int)Math.pow(2, 30), U.ceilPow2(Integer.MAX_VALUE - 1));
+        assertEquals((int)Math.pow(2, 30), U.ceilPow2(Integer.MAX_VALUE));
+        assertEquals(0, U.ceilPow2(Integer.MIN_VALUE + 1));
 
-        for (int i = (int)Math.pow(2, 30); i < Integer.MAX_VALUE; i++)
+        for (int i = (int)Math.pow(2, 30); i < Integer.MAX_VALUE && i > 0; i += 100)
             assertEquals((int)Math.pow(2, 30), U.ceilPow2(i));
 
-        for (int i = Integer.MIN_VALUE; i < 0; i++)
+        for (int i = Integer.MIN_VALUE; i < 0; i += 100)
             assertEquals(0, U.ceilPow2(i));
     }
 

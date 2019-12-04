@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,6 +61,9 @@ import org.jetbrains.annotations.NotNull;
  * </pre>
  */
 public abstract class LogListener implements Consumer<String> {
+    /** Name of the listener. */
+    private String name;
+
     /**
      * Checks that all conditions are met.
      *
@@ -69,9 +72,51 @@ public abstract class LogListener implements Consumer<String> {
     public abstract boolean check();
 
     /**
+     * Checks that all conditions are met with timeout.
+     *
+     * @return {@code True} if all conditions are met.
+     */
+    public boolean check(long millis) throws InterruptedException {
+        long startTime = System.currentTimeMillis();
+
+        while (startTime + millis >= System.currentTimeMillis()) {
+            if (check())
+                return true;
+
+            Thread.sleep(100);
+        }
+
+        return check();
+    }
+
+    /**
+     * @param name String representation of the listener.
+     * @return {@code this}
+     */
+    private LogListener setName(String name) {
+        this.name = name;
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return name;
+    }
+
+    /**
      * Reset listener state.
      */
     public abstract void reset();
+
+    /**
+     * Creates new builder.
+     *
+     * @return new builder.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
 
     /**
      * Creates new listener builder.
@@ -225,9 +270,21 @@ public abstract class LogListener implements Consumer<String> {
          * @return Log message listener.
          */
         public LogListener build() {
+            return build(null);
+        }
+
+        /**
+         * Constructs message listener.
+         *
+         * @param lsnrName String representation of the listener.
+         * @return Log message listener.
+         */
+        public LogListener build(String lsnrName) {
             addLast(null);
 
-            return lsnr.lsnrs.size() == 1 ? lsnr.lsnrs.get(0) : lsnr;
+            LogListener lsnr = this.lsnr.lsnrs.size() == 1 ? this.lsnr.lsnrs.get(0) : this.lsnr;
+
+            return lsnr.setName(lsnrName);
         }
 
         /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,7 +38,7 @@
 }
 
 namespace ignite
-{    
+{
     namespace impl
     {
         namespace interop 
@@ -94,7 +94,7 @@ namespace ignite
                 for (int i = 0; i < len; i++)
                     *(res + i) = ReadBool();
             }
-                
+
             int16_t InteropInputStream::ReadInt16()
             {
                 IGNITE_INTEROP_IN_READ(int16_t, 2);
@@ -182,7 +182,7 @@ namespace ignite
             {
                 IGNITE_INTEROP_IN_READ_ARRAY(len, 3);
             }
-                
+
             int32_t InteropInputStream::Remaining() const
             {
                 return len - pos;
@@ -201,6 +201,11 @@ namespace ignite
                     IGNITE_ERROR_FORMATTED_3(IgniteError::IGNITE_ERR_MEMORY, "Requested input stream position is out of bounds",
                         "memPtr", mem->PointerLong(), "len", len, "pos", pos);
                 }
+            }
+
+            void InteropInputStream::Ignore(int32_t cnt)
+            {
+                Shift(cnt);
             }
 
             void InteropInputStream::Synchronize()
@@ -234,4 +239,4 @@ namespace ignite
             }
         }
     }
-}        
+}

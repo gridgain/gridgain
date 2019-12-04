@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,6 +42,7 @@ import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -55,8 +56,7 @@ import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.lang.IgniteAsyncSupport;
-import org.apache.ignite.lang.IgniteAsyncSupported;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
@@ -66,7 +66,6 @@ import org.apache.ignite.transactions.TransactionException;
 import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Main entry point for all <b>Data Grid APIs.</b> You can get a named cache by calling {@link Ignite#cache(String)}
@@ -98,11 +97,7 @@ import org.jetbrains.annotations.Nullable;
  * @param <K> Cache key type.
  * @param <V> Cache value type.
  */
-public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncSupport {
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override public IgniteCache<K, V> withAsync();
-
+public interface IgniteCache<K, V> extends javax.cache.Cache<K, V> {
     /** {@inheritDoc} */
     @Override public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz);
 
@@ -195,8 +190,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *      {@link CacheStore#loadCache(IgniteBiInClosure, Object...)} method.
      * @throws CacheException If loading failed.
      */
-    @IgniteAsyncSupported
-    public void loadCache(@Nullable IgniteBiPredicate<K, V> p, @Nullable Object... args) throws CacheException;
+    public void loadCache(IgniteBiPredicate<K, V> p, Object... args) throws CacheException;
 
     /**
      * Asynchronously executes {@link #localLoadCache(IgniteBiPredicate, Object...)} on all cache nodes.
@@ -208,7 +202,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return a Future representing pending completion of the cache loading.
      * @throws CacheException If loading failed.
      */
-    public IgniteFuture<Void> loadCacheAsync(@Nullable IgniteBiPredicate<K, V> p, @Nullable Object... args)
+    public IgniteFuture<Void> loadCacheAsync(IgniteBiPredicate<K, V> p, Object... args)
         throws CacheException;
 
     /**
@@ -232,8 +226,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *      {@link CacheStore#loadCache(IgniteBiInClosure, Object...)} method.
      * @throws CacheException If loading failed.
      */
-    @IgniteAsyncSupported
-    public void localLoadCache(@Nullable IgniteBiPredicate<K, V> p, @Nullable Object... args) throws CacheException;
+    public void localLoadCache(IgniteBiPredicate<K, V> p, Object... args) throws CacheException;
 
     /**
      * Asynchronously loads state from the underlying persistent storage by delegating
@@ -257,7 +250,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return a Future representing pending completion of the cache loading.
      * @throws CacheException If loading failed.
      */
-    public IgniteFuture<Void> localLoadCacheAsync(@Nullable IgniteBiPredicate<K, V> p, @Nullable Object... args)
+    public IgniteFuture<Void> localLoadCacheAsync(IgniteBiPredicate<K, V> p, Object... args)
         throws CacheException;
 
     /**
@@ -287,7 +280,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws CacheException If put operation failed.
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     public V getAndPutIfAbsent(K key, V val) throws CacheException, TransactionException;
 
     /**
@@ -462,7 +454,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return Cache size across all nodes.
      * @throws CacheException On error.
      */
-    @IgniteAsyncSupported
     public int size(CachePeekMode... peekModes) throws CacheException;
 
     /**
@@ -489,7 +480,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return Cache size across all nodes.
      * @throws CacheException On error.
      */
-    @IgniteAsyncSupported
     public long sizeLong(CachePeekMode... peekModes) throws CacheException;
 
     /**
@@ -517,7 +507,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return Partition cache size across all nodes.
      * @throws CacheException On error.
      */
-    @IgniteAsyncSupported
     public long sizeLong(int partition, CachePeekMode... peekModes) throws CacheException;
 
     /**
@@ -573,11 +562,14 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * to load it (if a loader is configured) or a surrogate {@link javax.cache.Cache.Entry},
      * consisting of the key and a value of null is provided.
      * <p>
-     * The order that the entries for the keys are processed is undefined.
-     * Implementations may choose to process the entries in any order, including
-     * concurrently.  Furthermore there is no guarantee implementations will
-     * use the same {@link EntryProcessor} instance to process each entry, as
-     * the case may be in a non-local cache topology.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input maps that ensure the same ordering
+     * of keys (e.g., a sorted map may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input maps provide the same key ordering in all operations.
+     * <p>
+     * There is no guarantee implementations will use the same {@link EntryProcessor} instance to process
+     * each entry, as the case may be in a non-local cache topology.
      * <p>
      * The result of executing the {@link EntryProcessor} is returned in the future as a
      * {@link Map} of {@link EntryProcessorResult}s, one result per key. Should the
@@ -596,7 +588,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *      <code>null</code> value for a key.
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Map<? extends K, ? extends EntryProcessor<K, V, T>> map,
         Object... args) throws TransactionException;
 
@@ -616,7 +607,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public V get(K key) throws TransactionException;
 
     /**
@@ -648,7 +638,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * configured for the {@link Cache}.
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     public CacheEntry<K, V> getEntry(K key) throws TransactionException;
 
     /**
@@ -671,10 +660,37 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteFuture<CacheEntry<K, V>> getEntryAsync(K key) throws TransactionException;
 
     /**
-     * {@inheritDoc}
+     * Gets a collection of entries from the {@link Cache}, returning them as
+     * {@link Map} of the values associated with the set of keys requested.
+     * <p>
+     * If the cache is configured read-through, and a get for a key would
+     * return null because an entry is missing from the cache, the Cache's
+     * {@link CacheLoader} is called in an attempt to load the entry. If an
+     * entry cannot be loaded for a given key, the key will not be present in
+     * the returned Map.
+     * <p>
+     * When called inside a {@link org.apache.ignite.transactions.TransactionConcurrency#PESSIMISTIC}
+     * {@link org.apache.ignite.transactions.TransactionIsolation#REPEATABLE_READ} or
+     * {@link org.apache.ignite.transactions.TransactionIsolation#SERIALIZABLE} transaction on a
+     * {@link CacheAtomicityMode#TRANSACTIONAL} cache, this method will acquire locks for the passed keys.
+     * Therefore, the keys order must be consistent with all concurrent batch operations
+     * (putAll, removeAll, or invokeAll and their async counterparts) on overlapping sets of keys across all nodes
+     * (e.g., a sorted set may be supplied). If two batch operations use arguments with different sort orders,
+     * this may result in a deadlock. If concurrent batch operations are expected, the caller must ensure that
+     * the input arguments provide the same key ordering in all operations.
+     *
+     * @param keys The keys whose associated values are to be returned.
+     * @return A map of entries that were found for the given keys. Keys not found
+     *         in the cache are not in the returned map.
+     * @throws NullPointerException  if keys is null or if keys contains a null
+     * @throws IllegalStateException if the cache is {@link #isClosed()}
+     * @throws CacheException        if there is a problem fetching the values
+     * @throws ClassCastException    if the implementation is configured to perform
+     *                               runtime-type-checking, and the key or value
+     *                               types are incompatible with those that have been
+     *                               configured for the {@link Cache}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public Map<K, V> getAll(Set<? extends K> keys) throws TransactionException;
 
     /**
@@ -713,7 +729,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * configured for the {@link Cache}.
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     public Collection<CacheEntry<K, V>> getEntries(Set<? extends K> keys) throws TransactionException;
 
     /**
@@ -744,7 +759,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @param keys The keys whose associated values are to be returned.
      * @return A map of entries that were found for the given keys.
      */
-    @IgniteAsyncSupported
     public Map<K, V> getAllOutTx(Set<? extends K> keys);
 
     /**
@@ -760,7 +774,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean containsKey(K key) throws TransactionException;
 
     /**
@@ -783,7 +796,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return {@code True} if this cache contains a mapping for the specified keys.
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     public boolean containsKeys(Set<? extends K> keys) throws TransactionException;
 
     /**
@@ -799,7 +811,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public void put(K key, V val) throws TransactionException;
 
     /**
@@ -821,7 +832,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public V getAndPut(K key, V val) throws TransactionException;
 
     /**
@@ -845,10 +855,38 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteFuture<V> getAndPutAsync(K key, V val) throws TransactionException;
 
     /**
-     * {@inheritDoc}
+     * Copies all of the entries from the specified map to the {@link Cache}.
+     * <p>
+     * The effect of this call is equivalent to that of calling
+     * {@link #put(Object, Object) put(k, v)} on this cache once for each mapping
+     * from key <tt>k</tt> to value <tt>v</tt> in the specified map.
+     * <p>
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input maps that ensure the same ordering
+     * of keys (e.g., a sorted map may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input maps provide the same key ordering in all operations.
+     * <p>
+     * The behavior of this operation is undefined if entries in the cache
+     * corresponding to entries in the map are modified or removed while this
+     * operation is in progress. or if map is modified while the operation is in
+     * progress.
+     * <p>
+     * In Default Consistency mode, individual puts occur atomically but not
+     * the entire putAll.  Listeners may observe individual updates.
+     *
+     * @param map mappings to be stored in this cache
+     * @throws NullPointerException  if map is null or if map contains null keys
+     *                               or values.
+     * @throws IllegalStateException if the cache is {@link #isClosed()}
+     * @throws CacheException        if there is a problem doing the put.
+     * @throws ClassCastException    if the implementation is configured to perform
+     *                               runtime-type-checking, and the key or value
+     *                               types are incompatible with those that have been
+     *                               configured for the {@link Cache}
      * @throws TransactionException If operation within transaction is failed.
+     * @see CacheWriter#writeAll
      */
-    @IgniteAsyncSupported
     @Override public void putAll(Map<? extends K, ? extends V> map) throws TransactionException;
 
     /**
@@ -858,7 +896,11 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@link #putAsync(Object, Object)}  putAsync(k, v)} on this cache once for each mapping
      * from key <tt>k</tt> to value <tt>v</tt> in the specified map.
      * <p>
-     * The order in which the individual puts occur is undefined.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input maps that ensure the same ordering
+     * of keys (e.g., a sorted map may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input maps provide the same key ordering in all operations.
      * <p>
      * The behavior of this operation is undefined if entries in the cache
      * corresponding to entries in the map are modified or removed while this
@@ -884,7 +926,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean putIfAbsent(K key, V val) throws TransactionException;
 
     /**
@@ -909,7 +950,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean remove(K key) throws TransactionException;
 
     /**
@@ -942,7 +982,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean remove(K key, V oldVal) throws TransactionException;
 
     /**
@@ -965,7 +1004,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public V getAndRemove(K key) throws TransactionException;
 
     /**
@@ -988,7 +1026,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean replace(K key, V oldVal, V newVal) throws TransactionException;
 
     /**
@@ -1011,7 +1048,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public boolean replace(K key, V val) throws TransactionException;
 
     /**
@@ -1029,7 +1065,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * {@inheritDoc}
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public V getAndReplace(K key, V val) throws TransactionException;
 
     /**
@@ -1046,16 +1081,43 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteFuture<V> getAndReplaceAsync(K key, V val);
 
     /**
-     * {@inheritDoc}
+     /**
+     * Removes entries for the specified keys.
+     * <p>
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use set implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
+     * <p>
+     * For every entry in the key set, the following are called:
+     * <ul>
+     *   <li>any registered {@link CacheEntryRemovedListener}s</li>
+     *   <li>if the cache is a write-through cache, the {@link CacheWriter}</li>
+     * </ul>
+     * If the key set is empty, the {@link CacheWriter} is not called.
+     *
+     * @param keys the keys to remove
+     * @throws NullPointerException  if keys is null or if it contains a null key
+     * @throws IllegalStateException if the cache is {@link #isClosed()}
+     * @throws CacheException        if there is a problem during the remove
+     * @throws ClassCastException    if the implementation is configured to perform
+     *                               runtime-type-checking, and the key or value
+     *                               types are incompatible with those that have been
+     *                               configured for the {@link Cache}
      * @throws TransactionException If operation within transaction is failed.
+     * @see CacheWriter#deleteAll
      */
-    @IgniteAsyncSupported
     @Override public void removeAll(Set<? extends K> keys) throws TransactionException;
 
     /**
      * Asynchronously removes entries for the specified keys.
      * <p>
-     * The order in which the individual entries are removed is undefined.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use set implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
      * <p>
      * For every entry in the key set, the following are called:
      * <ul>
@@ -1093,7 +1155,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @see #clear()
      * @see CacheWriter#deleteAll
      */
-    @IgniteAsyncSupported
     @Override public void removeAll();
 
     /**
@@ -1120,7 +1181,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteFuture<Void> removeAllAsync();
 
     /** {@inheritDoc} */
-    @IgniteAsyncSupported
     @Override public void clear();
 
     /**
@@ -1140,7 +1200,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws IllegalStateException if the cache is {@link #isClosed()}
      * @throws CacheException        if there is a problem during the clear
      */
-    @IgniteAsyncSupported
     public void clear(K key);
 
     /**
@@ -1164,7 +1223,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws IllegalStateException if the cache is {@link #isClosed()}
      * @throws CacheException        if there is a problem during the clear
      */
-    @IgniteAsyncSupported
     public void clearAll(Set<? extends K> keys);
 
     /**
@@ -1213,7 +1271,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      *
      * @throws TransactionException If operation within transaction is failed.
      */
-    @IgniteAsyncSupported
     @Override public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments)
         throws TransactionException;
 
@@ -1265,7 +1322,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws TransactionException If operation within transaction is failed.
      * @see CacheEntryProcessor
      */
-    @IgniteAsyncSupported
     public <T> T invoke(K key, CacheEntryProcessor<K, V, T> entryProcessor, Object... arguments)
         throws TransactionException;
 
@@ -1300,14 +1356,50 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
         throws TransactionException;
 
     /**
-     * {@inheritDoc}
+     /**
+     * Invokes an {@link EntryProcessor} against the set of {@link Entry}s
+     * specified by the set of keys.
+     * <p>
+     * If an {@link Entry} does not exist for the specified key, an attempt is made
+     * to load it (if a loader is configured) or a surrogate {@link Entry},
+     * consisting of the key and a value of null is provided.
+     * <p>
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
+     * <p>
+     * Furthermore there is no guarantee implementations will
+     * use the same {@link EntryProcessor} instance to process each entry, as
+     * the case may be in a non-local cache topology.
+     * <p>
+     * The result of executing the {@link EntryProcessor} is returned as a
+     * {@link Map} of {@link EntryProcessorResult}s, one result per key.  Should the
+     * {@link EntryProcessor} or Caching implementation throw an exception, the
+     * exception is wrapped and re-thrown when a call to
+     * {@link javax.cache.processor.EntryProcessorResult#get()} is made.
      * <p>
      * Please refer to documentation for {@link CacheAtomicityMode#ATOMIC} for information on
      * system behavior in crash scenarios for atomic caches.
      *
+     * @param keys           the set of keys for entries to process
+     * @param entryProcessor the {@link EntryProcessor} to invoke
+     * @param args           additional arguments to pass to the
+     *                       {@link EntryProcessor}
+     * @return the map of {@link EntryProcessorResult}s of the processing per key,
+     * if any, defined by the {@link EntryProcessor} implementation.  No mappings
+     * will be returned for {@link EntryProcessor}s that return a
+     * <code>null</code> value for a key.
+     * @throws NullPointerException    if keys or {@link EntryProcessor} are null
+     * @throws IllegalStateException   if the cache is {@link #isClosed()}
+     * @throws ClassCastException    if the implementation is configured to perform
+     *                               runtime-type-checking, and the key or value
+     *                               types are incompatible with those that have been
+     *                               configured for the {@link Cache}
      * @throws TransactionException If operation within transaction is failed.
+     * @see EntryProcessor
      */
-    @IgniteAsyncSupported
     @Override public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
         EntryProcessor<K, V, T> entryProcessor, Object... args) throws TransactionException;
 
@@ -1319,11 +1411,11 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * to load it (if a loader is configured) or a surrogate {@link javax.cache.Cache.Entry},
      * consisting of the key and a value of null is provided.
      * <p>
-     * The order that the entries for the keys are processed is undefined.
-     * Implementations may choose to process the entries in any order, including
-     * concurrently.  Furthermore there is no guarantee implementations will
-     * use the same {@link EntryProcessor} instance to process each entry, as
-     * the case may be in a non-local cache topology.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
      * <p>
      * The result of executing the {@link EntryProcessor} is returned in the future as a
      * {@link Map} of {@link EntryProcessorResult}s, one result per key.  Should the
@@ -1351,11 +1443,14 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * to load it (if a loader is configured) or a surrogate {@link javax.cache.Cache.Entry},
      * consisting of the key and a value of null is provided.
      * <p>
-     * The order that the entries for the keys are processed is undefined.
-     * Implementations may choose to process the entries in any order, including
-     * concurrently.  Furthermore there is no guarantee implementations will
-     * use the same {@link CacheEntryProcessor} instance to process each entry, as
-     * the case may be in a non-local cache topology.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
+     * <p>
+     * There is no guarantee implementations will use the same {@link CacheEntryProcessor}
+     * instance to process each entry, as the case may be in a non-local cache topology.
      * <p>
      * The result of executing the {@link CacheEntryProcessor} is returned as a
      * {@link Map} of {@link EntryProcessorResult}s, one result per key.  Should the
@@ -1383,7 +1478,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws TransactionException If operation within transaction is failed.
      * @see CacheEntryProcessor
      */
-    @IgniteAsyncSupported
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
         CacheEntryProcessor<K, V, T> entryProcessor, Object... args) throws TransactionException;
 
@@ -1395,11 +1489,14 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * to load it (if a loader is configured) or a surrogate {@link javax.cache.Cache.Entry},
      * consisting of the key and a value of null is provided.
      * <p>
-     * The order that the entries for the keys are processed is undefined.
-     * Implementations may choose to process the entries in any order, including
-     * concurrently.  Furthermore there is no guarantee implementations will
-     * use the same {@link CacheEntryProcessor} instance to process each entry, as
-     * the case may be in a non-local cache topology.
+     * All concurrent batch operations (putAll, removeAll, or invokeAll and their async counterparts) on overlapping
+     * sets of keys across all nodes must be supplied input sets that ensure the same ordering
+     * of keys (e.g., a sorted set may be supplied). If two batch operations use map implementations
+     * with different sort orders, this may result in a deadlock. If concurrent batch operations are
+     * expected, the caller must ensure that the input sets provide the same key ordering in all operations.
+     * <p>
+     * There is no guarantee implementations will use the same {@link CacheEntryProcessor} instance to
+     * process each entry, as the case may be in a non-local cache topology.
      * <p>
      * The result of executing the {@link CacheEntryProcessor} is returned in the future as a
      * {@link Map} of {@link EntryProcessorResult}s, one result per key.  Should the
@@ -1513,7 +1610,16 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     /**
      * Gets a collection of lost partition IDs.
      *
+     * This method provides a facility for fine-tuned handling of lost partitions.
+     * Once all lost partitions are considered recovered (for example, after the previously failed
+     * primary and backup nodes, that stored partition data in Ignite persistence, are booted)
+     * {@link Ignite#resetLostPartitions(Collection)} can used in order to clear {@code lost} flag
+     * making all partitions fully operational.
+     *
      * @return Lost partitions.
+     * @see PartitionLossPolicy
+     * @see EventType#EVT_CACHE_REBALANCE_PART_DATA_LOST
+     * @see Ignite#resetLostPartitions(Collection)
      */
     public Collection<Integer> lostPartitions();
 

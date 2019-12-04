@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.HadoopConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -156,7 +155,6 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
         inclEvtTypes = c.getIncludeEventTypes();
         rest = new VisorRestConfiguration(c);
         userAttrs = c.getUserAttributes();
-        igfss = VisorIgfsConfiguration.list(c.getFileSystemConfiguration());
         env = new HashMap<>(System.getenv());
         sysProps = IgniteSystemProperties.snapshot();
         atomic = new VisorAtomicConfiguration(c.getAtomicConfiguration());
@@ -177,11 +175,6 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
             binaryCfg = new VisorBinaryConfiguration(bc);
 
         cacheKeyCfgs = VisorCacheKeyConfiguration.list(c.getCacheKeyConfiguration());
-
-        HadoopConfiguration hc = c.getHadoopConfiguration();
-
-        if (hc != null)
-            hadoopCfg = new VisorHadoopConfiguration(hc);
 
         ClientConnectorConfiguration ccc = c.getClientConnectorConfiguration();
 
@@ -412,7 +405,7 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
         out.writeObject(inclEvtTypes);
         out.writeObject(rest);
         U.writeMap(out, userAttrs);
-        U.writeCollection(out, igfss);
+        U.writeCollection(out, null);
         U.writeMap(out, env);
         out.writeObject(sysProps);
         out.writeObject(atomic);
@@ -423,7 +416,7 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
         U.writeString(out, warmupClos);
         out.writeObject(binaryCfg);
         U.writeCollection(out, cacheKeyCfgs);
-        out.writeObject(hadoopCfg);
+        out.writeObject(null);
         out.writeObject(sqlConnCfg);
         U.writeCollection(out, srvcCfgs);
         out.writeObject(dataStorage);

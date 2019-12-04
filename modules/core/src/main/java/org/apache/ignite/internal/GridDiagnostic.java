@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -129,14 +129,14 @@ final class GridDiagnostic {
                 }
             });
 
-            final long HALF_GB = 512L/*MB*/ * 1024 * 1024;
+            final long MIN_INIT_HEAP_SIZE = 480L/*MB*/ * 1024 * 1024;
 
             exec.execute(new GridWorker(igniteInstanceName, "grid-diagnostic-7", log) {
                 @Override public void body() {
                     long initBytes = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getInit();
                     long initMb = initBytes / 1024 / 1024;
 
-                    if (initBytes < HALF_GB)
+                    if (initBytes < MIN_INIT_HEAP_SIZE)
                         U.quietAndWarn(log,
                             String.format("Initial heap size is %dMB (should be no less than 512MB, " +
                                 "use -Xms512m -Xmx512m).", initMb));

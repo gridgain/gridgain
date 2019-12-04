@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.LoadBalancerResource;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * This class defines simplified adapter for {@link ComputeTask}. This adapter can be used
@@ -98,7 +99,7 @@ public abstract class ComputeTaskSplitAdapter<T, R> extends ComputeTaskAdapter<T
     protected abstract Collection<? extends ComputeJob> split(int gridSize, T arg) throws IgniteException;
 
     /** {@inheritDoc} */
-    @Override public final Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, T arg) {
+    @NotNull @Override public final Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, T arg) {
         assert subgrid != null;
         assert !subgrid.isEmpty();
 

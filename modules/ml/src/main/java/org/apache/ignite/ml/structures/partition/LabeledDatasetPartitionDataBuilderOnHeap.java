@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,7 @@ import org.apache.ignite.ml.structures.LabeledVectorSet;
  * @param <C> Type of a partition <tt>context</tt>.
  */
 public class LabeledDatasetPartitionDataBuilderOnHeap<K, V, C extends Serializable>
-    implements PartitionDataBuilder<K, V, C, LabeledVectorSet<Double, LabeledVector>> {
+    implements PartitionDataBuilder<K, V, C, LabeledVectorSet<LabeledVector>> {
     /** */
     private static final long serialVersionUID = -7820760153954269227L;
 
@@ -51,7 +51,7 @@ public class LabeledDatasetPartitionDataBuilderOnHeap<K, V, C extends Serializab
     }
 
     /** {@inheritDoc} */
-    @Override public LabeledVectorSet<Double, LabeledVector> build(
+    @Override public LabeledVectorSet<LabeledVector> build(
         LearningEnvironment env,
         Iterator<UpstreamEntry<K, V>> upstreamData,
         long upstreamDataSize, C ctx) {
@@ -63,6 +63,7 @@ public class LabeledDatasetPartitionDataBuilderOnHeap<K, V, C extends Serializab
 
         while (upstreamData.hasNext()) {
             UpstreamEntry<K, V> entry = upstreamData.next();
+            @SuppressWarnings("unchecked")
             LabeledVector<Double> labeledVector = preprocessor.apply(entry.getKey(), entry.getValue());
             Vector row = labeledVector.features();
 

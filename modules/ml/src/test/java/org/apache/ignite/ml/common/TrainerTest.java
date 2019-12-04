@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,13 +16,12 @@
 
 package org.apache.ignite.ml.common;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Basic fields and methods for the trainer tests.
@@ -255,7 +254,7 @@ public class TrainerTest {
     };
 
     /** The data is easy separated with classifier by y = x. */
-    protected static final double[][] twoLinearlySeparableClasses = {
+    public static final double[][] twoLinearlySeparableClasses = {
         {0.0, -122.69914721554494, -152.90003228835155},
         {1.0, -988.7803093110984, 39.64498230320555},
         {1.0, -721.0342526056645, -167.29469954420483},

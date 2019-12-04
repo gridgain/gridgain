@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -466,17 +466,18 @@ public class SchemaExchangeSelfTest extends AbstractSchemaSelfTest {
 
         node1 = start(1, KeyClass.class, ValueClass.class, KeyClass2.class, ValueClass2.class);
         assertTypes(node1, ValueClass.class, ValueClass2.class);
-        assertTypes(node2, ValueClass.class);
 
         assertCacheStarted(CACHE_NAME, node1);
 
         reconnFut.get();
 
-        assertTypes(node2, ValueClass.class, ValueClass2.class);
         assertCacheNotStarted(CACHE_NAME, node2);
 
         node2.cache(CACHE_NAME);
+
         assertCacheStarted(CACHE_NAME, node2);
+
+        assertTypes(node2, ValueClass.class, ValueClass2.class);
     }
 
     /**
@@ -538,9 +539,8 @@ public class SchemaExchangeSelfTest extends AbstractSchemaSelfTest {
      * @throws AssertionError If failed.
      */
     private void assertCacheStarted(String cacheName, IgniteEx... nodes) throws AssertionError {
-        for (IgniteEx node : nodes) {
+        for (IgniteEx node : nodes)
             assertTrue(isCacheStarted(cacheName, node));
-        }
     }
 
     /**
@@ -551,9 +551,8 @@ public class SchemaExchangeSelfTest extends AbstractSchemaSelfTest {
      * @throws AssertionError If failed.
      */
     private void assertCacheNotStarted(String cacheName, IgniteEx... nodes) throws AssertionError {
-        for (IgniteEx node : nodes) {
+        for (IgniteEx node : nodes)
             assertFalse(isCacheStarted(cacheName, node));
-        }
     }
 
     /**

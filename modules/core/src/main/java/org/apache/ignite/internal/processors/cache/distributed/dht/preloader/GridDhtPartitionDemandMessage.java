@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheMessage;
@@ -178,7 +179,9 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
 
     /**
      * @param topic Topic.
+     * @deprecated Obsolete (Kept to solve compatibility issues).
      */
+    @Deprecated
     void topic(Object topic) {
         this.topic = topic;
     }
@@ -373,6 +376,11 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
         return 10;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte policy() {
+        return GridIoPolicy.REBALANCE_POOL;
     }
 
     /** {@inheritDoc} */

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryDetailMetrics;
 import org.apache.ignite.compute.ComputeJobResult;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
@@ -35,11 +34,11 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isIgfsCache;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 
 /**
- * Task to collect cache query metrics.
+ * Collect query detailed metrics from cache context only.
+ * This task should be used to collect query metrics when indexing feature not available.
  */
 @GridInternal
 public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<VisorQueryDetailMetricsCollectorTaskArg,
@@ -118,8 +117,6 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
         ) throws IgniteException {
             assert arg != null;
 
-            IgniteConfiguration cfg = ignite.configuration();
-
             GridCacheProcessor cacheProc = ignite.context().cache();
 
             Collection<String> cacheNames = cacheProc.cacheNames();
@@ -127,7 +124,7 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
             Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> aggMetrics = new HashMap<>();
 
             for (String cacheName : cacheNames) {
-                if (!isSystemCache(cacheName) && !isIgfsCache(cfg, cacheName)) {
+                if (!isSystemCache(cacheName)) {
                     IgniteInternalCache<Object, Object> cache = cacheProc.cache(cacheName);
 
                     if (cache == null || !cache.context().started())

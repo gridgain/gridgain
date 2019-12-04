@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,19 +16,27 @@
 
 package org.apache.ignite.internal.processors.query.h2.sys.view;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.stat.IoStatisticsHolder;
-import org.apache.ignite.internal.stat.IoStatisticsHolderCache;
-import org.apache.ignite.internal.stat.IoStatisticsHolderKey;
-import org.apache.ignite.internal.stat.IoStatisticsType;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.spi.metric.IntMetric;
+import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.spi.metric.ObjectMetric;
 import org.h2.engine.Session;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.value.Value;
+
+import static java.util.Collections.emptyIterator;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.internal.metric.IoStatisticsHolderCache.LOGICAL_READS;
+import static org.apache.ignite.internal.metric.IoStatisticsHolderCache.PHYSICAL_READS;
+import static org.apache.ignite.internal.metric.IoStatisticsType.CACHE_GROUP;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.util.lang.GridFunc.iterator;
 
 /**
  * System view of cache group IO statistics.
@@ -50,45 +58,56 @@ public class SqlSystemViewCacheGroupsIOStatistics extends SqlAbstractLocalSystem
     @Override public Iterator<Row> getRows(Session ses, SearchRow first, SearchRow last) {
         SqlSystemViewColumnCondition nameCond = conditionForColumn("CACHE_GROUP_NAME", first, last);
 
-        Map<IoStatisticsHolderKey, IoStatisticsHolder> stats = ctx.ioStats().statistics(IoStatisticsType.CACHE_GROUP);
-
-        List<Row> rows = new ArrayList<>();
-
         if (nameCond.isEquality()) {
             String cacheGrpName = nameCond.valueForEquality().getString();
 
-            IoStatisticsHolderCache statHolder = (IoStatisticsHolderCache)stats
-                .get(new IoStatisticsHolderKey(cacheGrpName));
+            MetricRegistry mreg = ctx.metric().registry(metricName(CACHE_GROUP.metricGroupName(), cacheGrpName));
 
-            if (statHolder != null) {
-                rows.add(
-                    createRow(
-                        ses,
-                        statHolder.cacheGroupId(),
-                        cacheGrpName,
-                        statHolder.physicalReads(),
-                        statHolder.logicalReads()
-                    )
-                );
+            IntMetric grpId = mreg.findMetric("grpId");
+            ObjectMetric<String> grpName = mreg.findMetric("name");
+
+            if (grpId == null)
+                emptyIterator();
+
+            if (mreg != null) {
+                return singleton(toRow(ses,
+                    grpId.value(),
+                    grpName.value(),
+                    mreg)
+                ).iterator();
             }
         }
         else {
-            for (Map.Entry<IoStatisticsHolderKey, IoStatisticsHolder> entry : stats.entrySet()) {
-                IoStatisticsHolderCache statHolder = (IoStatisticsHolderCache)entry.getValue();
+            Collection<CacheGroupContext> grpCtxs = ctx.cache().cacheGroups();
 
-                rows.add(
-                    createRow(
-                        ses,
-                        statHolder.cacheGroupId(),
-                        entry.getKey().name(),
-                        statHolder.physicalReads(),
-                        statHolder.logicalReads()
-                    )
-                );
-            }
+            GridMetricManager mmgr = ctx.metric();
+
+            return iterator(grpCtxs,
+                grpCtx -> toRow(ses,
+                    grpCtx.groupId(),
+                    grpCtx.cacheOrGroupName(),
+                    mmgr.registry(metricName(CACHE_GROUP.metricGroupName(), grpCtx.cacheOrGroupName()))),
+                true,
+                grpCtx -> !grpCtx.systemCache());
         }
 
-        return rows.iterator();
+        return emptyIterator();
+    }
+
+    /** */
+    private Row toRow(Session ses, int grpId, String grpName, MetricRegistry mreg) {
+        IntMetric grpIdMetric = mreg.findMetric("grpId");
+
+        if (grpIdMetric == null)
+            return createRow(ses, grpId, grpName, 0, 0);
+
+        return createRow(
+            ses,
+            grpId,
+            grpName,
+            mreg.<LongMetric>findMetric(PHYSICAL_READS).value(),
+            mreg.<LongMetric>findMetric(LOGICAL_READS).value()
+        );
     }
 
     /** {@inheritDoc} */
@@ -98,6 +117,6 @@ public class SqlSystemViewCacheGroupsIOStatistics extends SqlAbstractLocalSystem
 
     /** {@inheritDoc} */
     @Override public long getRowCount() {
-        return ctx.ioStats().statistics(IoStatisticsType.CACHE_GROUP).size();
+        return ctx.cache().cacheGroups().size();
     }
 }

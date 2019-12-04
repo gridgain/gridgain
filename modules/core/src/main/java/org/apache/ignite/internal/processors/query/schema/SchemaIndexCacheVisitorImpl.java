@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -36,7 +37,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 
+import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
@@ -45,17 +48,13 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Default degree of parallelism. */
-    private static final int DFLT_PARALLELISM =
-        Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
+    private static final int DFLT_PARALLELISM;
 
     /** Count of rows, being processed within a single checkpoint lock. */
     private static final int BATCH_SIZE = 1000;
 
     /** Cache context. */
     private final GridCacheContext cctx;
-
-    /** Row filter. */
-    private final SchemaIndexCacheFilter rowFilter;
 
     /** Cancellation token. */
     private final SchemaIndexOperationCancellationToken cancel;
@@ -66,31 +65,38 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Whether to stop the process. */
     private volatile boolean stop;
 
+    static {
+        int parallelism = IgniteSystemProperties.getInteger(INDEX_REBUILDING_PARALLELISM, 0);
+
+        if (parallelism > 0)
+            DFLT_PARALLELISM = Math.min(parallelism, Runtime.getRuntime().availableProcessors());
+        else
+            DFLT_PARALLELISM = Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
+    }
+
     /**
      * Constructor.
      *  @param cctx Cache context.
      */
     public SchemaIndexCacheVisitorImpl(GridCacheContext cctx) {
-        this(cctx, null, null, 0);
+        this(cctx, null, 0);
     }
 
     /**
      * Constructor.
      *
      * @param cctx Cache context.
-     * @param rowFilter Row filter.
      * @param cancel Cancellation token.
      * @param parallelism Degree of parallelism.
      */
-    public SchemaIndexCacheVisitorImpl(GridCacheContext cctx, SchemaIndexCacheFilter rowFilter,
-        SchemaIndexOperationCancellationToken cancel, int parallelism) {
-        this.rowFilter = rowFilter;
+    public SchemaIndexCacheVisitorImpl(GridCacheContext cctx, SchemaIndexOperationCancellationToken cancel,
+        int parallelism) {
         this.cancel = cancel;
 
         if (parallelism > 0)
             this.parallelism = Math.min(Runtime.getRuntime().availableProcessors(), parallelism);
         else
-            this.parallelism =  DFLT_PARALLELISM;
+            this.parallelism = DFLT_PARALLELISM;
 
         if (cctx.isNear())
             cctx = ((GridNearCacheAdapter)cctx.cache()).dht().context();
@@ -177,7 +183,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         boolean reserved = false;
 
         if (part != null && part.state() != EVICTED)
-            reserved = (part.state() == OWNING || part.state() == RENTING) && part.reserve();
+            reserved = (part.state() == OWNING || part.state() == RENTING || part.state() == MOVING) && part.reserve();
 
         if (!reserved)
             return;
@@ -219,6 +225,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         }
         finally {
             part.release();
+
+            cctx.group().metrics().decrementIndexBuildCountPartitionsLeft();
         }
     }
 
@@ -237,7 +245,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
                 try {
-                    entry.updateIndex(rowFilter, clo);
+                    entry.updateIndex(clo);
                 }
                 finally {
                     entry.touch();
@@ -318,6 +326,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 U.error(log, "Error during parallel index create/rebuild.", e);
 
                 stop = true;
+
+                cctx.group().metrics().setIndexBuildCountPartitionsLeft(0);
             }
             finally {
                 fut.onDone(err);

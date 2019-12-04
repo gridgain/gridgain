@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -289,24 +289,6 @@ public class CacheGroupDescriptor {
      */
     void receivedFromStartVersion(AffinityTopologyVersion rcvdFromVer) {
         this.rcvdFromVer = rcvdFromVer;
-    }
-
-    /**
-     * Method to merge this CacheGroup descriptor with another one.
-     *
-     * @param otherDesc CacheGroup descriptor that must be merged with this one.
-     */
-    void mergeWith(CacheGroupDescriptor otherDesc) {
-        assert otherDesc != null && otherDesc.config() != null : otherDesc;
-
-        CacheConfiguration otherCfg = otherDesc.config();
-
-        cacheCfg.setRebalanceDelay(otherCfg.getRebalanceDelay());
-        cacheCfg.setRebalanceBatchesPrefetchCount(otherCfg.getRebalanceBatchesPrefetchCount());
-        cacheCfg.setRebalanceBatchSize(otherCfg.getRebalanceBatchSize());
-        cacheCfg.setRebalanceOrder(otherCfg.getRebalanceOrder());
-        cacheCfg.setRebalanceThrottle(otherCfg.getRebalanceThrottle());
-        cacheCfg.setRebalanceTimeout(otherCfg.getRebalanceTimeout());
     }
 
     /**

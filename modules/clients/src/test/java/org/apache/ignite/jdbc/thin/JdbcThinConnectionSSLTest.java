@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
     /** Trust key store path. */
     private static final String TRUST_KEY_STORE_PATH = U.getIgniteHome() +
-        "/modules/clients/src/test/keystore/trust.jks";
+        "/modules/clients/src/test/keystore/trust-one.jks";
 
     /** SSL context factory. */
     private static Factory<SSLContext> sslCtxFactory;
@@ -342,7 +342,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Failed to SSL connect to server");
+            }, SQLException.class, "connect to");
         }
         finally {
             stopAllGrids();
@@ -363,7 +363,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     Connection c = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-                        "&sslProtocol=TLSv1.3" +
+                        "&sslProtocol=TLSv1.13" +
                         "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                         "&sslClientCertificateKeyStorePassword=123456" +
                         "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
@@ -371,7 +371,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "TLSv1.3 is not a valid SSL protocol");
+            }, SQLException.class, "TLSv1.13 is not a valid SSL protocol");
         }
         finally {
             stopAllGrids();
@@ -421,7 +421,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     Connection c = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-                        "&sslClientCertificateKeyStoreType=PKCS12" +
+                        "&sslClientCertificateKeyStoreType=INVALID_TYPE" +
                         "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                         "&sslClientCertificateKeyStorePassword=123456" +
                         "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
@@ -429,7 +429,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not open client key store");
+            }, SQLException.class, "Could not create client KeyStore");
         }
         finally {
             stopAllGrids();

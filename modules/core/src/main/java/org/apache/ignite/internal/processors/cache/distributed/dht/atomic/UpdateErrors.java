@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -125,7 +125,7 @@ public class UpdateErrors implements Message {
         err.addSuppressed(e);
     }
 
-    /** {@inheritDoc} */
+    /** */
     void prepareMarshal(GridCacheMessage msg, GridCacheContext cctx) throws IgniteCheckedException {
         msg.prepareMarshalCacheObjects(failedKeys, cctx);
 
@@ -133,7 +133,7 @@ public class UpdateErrors implements Message {
             errBytes = U.marshal(cctx.marshaller(), err);
     }
 
-    /** {@inheritDoc} */
+    /** */
     void finishUnmarshal(GridCacheMessage msg, GridCacheContext cctx, ClassLoader ldr) throws IgniteCheckedException {
         msg.finishUnmarshalCacheObjects(failedKeys, cctx, ldr);
 

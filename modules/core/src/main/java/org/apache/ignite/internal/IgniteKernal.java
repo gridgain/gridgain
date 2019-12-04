@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import javax.cache.CacheException;
-import javax.management.JMException;
 import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
@@ -27,10 +25,15 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.nio.charset.Charset;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -49,6 +52,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.CacheException;
+import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -66,7 +71,6 @@ import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.IgniteLock;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
@@ -81,7 +85,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.MemoryMetrics;
 import org.apache.ignite.PersistenceMetrics;
 import org.apache.ignite.cache.affinity.Affinity;
-import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
@@ -140,14 +143,14 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.continuous.GridContinuousProcessor;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
-import org.apache.ignite.internal.processors.hadoop.Hadoop;
-import org.apache.ignite.internal.processors.hadoop.HadoopProcessorAdapter;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.nodevalidation.OsDiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
@@ -163,6 +166,9 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
+import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
@@ -170,10 +176,14 @@ import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.processors.tracing.TracingProcessor;
+import org.apache.ignite.internal.processors.txdr.NoOpTransactionalDrProcessor;
+import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.suggestions.JvmConfigurationSuggestions;
 import org.apache.ignite.internal.suggestions.OsConfigurationSuggestions;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -216,6 +226,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_ASCII;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALLER_USE_DEFAULT_SUID;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
@@ -230,9 +241,7 @@ import static org.apache.ignite.internal.GridKernalState.STARTING;
 import static org.apache.ignite.internal.GridKernalState.STOPPED;
 import static org.apache.ignite.internal.GridKernalState.STOPPING;
 import static org.apache.ignite.internal.IgniteComponentType.COMPRESSION;
-import static org.apache.ignite.internal.IgniteComponentType.HADOOP_HELPER;
-import static org.apache.ignite.internal.IgniteComponentType.IGFS;
-import static org.apache.ignite.internal.IgniteComponentType.IGFS_HELPER;
+import static org.apache.ignite.internal.IgniteComponentType.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteComponentType.SCHEDULE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
@@ -290,8 +299,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Ignite site that is shown in log messages. */
-    public static final String SITE = "ignite.apache.org";
+    /** GridGain site that is shown in log messages. */
+    public static final String SITE = "gridgain.com";
 
     /** System line separator. */
     private static final String NL = U.nl();
@@ -747,6 +756,109 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
     }
 
+    /** */
+    private void ackClassPathElementRecursive(File clsPathEntry, SB clsPathContent) {
+        if (clsPathEntry.isDirectory()) {
+            String[] list = clsPathEntry.list();
+
+            for (String listElement : list)
+                ackClassPathElementRecursive(new File(clsPathEntry, listElement), clsPathContent);
+        }
+        else {
+            String path = clsPathEntry.getAbsolutePath();
+
+            if (path.endsWith(".class"))
+                clsPathContent.a(path).a(";");
+        }
+    }
+
+    /** */
+    private void ackClassPathEntry(String clsPathEntry, SB clsPathContent) {
+        File clsPathElementFile = new File(clsPathEntry);
+
+        if (clsPathElementFile.isDirectory())
+            ackClassPathElementRecursive(clsPathElementFile, clsPathContent);
+        else {
+            String extension = clsPathEntry.length() >= 4
+                ? clsPathEntry.substring(clsPathEntry.length() - 4).toLowerCase()
+                : null;
+
+            if (".jar".equals(extension) || ".zip".equals(extension))
+                clsPathContent.a(clsPathEntry).a(";");
+        }
+    }
+
+    /** */
+    private void ackClassPathWildCard(String clsPathEntry, SB clsPathContent) {
+        final int lastSeparatorIdx = clsPathEntry.lastIndexOf(File.separator);
+
+        final int asteriskIdx = clsPathEntry.indexOf('*');
+
+        //just to log possibly incorrent entries to err
+        if (asteriskIdx >= 0 && asteriskIdx < lastSeparatorIdx)
+            throw new RuntimeException("Could not parse classpath entry");
+
+        final int fileMaskFirstIdx = lastSeparatorIdx + 1;
+
+        final String fileMask =
+            (fileMaskFirstIdx >= clsPathEntry.length()) ? "*.jar" : clsPathEntry.substring(fileMaskFirstIdx);
+
+        Path path = Paths.get(lastSeparatorIdx > 0 ? clsPathEntry.substring(0, lastSeparatorIdx) : ".")
+            .toAbsolutePath()
+            .normalize();
+
+        if (lastSeparatorIdx == 0)
+            path = path.getRoot();
+
+        try {
+            DirectoryStream<Path> files =
+                Files.newDirectoryStream(path, fileMask);
+
+            for (Path f : files) {
+                String s = f.toString();
+
+                if (s.toLowerCase().endsWith(".jar"))
+                    clsPathContent.a(f.toString()).a(";");
+            }
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Prints the list of *.jar and *.class files containing in classpath.
+     */
+    private void ackClassPathContent() {
+        assert log != null;
+
+        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
+
+        if (enabled) {
+            String clsPath = System.getProperty("java.class.path", ".");
+
+            String[] clsPathElements = clsPath.split(File.pathSeparator);
+
+            U.log(log, "Classpath value: " + clsPath);
+
+            SB clsPathContent = new SB("List of files containing in classpath: ");
+
+            for (String clsPathEntry : clsPathElements) {
+                try {
+                    if (clsPathEntry.contains("*"))
+                        ackClassPathWildCard(clsPathEntry, clsPathContent);
+                    else
+                        ackClassPathEntry(clsPathEntry, clsPathContent);
+                }
+                catch (Exception e) {
+                    U.warn(log, String.format("Could not log class path entry '%s': %s", clsPathEntry, e.getMessage()));
+                }
+            }
+
+            U.log(log, clsPathContent.toString());
+        }
+    }
+
     /**
      * @param cfg Configuration to use.
      * @param utilityCachePool Utility cache pool.
@@ -755,7 +867,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param stripedExecSvc Striped executor.
      * @param p2pExecSvc P2P executor service.
      * @param mgmtExecSvc Management executor service.
-     * @param igfsExecSvc IGFS executor service.
      * @param dataStreamExecSvc data stream executor service.
      * @param restExecSvc Reset executor service.
      * @param affExecSvc Affinity executor service.
@@ -763,6 +874,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance excutor service.
      * @param customExecSvcs Custom named executors.
      * @param errHnd Error handler to use for notification about startup problems.
      * @param workerRegistry Worker registry.
@@ -778,7 +890,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         final StripedExecutor stripedExecSvc,
         ExecutorService p2pExecSvc,
         ExecutorService mgmtExecSvc,
-        ExecutorService igfsExecSvc,
         StripedExecutor dataStreamExecSvc,
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
@@ -786,10 +897,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
-        Thread.UncaughtExceptionHandler hnd
+        Thread.UncaughtExceptionHandler hnd,
+        TimeBag startTimer
     )
         throws IgniteCheckedException {
         gw.compareAndSet(null, new GridKernalGatewayImpl(cfg.getIgniteInstanceName()));
@@ -900,7 +1013,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 stripedExecSvc,
                 p2pExecSvc,
                 mgmtExecSvc,
-                igfsExecSvc,
                 dataStreamExecSvc,
                 restExecSvc,
                 affExecSvc,
@@ -908,6 +1020,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 callbackExecSvc,
                 qryExecSvc,
                 schemaExecSvc,
+                rebalanceExecSvc,
                 customExecSvcs,
                 plugins,
                 MarshallerUtils.classNameFilter(this.getClass().getClassLoader()),
@@ -916,13 +1029,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 longJVMPauseDetector
             );
 
+            startProcessor(new DiagnosticProcessor(ctx));
+
             mBeansMgr = new IgniteMBeansManager(this);
 
             cfg.getMarshaller().setContext(ctx.marshallerContext());
 
-            GridInternalSubscriptionProcessor subscriptionProc = new GridInternalSubscriptionProcessor(ctx);
-
-            startProcessor(subscriptionProc);
+            startProcessor(new GridInternalSubscriptionProcessor(ctx));
 
             ClusterProcessor clusterProc = new ClusterProcessor(ctx);
 
@@ -948,15 +1061,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 }
             }
 
+            startProcessor(new TracingProcessor(ctx));
+
             // Lifecycle notification.
             notifyLifecycleBeans(BEFORE_NODE_START);
 
             // Starts lifecycle aware components.
             U.startLifecycleAware(lifecycleAwares(cfg));
-
-            addHelper(IGFS_HELPER.create(F.isEmpty(cfg.getFileSystemConfiguration())));
-
-            addHelper(HADOOP_HELPER.createIfInClassPath(ctx, false));
 
             startProcessor(new IgnitePluginProcessor(ctx, cfg, plugins));
 
@@ -977,10 +1088,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startProcessor(new GridTimeoutProcessor(ctx));
 
             // Start security processors.
-            startProcessor(createComponent(GridSecurityProcessor.class, ctx));
+            startProcessor(securityProcessor());
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
+            startManager(new GridMetricManager(ctx));
             startManager(new GridIoManager(ctx));
             startManager(new GridCheckpointManager(ctx));
 
@@ -1003,13 +1115,21 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             // Start processors before discovery manager, so they will
             // be able to start receiving messages once discovery completes.
             try {
+                startProcessor(new TracingProcessor(ctx));
                 startProcessor(COMPRESSION.createOptional(ctx));
+                startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
                 startProcessor(createComponent(GridSegmentationProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Start managers");
+
                 startProcessor(createComponent(IgniteCacheObjectProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Configure binary metadata");
+
                 startProcessor(createComponent(IGridClusterStateProcessor.class, ctx));
                 startProcessor(new IgniteAuthenticationProcessor(ctx));
                 startProcessor(new GridCacheProcessor(ctx));
@@ -1022,20 +1142,25 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor((GridProcessor)SCHEDULE.createOptional(ctx));
                 startProcessor(new GridRestProcessor(ctx));
                 startProcessor(new DataStreamProcessor(ctx));
-                startProcessor((GridProcessor)IGFS.create(ctx, F.isEmpty(cfg.getFileSystemConfiguration())));
                 startProcessor(new GridContinuousProcessor(ctx));
-                startProcessor(createHadoopComponent());
                 startProcessor(new DataStructuresProcessor(ctx));
                 startProcessor(createComponent(PlatformProcessor.class, ctx));
-                startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new DistributedMetaStorageImpl(ctx));
                 startProcessor(new DistributedConfigurationProcessor(ctx));
+                startProcessor(MANAGEMENT_CONSOLE.createOptional(ctx));
+
+                // Start transactional data replication processor.
+                startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Start processors");
 
                 // Start plugins.
                 for (PluginProvider provider : ctx.plugins().allProviders()) {
                     ctx.add(new GridPluginComponent(provider));
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
+
+                    startTimer.finishGlobalStage("Start '"+ provider.name() + "' plugin");
                 }
 
                 // Start platform plugins.
@@ -1050,9 +1175,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
 
-                ctx.cache().context().database().startMemoryRestore(ctx);
+                startTimer.finishGlobalStage("Init metastore");
+
+                ctx.cache().context().database().startMemoryRestore(ctx, startTimer);
 
                 ctx.recoveryMode(false);
+
+                startTimer.finishGlobalStage("Finish recovery");
             }
             catch (Throwable e) {
                 U.error(
@@ -1075,6 +1204,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             finally {
                 gw.writeUnlock();
             }
+
+            startTimer.finishGlobalStage("Join topology");
 
             // Check whether UTF-8 is the default character encoding.
             checkFileEncoding();
@@ -1115,6 +1246,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }
             else
                 active = joinData.active();
+
+            startTimer.finishGlobalStage("Await transition");
 
             boolean recon = false;
 
@@ -1159,10 +1292,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             if (recon)
                 reconnectState.waitFirstReconnect();
 
+            ctx.metric().registerThreadPools(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc,
+                p2pExecSvc, mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc,
+                callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
+
             // Register MBeans.
             mBeansMgr.registerAllMBeans(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
-                mgmtExecSvc, igfsExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
-                qryExecSvc, schemaExecSvc, customExecSvcs, ctx.workersRegistry());
+                mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
+                qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
 
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
@@ -1258,7 +1395,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 private final DecimalFormat dblFmt = new DecimalFormat("#.##");
 
                 @Override public void run() {
-                    ackNodeMetrics(dblFmt, execSvc, sysExecSvc, customExecSvcs);
+                    ackNodeMetrics(dblFmt, execSvc, sysExecSvc, stripedExecSvc, customExecSvcs);
                 }
             }, metricsLogFreq, metricsLogFreq);
         }
@@ -1285,11 +1422,27 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         U.quietAndInfo(log, "To start Console Management & Monitoring run ignitevisorcmd.{sh|bat}");
 
+        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_QUIET, true))
+            ackClassPathContent();
+
         ackStart(rtBean);
 
         if (!isDaemon())
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
+
+        startTimer.finishGlobalStage("Await exchange");
+    }
+
+    /**
+     * @return GridProcessor that implements {@link IgniteSecurity}
+     */
+    private GridProcessor securityProcessor() throws IgniteCheckedException {
+        GridSecurityProcessor prc = createComponent(GridSecurityProcessor.class, ctx);
+
+        return prc != null && prc.enabled()
+            ? new IgniteSecurityProcessor(ctx, prc)
+            : new NoOpIgniteSecurityProcessor(ctx, prc);
     }
 
     /**
@@ -1299,69 +1452,28 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param execSvc service to create a description for
      */
     private String createExecutorDescription(String execSvcName, ExecutorService execSvc) {
+        int poolSize = 0;
         int poolActiveThreads = 0;
-        int poolIdleThreads = 0;
         int poolQSize = 0;
 
         if (execSvc instanceof ThreadPoolExecutor) {
             ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
 
-            int poolSize = exec.getPoolSize();
-
+            poolSize = exec.getPoolSize();
             poolActiveThreads = Math.min(poolSize, exec.getActiveCount());
-            poolIdleThreads = poolSize - poolActiveThreads;
             poolQSize = exec.getQueue().size();
         }
+        else if (execSvc instanceof StripedExecutor) {
+            StripedExecutor exec = (StripedExecutor) execSvc;
+
+            poolSize = exec.stripes();
+            poolActiveThreads = exec.activeStripesCount();
+            poolQSize = exec.queueSize();
+        }
+
+        int poolIdleThreads = poolSize - poolActiveThreads;
 
         return execSvcName + " [active=" + poolActiveThreads + ", idle=" + poolIdleThreads + ", qSize=" + poolQSize + "]";
-    }
-
-    /**
-     * Create Hadoop component.
-     *
-     * @return Non-null Hadoop component: workable or no-op.
-     * @throws IgniteCheckedException If the component is mandatory and cannot be initialized.
-     */
-    private HadoopProcessorAdapter createHadoopComponent() throws IgniteCheckedException {
-        boolean mandatory = cfg.getHadoopConfiguration() != null;
-
-        if (mandatory) {
-            if (cfg.isPeerClassLoadingEnabled())
-                throw new IgniteCheckedException("Hadoop module cannot be used with peer class loading enabled " +
-                    "(set IgniteConfiguration.peerClassLoadingEnabled to \"false\").");
-
-            HadoopProcessorAdapter res = IgniteComponentType.HADOOP.createIfInClassPath(ctx, true);
-
-            res.validateEnvironment();
-
-            return res;
-        }
-        else {
-            HadoopProcessorAdapter cmp = null;
-
-            if (!ctx.hadoopHelper().isNoOp() && cfg.isPeerClassLoadingEnabled()) {
-                U.warn(log, "Hadoop module is found in classpath, but will not be started because peer class " +
-                    "loading is enabled (set IgniteConfiguration.peerClassLoadingEnabled to \"false\" if you want " +
-                    "to use Hadoop module).");
-            }
-            else {
-                cmp = IgniteComponentType.HADOOP.createIfInClassPath(ctx, false);
-
-                try {
-                    cmp.validateEnvironment();
-                }
-                catch (IgniteException | IgniteCheckedException e) {
-                    U.quietAndWarn(log, "Hadoop module will not start due to exception: " + e.getMessage());
-
-                    cmp = null;
-                }
-            }
-
-            if (cmp == null)
-                cmp = IgniteComponentType.HADOOP.create(ctx, true);
-
-            return cmp;
-        }
     }
 
     /**
@@ -1657,7 +1769,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         add(ATTR_TX_CONFIG, cfg.getTransactionConfiguration());
 
         // Supported features.
-        add(ATTR_IGNITE_FEATURES, IgniteFeatures.allFeatures());
+        add(ATTR_IGNITE_FEATURES, IgniteFeatures.allFeatures(context()));
 
         // Stick in SPI versions and classes attributes.
         addSpiAttributes(cfg.getCollisionSpi());
@@ -2064,6 +2176,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void ackNodeMetrics(DecimalFormat dblFmt,
         ExecutorService execSvc,
         ExecutorService sysExecSvc,
+        ExecutorService stripedExecSvc,
         Map<String, ? extends ExecutorService> customExecSvcs
     ) {
         if (!log.isInfoEnabled())
@@ -2191,7 +2304,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 pdsInfo +
                 "    ^-- Outbound messages queue [size=" + m.getOutboundMessagesQueueSize() + "]" + NL +
                 "    ^-- " + createExecutorDescription("Public thread pool", execSvc) + NL +
-                "    ^-- " + createExecutorDescription("System thread pool", sysExecSvc);
+                "    ^-- " + createExecutorDescription("System thread pool", sysExecSvc) + NL +
+                "    ^-- " + createExecutorDescription("Striped thread pool", stripedExecSvc);
 
             if (customExecSvcs != null) {
                 StringBuilder customSvcsMsg = new StringBuilder();
@@ -2332,9 +2446,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                         throw e;
                 }
             }
-
-            if (ctx.hadoopHelper() != null)
-                ctx.hadoopHelper().close();
 
             if (starveTask != null)
                 starveTask.close();
@@ -2488,8 +2599,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 // Preserve interrupt status.
                 Thread.currentThread().interrupt();
             }
-
-            ctx.ioStats().stop();
         }
         else {
             // Proper notification.
@@ -2632,13 +2741,25 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 U.warn(log, "Setting the rebalance pool size has no effect on the client mode");
         }
         else {
-            if (cfg.getSystemThreadPoolSize() <= cfg.getRebalanceThreadPoolSize())
-                throw new IgniteCheckedException("Rebalance thread pool size exceed or equals System thread pool size. " +
-                    "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
-
             if (cfg.getRebalanceThreadPoolSize() < 1)
                 throw new IgniteCheckedException("Rebalance thread pool size minimal allowed value is 1. " +
                     "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
+
+            if (cfg.getRebalanceBatchesPrefetchCount() < 1)
+                throw new IgniteCheckedException("Rebalance batches prefetch count minimal allowed value is 1. " +
+                    "Change IgniteConfiguration.rebalanceBatchesPrefetchCount property before next start.");
+
+            if (cfg.getRebalanceBatchSize() <= 0)
+                throw new IgniteCheckedException("Rebalance batch size must be greater than zero. " +
+                    "Change IgniteConfiguration.rebalanceBatchSize property before next start.");
+
+            if (cfg.getRebalanceThrottle() < 0)
+                throw new IgniteCheckedException("Rebalance throttle can't have negative value. " +
+                    "Change IgniteConfiguration.rebalanceThrottle property before next start.");
+
+            if (cfg.getRebalanceTimeout() < 0)
+                throw new IgniteCheckedException("Rebalance message timeout can't have negative value. " +
+                    "Change IgniteConfiguration.rebalanceTimeout property before next start.");
 
             for (CacheConfiguration ccfg : cfg.getCacheConfiguration()) {
                 if (ccfg.getRebalanceBatchesPrefetchCount() < 1)
@@ -3513,73 +3634,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteFileSystem fileSystem(String name) {
-        if (name == null)
-            throw new IllegalArgumentException("IGFS name cannot be null");
-
-        guard();
-
-        try {
-            checkClusterState();
-
-            IgniteFileSystem fs = ctx.igfs().igfs(name);
-
-            if (fs == null)
-                throw new IllegalArgumentException("IGFS is not configured: " + name);
-
-            return fs;
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public IgniteFileSystem igfsx(String name) {
-        if (name == null)
-            throw new IllegalArgumentException("IGFS name cannot be null");
-
-        guard();
-
-        try {
-            checkClusterState();
-
-            return ctx.igfs().igfs(name);
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public Collection<IgniteFileSystem> fileSystems() {
-        guard();
-
-        try {
-            checkClusterState();
-
-            return ctx.igfs().igfss();
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public Hadoop hadoop() {
-        guard();
-
-        try {
-            checkClusterState();
-
-            return ctx.hadoop().hadoop();
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public <T extends IgnitePlugin> T plugin(String name) throws PluginNotFoundException {
         guard();
 
@@ -3629,6 +3683,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         Ignition.stop(igniteInstanceName, true);
     }
 
+    /** {@inheritDoc} */
     @Override public <K> Affinity<K> affinity(String cacheName) {
         CU.validateCacheName(cacheName);
         checkClusterState();
@@ -3658,18 +3713,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         cluster().active(active);
     }
 
-    /** */
-    private Collection<BaselineNode> baselineNodes() {
-        Collection<ClusterNode> srvNodes = cluster().forServers().nodes();
-
-        ArrayList baselineNodes = new ArrayList(srvNodes.size());
-
-        for (ClusterNode clN : srvNodes)
-            baselineNodes.add(clN);
-
-        return baselineNodes;
-    }
-
     /** {@inheritDoc} */
     @Override public void resetLostPartitions(Collection<String> cacheNames) {
         CU.validateCacheNames(cacheNames);
@@ -3677,7 +3720,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         guard();
 
         try {
-            ctx.cache().resetCacheState(cacheNames).get();
+            ctx.cache().resetCacheState(cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -4149,6 +4192,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (cls.equals(IGridClusterStateProcessor.class))
             return (T)new GridClusterStateProcessor(ctx);
 
+        if (cls.equals(TransactionalDrProcessor.class))
+            return (T)new NoOpTransactionalDrProcessor(ctx);
+
+        if(cls.equals(GridSecurityProcessor.class))
+            return null;
+
         Class<T> implCls = null;
 
         try {
@@ -4344,6 +4393,36 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public void clearNodeLocalMap() {
         ctx.cluster().get().clearNodeMap();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void resetMetrics(String registry) {
+        assert registry != null;
+
+        MetricRegistry mreg = ctx.metric().registry(registry);
+
+        if (mreg != null)
+            mreg.reset();
+        else if (log.isInfoEnabled())
+            log.info("\"" + registry + "\" not found.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean readOnlyMode() {
+        return ctx.state().publicApiReadOnlyMode();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readOnlyMode(boolean readOnly) {
+        ctx.state().changeGlobalState(readOnly);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getReadOnlyModeDuration() {
+        if (ctx.state().publicApiReadOnlyMode())
+            return U.currentTimeMillis() - ctx.state().readOnlyModeStateChangeTime();
+        else
+            return 0;
     }
 
     /** {@inheritDoc} */

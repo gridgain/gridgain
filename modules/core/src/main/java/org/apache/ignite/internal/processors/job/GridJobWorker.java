@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,6 @@ import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.igfs.IgfsOutOfSpaceException;
 import org.apache.ignite.internal.GridInternalException;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridJobExecuteResponse;
@@ -588,7 +587,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                     assert ex != null;
                 }
                 else {
-                    if (X.hasCause(e, GridInternalException.class) || X.hasCause(e, IgfsOutOfSpaceException.class)) {
+                    if (X.hasCause(e, GridInternalException.class)) {
                         // Print exception for internal errors only if debug is enabled.
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);

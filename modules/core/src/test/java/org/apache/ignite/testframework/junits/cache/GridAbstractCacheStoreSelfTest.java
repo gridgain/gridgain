@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,6 @@ import org.apache.ignite.internal.util.lang.GridMetadataAwareAdapter;
 import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -562,21 +561,6 @@ public abstract class GridAbstractCacheStoreSelfTest<T extends CacheStore<Object
         /** {@inheritDoc} */
         @Override public void close() {
             // No-op.
-        }
-
-        /** {@inheritDoc} */
-        @Override public IgniteAsyncSupport withAsync() {
-            throw new UnsupportedOperationException();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean isAsync() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public <R> IgniteFuture<R> future() {
-            return null;
         }
 
         /** {@inheritDoc} */

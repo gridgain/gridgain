@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,9 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -33,39 +32,33 @@ public class CacheJoinNodeDiscoveryData implements Serializable {
 
     /** */
     @GridToStringInclude
-    private final Map<String, CacheInfo> caches;
+    private final IgniteUuid deploymentId;
 
     /** */
     @GridToStringInclude
-    private final Map<String, CacheInfo> templates;
-
-    /** */
-    @GridToStringInclude
-    private final IgniteUuid cacheDeploymentId;
+    private final Map<String, CacheDiscoveryInfo> caches;
 
     /** */
     private final boolean startCaches;
 
     /**
-     * @param cacheDeploymentId Deployment ID for started caches.
+     * @param deploymentId Deployment ID for started caches.
      * @param caches Caches.
-     * @param templates Templates.
      * @param startCaches {@code True} if required to start all caches on joining node.
      */
     public CacheJoinNodeDiscoveryData(
-        IgniteUuid cacheDeploymentId,
-        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
-        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> templates,
+        IgniteUuid deploymentId,
+        Map<String, CacheDiscoveryInfo> caches,
         boolean startCaches
     ) {
-        this.cacheDeploymentId = cacheDeploymentId;
+        this.deploymentId = deploymentId;
         this.caches = caches;
-        this.templates = templates;
         this.startCaches = startCaches;
     }
 
     /**
-     * @return {@code True} if required to start all caches on joining node.
+     *
+     * @return {@code True} if required to start all caches on joining node if it's client.
      */
     boolean startCaches() {
         return startCaches;
@@ -74,111 +67,15 @@ public class CacheJoinNodeDiscoveryData implements Serializable {
     /**
      * @return Deployment ID assigned on joining node.
      */
-    public IgniteUuid cacheDeploymentId() {
-        return cacheDeploymentId;
-    }
-
-    /**
-     * @return Templates configured on joining node.
-     */
-    public Map<String, CacheInfo> templates() {
-        return templates;
+    public IgniteUuid deploymentId() {
+        return deploymentId;
     }
 
     /**
      * @return Caches configured on joining node.
      */
-    public Map<String, CacheInfo> caches() {
-        return caches;
-    }
-
-    /**
-     *
-     */
-   public static class CacheInfo implements Serializable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        @GridToStringInclude
-        private StoredCacheData cacheData;
-
-        /** */
-        @GridToStringInclude
-        private CacheType cacheType;
-
-        /** */
-        @GridToStringInclude
-        private boolean sql;
-
-        /** Flags added for future usage. */
-        private long flags;
-
-        /** Statically configured flag */
-        private boolean staticallyConfigured;
-
-        /**
-         * @param cacheData Cache data.
-         * @param cacheType Cache type.
-         * @param sql SQL flag - {@code true} if cache was created with {@code CREATE TABLE}.
-         * @param flags Flags (for future usage).
-         * @param staticallyConfigured {@code true} if it was configured by static config and {@code false} otherwise.
-         */
-        public CacheInfo(StoredCacheData cacheData, CacheType cacheType, boolean sql, long flags,
-            boolean staticallyConfigured) {
-            this.cacheData = cacheData;
-            this.cacheType = cacheType;
-            this.sql = sql;
-            this.flags = flags;
-            this.staticallyConfigured = staticallyConfigured;
-        }
-
-        /**
-         * @return Cache data.
-         */
-        public StoredCacheData cacheData() {
-            return cacheData;
-        }
-
-        /**
-         * @return Cache type.
-         */
-        public CacheType cacheType() {
-            return cacheType;
-        }
-
-        /**
-         * @return SQL flag - {@code true} if cache was created with {@code CREATE TABLE}.
-         */
-        public boolean sql() {
-            return sql;
-        }
-
-        /**
-         * @return {@code true} if it was configured by static config and {@code false} otherwise.
-         */
-        public boolean isStaticallyConfigured() {
-            return staticallyConfigured;
-        }
-
-        /**
-         * @param ois ObjectInputStream.
-         */
-        private void readObject(ObjectInputStream ois)
-            throws IOException, ClassNotFoundException {
-            ObjectInputStream.GetField gf = ois.readFields();
-
-            cacheData = (StoredCacheData)gf.get("cacheData", null);
-            cacheType = (CacheType)gf.get("cacheType", null);
-            sql = gf.get("sql", false);
-            flags = gf.get("flags", 0L);
-            staticallyConfigured = gf.get("staticallyConfigured", true);
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(CacheInfo.class, this);
-        }
+    public Map<String, CacheDiscoveryInfo> caches() {
+        return Collections.unmodifiableMap(caches);
     }
 
     /** {@inheritDoc} */

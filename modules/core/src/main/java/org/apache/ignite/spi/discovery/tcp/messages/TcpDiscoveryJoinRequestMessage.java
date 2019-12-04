@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,8 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
@@ -25,7 +27,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
  * Initial message sent by a node that wants to enter topology.
  * Sent to random node during SPI start. Then forwarded directly to coordinator.
  */
-public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -34,6 +36,9 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
 
     /** Discovery data container. */
     private final DiscoveryDataPacket dataPacket;
+
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -94,5 +99,10 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryJoinRequestMessage.class, this, "super", super.toString());
+    }
+
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

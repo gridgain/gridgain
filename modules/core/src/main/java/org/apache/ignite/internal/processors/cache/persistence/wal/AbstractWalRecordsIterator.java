@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,6 +59,11 @@ public abstract class AbstractWalRecordsIterator
      * should already prepare some value<br>
      */
     protected IgniteBiTuple<WALPointer, WALRecord> curRec;
+
+    /**
+     * The exception which can be thrown during reading next record. It holds until the next calling of next record.
+     */
+    private IgniteCheckedException curException;
 
     /**
      * Current WAL segment absolute index. <br> Determined as lowest number of file at start, is changed during advance
@@ -121,9 +126,17 @@ public abstract class AbstractWalRecordsIterator
 
     /** {@inheritDoc} */
     @Override protected IgniteBiTuple<WALPointer, WALRecord> onNext() throws IgniteCheckedException {
+        if (curException != null)
+            throw curException;
+
         IgniteBiTuple<WALPointer, WALRecord> ret = curRec;
 
-        advance();
+        try {
+            advance();
+        }
+        catch (IgniteCheckedException e) {
+            curException = e;
+        }
 
         return ret;
     }
@@ -261,7 +274,10 @@ public abstract class AbstractWalRecordsIterator
             if (e instanceof WalSegmentTailReachedException) {
                 throw new WalSegmentTailReachedException(
                     "WAL segment tail reached. [idx=" + hnd.idx() +
-                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() + "]", e);
+                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() +
+                        ", actualFilePtr=" + actualFilePtr + ']',
+                    e
+                );
             }
 
             if (!(e instanceof SegmentEofException) && !(e instanceof EOFException)) {
@@ -310,7 +326,7 @@ public abstract class AbstractWalRecordsIterator
      * @param desc File descriptor.
      * @param start Optional start pointer. Null means read from the beginning.
      * @param fileIO fileIO associated with file descriptor
-     * @param segmentHeader read segment header from fileIO
+     * @param segmentHdr read segment header from fileIO
      * @return Initialized file read header.
      * @throws IgniteCheckedException If initialized failed due to another unexpected error.
      */
@@ -318,10 +334,10 @@ public abstract class AbstractWalRecordsIterator
         @NotNull final AbstractFileDescriptor desc,
         @Nullable final FileWALPointer start,
         @NotNull final SegmentIO fileIO,
-        @NotNull final SegmentHeader segmentHeader
+        @NotNull final SegmentHeader segmentHdr
     ) throws IgniteCheckedException {
         try {
-            boolean isCompacted = segmentHeader.isCompacted();
+            boolean isCompacted = segmentHdr.isCompacted();
 
             if (isCompacted)
                 serializerFactory.skipPositionCheck(true);
@@ -341,7 +357,7 @@ public abstract class AbstractWalRecordsIterator
                 }
             }
 
-            int serVer = segmentHeader.getSerializerVersion();
+            int serVer = segmentHdr.getSerializerVersion();
 
             return createReadFileHandle(fileIO, serializerFactory.createSerializer(serVer), in);
         }
@@ -365,6 +381,9 @@ public abstract class AbstractWalRecordsIterator
 
             throw new IgniteCheckedException(
                 "Failed to initialize WAL segment after reading segment header: " + desc.file().getAbsolutePath(), e);
+        }
+        finally {
+            serializerFactory.clearSegmentLocalState();
         }
     }
 
@@ -452,10 +471,16 @@ public abstract class AbstractWalRecordsIterator
 
         /** {@inheritDoc} */
         @Override public boolean apply(WALRecord.RecordType type, WALPointer pointer) {
-            if (start.fileOffset() == ((FileWALPointer)pointer).fileOffset())
-                startReached = true;
+            FileWALPointer filePointer = (FileWALPointer)pointer;
 
-            return startReached;
+            if (filePointer.index() == start.index()) {
+                if (start.fileOffset() == filePointer.fileOffset())
+                    startReached = true;
+
+                return startReached;
+            }
+            else
+                return filePointer.index() > start.index();
         }
     }
 

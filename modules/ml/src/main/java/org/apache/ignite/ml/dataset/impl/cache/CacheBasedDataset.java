@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,9 +47,6 @@ import org.apache.ignite.ml.math.functions.IgniteTriFunction;
  */
 public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoCloseable>
     implements Dataset<C, D> {
-    /** Number of retries for the case when one of partitions not found on the node where computation is performed. */
-    private static final int RETRIES = 15 * 60;
-
     /** Retry interval (ms) for the case when one of partitions not found on the node where computation is performed. */
     private static final int RETRY_INTERVAL = 1000;
 
@@ -80,6 +77,14 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
     /** Upstream keep binary. */
     private final boolean upstreamKeepBinary;
 
+    /** Number of retries for the case when one of partitions not found on the node where computation is performed. */
+    private final int retries;
+
+    /**
+     * Client-side learning environment.
+     */
+    private final LearningEnvironment localLearningEnv;
+
     /**
      * Constructs a new instance of dataset based on Ignite Cache, which is used as {@code upstream} and as reliable storage for
      * partition {@code context} as well.
@@ -91,6 +96,8 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
      * @param datasetCache Ignite Cache with partition {@code context}.
      * @param partDataBuilder Partition {@code data} builder.
      * @param datasetId Dataset ID.
+     * @param localLearningEnv Local learning environment.
+     * @param retriesCnt Number of retries for the case when one of partitions not found on the node where computation is performed.
      */
     public CacheBasedDataset(
         Ignite ignite,
@@ -101,7 +108,10 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
         LearningEnvironmentBuilder envBuilder,
         PartitionDataBuilder<K, V, C, D> partDataBuilder,
         UUID datasetId,
-        boolean upstreamKeepBinary) {
+        boolean upstreamKeepBinary,
+        LearningEnvironment localLearningEnv,
+        int retriesCnt) {
+
         this.ignite = ignite;
         this.upstreamCache = upstreamCache;
         this.filter = filter;
@@ -111,6 +121,8 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
         this.envBuilder = envBuilder;
         this.datasetId = datasetId;
         this.upstreamKeepBinary = upstreamKeepBinary;
+        this.localLearningEnv = localLearningEnv;
+        this.retries = retriesCnt;
     }
 
     /** {@inheritDoc} */
@@ -192,7 +204,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
      */
     private <R> R computeForAllPartitions(IgniteFunction<Integer, R> fun, IgniteBinaryOperator<R> reduce, R identity) {
         Collection<String> cacheNames = Arrays.asList(datasetCache.getName(), upstreamCache.getName());
-        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, RETRIES, RETRY_INTERVAL);
+        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, retries, RETRY_INTERVAL, localLearningEnv.deployingContext());
 
         R res = identity;
         for (R partRes : results)

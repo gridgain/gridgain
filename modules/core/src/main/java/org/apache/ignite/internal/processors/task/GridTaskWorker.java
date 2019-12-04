@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,6 @@ import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
-import org.apache.ignite.igfs.IgfsOutOfSpaceException;
 import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridInternalException;
 import org.apache.ignite.internal.GridJobCancelRequest;
@@ -70,6 +69,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.closure.AffinityTask;
 import org.apache.ignite.internal.processors.service.GridServiceNotFoundException;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CO;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -1002,7 +1002,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
             if (waitForAffTop && affFut != null) {
                 affFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                     @Override public void apply(IgniteInternalFuture<?> fut0) {
-                        ctx.closure().runLocalSafe(new Runnable() {
+                        ctx.closure().runLocalSafe(new GridPlainRunnable() {
                             @Override public void run() {
                                 onResponse(failoverRes);
                             }
@@ -1021,7 +1021,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
     private void sendRetryRequest(final long waitms, final GridJobResultImpl jRes, final GridJobExecuteResponse resp) {
         ctx.timeout().schedule(new Runnable() {
             @Override public void run() {
-                ctx.closure().runLocalSafe(new Runnable() {
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try {
                             ClusterNode newNode = ctx.affinity().mapPartitionToNode(affCacheName, affPartId,
@@ -1080,8 +1080,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                     return plc;
                 }
                 catch (IgniteException e) {
-                    if (X.hasCause(e, GridInternalException.class) ||
-                        X.hasCause(e, IgfsOutOfSpaceException.class)) {
+                    if (X.hasCause(e, GridInternalException.class)) {
                         // Print internal exceptions only if debug is enabled.
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to obtain remote job result policy for result from " +

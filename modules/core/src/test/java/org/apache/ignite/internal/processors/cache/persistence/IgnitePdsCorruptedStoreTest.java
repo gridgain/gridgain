@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,12 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -50,7 +55,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -333,9 +337,18 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
     public void testReadOnlyMetaStore() throws Exception {
         IgniteEx ignite0 = startGrid(0);
 
+        AtomicReference<File> readOnlyFile = new AtomicReference<>();
+
+        failingFileIOFactory.createClosure((file, options) -> {
+            if (Arrays.asList(options).contains(StandardOpenOption.WRITE) && file.equals(readOnlyFile.get()))
+                throw new IOException("File is readonly.");
+
+            return null;
+        });
+
         ignite0.cluster().active(true);
 
-        IgniteInternalCache cache = ignite0.cachex(CACHE_NAME1);
+        IgniteInternalCache<Integer, Integer> cache = ignite0.cachex(CACHE_NAME1);
 
         cache.put(1, 1);
 
@@ -347,27 +360,22 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
         File metaStoreDir = new File(workDir, MetaStorage.METASTORAGE_CACHE_NAME.toLowerCase());
         File metaStoreFile = new File(metaStoreDir, String.format(FilePageStoreManager.PART_FILE_TEMPLATE, 0));
 
-        metaStoreFile.setWritable(false);
+        readOnlyFile.set(metaStoreFile);
 
-        try {
-            IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
-                @Override public void run() {
-                    try {
-                        ignite0.cluster().active(true);
-                    }
-                    catch (Exception ignore) {
-                        // No-op.
-                    }
+        IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                try {
+                    ignite0.cluster().active(true);
                 }
-            });
+                catch (Exception ignore) {
+                    // No-op.
+                }
+            }
+        });
 
-            waitFailure(IOException.class);
+        waitFailure(IOException.class);
 
-            fut.cancel();
-        }
-        finally {
-            metaStoreFile.setWritable(true);
-        }
+        fut.cancel();
     }
 
 
@@ -378,7 +386,16 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
     public void testCheckpointFailure() throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        failingFileIOFactory.createClosure(new IgniteBiClosure<File, OpenOption[], FileIO>() {
+        ignite.cluster().active(true);
+
+        forceCheckpoint(); // Trigger empty checkpoint to make sure initial checkpoint on node start will finish.
+
+        ignite.cache(CACHE_NAME1).put(0, 0); // Mark some pages as dirty.
+
+        AtomicBoolean fail = new AtomicBoolean(true);
+        AtomicReference<FileIO> ref = new AtomicReference<>();
+
+        failingFileIOFactory.createClosure(new IgniteBiClosureX<File, OpenOption[], FileIO>() {
             @Override public FileIO apply(File file, OpenOption[] options) {
                 if (file.getName().indexOf("-END.bin") >= 0) {
                     FileIO delegate;
@@ -390,27 +407,38 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
                         return null;
                     }
 
-                    return new FileIODecorator(delegate) {
+                    FileIODecorator dec = new FileIODecorator(delegate) {
                         @Override public void close() throws IOException {
-                            throw new IOException("Checkpoint failed");
+                            if (fail.get())
+                                throw new IOException("Checkpoint failed");
+                            else
+                                super.close();
                         }
                     };
+
+                    ref.set(dec);
+
+                    return dec;
                 }
 
                 return null;
             }
         });
 
-        ignite.cluster().active(true);
-
         try {
-            forceCheckpoint(ignite);
-        }
-        catch (Exception ignore) {
-            // No-op.
-        }
+            try {
+                forceCheckpoint(ignite);
+            }
+            catch (Exception ignore) {
+                // No-op.
+            }
 
-        waitFailure(IOException.class);
+            waitFailure(IOException.class);
+        }
+        finally {
+            fail.set(false);
+            ref.get().close(); // Release file for any test outcome.
+        }
     }
 
     /**
@@ -463,7 +491,7 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
         private final FileIOFactory delegateFactory = new RandomAccessFileIOFactory();
 
         /** Create FileIO closure. */
-        private volatile IgniteBiClosure<File, OpenOption[], FileIO> createClo;
+        private volatile IgniteBiClosureX<File, OpenOption[], FileIO> createClo;
 
         /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... openOption) throws IOException {
@@ -477,7 +505,7 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
         /**
          * @param createClo FileIO create closure.
          */
-        public void createClosure(IgniteBiClosure<File, OpenOption[], FileIO> createClo) {
+        public void createClosure(IgniteBiClosureX<File, OpenOption[], FileIO> createClo) {
             this.createClo = createClo;
         }
 
@@ -487,5 +515,11 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
         public FileIOFactory delegateFactory() {
             return delegateFactory;
         }
+    }
+
+    /** */
+    private interface IgniteBiClosureX<E1, E2, R> extends Serializable {
+        /** */
+        R apply(E1 e1, E2 e2) throws IOException;
     }
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,6 +44,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -64,6 +65,7 @@ import org.apache.ignite.internal.processors.query.property.QueryPropertyAccesso
 import org.apache.ignite.internal.processors.query.property.QueryReadOnlyMethodsAccessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
@@ -97,6 +99,9 @@ public class QueryUtils {
 
     /** Schema for system view. */
     public static final String SCHEMA_SYS = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
+
+    /** Schema for monitoring views. */
+    public static final String SCHEMA_MONITORING = "MONITORING";
 
     /** Schema for system view. */
     public static final String SCHEMA_INFORMATION = "INFORMATION_SCHEMA";
@@ -1194,7 +1199,7 @@ public class QueryUtils {
      * @param e Original exception.
      * @return Schema exception.
      */
-    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Exception e) {
+    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Throwable e) {
         if (e == null)
             return null;
 
@@ -1348,10 +1353,11 @@ public class QueryUtils {
      *
      * @param schemaName Schema name.
      * @param tblName Table name.
+     * @param tblDigest Table digest.
      * @return Value type name.
      */
-    public static String createTableValueTypeName(String schemaName, String tblName) {
-        return createTableCacheName(schemaName, tblName) + "_" + UUID.randomUUID().toString().replace("-", "_");
+    public static String createTableValueTypeName(String schemaName, String tblName, String tblDigest) {
+        return createTableCacheName(schemaName, tblName) + "_" + tblDigest;
     }
 
     /**
@@ -1476,6 +1482,32 @@ public class QueryUtils {
         }
 
         return null;
+    }
+
+    /**
+     * @param reason exception to check.
+     * @return {@code true} if exception happened during local query or reduce step execution due to OOM protection,
+     * {@code false} otherwise.
+     */
+    public static boolean isLocalOrReduceOom(Throwable reason) {
+        boolean isRemoteFail = X.hasCause(reason, IgniteSQLMapStepException.class);
+
+        if (isRemoteFail)
+            return false;
+
+        IgniteSQLException cause = X.cause(reason, IgniteSQLException.class);
+
+        return cause != null && cause.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
+    }
+
+    /**
+     * Returns true if the exception is triggered by query cancel.
+     *
+     * @param e Exception.
+     * @return {@code true} if exception is caused by cancel.
+     */
+    public static boolean wasCancelled(Throwable e) {
+        return X.cause(e, QueryCancelledException.class) != null;
     }
 
     /**

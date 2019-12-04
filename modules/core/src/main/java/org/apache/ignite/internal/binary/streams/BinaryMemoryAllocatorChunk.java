@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,7 @@ public class BinaryMemoryAllocatorChunk {
     private int maxMsgSize;
 
     /** Last time array size is checked. */
-    private long lastCheck = U.currentTimeMillis();
+    private long lastCheckNanos = System.nanoTime();
 
     /** Whether the holder is acquired or not. */
     private boolean acquired;
@@ -87,15 +87,15 @@ public class BinaryMemoryAllocatorChunk {
 
         this.acquired = false;
 
-        long now = U.currentTimeMillis();
+        long nowNanos = System.nanoTime();
 
-        if (now - this.lastCheck >= CHECK_FREQ) {
+        if (U.nanosToMillis(nowNanos - lastCheckNanos) >= CHECK_FREQ) {
             int halfSize = data.length >> 1;
 
             if (this.maxMsgSize < halfSize)
                 this.data = new byte[halfSize];
 
-            this.lastCheck = now;
+            lastCheckNanos = nowNanos;
         }
     }
 

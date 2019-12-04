@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Client.Cache;
+    using Apache.Ignite.Core.Impl.Client.Cluster;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Handle;
@@ -39,7 +40,7 @@ namespace Apache.Ignite.Core.Impl.Client
     internal class IgniteClient : IIgniteInternal, IIgniteClient
     {
         /** Socket. */
-        private readonly IClientSocket _socket;
+        private readonly ClientFailoverSocket _socket;
 
         /** Marshaller. */
         private readonly Marshaller _marsh;
@@ -63,12 +64,12 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _configuration = new IgniteClientConfiguration(clientConfiguration);
 
-            _socket = new ClientFailoverSocket(_configuration);
-
             _marsh = new Marshaller(_configuration.BinaryConfiguration)
             {
                 Ignite = this
             };
+
+            _socket = new ClientFailoverSocket(_configuration, _marsh);
 
             _binProc = _configuration.BinaryProcessor ?? new BinaryProcessorClient(_socket);
 
@@ -78,7 +79,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Gets the socket.
         /// </summary>
-        public IClientSocket Socket
+        public ClientFailoverSocket Socket
         {
             get { return _socket; }
         }
@@ -145,6 +146,12 @@ namespace Apache.Ignite.Core.Impl.Client
         public ICollection<string> GetCacheNames()
         {
             return DoOutInOp(ClientOp.CacheGetNames, null, s => Marshaller.StartUnmarshal(s).ReadStringCollection());
+        }
+
+        /** <inheritDoc /> */
+        public IClientCluster GetCluster()
+        {
+            return new ClientCluster(this, _marsh);
         }
 
         /** <inheritDoc /> */

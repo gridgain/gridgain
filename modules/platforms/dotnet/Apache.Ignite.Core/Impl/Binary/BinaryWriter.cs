@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,6 +66,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             get { return _marsh; }
         }
+
+        /// <summary>
+        /// Invoked when binary object writing finishes.
+        /// </summary>
+        internal event Action<BinaryObjectHeader, object> OnObjectWritten;
 
         /// <summary>
         /// Write named boolean value.
@@ -1260,13 +1265,18 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 var len = _stream.Position - pos;
 
-                    var hashCode = BinaryArrayEqualityComparer.GetHashCode(Stream, pos + BinaryObjectHeader.Size,
-                            dataEnd - pos - BinaryObjectHeader.Size);
+                var hashCode = BinaryArrayEqualityComparer.GetHashCode(Stream, pos + BinaryObjectHeader.Size,
+                    dataEnd - pos - BinaryObjectHeader.Size);
 
-                    var header = new BinaryObjectHeader(desc.IsRegistered ? desc.TypeId : BinaryTypeId.Unregistered,
-                        hashCode, len, schemaId, schemaOffset, flags);
+                var header = new BinaryObjectHeader(desc.IsRegistered ? desc.TypeId : BinaryTypeId.Unregistered,
+                    hashCode, len, schemaId, schemaOffset, flags);
 
                 BinaryObjectHeader.Write(header, _stream, pos);
+
+                if (OnObjectWritten != null)
+                {
+                    OnObjectWritten(header, obj);
+                }
 
                 Stream.Seek(pos + len, SeekOrigin.Begin); // Seek to the end
             }

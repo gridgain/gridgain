@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -123,7 +123,7 @@ namespace Apache.Ignite.Core.Tests
             // Run test in new process because JVM is initialized only once.
             const string envVar = "ConsoleRedirectTest.TestDisabledRedirect";
 
-            if (Environment.GetEnvironmentVariable(envVar) == "true")
+            if (Environment.GetEnvironmentVariable(envVar) == bool.TrueString)
             {
                 var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(false));
                 Assert.IsTrue(cfg.RedirectJavaConsoleOutput);
@@ -132,14 +132,16 @@ namespace Apache.Ignite.Core.Tests
 
                 using (Ignition.Start(cfg))
                 {
-                    Assert.AreEqual("", _errSb.ToString());
-                    Assert.AreEqual("", _outSb.ToString());
+                    Assert.AreEqual(string.Empty, _errSb.ToString());
+                    Assert.AreEqual(string.Empty, _outSb.ToString());
                 }
             }
             else
             {
-                Environment.SetEnvironmentVariable(envVar, "true");
-                TestUtils.RunTestInNewProcess(GetType().FullName, "TestDisabledRedirect");
+                using (EnvVar.Set(envVar, bool.TrueString))
+                {
+                    TestUtils.RunTestInNewProcess(GetType().FullName, "TestDisabledRedirect");
+                }
             }
         }
 

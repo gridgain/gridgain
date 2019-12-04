@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,18 +16,15 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.CacheException;
-
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.jdbc.JdbcConnection;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,9 +38,6 @@ public class ReduceQueryRun {
     private CountDownLatch latch;
 
     /** */
-    private final JdbcConnection conn;
-
-    /** */
     private final int pageSize;
 
     /** */
@@ -54,19 +48,15 @@ public class ReduceQueryRun {
 
     /**
      * Constructor.
-     * @param conn Connection.
      * @param idxsCnt Number of indexes.
      * @param pageSize Page size.
      * @param dataPageScanEnabled If data page scan is enabled.
      */
     ReduceQueryRun(
-        Connection conn,
         int idxsCnt,
         int pageSize,
         Boolean dataPageScanEnabled
     ) {
-        this.conn = (JdbcConnection)conn;
-
         idxs = new ArrayList<>(idxsCnt);
 
         this.pageSize = pageSize > 0 ? pageSize : Query.DFLT_PAGE_SIZE;
@@ -141,13 +131,6 @@ public class ReduceQueryRun {
      */
     int pageSize() {
         return pageSize;
-    }
-
-    /**
-     * @return Connection.
-     */
-    JdbcConnection connection() {
-        return conn;
     }
 
     /** */

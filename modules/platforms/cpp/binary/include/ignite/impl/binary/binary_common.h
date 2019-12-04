@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,7 @@ namespace ignite
             /** Header: handle. */
             const int8_t IGNITE_HDR_HND = 102;
 
-            /** Header: fulle form. */
+            /** Header: full form. */
             const int8_t IGNITE_HDR_FULL = 103;
 
             /** Binary protocol version.  */
@@ -70,6 +70,9 @@ namespace ignite
             /** Type: object. */
             const int8_t IGNITE_TYPE_OBJECT = IGNITE_HDR_FULL;
 
+            /** Type: optimized marshaller. */
+            const int8_t IGNITE_TYPE_OPTM_MARSH = -2;
+
             /** Type: unsigned byte. */
             const int8_t IGNITE_TYPE_BYTE = 1;
 
@@ -93,9 +96,6 @@ namespace ignite
 
             /** Type: boolean. */
             const int8_t IGNITE_TYPE_BOOL = 8;
-
-            /** Type: decimal. */
-            const int8_t IGNITE_TYPE_DECIMAL = 30;
 
             /** Type: string. */
             const int8_t IGNITE_TYPE_STRING = 9;
@@ -130,9 +130,6 @@ namespace ignite
             /** Type: boolean array. */
             const int8_t IGNITE_TYPE_ARRAY_BOOL = 19;
 
-            /** Type: decimal array. */
-            const int8_t IGNITE_TYPE_ARRAY_DECIMAL = 31;
-
             /** Type: string array. */
             const int8_t IGNITE_TYPE_ARRAY_STRING = 20;
 
@@ -157,17 +154,38 @@ namespace ignite
             /** Type: binary object. */
             const int8_t IGNITE_TYPE_BINARY = 27;
 
+            /** Type: enum. */
+            const int8_t IGNITE_TYPE_ENUM = 28;
+
+            /** Type: enum array. */
+            const int8_t IGNITE_TYPE_ARRAY_ENUM = 29;
+
+            /** Type: decimal. */
+            const int8_t IGNITE_TYPE_DECIMAL = 30;
+
+            /** Type: decimal array. */
+            const int8_t IGNITE_TYPE_ARRAY_DECIMAL = 31;
+
+            /** Type: class. */
+            const int8_t IGNITE_TYPE_CLASS = 32;
+
             /** Type: timestamp. */
             const int8_t IGNITE_TYPE_TIMESTAMP = 33;
 
             /** Type: timestamp array. */
             const int8_t IGNITE_TYPE_ARRAY_TIMESTAMP = 34;
 
+            /** Type: proxy. */
+            const int8_t IGNITE_TYPE_PROXY = 35;
+
             /** Type: time. */
             const int8_t IGNITE_TYPE_TIME = 36;
 
             /** Type: time array. */
             const int8_t IGNITE_TYPE_ARRAY_TIME = 37;
+
+            /** Type: binary enum. */
+            const int8_t IGNITE_TYPE_BINARY_ENUM = 38;
 
             /** Read/write single object. */
             const int32_t IGNITE_BINARY_MODE_SINGLE = 0;

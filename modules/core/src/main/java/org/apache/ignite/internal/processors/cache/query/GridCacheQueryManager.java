@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,8 +75,8 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.datastructures.GridSetQueryPredicate;
@@ -184,7 +184,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     private int maxIterCnt;
 
     /** */
-    private volatile GridCacheQueryMetricsAdapter metrics = new GridCacheQueryMetricsAdapter();
+    private volatile GridCacheQueryMetricsAdapter metrics;
 
     /** */
     private int detailMetricsSz;
@@ -272,6 +272,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             }
         };
 
+        metrics = new GridCacheQueryMetricsAdapter(cctx.kernalContext().metric(), cctx.name(), cctx.isNear());
+
         cctx.events().addListener(lsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         qryTopVer = cctx.startTopologyVersion();
@@ -292,10 +294,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
         cctx.events().removeListener(lsnr);
 
-        if (cancel)
-            onCancelAtStop();
-        else
-            onWaitAtStop();
+        onCancelAtStop();
     }
 
     /**
@@ -1677,7 +1676,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * @return Cache queries metrics.
      */
     public QueryMetrics metrics() {
-        return metrics.copy();
+        return metrics.snapshot();
     }
 
     /**
@@ -1730,7 +1729,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * Resets metrics.
      */
     public void resetMetrics() {
-        metrics = new GridCacheQueryMetricsAdapter();
+        metrics.reset();
     }
 
     /**

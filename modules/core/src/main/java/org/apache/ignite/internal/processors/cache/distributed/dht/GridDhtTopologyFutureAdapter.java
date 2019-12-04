@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,12 +29,15 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.WRITE;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_VOLATILE_DS_GROUP_NAME;
 
 /**
  *
@@ -87,14 +90,21 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
             return new CacheInvalidStateException(
                 "Failed to perform cache operation (cluster is not activated): " + cctx.name());
 
+        if (cctx.cache() == null)
+            return new CacheInvalidStateException(
+                "Failed to perform cache operation (cache is stopped): " + cctx.name());
+
         OperationType opType = read ? OperationType.READ : WRITE;
 
         CacheGroupContext grp = cctx.group();
 
         PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
-        if (cctx.shared().readOnlyMode() && opType == WRITE)
-            return new IgniteCheckedException("Failed to perform cache operation (cluster is in read only mode)");
+        if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
+            && cctx.group().groupId() != CU.cacheId(DEFAULT_VOLATILE_DS_GROUP_NAME)) {
+            return new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
+                "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
+        }
 
         if (grp.needsRecovery() && !recovery) {
             if (opType == WRITE && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL))

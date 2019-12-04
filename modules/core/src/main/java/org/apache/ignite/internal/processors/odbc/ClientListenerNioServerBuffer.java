@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -63,11 +63,10 @@ public class ClientListenerNioServerBuffer {
 
     /**
      * @param buf Buffer.
-     * @param checkHandshake Check handshake.
      * @return Message bytes or {@code null} if message is not fully read yet.
      * @throws IgniteCheckedException If failed to parse message.
      */
-    @Nullable public byte[] read(ByteBuffer buf, boolean checkHandshake) throws IgniteCheckedException {
+    @Nullable public byte[] read(ByteBuffer buf, int msgLenLimit) throws IgniteCheckedException {
         if (cnt < 0) {
             for (; cnt < 0 && buf.hasRemaining(); cnt++)
                 msgSize |= (buf.get() & 0xFF) << (8*(4 + cnt));
@@ -76,7 +75,7 @@ public class ClientListenerNioServerBuffer {
                 return null;
 
             // If count is 0 then message size should be inited.
-            if (msgSize <= 0)
+            if (msgSize <= 0 || (msgLenLimit > 0 && msgSize > msgLenLimit))
                 throw new IgniteCheckedException("Invalid message size: " + msgSize);
 
             data = new byte[msgSize];
@@ -108,12 +107,7 @@ public class ClientListenerNioServerBuffer {
 
             return data0;
         }
-        else {
-            if (checkHandshake && cnt > 0 && (msgSize > ClientListenerNioListener.MAX_HANDSHAKE_MSG_SIZE
-                || data[0] != ClientListenerRequest.HANDSHAKE))
-                throw new IgniteCheckedException("Invalid handshake message");
 
-            return null;
-        }
+        return null;
     }
 }

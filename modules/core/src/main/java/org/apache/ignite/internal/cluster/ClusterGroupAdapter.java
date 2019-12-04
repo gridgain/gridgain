@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,6 @@ import org.apache.ignite.internal.IgniteServicesImpl;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.executor.GridExecutorService;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.processors.igfs.IgfsNodePredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -225,7 +224,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (messaging == null) {
             assert ctx != null;
 
-            messaging = new IgniteMessagingImpl(ctx, this, false);
+            messaging = new IgniteMessagingImpl(ctx, this);
         }
 
         return messaging;
@@ -238,7 +237,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (evts == null) {
             assert ctx != null;
 
-            evts = new IgniteEventsImpl(ctx, this, false);
+            evts = new IgniteEventsImpl(ctx, this);
         }
 
         return evts;
@@ -251,7 +250,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (svcs == null) {
             assert ctx != null;
 
-            svcs = new IgniteServicesImpl(ctx, this, false);
+            svcs = new IgniteServicesImpl(ctx, this);
         }
 
         return svcs;
@@ -610,13 +609,6 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         checkDaemon();
 
         return forPredicate(new CachesFilter(cacheName, affNodes, nearNodes, clientNodes));
-    }
-
-    /** {@inheritDoc} */
-    @Override public ClusterGroup forIgfsMetadataDataNodes(String igfsName, String metaCacheName) {
-        assert metaCacheName != null;
-
-        return forPredicate(new IgfsNodePredicate(igfsName)).forDataNodes(metaCacheName);
     }
 
     /** {@inheritDoc} */

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,7 +38,6 @@ import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -78,6 +77,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  * applying page snapshots and deltas.
  */
 public class PageMemoryTracker implements IgnitePlugin {
+    /** */
+    private final long DUMP_DIFF_BYTES_LIMIT = 65536L;
+
     /** Plugin context. */
     private final PluginContext ctx;
 
@@ -95,6 +97,9 @@ public class PageMemoryTracker implements IgnitePlugin {
 
     /** Pages. */
     private final Map<FullPageId, DirectMemoryPage> pages = new ConcurrentHashMap<>();
+
+    /** Dumped diff bytes. */
+    private volatile long dumpedDiffBytes = 0L;
 
     /** Page slots. */
     private volatile DirectMemoryPageSlot[] pageSlots;
@@ -424,7 +429,7 @@ public class PageMemoryTracker implements IgnitePlugin {
             page.lock();
 
             try {
-                PageUtils.putBytes(page.address(), 0, snapshot.pageData());
+                GridUnsafe.copyHeapOffheap(snapshot.pageData(), GridUnsafe.BYTE_ARR_OFF, page.address(), pageSize);
 
                 page.changeHistory().clear();
 
@@ -605,7 +610,7 @@ public class PageMemoryTracker implements IgnitePlugin {
 
             AbstractDataLeafIO io = (AbstractDataLeafIO)pageIo;
 
-            int cnt = io.getCount(actualPageAddr);
+            int cnt = io.getMaxCount(actualPageAddr, pageSize);
 
             // Reset lock info as there is no sense to log it into WAL.
             for (int i = 0; i < cnt; i++) {
@@ -644,6 +649,9 @@ public class PageMemoryTracker implements IgnitePlugin {
      * @param buf2 Buffer 2.
      */
     private void dumpDiff(ByteBuffer buf1, ByteBuffer buf2) {
+        if (dumpedDiffBytes > DUMP_DIFF_BYTES_LIMIT)
+            return;
+
         log.error(">>> Diff:");
 
         for (int i = 0; i < Math.min(buf1.remaining(), buf2.remaining()); i++) {
@@ -652,15 +660,21 @@ public class PageMemoryTracker implements IgnitePlugin {
 
             if (b1 != b2)
                 log.error(String.format("        0x%04X: %02X %02X", i, b1, b2));
+
+            dumpedDiffBytes++;
         }
 
         if (buf1.remaining() < buf2.remaining()) {
             for (int i = buf1.remaining(); i < buf2.remaining(); i++)
                 log.error(String.format("        0x%04X:    %02X", i, buf2.get(buf2.position() + i)));
+
+            dumpedDiffBytes++;
         }
         else if (buf1.remaining() > buf2.remaining()) {
             for (int i = buf2.remaining(); i < buf1.remaining(); i++)
                 log.error(String.format("        0x%04X: %02X", i, buf1.get(buf1.position() + i)));
+
+            dumpedDiffBytes++;
         }
     }
 

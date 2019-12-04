@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,9 +46,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>
  * Compute client also allows fetching contents of remote log files (including backwards mode) via any of
  * the provided {@code log(...)} methods.
- * <h1 class="header">Affinity Awareness</h1>
+ * <h1 class="header">Partition Awareness</h1>
  * One of the unique properties of the Ignite remote clients is that they are
- * affinity aware. In other words, both compute and data APIs will optionally
+ * partition aware. In other words, both compute and data APIs will optionally
  * contact exactly the node where the data is cached based on some affinity key.
  * This allows for collocation of computations and data and avoids extra network
  * hops that would be necessary if non-affinity nodes were contacted. Use

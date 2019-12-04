@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,9 +21,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -153,5 +155,61 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
                 return null;
             }
         }, IgniteCheckedException.class, "Duplicate index name");
+    }
+
+
+    /**
+     * Test class for sql queryable test key
+     */
+    private static class TestKey {
+
+        /**
+         * Not unique id
+         */
+        @QuerySqlField
+        int notUniqueId;
+
+    }
+
+    /**
+     * Test class for sql queryable test value
+     */
+    private static class TestValue {
+
+        /**
+         * Field with nested queryable field
+         */
+        @QuerySqlField
+        TestValueField field;
+
+    }
+
+    /**
+     * Test class for nested sql queryable field
+     */
+    private static class TestValueField {
+
+        /**
+         * Not unique id
+         */
+        @QuerySqlField
+        int notUniqueId;
+
+    }
+
+    /**
+     * Test duplicated nested annotations
+     */
+    @Test
+    public void testNestedDuplicatedAnnotations() {
+        final CacheConfiguration<TestKey, TestValue> ccfg = new CacheConfiguration<TestKey, TestValue>().setName(CACHE_NAME);
+
+        GridTestUtils.assertThrows(log, new Callable<Void>() {
+            @Override public Void call()  {
+                ccfg.setIndexedTypes(TestKey.class, TestValue.class);
+
+                return null;
+            }
+        }, CacheException.class, "Property with name 'notUniqueId' already exists");
     }
 }

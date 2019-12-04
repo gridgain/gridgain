@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.internal.processors.igfs.IgfsUtils;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -187,7 +187,7 @@ public class VisorQueryEntity extends VisorDataTransferObject {
         U.writeString(out, keyType);
         U.writeString(out, valType);
         U.writeCollection(out, keyFields);
-        IgfsUtils.writeStringMap(out, qryFlds);
+        IgniteUtils.writeStringMap(out, qryFlds);
         U.writeMap(out, aliases);
         U.writeCollection(out, grps);
         U.writeString(out, tblName);
@@ -200,7 +200,7 @@ public class VisorQueryEntity extends VisorDataTransferObject {
         keyType = U.readString(in);
         valType = U.readString(in);
         keyFields = U.readList(in);
-        qryFlds = IgfsUtils.readStringMap(in);
+        qryFlds = IgniteUtils.readStringMap(in);
         aliases = U.readMap(in);
         grps = U.readList(in);
         tblName = U.readString(in);

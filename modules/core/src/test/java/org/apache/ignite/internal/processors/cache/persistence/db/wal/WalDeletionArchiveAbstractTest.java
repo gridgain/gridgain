@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -81,8 +82,6 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        System.clearProperty(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE);
     }
 
     /** {@inheritDoc} */
@@ -235,8 +234,8 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
      * doesn't delete because deleting was disabled.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, value = "2")
     public void testCorrectDeletedCheckpointHistoryButKeepWalFiles() throws Exception {
-        System.setProperty(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, "2");
         //given: configured grid with disabled WAL removing.
         Ignite ignite = startGrid(dbCfg -> {
             dbCfg.setMaxWalArchiveSize(Long.MAX_VALUE);

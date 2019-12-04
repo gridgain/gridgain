@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,6 @@ import org.apache.ignite.mxbean.MXBeanParametersDescriptions;
 import org.apache.ignite.mxbean.MXBeanParametersNames;
 import org.apache.ignite.spi.IgniteSpiManagementMBean;
 import org.apache.ignite.spi.discovery.DiscoverySpiMBean;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Management bean for {@link TcpDiscoverySpi}.
@@ -217,10 +216,10 @@ public interface TcpDiscoverySpiMBean extends IgniteSpiManagementMBean, Discover
     /**
      * Gets current coordinator.
      *
-     * @return Gets current coordinator.
+     * @return Gets current coordinator ({@code null} if for some reason coordintator cannot be reported).
      */
     @MXBeanDescription("Coordinator node ID.")
-    @Override @Nullable public UUID getCoordinator();
+    @Override public UUID getCoordinator();
 
     /**
      * Gets message acknowledgement timeout.

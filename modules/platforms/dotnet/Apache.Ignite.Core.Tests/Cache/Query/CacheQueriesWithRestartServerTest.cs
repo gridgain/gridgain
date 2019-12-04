@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,8 +65,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
             cache.Put(1, new Item { Id = 20, Title = "test" });
 
             Ignition.Stop(_server.Name, false);
+
+            var evt = new ManualResetEventSlim(false);
+
+            _client.ClientReconnected += (sender, args) => evt.Set();
+
             _server = StartGrid(0);
-            WaitForReconnect(_client, 10000);
+
+            var restarted = evt.Wait(10000);
+            Assert.IsTrue(restarted);
 
             cache = _client.GetOrCreateCache<int, Item>("Test");
             cache.Put(1, new Item { Id = 30, Title = "test" });
@@ -91,19 +98,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                 ClientMode = client,
                 IgniteInstanceName = client ? "client-" + i : "grid-" + i
             });
-        }
-
-        /// <summary>
-        /// Waits for reconnect.
-        /// </summary>
-        private static void WaitForReconnect(IIgnite ignite, int timeout)
-        {
-            var evt = new ManualResetEventSlim(false);
-
-            ignite.ClientReconnected += (sender, args) => evt.Set();
-
-            var restarted = evt.Wait(timeout);
-            Assert.IsTrue(restarted);
         }
 
         /// <summary>

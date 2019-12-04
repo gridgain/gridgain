@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,9 @@
 
 package org.apache.ignite.ml.preprocessing.developer;
 
+import java.util.Collections;
+import java.util.List;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
@@ -28,7 +31,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <L0> Type of original label.
  * @param <L1> Type of mapped label.
  */
-public class MappedPreprocessor<K, V, L0, L1> implements Preprocessor<K, V> {
+public final class MappedPreprocessor<K, V, L0, L1> implements Preprocessor<K, V>, DeployableObject {
     /** Original preprocessor. */
     protected final Preprocessor<K, V> original;
 
@@ -49,5 +52,10 @@ public class MappedPreprocessor<K, V, L0, L1> implements Preprocessor<K, V> {
     @Override public LabeledVector<L1> apply(K key, V value) {
         LabeledVector<L0> origVec = original.apply(key, value);
         return mapping.apply(origVec);
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(original);
     }
 }

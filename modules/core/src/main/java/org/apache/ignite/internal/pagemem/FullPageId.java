@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,10 +39,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * <p>
  * <h3>Page ID rotation</h3>
  * There are scenarios when we reference one page (B) from within another page (A) by page ID. It is also
- * possible that this first page (B) is de-allocated and allocated again for a different purpose. In this
- * case we should have a mechanism to determine that page (B) cannot be used after reading it's ID in page (A).
+ * possible that this first page (B) is concurrently reused for a different purpose. In this
+ * case we should have a mechanism to determine that the reference from page (A) to page (B) is no longer valid.
  * This is ensured by page ID rotation - together with page's (B) ID we should write some value that is incremented
- * each time a page is de-allocated (page ID rotation). This ID should be verified after page read and a page
+ * each time a page is reused (page ID rotation). This ID should be verified after page read and a page
  * should be discarded if full ID is different.
  * <p>
  * Effective page ID is page ID with zeroed bits used for page ID rotation.
@@ -120,6 +120,13 @@ public class FullPageId {
      */
     public long pageId() {
         return pageId;
+    }
+
+    /**
+     * @return Effective page ID.
+     */
+    public long effectivePageId() {
+        return effectivePageId;
     }
 
     /**

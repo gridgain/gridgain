@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,7 +48,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static java.nio.file.Files.newDirectoryStream;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 import static org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog.TX_LOG_CACHE_NAME;
@@ -102,16 +101,12 @@ public class IgnitePdsDataRegionMetricsTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
     /**
      * @return Ignite cache configuration.
@@ -188,6 +183,7 @@ public class IgnitePdsDataRegionMetricsTest extends GridCommonAbstractTest {
         IgniteEx node0 = startGrid(0);
         IgniteEx node1 = startGrid(1);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
         node0.cluster().active(true);
 
         final IgniteCache<Integer, String> cache = node0.cache(DEFAULT_CACHE_NAME);

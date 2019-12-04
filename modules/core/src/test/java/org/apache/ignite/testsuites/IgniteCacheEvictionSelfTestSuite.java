@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.cache.GridCachePreloadingEvictionsS
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicNearEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheNearEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.DhtAndNearEvictionTest;
+import org.apache.ignite.internal.processors.cache.eviction.EvictionPolicyFailureHandlerTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheConcurrentEvictionConsistencySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheConcurrentEvictionsSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEmptyEntriesLocalSelfTest;
@@ -82,6 +83,7 @@ public class IgniteCacheEvictionSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesPartitionedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesLocalSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictableEntryEqualsSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, EvictionPolicyFailureHandlerTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, RandomLruPageEvictionMultinodeTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, RandomLruNearEnabledPageEvictionMultinodeTest.class, ignoredTests);

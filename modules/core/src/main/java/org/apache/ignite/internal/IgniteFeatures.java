@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,11 @@ package org.apache.ignite.internal;
 
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 
 /**
@@ -34,9 +36,6 @@ public enum IgniteFeatures {
 
     /** Cache metrics v2 support. */
     CACHE_METRICS_V2(1),
-
-    /** Distributed metastorage. */
-    DISTRIBUTED_METASTORAGE(2),
 
     /** Data paket compression. */
     DATA_PACKET_COMPRESSION(3),
@@ -53,9 +52,64 @@ public enum IgniteFeatures {
      */
     TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
 
-
     /** Displaying versbose transaction information: --info option of --tx control script command. */
-    TX_INFO_COMMAND(7);
+    TX_INFO_COMMAND(7),
+
+    /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
+    FIND_AND_DELETE_GARBAGE_COMMAND(8),
+
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
+
+    /** Distributed metastorage. */
+    DISTRIBUTED_METASTORAGE(11),
+
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
+
+    /** Support new security processor. */
+    IGNITE_SECURITY_PROCESSOR(13),
+
+    /** Replacing TcpDiscoveryNode field with nodeId field in discovery messages. */
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
+
+    /** Indexing enabled. */
+    INDEXING(15),
+
+    /** Support of cluster ID and tag. */
+    CLUSTER_ID_AND_TAG(16),
+
+    /** LRT system and user time dump settings.  */
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
+
+    /** A mode when data nodes throttle update rate regarding to DR sender load. */
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /** Support of DR events from  Web Console. */
+    WC_DR_EVENTS(20),
+
+    /**
+     * Rolling upgrade based on distributed metastorage.
+     */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE(21),
+
+    /** Support of chain parameter in snapshot delete task for Web Console. */
+    WC_SNAPSHOT_CHAIN_MODE(22),
+
+    /** Support of baseline auto adjustment. */
+    BASELINE_AUTO_ADJUSTMENT(23),
+
+    /** Scheduling disabled. */
+    WC_SCHEDULING_NOT_AVAILABLE(24),
+
+    /** Support of DR-specific visor tasks used by control utility. */
+    DR_CONTROL_UTILITY(25),
+
+    /** */
+    TRACING(26),
+
+    /***/
+    MANAGEMENT_CONSOLE(28);
 
     /**
      * Unique feature identifier.
@@ -79,17 +133,20 @@ public enum IgniteFeatures {
     /**
      * Checks that feature supported by node.
      *
+     * @param ctx Kernal context.
      * @param clusterNode Cluster node to check.
      * @param feature Feature to check.
      * @return {@code True} if feature is declared to be supported by remote node.
      */
-    public static boolean nodeSupports(ClusterNode clusterNode, IgniteFeatures feature) {
-        final byte[] features = clusterNode.attribute(ATTR_IGNITE_FEATURES);
+    public static boolean nodeSupports(GridKernalContext ctx, ClusterNode clusterNode, IgniteFeatures feature) {
+        if (ctx != null) {
+            RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-        if (features == null)
-            return false;
+            if (status.enabled() && !status.forcedModeEnabled())
+                return status.supportedFeatures().contains(feature);
+        }
 
-        return nodeSupports(features, feature);
+        return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
     }
 
     /**
@@ -100,6 +157,9 @@ public enum IgniteFeatures {
      * @return {@code True} if feature is declared to be supported by remote node.
      */
     public static boolean nodeSupports(byte[] featuresAttrBytes, IgniteFeatures feature) {
+        if (featuresAttrBytes == null)
+            return false;
+
         int featureId = feature.getFeatureId();
 
         // Same as "BitSet.valueOf(features).get(featureId)"
@@ -117,12 +177,20 @@ public enum IgniteFeatures {
     /**
      * Checks that feature supported by all nodes.
      *
+     * @param ctx Kernal context.
      * @param nodes cluster nodes to check their feature support.
      * @return if feature is declared to be supported by all nodes
      */
-    public static boolean allNodesSupports(Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+    public static boolean allNodesSupports(GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+        if (ctx != null && nodes.iterator().hasNext()) {
+            RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
+
+            if (status.enabled() && !status.forcedModeEnabled())
+                return status.supportedFeatures().contains(feature);
+        }
+
         for (ClusterNode next : nodes) {
-            if (!nodeSupports(next, feature))
+            if (!nodeSupports(next.attribute(ATTR_IGNITE_FEATURES), feature))
                 return false;
         }
 
@@ -132,12 +200,29 @@ public enum IgniteFeatures {
     /**
      * Features supported by the current node.
      *
+     * @param ctx Kernal context.
      * @return Byte array representing all supported features by current node.
      */
-    public static byte[] allFeatures() {
+    public static byte[] allFeatures(GridKernalContext ctx) {
         final BitSet set = new BitSet();
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
+            // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+                continue;
+
+            // Add only when indexing is enabled.
+            if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
+            // Add only when tracing is enabled.
+            if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
+                continue;
+
+            // Add only when management console is enabled.
+            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
+                continue;
+
             final int featureId = value.getFeatureId();
 
             assert !set.get(featureId) : "Duplicate feature ID found for [" + value + "] having same ID ["

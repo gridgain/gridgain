@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -51,6 +52,9 @@ class MapQueryResults {
     /** Query context. */
     private final QueryContext qctx;
 
+    /** Active queries. */
+    private int active;
+
     /**
      * Constructor.
      *
@@ -69,6 +73,7 @@ class MapQueryResults {
         this.lazy = lazy;
         this.qctx = qctx;
 
+        active = qrys;
         results = new AtomicReferenceArray<>(qrys);
         cancels = new GridQueryCancel[qrys];
 
@@ -107,15 +112,8 @@ class MapQueryResults {
     /**
      * @return {@code true} If all results are closed.
      */
-    boolean isAllClosed() {
-        for (int i = 0; i < results.length(); i++) {
-            MapQueryResult res = results.get(i);
-
-            if (res == null || !res.closed())
-                return false;
-        }
-
-        return true;
+    synchronized boolean isAllClosed() {
+        return active == 0;
     }
 
     /**
@@ -151,7 +149,9 @@ class MapQueryResults {
     void closeResult(int idx) {
         MapQueryResult res = results.get(idx);
 
-        if (res != null && !res.closed()) {
+        if (res != null) {
+            boolean lastClosed = false;
+
             try {
                 // Session isn't set for lazy=false queries.
                 // Also session == null when result already closed.
@@ -159,28 +159,46 @@ class MapQueryResults {
                 res.lockTables();
 
                 synchronized (this) {
-                    res.close();
+                    if (!res.closed()) {
+                        res.close();
 
-                    // The statement of the closed result must not be canceled
-                    // because statement & connection may be reused.
-                    cancels[idx] = null;
+                        // The statement of the closed result must not be canceled
+                        // because statement & connection may be reused.
+                        cancels[idx] = null;
+
+                        active--;
+
+                        lastClosed = active == 0;
+                    }
                 }
             }
             finally {
                 res.unlock();
             }
+
+            if (lastClosed)
+                onAllClosed();
         }
     }
 
     /**
-     *
+     * Close map results.
      */
     public void close() {
         for (int i = 0; i < results.length(); i++)
             closeResult(i);
+    }
+
+    /**
+     * All max results closed callback.
+     */
+    private void onAllClosed() {
+        assert active == 0;
 
         if (lazy)
             releaseQueryContext();
+
+        U.closeQuiet(qctx.queryMemoryTracker());
     }
 
     /**
@@ -198,18 +216,9 @@ class MapQueryResults {
     }
 
     /**
-     * @return Query context.
-     */
-    public QueryContext queryContext() {
-        return qctx;
-    }
-
-    /**
      * Release query context.
      */
     public void releaseQueryContext() {
-        h2.queryContextRegistry().clearThreadLocal();
-
         if (qctx.distributedJoinContext() == null)
             qctx.clearContext(false);
     }

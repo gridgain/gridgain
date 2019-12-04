@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,13 +36,13 @@ public class PartitionResult {
     /** Affinity function. */
     private final PartitionTableAffinityDescriptor aff;
 
-    /** Affinity topology version. Used within Jdbc thin affinity awareness. */
+    /** Affinity topology version. Used within Jdbc thin Partition Awareness. */
     private final AffinityTopologyVersion topVer;
 
-    /** Cache name. Used within Jdbc thin affinity awareness. */
+    /** Cache name. Used within Jdbc thin Partition Awareness. */
     private final String cacheName;
 
-    /** Partitions count. Used within Jdbc thin affinity awareness. */
+    /** Partitions count. Used within Jdbc thin Partition Awareness. */
     private final int partsCnt;
 
     /**
@@ -157,12 +157,12 @@ public class PartitionResult {
     }
 
     /**
-     * @return True if applicable to jdbc thin client side affinity awareness:
+     * @return True if applicable to jdbc thin client side Partition Awareness:
      *   1. Rendezvous affinity function without map filters was used;
      *   2. Partition result tree neither PartitoinAllNode nor PartitionNoneNode;
      */
-    public boolean isClientAffinityAwarenessApplicable() {
-        return aff != null && aff.isClientAffinityAwarenessApplicable() &&
+    public boolean isClientPartitionAwarenessApplicable() {
+        return aff != null && aff.isClientPartitionAwarenessApplicable() &&
             !(tree instanceof PartitionNoneNode) && !(tree instanceof PartitionAllNode);
     }
 

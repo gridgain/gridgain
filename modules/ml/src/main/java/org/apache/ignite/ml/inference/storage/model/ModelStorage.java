@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.ml.inference.storage.model;
 
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Storage that allows to load, keep and get access to model in byte representation.
@@ -111,4 +112,22 @@ public interface ModelStorage {
      * @return {@code true} if the specified path associated with a regular file.
      */
     public boolean isFile(String path);
+
+    /**
+     * Returns statistics for file.
+     *
+     * @param path Path to directory or file.
+     * @return Statistics for file or directory.
+     */
+    public FileStat getFileStat(String path);
+
+    /**
+     * Locks paths in model storage and call passed method.
+     *
+     * @param supplier Supplier.
+     * @param paths Paths for lock.
+     * @param <T> Type of result.
+     * @return Result of {@code callable}.
+     */
+    public <T> T lockPaths(Supplier<T> supplier, String... paths);
 }

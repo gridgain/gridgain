@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -502,6 +502,27 @@ namespace Apache.Ignite.Core.Tests.Dataload
             TestStreamReceiver(new StreamTransformer<int, int, int, int>(new EntryProcessorBinarizable()));
         }
 
+        [Test]
+        public void TestStreamTransformerIsInvokedForDuplicateKeys()
+        {
+            var cache = _grid.GetOrCreateCache<string, long>("c");
+
+            using (var streamer = _grid.GetDataStreamer<string, long>(cache.Name))
+            {
+                streamer.AllowOverwrite = true;
+                streamer.Receiver = new StreamTransformer<string, long, object, object>(new CountingEntryProcessor());
+
+                var words = Enumerable.Repeat("a", 3).Concat(Enumerable.Repeat("b", 2));
+                foreach (var word in words)
+                {
+                    streamer.AddData(word, 1L);
+                }
+            }
+
+            Assert.AreEqual(3, cache.Get("a"));
+            Assert.AreEqual(2, cache.Get("b"));
+        }
+
         /// <summary>
         /// Tests specified receiver.
         /// </summary>
@@ -664,5 +685,14 @@ namespace Apache.Ignite.Core.Tests.Dataload
             public Container Inner;
         }
 
+        private class CountingEntryProcessor : ICacheEntryProcessor<string, long, object, object>
+        {
+            public object Process(IMutableCacheEntry<string, long> e, object arg)
+            {
+                e.Value++;
+
+                return null;
+            }
+        }
     }
 }

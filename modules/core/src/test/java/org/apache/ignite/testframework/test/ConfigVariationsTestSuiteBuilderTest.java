@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -393,16 +393,6 @@ public class ConfigVariationsTestSuiteBuilderTest {
         /** IMPL NOTE new instances may be created rather arbitrarily, eg per every test case. */
         private final int testClsId = testInstCnt.getAndIncrement();
 
-        /**
-         * IMPL NOTE default config doesn't stop nodes.
-         */
-        @BeforeClass
-        public static void init() {
-            IgniteConfigVariationsAbstractTest.injectTestsConfiguration(new VariationsTestsConfig(
-                new ConfigVariationsFactory(null, new int[] {0}, ConfigVariations.cacheBasicSet(),
-                    new int[] {0}), "Dummy config", true, null, 1, false));
-        }
-
         /** {@inheritDoc} */
         @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
             IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -414,13 +404,24 @@ public class ConfigVariationsTestSuiteBuilderTest {
 
         /** {@inheritDoc} */
         @Override protected void beforeTestsStarted() throws Exception {
-            processStage("beforeTestsStarted", 0,  1);
+            // IMPL NOTE default config doesn't stop nodes.
+            testsCfg = new VariationsTestsConfig(
+                new ConfigVariationsFactory(null, new int[] {0}, ConfigVariations.cacheBasicSet(),
+                    new int[] {0}), "Dummy config", true, null, 1,
+                false);
+
+            processStage("beforeTestsStarted", 0, 1);
 
             super.beforeTestsStarted();
         }
 
         /** {@inheritDoc} */
         @Override protected void beforeTest() throws Exception {
+            testsCfg = new VariationsTestsConfig(
+                new ConfigVariationsFactory(null, new int[] {0}, ConfigVariations.cacheBasicSet(),
+                    new int[] {0}), "Dummy config", true, null, 1,
+                false);
+
             processStage("beforeTest", 1, 2);
 
             super.beforeTest();

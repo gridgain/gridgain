@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -73,7 +73,7 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
     private static final int KEYS_CNT = 10_000;
 
     /** Test duration. */
-    private static final long DUR = 90 * 1000L;
+    private static final long DUR = GridTestUtils.SF.applyLB(90 * 1000, 40 * 1000);
 
     /** Cache data assert frequency. */
     private static final long ASSERT_FREQ = 10_000;

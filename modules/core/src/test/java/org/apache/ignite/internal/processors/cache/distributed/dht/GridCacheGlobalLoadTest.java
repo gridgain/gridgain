@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,15 +82,7 @@ public class GridCacheGlobalLoadTest extends IgniteCacheAbstractTest {
      */
     @Test
     public void testLoadCache() throws Exception {
-        loadCache(false, false);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLoadCacheAsyncOld() throws Exception {
-        loadCache(true, true);
+        loadCache(false);
     }
 
     /**
@@ -98,31 +90,19 @@ public class GridCacheGlobalLoadTest extends IgniteCacheAbstractTest {
      */
     @Test
     public void testLoadCacheAsync() throws Exception {
-        loadCache(true, false);
+        loadCache(true);
     }
 
     /**
      * @param async If {@code true} uses asynchronous method.
-     * @param oldAsyncApi Flag to use old async API.
-     * @throws Exception If failed.
      */
-    private void loadCache(boolean async, boolean oldAsyncApi) throws Exception {
+    private void loadCache(boolean async) {
         IgniteCache<Integer, Integer> cache = jcache();
-
-        IgniteCache<Integer, Integer> asyncCache = cache.withAsync();
-
-        assertTrue(asyncCache.isAsync());
 
         map = new ConcurrentHashMap<>();
 
-        if (async) {
-            if (oldAsyncApi) {
-                asyncCache.loadCache(null, 1, 2, 3);
-
-                asyncCache.future().get();
-            } else
-                cache.loadCacheAsync(null, 1, 2, 3).get();
-        }
+        if (async)
+            cache.loadCacheAsync(null, 1, 2, 3).get();
         else
             cache.loadCache(null, 1, 2, 3);
 
@@ -143,16 +123,14 @@ public class GridCacheGlobalLoadTest extends IgniteCacheAbstractTest {
         map = new ConcurrentHashMap<>();
 
         if (async) {
-            asyncCache.loadCache(new IgniteBiPredicate<Integer, Integer>() {
+            cache.loadCacheAsync(new IgniteBiPredicate<Integer, Integer>() {
                 @Override public boolean apply(Integer key, Integer val) {
                     assertNotNull(key);
                     assertNotNull(val);
 
                     return key % 2 == 0;
                 }
-            }, 1, 2, 3, 4, 5, 6);
-
-            asyncCache.future().get();
+            }, 1, 2, 3, 4, 5, 6).get();
         }
         else {
             cache.loadCache(new IgniteBiPredicate<Integer, Integer>() {

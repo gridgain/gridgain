@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -34,7 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.commandline.cache.CacheCommand.IDLE_VERIFY;
+import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.IDLE_VERIFY;
 
 /**
  * Encapsulates result of {@link VerifyBackupPartitionsTaskV2}.
@@ -61,32 +62,32 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     @GridToStringInclude
     private Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions;
 
+    /** Lost partitions. */
+    @GridToStringInclude
+    private Map<PartitionKeyV2, List<PartitionHashRecordV2>> lostPartitions;
+
     /** Exceptions. */
     @GridToStringInclude
     private Map<ClusterNode, Exception> exceptions;
-
-    /** Whether job succeeded or not. */
-    private boolean succeeded = true;
 
     /**
      * @param cntrConflicts Counter conflicts.
      * @param hashConflicts Hash conflicts.
      * @param movingPartitions Moving partitions.
      * @param exceptions Occured exceptions.
-     * @param succeeded Whether succeeded or not.
      */
     public IdleVerifyResultV2(
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> hashConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions,
-        Map<ClusterNode, Exception> exceptions,
-        boolean succeeded
+        Map<PartitionKeyV2, List<PartitionHashRecordV2>> lostPartitions,
+        Map<ClusterNode, Exception> exceptions
     ) {
         this.cntrConflicts = cntrConflicts;
         this.hashConflicts = hashConflicts;
         this.movingPartitions = movingPartitions;
+        this.lostPartitions = lostPartitions;
         this.exceptions = exceptions;
-        this.succeeded = succeeded;
     }
 
     /**
@@ -97,7 +98,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -106,6 +107,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
         U.writeMap(out, hashConflicts);
         U.writeMap(out, movingPartitions);
         U.writeMap(out, exceptions);
+        U.writeMap(out, lostPartitions);
     }
 
     /** {@inheritDoc} */
@@ -117,6 +119,9 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
         if (protoVer >= V2)
             exceptions = U.readMap(in);
+
+        if (protoVer >= V3)
+            lostPartitions = U.readMap(in);
     }
 
     /**
@@ -138,6 +143,13 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
      */
     public Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions() {
         return movingPartitions;
+    }
+
+    /**
+     * @return Lost partitions.
+     */
+    public Map<PartitionKeyV2, List<PartitionHashRecordV2>> lostPartitions() {
+        return lostPartitions;
     }
 
     /**
@@ -164,7 +176,18 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
         print(printer, false);
 
         if (!F.isEmpty(exceptions)) {
-            File f = new File(IDLE_VERIFY_FILE_PREFIX + LocalDateTime.now().format(TIME_FORMATTER) + ".txt");
+            File wd = null;
+
+            try {
+                wd = U.resolveWorkDirectory(U.defaultWorkDirectory(), "", false);
+            }
+            catch (IgniteCheckedException e) {
+                printer.accept("Can't find work directory. " + e.getMessage() + "\n");
+
+                e.printStackTrace();
+            }
+
+            File f = new File(wd, IDLE_VERIFY_FILE_PREFIX + LocalDateTime.now().format(TIME_FORMATTER) + ".txt");
 
             try (PrintWriter pw = new PrintWriter(f)) {
                 print(pw::write, true);
@@ -189,13 +212,16 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     private void print(Consumer<String> printer, boolean printExceptionMessages) {
         boolean noMatchingCaches = false;
 
-        for (Exception e : exceptions.values())
+        boolean succeeded = true;
+
+        for (Exception e : exceptions.values()) {
             if (e instanceof NoMatchingCachesException) {
                 noMatchingCaches = true;
                 succeeded = false;
 
                 break;
             }
+        }
 
         if (succeeded) {
             if (!F.isEmpty(exceptions)) {
@@ -209,39 +235,56 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
             else
                 printConflicts(printer);
 
-            if (!F.isEmpty(movingPartitions())) {
-                printer.accept("Verification was skipped for " + movingPartitions().size() + " MOVING partitions:\n");
-
-                for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : movingPartitions().entrySet()) {
-                    printer.accept("Rebalancing partition: " + entry.getKey() + "\n");
-
-                    printer.accept("Partition instances: " + entry.getValue() + "\n");
-                }
-
-                printer.accept("\n");
-            }
+            printSkippedPartitions(printer, movingPartitions(), "MOVING");
+            printSkippedPartitions(printer, lostPartitions(), "LOST");
         }
         else {
-            printer.accept("idle_verify failed.");
+            printer.accept("\nidle_verify failed.\n");
 
             if (noMatchingCaches)
-                printer.accept("There are no caches matching given filter options.");
+                printer.accept("\nThere are no caches matching given filter options.\n");
         }
 
         if (!F.isEmpty(exceptions())) {
-            printer.accept("Idle verify failed on nodes:\n");
+            printer.accept("\nIdle verify failed on nodes:\n");
 
             for (Map.Entry<ClusterNode, Exception> e : exceptions().entrySet()) {
                 ClusterNode n = e.getKey();
 
-                printer.accept("Node ID: " + n.id() + " " + n.addresses() + " consistent ID: " + n.consistentId() + "\n");
+                printer.accept("\nNode ID: " + n.id() + " " + n.addresses() + "\nConsistent ID: " + n.consistentId() + "\n");
 
                 if (printExceptionMessages) {
-                    printer.accept("Exception message:" + "\n");
+                    String msg = e.getValue().getMessage();
 
-                    printer.accept(e.getValue().getMessage() + "\n");
+                    printer.accept("Exception: " + e.getValue().getClass().getCanonicalName() + "\n");
+                    printer.accept(msg == null ? "" : msg + "\n");
                 }
             }
+        }
+    }
+
+    /**
+     * Print partitions which were skipped.
+     *
+     * @param printer Consumer for printing.
+     * @param map Partitions storage.
+     * @param partitionState Partition state.
+     */
+    private void printSkippedPartitions(
+        Consumer<String> printer,
+        Map<PartitionKeyV2, List<PartitionHashRecordV2>> map,
+        String partitionState
+    ) {
+        if (!F.isEmpty(map)) {
+            printer.accept("Verification was skipped for " + map.size() + " " + partitionState + " partitions:\n");
+
+            for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : map.entrySet()) {
+                printer.accept("Skipped partition: " + entry.getKey() + "\n");
+
+                printer.accept("Partition instances: " + entry.getValue() + "\n");
+            }
+
+            printer.accept("\n");
         }
     }
 

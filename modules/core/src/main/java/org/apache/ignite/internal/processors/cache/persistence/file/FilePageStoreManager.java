@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,7 +66,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
-import org.apache.ignite.internal.processors.cache.persistence.AllocatedPageTracker;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -75,6 +74,7 @@ import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolde
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridStripedReadWriteLock;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
@@ -372,7 +372,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void initialize(int cacheId, int partitions, String workingDir, AllocatedPageTracker tracker)
+    @Override public void initialize(int cacheId, int partitions, String workingDir, LongAdderMetric tracker)
         throws IgniteCheckedException {
         assert storeWorkDir != null;
 
@@ -419,7 +419,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 new File(storeWorkDir, META_STORAGE_NAME),
                 grpId,
                 PageIdAllocator.METASTORE_PARTITION + 1,
-                dataRegion.memoryMetrics(),
+                dataRegion.memoryMetrics().totalAllocatedPages(),
                 false);
 
             CacheStoreHolder old = idxCacheStores.put(grpId, holder);
@@ -486,7 +486,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void onPartitionCreated(int grpId, int partId) throws IgniteCheckedException {
+    @Override public void onPartitionCreated(int grpId, int partId) {
         // No-op.
     }
 
@@ -620,7 +620,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      *
      */
     public Path getPath(boolean isSharedGroup, String cacheOrGroupName, int partId) {
-        return getPartitionFile(cacheWorkDir(isSharedGroup, cacheOrGroupName), partId).toPath();
+        return getPartitionFilePath(cacheWorkDir(isSharedGroup, cacheOrGroupName), partId);
     }
 
     /**
@@ -638,9 +638,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         DataRegionMetricsImpl regionMetrics = cctx.database().dataRegion(dataRegionName).memoryMetrics();
 
-        int grpId = CU.cacheId(grpDesc.cacheOrGroupName());
-
-        AllocatedPageTracker allocatedTracker = regionMetrics.getOrAllocateGroupPageAllocationTracker(grpId);
+        LongAdderMetric allocatedTracker =
+            regionMetrics.getOrAllocateGroupPageAllocationTracker(grpDesc.cacheOrGroupName());
 
         return initDir(
             cacheWorkDir,
@@ -663,7 +662,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     private CacheStoreHolder initDir(File cacheWorkDir,
         int grpId,
         int partitions,
-        AllocatedPageTracker allocatedTracker,
+        LongAdderMetric allocatedTracker,
         boolean encrypted) throws IgniteCheckedException {
         try {
             boolean dirExisted = checkAndInitCacheWorkDir(cacheWorkDir);
@@ -696,7 +695,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             FileVersionCheckingFactory pageStoreFactory = new FileVersionCheckingFactory(
                 pageStoreFileIoFactory,
                 pageStoreV1FileIoFactory,
-                igniteCfg.getDataStorageConfiguration());
+                igniteCfg.getDataStorageConfiguration()
+            );
 
             if (encrypted) {
                 int headerSize = pageStoreFactory.headerSize(pageStoreFactory.latestVersion());
@@ -714,10 +714,12 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             PageStore[] partStores = new PageStore[partitions];
 
             for (int partId = 0; partId < partStores.length; partId++) {
+                final int p = partId;
+
                 PageStore partStore =
                     pageStoreFactory.createPageStore(
                         PageMemory.FLAG_DATA,
-                        getPartitionFile(cacheWorkDir, partId),
+                        () -> getPartitionFilePath(cacheWorkDir, p),
                         allocatedTracker);
 
                     partStores[partId] = partStore;
@@ -737,8 +739,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @param cacheWorkDir Cache work directory.
      * @param partId Partition id.
      */
-    @NotNull private File getPartitionFile(File cacheWorkDir, int partId) {
-        return new File(cacheWorkDir, format(PART_FILE_TEMPLATE, partId));
+    @NotNull private Path getPartitionFilePath(File cacheWorkDir, int partId) {
+        return new File(cacheWorkDir, String.format(PART_FILE_TEMPLATE, partId)).toPath();
     }
 
     /** {@inheritDoc} */
@@ -1085,7 +1087,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         if (file.exists()) {
             if (!file.delete())
-                throw new IgniteCheckedException("Failed to delete cache configuration:" + cacheCfg.getName());
+                throw new IgniteCheckedException("Failed to delete cache configuration: " + cacheCfg.getName());
         }
     }
 

@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -123,7 +123,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 var single = clientCache.Query(new ScanQuery<int, Person>(new PersonKeyFilter(3))).Single();
                 Assert.AreEqual(3, single.Key);
 
-#if !NETCOREAPP2_0 && !NETCOREAPP2_1   // Serializing delegates is not supported on this platform.
+#if !NETCOREAPP2_0 && !NETCOREAPP2_1 && !NETCOREAPP3_0   // Serializing delegates is not supported on this platform.
                 // Multiple results.
                 var res = clientCache.Query(new ScanQuery<int, Person>(new PersonFilter(x => x.Name.Length == 1)))
                     .ToList();
@@ -156,7 +156,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
 
-#if !NETCOREAPP2_0 && !NETCOREAPP2_1   // Serializing delegates and exceptions is not supported on this platform.
+#if !NETCOREAPP2_0 && !NETCOREAPP2_1 && !NETCOREAPP3_0  // Serializing delegates and exceptions is not supported on this platform.
         /// <summary>
         /// Tests the exception in filter.
         /// </summary>

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -133,21 +133,22 @@ public class DynamicCacheChangeRequest implements Serializable {
     /**
      * @param ctx Context.
      * @param cfg0 Template configuration.
+     * @param splitCfg Cache configuration splitter.
      * @return Request to add template.
      */
-    static DynamicCacheChangeRequest addTemplateRequest(GridKernalContext ctx, CacheConfiguration<?, ?> cfg0) {
-        CacheConfiguration<?, ?> cfg = new CacheConfiguration<>(cfg0);
-
-        DynamicCacheChangeRequest req = new DynamicCacheChangeRequest(UUID.randomUUID(), cfg.getName(), ctx.localNodeId());
+    static DynamicCacheChangeRequest addTemplateRequest(
+        GridKernalContext ctx,
+        CacheConfiguration<?, ?> cfg0,
+        T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg
+    ) {
+        DynamicCacheChangeRequest req = new DynamicCacheChangeRequest(UUID.randomUUID(), cfg0.getName(), ctx.localNodeId());
 
         req.template(true);
-
-        T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = ctx.cache().backwardCompatibleSplitter().split(cfg);
 
         req.startCacheConfiguration(splitCfg.get1());
         req.cacheConfigurationEnrichment(splitCfg.get2());
 
-        req.schema(new QuerySchema(cfg.getQueryEntities()));
+        req.schema(new QuerySchema(cfg0.getQueryEntities()));
         req.deploymentId(IgniteUuid.randomUuid());
 
         return req;
@@ -487,7 +488,7 @@ public class DynamicCacheChangeRequest implements Serializable {
             ", clientStartOnly=" + clientStartOnly +
             ", stop=" + stop +
             ", destroy=" + destroy +
-            ", disabledAfterStart" + disabledAfterStart +
+            ", disabledAfterStart=" + disabledAfterStart +
             ']';
     }
 }

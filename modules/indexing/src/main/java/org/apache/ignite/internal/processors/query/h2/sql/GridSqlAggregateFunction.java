@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,8 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.expression.Aggregate;
-import org.h2.util.StatementBuilder;
+import org.h2.expression.aggregate.AggregateType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.AVG;
@@ -45,7 +44,7 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
      * @param type H2 type.
      * @return Ignite type, {@code null} if not supported.
      */
-    @Nullable private static GridSqlFunctionType mapType(Aggregate.AggregateType type) {
+    @Nullable private static GridSqlFunctionType mapType(AggregateType type) {
         switch (type) {
             case COUNT_ALL:
                 return COUNT_ALL;
@@ -53,7 +52,7 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
             case COUNT:
                 return COUNT;
 
-            case GROUP_CONCAT:
+            case LISTAGG:
                 return GROUP_CONCAT;
 
             case SUM:
@@ -98,7 +97,7 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
      * @param distinct Distinct.
      * @param type Type.
      */
-    public GridSqlAggregateFunction(boolean distinct, Aggregate.AggregateType type) {
+    public GridSqlAggregateFunction(boolean distinct, AggregateType type) {
         this(distinct, mapType(type));
     }
 
@@ -108,7 +107,7 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
      * @param type Aggregate type.
      * @return True is valid, otherwise false.
      */
-    protected static boolean isValidType(Aggregate.AggregateType type) {
+    protected static boolean isValidType(AggregateType type) {
         return mapType(type) != null;
     }
 
@@ -155,12 +154,12 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
         return groupConcatSeparator;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
         if (type == COUNT_ALL)
             return "COUNT(*)";
 
-        StatementBuilder buff = new StatementBuilder(name()).append('(');
+        StringBuilder buff = new StringBuilder(name()).append('(');
 
         if (distinct)
             buff.append("DISTINCT ");
@@ -170,10 +169,9 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
         if (!F.isEmpty(groupConcatOrderExpression)) {
             buff.append(" ORDER BY ");
 
-            buff.resetCount();
-
-            for (int i = 0; i < groupConcatOrderExpression.length; ++i) {
-                buff.appendExceptFirst(", ");
+            for (int i = 0; i < groupConcatOrderExpression.length; i++) {
+                if (i > 0)
+                    buff.append(", ");
 
                 buff.append(groupConcatOrderExpression[i].getSQL());
 

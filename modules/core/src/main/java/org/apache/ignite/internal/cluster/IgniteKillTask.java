@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
 
@@ -42,7 +43,7 @@ class IgniteKillTask extends ComputeTaskAdapter<Boolean, Void> {
     private boolean restart;
 
     /** {@inheritDoc} */
-    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Boolean restart) {
+    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Boolean restart) {
         assert restart != null;
 
         this.restart = restart;

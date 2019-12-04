@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionTest;
 import org.apache.ignite.internal.processors.cache.PartitionedAtomicCacheGetsDistributionTest;
 import org.apache.ignite.internal.processors.cache.PartitionedMvccTxPessimisticCacheGetsDistributionTest;
 import org.apache.ignite.internal.processors.cache.PartitionedTransactionalOptimisticCacheGetsDistributionTest;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.distributed.ExchangeMergeStal
 import org.apache.ignite.internal.processors.cache.distributed.GridCachePartitionEvictionDuringReadThroughSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCache150ClientsTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteOptimisticTxSuspendResumeTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxLocalDhtMixedCacheModesTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxOptimisticOnPartitionExchangeTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxOptimisticPrepareOnUnstableTopologyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxRollbackOnTimeoutOnePhaseCommitTest;
@@ -81,6 +83,10 @@ public class IgniteCacheMvccTestSuite6 {
         ignoredTests.add(PartitionsExchangeCoordinatorFailoverTest.class);
         ignoredTests.add(CacheParallelStartTest.class);
         ignoredTests.add(IgniteCache150ClientsTest.class);
+        ignoredTests.add(CacheIgniteOutOfMemoryExceptionTest.class);
+
+        // Mixed local/dht tx test.
+        ignoredTests.add(TxLocalDhtMixedCacheModesTest.class);
 
         // Skip tests that has Mvcc clones.
         ignoredTests.add(PartitionedTransactionalPessimisticCacheGetsDistributionTest.class); // See PartitionedMvccTxPessimisticCacheGetsDistributionTest.

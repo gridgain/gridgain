@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.plugin;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.jetbrains.annotations.Nullable;
 
 import javax.cache.Cache;
 
@@ -60,18 +59,20 @@ public interface CachePluginProvider<C extends CachePluginConfiguration> {
 
     /**
      * @param cls Ignite component class.
-     * @return Ignite component or {@code null} if component is not supported.
+     * @return Ignite component or {@code null} if component is not supported
+     *      (default Ignite component will be used).
      */
-    @Nullable public <T> T createComponent(Class<T> cls);
+    public <T> T createComponent(Class<T> cls);
 
     /**
      * Unwrap entry to specified type. For details see {@code javax.cache.Cache.Entry.unwrap(Class)}.
      *
      * @param entry Mutable entry to unwrap.
      * @param cls Type of the expected component.
-     * @return New instance of underlying type or {@code null} if it's not available.
+     * @return New instance of underlying type or {@code null} if it's not available
+     *      (default Ignite unwrap will be used).
      */
-    @Nullable public <T, K, V> T unwrapCacheEntry(Cache.Entry<K, V> entry, Class<T> cls);
+    public <T, K, V> T unwrapCacheEntry(Cache.Entry<K, V> entry, Class<T> cls);
 
     /**
      * Validates cache plugin configuration in process of cache creation. Throw exception if validation failed.

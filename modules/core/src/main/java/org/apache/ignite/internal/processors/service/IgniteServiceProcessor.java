@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -603,7 +603,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      */
     private SecurityException checkPermissions(String name, SecurityPermission perm) {
         try {
-            ctx.security().authorize(name, perm, null);
+            ctx.security().authorize(name, perm);
 
             return null;
         }
@@ -857,7 +857,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             return null;
 
         try {
-            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
             Collection<ServiceContextImpl> ctxs = serviceContexts(name);
 
@@ -928,7 +928,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
     @Override public <T> T serviceProxy(ClusterGroup prj, String name, Class<? super T> srvcCls, boolean sticky,
         long timeout)
         throws IgniteException {
-        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
         if (hasLocalNode(prj)) {
             ServiceContextImpl ctx = serviceContext(name);
@@ -968,7 +968,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             return null;
 
         try {
-            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
             Collection<ServiceContextImpl> ctxs = serviceContexts(name);
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -113,9 +113,10 @@ public class CacheContinuousQueryEventBuffer {
     }
 
     /**
+     * @param backup {@code True} if backup context.
      * @return Initial partition counter.
      */
-    protected long currentPartitionCounter() {
+    protected long currentPartitionCounter(boolean backup) {
         return 0;
     }
 
@@ -152,7 +153,7 @@ public class CacheContinuousQueryEventBuffer {
         Object res = null;
 
         for (;;) {
-            batch = initBatch(entry.topologyVersion());
+            batch = initBatch(entry.topologyVersion(), backup);
 
             if (batch == null || cntr < batch.startCntr) {
                 if (backup) {
@@ -184,7 +185,7 @@ public class CacheContinuousQueryEventBuffer {
 
                 res = processPending(res, batch, backup);
 
-                batch0 = initBatch(entry.topologyVersion());
+                batch0 = initBatch(entry.topologyVersion(), backup);
             }
             while (batch != batch0);
         }
@@ -194,16 +195,17 @@ public class CacheContinuousQueryEventBuffer {
 
     /**
      * @param topVer Current event topology version.
+     * @param backup {@code True} if backup entry.
      * @return Current batch.
      */
-    @Nullable private Batch initBatch(AffinityTopologyVersion topVer) {
+    private Batch initBatch(AffinityTopologyVersion topVer, boolean backup) {
         Batch batch = curBatch.get();
 
         if (batch != null)
             return batch;
 
         for (;;) {
-            long curCntr = currentPartitionCounter();
+            long curCntr = currentPartitionCounter(backup);
 
             if (curCntr == -1)
                 return null;

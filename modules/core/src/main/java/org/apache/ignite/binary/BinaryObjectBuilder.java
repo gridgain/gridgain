@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,8 +15,6 @@
  */
 
 package org.apache.ignite.binary;
-
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Binary object builder. Provides ability to build binary objects dynamically without having class definitions.
@@ -101,11 +99,11 @@ public interface BinaryObjectBuilder {
      * Field type is needed for proper metadata update.
      *
      * @param name Field name.
-     * @param val Field value.
+     * @param val Field value (may be {@code null}).
      * @param type Field type.
      * @see BinaryObject#type()
      */
-    public <T> BinaryObjectBuilder setField(String name, @Nullable T val, Class<? super T> type);
+    public <T> BinaryObjectBuilder setField(String name, T val, Class<? super T> type);
 
     /**
      * Sets field value.
@@ -113,9 +111,9 @@ public interface BinaryObjectBuilder {
      * This method should be used if field is binary object.
      *
      * @param name Field name.
-     * @param builder Builder for object field.
+     * @param builder Builder for object field (may be {@code null}).
      */
-    public BinaryObjectBuilder setField(String name, @Nullable BinaryObjectBuilder builder);
+    public BinaryObjectBuilder setField(String name, BinaryObjectBuilder builder);
 
     /**
      * Removes field from this builder.

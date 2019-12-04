@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,10 +43,10 @@ namespace Apache.Ignite.Core.Tests
         public const string CategoryExamples = "EXAMPLES_TEST";
 
         /** */
-        private const int DfltBusywaitSleepInterval = 200;
+        public const int DfltBusywaitSleepInterval = 200;
 
         /** Work dir. */
-        private static readonly string WorkDir = 
+        private static readonly string WorkDir =
             // ReSharper disable once AssignNullToNotNullAttribute
             Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ignite_work");
 
@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Tests
 
         /** */
         private static readonly IList<string> JvmDebugOpts =
-            new List<string> { "-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005" };
+            new List<string> { "-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=false" };
 
         /** */
         public static bool JvmDebug = true;
@@ -142,7 +142,7 @@ namespace Apache.Ignite.Core.Tests
 
             foreach (Thread thread in threads)
                 thread.Join();
-            
+
             foreach (var ex in errors)
                 Assert.Fail("Unexpected exception: " + ex);
         }

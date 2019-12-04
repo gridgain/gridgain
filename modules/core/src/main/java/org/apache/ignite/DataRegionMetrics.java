@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
 
 /**
@@ -44,7 +45,10 @@ import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
  * why the metrics are turned off by default. To enable the collection you can use both
  * {@link DataRegionConfiguration#setMetricsEnabled(boolean)} configuration property or
  * {@link DataRegionMetricsMXBean#enableMetrics()} method of a respective JMX bean.
+ *
+ * @deprecated Use {@link GridMetricManager} instead.
  */
+@Deprecated
 public interface DataRegionMetrics {
     /**
      * A name of a memory region the metrics are collected for.

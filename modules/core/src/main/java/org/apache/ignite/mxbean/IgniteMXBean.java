@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -494,4 +494,43 @@ public interface IgniteMXBean {
      */
     @MXBeanDescription("Clears local node map.")
     void clearNodeLocalMap();
+
+    /**
+     * Resets metrics for of a given registry.
+     *
+     * @param registry Metrics registry name.
+     */
+    @MXBeanDescription("Resets metrics of a given registry.")
+    @MXBeanParametersNames("registry")
+    @MXBeanParametersDescriptions("Metrics registry.")
+    public void resetMetrics(String registry);
+
+
+    /**
+     * Gets cluster read-only mode status.
+     *
+     * @return {@code True} if cluster active and read-only mode enabled, and {@code False} otherwise.
+     */
+    @MXBeanDescription("Cluster read-only mode status.")
+    boolean readOnlyMode();
+
+    /**
+     * Enable or disable cluster read-only mode. If {@code readOnly} flag is {@code True} read-only mode will be
+     * enabled. If {@code readOnly} flag is {@code False} read-only mode will be disabled.
+     *
+     * @param readOnly enable/disable cluster read-only mode flag.
+     */
+    @MXBeanDescription("Enable or disable cluster read-only mode.")
+    @MXBeanParametersNames("readOnly")
+    @MXBeanParametersDescriptions("True - enable read-only mode, false - disable read-only mode.")
+    void readOnlyMode(boolean readOnly);
+
+    /**
+     * Gets duration of read-only mode enabled on cluster.
+     *
+     * @return {@code 0} if cluster read-only mode disabled, and time in milliseconds since enabling cluster read-only
+     * mode.
+     */
+    @MXBeanDescription("Duration of read-only mode enabled on cluster.")
+    long getReadOnlyModeDuration();
 }

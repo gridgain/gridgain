@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.ml.genetic.parameter.GAConfiguration;
 import org.apache.ignite.ml.genetic.parameter.GAGridConstants;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Responsible for fitness operation
@@ -49,12 +50,8 @@ public class FitnessTask extends ComputeTaskAdapter<List<Long>, Boolean> {
         this.cfg = cfg;
     }
 
-    /**
-     * @param nodes List of ClusterNode
-     * @param chromosomeKeys List of chromosome keys
-     * @return Map of jobs to nodes
-     */
-    @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
+    /** {@inheritDoc} */
+    @NotNull @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
 
         Map<ComputeJob, ClusterNode> map = new HashMap<>();
 
@@ -71,20 +68,13 @@ public class FitnessTask extends ComputeTaskAdapter<List<Long>, Boolean> {
         return map;
     }
 
-    /**
-     * @param list List of ComputeJobResult
-     * @return Boolean value
-     */
+    /** {@inheritDoc} */
     @Override public Boolean reduce(List<ComputeJobResult> list) throws IgniteException {
 
         return Boolean.TRUE;
     }
 
-    /**
-     * @param res ComputeJobResult
-     * @param rcvd List of ComputeJobResult
-     * @return ComputeJobResultPolicy
-     */
+    /** {@inheritDoc} */
     @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
         IgniteException err = res.getException();
 

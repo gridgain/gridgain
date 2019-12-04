@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,7 +45,7 @@ namespace ignite
              */
             IgniteClientConfiguration() :
                 sslMode(SslMode::DISABLE),
-                affinityAwareness(false)
+                partitionAwareness(false)
             {
                 // No-op.
             }
@@ -202,7 +202,7 @@ namespace ignite
             }
 
             /**
-             * Set Affinity Awareness.
+             * Set Partition Awareness.
              *
              * Enable or disable feature that enables thin client to consider data affinity when making requests
              * to the cluster. It means, thin client is going to connect to all available cluster servers listed by
@@ -210,23 +210,23 @@ namespace ignite
              *
              * Disabled by default.
              *
-             * @param enable Enable affinity awareness.
+             * @param enable Enable Partition Awareness.
              */
-            void SetAffinityAwareness(bool enable)
+            void SetPartitionAwareness(bool enable)
             {
-                affinityAwareness = enable;
+                partitionAwareness = enable;
             }
 
             /**
-             * Get Affinity Awareness flag.
+             * Get Partition Awareness flag.
              *
-             * @see SetAffinityAwareness() for details.
+             * @see SetPartitionAwareness() for details.
              *
-             * @return @c true if affinity awareness is enabled and @c false otherwise.
+             * @return @c true if Partition Awareness is enabled and @c false otherwise.
              */
-            bool IsAffinityAwareness() const
+            bool IsPartitionAwareness() const
             {
-                return affinityAwareness;
+                return partitionAwareness;
             }
 
         private:
@@ -251,8 +251,8 @@ namespace ignite
             /** SSL client certificate authority path */
             std::string sslCaFile;
 
-            /** Affinity Awareness. */
-            bool affinityAwareness;
+            /** Partition Awareness. */
+            bool partitionAwareness;
         };
     }
 }

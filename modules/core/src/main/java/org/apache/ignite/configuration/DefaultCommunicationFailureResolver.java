@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,11 +47,12 @@ public class DefaultCommunicationFailureResolver implements CommunicationFailure
         if (largestCluster == null)
             return;
 
-        log.info("Communication problem resolver found fully connected independent cluster ["
-            + "serverNodesCnt=" + largestCluster.srvNodesCnt + ", "
-            + "clientNodesCnt=" + largestCluster.connectedClients.size() + ", "
-            + "totalAliveNodes=" + ctx.topologySnapshot().size() + ", "
-            + "serverNodesIds=" + clusterNodeIds(largestCluster.srvNodesSet, ctx.topologySnapshot(), 1000) + "]");
+        if (log.isInfoEnabled())
+            log.info("Communication problem resolver found fully connected independent cluster ["
+                + "serverNodesCnt=" + largestCluster.srvNodesCnt + ", "
+                + "clientNodesCnt=" + largestCluster.connectedClients.size() + ", "
+                + "totalAliveNodes=" + ctx.topologySnapshot().size() + ", "
+                + "serverNodesIds=" + clusterNodeIds(largestCluster.srvNodesSet, ctx.topologySnapshot(), 1000) + "]");
 
         keepCluster(ctx, largestCluster);
     }
@@ -86,9 +87,15 @@ public class DefaultCommunicationFailureResolver implements CommunicationFailure
             boolean fullyConnected = graph.checkFullyConnected(nodesSet);
 
             if (fullyConnected && nodeCnt == srvNodes.size()) {
-                U.warn(log, "All alive nodes are fully connected, this should be resolved automatically.");
+                Set<ClusterNode> clients = findConnectedClients(ctx, nodesSet);
 
-                return null;
+                if (clients.size() + nodeCnt == ctx.topologySnapshot().size()) {
+                    U.warn(log, "All alive nodes are fully connected, this should be resolved automatically.");
+
+                    return null;
+                }
+                else
+                    return new ClusterPart(nodesSet, clients);
             }
 
             if (log.isInfoEnabled())

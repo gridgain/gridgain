@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -92,7 +92,7 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> AdaptableDatasetModel<I, O, IW, OW, M> fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> AdaptableDatasetModel<I, O, IW, OW, M> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                                        Preprocessor<K, V> extractor) {
         M fit = wrapped.
             withEnvironmentBuilder(envBuilder)
@@ -164,7 +164,7 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
     public AdaptableDatasetTrainer<I, O, IW, OW, M, L> withDatasetMapping(DatasetMapping<L, L> mapping) {
         return of(new DatasetTrainer<M, L>() {
             /** {@inheritDoc} */
-            @Override public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> extractor) {
+            @Override public <K, V> M fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> extractor) {
                 return wrapped.fit(datasetBuilder, extractor.map(lv -> new LabeledVector<>(
                     mapping.mapFeatures(lv.features()),
                     mapping.mapLabels((L)lv.label())

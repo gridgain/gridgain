@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,6 +40,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
 
 import static java.sql.Types.BIGINT;
@@ -798,145 +799,145 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
         stmt = conn.prepareStatement("");
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setArray(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setAsciiStream(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setAsciiStream(1, null, 0);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setAsciiStream(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBinaryStream(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBinaryStream(1, null, 0);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBinaryStream(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBlob(1, (Blob)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBlob(1, (InputStream)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setBlob(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setCharacterStream(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setCharacterStream(1, null, 0);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setCharacterStream(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setClob(1, (Clob)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setClob(1, (Reader)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setClob(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setNCharacterStream(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setNCharacterStream(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setNClob(1, (NClob)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setNClob(1, (Reader)null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setNClob(1, null, 0L);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setRowId(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setRef(1, null);
             }
         });
 
         checkNotSupported(new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 stmt.setSQLXML(1, null);
             }
         });

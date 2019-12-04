@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -164,7 +164,7 @@ public class DataStreamGeneratorTest {
     private void checkDataset(int sampleSize, DatasetBuilder<Vector, Double> datasetBuilder,
         Predicate<LabeledVector> labelCheck) throws Exception {
 
-        try (Dataset<EmptyContext, LabeledVectorSet<Double, LabeledVector>> dataset = buildDataset(datasetBuilder)) {
+        try (Dataset<EmptyContext, LabeledVectorSet<LabeledVector>> dataset = buildDataset(datasetBuilder)) {
             List<LabeledVector> res = dataset.compute(this::map, this::reduce);
             assertEquals(sampleSize, res.size());
 
@@ -173,16 +173,17 @@ public class DataStreamGeneratorTest {
     }
 
     /** */
-    private Dataset<EmptyContext, LabeledVectorSet<Double, LabeledVector>> buildDataset(
+    private Dataset<EmptyContext, LabeledVectorSet<LabeledVector>> buildDataset(
         DatasetBuilder<Vector, Double> b1) {
         return b1.build(LearningEnvironmentBuilder.defaultBuilder(),
             new EmptyContextBuilder<>(),
-            new LabeledDatasetPartitionDataBuilderOnHeap<>((Preprocessor<Vector, Double>)LabeledVector::new)
+            new LabeledDatasetPartitionDataBuilderOnHeap<>((Preprocessor<Vector, Double>)LabeledVector::new),
+            LearningEnvironmentBuilder.defaultBuilder().buildForTrainer()
         );
     }
 
     /** */
-    private List<LabeledVector> map(LabeledVectorSet<Double, LabeledVector> d) {
+    private List<LabeledVector> map(LabeledVectorSet<LabeledVector> d) {
         return IntStream.range(0, d.rowSize()).mapToObj(d::getRow).collect(Collectors.toList());
     }
 

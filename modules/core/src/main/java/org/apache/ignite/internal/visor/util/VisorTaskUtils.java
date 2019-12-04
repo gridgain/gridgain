@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,10 +22,7 @@ import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.math.BigDecimal;
 import java.net.InetAddress;
-import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
@@ -51,8 +48,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.eviction.AbstractEvictionPolicyFactory;
 import org.apache.ignite.cluster.ClusterNode;
@@ -61,7 +56,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
-import org.apache.ignite.internal.processors.igfs.IgfsEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -73,11 +67,9 @@ import org.apache.ignite.internal.visor.log.VisorLogFile;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.eventstorage.NoopEventStorageSpi;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.System.getProperty;
-import static org.apache.ignite.configuration.FileSystemConfiguration.DFLT_IGFS_LOG_DIR;
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
 import static org.apache.ignite.events.EventType.EVT_CLASS_DEPLOY_FAILED;
 import static org.apache.ignite.events.EventType.EVT_JOB_CANCELLED;
@@ -424,16 +416,17 @@ public class VisorTaskUtils {
      * Checks for explicit events configuration.
      *
      * @param ignite Grid instance.
+     * @param evts Event types.
      * @return {@code true} if all task events explicitly specified in configuration.
      */
-    public static boolean checkExplicitTaskMonitoring(Ignite ignite) {
-        int[] evts = ignite.configuration().getIncludeEventTypes();
+    public static boolean checkExplicitEvents(Ignite ignite, int[] evts) {
+        int[] curEvts = ignite.configuration().getIncludeEventTypes();
 
-        if (F.isEmpty(evts))
+        if (F.isEmpty(curEvts))
             return false;
 
-        for (int evt : VISOR_TASK_EVTS) {
-            if (!F.contains(evts, evt))
+        for (int evt : evts) {
+            if (!F.contains(curEvts, evt))
                 return false;
         }
 
@@ -744,28 +737,6 @@ public class VisorTaskUtils {
         finally {
             U.close(raf, null);
         }
-    }
-
-    /**
-     * Resolve IGFS profiler logs directory.
-     *
-     * @param igfs IGFS instance to resolve logs dir for.
-     * @return {@link Path} to log dir or {@code null} if not found.
-     * @throws IgniteCheckedException if failed to resolve.
-     */
-    public static Path resolveIgfsProfilerLogsDir(IgniteFileSystem igfs) throws IgniteCheckedException {
-        String logsDir;
-
-        if (igfs instanceof IgfsEx)
-            logsDir = ((IgfsEx)igfs).clientLogDirectory();
-        else if (igfs == null)
-            throw new IgniteCheckedException("Failed to get profiler log folder (IGFS instance not found)");
-        else
-            throw new IgniteCheckedException("Failed to get profiler log folder (unexpected IGFS instance type)");
-
-        URL logsDirUrl = U.resolveIgniteUrl(logsDir != null ? logsDir : DFLT_IGFS_LOG_DIR);
-
-        return logsDirUrl != null ? new File(logsDirUrl.getPath()).toPath() : null;
     }
 
     /**
@@ -1127,124 +1098,6 @@ public class VisorTaskUtils {
      */
     public static boolean joinTimedOut(String msg) {
         return msg != null && msg.startsWith("Join process timed out.");
-    }
-
-    /**
-     * Special wrapper over address that can be sorted in following order:
-     *     IPv4, private IPv4, IPv4 local host, IPv6.
-     *     Lower addresses first.
-     */
-    private static class SortableAddress implements Comparable<SortableAddress> {
-        /** */
-        private int type;
-
-        /** */
-        private BigDecimal bits;
-
-        /** */
-        private String addr;
-
-        /**
-         * Constructor.
-         *
-         * @param addr Address as string.
-         */
-        private SortableAddress(String addr) {
-            this.addr = addr;
-
-            if (addr.indexOf(':') > 0)
-                type = 4; // IPv6
-            else {
-                try {
-                    InetAddress inetAddr = InetAddress.getByName(addr);
-
-                    if (inetAddr.isLoopbackAddress())
-                        type = 3;  // localhost
-                    else if (inetAddr.isSiteLocalAddress())
-                        type = 2;  // private IPv4
-                    else
-                        type = 1; // other IPv4
-                }
-                catch (UnknownHostException ignored) {
-                    type = 5;
-                }
-            }
-
-            bits = BigDecimal.valueOf(0L);
-
-            try {
-                String[] octets = addr.contains(".") ? addr.split(".") : addr.split(":");
-
-                int len = octets.length;
-
-                for (int i = 0; i < len; i++) {
-                    long oct = F.isEmpty(octets[i]) ? 0 : Long.valueOf( octets[i]);
-                    long pow = Double.valueOf(Math.pow(256, octets.length - 1 - i)).longValue();
-
-                    bits = bits.add(BigDecimal.valueOf(oct * pow));
-                }
-            }
-            catch (Exception ignore) {
-                // No-op.
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public int compareTo(@NotNull SortableAddress o) {
-            return (type == o.type ? bits.compareTo(o.bits) : Integer.compare(type, o.type));
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            SortableAddress other = (SortableAddress)o;
-
-            return addr != null ? addr.equals(other.addr) : other.addr == null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return addr != null ? addr.hashCode() : 0;
-        }
-
-        /**
-         * @return Address.
-         */
-        public String address() {
-            return addr;
-        }
-    }
-
-    /**
-     * Sort addresses: IPv4 & real addresses first.
-     *
-     * @param addrs Addresses to sort.
-     * @return Sorted list.
-     */
-    public static Collection<String> sortAddresses(Collection<String> addrs) {
-        if (F.isEmpty(addrs))
-            return Collections.emptyList();
-
-        int sz = addrs.size();
-
-        List<SortableAddress> sorted = new ArrayList<>(sz);
-
-        for (String addr : addrs)
-            sorted.add(new SortableAddress(addr));
-
-        Collections.sort(sorted);
-
-        Collection<String> res = new ArrayList<>(sz);
-
-        for (SortableAddress sa : sorted)
-            res.add(sa.address());
-
-        return res;
     }
 
     /**

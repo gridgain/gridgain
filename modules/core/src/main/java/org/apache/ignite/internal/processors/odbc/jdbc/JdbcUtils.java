@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Various JDBC utility methods.
@@ -103,5 +104,41 @@ public class JdbcUtils {
         }
         else
             return Collections.emptyList();
+    }
+
+    /**
+     * Read nullable Integer.
+     *
+     * @param reader Binary reader.
+     * @return read value.
+     */
+    @Nullable public static Integer readNullableInteger(BinaryReaderExImpl reader) {
+        return reader.readBoolean() ? reader.readInt() : null;
+    }
+
+    /**
+     * Write nullable integer.
+     *
+     * @param writer Binary writer.
+     * @param val Integer value..
+     */
+    public static void writeNullableInteger(BinaryWriterExImpl writer, @Nullable Integer val) {
+        writer.writeBoolean(val != null);
+
+        if (val != null)
+            writer.writeInt(val);
+    }
+
+    /**
+     * Write nullable integer.
+     *
+     * @param writer Binary writer.
+     * @param val Integer value..
+     */
+    public static void writeNullableLong(BinaryWriterExImpl writer, @Nullable Long val) {
+        writer.writeBoolean(val != null);
+
+        if (val != null)
+            writer.writeLong(val);
     }
 }

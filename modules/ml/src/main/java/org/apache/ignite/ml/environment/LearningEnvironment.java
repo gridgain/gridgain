@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.ml.environment;
 
 import java.util.Random;
 import org.apache.ignite.ml.dataset.Dataset;
+import org.apache.ignite.ml.environment.deploy.DeployingContext;
 import org.apache.ignite.ml.environment.logging.MLLogger;
 import org.apache.ignite.ml.environment.parallelism.ParallelismStrategy;
 
@@ -59,4 +60,28 @@ public interface LearningEnvironment {
      * @return Partition.
      */
     public int partition();
+
+    /**
+     * Returns partition data time-to-live in seconds (-1 for an infinite lifetime).
+     *
+     * @return Partition data time-to-live in seconds (-1 for an infinite lifetime).
+     */
+    public long dataTtl();
+
+    /**
+     * Returns deploy context instance.
+     *
+     * @return Deploy context.
+     */
+    public DeployingContext deployingContext();
+
+    /**
+     * Initializes deploying context by object representing current client computation
+     * with classes unknown for server side.
+     *
+     * @param clientSideObj Client side object.
+     */
+    public default void initDeployingContext(Object clientSideObj) {
+        deployingContext().initByClientObject(clientSideObj);
+    }
 }

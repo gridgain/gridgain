@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,9 +38,11 @@ import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.createJdbcSqlException;
 
@@ -228,6 +230,17 @@ public class DmlBatchSender {
                 assert rowNum != null;
 
                 cntPerRow[rowNum] = Statement.EXECUTE_FAILED;
+            }
+
+            if (X.hasCause(e, IgniteClusterReadOnlyException.class)) {
+                SQLException sqlEx = new SQLException(
+                    e.getMessage(),
+                    SqlStateCode.CLUSTER_READ_ONLY_MODE_ENABLED,
+                    IgniteQueryErrorCode.CLUSTER_READ_ONLY_MODE_ENABLED,
+                    e
+                );
+
+                return new DmlPageProcessingResult(0, null, sqlEx);
             }
 
             return new DmlPageProcessingResult(0, null,

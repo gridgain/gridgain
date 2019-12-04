@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,24 +68,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
                 Assert.assertEquals(Thread.currentThread(), thread);
                 Assert.assertEquals(msgStr, msg);
             }
-        }, false);
-    }
-
-    /**
-     * Checks if use async mode, local listeners execute in another thread, 1 node in topology.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendAsyncMode() throws Exception {
-        Ignite ignite1 = startGrid(1);
-
-        send(ignite1.message(), msgStr,  new IgniteBiInClosure<String, Thread> () {
-            @Override public void apply(String msg, Thread thread) {
-                Assert.assertTrue(!Thread.currentThread().equals(thread));
-                Assert.assertEquals(msgStr, msg);
-            }
-        }, true);
+        });
     }
 
     /**
@@ -103,25 +86,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
                 Assert.assertEquals(Thread.currentThread(), thread);
                 Assert.assertEquals(msgStr, msg);
             }
-        }, false);
-    }
-
-    /**
-     * Checks if use async mode, local listeners execute in another thread, 2 nodes in topology.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendAsyncMode2Node() throws Exception {
-        Ignite ignite1 = startGrid(1);
-        Ignite ignite2 = startGrid(2);
-
-        sendWith2Nodes(ignite2, ignite1.message(), msgStr,  new IgniteBiInClosure<String, Thread> () {
-            @Override public  void apply(String msg, Thread thread) {
-                Assert.assertTrue(!Thread.currentThread().equals(thread));
-                Assert.assertEquals(msgStr, msg);
-            }
-        }, true);
+        });
     }
 
     /**
@@ -316,15 +281,13 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
      * @param igniteMsg Ignite message.
      * @param msgStr    Message string.
      * @param cls       Callback for compare result.
-     * @param async     Use sendAsync flag.
      * @throws Exception If failed.
      */
     private void sendWith2Nodes(
             final Ignite ignite2,
             final IgniteMessaging igniteMsg,
             final String msgStr,
-            final IgniteBiInClosure<String, Thread>  cls,
-            final boolean async
+            final IgniteBiInClosure<String, Thread>  cls
     ) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -338,7 +301,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
             }
         });
 
-        send(igniteMsg, msgStr, cls, async);
+        send(igniteMsg, msgStr, cls);
 
         latch.await();
     }
@@ -347,14 +310,12 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
      * @param igniteMsg Ignite messaging.
      * @param msgStr    Message string.
      * @param cls       Callback for compare result.
-     * @param async     Use sendAsync flag.
      * @throws Exception If failed.
      */
     private void send(
            final IgniteMessaging igniteMsg,
            final String msgStr,
-           final IgniteBiInClosure<String, Thread> cls,
-           final boolean async
+           final IgniteBiInClosure<String, Thread> cls
     ) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -373,10 +334,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
             }
         });
 
-        if (async)
-            igniteMsg.withAsync().send(TOPIC, msgStr);
-        else
-            igniteMsg.send(TOPIC, msgStr);
+        igniteMsg.send(TOPIC, msgStr);
 
         latch.await();
 

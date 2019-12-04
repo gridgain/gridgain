@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,6 +36,8 @@ import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheCon
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicOneNodeTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.IgniteCacheContinuousQueryClientTest;
+import org.apache.ignite.internal.processors.query.HashJoinQueryTest;
+import org.apache.ignite.internal.processors.query.MemLeakOnSqlWithClientReconnectTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -63,7 +65,9 @@ import org.junit.runners.Suite;
     CacheContinuousWithTransformerRandomOperationsTest.class,
     CacheContinuousQueryRandomOperationsTest.class,
     StaticCacheDdlTest.class,
-    StaticCacheDdlKeepStaticConfigurationTest.class
+    StaticCacheDdlKeepStaticConfigurationTest.class,
+    MemLeakOnSqlWithClientReconnectTest.class,
+    HashJoinQueryTest.class,
 })
 public class IgniteCacheQuerySelfTestSuite6 {
 }

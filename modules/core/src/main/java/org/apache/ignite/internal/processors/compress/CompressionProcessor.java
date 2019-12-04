@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ public class CompressionProcessor extends GridProcessorAdapter {
     public static final int ZSTD_DEFAULT_LEVEL = 3;
 
     /** */
-    protected static final byte UNCOMPRESSED_PAGE = 0;
+    public static final byte UNCOMPRESSED_PAGE = 0;
 
     /** */
     protected static final byte COMPACTED_PAGE = 1;
@@ -130,6 +130,15 @@ public class CompressionProcessor extends GridProcessorAdapter {
      */
     private static <T> T fail() throws IgniteCheckedException {
         throw new IgniteCheckedException("Make sure that ignite-compress module is in classpath.");
+    }
+
+    /**
+     * Checks weither page compression is supported.
+     *
+     * @throws IgniteCheckedException If compression is not supported.
+     */
+    public void checkPageCompressionSupported() throws IgniteCheckedException {
+        fail();
     }
 
     /**

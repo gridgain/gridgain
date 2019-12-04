@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,6 +54,8 @@ import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListe
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.verify.GridNotIdleException;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
@@ -62,12 +64,13 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
-import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -75,6 +78,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.h2.engine.Session;
 import org.h2.index.Cursor;
 import org.h2.index.Index;
+import org.h2.message.DbException;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -220,20 +224,22 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             IgniteH2Indexing indexing = (IgniteH2Indexing)qry.getIndexing();
 
             for (GridCacheContext ctx : grpCtx.caches()) {
-                Collection<GridQueryTypeDescriptor> types = qry.types(ctx.name());
+                if (cacheNames == null || cacheNames.contains(ctx.name())) {
+                    Collection<GridQueryTypeDescriptor> types = qry.types(ctx.name());
 
-                if (!F.isEmpty(types)) {
-                    for (GridQueryTypeDescriptor type : types) {
-                        GridH2Table gridH2Tbl = indexing.schemaManager().dataTable(ctx.name(), type.tableName());
+                    if (!F.isEmpty(types)) {
+                        for (GridQueryTypeDescriptor type : types) {
+                            GridH2Table gridH2Tbl = indexing.schemaManager().dataTable(ctx.name(), type.tableName());
 
-                        if (gridH2Tbl == null)
-                            continue;
+                            if (gridH2Tbl == null)
+                                continue;
 
-                        ArrayList<Index> indexes = gridH2Tbl.getIndexes();
+                            ArrayList<Index> indexes = gridH2Tbl.getIndexes();
 
-                        for (Index idx : indexes)
-                            if (idx instanceof H2TreeIndexBase)
-                                idxArgs.add(new T2<>(ctx, idx));
+                            for (Index idx : indexes)
+                                if (idx instanceof H2TreeIndexBase)
+                                    idxArgs.add(new T2<>(ctx, idx));
+                        }
                     }
                 }
             }
@@ -316,7 +322,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     }
 
                     @Override public void onCheckpointBegin(Context ctx) {
-                        if (ctx.hasPages())
+                        if (ctx.hasUserPages())
                             cpFlag.set(true);
                     }
 
@@ -621,8 +627,16 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      */
     private Future<Map<String, ValidateIndexesPartitionResult>> processIndexAsync(GridCacheContext ctx, Index idx) {
         return calcExecutor.submit(new Callable<Map<String, ValidateIndexesPartitionResult>>() {
-            @Override public Map<String, ValidateIndexesPartitionResult> call() throws Exception {
-                return processIndex(ctx, idx);
+            /** {@inheritDoc} */
+            @Override public Map<String, ValidateIndexesPartitionResult> call() {
+                BPlusTree.suspendFailureDiagnostic.set(true);
+
+                try {
+                    return processIndex(ctx, idx);
+                }
+                finally {
+                    BPlusTree.suspendFailureDiagnostic.set(false);
+                }
             }
         });
     }
@@ -652,6 +666,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
             log.error("Find in index failed: " + is.toString());
 
+            idxValidationRes.reportIssue(is);
+
             enoughIssues = true;
         }
 
@@ -671,10 +687,15 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     if (!cursor.next())
                         break;
                 }
-                catch (IllegalStateException e) {
-                    throw new IgniteCheckedException("Key is present in SQL index, but is missing in corresponding " +
-                        "data page. Previous successfully read key: " +
-                        CacheObjectUtils.unwrapBinaryIfNeeded(ctx.cacheObjectContext(), previousKey, true, true), e);
+                catch (DbException e) {
+                    if (X.hasCause(e, CorruptedTreeException.class))
+                        throw new IgniteCheckedException("Key is present in SQL index, but is missing in corresponding " +
+                            "data page. Previous successfully read key: " +
+                            CacheObjectUtils.unwrapBinaryIfNeeded(ctx.cacheObjectContext(), previousKey, true, true),
+                            X.cause(e, CorruptedTreeException.class)
+                        );
+
+                    throw e;
                 }
 
                 H2CacheRow h2Row = (H2CacheRow)cursor.get();
@@ -727,7 +748,16 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             }
         }
 
-        String uniqueIdxName = "[cache=" + ctx.name() + ", idx=" + idx.getName() + "]";
+        CacheGroupContext group = ctx.group();
+
+        String uniqueIdxName = String.format(
+            "[cacheGroup=%s, cacheGroupId=%s, cache=%s, cacheId=%s, idx=%s]",
+            group.name(),
+            group.groupId(),
+            ctx.name(),
+            ctx.cacheId(),
+            idx.getName()
+        );
 
         processedIndexes.incrementAndGet();
 

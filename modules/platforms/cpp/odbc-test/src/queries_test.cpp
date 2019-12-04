@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -94,7 +94,7 @@ struct QueriesTestSuiteFixture : odbc::OdbcTestSuite
         cache1.Put(1, in1);
         cache1.Put(2, in2);
 
-        const size_t columnsCnt = 12;
+        const SQLSMALLINT columnsCnt = 12;
 
         T columns[columnsCnt] = { 0 };
 
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(TestTwoRowsString)
     cache1.Put(1, in1);
     cache1.Put(2, in2);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
 
@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE(TestOneRowString)
 
     cache1.Put(1, in);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
 
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE(TestOneRowStringLen)
 
     cache1.Put(1, in);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
 
@@ -569,7 +569,7 @@ BOOST_AUTO_TEST_CASE(TestDataAtExecution)
     cache1.Put(1, in1);
     cache1.Put(2, in2);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
@@ -696,7 +696,7 @@ BOOST_AUTO_TEST_CASE(TestNullFields)
     cache1.Put(2, inNull);
     cache1.Put(3, in);
 
-    const size_t columnsCnt = 11;
+    const SQLSMALLINT columnsCnt = 11;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
 
@@ -821,7 +821,7 @@ BOOST_AUTO_TEST_CASE(TestDistributedJoins)
 
     SQLRETURN ret;
 
-    const size_t columnsCnt = 2;
+    const SQLSMALLINT columnsCnt = 2;
 
     SQLBIGINT columns[columnsCnt] = { 0 };
 
@@ -1618,7 +1618,7 @@ BOOST_AUTO_TEST_CASE(TestErrorMessage)
     BOOST_REQUIRE_EQUAL(ret, SQL_ERROR);
 
     std::string error = GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt);
-    std::string pattern = "42000: Table \"B\" not found; SQL statement:\nSELECT a FROM B";
+    std::string pattern = "42000: Failed to parse query. Table \"B\" not found; SQL statement:\nSELECT a FROM B";
 
     if (error.substr(0, pattern.size()) != pattern)
         BOOST_FAIL("'" + error + "' does not match '" + pattern + "'");
@@ -1632,10 +1632,6 @@ BOOST_AUTO_TEST_CASE(TestAffectedRows)
 
     // Inserting values.
     InsertTestStrings(recordsNum);
-
-    int64_t key = 0;
-    char strField[1024] = { 0 };
-    SQLLEN strFieldLen = 0;
 
     SQLCHAR updateReq[] = "UPDATE TestType SET strField = 'Updated value' WHERE _key > 20 AND _key < 40";
 

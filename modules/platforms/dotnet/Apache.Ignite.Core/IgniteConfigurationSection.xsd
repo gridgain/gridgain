@@ -2,13 +2,13 @@
 
 <!--
  Copyright 2019 GridGain Systems, Inc. and Contributors.
- 
+
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
      https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -114,6 +114,16 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="Random" />
             <xs:enumeration value="Sequential" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="diskPageCompression" final="restriction">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Disabled" />
+            <xs:enumeration value="SkipGarbage" />
+            <xs:enumeration value="Zstd" />
+            <xs:enumeration value="Lz4" />
+            <xs:enumeration value="Snappy" />
         </xs:restriction>
     </xs:simpleType>
 
@@ -1513,6 +1523,11 @@
                                 <xs:documentation>Idle timeout for client connections on the server side. If no packets come within idle timeout, the connection is closed by the server. Zero or negative for no timeout.</xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
+                        <xs:attribute name="handshakeTimeout" type="xs:string">
+                            <xs:annotation>
+                                <xs:documentation>Handshake timeout for client connections on the server side. If no successful handshake is performed within this timeout upon successful establishment of TCP connection, the connection is closed by the server. Zero or negative for no timeout.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
                         <xs:attribute name="thinClientEnabled" type="xs:boolean">
                             <xs:annotation>
                                 <xs:documentation>Enables thin client connector.</xs:documentation>
@@ -1948,6 +1963,16 @@
                                 </xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
+                        <xs:attribute name="walPageCompression" type="diskPageCompression">
+                            <xs:annotation>
+                                <xs:documentation>Compression algorithm for WAL page snapshot records.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
+                        <xs:attribute name="walPageCompressionLevel" type="xs:int">
+                            <xs:annotation>
+                                <xs:documentation>Compression level for WAL page snapshot records.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="sslContextFactory" minOccurs="0">
@@ -2104,6 +2129,32 @@
                     <xs:complexType>
                         <xs:sequence>
                             <xs:element maxOccurs="unbounded" name="string" type="xs:string" />
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="executorConfiguration" minOccurs="0">
+                    <xs:annotation>
+                        <xs:documentation>Custom executor configuration for compute tasks.</xs:documentation>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="executorConfiguration" maxOccurs="unbounded" minOccurs="0">
+                                <xs:annotation>
+                                    <xs:documentation>Thread pool configuration for compute tasks.</xs:documentation>
+                                </xs:annotation>
+                                <xs:complexType>
+                                    <xs:attribute type="xs:string" name="name" use="required">
+                                        <xs:annotation>
+                                            <xs:documentation>Thread pool name.</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:attribute>
+                                    <xs:attribute type="xs:int" name="size" use="required">
+                                        <xs:annotation>
+                                            <xs:documentation>Thread pool size.</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:attribute>
+                                </xs:complexType>
+                            </xs:element>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>

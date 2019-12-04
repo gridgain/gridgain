@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -254,8 +254,18 @@ public abstract class SqlListenerUtils {
     }
 
     /**
-     * Converts sql pattern wildcards into java regex wildcards.
-     * Translates "_" to "." and "%" to ".*" if those are not escaped with "\" ("\_" or "\%").
+     * <p>Converts sql pattern wildcards into java regex wildcards.</p>
+     * <p>Translates "_" to "." and "%" to ".*" if those are not escaped with "\" ("\_" or "\%").</p>
+     * <p>All other characters are considered normal and will be escaped if necessary.</p>
+     * <pre>
+     * Example:
+     *      som_    -->     som.
+     *      so%     -->     so.*
+     *      s[om]e  -->     so\[om\]e
+     *      so\_me  -->     so_me
+     *      some?   -->     some\?
+     *      som\e   -->     som\\e
+     * </pre>
      */
     public static String translateSqlWildcardsToRegex(String sqlPtrn) {
         if (F.isEmpty(sqlPtrn))
@@ -263,9 +273,10 @@ public abstract class SqlListenerUtils {
 
         String toRegex = ' ' + sqlPtrn;
 
-        toRegex = toRegex.replaceAll("([^\\\\])%", "$1.*");
-        toRegex = toRegex.replaceAll("([^\\\\])_", "$1.");
-        toRegex = toRegex.replaceAll("\\\\(.)", "$1");
+        toRegex = toRegex.replaceAll("([\\[\\]{}()*+?.\\\\\\\\^$|])", "\\\\$1");
+        toRegex = toRegex.replaceAll("([^\\\\\\\\])((?:\\\\\\\\\\\\\\\\)*)%", "$1$2.*");
+        toRegex = toRegex.replaceAll("([^\\\\\\\\])((?:\\\\\\\\\\\\\\\\)*)_", "$1$2.");
+        toRegex = toRegex.replaceAll("([^\\\\\\\\])(\\\\\\\\(?>\\\\\\\\\\\\\\\\)*\\\\\\\\)*\\\\\\\\([_|%])", "$1$2$3");
 
         return toRegex.substring(1);
     }

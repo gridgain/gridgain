@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,7 +44,7 @@ public class IgniteGetFromComputeBenchmark extends IgniteCacheAbstractBenchmark<
     private IgniteCompute compute;
 
     /** */
-    private IgniteCache asyncCache;
+    private IgniteCache<Integer, Object> cache;
 
     /** */
     private ThreadLocal<IgniteFuture> invokeFut = new ThreadLocal<>();
@@ -81,7 +81,7 @@ public class IgniteGetFromComputeBenchmark extends IgniteCacheAbstractBenchmark<
 
         compute = ignite().compute();
 
-        asyncCache = cache().withAsync();
+        cache = cache();
     }
 
     /** {@inheritDoc} */
@@ -94,9 +94,7 @@ public class IgniteGetFromComputeBenchmark extends IgniteCacheAbstractBenchmark<
             for (int i = 0; i < 3; i++)
                 keys.add(nextRandom(args.range()));
 
-            asyncCache.invokeAll(keys, new SlowEntryProcessor(0));
-
-            invokeFut.set(asyncCache.future());
+            invokeFut.set(cache.invokeAllAsync(keys, new SlowEntryProcessor(0)));
         }
 
         int key = nextRandom(args.range());

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,10 +16,13 @@
 
 package org.apache.ignite.yardstick;
 
+import com.beust.jcommander.DynamicParameter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -296,6 +299,11 @@ public class IgniteBenchmarkArguments {
     /** See {@link #selectCommand()}. */
     @Parameter(names = {"--select-command"})
     private SelectCommand selectCommand = SelectCommand.BY_PRIMARY_KEY;
+
+    /** Dynamic parameters. */
+    @DynamicParameter(names = {"-D", "--param"},
+        description = "Allow add any dynamic parameters specific for some benchmarks")
+    private Map<String, String> params = new HashMap<>();
 
     /**
      * @return {@code True} if need set {@link DataStorageConfiguration}.
@@ -734,6 +742,50 @@ public class IgniteBenchmarkArguments {
      */
     public SelectCommand selectCommand() {
         return selectCommand;
+    }
+
+    /**
+     * @param name Parameter name.
+     * @param dflt Default value.
+     * @return value.
+     */
+    public String getStringParameter(String name, String dflt) {
+        String val = params.get(name);
+
+        return val != null ? val : dflt;
+    }
+
+    /**
+     * @param name Parameter name.
+     * @param dflt Default value.
+     * @return value.
+     */
+    public boolean getBooleanParameter(String name, boolean dflt) {
+        String val = params.get(name);
+
+        return val != null ? Boolean.parseBoolean(val) : dflt;
+    }
+
+    /**
+     * @param name Parameter name.
+     * @param dflt Default value.
+     * @return value.
+     */
+    public int getIntParameter(String name, int dflt) {
+        String val = params.get(name);
+
+        return val != null ? Integer.parseInt(val) : dflt;
+    }
+
+    /**
+     * @param name Parameter name.
+     * @param dflt Default value.
+     * @return value.
+     */
+    public long getLongParameter(String name, long dflt) {
+        String val = params.get(name);
+
+        return val != null ? Long.parseLong(val) : dflt;
     }
 
     /** {@inheritDoc} */

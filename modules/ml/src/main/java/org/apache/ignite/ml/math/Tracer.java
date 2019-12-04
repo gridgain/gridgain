@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -103,7 +103,8 @@ public class Tracer {
     public static void showAscii(Vector vec, IgniteLogger log, String fmt) {
         String cls = vec.getClass().getSimpleName();
 
-        log.info(String.format(LOCALE, "%s(%d) [%s]", cls, vec.size(), mkString(vec, fmt)));
+        if (log.isInfoEnabled())
+            log.info(String.format(LOCALE, "%s(%d) [%s]", cls, vec.size(), mkString(vec, fmt)));
     }
 
     /**
@@ -210,10 +211,12 @@ public class Tracer {
         int rows = mtx.rowSize();
         int cols = mtx.columnSize();
 
-        log.info(String.format(LOCALE, "%s(%dx%d)", cls, rows, cols));
+        if (log.isInfoEnabled()) {
+            log.info(String.format(LOCALE, "%s(%dx%d)", cls, rows, cols));
 
-        for (int row = 0; row < rows; row++)
-            log.info(rowStr(mtx, row, fmt));
+            for (int row = 0; row < rows; row++)
+                log.info(rowStr(mtx, row, fmt));
+        }
     }
 
     /**

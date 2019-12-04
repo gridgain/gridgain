@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,6 +46,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
@@ -97,8 +98,33 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
     /** {@inheritDoc} */
     @Override protected long nextPartitionCounter(AffinityTopologyVersion topVer,
         boolean primary,
+        boolean init,
         @Nullable Long primaryCntr) {
-        return locPart.nextUpdateCounter(cctx.cacheId(), topVer, primary, primaryCntr);
+        try {
+            return locPart.nextUpdateCounter(cctx.cacheId(), topVer, primary, init, primaryCntr);
+        }
+        catch (Throwable t) {
+            log.error("Failed to update counter for atomic cache [" +
+                ", initial=" + init +
+                ", primaryCntr=" + primaryCntr +
+                ", part=" + locPart + ']', t);
+
+            throw t;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override  protected long nextPartitionCounter(IgniteInternalTx tx, @Nullable Long primaryCntr) {
+        try {
+            return locPart.nextUpdateCounter(cctx.cacheId(), tx, primaryCntr);
+        }
+        catch (Throwable t) {
+            log.error("Failed to update counter for tx cache [" +
+                ", primaryCntr=" + primaryCntr +
+                ", part=" + locPart + ", tx=" + CU.txString(tx) + ']', t);
+
+            throw t;
+        }
     }
 
     /** {@inheritDoc} */
@@ -652,9 +678,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);
-
-            if (cctx.store().isLocal())
-                cctx.store().remove(null, key);
 
             rmv = true;
 

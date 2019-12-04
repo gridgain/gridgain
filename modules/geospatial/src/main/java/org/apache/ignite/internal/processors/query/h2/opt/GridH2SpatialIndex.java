@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,7 @@ import org.apache.ignite.internal.util.GridCursorIteratorWrapper;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
 import org.h2.index.Cursor;
 import org.h2.index.IndexLookupBatch;
@@ -47,13 +47,14 @@ import org.h2.mvstore.rtree.MVRTreeMap;
 import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
-import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
  * Spatial index.
@@ -104,8 +105,25 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
      */
     @SuppressWarnings("unchecked")
     public GridH2SpatialIndex(GridH2Table tbl, String idxName, int segmentsCnt, IndexColumn... cols) {
-        super(tbl);
+        super(tbl, idxName,  validateColumns(cols), IndexType.createNonUnique(false, false, true));
 
+        // Index in memory
+        store = MVStore.open(null);
+
+        segments = new MVRTreeMap[segmentsCnt];
+
+        for (int i = 0; i < segmentsCnt; i++)
+            segments[i] = store.openMap("spatialIndex-" + i, new MVRTreeMap.Builder<Long>());
+
+        ctx = tbl.rowDescriptor().context();
+    }
+
+    /**
+     * Validate if index is applicable for given columns.
+     * @return {@code cols} as is.
+     * @throws DbException If parameter is invalid.
+     */
+    private static IndexColumn[] validateColumns(IndexColumn[] cols) {
         if (cols.length > 1)
             throw DbException.getUnsupportedException("can only do one column");
 
@@ -118,24 +136,12 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
         if ((cols[0].sortType & SortOrder.NULLS_LAST) != 0)
             throw DbException.getUnsupportedException("cannot do nulls last");
 
-        initBaseIndex(tbl, 0, idxName, cols, IndexType.createNonUnique(false, false, true));
-
-        table = tbl;
-
-        if (cols[0].column.getType() != Value.GEOMETRY) {
+        if (cols[0].column.getType().getValueType() != Value.GEOMETRY) {
             throw DbException.getUnsupportedException("spatial index on non-geometry column, " +
                 cols[0].column.getCreateSQL());
         }
 
-        // Index in memory
-        store = MVStore.open(null);
-
-        segments = new MVRTreeMap[segmentsCnt];
-
-        for (int i = 0; i < segmentsCnt; i++)
-            segments[i] = store.openMap("spatialIndex-" + i, new MVRTreeMap.Builder<Long>());
-
-        ctx = tbl.rowDescriptor().context();
+        return cols;
     }
 
     /** {@inheritDoc} */
@@ -295,7 +301,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
 
     /** {@inheritDoc} */
     @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter,
-        SortOrder sortOrder, HashSet<Column> cols) {
+        SortOrder sortOrder, AllColumnsForPlan cols) {
         return SpatialTreeIndex.getCostRangeIndex(masks, columns) / 10;
     }
 
@@ -321,7 +327,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
         try {
             checkClosed();
 
-            final int seg = threadLocalSegment();
+            final int seg = segment(H2Utils.context(filter.getSession()));
 
             final MVRTreeMap<Long> segment = segments[seg];
 
@@ -345,13 +351,13 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
     @SuppressWarnings("unchecked")
     private GridCursor<H2Row> rowIterator(Iterator<SpatialKey> i, TableFilter filter) {
         if (!i.hasNext())
-            return H2Utils.EMPTY_CURSOR;
+            return EMPTY_CURSOR;
 
         long time = System.currentTimeMillis();
 
         IndexingQueryFilter qryFilter = null;
 
-        QueryContext qctx = queryContextRegistry().getThreadLocal();
+        QueryContext qctx = H2Utils.context(filter.getSession());
 
         if (qctx != null)
             qryFilter = qctx.filter();
@@ -388,7 +394,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
             if (!first)
                 throw DbException.throwInternalError("Spatial Index can only be fetch by ascending order");
 
-            final int seg = threadLocalSegment();
+            final int seg = segment(H2Utils.context(ses));
 
             final MVRTreeMap<Long> segment = segments[seg];
 
@@ -410,7 +416,12 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
+    @Override public long getRowCountApproximation(Session ses) {
+        return rowCnt;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long totalRowCount(IndexingQueryCacheFilter partsFilter) {
         return rowCnt;
     }
 
@@ -425,7 +436,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
             if (intersection == null)
                 return find(filter.getSession(), null, null);
 
-            final int seg = threadLocalSegment();
+            final int seg = segment(H2Utils.context(filter.getSession()));
 
             final MVRTreeMap<Long> segment = segments[seg];
 

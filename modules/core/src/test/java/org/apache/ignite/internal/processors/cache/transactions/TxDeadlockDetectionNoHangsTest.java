@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -156,28 +156,26 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
         IgniteInternalFuture<Long> restartFut = null;
 
         try {
-            restartFut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
-                @Override public void run() {
-                    while (!stop.get()) {
-                        try {
-                            U.sleep(500);
+            restartFut = GridTestUtils.runMultiThreadedAsync(() -> {
+                while (!stop.get()) {
+                    try {
+                        U.sleep(500);
 
-                            startGrid(NODES_CNT);
+                        startGrid(NODES_CNT);
 
-                            awaitPartitionMapExchange();
+                        awaitPartitionMapExchange();
 
-                            U.sleep(500);
+                        U.sleep(500);
 
-                            stopGrid(NODES_CNT);
-                        }
-                        catch (Exception ignored) {
-                            // No-op.
-                        }
+                        stopGrid(NODES_CNT);
+                    }
+                    catch (Exception ignored) {
+                        // No-op.
                     }
                 }
             }, 1, "restart-thread");
 
-            long stopTime = System.currentTimeMillis() + 2 * 60_000L;
+            long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
             for (int i = 0; System.currentTimeMillis() < stopTime; i++) {
                 boolean detectionEnabled = grid(0).context().cache().context().tm().deadlockDetectionEnabled();

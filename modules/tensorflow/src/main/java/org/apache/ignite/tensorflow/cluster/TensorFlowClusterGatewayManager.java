@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -81,7 +81,9 @@ public class TensorFlowClusterGatewayManager {
             svcName,
             new TensorFlowClusterMaintainer(clusterId, jobArchive, topicName)
         );
-        log.info("Cluster maintainer deployed as a service [clusterId=" + clusterId + "]");
+
+        if (log.isInfoEnabled())
+            log.info("Cluster maintainer deployed as a service [clusterId=" + clusterId + "]");
 
         return gateway;
     }
@@ -131,7 +133,9 @@ public class TensorFlowClusterGatewayManager {
      */
     public void stopClusterIfExists(UUID clusterId) {
         ignite.services().cancel(String.format(SERVICE_NAME_TEMPLATE, clusterId));
-        log.info("Cluster maintained cancelled as a service [clusterId=" + clusterId + "]");
+
+        if (log.isInfoEnabled())
+            log.info("Cluster maintained cancelled as a service [clusterId=" + clusterId + "]");
     }
 
     /**
@@ -143,11 +147,15 @@ public class TensorFlowClusterGatewayManager {
     private TensorFlowClusterGateway createTensorFlowClusterGateway(String topicName) {
         TensorFlowClusterGateway gateway = new TensorFlowClusterGateway(subscriber -> {
             ignite.message().stopLocalListen(topicName, subscriber);
-            log.info("Stop listen to cluster gateway [topicName=" + topicName + "]");
+
+            if (log.isInfoEnabled())
+                log.info("Stop listen to cluster gateway [topicName=" + topicName + "]");
         });
 
         ignite.message().localListen(topicName, gateway);
-        log.info("Start listen to cluster gateway [topicName=" + topicName + "]");
+
+        if (log.isInfoEnabled())
+            log.info("Start listen to cluster gateway [topicName=" + topicName + "]");
 
         return gateway;
     }

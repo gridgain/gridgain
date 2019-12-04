@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,11 +18,11 @@ package org.apache.ignite.internal.managers.communication;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
-
 import org.apache.ignite.internal.ExecutorAwareMessage;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheMessage;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
+import org.apache.ignite.internal.processors.tracing.messages.SpanTransport;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Wrapper for all grid messages.
  */
-public class GridIoMessage implements Message {
+public class GridIoMessage implements Message, SpanTransport {
     /** */
     public static final Integer STRIPE_DISABLED_PART = Integer.MIN_VALUE;
 
@@ -65,6 +65,9 @@ public class GridIoMessage implements Message {
 
     /** Message. */
     private Message msg;
+
+    /** Serialized span */
+    private byte[] span;
 
     /**
      * No-op constructor to support {@link Externalizable} interface.
@@ -108,7 +111,7 @@ public class GridIoMessage implements Message {
     /**
      * @return Policy.
      */
-    byte policy() {
+    @Override public byte policy() {
         return plc;
     }
 
@@ -227,18 +230,24 @@ public class GridIoMessage implements Message {
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeLong("timeout", timeout))
+                if (!writer.writeByteArray("span", span))
                     return false;
 
                 writer.incrementState();
 
             case 5:
-                if (!writer.writeByteArray("topicBytes", topicBytes))
+                if (!writer.writeLong("timeout", timeout))
                     return false;
 
                 writer.incrementState();
 
             case 6:
+                if (!writer.writeByteArray("topicBytes", topicBytes))
+                    return false;
+
+                writer.incrementState();
+
+            case 7:
                 if (!writer.writeInt("topicOrd", topicOrd))
                     return false;
 
@@ -290,7 +299,7 @@ public class GridIoMessage implements Message {
                 reader.incrementState();
 
             case 4:
-                timeout = reader.readLong("timeout");
+                span = reader.readByteArray("span");
 
                 if (!reader.isLastRead())
                     return false;
@@ -298,7 +307,7 @@ public class GridIoMessage implements Message {
                 reader.incrementState();
 
             case 5:
-                topicBytes = reader.readByteArray("topicBytes");
+                timeout = reader.readLong("timeout");
 
                 if (!reader.isLastRead())
                     return false;
@@ -306,6 +315,14 @@ public class GridIoMessage implements Message {
                 reader.incrementState();
 
             case 6:
+                topicBytes = reader.readByteArray("topicBytes");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 7:
                 topicOrd = reader.readInt("topicOrd");
 
                 if (!reader.isLastRead())
@@ -325,7 +342,17 @@ public class GridIoMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 7;
+        return 8;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void span(byte[] span) {
+        this.span = span;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] span() {
+        return span;
     }
 
     /**

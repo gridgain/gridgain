@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.util.StatementBuilder;
 import org.h2.util.StringUtils;
 
 /**
@@ -203,7 +202,7 @@ public enum GridSqlOperationType {
 
         /** {@inheritDoc} */
         @Override public String getSql(GridSqlOperation operation) {
-            StatementBuilder buff = new StatementBuilder("(");
+            StringBuilder buff = new StringBuilder("(");
 
             buff.append(operation.child(0).getSQL()).append(" IN(");
 
@@ -216,7 +215,9 @@ public enum GridSqlOperationType {
             }
             else {
                 for (int i = 1; i < operation.size(); i++) {
-                    buff.appendExceptFirst(", ");
+                    if (i > 1)
+                        buff.append(", ");
+
                     buff.append(operation.child(i).getSQL());
                 }
             }

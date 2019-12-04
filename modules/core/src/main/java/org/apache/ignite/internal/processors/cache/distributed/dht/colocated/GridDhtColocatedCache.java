@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -134,7 +134,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
 
         ctx.io().addCacheHandler(ctx.cacheId(), GridNearLockResponse.class, new CI2<UUID, GridNearLockResponse>() {
             @Override public void apply(UUID nodeId, GridNearLockResponse res) {
-                processLockResponse(nodeId, res);
+                processNearLockResponse(nodeId, res);
             }
         });
     }
@@ -176,7 +176,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
 
     /** {@inheritDoc} */
     @Override protected IgniteInternalFuture<V> getAsync(final K key,
-        boolean forcePrimary,
         boolean skipTx,
         @Nullable UUID subjId,
         String taskName,
@@ -263,7 +262,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             ctx.toCacheKeyObject(key),
             topVer,
             opCtx == null || !opCtx.skipStore(),
-            forcePrimary,
+            false,
             subjId,
             taskName,
             deserializeBinary,
@@ -489,7 +488,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             expiryPlc = expiryPolicy(null);
 
         // Optimization: try to resolve value locally and escape 'get future' creation.
-        if (!forcePrimary && ctx.affinityNode()) {
+        if (!forcePrimary && ctx.config().isReadFromBackup() && ctx.affinityNode()) {
             try {
                 Map<K, V> locVals = null;
 
@@ -1164,7 +1163,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
      * @param nodeId Node ID.
      * @param res Response.
      */
-    private void processLockResponse(UUID nodeId, GridNearLockResponse res) {
+    private void processNearLockResponse(UUID nodeId, GridNearLockResponse res) {
         if (txLockMsgLog.isDebugEnabled())
             txLockMsgLog.debug("Received near lock response [txId=" + res.version() + ", node=" + nodeId + ']');
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,6 @@ import javax.cache.processor.EntryProcessorResult;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CachePartialUpdateException;
@@ -62,7 +61,7 @@ import static org.apache.ignite.testframework.GridTestUtils.runAsync;
  */
 public abstract class IgniteCachePutRetryAbstractSelfTest extends GridCommonAbstractTest {
     /** */
-    protected static final long DURATION = 60_000;
+    protected static final long DURATION = GridTestUtils.SF.applyLB(30_000, 7_000);
 
     /** */
     protected static final int GRID_CNT = 4;

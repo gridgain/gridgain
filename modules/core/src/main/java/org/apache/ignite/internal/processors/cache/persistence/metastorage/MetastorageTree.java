@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInne
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,7 +57,9 @@ public class MetastorageTree extends BPlusTree<MetastorageSearchRow, Metastorage
      * @param failureProcessor To call if the tree is corrupted.
      * @throws IgniteCheckedException If failed to initialize.
      */
-    public MetastorageTree(int cacheId,
+    public MetastorageTree(
+        int cacheId,
+        String name,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -65,9 +68,23 @@ public class MetastorageTree extends BPlusTree<MetastorageSearchRow, Metastorage
         long metaPageId,
         boolean initNew,
         @Nullable FailureProcessor failureProcessor,
-        int partId) throws IgniteCheckedException {
-        super("Metastorage", cacheId, pageMem, wal,
-            globalRmvId, metaPageId, reuseList, MetastorageInnerIO.VERSIONS, MetastoreLeafIO.VERSIONS, failureProcessor);
+        int partId,
+        @Nullable PageLockListener lockLsnr
+    ) throws IgniteCheckedException {
+        super(
+            name,
+            cacheId,
+            null,
+            pageMem,
+            wal,
+            globalRmvId,
+            metaPageId,
+            reuseList,
+            MetastorageInnerIO.VERSIONS,
+            MetastoreLeafIO.VERSIONS,
+            failureProcessor,
+            lockLsnr
+        );
 
         this.rowStore = rowStore;
 

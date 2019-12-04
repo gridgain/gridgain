@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,36 +16,25 @@
 
 package org.apache.ignite.ml.knn.regression;
 
-import org.apache.ignite.ml.dataset.DatasetBuilder;
-import org.apache.ignite.ml.knn.KNNUtils;
-import org.apache.ignite.ml.preprocessing.Preprocessor;
-import org.apache.ignite.ml.trainers.SingleLabelDatasetTrainer;
+import org.apache.ignite.ml.dataset.Dataset;
+import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
+import org.apache.ignite.ml.knn.KNNTrainer;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndex;
 
 /**
- * kNN algorithm trainer to solve regression task.
+ * KNN regression model trader that trains model on top of distribtued spatial indices. Be aware that this model is
+ * linked with cluster environment it's been built on and can't be saved or used in other places. Under the hood it
+ * keeps {@link Dataset} that consists of a set of resources allocated across the cluster.
  */
-public class KNNRegressionTrainer extends SingleLabelDatasetTrainer<KNNRegressionModel> {
+public class KNNRegressionTrainer extends KNNTrainer<KNNRegressionModel, KNNRegressionTrainer> {
     /** {@inheritDoc} */
-    @Override public <K, V> KNNRegressionModel fit(DatasetBuilder<K, V> datasetBuilder,
-                                                   Preprocessor<K, V> extractor) {
-
-        return updateModel(null, datasetBuilder, extractor);
+    @Override protected KNNRegressionModel convertDatasetIntoModel(
+        Dataset<EmptyContext, SpatialIndex<Double>> dataset) {
+        return new KNNRegressionModel(dataset, distanceMeasure, k, weighted);
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> KNNRegressionModel updateModel(
-        KNNRegressionModel mdl,
-        DatasetBuilder<K, V> datasetBuilder,
-        Preprocessor<K, V> extractor) {
-
-        KNNRegressionModel res = new KNNRegressionModel(KNNUtils.buildDataset(envBuilder, datasetBuilder, extractor));
-        if (mdl != null)
-            res.copyStateFrom(mdl);
-        return res;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isUpdateable(KNNRegressionModel mdl) {
-        return true;
+    @Override protected KNNRegressionTrainer self() {
+        return this;
     }
 }

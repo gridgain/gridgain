@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,7 +43,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind
      * if there is nothing to clean yet.
      */
-    public static final long UNWIND_THROTTLING_TIMEOUT = Long.getLong(
+    private final long unwindThrottlingTimeout = Long.getLong(
         IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
 
     /** Entries pending removal. This collection tracks entries for near cache only. */
@@ -120,6 +120,15 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     @Override protected void onKernalStop0(boolean cancel) {
         if (pendingEntries != null)
             pendingEntries.clear();
+    }
+
+    /**
+     * Unregister this TTL manager of cache from periodical check on expired entries.
+     */
+    public void unregister() {
+        // Ignoring attempt to unregister manager that has never been started.
+        if (!starting.get())
+            return;
 
         cctx.shared().ttl().unregister(this);
     }
@@ -236,7 +245,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 return true;
 
             // There is nothing to clean, so the next clean up can be postponed.
-            nextCleanTime = U.currentTimeMillis() + UNWIND_THROTTLING_TIMEOUT;
+            nextCleanTime = U.currentTimeMillis() + unwindThrottlingTimeout;
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();

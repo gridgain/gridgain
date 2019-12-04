@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.query;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.AffinityKey;
 import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryMetrics;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.cache.query.annotations.QueryTextField;
@@ -256,18 +255,6 @@ public interface CacheQuery<T> {
      * @return Future for the query result.
      */
     public <R> CacheQueryFuture<R> execute(IgniteReducer<T, R> rmtReducer, @Nullable Object... args);
-
-    /**
-     * Gets metrics for this query.
-     *
-     * @return Query metrics.
-     */
-    public QueryMetrics metrics();
-
-    /**
-     * Resets metrics for this query.
-     */
-    public void resetMetrics();
 
     /**
      * @return Scan query iterator.

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,6 +41,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Assume;
 import org.junit.Test;
@@ -62,10 +63,10 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
     private static final String ACTIVATOR_NODE_ATTR = "split.resolved";
 
     /** */
-    private static final int GRID_CNT = 32;
+    private static final int GRID_CNT = GridTestUtils.SF.applyLB(32, 16);
 
     /** */
-    private static final int CACHES_CNT = 50;
+    private static final int CACHES_CNT = GridTestUtils.SF.applyLB(50, 20);
 
     /** */
     private static final int RESOLVER_GRID_IDX = GRID_CNT;

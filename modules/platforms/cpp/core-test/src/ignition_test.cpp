@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@
 
 using namespace ignite;
 using namespace boost::unit_test;
+using namespace ignite_test;
 
 BOOST_AUTO_TEST_SUITE(IgnitionTestSuite)
 
@@ -30,9 +31,9 @@ BOOST_AUTO_TEST_CASE(TestIgnition)
     IgniteConfiguration cfg;
 
 #ifdef IGNITE_TESTS_32
-    ignite_test::InitConfig(cfg, "persistence-store-32.xml");
+    InitConfig(cfg, "persistence-store-32.xml");
 #else
-    ignite_test::InitConfig(cfg, "persistence-store.xml");
+    InitConfig(cfg, "persistence-store.xml");
 #endif
 
     IgniteError err;
@@ -81,9 +82,9 @@ BOOST_AUTO_TEST_CASE(TestStartWithpersistence)
     IgniteConfiguration cfg;
 
 #ifdef IGNITE_TESTS_32
-    ignite_test::InitConfig(cfg, "persistence-store-32.xml");
+    InitConfig(cfg, "persistence-store-32.xml");
 #else
-    ignite_test::InitConfig(cfg, "persistence-store.xml");
+    InitConfig(cfg, "persistence-store.xml");
 #endif
     try
     {
@@ -91,22 +92,39 @@ BOOST_AUTO_TEST_CASE(TestStartWithpersistence)
     }
     catch (...)
     {
-        // Stop all
         Ignition::StopAll(true);
-
         throw;
     }
+
+    Ignition::StopAll(true);
 }
 
 BOOST_AUTO_TEST_CASE(GracefulDeathOnInvalidConfig)
 {
     IgniteConfiguration cfg;
 
-    ignite_test::InitConfig(cfg, "invalid.xml");
+    InitConfig(cfg, "invalid.xml");
 
     BOOST_CHECK_THROW(Ignition::Start(cfg), IgniteError);
 
     Ignition::StopAll(false);
+}
+
+BOOST_AUTO_TEST_CASE(GracefulDeathOnDuplicatedIgnitionInstanceName)
+{
+#ifdef IGNITE_TESTS_32
+    const char* cfgFile = "persistence-store-32.xml";
+#else
+    const char* cfgFile = "persistence-store.xml";
+#endif
+
+    const char* ignitionName = "ignitionTest-1";
+
+    // Start two Ignite instances with same name.
+    StartNode(cfgFile, ignitionName);
+    BOOST_CHECK_THROW(StartNode(cfgFile, ignitionName), IgniteError);
+
+    Ignition::StopAll(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

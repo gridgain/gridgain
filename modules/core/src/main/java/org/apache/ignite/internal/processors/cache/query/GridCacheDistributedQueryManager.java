@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedSet;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
+import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.F;
@@ -50,7 +51,6 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteReducer;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -537,6 +537,9 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             Boolean dataPageScanEnabled = qry.query().isDataPageScanEnabled();
             MvccSnapshot mvccSnapshot = qry.query().mvccSnapshot();
 
+            boolean deployFilterOrTransformer = (qry.query().scanFilter() != null || qry.query().transform() != null)
+                && cctx.gridDeploy().enabled();
+
             final GridCacheQueryRequest req = new GridCacheQueryRequest(
                 cctx.cacheId(),
                 reqId,
@@ -559,7 +562,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 queryTopologyVersion(),
                 mvccSnapshot,
                 // Force deployment anyway if scan query is used.
-                cctx.deploymentEnabled() || (qry.query().scanFilter() != null && cctx.gridDeploy().enabled()),
+                cctx.deploymentEnabled() || deployFilterOrTransformer,
                 dataPageScanEnabled);
 
             addQueryFuture(req.id(), fut);
@@ -839,7 +842,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
         }
 
         if (locNode != null) {
-            cctx.closures().callLocalSafe(new Callable<Object>() {
+            cctx.closures().callLocalSafe(new GridPlainCallable<Object>() {
                 @Override public Object call() throws Exception {
                     req.beforeLocalExecution(cctx);
 

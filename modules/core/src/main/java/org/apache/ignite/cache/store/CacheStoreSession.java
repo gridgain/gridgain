@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.cache.store;
 import java.util.Map;
 import org.apache.ignite.resources.CacheStoreSessionResource;
 import org.apache.ignite.transactions.Transaction;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Session for the cache store operations. The main purpose of cache store session
@@ -62,14 +61,14 @@ public interface CacheStoreSession {
      * @param attachment The object to be attached (or {@code null} to discard current attachment).
      * @return Previously attached object, if any.
      */
-    @Nullable public <T> T attach(@Nullable Object attachment);
+    public <T> T attach(Object attachment);
 
     /**
      * Retrieves the current attachment or {@code null} if there is no attachment.
      *
      * @return Currently attached object, if any.
      */
-    @Nullable public <T> T attachment();
+    public <T> T attachment();
 
     /**
      * Gets current session properties. You can add properties directly to the

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_HANDSHAKE_TIMEOUT_TASK;
+
 /**
  * This class implements stream parser based on {@link ClientListenerNioServerBuffer}.
  * <p>
@@ -40,6 +42,9 @@ public class ClientListenerBufferedParser implements GridNioParser {
     /** Buffer metadata key. */
     private static final int BUF_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
+    /** Length limit of handshake message - 128 MB.*/
+    private static final int HANDSHAKE_MSG_LEN_LIMIT = 1024 * 1024 * 128;
+
     /** {@inheritDoc} */
     @Override public byte[] decode(GridNioSession ses, ByteBuffer buf) throws IOException, IgniteCheckedException {
         ClientListenerNioServerBuffer nioBuf = ses.meta(BUF_META_KEY);
@@ -54,9 +59,18 @@ public class ClientListenerBufferedParser implements GridNioParser {
             assert old == null;
         }
 
-        boolean checkHandshake = ses.meta(ClientListenerNioListener.CONN_CTX_HANDSHAKE_PASSED) == null;
+        int msgLenLimit = 0;
 
-        return nioBuf.read(buf, checkHandshake);
+        // It means, we are still in handshake process
+        if (ses.meta(CONN_CTX_HANDSHAKE_TIMEOUT_TASK) != null)
+            msgLenLimit = HANDSHAKE_MSG_LEN_LIMIT;
+
+        try {
+            return nioBuf.read(buf, msgLenLimit);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteCheckedException("Failed to parse message from remote " + ses.remoteAddress(), e);
+        }
     }
 
     /** {@inheritDoc} */

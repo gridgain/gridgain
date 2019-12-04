@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -691,7 +691,7 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
 
         final int THREADS_PER_NODE = 5;
         final int KEY_RANGE = 10_000;
-        final int ITERATIONS = 3000;
+        final int ITERATIONS = GridTestUtils.SF.applyLB(2000, 100);
 
         for (int i = 0; i < gridCount(); i++) {
             final int idx = i;

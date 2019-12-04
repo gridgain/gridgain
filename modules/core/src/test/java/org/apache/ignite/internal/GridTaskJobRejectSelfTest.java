@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,11 +28,13 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.collision.fifoqueue.FifoQueueCollisionSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -63,6 +65,8 @@ public class GridTaskJobRejectSelfTest extends GridCommonAbstractTest {
         collision.setParallelJobsNumber(1);
 
         cfg.setCollisionSpi(collision);
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
@@ -121,7 +125,7 @@ public class GridTaskJobRejectSelfTest extends GridCommonAbstractTest {
         final ClusterNode node = grid(1).localNode();
 
         ComputeTaskFuture<?> fut = grid(1).compute().executeAsync(new ComputeTaskAdapter<Void, Void>() {
-            @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+            @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
                 @Nullable Void arg) {
                 return F.asMap(new SleepJob(), node, new SleepJob(), node);
             }

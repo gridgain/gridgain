@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -740,6 +740,61 @@ public abstract class JdbcErrorsAbstractSelfTest extends GridCommonAbstractTest 
 
         checkSqlErrorMessage("alter table test drop column", "42000",
             "Failed to parse query. Syntax error in SQL statement \"ALTER TABLE TEST DROP COLUMN [*]");
+    }
+
+    /**
+     * Checks execution DML request on read-only cluster error code and message.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testUpdatesRejectedInReadOnlyMode() throws Exception {
+        try (Connection conn = getConnection()) {
+            try (Statement statement = conn.createStatement()) {
+                statement.executeUpdate("CREATE TABLE TEST_READ_ONLY (ID LONG PRIMARY KEY, VAL LONG)");
+            }
+        }
+
+        grid(0).cluster().readOnly(true);
+
+        try {
+            checkErrorState((conn) -> {
+                try (Statement statement = conn.createStatement()) {
+                    statement.executeUpdate("INSERT INTO TEST_READ_ONLY VALUES (1, 2)");
+                }
+            }, "90097", "Failed to execute DML statement. Cluster in read-only mode");
+        }
+        finally {
+            grid(0).cluster().readOnly(false);
+        }
+    }
+
+    /**
+     * Checks execution batch DML request on read-only cluster error code and message.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBatchUpdatesRejectedInReadOnlyMode() throws Exception {
+        try (Connection conn = getConnection()) {
+            try (Statement statement = conn.createStatement()) {
+                statement.executeUpdate("CREATE TABLE TEST_READ_ONLY_BATCH (ID LONG PRIMARY KEY, VAL LONG)");
+            }
+        }
+
+        grid(0).cluster().readOnly(true);
+
+        try {
+            checkErrorState((conn) -> {
+                try (Statement statement = conn.createStatement()) {
+                    statement.addBatch("INSERT INTO TEST_READ_ONLY_BATCH VALUES (1, 2)");
+                    statement.executeBatch();
+                }
+            }, "90097", null);
+        }
+        finally {
+            grid(0).cluster().readOnly(false);
+        }
     }
 
     /**

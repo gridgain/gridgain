@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,6 +90,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxState;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxStateAware;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -209,7 +210,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                         fut.listen(new CI1<IgniteInternalFuture<?>>() {
                             @Override public void apply(IgniteInternalFuture<?> fut) {
-                                cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+                                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                                     @Override public void run() {
                                         handleMessage(nodeId, cacheMsg, plc);
                                     }
@@ -235,7 +236,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
             else {
                 AffinityTopologyVersion locAffVer = cctx.exchange().readyAffinityVersion();
 
-                if (locAffVer.compareTo(lastAffChangedVer) < 0) {
+                if (locAffVer.before(lastAffChangedVer)) {
                     IgniteLogger log = cacheMsg.messageLogger(cctx);
 
                     if (log.isDebugEnabled()) {
@@ -888,6 +889,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     0,
                     req.classError(),
                     null,
+                    false,
                     false);
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);

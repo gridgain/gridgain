@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors;
 
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -77,12 +76,12 @@ public class DeadLockOnNodeLeftExchangeTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = ExchangeContext.IGNITE_EXCHANGE_COMPATIBILITY_VER_1, value = "true")
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void test() throws Exception {
         startGrids(4);
 
         IgniteClusterEx cluster = grid(0).cluster();
 
+        cluster.baselineAutoAdjustEnabled(false);
         cluster.active(true);
 
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(grid(3));

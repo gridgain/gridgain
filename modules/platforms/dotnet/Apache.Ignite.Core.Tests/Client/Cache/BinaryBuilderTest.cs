@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,14 +30,21 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// Tests the classless object builder.
         /// </summary>
         [Test]
-        public void TestClasslessBuilder()
+        public void TestClasslessBuilder([Values(true, false)] bool useTypeOverrideSetters)
         {
             var bin = Client.GetBinary();
 
-            var obj = bin.GetBuilder("FooBarBaz")
-                .SetByteField("code", 99)
-                .SetStringField("name", "abc")
-                .Build();
+            var typeName = "FooBarBaz_" + useTypeOverrideSetters;
+            
+            var obj = useTypeOverrideSetters
+                ? bin.GetBuilder(typeName)
+                    .SetField<object>("code", 99, typeof(byte))
+                    .SetField<object>("name", "abc", typeof(string))
+                    .Build()
+                : bin.GetBuilder(typeName)
+                    .SetByteField("code", 99)
+                    .SetStringField("name", "abc")
+                    .Build();
 
             var cache = GetBinaryCache();
             cache[1] = obj;
@@ -48,14 +55,14 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.IsNull(res.GetField<object>("field"));
 
             var type = res.GetBinaryType();
-            Assert.AreEqual("FooBarBaz", type.TypeName);
+            Assert.AreEqual(typeName, type.TypeName);
             Assert.IsFalse(type.IsEnum);
 
             CollectionAssert.AreEquivalent(new[] { "code", "name" }, type.Fields);
             Assert.AreEqual("byte", type.GetFieldTypeName("code"));
             Assert.AreEqual("String", type.GetFieldTypeName("name"));
 
-            Assert.AreEqual(type.TypeId, bin.GetBinaryType("FooBarBaz").TypeId);
+            Assert.AreEqual(type.TypeId, bin.GetBinaryType(typeName).TypeId);
             Assert.AreEqual(type.TypeName, bin.GetBinaryType(type.TypeId).TypeName);
         }
 

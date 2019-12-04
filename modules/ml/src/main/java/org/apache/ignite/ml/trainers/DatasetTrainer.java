@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,14 +58,15 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
     public static <I, L> DatasetTrainer<IgniteModel<I, I>, L> identityTrainer() {
         return new DatasetTrainer<IgniteModel<I, I>, L>() {
             /** {@inheritDoc} */
-            @Override public <K, V> IgniteModel<I, I> fit(DatasetBuilder<K, V> datasetBuilder,
-                                                          Preprocessor<K, V> preprocessor) {
+            @Override public <K, V> IgniteModel<I, I> fitWithInitializedDeployingContext(
+                DatasetBuilder<K, V> datasetBuilder,
+                Preprocessor<K, V> preprocessor) {
                 return x -> x;
             }
 
             /** {@inheritDoc} */
             @Override protected <K, V> IgniteModel<I, I> updateModel(IgniteModel<I, I> mdl,
-                                                                     DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+                DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
                 return x -> x;
             }
 
@@ -85,7 +86,39 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @param <V> Type of a value in {@code upstream} data.
      * @return Model.
      */
-    public abstract <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor);
+    public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+        learningEnvironment().initDeployingContext(preprocessor);
+
+        return fitWithInitializedDeployingContext(datasetBuilder, preprocessor);
+    }
+
+    /**
+     * Trains model based on the specified data.
+     *
+     * @param datasetBuilder Dataset builder.
+     * @param preprocessor Extractor of {@link UpstreamEntry} into {@link LabeledVector}.
+     * @param learningEnvironment Local learning environment.
+     * @param <K> Type of a key in {@code upstream} data.
+     * @param <V> Type of a value in {@code upstream} data.
+     * @return Model.
+     */
+    public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor,
+        LearningEnvironment learningEnvironment) {
+        environment = learningEnvironment;
+        return fitWithInitializedDeployingContext(datasetBuilder, preprocessor);
+    }
+
+    /**
+     * Trains model based on the specified data.
+     *
+     * @param datasetBuilder Dataset builder.
+     * @param preprocessor Extractor of {@link UpstreamEntry} into {@link LabeledVector}.
+     * @param <K> Type of a key in {@code upstream} data.
+     * @param <V> Type of a value in {@code upstream} data.
+     * @return Model.
+     */
+    protected abstract <K, V> M fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+        Preprocessor<K, V> preprocessor);
 
     /**
      * Gets state of model in arguments, compare it with training parameters of trainer and if they are fit then trainer
@@ -101,8 +134,11 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
     public <K, V> M update(M mdl, DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
 
         if (mdl != null) {
-            if (isUpdateable(mdl))
+            if (isUpdateable(mdl)) {
+                learningEnvironment().initDeployingContext(preprocessor);
+
                 return updateModel(mdl, datasetBuilder, preprocessor);
+            }
             else {
                 environment.logger(getClass()).log(
                     MLLogger.VerboseLevel.HIGH,
@@ -178,7 +214,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @return Model.
      */
     public <K, V> M fit(Ignite ignite, IgniteCache<K, V> cache, IgniteBiPredicate<K, V> filter,
-                        Preprocessor<K, V> preprocessor) {
+        Preprocessor<K, V> preprocessor) {
 
         return fit(new CacheBasedDatasetBuilder<>(ignite, cache, filter), preprocessor);
     }
@@ -196,7 +232,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @return Updated model.
      */
     public <K, V> M update(M mdl, Ignite ignite, IgniteCache<K, V> cache, IgniteBiPredicate<K, V> filter,
-                           Preprocessor<K, V> preprocessor) {
+        Preprocessor<K, V> preprocessor) {
         return update(
             mdl, new CacheBasedDatasetBuilder<>(ignite, cache, filter),
             preprocessor
@@ -247,7 +283,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @return Model.
      */
     public <K, V> M fit(Map<K, V> data, IgniteBiPredicate<K, V> filter, int parts,
-                        Preprocessor<K, V> preprocessor) {
+        Preprocessor<K, V> preprocessor) {
         return fit(new LocalDatasetBuilder<>(data, filter, parts), preprocessor);
     }
 
@@ -263,7 +299,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @return Updated model.
      */
     public <K, V> M update(M mdl, Map<K, V> data, IgniteBiPredicate<K, V> filter, int parts,
-                           Preprocessor<K, V> preprocessor) {
+        Preprocessor<K, V> preprocessor) {
         return update(
             mdl, new LocalDatasetBuilder<>(data, filter, parts),
             preprocessor
@@ -284,7 +320,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
     }
 
     /**
-     * Gets state of model in arguments, update in according to new data and return new model.
+     * Trains new model taken previous one as a first approximation.
      *
      * @param mdl Learned model.
      * @param datasetBuilder Dataset builder.
@@ -294,8 +330,8 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @return Updated model.
      */
     protected abstract <K, V> M updateModel(M mdl,
-                                            DatasetBuilder<K, V> datasetBuilder,
-                                            Preprocessor<K, V> preprocessor);
+        DatasetBuilder<K, V> datasetBuilder,
+        Preprocessor<K, V> preprocessor);
 
     /**
      * Get learning environment.
@@ -333,13 +369,14 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
         return new DatasetTrainer<M, L1>() {
             private <K, V> Preprocessor<K, V> getNewExtractor(
                 Preprocessor<K, V> extractor) {
-                IgniteFunction<LabeledVector<L1>, LabeledVector<L>> func = lv -> new LabeledVector<>(lv.features(), new2Old.apply(lv.label()));
-                return new PatchedPreprocessor<K, V, L1, L>(func, extractor);
+                IgniteFunction<LabeledVector<L1>, LabeledVector<L>> func = lv -> new LabeledVector<>(lv.features(),
+                    new2Old.apply(lv.label()));
+                return new PatchedPreprocessor<>(func, extractor);
             }
 
-            /** {@inheritDoc} */
+            /** */
             public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder,
-                                Vectorizer<K, V, Integer, L1> extractor) {
+                Vectorizer<K, V, Integer, L1> extractor) {
                 return old.fit(datasetBuilder, getNewExtractor(extractor));
             }
 
@@ -349,7 +386,8 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
                 return old.updateModel(mdl, datasetBuilder, getNewExtractor(preprocessor));
             }
 
-            @Override public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+            @Override public <K, V> M fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+                Preprocessor<K, V> preprocessor) {
                 return old.fit(datasetBuilder, getNewExtractor(preprocessor));
             }
 

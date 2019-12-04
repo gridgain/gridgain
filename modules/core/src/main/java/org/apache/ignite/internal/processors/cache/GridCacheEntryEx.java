@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFilter;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.lang.IgniteUuid;
@@ -1001,12 +1000,11 @@ public interface GridCacheEntryEx {
     /**
      * Update index from within entry lock, passing key, value, and expiration time to provided closure.
      *
-     * @param filter Row filter.
      * @param clo Closure to apply to key, value, and expiration time.
      * @throws IgniteCheckedException If failed.
      * @throws GridCacheEntryRemovedException If entry was removed.
      */
-    public void updateIndex(SchemaIndexCacheFilter filter, SchemaIndexCacheVisitorClosure clo)
+    public void updateIndex(SchemaIndexCacheVisitorClosure clo)
         throws IgniteCheckedException, GridCacheEntryRemovedException;
 
     /**

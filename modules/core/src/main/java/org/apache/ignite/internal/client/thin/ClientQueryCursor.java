@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientReconnectedException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -38,12 +39,20 @@ class ClientQueryCursor<T> implements QueryCursor<T> {
 
     /** {@inheritDoc} */
     @Override public List<T> getAll() {
-        List<T> res = new ArrayList<>();
+        while (true) {
+            try {
+                List<T> res = new ArrayList<>();
 
-        for (T ent : this)
-            res.add(ent);
+                for (T ent : this)
+                    res.add(ent);
 
-        return res;
+                return res;
+            }
+            catch (ClientReconnectedException ex) {
+                // If we were reconnected to a new server we can retry entire query to failover.
+                pager.reset();
+            }
+        }
     }
 
     /** {@inheritDoc} */
@@ -84,10 +93,13 @@ class ClientQueryCursor<T> implements QueryCursor<T> {
 
                     return currPageIt;
                 }
-                catch (ClientException e) {
-                    throw e;
-                }
                 catch (Exception e) {
+                    if (e instanceof ClientException)
+                        throw (ClientException)e;
+
+                    if (e instanceof ClientError)
+                        throw (ClientError)e;
+
                     throw new ClientException("Failed to retrieve query results", e);
                 }
             }

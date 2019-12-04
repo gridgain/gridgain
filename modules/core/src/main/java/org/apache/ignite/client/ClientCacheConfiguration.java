@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /** Cache configuration. */
@@ -60,10 +61,10 @@ public final class ClientCacheConfiguration implements Serializable {
     private boolean readFromBackup = CacheConfiguration.DFLT_READ_FROM_BACKUP;
 
     /** @serial Rebalance batch size. */
-    private int rebalanceBatchSize = CacheConfiguration.DFLT_REBALANCE_BATCH_SIZE;
+    private int rebalanceBatchSize = IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
 
     /** @serial Rebalance batches prefetch count. */
-    private long rebalanceBatchesPrefetchCnt = CacheConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
+    private long rebalanceBatchesPrefetchCnt = IgniteConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
 
     /** @serial Rebalance delay. */
     private long rebalanceDelay = 0;
@@ -75,10 +76,10 @@ public final class ClientCacheConfiguration implements Serializable {
     private int rebalanceOrder = 0;
 
     /** @serial Rebalance throttle. */
-    private long rebalanceThrottle = CacheConfiguration.DFLT_REBALANCE_THROTTLE;
+    private long rebalanceThrottle = IgniteConfiguration.DFLT_REBALANCE_THROTTLE;
 
     /** @serial @serial Rebalance timeout. */
-    private long rebalanceTimeout = CacheConfiguration.DFLT_REBALANCE_TIMEOUT;
+    private long rebalanceTimeout = IgniteConfiguration.DFLT_REBALANCE_TIMEOUT;
 
     /** @serial Write synchronization mode. */
     private CacheWriteSynchronizationMode writeSynchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;

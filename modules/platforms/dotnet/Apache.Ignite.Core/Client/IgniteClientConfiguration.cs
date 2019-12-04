@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -112,6 +112,7 @@ namespace Apache.Ignite.Core.Client
             Password = cfg.Password;
             Endpoints = cfg.Endpoints == null ? null : cfg.Endpoints.ToList();
             ReconnectDisabled = cfg.ReconnectDisabled;
+            EnablePartitionAwareness = cfg.EnablePartitionAwareness;
         }
 
         /// <summary>
@@ -200,6 +201,16 @@ namespace Apache.Ignite.Core.Client
         /// Password to be used to connect to secured cluster.
         /// </summary>
         public string Password { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether Partition Awareness should be enabled.
+        /// <para />
+        /// Default is false: only one connection is established at a given moment to a random server node.
+        /// When true: for cache operations, Ignite client attempts to send the request directly to
+        /// the primary node for the given cache key.
+        /// To do so, connection is established to every known server node at all times.
+        /// </summary>
+        public bool EnablePartitionAwareness { get; set; }
 
         /// <summary>
         /// Gets or sets custom binary processor. Internal property for tests.

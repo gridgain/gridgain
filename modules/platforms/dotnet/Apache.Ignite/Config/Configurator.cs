@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,9 +75,7 @@ namespace Apache.Ignite.Config
 
             foreach (var arg in args)
             {
-                if (string.IsNullOrWhiteSpace(arg.Item2))
-                    throw new IgniteException(string.Format(
-                        "Missing argument value: '{0}'. See 'Apache.Ignite.exe /help'", arg.Item1));
+                ValidateArgValue(arg);
 
                 var arg0 = arg;  // copy captured variable
                 Func<string, bool> argIs = x => arg0.Item1.Equals(x, StringComparison.OrdinalIgnoreCase);
@@ -128,6 +126,22 @@ namespace Apache.Ignite.Config
             }
 
             return cfg;
+        }
+
+        /// <summary>
+        /// Validates arg value, throws an exception when not valid.
+        /// </summary>
+        /// <param name="arg">Tuple of arg name and value.</param>
+        /// <returns>Arg value.</returns>
+        public static string ValidateArgValue(Tuple<string, string> arg)
+        {
+            if (string.IsNullOrWhiteSpace(arg.Item2))
+            {
+                throw new IgniteException(
+                    string.Format("Missing argument value: '{0}'. See 'Apache.Ignite.exe /help'", arg.Item1));
+            }
+
+            return arg.Item2;
         }
 
         /// <summary>

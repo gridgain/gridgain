@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1115,7 +1115,7 @@ public class JobStealingCollisionSpi extends IgniteSpiAdapter implements Collisi
         private int jobsToSteal;
 
         /** */
-        private long ts = U.currentTimeMillis();
+        private long ts = System.nanoTime();
 
         /**
          * @return Job to steal.
@@ -1132,7 +1132,7 @@ public class JobStealingCollisionSpi extends IgniteSpiAdapter implements Collisi
         boolean expired() {
             assert Thread.holdsLock(this);
 
-            return jobsToSteal > 0 && U.currentTimeMillis() - ts >= msgExpireTime;
+            return jobsToSteal > 0 && U.millisSinceNanos(ts) >= msgExpireTime;
         }
 
         /**
@@ -1143,7 +1143,7 @@ public class JobStealingCollisionSpi extends IgniteSpiAdapter implements Collisi
 
             this.jobsToSteal = jobsToSteal;
 
-            ts = U.currentTimeMillis();
+            ts = System.nanoTime();
         }
 
         /** {@inheritDoc} */

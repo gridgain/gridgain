@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,8 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType;
 
 /**
  * Tracks various checkpoint phases and stats.
@@ -74,6 +78,12 @@ public class CheckpointMetricsTracker {
 
     /** */
     private long walCpRecordFsyncEnd;
+
+    /** */
+    private long splitAndSortCpPagesStart;
+
+    /** */
+    private long splitAndSortCpPagesEnd;
 
     /** */
     private long listenersExecEnd;
@@ -165,6 +175,20 @@ public class CheckpointMetricsTracker {
     /**
      *
      */
+    public void onSplitAndSortCpPagesStart() {
+        splitAndSortCpPagesStart = System.currentTimeMillis();
+    }
+
+    /**
+     *
+     */
+    public void onSplitAndSortCpPagesEnd() {
+        splitAndSortCpPagesEnd = System.currentTimeMillis();
+    }
+
+    /**
+     *
+     */
     public void onWalCpRecordFsyncEnd() {
         walCpRecordFsyncEnd = System.currentTimeMillis();
     }
@@ -230,6 +254,22 @@ public class CheckpointMetricsTracker {
      */
     public long walCpRecordFsyncDuration() {
         return walCpRecordFsyncEnd - walCpRecordFsyncStart;
+    }
+
+    /**
+     * @return Duration of checkpoint entry buffer writing to file.
+     *
+     * @see GridCacheDatabaseSharedManager#writeCheckpointEntry(ByteBuffer, CheckpointEntry, CheckpointEntryType)
+     */
+    public long writeCheckpointEntryDuration() {
+        return splitAndSortCpPagesStart - walCpRecordFsyncEnd;
+    }
+
+    /**
+     * @return Duration of splitting and sorting checkpoint pages.
+     */
+    public long splitAndSortCpPagesDuration() {
+        return splitAndSortCpPagesEnd - splitAndSortCpPagesStart;
     }
 
     /**

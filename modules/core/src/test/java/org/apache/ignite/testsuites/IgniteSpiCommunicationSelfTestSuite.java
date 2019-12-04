@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoveryNo
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoverySelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoverySslSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiShmemSelfTest;
+import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiSslSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiSslSmallBuffersSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiStartStopSelfTest;
@@ -63,6 +64,7 @@ import org.junit.runners.Suite;
 
     GridTcpCommunicationSpiSslSelfTest.class,
     GridTcpCommunicationSpiSslSmallBuffersSelfTest.class,
+    GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest.class,
 
     GridTcpCommunicationSpiTcpSelfTest.class,
     GridTcpCommunicationSpiTcpNoDelayOffSelfTest.class,

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Binary builder implementation.
@@ -122,8 +123,18 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritDoc /> */
         public IBinaryObjectBuilder SetField<T>(string fieldName, T val)
         {
-            return SetField0(fieldName,
-                new BinaryBuilderField(typeof (T), val, BinaryTypeId.GetTypeId(typeof (T))));
+            // typeof(T) is used instead of val.GetType():
+            // it works for nulls, and generic parameter is supposed to clearly show the intent of the user.
+            // When boxed values are being passed, the overload below should be used.
+            return SetField(fieldName, val, typeof(T));
+        }
+
+        /** <inheritDoc /> */
+        public IBinaryObjectBuilder SetField<T>(string fieldName, T val, Type valType)
+        {
+            IgniteArgumentCheck.NotNull(valType, "valType");
+            
+            return SetField0(fieldName, new BinaryBuilderField(valType, val, BinaryTypeId.GetTypeId(valType)));
         }
 
         /** <inheritDoc /> */

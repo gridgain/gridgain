@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import org.apache.ignite.internal.processors.cache.AtomicCacheAffinityConfigurat
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueCleanupSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueClientDisconnectTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueMultiNodeConsistencySelfTest;
+import org.apache.ignite.internal.processors.cache.datastructures.GridCacheSetRebalanceTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDiscoveryDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureUniqueNameTest;
@@ -83,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Ign
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedLockSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedSemaphoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheAtomicReplicatedNodeRestartSelfTest;
+import org.apache.ignite.internal.processors.datastructures.GridCacheReplicatedQueueRemoveSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -116,6 +118,7 @@ import org.junit.runners.Suite;
     IgniteReplicatedSemaphoreSelfTest.class,
     IgniteReplicatedLockSelfTest.class,
     IgniteCacheAtomicReplicatedNodeRestartSelfTest.class,
+    GridCacheReplicatedQueueRemoveSelfTest.class,
 
     GridCachePartitionedSequenceApiSelfTest.class,
     GridCachePartitionedSequenceMultiNodeSelfTest.class,
@@ -142,6 +145,7 @@ import org.junit.runners.Suite;
 
     GridCachePartitionedSetFailoverSelfTest.class,
     GridCachePartitionedAtomicSetFailoverSelfTest.class,
+    GridCacheSetRebalanceTest.class,
 
     GridCachePartitionedQueueRotativeMultiNodeTest.class,
     GridCachePartitionedAtomicQueueRotativeMultiNodeTest.class,

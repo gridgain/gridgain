@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,6 +68,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
@@ -81,8 +82,10 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_DISTRIBUTED_JOINS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_ENFORCE_JOIN_ORDER;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LAZY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LOCAL;
+import static org.apache.ignite.IgniteJdbcDriver.PROP_QRY_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_MULTIPLE_STMTS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_NODE_ID;
+import static org.apache.ignite.IgniteJdbcDriver.PROP_SCHEMA;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SKIP_REDUCER_ON_UPDATE;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_ALLOW_OVERWRITE;
@@ -99,6 +102,14 @@ import static org.apache.ignite.internal.processors.cache.query.IgniteQueryError
 public class JdbcConnection implements Connection {
     /** Null stub. */
     private static final String NULL = "null";
+
+    /** Multiple statements supported since version. */
+    private static final IgniteProductVersion MULTIPLE_STATEMENTS_SUPPORTED_SINCE =
+        IgniteProductVersion.fromString("2.4.0");
+
+    /** Multiple statements V2 task supported since version. */
+    private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE =
+        IgniteProductVersion.fromString("8.8.0");
 
     /**
      * Ignite nodes cache.
@@ -173,6 +184,9 @@ public class JdbcConnection implements Connection {
     /** Skip reducer on update flag. */
     private final boolean skipReducerOnUpdate;
 
+    /** Query memory limit. */
+    private final long qryMaxMemory;
+
     /** Statements. */
     final Set<JdbcStatement> statements = new HashSet<>();
 
@@ -196,6 +210,7 @@ public class JdbcConnection implements Connection {
         enforceJoinOrder = Boolean.parseBoolean(props.getProperty(PROP_ENFORCE_JOIN_ORDER));
         lazy = Boolean.parseBoolean(props.getProperty(PROP_LAZY));
         txAllowed = Boolean.parseBoolean(props.getProperty(PROP_TX_ALLOWED));
+        qryMaxMemory = Long.parseLong(props.getProperty(PROP_QRY_MAX_MEMORY, "0"));
 
         stream = Boolean.parseBoolean(props.getProperty(PROP_STREAMING));
 
@@ -214,6 +229,7 @@ public class JdbcConnection implements Connection {
 
         multipleStmts = Boolean.parseBoolean(props.getProperty(PROP_MULTIPLE_STMTS));
         skipReducerOnUpdate = Boolean.parseBoolean(props.getProperty(PROP_SKIP_REDUCER_ON_UPDATE));
+        schemaName = QueryUtils.normalizeSchemaName(null, props.getProperty(PROP_SCHEMA));
 
         String nodeIdProp = props.getProperty(PROP_NODE_ID);
 
@@ -240,10 +256,13 @@ public class JdbcConnection implements Connection {
                         IgniteQueryErrorCode.CACHE_NOT_FOUND);
                 }
 
-                schemaName = QueryUtils.normalizeSchemaName(cacheName, cacheDesc.cacheConfiguration().getSqlSchema());
+                if (schemaName == null)
+                    schemaName = QueryUtils.normalizeSchemaName(cacheName, cacheDesc.cacheConfiguration().getSqlSchema());
             }
-            else
-                schemaName = QueryUtils.DFLT_SCHEMA;
+            else {
+                if (schemaName == null)
+                    schemaName = QueryUtils.DFLT_SCHEMA;
+            }
         }
         catch (Exception e) {
             close();
@@ -850,6 +869,20 @@ public class JdbcConnection implements Connection {
     }
 
     /**
+     * @return {@code true} if multiple statements allowed, {@code false} otherwise.
+     */
+    boolean isMultipleStatementsSupported() {
+        return U.isOldestNodeVersionAtLeast(MULTIPLE_STATEMENTS_SUPPORTED_SINCE, ignite.cluster().nodes());
+    }
+
+    /**
+     * @return {@code true} if multiple statements allowed, {@code false} otherwise.
+     */
+    boolean isMultipleStatementsTaskV2Supported() {
+        return U.isOldestNodeVersionAtLeast(MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE, ignite.cluster().nodes());
+    }
+
+    /**
      * @return {@code true} if update on server is enabled, {@code false} otherwise.
      */
     boolean skipReducerOnUpdate() {
@@ -889,6 +922,13 @@ public class JdbcConnection implements Connection {
      */
     boolean isLazy() {
         return lazy;
+    }
+
+    /**
+     * @return Query memory limit.
+     */
+    long getQueryMaxMemory() {
+        return qryMaxMemory;
     }
 
     /**

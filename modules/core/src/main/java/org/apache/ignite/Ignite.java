@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,6 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.IgnitePlugin;
 import org.apache.ignite.plugin.PluginNotFoundException;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Main entry-point for all Ignite APIs.
@@ -62,7 +61,6 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@link IgniteQueue} - distributed blocking queue.</li>
  * <li>{@link IgniteSet} - distributed concurrent set.</li>
  * <li>{@link IgniteScheduler} - functionality for scheduling jobs using UNIX Cron syntax.</li>
- * <li>{@link IgniteFileSystem} - functionality for distributed Hadoop-compliant in-memory file system and map-reduce.</li>
  * </ul>
  */
 public interface Ignite extends AutoCloseable {
@@ -357,27 +355,44 @@ public interface Ignite extends AutoCloseable {
         throws CacheException;
 
     /**
-     * Stops dynamically started cache.
+     * Destroys a cache with the given name and cleans data that was written to the cache. The call will
+     * deallocate all resources associated with the given cache on all nodes in the cluster. There is no way
+     * to undo the action and recover destroyed data.
+     * <p>
+     * All existing instances of {@link IgniteCache} will be invalidated, subsequent calls to the API
+     * will throw exceptions.
+     * <p>
+     * If a cache with the specified name does not exist in the grid, the operation has no effect.
      *
-     * @param cacheName Cache name to stop.
+     * @param cacheName Cache name to destroy.
      * @throws CacheException If error occurs.
      */
     public void destroyCache(String cacheName) throws CacheException;
 
     /**
-     * Stops dynamically started caches.
+     * Destroys caches with the given names and cleans data that was written to the caches. The call will
+     * deallocate all resources associated with the given caches on all nodes in the cluster. There is no way
+     * to undo the action and recover destroyed data.
+     * <p>
+     * All existing instances of {@link IgniteCache} will be invalidated, subsequent calls to the API
+     * will throw exceptions.
+     * <p>
+     * If the specified collection contains {@code null} or an empty value,
+     * this method will throw {@link IllegalArgumentException} and the caches will not be destroyed.
+     * <p>
+     * If a cache with the specified name does not exist in the grid, the specified value will be skipped.
      *
-     * @param cacheNames Collection of cache names to stop.
+     * @param cacheNames Collection of cache names to destroy.
      * @throws CacheException If error occurs.
      */
     public void destroyCaches(Collection<String> cacheNames) throws CacheException;
 
     /**
-     * Gets an instance of {@link IgniteCache} API. {@code IgniteCache} is a fully-compatible
-     * implementation of {@code JCache (JSR 107)} specification.
+     * Gets an instance of {@link IgniteCache} API for the given name if one is configured or {@code null} otherwise.
+     * {@code IgniteCache} is a fully-compatible implementation of {@code JCache (JSR 107)} specification.
      *
      * @param name Cache name.
-     * @return Instance of the cache for the specified name.
+     * @return Instance of the cache for the specified name or {@code null} if one does not exist.
      * @throws CacheException If error occurs.
      */
     public <K, V> IgniteCache<K, V> cache(String name) throws CacheException;
@@ -406,27 +421,6 @@ public interface Ignite extends AutoCloseable {
      * @throws IllegalStateException If node is stopping.
      */
     public <K, V> IgniteDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException;
-
-    /**
-     * Gets an instance of IGFS (Ignite In-Memory File System). If one is not
-     * configured then {@link IllegalArgumentException} will be thrown.
-     * <p>
-     * IGFS is fully compliant with Hadoop {@code FileSystem} APIs and can
-     * be plugged into Hadoop installations. For more information refer to
-     * documentation on Hadoop integration shipped with Ignite.
-     *
-     * @param name IGFS name.
-     * @return IGFS instance.
-     * @throws IllegalArgumentException If IGFS with such name is not configured.
-     */
-    public IgniteFileSystem fileSystem(String name) throws IllegalArgumentException;
-
-    /**
-     * Gets all instances of IGFS (Ignite In-Memory File System).
-     *
-     * @return Collection of IGFS instances.
-     */
-    public Collection<IgniteFileSystem> fileSystems();
 
     /**
      * Will get an atomic sequence from cache and create one if it has not been created yet and {@code create} flag
@@ -485,12 +479,12 @@ public interface Ignite extends AutoCloseable {
      * is {@code true}. It will use configuration from {@link IgniteConfiguration#getAtomicConfiguration()}.
      *
      * @param name Atomic reference name.
-     * @param initVal Initial value for atomic reference. Ignored if {@code create} flag is {@code false}.
+     * @param initVal Initial value for atomic reference (may be {@code null}). Ignored if {@code create} flag is {@code false}.
      * @param create Boolean flag indicating whether data structure should be created if does not exist.
      * @return Atomic reference for the given name.
      * @throws IgniteException If atomic reference could not be fetched or created.
      */
-    public <T> IgniteAtomicReference<T> atomicReference(String name, @Nullable T initVal, boolean create)
+    public <T> IgniteAtomicReference<T> atomicReference(String name, T initVal, boolean create)
         throws IgniteException;
 
     /**
@@ -499,12 +493,12 @@ public interface Ignite extends AutoCloseable {
      *
      * @param name Atomic reference name.
      * @param cfg Configuration.
-     * @param initVal Initial value for atomic reference. Ignored if {@code create} flag is {@code false}.
+     * @param initVal Initial value for atomic reference (may be {@code null}). Ignored if {@code create} flag is {@code false}.
      * @param create Boolean flag indicating whether data structure should be created if does not exist.
      * @return Atomic reference for the given name.
      * @throws IgniteException If atomic reference could not be fetched or created.
      */
-    public <T> IgniteAtomicReference<T> atomicReference(String name, AtomicConfiguration cfg, @Nullable T initVal, boolean create)
+    public <T> IgniteAtomicReference<T> atomicReference(String name, AtomicConfiguration cfg, T initVal, boolean create)
         throws IgniteException;
 
     /**
@@ -512,14 +506,14 @@ public interface Ignite extends AutoCloseable {
      * is {@code true}.
      *
      * @param name Atomic stamped name.
-     * @param initVal Initial value for atomic stamped. Ignored if {@code create} flag is {@code false}.
-     * @param initStamp Initial stamp for atomic stamped. Ignored if {@code create} flag is {@code false}.
+     * @param initVal Initial value for atomic stamped (may be {@code null}). Ignored if {@code create} flag is {@code false}.
+     * @param initStamp Initial stamp for atomic stamped (may be {@code null}). Ignored if {@code create} flag is {@code false}.
      * @param create Boolean flag indicating whether data structure should be created if does not exist.
      * @return Atomic stamped for the given name.
      * @throws IgniteException If atomic stamped could not be fetched or created.
      */
-    public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name, @Nullable T initVal,
-        @Nullable S initStamp, boolean create) throws IgniteException;
+    public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name, T initVal,
+        S initStamp, boolean create) throws IgniteException;
 
     /**
      * Will get a atomic stamped from cache and create one if it has not been created yet and {@code create} flag
@@ -527,14 +521,14 @@ public interface Ignite extends AutoCloseable {
      *
      * @param name Atomic stamped name.
      * @param cfg Configuration.
-     * @param initVal Initial value for atomic stamped. Ignored if {@code create} flag is {@code false}.
-     * @param initStamp Initial stamp for atomic stamped. Ignored if {@code create} flag is {@code false}.
+     * @param initVal Initial value for atomic stamped (may be {@code null}). Ignored if {@code create} flag is {@code false}.
+     * @param initStamp Initial stamp for atomic stamped (may be {@code null}). Ignored if {@code create} flag is {@code false}.
      * @param create Boolean flag indicating whether data structure should be created if does not exist.
      * @return Atomic stamped for the given name.
      * @throws IgniteException If atomic stamped could not be fetched or created.
      */
-    public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name, AtomicConfiguration cfg, @Nullable T initVal,
-        @Nullable S initStamp, boolean create) throws IgniteException;
+    public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name, AtomicConfiguration cfg, T initVal,
+        S initStamp, boolean create) throws IgniteException;
 
     /**
      * Gets or creates count down latch. If count down latch is not found in cache and {@code create} flag
@@ -596,11 +590,12 @@ public interface Ignite extends AutoCloseable {
      *
      * @param name Name of queue.
      * @param cap Capacity of queue, {@code 0} for unbounded queue. Ignored if {@code cfg} is {@code null}.
-     * @param cfg Queue configuration if new queue should be created.
-     * @return Queue with given properties.
+     * @param cfg Queue configuration if new queue should be created. If {@code null}, will try to return
+     *            an existing queue.
+     * @return Queue with given properties or {@code null} if queue was not created and does not exist.
      * @throws IgniteException If queue could not be fetched or created.
      */
-    public <T> IgniteQueue<T> queue(String name, int cap, @Nullable CollectionConfiguration cfg)
+    public <T> IgniteQueue<T> queue(String name, int cap, CollectionConfiguration cfg)
         throws IgniteException;
 
     /**
@@ -608,11 +603,12 @@ public interface Ignite extends AutoCloseable {
      * {@code null}.
      *
      * @param name Set name.
-     * @param cfg Set configuration if new set should be created.
+     * @param cfg Set configuration if new set should be created. If {@code null}, will try to return
+     *            an existing set.
      * @return Set with given properties.
      * @throws IgniteException If set could not be fetched or created.
      */
-    public <T> IgniteSet<T> set(String name, @Nullable CollectionConfiguration cfg) throws IgniteException;
+    public <T> IgniteSet<T> set(String name, CollectionConfiguration cfg) throws IgniteException;
 
     /**
      * Gets an instance of deployed Ignite plugin.
@@ -687,7 +683,7 @@ public interface Ignite extends AutoCloseable {
      * @deprecated Use {@link #dataRegionMetrics(String)} instead.
      */
     @Deprecated
-    @Nullable public MemoryMetrics memoryMetrics(String memPlcName);
+    public MemoryMetrics memoryMetrics(String memPlcName);
 
     /**
      * @return {@link PersistenceMetrics} snapshot.
@@ -716,7 +712,7 @@ public interface Ignite extends AutoCloseable {
      * @param memPlcName Name of memory region configured with {@link DataRegionConfiguration config}.
      * @return {@link DataRegionMetrics} snapshot or {@code null} if no memory region is configured under specified name.
      */
-    @Nullable public DataRegionMetrics dataRegionMetrics(String memPlcName);
+    public DataRegionMetrics dataRegionMetrics(String memPlcName);
 
     /**
      * @return {@link DataStorageMetrics} snapshot.

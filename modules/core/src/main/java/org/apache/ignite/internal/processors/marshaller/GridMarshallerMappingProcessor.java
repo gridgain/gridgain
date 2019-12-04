@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
@@ -303,7 +304,7 @@ public class GridMarshallerMappingProcessor extends GridProcessorAdapter {
             final MarshallerMappingItem item = msg.getMappingItem();
             marshallerCtx.onMappingAccepted(item);
 
-            closProc.runLocalSafe(new Runnable() {
+            closProc.runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     for (MappingUpdatedListener lsnr : mappingUpdatedLsnrs)
                         lsnr.mappingUpdated(item.platformId(), item.typeId(), item.className());

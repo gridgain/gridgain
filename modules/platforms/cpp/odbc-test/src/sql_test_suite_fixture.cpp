@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -194,7 +194,7 @@ namespace ignite
         BOOST_CHECK_EQUAL(res.Data2, expected.GetMostSignificantBits() & 0x00000000FFFF0000ULL >> 16);
         BOOST_CHECK_EQUAL(res.Data3, expected.GetMostSignificantBits() & 0x000000000000FFFFULL);
 
-        for (int i = 0; i < sizeof(res.Data4); ++i)
+        for (size_t i = 0; i < sizeof(res.Data4); ++i)
             BOOST_CHECK_EQUAL(res.Data4[i], (expected.GetLeastSignificantBits() & (0xFFULL << (8 * i))) >> (8 * i));
     }
 

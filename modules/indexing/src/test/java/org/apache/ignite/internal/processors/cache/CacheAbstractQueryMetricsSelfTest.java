@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.util.Collection;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.Query;
+import org.apache.ignite.cache.query.QueryMetrics;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -28,7 +29,6 @@ import org.apache.ignite.cache.query.TextQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMetricsAdapter;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -349,21 +349,21 @@ public abstract class CacheAbstractQueryMetricsSelfTest extends GridCommonAbstra
      * @param first {@code true} if metrics checked for first query only.
      */
     private void checkMetrics(IgniteCache<Integer, String> cache, int execs, int completions, int failures, boolean first) {
-        GridCacheQueryMetricsAdapter m = (GridCacheQueryMetricsAdapter)cache.queryMetrics();
+        QueryMetrics m = cache.queryMetrics();
 
         assertNotNull(m);
 
         info("Metrics: " + m);
 
         assertEquals("Executions", execs, m.executions());
-        assertEquals("Completions", completions, m.completedExecutions());
+        assertEquals("Completions", completions, m.executions() - m.fails());
         assertEquals("Failures", failures, m.fails());
         assertTrue(m.averageTime() >= 0);
         assertTrue(m.maximumTime() >= 0);
         assertTrue(m.minimumTime() >= 0);
 
         if (first)
-            assertTrue("On first execution minTime == maxTime", m.minimumTime() == m.maximumTime());
+            assertEquals("On first execution minTime == maxTime", m.minimumTime(), m.maximumTime());
     }
 
     /**
@@ -437,8 +437,9 @@ public abstract class CacheAbstractQueryMetricsSelfTest extends GridCommonAbstra
         final int exp) throws IgniteInterruptedCheckedException {
         GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                GridCacheQueryMetricsAdapter m = (GridCacheQueryMetricsAdapter)cache.queryMetrics();
-                return m.completedExecutions() == exp;
+                QueryMetrics m = cache.queryMetrics();
+
+                return m.executions() - m.fails() == exp;
             }
         }, 5000);
     }

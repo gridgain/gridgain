@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.events.CacheEvent;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -387,11 +388,18 @@ public class GridCacheEventManager extends GridCacheManagerAdapter {
         GridCacheContext cctx0 = cctx;
 
         // Event recording is impossible in recovery mode.
-        if (cctx0 != null && cctx0.kernalContext().recoveryMode())
+        if (cctx0 == null || cctx0.kernalContext().recoveryMode())
             return false;
 
-        return cctx0 != null && cctx0.userCache() && cctx0.gridEvents().isRecordable(type)
-            && cctx0.config() != null && !cctx0.config().isEventsDisabled();
+        try {
+            CacheConfiguration cfg = cctx0.config();
+
+            return cctx0.userCache() && cctx0.gridEvents().isRecordable(type) && !cfg.isEventsDisabled();
+        }
+        catch (IllegalStateException e) {
+            // Cache context was cleaned up.
+            return false;
+        }
     }
 
     /** {@inheritDoc} */

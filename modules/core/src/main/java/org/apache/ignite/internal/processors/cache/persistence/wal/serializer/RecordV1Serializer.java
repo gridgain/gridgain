@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,7 +55,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
  * Record V1 serializer.
  * Stores records in following format:
  * <ul>
- *     <li>Record type from {@link RecordType#ordinal()} incremented by 1</li>
+ *     <li>Record type from {@link RecordType#index()} incremented by 1</li>
  *     <li>WAL pointer to double check consistency</li>
  *     <li>Data</li>
  *     <li>CRC or zero padding</li>
@@ -139,7 +139,7 @@ public class RecordV1Serializer implements RecordSerializer {
             if (recType == null)
                 throw new IOException("Unknown record type: " + recType);
 
-            final WALRecord rec = dataSerializer.readRecord(recType, in);
+            final WALRecord rec = dataSerializer.readRecord(recType, in, 0);
 
             rec.position(ptr);
 
@@ -263,7 +263,7 @@ public class RecordV1Serializer implements RecordSerializer {
             if (recordType == WALRecord.RecordType.STOP_ITERATION_RECORD_TYPE)
                 throw new SegmentEofException("Reached logical end of the segment", null);
 
-            WALRecord.RecordType type = WALRecord.RecordType.fromOrdinal(recordType - 1);
+            WALRecord.RecordType type = WALRecord.RecordType.fromIndex(recordType - 1);
 
             if (type != WALRecord.RecordType.HEADER_RECORD)
                 throw new IOException("Can't read serializer version", null);
@@ -328,7 +328,7 @@ public class RecordV1Serializer implements RecordSerializer {
      * @param type WAL record type.
      */
     static void putRecordType(ByteBuffer buf, RecordType type) {
-        buf.put((byte)(type.ordinal() + 1));
+        buf.put((byte)(type.index() + 1));
     }
 
     /**
@@ -345,7 +345,7 @@ public class RecordV1Serializer implements RecordSerializer {
         if (type == WALRecord.RecordType.STOP_ITERATION_RECORD_TYPE)
             throw new SegmentEofException("Reached logical end of the segment", null);
 
-        return RecordType.fromOrdinal(type - 1);
+        return RecordType.fromIndex(type - 1);
     }
 
     /**

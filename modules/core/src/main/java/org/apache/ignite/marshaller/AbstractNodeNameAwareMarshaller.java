@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -100,7 +100,7 @@ public abstract class AbstractNodeNameAwareMarshaller extends AbstractMarshaller
      * Marshals object to the output stream. This method should not close
      * given output stream.
      *
-     * @param obj Object to marshal.
+     * @param obj Object to marshal. {@code null} object will be marshaled to binary {@code null} representation.
      * @param out Output stream to marshal into.
      * @throws IgniteCheckedException If marshalling failed.
      */
@@ -109,7 +109,7 @@ public abstract class AbstractNodeNameAwareMarshaller extends AbstractMarshaller
     /**
      * Marshals object to byte array.
      *
-     * @param obj Object to marshal.
+     * @param obj Object to marshal. {@code null} object will be marshaled to binary {@code null} representation.
      * @return Byte array.
      * @throws IgniteCheckedException If marshalling failed.
      */
@@ -121,7 +121,7 @@ public abstract class AbstractNodeNameAwareMarshaller extends AbstractMarshaller
      *
      * @param <T> Type of unmarshalled object.
      * @param in Input stream.
-     * @param clsLdr Class loader to use.
+     * @param clsLdr If not {@code null} then given class loader will be used for unmarshal object.
      * @return Unmarshalled object.
      * @throws IgniteCheckedException If unmarshalling failed.
      */
@@ -132,7 +132,7 @@ public abstract class AbstractNodeNameAwareMarshaller extends AbstractMarshaller
      *
      * @param <T> Type of unmarshalled object.
      * @param arr Byte array.
-     * @param clsLdr Class loader to use.
+     * @param clsLdr If not {@code null} then given class loader will be used for unmarshal object.
      * @return Unmarshalled object.
      * @throws IgniteCheckedException If unmarshalling failed.
      */

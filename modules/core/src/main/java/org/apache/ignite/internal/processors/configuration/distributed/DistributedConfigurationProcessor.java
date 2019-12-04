@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.configuration.distributed;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
@@ -26,6 +27,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor.AllowableAction.ACTUALIZE;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor.AllowableAction.CLUSTER_WIDE_UPDATE;
@@ -38,10 +40,10 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
  */
 public class DistributedConfigurationProcessor extends GridProcessorAdapter implements DistributedPropertyDispatcher {
     /** Prefix of key for distributed meta storage. */
-    private static final String DIST_CONF_PREFIX = "distrConf";
+    private static final String DIST_CONF_PREFIX = "distrConf-";
 
     /** Properties storage. */
-    private final Map<String, DistributedProperty> props = new ConcurrentHashMap<>();
+    private final Map<String, DistributedChangeableProperty> props = new ConcurrentHashMap<>();
 
     /** Global metastorage. */
     private volatile DistributedMetaStorage distributedMetastorage;
@@ -58,6 +60,9 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        if (ctx.isDaemon())
+            return;
+
         GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
 
         isp.registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
@@ -68,7 +73,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
                 distributedMetastorage.listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
-                        DistributedProperty prop = props.get(toPropertyKey(key));
+                        DistributedChangeableProperty prop = props.get(toPropertyKey(key));
 
                         if (prop != null)
                             prop.localUpdate(newVal);
@@ -87,6 +92,9 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
             @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
                 //Switch to cluster wide update action and do it on already registered properties.
                 switchCurrentActionTo(CLUSTER_WIDE_UPDATE);
+
+                isp.getDistributedConfigurationListeners()
+                    .forEach(DistributedConfigurationLifecycleListener::onReadyToWrite);
             }
         });
     }
@@ -128,45 +136,23 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
         return metaStorageKey.substring(DIST_CONF_PREFIX.length());
     }
 
+    /** {@inheritDoc} */
+    @Override public <T extends DistributedChangeableProperty> void registerProperties(T... props) {
+        Arrays.stream(props)
+            .forEach(this::registerProperty);
+    }
+
     /**
      * Register property to processor and attach it if it possible.
      *
      * @param prop Property to attach to processor.
-     * @param <T> Type of property value.
      */
-    @Override public <T extends DistributedProperty> T registerProperty(T prop) {
+    @Override public <T extends Serializable> DistributedProperty<T> registerProperty(
+        DistributedChangeableProperty<T> prop
+    ) {
         doAllAllowableActions(prop);
 
         return prop;
-    }
-
-    /**
-     * Get registered property.
-     *
-     * @param <T> Type of property value.
-     */
-    public <T extends DistributedProperty> T getProperty(String name) {
-        return (T)props.get(name);
-    }
-
-    /**
-     * Create and attach new long property.
-     *
-     * @param name Name of property.
-     * @return Attached new property.
-     */
-    @Override public DistributedLongProperty registerLong(String name) {
-        return registerProperty(new DistributedLongProperty(name));
-    }
-
-    /**
-     * Create and attach new boolean property.
-     *
-     * @param name Name of property.
-     * @return Attached new property.
-     */
-    @Override public DistributedBooleanProperty registerBoolean(String name) {
-        return registerProperty(new DistributedBooleanProperty(name));
     }
 
     /**
@@ -174,7 +160,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be executed on.
      */
-    private void doAllAllowableActions(DistributedProperty prop) {
+    private void doAllAllowableActions(DistributedChangeableProperty prop) {
         for (AllowableAction action : AllowableAction.values()) {
             doAction(action, prop);
 
@@ -189,7 +175,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      * @param act Action to execute.
      * @param prop Property which action should be execute on.
      */
-    private void doAction(AllowableAction act, DistributedProperty prop) {
+    private void doAction(AllowableAction act, DistributedChangeableProperty prop) {
         switch (act) {
             case REGISTER:
                 doRegister(prop);
@@ -210,7 +196,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doRegister(DistributedProperty prop) {
+    private void doRegister(DistributedChangeableProperty prop) {
         if (props.containsKey(prop.getName()))
             throw new IllegalArgumentException("Property already exists : " + prop.getName());
 
@@ -226,7 +212,7 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doActualize(DistributedProperty prop) {
+    private void doActualize(DistributedChangeableProperty prop) {
         Serializable readVal = null;
         try {
             readVal = distributedMetastorage.read(toMetaStorageKey(prop.getName()));
@@ -245,10 +231,19 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      *
      * @param prop Property which action should be execute on.
      */
-    private void doClusterWideUpdate(DistributedProperty prop) {
-        prop.onReadyForUpdate(
-            (key, newValue) -> distributedMetastorage.writeAsync(toMetaStorageKey(key), newValue)
-        );
+    private void doClusterWideUpdate(DistributedChangeableProperty prop) {
+        prop.onReadyForUpdate(new PropertyUpdateClosure() {
+            @Override public GridFutureAdapter<?> update(String key, Serializable newValue)
+                throws IgniteCheckedException {
+                return distributedMetastorage.writeAsync(toMetaStorageKey(key), newValue);
+            }
+
+            @Override
+            public GridFutureAdapter<?> casUpdate(String key, Serializable expectedValue, Serializable newValue)
+                throws IgniteCheckedException {
+                return distributedMetastorage.compareAndSetAsync(toMetaStorageKey(key), expectedValue, newValue);
+            }
+        });
     }
 
     /**

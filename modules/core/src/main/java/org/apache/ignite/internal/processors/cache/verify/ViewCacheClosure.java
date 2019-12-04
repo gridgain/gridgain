@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -87,7 +87,7 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                 Collection<CacheGroupContext> contexts = k.context().cache().cacheGroups();
 
                 for (CacheGroupContext context : contexts) {
-                    if (!compiled.matcher(context.cacheOrGroupName()).find())
+                    if (!context.userCache() || !compiled.matcher(context.cacheOrGroupName()).find())
                         continue;
 
                     CacheInfo ci = new CacheInfo();
@@ -110,10 +110,9 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                 Map<String, DynamicCacheDescriptor> descMap = k.context().cache().cacheDescriptors();
 
                 for (Map.Entry<String, DynamicCacheDescriptor> entry : descMap.entrySet()) {
-
                     DynamicCacheDescriptor desc = entry.getValue();
 
-                    if (!compiled.matcher(desc.cacheName()).find())
+                    if (!desc.cacheType().userCache() || !compiled.matcher(desc.cacheName()).find())
                         continue;
 
                     CacheInfo ci = new CacheInfo();

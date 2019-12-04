@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -112,7 +114,7 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
     @Override public int hashCode() {
         assert val != null;
 
-        return val.hashCode();
+        return IgniteUtils.hashCode(val);
     }
 
     /** {@inheritDoc} */
@@ -197,7 +199,7 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
 
         KeyCacheObjectImpl other = (KeyCacheObjectImpl)obj;
 
-        return val.equals(other.val);
+        return Objects.deepEquals(val, other.val);
     }
 
     /** {@inheritDoc} */

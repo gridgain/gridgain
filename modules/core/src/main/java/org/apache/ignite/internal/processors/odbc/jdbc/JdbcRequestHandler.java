@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.jdbc.thin.JdbcThinAffinityAwarenessMappingGroup;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionAwarenessMappingGroup;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -70,9 +70,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
+import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionSerializationException;
 import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 import org.jetbrains.annotations.Nullable;
@@ -171,6 +171,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param dataPageScanEnabled Enable scan data page mode.
+     * @param updateBatchSize Size of internal batch for DML queries.
      * @param actx Authentication context.
      * @param protocolVer Protocol version.
      * @param connCtx Jdbc connection context.
@@ -179,6 +181,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         GridSpinBusyLock busyLock,
         ClientListenerResponseSender sender,
         int maxCursors,
+        long maxMem,
         boolean distributedJoins,
         boolean enforceJoinOrder,
         boolean collocated,
@@ -188,6 +191,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         boolean skipReducerOnUpdate,
         NestedTxMode nestedTxMode,
         @Nullable Boolean dataPageScanEnabled,
+        @Nullable Integer updateBatchSize,
         AuthorizationContext actx,
         ClientListenerProtocolVersion protocolVer,
         JdbcConnectionContext connCtx
@@ -212,7 +216,9 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             replicatedOnly,
             lazy,
             skipReducerOnUpdate,
-            dataPageScanEnabled
+            dataPageScanEnabled,
+            updateBatchSize,
+            maxMem
         );
 
         this.busyLock = busyLock;
@@ -467,6 +473,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         catch (Exception e) {
             U.error(null, "Error processing file batch", e);
 
+            processor.onFail(e);
+
             if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
             else
@@ -639,7 +647,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                 if (cur.isQuery())
                     res = new JdbcQueryExecuteResult(cur.cursorId(), cur.fetchRows(), !cur.hasNext(),
-                        isClientAffinityAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
+                        isClientPartitionAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
                             partRes :
                             null);
                 else {
@@ -651,7 +659,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                             ", res=" + S.toString(List.class, items) + ']';
 
                     res = new JdbcQueryExecuteResult(cur.cursorId(), (Long)items.get(0).get(0),
-                        isClientAffinityAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
+                        isClientPartitionAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
                             partRes :
                             null);
                 }
@@ -709,6 +717,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
+            else if (X.cause(e, IgniteSQLException.class) != null)
+                return exceptionToResult(X.cause(e, IgniteSQLException.class));
             else
                 return exceptionToResult(e);
         }
@@ -965,9 +975,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         qry.setLazy(cliCtx.isLazy());
         qry.setNestedTxMode(nestedTxMode);
         qry.setSchema(schemaName);
+        qry.setMaxMemory(cliCtx.maxMemory());
 
-        if (cliCtx.dataPageScanEnabled() != null)
-            qry.setDataPageScanEnabled(cliCtx.dataPageScanEnabled());
+        if (cliCtx.updateBatchSize() != null)
+            qry.setUpdateBatchSize(cliCtx.updateBatchSize());
     }
 
     /**
@@ -1066,7 +1077,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      */
     private JdbcResponse getTablesMeta(JdbcMetaTablesRequest req) {
         try {
-            List<JdbcTableMeta> tabMetas = meta.getTablesMeta(req.schemaName(), req.tableName());
+            List<JdbcTableMeta> tabMetas = meta.getTablesMeta(req.schemaName(), req.tableName(), req.tableTypes());
 
             JdbcMetaTablesResult res = new JdbcMetaTablesResult(tabMetas);
 
@@ -1305,7 +1316,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Partitions distributions.
      */
     private JdbcResponse getCachePartitions(JdbcCachePartitionsRequest req) {
-        List<JdbcThinAffinityAwarenessMappingGroup> mappings = new ArrayList<>();
+        List<JdbcThinPartitionAwarenessMappingGroup> mappings = new ArrayList<>();
 
         AffinityTopologyVersion topVer = connCtx.kernalContext().cache().context().exchange().readyAffinityVersion();
 
@@ -1314,7 +1325,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                 connCtx.kernalContext().cache().cacheDescriptor(cacheId),
                 topVer);
 
-            mappings.add(new JdbcThinAffinityAwarenessMappingGroup(cacheId, partitionsMap));
+            mappings.add(new JdbcThinPartitionAwarenessMappingGroup(cacheId, partitionsMap));
         }
 
         return new JdbcResponse(new JdbcCachePartitionsResult(mappings), topVer);
@@ -1349,7 +1360,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      *
      * @return True if supported, false otherwise.
      */
-    private boolean isCancellationSupported() {
+    @Override public boolean isCancellationSupported() {
         return (protocolVer.compareTo(VER_2_8_0) >= 0);
     }
 
@@ -1471,13 +1482,13 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /**
      * @param partResRequested Boolean flag that signals whether client requested partiton result.
      * @param partRes Direved partition result.
-     * @return True if applicable to jdbc thin client side affinity awareness:
+     * @return True if applicable to jdbc thin client side Partition Awareness:
      *   1. Partitoin result was requested;
      *   2. Partition result either null or
      *     a. Rendezvous affinity function without map filters was used;
      *     b. Partition result tree neither PartitoinAllNode nor PartitionNoneNode;
      */
-    private static boolean isClientAffinityAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
-        return partResRequested && (partRes == null || partRes.isClientAffinityAwarenessApplicable());
+    private static boolean isClientPartitionAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
+        return partResRequested && (partRes == null || partRes.isClientPartitionAwarenessApplicable());
     }
 }

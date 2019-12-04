@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -314,6 +314,7 @@ public interface CacheMetrics {
 
     /**
      * Gets number of non-{@code null} values in the cache.
+     * Note this method will always return {@code 0}
      *
      * @return Number of non-{@code null} values in the cache.
      * @deprecated Can overflow. Use {@link CacheMetrics#getCacheSize()} instead.
@@ -330,6 +331,7 @@ public interface CacheMetrics {
 
     /**
      * Gets number of keys in the cache, possibly with {@code null} values.
+     * Note this method will always return {@code 0}
      *
      * @return Number of keys in the cache.
      * @deprecated Can overflow. Use {@link CacheMetrics#getCacheSize()} instead.

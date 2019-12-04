@@ -1,12 +1,12 @@
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
-# 
+#
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -73,6 +73,7 @@ ignite_odbc_tests_SOURCES = \
     src/queries_ssl_test.cpp \
     src/test_utils.cpp \
     src/sql_test_suite_fixture.cpp \
+    src/sql_schema_test.cpp \
     src/sql_string_functions_test.cpp \
     src/sql_numeric_functions_test.cpp \
     src/sql_aggregate_functions_test.cpp \

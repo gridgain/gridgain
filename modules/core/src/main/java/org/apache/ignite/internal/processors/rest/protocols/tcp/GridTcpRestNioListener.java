@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,10 +34,12 @@ import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientReadOnlyModeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskRequest;
@@ -47,6 +49,8 @@ import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.GridRedisM
 import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.GridRedisNioListener;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestReadOnlyChangeModeRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
@@ -68,6 +72,9 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_P
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REMOVE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REMOVE_ALL;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_REPLACE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_READ_ONLY_MODE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_READ_ONLY_DISABLE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_READ_ONLY_ENABLE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.EXE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NOOP;
@@ -377,6 +384,24 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
 
             restReq = restChangeReq;
         }
+        else if (msg instanceof GridClientReadOnlyModeRequest) {
+            GridClientReadOnlyModeRequest req = (GridClientReadOnlyModeRequest)msg;
+
+            GridRestReadOnlyChangeModeRequest restChangeReq = new GridRestReadOnlyChangeModeRequest();
+
+            if (req.isReqCurrentState()) {
+                restChangeReq.reqCurrentMode();
+                restChangeReq.command(CLUSTER_CURRENT_READ_ONLY_MODE);
+            }
+            else {
+                restChangeReq.readOnly(req.readOnly());
+                restChangeReq.command(req.readOnly() ? CLUSTER_READ_ONLY_ENABLE : CLUSTER_READ_ONLY_DISABLE);
+            }
+
+            restReq = restChangeReq;
+        }
+        else if (msg instanceof GridClientClusterNameRequest)
+            restReq = new GridRestClusterNameRequest();
 
         if (restReq != null) {
             restReq.destinationId(msg.destinationId());

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,9 @@ package org.apache.ignite.internal.util;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.lang.IgniteThrowableRunner;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -114,6 +117,40 @@ public final class IgniteStopwatch {
      */
     public static IgniteStopwatch createStarted(IgniteTicker ticker) {
         return new IgniteStopwatch(ticker).start();
+    }
+
+    /**
+     * Execution given operation and calculation it time.
+     *
+     * @param log Logger fol logging.
+     * @param operationName Operation name for logging.
+     * @param operation Operation for execution.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static void logTime(
+        IgniteLogger log,
+        String operationName,
+        IgniteThrowableRunner operation
+    ) throws IgniteCheckedException {
+        long start = System.currentTimeMillis();
+
+        if (log.isInfoEnabled())
+            log.info("Operation was started: " + operationName);
+
+        try {
+            operation.run();
+        }
+        catch (Throwable ex) {
+            if (log.isInfoEnabled())
+                log.info("Operation failed [operation=" + operationName
+                    + ", elapsedTime=" + (System.currentTimeMillis() - start) + "ms]");
+
+            throw ex;
+        }
+
+        if (log.isInfoEnabled())
+            log.info("Operation succeeded [operation=" + operationName
+                + ", elapsedTime=" + (System.currentTimeMillis() - start) + "ms]");
     }
 
     /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,8 +23,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryFetchRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -80,8 +81,11 @@ public class JdbcThinTcpIo {
     /** Version 2.8.0. */
     private static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
+    /** Version 2.8.1. */
+    private static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_0;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -120,7 +124,7 @@ public class JdbcThinTcpIo {
     private final BufferedInputStream in;
 
     /** Connected flag. */
-    private boolean connected;
+    private volatile boolean connected;
 
     /** Ignite server version. */
     private final IgniteProductVersion igniteVer;
@@ -246,8 +250,14 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_7_0) >= 0)
             writer.writeString(connProps.nestedTxMode());
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (ver.compareTo(VER_2_8_0) >= 0) {
             writer.writeByte(nullableBooleanToByte(connProps.isDataPageScanEnabled()));
+
+            JdbcUtils.writeNullableInteger(writer, connProps.getUpdateBatchSize());
+        }
+
+        if (ver.compareTo(VER_2_8_1) >= 0)
+            JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -417,10 +427,9 @@ public class JdbcThinTcpIo {
 
         JdbcResponse resp = readResponse();
 
-        if (stmt != null && stmt.isCancelled())
-            return new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG);
-        else
-            return resp;
+        return stmt != null && stmt.isCancelled() ?
+            new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG) :
+            resp;
     }
 
     /**
@@ -596,9 +605,9 @@ public class JdbcThinTcpIo {
     }
 
     /**
-     * @return True if affinity awareness supported, false otherwise.
+     * @return True if Partition Awareness supported, false otherwise.
      */
-    boolean isAffinityAwarenessSupported() {
+    boolean isPartitionAwarenessSupported() {
         assert srvProtoVer != null;
 
         return srvProtoVer.compareTo(VER_2_8_0) >= 0;
@@ -644,5 +653,19 @@ public class JdbcThinTcpIo {
      */
     public UUID nodeId() {
         return nodeId;
+    }
+
+    /**
+     * @return Socket address.
+     */
+    public InetSocketAddress socketAddress() {
+        return sockAddr;
+    }
+
+    /**
+     * @return Connected flag.
+     */
+    public boolean connected() {
+        return connected;
     }
 }

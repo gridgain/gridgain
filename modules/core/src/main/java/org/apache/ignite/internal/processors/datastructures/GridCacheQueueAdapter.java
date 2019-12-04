@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1043,13 +1043,13 @@ public abstract class GridCacheQueueAdapter<T> extends AbstractCollection<T> imp
         /** {@inheritDoc} */
         @Override public void writeExternal(ObjectOutput out) throws IOException {
             U.writeGridUuid(out, id);
-            out.writeLong(idx);
+            out.writeObject(idx);
         }
 
         /** {@inheritDoc} */
         @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
             id = U.readGridUuid(in);
-            idx = in.readLong();
+            idx = (Long)in.readObject();
         }
     }
 

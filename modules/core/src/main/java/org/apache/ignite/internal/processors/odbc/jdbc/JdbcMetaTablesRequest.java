@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,8 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
+
 /**
  * JDBC tables metadata request.
  */
@@ -31,6 +33,9 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
     /** Table search pattern. */
     private String tblName;
+
+    /** Table types. */
+    private String[] tblTypes;
 
     /**
      * Default constructor is used for deserialization.
@@ -42,12 +47,14 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
     /**
      * @param schemaName Schema search pattern.
      * @param tblName Table search pattern.
+     * @param tblTypes Table types.
      */
-    public JdbcMetaTablesRequest(String schemaName, String tblName) {
+    public JdbcMetaTablesRequest(String schemaName, String tblName, String[] tblTypes) {
         super(META_TABLES);
 
         this.schemaName = schemaName;
         this.tblName = tblName;
+        this.tblTypes = tblTypes;
     }
 
     /**
@@ -64,6 +71,13 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
         return tblName;
     }
 
+    /**
+     * @return Table types.
+     */
+    public String[] tableTypes() {
+        return tblTypes;
+    }
+
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
@@ -71,6 +85,9 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
         writer.writeString(schemaName);
         writer.writeString(tblName);
+
+        if (ver.compareTo(VER_2_8_0) >= 0)
+            writer.writeStringArray(tblTypes);
     }
 
     /** {@inheritDoc} */
@@ -78,8 +95,11 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.readBinary(reader, ver);
 
-        this.schemaName = reader.readString();
-        this.tblName = reader.readString();
+        schemaName = reader.readString();
+        tblName = reader.readString();
+
+        if (ver.compareTo(VER_2_8_0) >= 0)
+            tblTypes = reader.readStringArray();
     }
 
     /** {@inheritDoc} */

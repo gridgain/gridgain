@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -321,6 +321,39 @@ public abstract class GridClientConnection {
      * @param destNodeId Destination node id.
      */
     public abstract GridClientFuture<Boolean> currentState(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
+
+    /**
+     * Get current read-only mode status. If future contains {@code True} - read-only mode enabled, and {@code False}
+     * otherwise.
+     *
+     * @param destNodeId Destination node id.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<Boolean> readOnlyState(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
+
+    /**
+     * Change read-only mode. Cluster must be activated.
+     *
+     * @param readOnly Read-only mode enabled flag.
+     * @param destNodeId Destination node id.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<?> changeReadOnlyState(boolean readOnly, UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
+
+    /**
+     * Get a cluster name.
+     *
+     * @param destNodeId Destination node id.
+     * @return Future to get the cluster name.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<String> clusterName(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException;
 
     /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,14 +42,14 @@ public class EncoderTrainerTest extends TrainerTest {
     @Test
     public void testFitOnStringCategorialFeatures() {
         Map<Integer, Vector> data = new HashMap<>();
-        data.put(1, new DenseVector(new Serializable[]{"Monday", "September"}));
-        data.put(2, new DenseVector(new Serializable[]{"Monday", "August"}));
-        data.put(3, new DenseVector(new Serializable[]{"Monday", "August"}));
-        data.put(4, new DenseVector(new Serializable[]{"Friday", "June"}));
-        data.put(5, new DenseVector(new Serializable[]{"Friday", "June"}));
-        data.put(6, new DenseVector(new Serializable[]{"Sunday", "August"}));
+        data.put(1, new DenseVector(new Serializable[]{1.0, "Monday", "September"}));
+        data.put(2, new DenseVector(new Serializable[]{2.0, "Monday", "August"}));
+        data.put(3, new DenseVector(new Serializable[]{3.0, "Monday", "August"}));
+        data.put(4, new DenseVector(new Serializable[]{4.0, "Friday", "June"}));
+        data.put(5, new DenseVector(new Serializable[]{5.0, "Friday", "June"}));
+        data.put(6, new DenseVector(new Serializable[]{6.0, "Sunday", "August"}));
 
-        final Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>(0 , 1);
+        final Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>(1, 2).labeled(0);
 
         DatasetBuilder<Integer, Vector> datasetBuilder = new LocalDatasetBuilder<>(data, parts);
 
@@ -64,7 +64,7 @@ public class EncoderTrainerTest extends TrainerTest {
             vectorizer
         );
 
-        assertArrayEquals(new double[]{0.0, 2.0}, preprocessor.apply(7, new DenseVector(new Serializable[]{"Monday", "September"})).features().asArray(), 1e-8);
+        assertArrayEquals(new double[]{0.0, 2.0}, preprocessor.apply(7, new DenseVector(new Serializable[]{7.0, "Monday", "September"})).features().asArray(), 1e-8);
     }
 
     /** Tests {@code fit()} method. */

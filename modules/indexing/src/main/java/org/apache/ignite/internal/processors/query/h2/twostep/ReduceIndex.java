@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,6 +43,7 @@ import org.h2.message.DbException;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.table.IndexColumn;
+import org.h2.table.Table;
 import org.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
@@ -126,23 +127,24 @@ public abstract class ReduceIndex extends BaseIndex {
      * @param cols Columns.
      */
     protected ReduceIndex(GridKernalContext ctx,
-        ReduceTable tbl,
+        Table tbl,
         String name,
         IndexType type,
         IndexColumn[] cols
     ) {
-        this(ctx);
+        super(tbl, 0, name, cols, type);
 
-        initBaseIndex(tbl, 0, name, cols, type);
+        this.ctx = ctx;
+
+        fetched = new ReduceBlockList<>(PREFETCH_SIZE);
     }
 
     /**
      * @param ctx Context.
+     * @param tbl Fake reduce table.
      */
-    protected ReduceIndex(GridKernalContext ctx) {
-        this.ctx = ctx;
-
-        fetched = new ReduceBlockList<>(PREFETCH_SIZE);
+    protected ReduceIndex(GridKernalContext ctx, Table tbl) {
+        this(ctx, tbl, null, IndexType.createScan(false), null);
     }
 
     /**
@@ -186,7 +188,7 @@ public abstract class ReduceIndex extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
+    @Override public long getRowCountApproximation(Session ses) {
         return 10_000;
     }
 

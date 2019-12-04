@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,8 +47,11 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
     /** Current server nodes. */
     private Map<String, VisorBaselineNode> servers;
 
-    /** Baseline autoadjustment settings. */
-    private VisorBaselineAutoAdjustSettings autoAdjustSettings;
+    /** Baseline auto adjust enable flag. */
+    private Boolean autoAdjustEnabled;
+
+    /** Await time of baseline auto adjust after last topology event in ms. */
+    private Long autoAdjustAwaitingTime;
 
     /** Time to next baseline adjust. */
     private long remainingTimeToBaselineAdjust = -1;
@@ -97,14 +100,17 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         long topVer,
         Collection<? extends BaselineNode> baseline,
         Collection<? extends BaselineNode> servers,
-        VisorBaselineAutoAdjustSettings autoAdjustSettings,
+        Boolean autoAdjustEnabled,
+        Long autoAdjustAwaitingTime,
         long remainingTimeToBaselineAdjust,
-        boolean baselineAdjustInProgress) {
+        boolean baselineAdjustInProgress
+    ) {
         this.active = active;
         this.topVer = topVer;
         this.baseline = toMap(baseline);
         this.servers = toMap(servers);
-        this.autoAdjustSettings = autoAdjustSettings;
+        this.autoAdjustEnabled = autoAdjustEnabled;
+        this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
         this.remainingTimeToBaselineAdjust = remainingTimeToBaselineAdjust;
         this.baselineAdjustInProgress = baselineAdjustInProgress;
     }
@@ -143,10 +149,17 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
     }
 
     /**
-     * @return Baseline autoadjustment settings.
+     * @return Baseline auto adjust enable flag.
      */
-    public VisorBaselineAutoAdjustSettings getAutoAdjustSettings() {
-        return autoAdjustSettings;
+    public Boolean isAutoAdjustEnabled() {
+        return autoAdjustEnabled;
+    }
+
+    /**
+     * @return Await time of baseline auto adjust after last topology event in ms.
+     */
+    public Long getAutoAdjustAwaitingTime() {
+        return autoAdjustAwaitingTime;
     }
 
     /**
@@ -169,7 +182,8 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         out.writeLong(topVer);
         U.writeMap(out, baseline);
         U.writeMap(out, servers);
-        out.writeObject(autoAdjustSettings);
+        out.writeObject(autoAdjustEnabled);
+        out.writeObject(autoAdjustAwaitingTime);
         out.writeLong(remainingTimeToBaselineAdjust);
         out.writeBoolean(baselineAdjustInProgress);
     }
@@ -183,7 +197,8 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         servers = U.readTreeMap(in);
 
         if (protoVer > V1) {
-            autoAdjustSettings = (VisorBaselineAutoAdjustSettings)in.readObject();
+            autoAdjustEnabled = (Boolean)in.readObject();
+            autoAdjustAwaitingTime = (Long)in.readObject();
             remainingTimeToBaselineAdjust = in.readLong();
             baselineAdjustInProgress = in.readBoolean();
         }

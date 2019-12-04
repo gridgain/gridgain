@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ public abstract class IgniteTxConsistencyRestartAbstractSelfTest extends GridCom
     private static final int GRID_CNT = 4;
 
     /** Key range. */
-    private static final int RANGE = 100_000;
+    private static final int RANGE = 10_000;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -134,7 +134,7 @@ public abstract class IgniteTxConsistencyRestartAbstractSelfTest extends GridCom
         Random rnd = new Random();
 
         // Make some iterations with 1-3 keys transactions.
-        for (int i = 0; i < 50_000; i++) {
+        for (int i = 0; i < RANGE; i++) {
             int idx = i % GRID_CNT;
 
             if (i > 0 && i % 1000 == 0)
@@ -185,14 +185,14 @@ public abstract class IgniteTxConsistencyRestartAbstractSelfTest extends GridCom
 
                 if (grid.affinity(DEFAULT_CACHE_NAME).isPrimaryOrBackup(grid.localNode(), k)) {
                     if (val == null) {
-                        val = cache.localPeek(k, CachePeekMode.ONHEAP);
+                        val = cache.localPeek(k, CachePeekMode.ALL);
 
                         assertNotNull("Failed to peek value for key: " + k, val);
                     }
                     else
                         assertEquals("Failed to find value in cache [primary=" +
                             grid.affinity(DEFAULT_CACHE_NAME).isPrimary(grid.localNode(), k) + ']',
-                            val, cache.localPeek(k, CachePeekMode.ONHEAP));
+                            val, cache.localPeek(k, CachePeekMode.ALL));
                 }
             }
         }

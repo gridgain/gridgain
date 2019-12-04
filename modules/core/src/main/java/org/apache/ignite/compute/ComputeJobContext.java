@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.compute;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.lang.IgniteUuid;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Context attached to every job executed on the grid. Note that unlike
@@ -66,9 +65,9 @@ public interface ComputeJobContext extends ComputeJobContinuation {
      * Sets an attribute into this job context.
      *
      * @param key Attribute key.
-     * @param val Attribute value.
+     * @param val Attribute value, may be {@code null}.
      */
-    public void setAttribute(Object key, @Nullable Object val);
+    public void setAttribute(Object key, Object val);
 
     /**
      * Sets map of attributes into this job context.

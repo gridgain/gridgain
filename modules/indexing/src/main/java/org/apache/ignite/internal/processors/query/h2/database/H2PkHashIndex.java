@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
@@ -29,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -38,6 +38,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
 import org.h2.index.Cursor;
 import org.h2.index.IndexType;
@@ -45,7 +46,6 @@ import org.h2.message.DbException;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
-import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 
@@ -74,19 +74,16 @@ public class H2PkHashIndex extends GridH2IndexBase {
         List<IndexColumn> colsList,
         int segments
     ) {
-        super(tbl);
+        super(
+            tbl,
+            name,
+            GridH2IndexBase.columnsArray(tbl, colsList),
+            IndexType.createPrimaryKey(false, true));
 
         assert segments > 0: segments;
 
-        this.segments = segments;
-
-        IndexColumn[] cols = colsList.toArray(new IndexColumn[0]);
-
-        IndexColumn.mapColumns(cols, tbl);
-
-        initBaseIndex(tbl, 0, name, cols, IndexType.createPrimaryKey(false, true));
-
         this.cctx = cctx;
+        this.segments = segments;
     }
 
     /** {@inheritDoc} */
@@ -99,7 +96,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
         IndexingQueryCacheFilter filter = null;
         MvccSnapshot mvccSnapshot = null;
 
-        QueryContext qctx = queryContextRegistry().getThreadLocal();
+        QueryContext qctx = H2Utils.context(ses);
 
         int seg = 0;
 
@@ -107,7 +104,8 @@ public class H2PkHashIndex extends GridH2IndexBase {
             IndexingQueryFilter f = qctx.filter();
             filter = f != null ? f.forCache(getTable().cacheName()) : null;
             mvccSnapshot = qctx.mvccSnapshot();
-            seg = qctx.segment();
+
+            seg = segment(qctx);
         }
 
         assert !cctx.mvccEnabled() || mvccSnapshot != null;
@@ -170,7 +168,8 @@ public class H2PkHashIndex extends GridH2IndexBase {
     }
 
     /** {@inheritDoc} */
-    @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter, SortOrder sortOrder, HashSet<Column> allColumnsSet) {
+    @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter,
+        SortOrder sortOrder, AllColumnsForPlan allColsSet) {
         return Double.MAX_VALUE;
     }
 
@@ -187,11 +186,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        return 10_000; // TODO
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean canGetFirstOrLast() {
         return false;
     }
@@ -199,6 +193,37 @@ public class H2PkHashIndex extends GridH2IndexBase {
     /** {@inheritDoc} */
     @Override public Cursor findFirstOrLast(Session ses, boolean b) {
         throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long totalRowCount(IndexingQueryCacheFilter partsFilter) {
+        CacheDataRowStore.setSkipVersion(true);
+
+        try {
+            Collection<GridCursor<? extends CacheDataRow>> cursors = new ArrayList<>();
+
+            for (IgniteCacheOffheapManager.CacheDataStore store : cctx.offheap().cacheDataStores()) {
+                int part = store.partId();
+
+                if (partsFilter == null || partsFilter.applyPartition(part))
+                    cursors.add(store.cursor(cctx.cacheId()));
+            }
+
+            Cursor pkHashCursor = new H2PkHashIndexCursor(cursors.iterator());
+
+            long res = 0;
+
+            while (pkHashCursor.next())
+                res++;
+
+            return res;
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+        finally {
+            CacheDataRowStore.setSkipVersion(false);
+        }
     }
 
     /**

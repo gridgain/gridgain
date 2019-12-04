@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -80,6 +80,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicyFactory;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
@@ -114,7 +115,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
- *
+ * TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11820 https://issues.apache.org/jira/browse/IGNITE-11797
  */
 @SuppressWarnings({"unchecked", "ThrowableNotThrown"})
 public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
@@ -1460,7 +1461,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStartManyCaches() throws Exception {
-        final int CACHES =  SF.apply(5_000);
+        final int CACHES = SF.apply(5_000);
 
         final int NODES = 4;
 
@@ -2290,7 +2291,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         for (final int i : sequence(loaders)) {
             final IgniteDataStreamer ldr = clientNode.dataStreamer(cache.getName());
-
+            ldr.allowOverwrite(true); // TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11793
             ldr.autoFlushFrequency(0);
 
             cls.add(new Callable<Void>() {
@@ -4185,12 +4186,11 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
                     assertNotNull(grp);
 
                     for (GridDhtLocalPartition part : grp.topology().currentLocalPartitions()) {
-                        Map<Integer, Object> cachesMap = GridTestUtils.getFieldValue(part, "cacheMaps");
+                        IntMap<Object> cachesMap = GridTestUtils.getFieldValue(part, "cacheMaps");
 
                         assertTrue(cachesMap.size() <= cacheIds.size());
 
-                        for (Integer cacheId : cachesMap.keySet())
-                            assertTrue(cachesMap.containsKey(cacheId));
+                        cachesMap.forEach((cacheId, v) -> assertTrue(cachesMap.containsKey(cacheId)));
                     }
                 }
             }

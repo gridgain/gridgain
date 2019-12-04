@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /** Broadcast task name. */
         public const string BroadcastTask = "org.apache.ignite.platform.PlatformComputeBroadcastTask";
 
-        /** Broadcast task name. */
+        /** Decimal task name. */
         private const string DecimalTask = "org.apache.ignite.platform.PlatformComputeDecimalTask";
 
         /** Echo type: null. */
@@ -315,7 +315,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 Assert.AreEqual(val, binRes.GetField<long>("Field"));
 
-#if !NETCOREAPP2_0 && !NETCOREAPP2_1
+#if !NETCOREAPP2_0 && !NETCOREAPP2_1 && !NETCOREAPP3_0
                 var dotNetBin = _grid1.GetBinary().ToBinary<BinaryObject>(res);
 
                 Assert.AreEqual(dotNetBin.Header.HashCode, ((BinaryObject)binRes).Header.HashCode);

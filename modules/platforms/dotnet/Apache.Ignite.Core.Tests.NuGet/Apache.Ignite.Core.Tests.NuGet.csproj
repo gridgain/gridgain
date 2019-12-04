@@ -72,32 +72,32 @@
   <ItemGroup>
     <Reference Include="Apache.Ignite.Core">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.1.8.0\lib\net40\Apache.Ignite.Core.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.9.0.0\lib\net40\Apache.Ignite.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Apache.Ignite.Linq">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.Linq.1.8.0\lib\net40\Apache.Ignite.Linq.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.Linq.9.0.0\lib\net40\Apache.Ignite.Linq.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Apache.Ignite.AspNet">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.AspNet.1.8.0\lib\net40\Apache.Ignite.AspNet.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.AspNet.9.0.0\lib\net40\Apache.Ignite.AspNet.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Apache.Ignite.NLog">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.NLog.1.8.0\lib\net40\Apache.Ignite.NLog.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.NLog.9.0.0\lib\net40\Apache.Ignite.NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Apache.Ignite.Log4Net">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.Log4Net.1.8.0\lib\net40\Apache.Ignite.Log4Net.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.Log4Net.9.0.0\lib\net40\Apache.Ignite.Log4Net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Apache.Ignite.EntityFramework">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Apache.Ignite.EntityFramework.1.8.0\lib\net40\Apache.Ignite.EntityFramework.dll</HintPath>
+      <HintPath>packages\GridGain.Ignite.EntityFramework.9.0.0\lib\net40\Apache.Ignite.EntityFramework.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
@@ -132,6 +132,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Apache.Ignite.Core.Tests\PathUtils.cs">
+      <Link>PathUtils.cs</Link>
+    </Compile>
     <Compile Include="Log4NetTest.cs" />
     <Compile Include="NLogTest.cs" />
     <Compile Include="AspNetTest.cs" />
@@ -162,19 +165,11 @@
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>if not exist "$(TargetDir)libs" md "$(TargetDir)libs"
-xcopy /s /y "$(SolutionDir)packages\Apache.Ignite.1.8.0\libs\*.*" "$(TargetDir)libs"</PostBuildEvent>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PreBuildEvent>
-    </PreBuildEvent>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
+  <Import Project="packages\GridGain.Ignite.9.0.0\build\GridGain.Ignite.targets" Condition="Exists('packages\GridGain.Ignite.9.0.0\build\GridGain.Ignite.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\GridGain.Ignite.9.0.0\build\GridGain.Ignite.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\GridGain.Ignite.9.0.0\build\GridGain.Ignite.targets'))" />
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

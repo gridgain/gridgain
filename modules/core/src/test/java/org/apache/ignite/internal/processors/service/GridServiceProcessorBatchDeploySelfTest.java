@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,6 +36,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceDeploymentException;
 import org.apache.ignite.services.ServiceDescriptor;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
@@ -168,7 +169,7 @@ public class GridServiceProcessorBatchDeploySelfTest extends GridCommonAbstractT
         IgniteInternalFuture<Object> topChangeFut = runTopChanger(finished);
 
         try {
-            int numServices = 200;
+            int numServices = GridTestUtils.SF.apply(200);
             int batchSize = 5;
 
             CountDownLatch latch = new CountDownLatch(numServices);

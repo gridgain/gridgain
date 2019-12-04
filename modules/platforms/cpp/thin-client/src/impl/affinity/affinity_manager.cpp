@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,7 @@ namespace ignite
                     ResetAffinity(ver);
                 }
 
-                void AffinityManager::UpdateAffinity(const std::vector<AffinityAwarenessGroup>& groups,
+                void AffinityManager::UpdateAffinity(const std::vector<PartitionAwarenessGroup>& groups,
                     const AffinityTopologyVersion& ver)
                 {
                     if (topologyVersion > ver)
@@ -56,7 +56,7 @@ namespace ignite
 
                         CacheAffinityMap& newAffinity = *newAffinityPtr.Get();
 
-                        std::vector<AffinityAwarenessGroup>::const_iterator group;
+                        std::vector<PartitionAwarenessGroup>::const_iterator group;
                         for (group = groups.begin(); group != groups.end(); ++group)
                         {
                             SP_AffinityAssignment newMapping(new AffinityAssignment(group->GetNodePartitions()));

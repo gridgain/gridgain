@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -174,7 +174,7 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
 
     /** {@inheritDoc} */
     @Override public <T> T deserialize() throws BinaryObjectException {
-        Class cls = BinaryUtils.resolveClass(ctx, typeId, clsName, ctx.configuration().getClassLoader(), true);
+        Class cls = BinaryUtils.resolveClass(ctx, typeId, clsName, ctx.configuration().getClassLoader(), false);
 
         return (T)BinaryEnumCache.get(cls, ord);
     }
@@ -427,14 +427,5 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
         }
 
         return reader.afterMessageRead(BinaryEnumObjectImpl.class);
-    }
-
-    /**
-     * @param cls type to examine.
-     * @return true if typeId equals for passed type and current
-     * binary enum.
-     */
-    public boolean isTypeEquals(final Class<?> cls) {
-        return ctx.descriptorForClass(cls, false, false).typeId() == typeId();
     }
 }

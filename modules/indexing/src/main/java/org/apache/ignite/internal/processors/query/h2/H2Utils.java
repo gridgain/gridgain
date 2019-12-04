@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import java.util.UUID;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -61,12 +63,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
-import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -76,7 +77,9 @@ import org.h2.result.Row;
 import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
+import org.h2.util.JdbcUtils;
 import org.h2.util.LocalDateTimeUtils;
+import org.h2.util.Utils;
 import org.h2.value.DataType;
 import org.h2.value.Value;
 import org.h2.value.ValueArray;
@@ -100,6 +103,8 @@ import org.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_HASH_JOIN;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_HASH_JOIN_MAX_TABLE_SIZE;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_COL;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
@@ -108,6 +113,9 @@ import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_N
  * H2 utility methods.
  */
 public class H2Utils {
+    /** Default hash join max table size. */
+    public static final int DFLT_HASH_JOIN_MAX_TABLE_SIZE = 100_000;
+
     /**
      * The default precision for a char/varchar value.
      */
@@ -127,6 +135,9 @@ public class H2Utils {
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
         Collections.singletonList(new H2SqlFieldMetadata(null, null, "UPDATED", Long.class.getName(), -1, -1));
 
+    /** */
+    public static final IndexColumn[] EMPTY_COLUMNS = new IndexColumn[0];
+
     /** Spatial index class name. */
     private static final String SPATIAL_IDX_CLS =
         "org.apache.ignite.internal.processors.query.h2.opt.GridH2SpatialIndex";
@@ -134,18 +145,18 @@ public class H2Utils {
     /** Quotation character. */
     private static final char ESC_CH = '\"';
 
-    /** Empty cursor. */
-    public static final GridCursor<H2Row> EMPTY_CURSOR = new GridCursor<H2Row>() {
-        /** {@inheritDoc} */
-        @Override public boolean next() {
-            return false;
-        }
 
-        /** {@inheritDoc} */
-        @Override public H2Row get() {
-            return null;
-        }
-    };
+    /** Hash join max table size (not final for test). */
+    private static int hashJoinMaxTableSize
+        = IgniteSystemProperties.getInteger(IGNITE_HASH_JOIN_MAX_TABLE_SIZE, DFLT_HASH_JOIN_MAX_TABLE_SIZE);
+
+    /**
+     * Enable use hash join by query optimizer. When disabled hash join may be used only with index hint:
+     * USE INDEX(HASH_JOIN_IDX)
+     * (not final for tests).
+     */
+    private static boolean enableHashJoin
+        = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
 
     /**
      * @param c1 First column.
@@ -403,27 +414,41 @@ public class H2Utils {
      * @param c Connection.
      * @return Session.
      */
+    public static Session session(H2PooledConnection c) {
+        return session(c.connection());
+    }
+
+    /**
+     * @param c Connection.
+     * @return Session.
+     */
     public static Session session(Connection c) {
         return (Session)((JdbcConnection)c).getSession();
     }
 
     /**
      * @param conn Connection to use.
+     * @param qctx Query context.
      * @param distributedJoins If distributed joins are enabled.
      * @param enforceJoinOrder Enforce join order of tables.
      */
-    public static void setupConnection(Connection conn, boolean distributedJoins, boolean enforceJoinOrder) {
-        setupConnection(conn,distributedJoins, enforceJoinOrder, false);
+    public static void setupConnection(H2PooledConnection conn, QueryContext qctx,
+        boolean distributedJoins, boolean enforceJoinOrder) {
+        assert qctx != null;
+
+        setupConnection(conn, qctx, distributedJoins, enforceJoinOrder, false);
     }
 
     /**
      * @param conn Connection to use.
+     * @param qctx Query context.
      * @param distributedJoins If distributed joins are enabled.
      * @param enforceJoinOrder Enforce join order of tables.
      * @param lazy Lazy query execution mode.
      */
     public static void setupConnection(
-        Connection conn,
+        H2PooledConnection conn,
+        H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
         boolean lazy
@@ -433,6 +458,26 @@ public class H2Utils {
         s.setForceJoinOrder(enforceJoinOrder);
         s.setJoinBatchEnabled(distributedJoins);
         s.setLazyQueryExecution(lazy);
+        s.setHashJoinMaxTableSize(hashJoinMaxTableSize);
+        s.setHashJoinEnabled(enableHashJoin && !distributedJoins);
+
+        H2QueryContext oldCtx = s.getQueryContext();
+
+        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
+
+        s.setQueryContext(qctx);
+    }
+
+    /**
+     * Clean up session for further reuse.
+     *
+     * @param conn Connection to use.
+     */
+    public static void resetSession(H2PooledConnection conn) {
+        Session s = session(conn);
+
+        U.closeQuiet(s.queryMemoryTracker());
+        s.setQueryContext(null);
     }
 
     /**
@@ -448,7 +493,7 @@ public class H2Utils {
         if (val == null)
             return null;
 
-        int objType = DataType.getTypeFromClass(val.getClass());
+        int objType = getTypeFromClass(val.getClass());
 
         if (objType == type)
             return val;
@@ -592,7 +637,7 @@ public class H2Utils {
                     Object o = arr[i];
 
                     valArr[i] = o == null ? ValueNull.INSTANCE :
-                        wrap(coCtx, o, DataType.getTypeFromClass(o.getClass()));
+                        wrap(coCtx, o, getTypeFromClass(o.getClass()));
                 }
 
                 return ValueArray.get(valArr);
@@ -602,6 +647,74 @@ public class H2Utils {
         }
 
         throw new IgniteCheckedException("Failed to wrap value[type=" + type + ", value=" + obj + "]");
+    }
+
+    /**
+     * Maps java class on H2's Value type that is supported by Ignite.
+     * <p/> Note that Ignite supports fewer types than H2.
+     *
+     * @param x java class to map on H2's type.
+     * @return H2 type if Ignite supports this type or {@link Value#JAVA_OBJECT} otherwise.
+     * @see Value
+     * @see DataType#getTypeFromClass(Class)
+     */
+    public static int getTypeFromClass(Class <?> x) {
+        if (x == null || Void.TYPE == x)
+            return Value.NULL;
+
+        x = Utils.getNonPrimitiveClass(x);
+
+        if (String.class == x)
+            return Value.STRING;
+        else if (Integer.class == x)
+            return Value.INT;
+        else if (Long.class == x)
+            return Value.LONG;
+        else if (Boolean.class == x)
+            return Value.BOOLEAN;
+        else if (Double.class == x)
+            return Value.DOUBLE;
+        else if (Byte.class == x)
+            return Value.BYTE;
+        else if (Short.class == x)
+            return Value.SHORT;
+        else if (Character.class == x)
+            throw new IgniteSQLException("Character type is not supported.",
+                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+        else if (Float.class == x)
+            return Value.FLOAT;
+        else if (byte[].class == x)
+            return Value.BYTES;
+        else if (UUID.class == x)
+            return Value.UUID;
+        else if (Void.class == x)
+            return Value.NULL;
+        else if (BigDecimal.class.isAssignableFrom(x))
+            return Value.DECIMAL;
+        else if (Date.class.isAssignableFrom(x))
+            return Value.DATE;
+        else if (Time.class.isAssignableFrom(x))
+            return Value.TIME;
+        else if (Timestamp.class.isAssignableFrom(x))
+            return Value.TIMESTAMP;
+        else if (java.util.Date.class.isAssignableFrom(x))
+            return Value.TIMESTAMP;
+        else if (Object[].class.isAssignableFrom(x)) // Array of any type.
+            return Value.ARRAY;
+        else if (QueryUtils.isGeometryClass(x))
+            return Value.GEOMETRY;
+        else if (LocalDateTimeUtils.LOCAL_DATE == x)
+            return Value.DATE;
+        else if (LocalDateTimeUtils.LOCAL_TIME == x)
+            return Value.TIME;
+        else if (LocalDateTimeUtils.LOCAL_DATE_TIME == x)
+            return Value.TIMESTAMP;
+        else {
+            if (JdbcUtils.customDataTypesHandler != null)
+                return JdbcUtils.customDataTypesHandler.getTypeIdFromClass(x);
+
+            return Value.JAVA_OBJECT;
+        }
     }
 
     /**
@@ -780,6 +893,8 @@ public class H2Utils {
                 stmt.setObject(idx, obj, Types.JAVA_OBJECT);
             else if (obj instanceof BigDecimal)
                 stmt.setObject(idx, obj, Types.DECIMAL);
+            else if (obj.getClass() == Instant.class)
+                stmt.setObject(idx, obj, Types.JAVA_OBJECT);
             else
                 stmt.setObject(idx, obj);
         }
@@ -977,7 +1092,24 @@ public class H2Utils {
                 keyCols.add(idxCol);
         }
 
-        return keyCols.toArray(new IndexColumn[0]);
+        return keyCols.toArray(EMPTY_COLUMNS);
     }
 
+    /**
+     * @param ses H2 session.
+     * @return Query context.
+     */
+    public static QueryContext context(Session ses) {
+        assert ses != null;
+
+        return (QueryContext)ses.getQueryContext();
+    }
+
+    /**
+     * @param c Connection.
+     * @return Query context.
+     */
+    public static QueryContext context(Connection c) {
+        return (QueryContext)((Session)((JdbcConnection)c).getSession()).getQueryContext();
+    }
 }

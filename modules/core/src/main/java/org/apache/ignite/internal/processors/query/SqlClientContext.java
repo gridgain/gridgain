@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,6 +60,12 @@ public class SqlClientContext implements AutoCloseable {
     /** Data page scan support for query execution. */
     private final @Nullable Boolean dataPageScanEnabled;
 
+    /** Update internal batch size. */
+    private final @Nullable Integer updateBatchSize;
+
+    /** Query memory limit.*/
+    private long qryMaxMemory;
+
     /** Monitor for stream operations. */
     private final Object muxStreamer = new Object();
 
@@ -103,11 +109,15 @@ public class SqlClientContext implements AutoCloseable {
      * @param replicatedOnly Replicated caches only flag.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param dataPageScanEnabled Enable scan data page mode.
+     * @param updateBatchSize Size of internal batch for DML queries.
+     * @param qryMaxMemory Query memory limit.
      */
     public SqlClientContext(GridKernalContext ctx, Factory<GridWorker> orderedBatchWorkerFactory,
         boolean distributedJoins, boolean enforceJoinOrder,
         boolean collocated, boolean replicatedOnly, boolean lazy, boolean skipReducerOnUpdate,
-        @Nullable Boolean dataPageScanEnabled) {
+        @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long qryMaxMemory
+        ) {
         this.ctx = ctx;
         this.orderedBatchWorkerFactory = orderedBatchWorkerFactory;
         this.distributedJoins = distributedJoins;
@@ -117,6 +127,8 @@ public class SqlClientContext implements AutoCloseable {
         this.lazy = lazy;
         this.skipReducerOnUpdate = skipReducerOnUpdate;
         this.dataPageScanEnabled = dataPageScanEnabled;
+        this.updateBatchSize = updateBatchSize;
+        this.qryMaxMemory = qryMaxMemory;
 
         log = ctx.log(SqlClientContext.class.getName());
     }
@@ -224,6 +236,20 @@ public class SqlClientContext implements AutoCloseable {
      */
     public @Nullable Boolean dataPageScanEnabled() {
         return dataPageScanEnabled;
+    }
+
+    /**
+     * @return Update internal batch size.
+     */
+    public @Nullable Integer updateBatchSize() {
+        return updateBatchSize;
+    }
+
+    /**
+     * @return Query memory limit in bytes.
+     */
+    public long maxMemory() {
+        return qryMaxMemory;
     }
 
     /**

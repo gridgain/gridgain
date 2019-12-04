@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,6 +36,7 @@ import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
@@ -46,7 +47,7 @@ import org.junit.Test;
  */
 public class IgnitePdsCacheStartStopWithFreqCheckpointTest extends GridCommonAbstractTest {
     /** Caches. */
-    private static final int CACHES = 10;
+    private static final int CACHES = SF.applyLB(10, 3);
 
     /** Cache name. */
     private static final String CACHE_NAME = "test";
@@ -78,7 +79,7 @@ public class IgnitePdsCacheStartStopWithFreqCheckpointTest extends GridCommonAbs
         return cfg;
     }
 
-    /** {@inheritDoc} */
+    /** */
     private CacheConfiguration cacheConfiguration(int cacheIdx) {
         CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME + cacheIdx)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
@@ -151,7 +152,7 @@ public class IgnitePdsCacheStartStopWithFreqCheckpointTest extends GridCommonAbs
             }
         });
 
-        U.sleep(60_000);
+        U.sleep(SF.applyLB(60_000, 10_000));
 
         log.info("Stopping caches start/stop process.");
 

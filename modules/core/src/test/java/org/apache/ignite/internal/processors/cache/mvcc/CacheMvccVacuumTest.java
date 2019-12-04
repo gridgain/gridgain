@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.mvcc;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -34,27 +33,12 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
  * Vacuum test.
  */
 public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
     /** {@inheritDoc} */
     @Override protected CacheMode cacheMode() {
         return PARTITIONED;
@@ -186,6 +170,7 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
 
         Ignite node0 = startGrid(0);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
         ensureNoVacuum(node0);
 
         node0.cluster().active(true);
@@ -219,6 +204,7 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
         Ignite node0 = startGrid(0);
         Ignite node1 = startGrid(1);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
         node0.cluster().active(true);
 
         IgniteCache<Object, Object> cache = node0.createCache(
@@ -257,6 +243,8 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
         Ignite node0 = startGrid(0);
         Ignite node1 = startGrid(1);
 
+        node0.cluster().baselineAutoAdjustEnabled(false);
+
         ensureNoVacuum(node0);
         ensureNoVacuum(node1);
 
@@ -264,7 +252,7 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
 
         IgniteCache<Object, Object> cache = node0.createCache(
             cacheConfiguration(PARTITIONED, CacheWriteSynchronizationMode.FULL_SYNC, 1, 16)
-                .setNodeFilter(new NodeFilter(node0.cluster().node().id())));
+                .setNodeFilter(new NodeFilter(node0.cluster().node().consistentId())));
 
         cache.put(1, 0);
 
@@ -359,19 +347,19 @@ public class CacheMvccVacuumTest extends CacheMvccAbstractTest {
      * Filter specifying on which node the cache should be started.
      */
     public static class NodeFilter implements IgnitePredicate<ClusterNode> {
-        /** Cache should be created node with certain UUID. */
-        public UUID uuid;
+        /** Cache should be created node with certain consistentId. */
+        public Object consistentId;
 
         /**
-         * @param uuid node ID.
+         * @param consistentId node ID.
          */
-        public NodeFilter(UUID uuid) {
-            this.uuid = uuid;
+        public NodeFilter(Object consistentId) {
+            this.consistentId = consistentId;
         }
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode clusterNode) {
-            return clusterNode.id().equals(uuid);
+            return clusterNode.consistentId().equals(consistentId);
         }
     }
 }

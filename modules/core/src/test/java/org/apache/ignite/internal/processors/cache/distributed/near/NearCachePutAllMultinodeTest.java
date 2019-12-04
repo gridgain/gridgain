@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -50,6 +51,11 @@ public class NearCachePutAllMultinodeTest extends GridCommonAbstractTest {
 
     /** Client flag. */
     private boolean client;
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return 30_000;
+    }
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -100,6 +106,7 @@ public class NearCachePutAllMultinodeTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-11877")
     @Test
     public void testMultithreadedPutAll() throws Exception {
         final AtomicInteger idx = new AtomicInteger();

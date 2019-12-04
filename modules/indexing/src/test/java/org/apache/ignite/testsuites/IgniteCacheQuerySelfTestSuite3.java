@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinu
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryCounterReplicatedTxTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryExecuteInPrimaryTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFactoryAsyncFilterRandomOperationTest;
-import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFailoverAtomicNearEnabledSelfSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousWithTransformerClientSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousWithTransformerReplicatedSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.ClientReconnectContinuousQueryTest;
@@ -51,36 +50,29 @@ import org.junit.runners.Suite;
     GridCacheContinuousQueryNodesFilteringTest.class,
     GridCacheContinuousQueryPartitionTxOneNodeTest.class,
     CacheContinuousWithTransformerReplicatedSelfTest.class,
-    CacheContinuousQueryExecuteInPrimaryTest.class,
     CacheContinuousWithTransformerClientSelfTest.class,
-    ClientReconnectContinuousQueryTest.class,
+    CacheContinuousQueryExecuteInPrimaryTest.class,
     IgniteCacheContinuousQueryNoUnsubscribeTest.class,
+
+    ClientReconnectContinuousQueryTest.class,
+    IgniteCacheContinuousQueryReconnectTest.class,
     IgniteCacheContinuousQueryClientTxReconnectTest.class,
     IgniteCacheContinuousQueryClientReconnectTest.class,
+
     GridCacheContinuousQueryAtomicSelfTest.class,
     GridCacheContinuousQueryAtomicNearEnabledSelfTest.class,
-    GridCacheContinuousQueryPartitionTxOneNodeTest.class,
-    IgniteCacheContinuousQueryClientReconnectTest.class,
-    IgniteCacheContinuousQueryClientTxReconnectTest.class,
-    GridCacheContinuousQueryReplicatedSelfTest.class,
-    CacheContinuousQueryFactoryAsyncFilterRandomOperationTest.class,
     GridCacheContinuousQueryPartitionedSelfTest.class,
+    GridCacheContinuousQueryReplicatedSelfTest.class,
+
+    CacheContinuousQueryFactoryAsyncFilterRandomOperationTest.class,
     CacheContinuousBatchForceServerModeAckTest.class,
-    CacheContinuousQueryExecuteInPrimaryTest.class,
-    GridCacheContinuousQueryNodesFilteringTest.class,
-    IgniteCacheContinuousQueryNoUnsubscribeTest.class,
-    ClientReconnectContinuousQueryTest.class,
     ContinuousQueryReassignmentTest.class,
     CacheContinuousQueryConcurrentPartitionUpdateTest.class,
-    CacheContinuousQueryFactoryAsyncFilterRandomOperationTest.class,
 
     CacheContinuousQueryCounterPartitionedAtomicTest.class,
     CacheContinuousQueryCounterPartitionedTxTest.class,
     CacheContinuousQueryCounterReplicatedAtomicTest.class,
-    CacheContinuousQueryCounterReplicatedTxTest.class,
-    CacheContinuousQueryFailoverAtomicNearEnabledSelfSelfTest.class,
-
-    IgniteCacheContinuousQueryReconnectTest.class
+    CacheContinuousQueryCounterReplicatedTxTest.class
 })
 public class IgniteCacheQuerySelfTestSuite3 {
 }

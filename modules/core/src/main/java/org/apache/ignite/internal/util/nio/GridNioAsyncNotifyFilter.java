@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,6 +61,27 @@ public class GridNioAsyncNotifyFilter extends GridNioFilterAdapter {
 
     /** {@inheritDoc} */
     @Override public void onSessionOpened(final GridNioSession ses) throws IgniteCheckedException {
+        onSessionOpened(ses, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onSessionClosed(final GridNioSession ses) throws IgniteCheckedException {
+        onSessionClosed(ses, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onMessageReceived(final GridNioSession ses, final Object msg) throws IgniteCheckedException {
+        onMessageReceived(ses, msg, null);
+    }
+
+    /**
+     * Invoked when a new session was created.
+     *
+     * @param ses Opened session.
+     * @param opC Operation finish closure.
+     * @throws IgniteCheckedException If GridNioException occurred while handling event.
+     */
+    protected void onSessionOpened(final GridNioSession ses, Runnable opC) throws IgniteCheckedException {
         workerPool.execute(new GridWorker(igniteInstanceName, "session-opened-notify", log) {
             @Override protected void body() {
                 try {
@@ -69,12 +90,21 @@ public class GridNioAsyncNotifyFilter extends GridNioFilterAdapter {
                 catch (IgniteCheckedException e) {
                     handleException(ses, e);
                 }
+                finally {
+                    onFinish(ses, opC);
+                }
             }
         });
     }
 
-    /** {@inheritDoc} */
-    @Override public void onSessionClosed(final GridNioSession ses) throws IgniteCheckedException {
+    /**
+     * Invoked after session get closed.
+     *
+     * @param ses Closed session.
+     * @param opC Operation finish closure.
+     * @throws IgniteCheckedException If GridNioException occurred while handling event.
+     */
+    protected void onSessionClosed(final GridNioSession ses, Runnable opC) throws IgniteCheckedException {
         workerPool.execute(new GridWorker(igniteInstanceName, "session-closed-notify", log) {
             @Override protected void body() {
                 try {
@@ -83,13 +113,22 @@ public class GridNioAsyncNotifyFilter extends GridNioFilterAdapter {
                 catch (IgniteCheckedException e) {
                     handleException(ses, e);
                 }
+                finally {
+                    onFinish(ses, opC);
+                }
             }
         });
-
     }
 
-    /** {@inheritDoc} */
-    @Override public void onMessageReceived(final GridNioSession ses, final Object msg) throws IgniteCheckedException {
+    /**
+     * Invoked when a new messages received.
+     *
+     * @param ses Session on which message was received.
+     * @param msg Received message.
+     * @param opC Operation finish closure.
+     * @throws IgniteCheckedException If IgniteCheckedException occurred while handling event.
+     */
+    protected void onMessageReceived(final GridNioSession ses, final Object msg, Runnable opC) throws IgniteCheckedException {
         workerPool.execute(new GridWorker(igniteInstanceName, "message-received-notify", log) {
             @Override protected void body() {
                 try {
@@ -97,6 +136,9 @@ public class GridNioAsyncNotifyFilter extends GridNioFilterAdapter {
                 }
                 catch (IgniteCheckedException e) {
                     handleException(ses, e);
+                }
+                finally {
+                    onFinish(ses, opC);
                 }
             }
         });
@@ -131,6 +173,19 @@ public class GridNioAsyncNotifyFilter extends GridNioFilterAdapter {
     /** {@inheritDoc} */
     @Override public void onSessionWriteTimeout(GridNioSession ses) throws IgniteCheckedException {
         proceedSessionWriteTimeout(ses);
+    }
+
+    /**
+     * @param ses Session.
+     * @param opC Operation finish closure.
+     */
+    private void onFinish(GridNioSession ses, Runnable opC) {
+        try {
+            if (opC != null)
+                opC.run();
+        } catch (Throwable e) {
+            handleException(ses, U.cast(e));
+        }
     }
 
     /**

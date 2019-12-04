@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.lang.reflect.Constructor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.management.NoopManagementConsoleProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
@@ -27,28 +28,32 @@ import org.jetbrains.annotations.Nullable;
  * Component type.
  */
 public enum IgniteComponentType {
-    /** IGFS. */
+    /** @deprecated Should be removed. */
+    @Deprecated
     IGFS(
         "org.apache.ignite.internal.processors.igfs.IgfsNoopProcessor",
         "org.apache.ignite.internal.processors.igfs.IgfsProcessor",
         "ignite-hadoop"
     ),
 
-    /** Hadoop. */
+    /** @deprecated Should be removed. */
+    @Deprecated
     HADOOP(
         "org.apache.ignite.internal.processors.hadoop.HadoopNoopProcessor",
         "org.apache.ignite.internal.processors.hadoop.HadoopProcessor",
         "ignite-hadoop"
     ),
 
-    /** Hadoop Helper component. */
+    /** @deprecated Should be removed. */
+    @Deprecated
     HADOOP_HELPER(
         "org.apache.ignite.internal.processors.hadoop.HadoopNoopHelper",
         "org.apache.ignite.internal.processors.hadoop.HadoopHelperImpl",
         "ignite-hadoop"
     ),
 
-    /** IGFS helper component. */
+    /** @deprecated Should be removed. */
+    @Deprecated
     IGFS_HELPER(
         "org.apache.ignite.internal.processors.igfs.IgfsNoopHelper",
         "org.apache.ignite.internal.processors.igfs.IgfsHelperImpl",
@@ -91,10 +96,26 @@ public enum IgniteComponentType {
         "ignite-schedule"
     ),
 
+    /** */
     COMPRESSION(
         CompressionProcessor.class.getName(),
         "org.apache.ignite.internal.processors.compress.CompressionProcessorImpl",
         "ignite-compress"
+    ),
+
+    /** OpenCensus tracing implementation. */
+    TRACING(
+        null,
+        "org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi",
+        "ignite-opencensus"
+    ),
+
+    /** Management console. */
+    MANAGEMENT_CONSOLE(
+        NoopManagementConsoleProcessor.class.getName(),
+        "org.apache.ignite.agent.ManagementConsoleProcessor",
+        "ignite-management-console-agent",
+        "org.apache.ignite.agent.processor.metrics.MetricsExporterMessageFactory"
     );
 
     /** No-op class name. */

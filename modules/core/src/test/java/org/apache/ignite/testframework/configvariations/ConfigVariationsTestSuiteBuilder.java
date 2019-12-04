@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,16 +27,11 @@ import java.util.stream.Collectors;
 import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.CtNewMethod;
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.ConstPool;
-import javassist.bytecode.annotation.Annotation;
+import javassist.CtNewConstructor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.testframework.junits.IgniteCacheConfigVariationsAbstractTest;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.junits.IgniteCacheConfigVariationsAbstractTest;
 import org.apache.ignite.testframework.junits.IgniteConfigVariationsAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
@@ -430,22 +425,12 @@ public class ConfigVariationsTestSuiteBuilder {
         try {
             cl.setSuperclass(cp.get(cls.getName()));
 
-            CtMethod mtd = CtNewMethod.make("public static void init() { "
-                + "injectTestsConfiguration("
-                + ConfigVariationsTestSuiteBuilder.class.getName()
-                + ".getCfg(\"" + clsName + "\")); }", cl);
-
-            // Create and add annotation.
-            ClassFile ccFile = cl.getClassFile();
-            ConstPool constpool = ccFile.getConstPool();
-
-            AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-            Annotation annot = new Annotation("org.junit.BeforeClass", constpool);
-
-            attr.addAnnotation(annot);
-            mtd.getMethodInfo().addAttribute(attr);
-
-            cl.addMethod(mtd);
+            cl.addConstructor(CtNewConstructor.make("public " + clsName + "() { "
+                    + "this.testsCfg = "
+                    + ConfigVariationsTestSuiteBuilder.class.getName()
+                    + ".getCfg(\"" + clsName + "\"); "
+                    + "}"
+                , cl));
 
             return cl.toClass();
         }

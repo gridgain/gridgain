@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,10 @@
 
 package org.apache.ignite.spi.discovery;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Collections;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,12 +33,6 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import org.junit.Test;
 
 /**
@@ -112,24 +110,19 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
 
             /** {@inheritDoc} */
             @Override public IgniteFuture<?> onDiscovery(
-                int type,
-                long topVer,
-                ClusterNode node,
-                Collection<ClusterNode> topSnapshot,
-                @Nullable Map<Long, Collection<ClusterNode>> topHist,
-                @Nullable DiscoverySpiCustomMessage spiCustomMsg
+                DiscoveryNotification notification
             ) {
-                if (EventType.EVT_NODE_METRICS_UPDATED == type) {
-                    log.info("Metrics update message catched from node " + node);
+                if (EventType.EVT_NODE_METRICS_UPDATED == notification.type()) {
+                    log.info("Metrics update message catched from node " + notification.getNode());
 
                     assertFalse(locNode.isClient());
 
-                    if (node.isClient())
+                    if (notification.getNode().isClient())
                         clientMetricsUpdateCnt++;
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+                    return delegate.onDiscovery(notification);
 
                 return new IgniteFinishedFutureImpl<>();
             }

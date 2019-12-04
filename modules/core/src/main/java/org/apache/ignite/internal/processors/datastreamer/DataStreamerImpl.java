@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -74,7 +74,8 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.CacheStoppedException;
+import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -85,6 +86,8 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheFutureImpl;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -96,6 +99,7 @@ import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -326,7 +330,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                 // Only async notification is possible since
                 // discovery thread may be trapped otherwise.
                 if (buf != null) {
-                    waitAffinityAndRun(new Runnable() {
+                    waitAffinityAndRun(new GridPlainRunnable() {
                         @Override public void run() {
                             buf.onNodeLeft();
                         }
@@ -368,16 +372,12 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         GridCacheAdapter cache = ctx.cache().internalCache(cacheName);
 
-        if (cache == null) { // Possible, cache is not configured on node.
-            assert ccfg != null;
+        assert ccfg != null;
 
-            if (ccfg.getCacheMode() == CacheMode.LOCAL)
-                throw new CacheException("Impossible to load Local cache configured remotely.");
+        if (cache == null && ccfg.getCacheMode() == CacheMode.LOCAL)
+            throw new CacheException("Impossible to load Local cache configured remotely.");
 
-            ctx.grid().getOrCreateCache(ccfg);
-        }
-
-        ensureCacheStarted();
+        ctx.grid().getOrCreateCache(ccfg);
     }
 
     /** {@inheritDoc} */
@@ -424,7 +424,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
     /**
      * Acquires read or write lock.
-     * 
+     *
      * @param writeLock {@code True} if acquires write lock.
      */
     private void lock(boolean writeLock) {
@@ -844,8 +844,19 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
             AffinityTopologyVersion topVer;
 
-            if (!cctx.isLocal())
-                topVer = ctx.cache().context().exchange().lastTopologyFuture().get();
+            if (!cctx.isLocal()) {
+                GridDhtPartitionsExchangeFuture exchFut = ctx.cache().context().exchange().lastTopologyFuture();
+
+                if (!exchFut.isDone()) {
+                    ExchangeActions acts = exchFut.exchangeActions();
+
+                    if (acts != null && acts.cacheStopped(CU.cacheId(cacheName)))
+                        throw new CacheStoppedException(cacheName);
+                }
+
+                // It is safe to block here even if the cache gate is acquired.
+                topVer = exchFut.get();
+            }
             else
                 topVer = ctx.cache().context().exchange().readyAffinityVersion();
 
@@ -962,6 +973,12 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                     resFut.onDone(new IgniteCheckedException("Failed to finish operation (too many remaps): "
                                         + remaps, e1));
                                 }
+                                else if (X.hasCause(e1, IgniteClusterReadOnlyException.class)) {
+                                    resFut.onDone(new IgniteClusterReadOnlyException(
+                                        "Failed to finish operation. Cluster in read-only mode!",
+                                        e1
+                                    ));
+                                }
                                 else {
                                     try {
                                         remapSem.acquire();
@@ -1046,7 +1063,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                         if (bufMappings.remove(nodeId, buf)) {
                             final Buffer buf0 = buf;
 
-                            waitAffinityAndRun(new Runnable() {
+                            waitAffinityAndRun(new GridPlainRunnable() {
                                 @Override public void run() {
                                     buf0.onNodeLeft();
 
@@ -1197,6 +1214,9 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                             log.debug("Failed to flush buffer: " + e);
 
                         err = true;
+
+                        if (X.cause(e, IgniteClusterReadOnlyException.class) != null)
+                            throw e;
                     }
                 }
 
@@ -1442,31 +1462,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         if (!ctx.security().enabled())
             return;
 
-        ctx.security().authorize(cacheName, perm, null);
-    }
-
-    /**
-     * Ensures that cache has been started and is ready to store streamed data.
-     */
-    private void ensureCacheStarted() {
-        DynamicCacheDescriptor desc = ctx.cache().cacheDescriptor(cacheName);
-
-        assert desc != null;
-
-        if (desc.startTopologyVersion() == null)
-            return;
-
-        IgniteInternalFuture<?> affReadyFut = ctx.cache().context().exchange()
-            .affinityReadyFuture(desc.startTopologyVersion());
-
-        if (affReadyFut != null) {
-            try {
-                affReadyFut.get();
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex);
-            }
-        }
+        ctx.security().authorize(cacheName, perm);
     }
 
     /**
@@ -2059,9 +2055,12 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
                     final String msg = "DataStreamer request failed [node=" + nodeId + "]";
 
-                    err = cause instanceof ClusterTopologyCheckedException ?
-                        new ClusterTopologyCheckedException(msg, cause) :
-                        new IgniteCheckedException(msg, cause);
+                    if (cause instanceof ClusterTopologyCheckedException)
+                        err = new ClusterTopologyCheckedException(msg, cause);
+                    else if (X.hasCause(cause, IgniteClusterReadOnlyException.class))
+                        err = new IgniteClusterReadOnlyException(msg, cause);
+                    else
+                        err = new IgniteCheckedException(msg, cause);
                 }
                 catch (IgniteCheckedException e) {
                     f.onDone(null, new IgniteCheckedException("Failed to unmarshal response.", e));

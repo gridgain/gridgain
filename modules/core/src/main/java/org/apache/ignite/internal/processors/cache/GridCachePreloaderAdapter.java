@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,6 +33,11 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_THROTTLE;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_TIMEOUT;
 
 /**
  * Adapter for preloading which always assumes that preloading finished.
@@ -119,12 +124,7 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     }
 
     /** {@inheritDoc} */
-    @Override public void unwindUndeploys() {
-        grp.unwindUndeploys();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void handleSupplyMessage(int idx, UUID id, GridDhtPartitionSupplyMessage s) {
+    @Override public void handleSupplyMessage(UUID id, GridDhtPartitionSupplyMessage s) {
         // No-op.
     }
 
@@ -189,5 +189,29 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     /** {@inheritDoc} */
     @Override public void resume() {
         // No-op
+    }
+
+    /** {@inheritDoc} */
+    @Override public long timeout() {
+        return grp.shared().gridConfig().getRebalanceTimeout() == DFLT_REBALANCE_TIMEOUT ?
+            grp.config().getRebalanceTimeout() : grp.shared().gridConfig().getRebalanceTimeout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long batchesPrefetchCount() {
+        return grp.shared().gridConfig().getRebalanceBatchesPrefetchCount() == DFLT_REBALANCE_BATCHES_PREFETCH_COUNT ?
+            grp.config().getRebalanceBatchesPrefetchCount() : grp.shared().gridConfig().getRebalanceBatchesPrefetchCount();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long throttle() {
+        return grp.shared().gridConfig().getRebalanceThrottle() == DFLT_REBALANCE_THROTTLE ?
+            grp.config().getRebalanceThrottle() : grp.shared().gridConfig().getRebalanceThrottle();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int batchSize() {
+        return grp.shared().gridConfig().getRebalanceBatchSize() == DFLT_REBALANCE_BATCH_SIZE ?
+            grp.config().getRebalanceBatchSize() : grp.shared().gridConfig().getRebalanceBatchSize();
     }
 }

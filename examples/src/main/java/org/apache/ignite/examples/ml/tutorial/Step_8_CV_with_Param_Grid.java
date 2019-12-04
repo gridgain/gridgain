@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -119,19 +119,21 @@ public class Step_8_CV_with_Param_Grid {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .addHyperParam("maxDeep", new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 10.0})
-                    .addHyperParam("minImpurityDecrease", new Double[]{0.0, 0.25, 0.5});
+                    .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 10.0})
+                    .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.25, 0.5});
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score(
-                    trainerCV,
-                    new Accuracy<>(),
-                    ignite,
-                    dataCache,
-                    split.getTrainFilter(),
-                    normalizationPreprocessor,
-                    3,
-                    paramGrid
-                );
+                scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
+                    .withTrainer(trainerCV)
+                    .withMetric(new Accuracy<>())
+                    .withFilter(split.getTrainFilter())
+                    .isRunningOnPipeline(false)
+                    .withPreprocessor(normalizationPreprocessor)
+                    .withAmountOfFolds(3)
+                    .withParamGrid(paramGrid);
+
+                CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));
@@ -174,6 +176,8 @@ public class Step_8_CV_with_Param_Grid {
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

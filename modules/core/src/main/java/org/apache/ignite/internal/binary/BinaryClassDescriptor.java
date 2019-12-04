@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -401,6 +401,20 @@ public class BinaryClassDescriptor {
      */
     boolean isEnum() {
         return mode == BinaryWriteMode.ENUM;
+    }
+
+    /**
+     * @return {@code True} if the type is registered as an OBJECT.
+     */
+    boolean isObject() {
+        return mode == BinaryWriteMode.OBJECT;
+    }
+
+    /**
+     * @return {@code True} if the type is registered as a BINARY object.
+     */
+    boolean isBinary() {
+        return mode == BinaryWriteMode.BINARY;
     }
 
     /**
@@ -911,6 +925,56 @@ public class BinaryClassDescriptor {
 
             throw new BinaryObjectException(msg, e);
         }
+    }
+
+    /**
+     * @return A copy of this {@code BinaryClassDescriptor} marked as registered.
+     */
+    BinaryClassDescriptor makeRegistered() {
+        if (registered)
+            return this;
+        else
+            return new BinaryClassDescriptor(ctx,
+                cls,
+                userType,
+                typeId,
+                typeName,
+                affKeyFieldName,
+                mapper,
+                initialSerializer,
+                stableFieldsMeta != null,
+                true);
+    }
+
+    /**
+     * @return Instance of {@link BinaryMetadata} for this type.
+     */
+    BinaryMetadata metadata() {
+        return new BinaryMetadata(
+            typeId,
+            typeName,
+            stableFieldsMeta,
+            affKeyFieldName,
+            null,
+            isEnum(),
+            cls.isEnum() ? enumMap(cls) : null);
+    }
+
+    /**
+     * @param cls Enum class.
+     * @return Enum name to ordinal mapping.
+     */
+    private static Map<String, Integer> enumMap(Class<?> cls) {
+        assert cls.isEnum();
+
+        Object[] enumVals = cls.getEnumConstants();
+
+        Map<String, Integer> enumMap = new LinkedHashMap<>(enumVals.length);
+
+        for (Object enumVal : enumVals)
+            enumMap.put(((Enum)enumVal).name(), ((Enum)enumVal).ordinal());
+
+        return enumMap;
     }
 
     /**

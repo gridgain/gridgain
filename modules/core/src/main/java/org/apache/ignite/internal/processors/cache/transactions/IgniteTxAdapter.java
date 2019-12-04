@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -704,22 +704,22 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     }
 
     /** {@inheritDoc} */
-    @Override public void addInvalidPartition(GridCacheContext<?, ?> cacheCtx, int part) {
+    @Override public void addInvalidPartition(int cacheId, int part) {
         if (invalidParts == null)
             invalidParts = new HashMap<>();
 
-        Set<Integer> parts = invalidParts.get(cacheCtx.cacheId());
+        Set<Integer> parts = invalidParts.get(cacheId);
 
         if (parts == null) {
             parts = new HashSet<>();
 
-            invalidParts.put(cacheCtx.cacheId(), parts);
+            invalidParts.put(cacheId, parts);
         }
 
         parts.add(part);
 
         if (log.isDebugEnabled())
-            log.debug("Added invalid partition for transaction [cache=" + cacheCtx.name() + ", part=" + part +
+            log.debug("Added invalid partition for transaction [cacheId=" + cacheId + ", part=" + part +
                 ", tx=" + this + ']');
     }
 
@@ -807,18 +807,16 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     public void logTxFinishErrorSafe(@Nullable IgniteLogger log, boolean commit, Throwable e) {
         assert e != null : "Exception is expected";
 
-        final String fmt = "Failed completing the transaction: [commit=%s, tx=%s, plc=%s]";
+        final String fmt = "Failed completing the transaction: [commit=%s, tx=%s]";
 
         try {
             // First try printing a full transaction. This is error prone.
-            U.error(log, String.format(fmt, commit, this,
-                cctx.gridConfig().getFailureHandler().getClass().getSimpleName()), e);
+            U.error(log, String.format(fmt, commit, this), e);
         }
         catch (Throwable e0) {
             e.addSuppressed(e0);
 
-            U.error(log, String.format(fmt, commit, CU.txString(this),
-                cctx.gridConfig().getFailureHandler().getClass().getSimpleName()), e);
+            U.error(log, String.format(fmt, commit, CU.txString(this)), e);
         }
     }
 
@@ -1380,23 +1378,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
     /**
      * @param stores Store managers.
-     * @return If {@code isWriteToStoreFromDht} value same for all stores.
-     */
-    protected boolean isWriteToStoreFromDhtValid(Collection<CacheStoreManager> stores) {
-        if (stores != null && !stores.isEmpty()) {
-            boolean exp = F.first(stores).isWriteToStoreFromDht();
-
-            for (CacheStoreManager store : stores) {
-                if (store.isWriteToStoreFromDht() != exp)
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @param stores Store managers.
      * @param commit Commit flag.
      * @throws IgniteCheckedException In case of error.
      */
@@ -1427,16 +1408,14 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         Collection<CacheStoreManager> stores = txState().stores(cctx);
 
-        if (stores == null || stores.isEmpty())
+        if (F.isEmpty(stores))
             return;
-
-        assert isWriteToStoreFromDhtValid(stores) : "isWriteToStoreFromDht can't be different within one transaction";
 
         CacheStoreManager first = F.first(stores);
 
         boolean isWriteToStoreFromDht = first.isWriteToStoreFromDht();
 
-        if ((local() || first.isLocal()) && (near() || isWriteToStoreFromDht)) {
+        if (local() && (near() || isWriteToStoreFromDht)) {
             try {
                 if (writeEntries != null) {
                     Map<KeyCacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>> putMap = null;
@@ -1453,10 +1432,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                                 e.cached().detached() ||
                                 !e.context().affinity().primaryByPartition(e.cached().partition(), topologyVersion()).isLocal();
                         }
-
-                        if (!skip && !local() && // Update local store at backups only if needed.
-                            cctx.localStorePrimaryOnly())
-                            skip = true;
 
                         if (skip)
                             continue;
@@ -2322,7 +2297,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
 
         /** {@inheritDoc} */
-        @Override public void addInvalidPartition(GridCacheContext cacheCtx, int part) {
+        @Override public void addInvalidPartition(int cacheId, int part) {
             throw new IllegalStateException("Deserialized transaction can only be used as read-only.");
         }
 

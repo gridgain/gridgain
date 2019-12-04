@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +16,15 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
+    using System;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Configuration;
+    using Apache.Ignite.Core.Impl.Cache.Expiry;
     using Apache.Ignite.Core.Impl.Client.Cache;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Tests.Cache;
@@ -147,6 +151,36 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             cache = Client.CreateCache<int, int>(cfg);
             AssertClientConfigsAreEqual(cfg, cache.GetConfiguration());
+        }
+
+        /// <summary>
+        /// Test cache creation from configuration with expiry policy.
+        /// </summary>
+        [Test]
+        public void TestCreateFromConfigurationWithExpiration()
+        {
+            var expiryPolicy = new ExpiryPolicy(
+                TimeSpan.FromMilliseconds(20),
+                TimeSpan.FromMilliseconds(10),
+                TimeSpan.FromMilliseconds(30));
+
+            // Default config.
+            var cfg = new CacheClientConfiguration("a")
+            {
+                ExpiryPolicyFactory = new ExpiryPolicyFactory(expiryPolicy)
+            };
+            var cache = Client.CreateCache<int, int>(cfg);
+            AssertExtensions.ReflectionEqual(cfg, cache.GetConfiguration());
+
+            var remoteExpiryPolicy  = cache.GetConfiguration().ExpiryPolicyFactory.CreateInstance();
+            AssertExtensions.ReflectionEqual(expiryPolicy, remoteExpiryPolicy);
+
+            cache.Put(1, 1);
+
+            // Wait for expiration period.
+            Thread.Sleep(100);
+
+            Assert.IsFalse(cache.ContainsKey(1));
         }
 
         /// <summary>

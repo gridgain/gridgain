@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,25 +72,25 @@ public class GridSqlTable extends GridSqlElement {
         this.tbl = tbl instanceof GridH2Table ? (GridH2Table)tbl : null;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
-        return getBeforeAliasSql() + getAfterAliasSQL();
+        return getBeforeAliasSql(true) + getAfterAliasSQL(true);
     }
 
     /**
      * @return SQL for the table before alias.
      */
-    public String getBeforeAliasSql() {
+    public String getBeforeAliasSql(boolean alwaysQuote) {
         if (schema == null)
-            return Parser.quoteIdentifier(tblName);
+            return Parser.quoteIdentifier(tblName, alwaysQuote);
 
-        return Parser.quoteIdentifier(schema) + '.' + Parser.quoteIdentifier(tblName);
+        return Parser.quoteIdentifier(schema, alwaysQuote) + '.' + Parser.quoteIdentifier(tblName, alwaysQuote);
     }
 
     /**
      * @return SQL for the table after alias.
      */
-    public String getAfterAliasSQL() {
+    public String getAfterAliasSQL(boolean alwaysQuote) {
         if (useIndexes == null)
             return "";
 
@@ -106,7 +106,7 @@ public class GridSqlTable extends GridSqlElement {
             else
                 b.a(", ");
 
-            b.a(Parser.quoteIdentifier(idx));
+            b.a(Parser.quoteIdentifier(idx, alwaysQuote));
         }
 
         b.a(')');

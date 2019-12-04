@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -189,6 +189,40 @@ public class PagePartitionMetaIO extends PageMetaIO {
      */
     public void setPendingTreeRoot(long pageAddr, long treeRoot) {
         throw new UnsupportedOperationException("Per partition pending tree is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     */
+    public long getPartitionMetaStoreReuseListRoot(long pageAddr) {
+        throw new UnsupportedOperationException("Partition metastore is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param listRoot List root.
+     */
+    public void setPartitionMetaStoreReuseListRoot(long pageAddr, long listRoot) {
+        throw new UnsupportedOperationException("Partition metastore is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     */
+    public long getGapsLink(long pageAddr) {
+        throw new UnsupportedOperationException("Gaps link is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param link Link.
+     */
+    public boolean setGapsLink(long pageAddr, long link) {
+        throw new UnsupportedOperationException("Gaps link is not supported by " +
             "this PagePartitionMetaIO version: ver=" + getVersion());
     }
 

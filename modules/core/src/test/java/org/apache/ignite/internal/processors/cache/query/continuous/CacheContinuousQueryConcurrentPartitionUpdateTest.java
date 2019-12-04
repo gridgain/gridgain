@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionSerializationException;
@@ -182,15 +183,15 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
 
         assertEquals(KEYS, keys.size());
 
-        final int THREADS = 10;
-        final int UPDATES = 1000;
+        final int THREADS = SF.applyLB(10, 4);
+        final int UPDATES = SF.applyLB(1000, 100);
 
         final List<IgniteCache<Object, Object>> srvCaches = new ArrayList<>();
 
         for (String cacheName : caches)
             srvCaches.add(srv.cache(cacheName));
 
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < SF.applyLB(15, 5); i++) {
             log.info("Iteration: " + i);
 
             GridTestUtils.runMultiThreaded(new Callable<Void>() {
@@ -381,7 +382,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
         for (String cacheName : caches)
             srvCaches.add(srv.cache(cacheName));
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < SF.applyLB(5, 2); i++) {
             log.info("Iteration: " + i);
 
             final AtomicBoolean stop = new AtomicBoolean();
@@ -484,7 +485,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                     }
                 }, 30000);
 
-                assertEquals(THREADS * UPDATES, qry.get1().get());
+                assertEquals(THREADS * UPDATES, evtCnt.get());
 
                 qry.get2().close();
             }

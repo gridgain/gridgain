@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,6 +90,9 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTaskResult> {
     /** Fetch size. */
     private final int fetchSize;
 
+    /** Query memory limit. */
+    private final long maxMemory;
+
     /** Local execution flag. */
     private final boolean loc;
 
@@ -112,12 +115,14 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTaskResult> {
      * @param args Args.
      * @param fetchSize Fetch size.
      * @param uuid UUID.
+     * @param maxMem Query memory limit.
      * @param locQry Local query flag.
      * @param collocatedQry Collocated query flag.
      * @param distributedJoins Distributed joins flag.
      */
     public JdbcQueryTask(Ignite ignite, String cacheName, String schemaName, String sql, Boolean isQry, boolean loc,
-        Object[] args, int fetchSize, UUID uuid, boolean locQry, boolean collocatedQry, boolean distributedJoins) {
+        Object[] args, int fetchSize, UUID uuid, long maxMem, boolean locQry, boolean collocatedQry,
+        boolean distributedJoins) {
         this.ignite = ignite;
         this.args = args;
         this.uuid = uuid;
@@ -126,6 +131,7 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTaskResult> {
         this.sql = sql;
         this.isQry = isQry;
         this.fetchSize = fetchSize;
+        this.maxMemory = maxMem;
         this.loc = loc;
         this.locQry = locQry;
         this.collocatedQry = collocatedQry;
@@ -168,6 +174,9 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTaskResult> {
             qry.setEnforceJoinOrder(enforceJoinOrder());
             qry.setLazy(lazy());
             qry.setSchema(schemaName);
+
+            if (qry instanceof  SqlFieldsQueryEx)
+                ((SqlFieldsQueryEx)qry).setMaxMemory(maxMemory);
 
             FieldsQueryCursor<List<?>> fldQryCursor = cache.withKeepBinary().query(qry);
 

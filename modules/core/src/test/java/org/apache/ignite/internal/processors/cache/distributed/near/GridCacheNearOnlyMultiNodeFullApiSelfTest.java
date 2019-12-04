@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,6 +38,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.processors.cache.GatewayProtectedCacheProxy;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -101,6 +102,8 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
 
             cfg.setCacheConfiguration();
         }
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
@@ -523,7 +526,7 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
      * @param async If {@code true} uses async method.
      * @throws Exception If failed.
      */
-    @Override protected void globalClearAll(boolean async, boolean oldAsync) throws Exception {
+    @Override protected void globalClearAll(boolean async) throws Exception {
         // Save entries only on their primary nodes. If we didn't do so, clearLocally() will not remove all entries
         // because some of them were blocked due to having readers.
         for (int i = 0; i < gridCount(); i++) {
@@ -533,16 +536,8 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
             }
         }
 
-        if (async) {
-            if (oldAsync) {
-                IgniteCache<String, Integer> asyncCache = jcache(nearIdx).withAsync();
-
-                asyncCache.clear();
-
-                asyncCache.future().get();
-            } else
-                jcache(nearIdx).clearAsync().get();
-        }
+        if (async)
+            jcache(nearIdx).clearAsync().get();
         else
             jcache(nearIdx).clear();
 

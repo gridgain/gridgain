@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
 /**
@@ -49,10 +50,13 @@ public class PendingEntriesTree extends BPlusTree<PendingRow, PendingRow> {
         PageMemory pageMem,
         long metaPageId,
         ReuseList reuseList,
-        boolean initNew)
-        throws IgniteCheckedException {
-        super(name,
+        boolean initNew,
+        PageLockListener lockLsnr
+    ) throws IgniteCheckedException {
+        super(
+            name,
             grp.groupId(),
+            grp.name(),
             pageMem,
             grp.dataRegion().config().isPersistenceEnabled() ? grp.shared().wal() : null,
             grp.offheap().globalRemoveId(),
@@ -60,7 +64,9 @@ public class PendingEntriesTree extends BPlusTree<PendingRow, PendingRow> {
             reuseList,
             grp.sharedGroup() ? CacheIdAwarePendingEntryInnerIO.VERSIONS : PendingEntryInnerIO.VERSIONS,
             grp.sharedGroup() ? CacheIdAwarePendingEntryLeafIO.VERSIONS : PendingEntryLeafIO.VERSIONS,
-            grp.shared().kernalContext().failure());
+            grp.shared().kernalContext().failure(),
+            lockLsnr
+        );
 
         this.grp = grp;
 

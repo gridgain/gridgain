@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -323,6 +323,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual("wal-store", ds.WalPath);
             Assert.AreEqual(TimeSpan.FromSeconds(18), ds.WalAutoArchiveAfterInactivity);
             Assert.IsTrue(ds.WriteThrottlingEnabled);
+            Assert.AreEqual(DiskPageCompression.Zstd, ds.WalPageCompression);
 
             var dr = ds.DataRegionConfigurations.Single();
             Assert.AreEqual(1, dr.EmptyPagesPoolSize);
@@ -357,6 +358,12 @@ namespace Apache.Ignite.Core.Tests
             
             Assert.IsTrue(failureHandler.TryStop);  
             Assert.AreEqual(TimeSpan.Parse("0:1:0"), failureHandler.Timeout);
+
+            var ec = cfg.ExecutorConfiguration;
+            Assert.NotNull(ec);
+            Assert.AreEqual(2, ec.Count);
+            Assert.AreEqual(new[] {"exec1", "exec2"}, ec.Select(e => e.Name));
+            Assert.AreEqual(new[] {1, 2}, ec.Select(e => e.Size));
         }
 
         /// <summary>
@@ -986,6 +993,8 @@ namespace Apache.Ignite.Core.Tests
                     ConcurrencyLevel = 1,
                     PageSize = 5 * 1024,
                     WalAutoArchiveAfterInactivity = TimeSpan.FromSeconds(19),
+                    WalPageCompression = DiskPageCompression.Lz4,
+                    WalPageCompressionLevel = 10,
                     DefaultDataRegionConfiguration = new DataRegionConfiguration
                     {
                         Name = "reg1",
@@ -1025,7 +1034,15 @@ namespace Apache.Ignite.Core.Tests
                     TryStop = false,
                     Timeout = TimeSpan.FromSeconds(10)
                 },
-                SqlQueryHistorySize = 345
+                SqlQueryHistorySize = 345,
+                ExecutorConfiguration = new[]
+                {
+                    new ExecutorConfiguration
+                    {
+                        Name = "exec-1",
+                        Size = 11
+                    }
+                }
             };
         }
 

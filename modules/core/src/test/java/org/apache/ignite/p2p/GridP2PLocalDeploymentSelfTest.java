@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,6 +42,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
@@ -255,7 +256,7 @@ public class GridP2PLocalDeploymentSelfTest extends GridCommonAbstractTest {
                 @Override public void run() {
                     stop.set(true);
                 }
-            }, 10, TimeUnit.SECONDS);
+            }, 5, TimeUnit.SECONDS);
 
             fut.get();
         } finally {
@@ -331,7 +332,7 @@ public class GridP2PLocalDeploymentSelfTest extends GridCommonAbstractTest {
      */
     public static class TestTask extends ComputeTaskAdapter<UUID, Serializable> {
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(final List<ClusterNode> subgrid, UUID arg) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(final List<ClusterNode> subgrid, UUID arg) {
             taskLdr = getClass().getClassLoader();
 
             for (ClusterNode node : subgrid) {

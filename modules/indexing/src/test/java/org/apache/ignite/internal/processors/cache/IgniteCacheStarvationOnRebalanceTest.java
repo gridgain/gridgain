@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,16 +41,9 @@ public class IgniteCacheStarvationOnRebalanceTest extends GridCacheAbstractSelfT
     /** Grid count. */
     private static final int GRID_CNT = 4;
 
-    /** Test timeout. */
-    private static final long TEST_TIMEOUT = 3 * 60 * 1000;
-
     /** Use small system thread pool to reproduce the issue. */
     private static final int IGNITE_THREAD_POOL_SIZE = 5;
 
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return TEST_TIMEOUT;
-    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -91,7 +84,7 @@ public class IgniteCacheStarvationOnRebalanceTest extends GridCacheAbstractSelfT
     public void testLoadSystemWithPutAndStartRebalancing() throws Exception {
         final IgniteCache<Integer, CacheValue> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        final long endTime = System.currentTimeMillis() + SF.applyLB((int)TEST_TIMEOUT - 60_000, 5_000);
+        final long endTime = System.currentTimeMillis() + SF.applyLB((int)getTestTimeout() - 60_000, 5_000);
 
         int iter = 0;
 

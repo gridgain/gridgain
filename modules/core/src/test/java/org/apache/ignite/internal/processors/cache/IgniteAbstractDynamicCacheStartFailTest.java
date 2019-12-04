@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,16 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.ObjectInputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.management.Attribute;
@@ -49,6 +39,15 @@ import javax.management.OperationsException;
 import javax.management.QueryExp;
 import javax.management.ReflectionException;
 import javax.management.loading.ClassLoaderRepository;
+import java.io.ObjectInputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -552,6 +551,8 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
 
             Ignite clientNode = startGrid(clientName1, clientCfg);
 
+            clientNode.cluster().baselineAutoAdjustEnabled(false);
+
             List<BaselineNode> baseline = new ArrayList<>(grid(0).cluster().currentBaselineTopology());
 
             baseline.add(serverNode.cluster().localNode());
@@ -710,7 +711,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
     ) {
         assert unluckyCfg >= 0 && unluckyCfg < cacheNum;
 
-        final UUID uuid = ignite(unluckyNode).cluster().localNode().id();
+        final Object consistentId = ignite(unluckyNode).cluster().localNode().consistentId();
 
         List<CacheConfiguration> cfgs = new ArrayList<>();
 
@@ -721,7 +722,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
                 cfg.setAffinity(new BrokenAffinityFunction(failOnAllNodes, getTestIgniteInstanceName(unluckyNode)));
 
             if (useFilter)
-                cfg.setNodeFilter(new NodeFilter(uuid));
+                cfg.setNodeFilter(new NodeFilter(consistentId));
 
             cfgs.add(cfg);
         }
@@ -749,7 +750,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
     ) {
         assert unluckyCfg >= 0 && unluckyCfg < cacheNum;
 
-        final UUID uuid = ignite(unluckyNode).cluster().localNode().id();
+        final Object consistentId = ignite(unluckyNode).cluster().localNode().consistentId();
 
         List<CacheConfiguration> cfgs = new ArrayList<>();
 
@@ -762,7 +763,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
                 cfg.setCacheStoreFactory(new BrokenStoreFactory(failOnAllNodes, getTestIgniteInstanceName(unluckyNode)));
 
             if (useFilter)
-                cfg.setNodeFilter(new NodeFilter(uuid));
+                cfg.setNodeFilter(new NodeFilter(consistentId));
 
             cfgs.add(cfg);
         }
@@ -853,19 +854,19 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
      * Filter specifying on which node the cache should be started.
      */
     public static class NodeFilter implements IgnitePredicate<ClusterNode> {
-        /** Cache should be created node with certain UUID. */
-        public UUID uuid;
+        /** Cache should be created node with certain consistent id. */
+        public Object consistentId;
 
         /**
-         * @param uuid node ID.
+         * @param consistentId Consistent id.
          */
-        public NodeFilter(UUID uuid) {
-            this.uuid = uuid;
+        public NodeFilter(Object consistentId) {
+            this.consistentId = consistentId;
         }
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode clusterNode) {
-            return clusterNode.id().equals(uuid);
+            return clusterNode.consistentId().equals(consistentId);
         }
     }
 

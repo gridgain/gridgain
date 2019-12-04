@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -62,6 +61,7 @@ import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewRunn
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewSchemas;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemViewTables;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.index.Index;
@@ -82,6 +82,9 @@ public class SchemaManager {
 
     /** Data tables. */
     private final ConcurrentMap<QueryTable, GridH2Table> dataTables = new ConcurrentHashMap<>();
+
+    /** System VIEW collection. */
+    private final Set<SqlSystemView> systemViews = new GridConcurrentHashSet<>();
 
     /** Mutex to synchronize schema operations. */
     private final Object schemaMux = new Object();
@@ -130,13 +133,17 @@ public class SchemaManager {
     }
 
     /**
-     * Create system views.
+     * Registers new system view.
+     *
+     * @param schema Schema to create view in.
+     * @param view System view.
      */
-    private void createSystemViews() throws IgniteCheckedException {
+    public void createSystemView(String schema, SqlSystemView view) throws IgniteCheckedException {
         boolean disabled = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
 
         if (disabled) {
-            log.info("SQL system views will not be created because they are disabled (see " +
+            if (log.isInfoEnabled())
+                log.info("SQL system views will not be created because they are disabled (see " +
                     IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS + " system property)");
 
             return;
@@ -144,17 +151,26 @@ public class SchemaManager {
 
         try {
             synchronized (schemaMux) {
-                createSchema(QueryUtils.SCHEMA_SYS, true);
+                createSchema(schema, true);
             }
 
-            try (Connection c = connMgr.connectionNoCache(QueryUtils.SCHEMA_SYS)) {
-                for (SqlSystemView view : systemViews(ctx))
-                    SqlSystemTableEngine.registerView(c, view);
+            try (H2PooledConnection c = connMgr.connection(schema)) {
+                SqlSystemTableEngine.registerView(c.connection(), view);
+
+                systemViews.add(view);
             }
         }
-        catch (SQLException e) {
+        catch (IgniteCheckedException | SQLException e) {
             throw new IgniteCheckedException("Failed to register system view.", e);
         }
+    }
+
+    /**
+     * Create system views.
+     */
+    private void createSystemViews() throws IgniteCheckedException {
+        for (SqlSystemView view : systemViews(ctx))
+            createSystemView(QueryUtils.SCHEMA_SYS, view);
     }
 
     /**
@@ -173,7 +189,7 @@ public class SchemaManager {
         views.add(new SqlSystemViewCacheGroupsIOStatistics(ctx));
         views.add(new SqlSystemViewRunningQueries(ctx));
         views.add(new SqlSystemViewQueryHistoryMetrics(ctx));
-        views.add(new SqlSystemViewTables(ctx, this));
+        views.add(new SqlSystemViewTables(ctx));
         views.add(new SqlSystemViewIndexes(ctx, this));
         views.add(new SqlSystemViewSchemas(ctx, this));
 
@@ -241,10 +257,7 @@ public class SchemaManager {
 
         H2Schema schema = schema(schemaName);
 
-        Connection conn = null;
-        try {
-            conn = connMgr.connectionForThread().connection(schema.schemaName());
-
+        try(H2PooledConnection conn = connMgr.connection(schema.schemaName())) {
             GridH2Table h2tbl = createTable(schema.schemaName(), schema, tblDesc, conn);
 
             schema.add(tblDesc);
@@ -253,8 +266,6 @@ public class SchemaManager {
                 throw new IllegalStateException("Table already exists: " + h2tbl.identifierString());
         }
         catch (SQLException e) {
-            connMgr.onSqlException(conn);
-
             throw new IgniteCheckedException("Failed to register query type: " + tblDesc, e);
         }
     }
@@ -448,7 +459,7 @@ public class SchemaManager {
      * @throws SQLException If failed to create db table.
      * @throws IgniteCheckedException If failed.
      */
-    private GridH2Table createTable(String schemaName, H2Schema schema, H2TableDescriptor tbl, Connection conn)
+    private GridH2Table createTable(String schemaName, H2Schema schema, H2TableDescriptor tbl, H2PooledConnection conn)
         throws SQLException, IgniteCheckedException {
         assert schema != null;
         assert tbl != null;
@@ -460,7 +471,7 @@ public class SchemaManager {
 
         GridH2RowDescriptor rowDesc = new GridH2RowDescriptor(tbl, tbl.type());
 
-        GridH2Table h2Tbl = H2TableEngine.createTable(conn, sql, rowDesc, tbl);
+        GridH2Table h2Tbl = H2TableEngine.createTable(conn.connection(), sql, rowDesc, tbl);
 
         for (GridH2IndexBase usrIdx : tbl.createUserIndexes())
             createInitialUserIndex(schemaName, tbl, usrIdx);
@@ -479,28 +490,26 @@ public class SchemaManager {
         if (log.isDebugEnabled())
             log.debug("Removing query index table: " + tbl.fullTableName());
 
-        Connection c = connMgr.connectionForThread().connection(tbl.schemaName());
+        try (H2PooledConnection c = connMgr.connection(tbl.schemaName())) {
+            Statement stmt = null;
 
-        Statement stmt = null;
+            try {
+                stmt = c.connection().createStatement();
 
-        try {
-            stmt = c.createStatement();
+                String sql = "DROP TABLE IF EXISTS " + tbl.fullTableName();
 
-            String sql = "DROP TABLE IF EXISTS " + tbl.fullTableName();
+                if (log.isDebugEnabled())
+                    log.debug("Dropping database index table with SQL: " + sql);
 
-            if (log.isDebugEnabled())
-                log.debug("Dropping database index table with SQL: " + sql);
-
-            stmt.executeUpdate(sql);
-        }
-        catch (SQLException e) {
-            connMgr.onSqlException(c);
-
-            throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +
-                ", table=" + tbl.fullTableName() + "]", IgniteQueryErrorCode.TABLE_DROP_FAILED, e);
-        }
-        finally {
-            U.close(stmt, log);
+                stmt.executeUpdate(sql);
+            }
+            catch (SQLException e) {
+                throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +
+                    ", table=" + tbl.fullTableName() + "]", IgniteQueryErrorCode.TABLE_DROP_FAILED, e);
+            }
+            finally {
+                U.close(stmt, log);
+            }
         }
     }
 
@@ -573,9 +582,11 @@ public class SchemaManager {
 
         try {
             // Populate index with existing cache data.
-            final GridH2RowDescriptor rowDesc = h2Tbl.rowDescriptor();
+            IndexRebuildPartialClosure idxBuild = new IndexRebuildPartialClosure(h2Tbl.cacheContext());
 
-            cacheVisitor.visit(new IndexBuildClosure(rowDesc, h2Idx));
+            idxBuild.addIndex(h2Tbl, h2Idx);
+
+            cacheVisitor.visit(idxBuild);
 
             // At this point index is in consistent state, promote it through H2 SQL statement, so that cached
             // prepared statements are re-built.
@@ -602,6 +613,10 @@ public class SchemaManager {
     public void dropIndex(final String schemaName, String idxName, boolean ifExists)
         throws IgniteCheckedException{
         String sql = H2Utils.indexDropSql(schemaName, idxName, ifExists);
+
+        GridH2Table tbl = dataTableForIndex(schemaName, idxName);
+
+        tbl.setRemoveIndexOnDestroy(true);
 
         connMgr.executeStatement(schemaName, sql);
     }
@@ -717,6 +732,13 @@ public class SchemaManager {
      */
     public Collection<GridH2Table> dataTables() {
         return dataTables.values();
+    }
+
+    /**
+     * @return all known system views.
+     */
+    public Collection<SqlSystemView> systemViews() {
+        return Collections.unmodifiableSet(systemViews);
     }
 
     /**

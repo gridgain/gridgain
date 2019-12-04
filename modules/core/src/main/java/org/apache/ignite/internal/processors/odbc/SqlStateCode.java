@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,8 @@
  */
 
 package org.apache.ignite.internal.processors.odbc;
+
+import org.apache.ignite.IgniteCluster;
 
 /**
  * SQL state codes.
@@ -72,6 +74,15 @@ public final class SqlStateCode {
     /** Internal error. */
     public static final String INTERNAL_ERROR = "50000";  // Generic value for custom "50" class.
 
+    /**
+     * Read only mode enabled on cluster. {@link IgniteCluster#readOnly()}.
+     * Value is equal to {@code org.h2.api.ErrorCode#DATABASE_IS_READ_ONLY} code.
+     */
+    public static final String CLUSTER_READ_ONLY_MODE_ENABLED = "90097";
+
     /** Query canceled. */
     public static final String QUERY_CANCELLED = "57014";
+
+    /** Query canceled. */
+    public static final String MEMORY_ALLOCATION_ERROR = "HY001";
 }

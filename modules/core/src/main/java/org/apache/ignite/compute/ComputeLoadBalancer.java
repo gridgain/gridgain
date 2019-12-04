@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Load balancer is used for finding the best balanced node according
@@ -106,9 +105,10 @@ public interface ComputeLoadBalancer {
      * @param job Job to get the balanced node for.
      * @param exclNodes Optional collection of nodes that should be excluded from balanced nodes.
      *      If collection is {@code null} or empty - no nodes will be excluded.
-     * @return Next balanced node.
+     * @return Next balanced node. If this method returns {@code null}, an exception will be thrown during Ignite
+     *      job mapping process.
      * @throws IgniteException If any error occurred when finding next balanced node.
      */
-    @Nullable public ClusterNode getBalancedNode(ComputeJob job, @Nullable Collection<ClusterNode> exclNodes)
+    public ClusterNode getBalancedNode(ComputeJob job, Collection<ClusterNode> exclNodes)
         throws IgniteException;
 }

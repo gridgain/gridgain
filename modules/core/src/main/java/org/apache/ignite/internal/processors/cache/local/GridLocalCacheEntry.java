@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -198,8 +198,12 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
 
     /**
      * Rechecks if lock should be reassigned.
+     *
+     * @param ver Thread chain version.
+     *
+     * @return {@code True} if thread chain processing must be stopped.
      */
-    public void recheck() {
+    public boolean recheck(GridCacheVersion ver) {
         CacheObject val;
         CacheLockCandidates prev = null;
         CacheLockCandidates owner = null;
@@ -224,7 +228,9 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
             unlockEntry();
         }
 
-        checkOwnerChanged(prev, owner, val);
+        checkOwnerChanged(prev, owner, val, true);
+
+        return owner == null || !owner.hasCandidate(ver); // Will return false if locked by thread chain version.
     }
 
     /** {@inheritDoc} */
@@ -245,12 +251,9 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
 
                     GridLocalCacheEntry e = (GridLocalCacheEntry)cctx0.cache().peekEx(cand.parent().key());
 
-                    // At this point candidate may have been removed and entry destroyed,
-                    // so we check for null.
-                    if (e != null)
-                        e.recheck();
-
-                    break;
+                    // At this point candidate may have been removed and entry destroyed, so we check for null.
+                    if (e == null || e.recheck(owner.version()))
+                        break;
                 }
             }
         }

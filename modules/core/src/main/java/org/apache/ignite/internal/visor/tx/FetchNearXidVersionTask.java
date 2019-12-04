@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,10 @@ package org.apache.ignite.internal.visor.tx;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
@@ -25,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -81,5 +85,12 @@ public class FetchNearXidVersionTask extends VisorMultiNodeTask<TxVerboseId, Gri
 
             return null;
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Collection<UUID> jobNodes(VisorTaskArgument<TxVerboseId> arg) {
+        return ignite.cluster().nodes().stream()
+            .map(ClusterNode::id)
+            .collect(Collectors.toList());
     }
 }

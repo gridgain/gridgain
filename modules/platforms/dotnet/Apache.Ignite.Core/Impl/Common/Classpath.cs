@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,30 +41,29 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Creates classpath from the given configuration, or default classpath if given config is null.
         /// </summary>
-        /// <param name="cfg">The configuration.</param>
+        /// <param name="classPath">Known or additional classpath, can be null.</param>
+        /// <param name="igniteHome">Ignite home, can be null.</param>
         /// <param name="forceTestClasspath">Append test directories even if
         /// <see cref="EnvIgniteNativeTestClasspath" /> is not set.</param>
         /// <param name="log">The log.</param>
         /// <returns>
         /// Classpath string.
         /// </returns>
-        internal static string CreateClasspath(IgniteConfiguration cfg = null, bool forceTestClasspath = false, 
+        internal static string CreateClasspath(string classPath, string igniteHome, bool forceTestClasspath = false,
             ILogger log = null)
         {
             var cpStr = new StringBuilder();
 
-            if (cfg != null && cfg.JvmClasspath != null)
+            if (!string.IsNullOrWhiteSpace(classPath))
             {
-                cpStr.Append(cfg.JvmClasspath);
+                cpStr.Append(classPath);
 
-                if (!cfg.JvmClasspath.EndsWith(ClasspathSeparator))
+                if (!classPath.EndsWith(ClasspathSeparator))
                     cpStr.Append(ClasspathSeparator);
             }
 
-            var ggHome = IgniteHome.Resolve(cfg, log);
-
-            if (!string.IsNullOrWhiteSpace(ggHome))
-                AppendHomeClasspath(ggHome, forceTestClasspath, cpStr);
+            if (!string.IsNullOrWhiteSpace(igniteHome))
+                AppendHomeClasspath(igniteHome, forceTestClasspath, cpStr);
 
             if (log != null)
             {
@@ -87,7 +86,9 @@ namespace Apache.Ignite.Core.Impl.Common
         private static void AppendHomeClasspath(string ggHome, bool forceTestClasspath, StringBuilder cpStr)
         {
             // Append test directories (if needed) first, because otherwise build *.jar will be picked first.
-            if (forceTestClasspath || "true".Equals(Environment.GetEnvironmentVariable(EnvIgniteNativeTestClasspath)))
+            if (forceTestClasspath || bool.TrueString.Equals(
+                    Environment.GetEnvironmentVariable(EnvIgniteNativeTestClasspath),
+                    StringComparison.OrdinalIgnoreCase))
             {
                 AppendTestClasses(Path.Combine(ggHome, "examples"), cpStr);
                 AppendTestClasses(Path.Combine(ggHome, "modules"), cpStr);

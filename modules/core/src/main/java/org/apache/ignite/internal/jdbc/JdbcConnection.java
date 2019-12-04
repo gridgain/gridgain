@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,8 +64,12 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_PORT;
  */
 @Deprecated
 public class JdbcConnection implements Connection {
-    /** Validation task name. */
-    private static final String VALID_TASK_NAME =
+    /** Connection validation task name. */
+    private static final String CONNECTION_VALID_TASK_NAME =
+        "org.apache.ignite.internal.jdbc.JdbcConnectionValidationTask";
+
+    /** Cache validation task name. */
+    private static final String CACHE_VALID_TASK_NAME =
         "org.apache.ignite.internal.processors.cache.query.jdbc.GridCacheQueryJdbcValidationTask";
 
     /** Ignite client. */
@@ -85,6 +89,9 @@ public class JdbcConnection implements Connection {
 
     /** Timeout. */
     private int timeout;
+
+    /** Whether using security. */
+    private boolean usingSecurity;
 
     /**
      * Creates new connection.
@@ -114,10 +121,14 @@ public class JdbcConnection implements Connection {
             String passwd = props.getProperty("password");
 
             if (!F.isEmpty(user)) {
+                usingSecurity = true;
+
                 SecurityCredentials creds = new SecurityCredentials(user, passwd);
 
                 cfg.setSecurityCredentialsProvider(new SecurityCredentialsBasicProvider(creds));
             }
+            else
+                usingSecurity = false;
 
             // Disable all fetching and caching for metadata.
             cfg.setEnableMetricsCache(false);
@@ -452,7 +463,9 @@ public class JdbcConnection implements Connection {
             throw new SQLException("Invalid timeout: " + timeout);
 
         try {
-            return client.compute().<Boolean>executeAsync(VALID_TASK_NAME, cacheName).get(timeout, SECONDS);
+            return client.compute()
+                .<Boolean>executeAsync(usingSecurity ? CONNECTION_VALID_TASK_NAME : CACHE_VALID_TASK_NAME, cacheName)
+                .get(timeout, SECONDS);
         }
         catch (GridClientDisconnectedException | GridClientFutureTimeoutException e) {
             throw new SQLException("Failed to establish connection.", e);

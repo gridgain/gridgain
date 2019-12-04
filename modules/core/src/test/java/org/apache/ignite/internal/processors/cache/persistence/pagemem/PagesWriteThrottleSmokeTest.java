@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,7 +40,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
-import org.apache.ignite.internal.processors.cache.ratemetrics.HitRateMetrics;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -127,9 +127,9 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
 
             final AtomicBoolean zeroDropdown = new AtomicBoolean(false);
 
-            final HitRateMetrics putRate10secs = new HitRateMetrics(10_000, 20);
+            final HitRateMetric putRate10secs = new HitRateMetric("putRate10secs", "", 10_000, 20);
 
-            final HitRateMetrics putRate1sec = new HitRateMetrics(1_000, 20);
+            final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 1_000, 20);
 
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
@@ -138,10 +138,10 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
 
                         while (run.get()) {
                             System.out.println(
-                                "Put rate over last 10 seconds: " + (putRate10secs.getRate() / 10) +
-                                    " puts/sec, over last 1 second: " + putRate1sec.getRate());
+                                "Put rate over last 10 seconds: " + (putRate10secs.value() / 10) +
+                                    " puts/sec, over last 1 second: " + putRate1sec.value());
 
-                            if (putRate10secs.getRate() == 0) {
+                            if (putRate10secs.value() == 0) {
                                 zeroDropdown.set(true);
 
                                 run.set(false);
@@ -172,9 +172,9 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                         cache.put(ThreadLocalRandom.current().nextInt(keyCnt), new TestValue(ThreadLocalRandom.current().nextInt(),
                             ThreadLocalRandom.current().nextInt()));
 
-                        putRate10secs.onHit();
+                        putRate10secs.increment();
 
-                        putRate1sec.onHit();
+                        putRate1sec.increment();
                     }
 
                     run.set(false);

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,8 +19,10 @@ package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,6 +30,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -38,9 +41,9 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -220,9 +223,9 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
         RebalanceBlockingSPI commSpi = (RebalanceBlockingSPI)ig1.configuration().getCommunicationSpi();
 
         // Complete all futures for groups that we don't need to wait.
-        commSpi.resumeRebalanceFutures.forEach((k, v) -> {
+        commSpi.suspendedMessages.forEach((k, v) -> {
             if (k != CU.cacheId(groupName))
-                v.onDone();
+                commSpi.resume(k);
         });
 
         CountDownLatch latch = commSpi.suspendRebalanceInMiddleLatch.get(CU.cacheId(groupName));
@@ -235,7 +238,7 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
         testAction.apply(ig0);
 
         // Resume rebalance after action performed.
-        commSpi.resumeRebalanceFutures.get(CU.cacheId(groupName)).onDone();
+        commSpi.resume(CU.cacheId(groupName));
 
         awaitPartitionMapExchange(true, true, null, true);
 
@@ -256,6 +259,7 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
             .setRebalanceBatchSize(REBALANCE_BATCH_SIZE)
             .setCacheMode(CacheMode.REPLICATED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAffinity(new RendezvousAffinityFunction(false, 64))
         ).collect(Collectors.toList());
 
         ig.getOrCreateCaches(configs);
@@ -263,7 +267,7 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
         configs.forEach(cfg -> {
             try (IgniteDataStreamer<Object, Object> streamer = ig.dataStreamer(cfg.getName())) {
                 for (int i = 0; i < KEYS_SIZE; i++)
-                    streamer.addData(i, new byte[1024]);
+                    streamer.addData(i, i);
 
                 streamer.flush();
             }
@@ -275,15 +279,15 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
      */
     private static class RebalanceBlockingSPI extends TcpCommunicationSpi {
         /** */
-        private final Map<Integer, GridFutureAdapter> resumeRebalanceFutures = new ConcurrentHashMap<>();
+        private final Map<Integer, Queue<T3<UUID, Message, IgniteRunnable>>> suspendedMessages = new ConcurrentHashMap<>();
 
         /** */
         private final Map<Integer, CountDownLatch> suspendRebalanceInMiddleLatch = new ConcurrentHashMap<>();
 
         /** */
         RebalanceBlockingSPI() {
-            resumeRebalanceFutures.put(CU.cacheId(GROUP_1), new GridFutureAdapter());
-            resumeRebalanceFutures.put(CU.cacheId(GROUP_2), new GridFutureAdapter());
+            suspendedMessages.put(CU.cacheId(GROUP_1), new ConcurrentLinkedQueue<>());
+            suspendedMessages.put(CU.cacheId(GROUP_2), new ConcurrentLinkedQueue<>());
             suspendRebalanceInMiddleLatch.put(CU.cacheId(GROUP_1), new CountDownLatch(3));
             suspendRebalanceInMiddleLatch.put(CU.cacheId(GROUP_2), new CountDownLatch(3));
         }
@@ -300,14 +304,29 @@ public class IgniteRebalanceOnCachesStoppingOrDestroyingTest extends GridCommonA
                     if (latch.getCount() > 0)
                         latch.countDown();
                     else {
-                        resumeRebalanceFutures.get(msg0.groupId()).listen(f -> super.notifyListener(sndId, msg, msgC));
+                        synchronized (this) {
+                            // Order make sense!
+                            Queue<T3<UUID, Message, IgniteRunnable>> q = suspendedMessages.get(msg0.groupId());
 
-                        return;
+                            if (q != null) {
+                                q.add(new T3<>(sndId, msg, msgC));
+
+                                return;
+                            }
+                        }
                     }
                 }
             }
 
             super.notifyListener(sndId, msg, msgC);
+        }
+
+        /**
+         * @param cacheId Cache id.
+         */
+        public synchronized void resume(int cacheId){
+            for (T3<UUID, Message, IgniteRunnable> t : suspendedMessages.remove(cacheId))
+                super.notifyListener(t.get1(), t.get2(), t.get3());
         }
     }
 }

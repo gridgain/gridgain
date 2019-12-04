@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,10 +16,13 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
+import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Message sent by node to its next to ensure that next node and
@@ -42,6 +45,9 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
     /** Creator node. */
     private final TcpDiscoveryNode creatorNode;
 
+    /** Creator node addresses. */
+    private final Collection<InetSocketAddress> creatorNodeAddrs;
+
     /** Failed node id. */
     private final UUID failedNodeId;
 
@@ -59,17 +65,22 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
 
         this.creatorNode = creatorNode;
         this.failedNodeId = failedNodeId;
+        this.creatorNodeAddrs = null;
     }
 
     /**
-     * @param msg Message to copy.
+     * Constructor.
+     *
+     * @param creatorNodeAddrs Addresses of creator node, used to be able not to serialize node in message.
+     * @param creatorNodeId Creator node ID.
+     * @param failedNodeId Failed node id.
      */
-    public TcpDiscoveryStatusCheckMessage(TcpDiscoveryStatusCheckMessage msg) {
-        super(msg);
+    public TcpDiscoveryStatusCheckMessage(UUID creatorNodeId, Collection<InetSocketAddress> creatorNodeAddrs, UUID failedNodeId) {
+        super(creatorNodeId);
 
-        this.creatorNode = msg.creatorNode;
-        this.failedNodeId = msg.failedNodeId;
-        this.status = msg.status;
+        this.creatorNodeAddrs = creatorNodeAddrs;
+        this.creatorNode = null;
+        this.failedNodeId = failedNodeId;
     }
 
     /**
@@ -77,8 +88,17 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
      *
      * @return Creator node.
      */
-    public TcpDiscoveryNode creatorNode() {
+    public @Nullable TcpDiscoveryNode creatorNode() {
         return creatorNode;
+    }
+
+    /**
+     * Gets creator node addresses.
+     *
+     * @return Creator node addresses.
+     */
+    public Collection<InetSocketAddress> creatorNodeAddrs() {
+        return creatorNodeAddrs;
     }
 
     /**
@@ -118,7 +138,7 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
 
         TcpDiscoveryStatusCheckMessage other = (TcpDiscoveryStatusCheckMessage)obj;
 
-        return F.eqNodes(other.creatorNode, creatorNode) &&
+        return F.eq(other.creatorNodeId(), creatorNodeId()) &&
             F.eq(other.failedNodeId, failedNodeId) &&
             status == other.status;
     }

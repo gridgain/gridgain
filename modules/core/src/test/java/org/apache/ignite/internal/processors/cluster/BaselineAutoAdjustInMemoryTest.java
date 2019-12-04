@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,5 +59,31 @@ public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
         stopGrid(client.name());
 
         assertEquals(3, grid(0).cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSetBaselineManually() throws Exception {
+        IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().active(true);
+
+        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
+
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
+        IgniteEx ignite1 = startGrid(1);
+
+        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
+        assertEquals(1, ignite1.cluster().currentBaselineTopology().size());
+
+        assertFalse(ignite1.cluster().isBaselineAutoAdjustEnabled());
+
+        ignite0.cluster().setBaselineTopology(ignite0.context().discovery().aliveServerNodes());
+
+        assertEquals(2, ignite0.cluster().currentBaselineTopology().size());
+        assertEquals(2, ignite1.cluster().currentBaselineTopology().size());
     }
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -76,7 +76,7 @@ public class TensorFlowDistributedInferenceExample {
                 Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_IMG_PATH)).getPath(),
                 Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_LBL_PATH)).getPath(),
                 new Random(0),
-                10000
+                1000
             );
 
             long t0 = System.currentTimeMillis();
@@ -93,6 +93,8 @@ public class TensorFlowDistributedInferenceExample {
             long t1 = System.currentTimeMillis();
 
             System.out.println("Threaded model throughput: " + images.size() / ((t1 - t0) / 1000.0) + " req/sec");
+        } finally {
+            System.out.flush();
         }
     }
 }

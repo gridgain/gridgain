@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -116,8 +116,24 @@ public class AffinityTopologyVersion implements Comparable<AffinityTopologyVersi
      * @param upper Upper bound.
      * @return {@code True} if this topology version is within provided bounds (inclusive).
      */
-    public boolean isBetween(AffinityTopologyVersion lower, AffinityTopologyVersion upper) {
+    public final boolean isBetween(AffinityTopologyVersion lower, AffinityTopologyVersion upper) {
         return compareTo(lower) >= 0 && compareTo(upper) <= 0;
+    }
+
+    /**
+     * @param topVer Test version.
+     * @return {@code True} if this topology happens strictly after than {@code topVer}.
+     */
+    public final boolean after(AffinityTopologyVersion topVer) {
+        return compareTo(topVer) > 0;
+    }
+
+    /**
+     * @param topVer Test version.
+     * @return {@code True} if this topology happens strictly before than {@code topVer}.
+     */
+    public final boolean before(AffinityTopologyVersion topVer) {
+        return compareTo(topVer) < 0;
     }
 
     /** {@inheritDoc} */

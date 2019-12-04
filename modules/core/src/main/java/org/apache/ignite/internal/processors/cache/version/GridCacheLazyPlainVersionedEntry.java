@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.version;
 
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectUtils;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -102,6 +104,42 @@ public class GridCacheLazyPlainVersionedEntry<K, V> extends GridCachePlainVersio
             val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true);
 
         return val;
+    }
+
+    /**
+     * Checks the key is binary object.
+     *
+     * @return {@code true} if the key is binary object. Otherwise (key's type is a platform type) returns false.
+     */
+    public boolean isKeyBinary() {
+        return CacheObjectUtils.isBinary(keyObj);
+    }
+
+    /**
+     * Returns the key stored in the cache when this entry was created.
+     *
+     * @return the key binary object corresponding to this entry.
+     */
+    public BinaryObject keyBinary() {
+        return CacheObjectUtils.binary(keyObj);
+    }
+
+    /**
+     * Checks the value is binary object.
+     *
+     * @return {@code true} if the value is binary object. Otherwise (value's type is a platform type) returns false.
+     */
+    public boolean isValueBinary() {
+        return CacheObjectUtils.isBinary(valObj);
+    }
+
+    /**
+     * Returns the value stored in the cache when this entry was created.
+     *
+     * @return the value binary object corresponding to this entry.
+     */
+    public BinaryObject valueBinary() {
+        return CacheObjectUtils.binary(valObj);
     }
 
     /** {@inheritDoc} */

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,7 +55,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
@@ -97,20 +96,6 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         );
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -188,6 +173,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
     public void testBltChangeTopVerRemoveOnlineNodeFails() throws Exception {
         Ignite ignite = startGridWithConsistentId("A");
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
         ignite.cluster().active(true);
 
         long singleNodeTopVer = ignite.cluster().topologyVersion();
@@ -221,6 +207,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         Ignite nodeB = startGridWithConsistentId("B");
         Ignite nodeC = startGridWithConsistentId("OnlineConsID");
 
+        nodeC.cluster().baselineAutoAdjustEnabled(false);
         nodeC.cluster().active(true);
 
         boolean expectedExceptionIsThrown = false;
@@ -248,6 +235,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         startGridWithConsistentId("B");
         Ignite nodeC = startGridWithConsistentId("C");
 
+        nodeC.cluster().baselineAutoAdjustEnabled(false);
         nodeC.active(true);
 
         stopAllGrids(false);
@@ -407,6 +395,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
 
         IgniteEx grid = grid("B");
 
+        grid.cluster().baselineAutoAdjustEnabled(false);
         grid.cluster().active(true);
 
         IgniteCache<Object, Object> cache = grid.getOrCreateCache(CACHE_NAME);
@@ -607,6 +596,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         startGridWithConsistentId("B");
         Ignite nodeC = startGridWithConsistentId("C");
 
+        nodeA.cluster().baselineAutoAdjustEnabled(false);
         nodeC.cluster().active(true);
 
         stopGrid("B", false);
@@ -662,6 +652,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         Ignite nodeB = startGridWithConsistentId("B");
         Ignite nodeC = startGridWithConsistentId("C");
 
+        nodeA.cluster().baselineAutoAdjustEnabled(false);
         nodeC.cluster().active(true);
 
         IgniteEx nodeD = (IgniteEx) startGridWithConsistentId("D");
@@ -686,6 +677,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         Ignite nodeB = startGridWithConsistentId("B");
         Ignite nodeC = startGridWithConsistentId("C");
 
+        nodeA.cluster().baselineAutoAdjustEnabled(false);
         nodeA.cluster().active(true);
 
         nodeA.cluster().setBaselineTopology(null);
@@ -755,39 +747,6 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         nodeA.cluster().active(true);
 
         verifyBaselineTopologyOnNodes(verifier, new Ignite[] {nodeA, nodeB});
-    }
-
-    /**
-     * Verifies that grid is autoactivated when full BaselineTopology is preset even on one node
-     * and then all other nodes from BaselineTopology are started.
-     */
-    @Test
-    public void testAutoActivationWithBaselineTopologyPreset() throws Exception {
-        Ignite ig = startGridWithConsistentId("A");
-
-        ig.cluster().active(true);
-
-        ig.cluster().setBaselineTopology(Arrays.asList(new BaselineNode[] {
-            createBaselineNodeWithConsId("A"), createBaselineNodeWithConsId("B"), createBaselineNodeWithConsId("C")}));
-
-        stopAllGrids();
-
-        final Ignite ig1 = startGridWithConsistentId("A");
-
-        startGridWithConsistentId("B");
-
-        startGridWithConsistentId("C");
-
-        boolean activated = GridTestUtils.waitForCondition(
-            new GridAbsPredicate() {
-               @Override public boolean apply() {
-                   return ig1.cluster().active();
-               }
-            },
-            10_000
-        );
-
-        assertTrue(activated);
     }
 
     /**
@@ -916,6 +875,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         startGridWithConsistentId("B");
         startGridWithConsistentId("C");
 
+        nodeA.cluster().baselineAutoAdjustEnabled(false);
         nodeA.cluster().active(true);
 
         stopGrid("C", false);
@@ -968,6 +928,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         startGridWithConsistentId("B");
         startGridWithConsistentId("C");
 
+        nodeA.cluster().baselineAutoAdjustEnabled(false);
         nodeA.cluster().active(true);
 
         stopGrid("C", false);

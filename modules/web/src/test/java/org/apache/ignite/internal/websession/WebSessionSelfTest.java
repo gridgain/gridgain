@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -116,6 +116,11 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
     @Test
     public void testImplicitlyAttributeModification() throws Exception {
         testImplicitlyModification("ignite-webapp-config.xml");
+    }
+
+    @Test
+    public void testSessionCookie() throws Exception {
+        testSessionCookie("/modules/core/src/test/config/websession/example-cache.xml");
     }
 
     /**
@@ -478,6 +483,122 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests session cookie.
+     *
+     * @param cfg Configuration.
+     * @throws Exception If failed.
+     */
+    private void testSessionCookie(String cfg) throws Exception {
+        Server srv = null;
+        String sesId;
+
+        try {
+            srv = startServerWithLoginService(TEST_JETTY_PORT, cfg, null, new SessionLoginServlet());
+
+            URLConnection conn = new URL("http://localhost:" + TEST_JETTY_PORT + "/ignitetest/test").openConnection();
+
+            conn.connect();
+
+            String sesIdCookie1 = getSessionIdFromCookie(conn);
+
+            X.println(">>>", "Initial session Cookie: " + sesIdCookie1, ">>>");
+
+            assertTrue(sesIdCookie1.contains(".node0"));
+
+            try (BufferedReader rdr = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                sesId = rdr.readLine();
+
+                if (!keepBinary()) {
+                    IgniteCache<String, HttpSession> cache = G.ignite().cache(getCacheName());
+
+                    assertNotNull(cache);
+
+                    HttpSession ses = cache.get(sesId);
+
+                    assertNotNull(ses);
+
+                    assertEquals("val1", ses.getAttribute("key1"));
+                }
+                else {
+                    final IgniteCache<String, WebSessionEntity> cache = G.ignite().cache(getCacheName());
+
+                    assertNotNull(cache);
+
+                    final WebSessionEntity entity = cache.get(sesId);
+
+                    assertNotNull(entity);
+
+                    final byte[] data = entity.attributes().get("key1");
+
+                    assertNotNull(data);
+
+                    final Marshaller marshaller = G.ignite().configuration().getMarshaller();
+
+                    final String val = marshaller.unmarshal(data, getClass().getClassLoader());
+
+                    assertEquals("val1", val);
+                }
+            }
+
+            URLConnection conn2 = new URL("http://localhost:" + TEST_JETTY_PORT + "/ignitetest/login").openConnection();
+
+            HttpURLConnection con = (HttpURLConnection) conn2;
+
+            con.addRequestProperty("Cookie", "JSESSIONID=" + sesIdCookie1);
+
+            con.setRequestMethod("POST");
+
+            con.setDoOutput(true);
+
+            String sesIdCookie2 = getSessionIdFromCookie(con);
+
+            X.println(">>>", "Logged In session Cookie: " + sesIdCookie2, ">>>");
+
+            assertTrue(sesIdCookie2.contains(".node0"));
+
+            try (BufferedReader rdr = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                String sesId2 = rdr.readLine();
+
+                if (!keepBinary()) {
+                    IgniteCache<String, HttpSession> cache = G.ignite().cache(getCacheName());
+
+                    assertNotNull(cache);
+
+                    HttpSession ses = cache.get(sesId2);
+
+                    assertNotNull(ses);
+
+                    assertEquals("val1", ses.getAttribute("key1"));
+
+                }
+                else {
+                    final IgniteCache<String, WebSessionEntity> cache = G.ignite().cache(getCacheName());
+
+                    assertNotNull(cache);
+
+                    final WebSessionEntity entity = cache.get(sesId2);
+
+                    assertNotNull(entity);
+
+                    final byte[] data = entity.attributes().get("key1");
+
+                    assertNotNull(data);
+
+                    final Marshaller marshaller = G.ignite().configuration().getMarshaller();
+
+                    final String val = marshaller.unmarshal(data, getClass().getClassLoader());
+
+                    assertEquals("val1", val);
+
+                }
+            }
+        }
+        finally {
+             stopServerWithLoginService(srv);
+        }
+    }
+
+     /**
      * Tests invalidated sessions.
      *
      * @throws Exception Exception If failed.

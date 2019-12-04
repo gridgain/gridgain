@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-set -o nounset
-set -o errexit
-set -o pipefail
-set -o errtrace
-set -o functrace
+if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
+then
+    set -o nounset
+    set -o errexit
+    set -o pipefail
+    set -o errtrace
+    set -o functrace
+fi
+
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
-# 
+#
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -146,8 +150,6 @@ fi
 #
 # Final JVM_OPTS for Java 9+ compatibility
 #
-javaMajorVersion "${JAVA_HOME}/bin/java"
-
 if [ $version -eq 8 ] ; then
     JVM_OPTS="\
         -XX:+AggressiveOpts \
@@ -162,7 +164,6 @@ elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
         --illegal-access=permit \
-        --add-modules=java.transaction \
         --add-modules=java.xml.bind \
         ${JVM_OPTS}"
 

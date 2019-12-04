@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,12 +27,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 /**
@@ -41,34 +41,25 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcThinAbstractSelfTest extends GridCommonAbstractTest {
 
-    /** Signals that tests should start in affinity awareness mode. */
-    public static boolean affinityAwareness;
+    /** Signals that tests should start in Partition Awareness mode. */
+    public static boolean partitionAwareness;
 
     /**
      * @param r Runnable to check support.
      */
     protected void checkNotSupported(final RunnableX r) {
-        GridTestUtils.assertThrows(log,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    r.run();
-
-                    return null;
-                }
-            }, SQLFeatureNotSupportedException.class, null);
+        GridTestUtils.assertThrowsWithCause(r, SQLFeatureNotSupportedException.class);
     }
 
     /**
      * @param r Runnable to check on closed connection.
      */
     protected void checkConnectionClosed(final RunnableX r) {
-        GridTestUtils.assertThrows(log,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    r.run();
+        GridTestUtils.assertThrowsAnyCause(log,
+            () -> {
+                r.run();
 
-                    return null;
-                }
+                return null;
             }, SQLException.class, "Connection is closed");
     }
 
@@ -76,13 +67,11 @@ public class JdbcThinAbstractSelfTest extends GridCommonAbstractTest {
      * @param r Runnable to check on closed statement.
      */
     protected void checkStatementClosed(final RunnableX r) {
-        GridTestUtils.assertThrows(log,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    r.run();
+        GridTestUtils.assertThrowsAnyCause(log,
+            () -> {
+                r.run();
 
-                    return null;
-                }
+                return null;
             }, SQLException.class, "Statement is closed");
     }
 
@@ -90,24 +79,12 @@ public class JdbcThinAbstractSelfTest extends GridCommonAbstractTest {
      * @param r Runnable to check on closed result set.
      */
     protected void checkResultSetClosed(final RunnableX r) {
-        GridTestUtils.assertThrows(log,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    r.run();
+        GridTestUtils.assertThrowsAnyCause(log,
+            () -> {
+                r.run();
 
-                    return null;
-                }
+                return null;
             }, SQLException.class, "Result set is closed");
-    }
-
-    /**
-     * Runnable that can throw an exception.
-     */
-    interface RunnableX {
-        /**
-         * @throws Exception On error.
-         */
-        void run() throws Exception;
     }
 
     /**

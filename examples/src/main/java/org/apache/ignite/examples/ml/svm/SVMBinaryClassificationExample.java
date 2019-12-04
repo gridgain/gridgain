@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,7 @@
 
 package org.apache.ignite.examples.ml.svm;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -45,7 +45,7 @@ import org.apache.ignite.ml.util.SandboxMLCache;
  */
 public class SVMBinaryClassificationExample {
     /** Run example. */
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws IOException {
         System.out.println();
         System.out.println(">>> SVM Binary classification model over cached dataset usage example started.");
         // Start ignite grid.
@@ -77,6 +77,8 @@ public class SVMBinaryClassificationExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

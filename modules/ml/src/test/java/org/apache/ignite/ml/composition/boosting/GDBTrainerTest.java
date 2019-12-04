@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,7 +58,7 @@ public class GDBTrainerTest extends TrainerTest {
             learningSample.put(i, new double[] {xs[i], ys[i]});
         }
 
-        GDBTrainer trainer = new GDBRegressionOnTreesTrainer(1.0, 2000, 3, 0.0)
+        GDBTrainer trainer = new GDBRegressionOnTreesTrainer(1.0, 400, 3, 0.0)
             .withUsingIdx(true);
 
         IgniteModel<Vector, Double> mdl = trainer.fit(
@@ -84,7 +84,7 @@ public class GDBTrainerTest extends TrainerTest {
 
         composition.getModels().forEach(m -> assertTrue(m instanceof DecisionTreeConditionalNode));
 
-        assertEquals(2000, composition.getModels().size());
+        assertEquals(400, composition.getModels().size());
         assertTrue(composition.getPredictionsAggregator() instanceof WeightedPredictionsAggregator);
 
         trainer = trainer.withCheckConvergenceStgyFactory(new MeanAbsValueConvergenceCheckerFactory(0.1));
@@ -125,7 +125,7 @@ public class GDBTrainerTest extends TrainerTest {
         for (int i = 0; i < sampleSize; i++)
             learningSample.put(i, new double[] {xs[i], ys[i]});
 
-        GDBTrainer trainer = new GDBBinaryClassifierOnTreesTrainer(0.3, 500, 3, 0.0)
+        GDBTrainer trainer = new GDBBinaryClassifierOnTreesTrainer(0.3, 400, 3, 0.0)
             .withUsingIdx(true)
             .withCheckConvergenceStgyFactory(new MeanAbsValueConvergenceCheckerFactory(0.3));
 
@@ -150,7 +150,7 @@ public class GDBTrainerTest extends TrainerTest {
         assertTrue(composition.getPredictionsAggregator() instanceof WeightedPredictionsAggregator);
 
         trainer = trainer.withCheckConvergenceStgyFactory(new ConvergenceCheckerStubFactory());
-        assertEquals(500, ((ModelsComposition)fitter.apply(trainer, learningSample)).getModels().size());
+        assertEquals(400, ((ModelsComposition)fitter.apply(trainer, learningSample)).getModels().size());
     }
 
     /** */

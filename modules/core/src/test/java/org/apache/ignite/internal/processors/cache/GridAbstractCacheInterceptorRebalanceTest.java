@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -194,7 +194,7 @@ public abstract class GridAbstractCacheInterceptorRebalanceTest extends GridComm
      * @throws Exception If fail.
      */
     private void testRebalance(final Operation operation) throws Exception {
-        long stopTime = System.currentTimeMillis() + SF.applyLB(2 * 60_000, 5_000);
+        long stopTime = System.currentTimeMillis() + SF.applyLB(60_000, 5_000);
 
         for (int iter = 0; iter < TEST_ITERATIONS && System.currentTimeMillis() < stopTime; iter++) {
             log.info("Iteration: " + iter);

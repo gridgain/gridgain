@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -291,6 +291,7 @@ public interface GridDhtPartitionTopology {
      * @param partsToReload Set of partitions that need to be reloaded.
      * @param msgTopVer Topology version from incoming message. This value is not null only for case message is not
      *      related to exchange. Value should be not less than previous 'Topology version from exchange'.
+     * @param exchFut Future which is not null for initial partition update on exchange.
      * @return {@code True} if local state was changed.
      */
     public boolean update(
@@ -299,7 +300,9 @@ public interface GridDhtPartitionTopology {
         @Nullable CachePartitionFullCountersMap cntrMap,
         Set<Integer> partsToReload,
         @Nullable Map<Integer, Long> partSizes,
-        @Nullable AffinityTopologyVersion msgTopVer);
+        @Nullable AffinityTopologyVersion msgTopVer,
+        @Nullable GridDhtPartitionsExchangeFuture exchFut
+    );
 
     /**
      * @param exchId Exchange ID.
@@ -358,7 +361,7 @@ public interface GridDhtPartitionTopology {
     public CachePartitionFullCountersMap fullUpdateCounters();
 
     /**
-     * @param skipZeros {@code True} for adding zero counter to map.
+     * @param skipZeros {@code True} to exclude zero counters from map.
      * @return Partition update counters.
      */
     public CachePartitionPartialCountersMap localUpdateCounters(boolean skipZeros);
@@ -417,15 +420,20 @@ public interface GridDhtPartitionTopology {
     public boolean rebalanceFinished(AffinityTopologyVersion topVer);
 
     /**
-     * Calculates nodes and partitions which have non-actual state and must be rebalanced.
+     * Calculates nodes and partitions which have non-actual state (based on LWM value) and must be rebalanced.
      * State of all current owners that aren't contained in the given {@code ownersByUpdCounters} will be reset to MOVING.
+     * Called on coordinator during assignment of partition states.
      *
      * @param ownersByUpdCounters Map (partition, set of node IDs that have most actual state about partition
      *                            (update counter is maximal) and should hold OWNING state for such partition).
-     * @param haveHistory Set of partitions which have WAL history to rebalance.
+     * @param haveHist Set of partitions which have WAL history to rebalance.
+     * @param exchFut Exchange future for operation.
      * @return Map (nodeId, set of partitions that should be rebalanced <b>fully</b> by this node).
      */
-    public Map<UUID, Set<Integer>> resetOwners(Map<Integer, Set<UUID>> ownersByUpdCounters, Set<Integer> haveHistory);
+    public Map<UUID, Set<Integer>> resetOwners(
+        Map<Integer, Set<UUID>> ownersByUpdCounters,
+        Set<Integer> haveHist,
+        GridDhtPartitionsExchangeFuture exchFut);
 
     /**
      * Callback on exchange done.

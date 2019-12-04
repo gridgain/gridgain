@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,9 +39,6 @@ import org.apache.tools.ant.taskdefs.MatchingTask;
  * Ant task fixing known HTML issues for Javadoc.
  */
 public class GridJavadocAntTask extends MatchingTask {
-    /** */
-    private static final String SH_URL = "http://agorbatchev.typepad.com/pub/sh/3_0_83";
-
     /** Directory. */
     private File dir;
 
@@ -281,29 +278,7 @@ public class GridJavadocAntTask extends MatchingTask {
                     if ("</head>".equalsIgnoreCase(val))
                         tok.update(
                             "<link rel='shortcut icon' href='https://ignite.apache.org/favicon.ico'/>\n" +
-                            "<link type='text/css' rel='stylesheet' href='" + SH_URL + "/styles/shCore.css'/>\n" +
-                            "<link type='text/css' rel='stylesheet' href='" + SH_URL +
-                                "/styles/shThemeDefault.css'/>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shCore.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shLegacy.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushJava.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushPlain.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL +
-                                "/scripts/shBrushJScript.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushBash.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushXml.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushScala.js'></script>\n" +
-                            "<script type='text/javascript' src='" + SH_URL + "/scripts/shBrushGroovy.js'></script>\n" +
                             "</head>\n");
-                    else if ("</body>".equalsIgnoreCase(val))
-                        tok.update(
-                            "<!--FOOTER-->" +
-                            "<script type='text/javascript'>" +
-                                "SyntaxHighlighter.all();" +
-                                "dp.SyntaxHighlighter.HighlightAll('code');" +
-                                "!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');" +
-                            "</script>\n" +
-                            "</body>\n");
 
                     break;
                 }

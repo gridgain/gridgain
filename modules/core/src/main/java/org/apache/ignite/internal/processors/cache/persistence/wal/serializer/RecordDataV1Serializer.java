@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,6 +61,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MergeRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageAddRootRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageCutRootRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRecord;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootInlineFlagsCreatedVersionRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootInlineRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastAllocatedIndex;
@@ -68,6 +69,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastSuc
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastSuccessfulSnapshotId;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateNextSnapshotId;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageListMetaResetCountRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PagesListAddPageRecord;
@@ -105,6 +107,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
@@ -127,10 +130,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     protected final GridCacheSharedContext cctx;
 
     /** Size of page used for PageMemory regions. */
-    private final int pageSize;
+    protected final int pageSize;
 
     /** Size of page without encryption overhead. */
-    private final int realPageSize;
+    protected final int realPageSize;
 
     /** Cache object processor to reading {@link DataEntry DataEntries}. */
     protected final IgniteCacheObjectProcessor co;
@@ -184,7 +187,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     }
 
     /** {@inheritDoc} */
-    @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in)
+    @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in, int size)
         throws IOException, IgniteCheckedException {
         if (type == ENCRYPTED_RECORD) {
             if (encSpi == null) {
@@ -201,10 +204,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             if (clData.get1() == null)
                 return new EncryptedRecord(clData.get2(), clData.get3());
 
-            return readPlainRecord(clData.get3(), clData.get1(), true);
+            return readPlainRecord(clData.get3(), clData.get1(), true, clData.get1().buffer().capacity());
         }
 
-        return readPlainRecord(type, in, false);
+        return readPlainRecord(type, in, false, size);
     }
 
     /** {@inheritDoc} */
@@ -346,7 +349,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 PageSnapshot pageRec = (PageSnapshot)record;
 
-                return pageRec.pageData().length + 12;
+                return pageRec.pageDataSize() + 12;
 
             case CHECKPOINT_RECORD:
                 CheckpointRecord cpRec = (CheckpointRecord)record;
@@ -366,6 +369,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
                         + /*allocatedIdxCandidate*/ 4;
+
+            case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
+                return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
+                    + /*allocatedIdxCandidate*/ 4 + /*link*/ 8;
 
             case MEMORY_RECOVERY:
                 return 8;
@@ -426,6 +433,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case BTREE_META_PAGE_INIT_ROOT2:
                 return 4 + 8 + 8 + 2;
+
+            case BTREE_META_PAGE_INIT_ROOT_V3:
+                return 4 + 8 + 8 + 2 + 8 + IgniteProductVersion.SIZE_IN_BYTES;
 
             case BTREE_META_PAGE_ADD_ROOT:
                 return 4 + 8 + 8;
@@ -532,12 +542,13 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
      * @param type Record type.
      * @param in Input
      * @param encrypted Record was encrypted.
+     * @param recordSize Record size.
      * @return Deserialized record.
      * @throws IOException If failed.
      * @throws IgniteCheckedException If failed.
      */
     WALRecord readPlainRecord(RecordType type, ByteBufferBackedDataInput in,
-        boolean encrypted) throws IOException, IgniteCheckedException {
+        boolean encrypted, int recordSize) throws IOException, IgniteCheckedException {
         WALRecord res;
 
         switch (type) {
@@ -589,17 +600,12 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
-                cacheId = in.readInt();
-                pageId = in.readLong();
+                res = new MetaPageUpdatePartitionDataRecord(in);
 
-                long updCntr = in.readLong();
-                long rmvId = in.readLong();
-                int partSize = in.readInt();
-                long countersPageId = in.readLong();
-                byte state = in.readByte();
-                int allocatedIdxCandidate = in.readInt();
+                break;
 
-                res = new MetaPageUpdatePartitionDataRecord(cacheId, pageId, updCntr, rmvId, partSize, countersPageId, state, allocatedIdxCandidate);
+            case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
+                res = new MetaPageUpdatePartitionDataRecordV2(in);
 
                 break;
 
@@ -819,6 +825,34 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case BTREE_META_PAGE_INIT_ROOT_V3:
+                cacheId = in.readInt();
+                pageId = in.readLong();
+
+                long rootId3 = in.readLong();
+                int inlineSize3 = in.readShort();
+
+                long flags = in.readLong();
+
+                byte[] revHash = new byte[IgniteProductVersion.REV_HASH_SIZE];
+                byte maj = in.readByte();
+                byte min = in.readByte();
+                byte maint = in.readByte();
+                long verTs = in.readLong();
+                in.readFully(revHash);
+
+                IgniteProductVersion createdVer = new IgniteProductVersion(
+                    maj,
+                    min,
+                    maint,
+                    verTs,
+                    revHash);
+
+                res = new MetaPageInitRootInlineFlagsCreatedVersionRecord(cacheId, pageId, rootId3,
+                    inlineSize3, flags, createdVer);
+
+                break;
+
             case BTREE_META_PAGE_ADD_ROOT:
                 cacheId = in.readInt();
                 pageId = in.readLong();
@@ -942,7 +976,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 int dstIdx = in.readUnsignedShort();
                 long srcPageId = in.readLong();
                 int srcIdx = in.readUnsignedShort();
-                rmvId = in.readLong();
+                long rmvId = in.readLong();
 
                 res = new InnerReplaceRecord<>(cacheId, pageId, dstIdx, srcPageId, srcIdx, rmvId);
 
@@ -1104,7 +1138,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 partId = in.readInt();
 
-                state = in.readByte();
+                byte state = in.readByte();
 
                 long updateCntr = in.readLong();
 
@@ -1160,7 +1194,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 buf.putInt(snap.fullPageId().groupId());
                 buf.putLong(snap.fullPageId().pageId());
-                buf.put(snap.pageData());
+                buf.put(snap.pageDataBuffer());
 
                 break;
 
@@ -1193,17 +1227,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
-                MetaPageUpdatePartitionDataRecord partDataRec = (MetaPageUpdatePartitionDataRecord)rec;
-
-                buf.putInt(partDataRec.groupId());
-                buf.putLong(partDataRec.pageId());
-
-                buf.putLong(partDataRec.updateCounter());
-                buf.putLong(partDataRec.globalRemoveId());
-                buf.putInt(partDataRec.partitionSize());
-                buf.putLong(partDataRec.countersPageId());
-                buf.put(partDataRec.state());
-                buf.putInt(partDataRec.allocatedIndexCandidate());
+            case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
+                ((MetaPageUpdatePartitionDataRecord)rec).toBytes(buf);
 
                 break;
 
@@ -1395,6 +1420,29 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 buf.putLong(imRec2.rootId());
 
                 buf.putShort((short)imRec2.inlineSize());
+                break;
+
+            case BTREE_META_PAGE_INIT_ROOT_V3:
+                MetaPageInitRootInlineFlagsCreatedVersionRecord imRec3 =
+                    (MetaPageInitRootInlineFlagsCreatedVersionRecord)rec;
+
+                buf.putInt(imRec3.groupId());
+                buf.putLong(imRec3.pageId());
+
+                buf.putLong(imRec3.rootId());
+
+                buf.putShort((short)imRec3.inlineSize());
+
+                buf.putLong(imRec3.flags());
+
+                // Write created version.
+                IgniteProductVersion createdVer = imRec3.createdVersion();
+                buf.put(createdVer.major());
+                buf.put(createdVer.minor());
+                buf.put(createdVer.maintenance());
+                buf.putLong(createdVer.revisionTimestamp());
+                buf.put(createdVer.revisionHash());
+
                 break;
 
             case BTREE_META_PAGE_ADD_ROOT:
@@ -1682,7 +1730,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 buf.put(partMetaStateRecord.state());
 
-                buf.putLong(partMetaStateRecord.updateCounter());
+                buf.putLong(0);
 
                 break;
 

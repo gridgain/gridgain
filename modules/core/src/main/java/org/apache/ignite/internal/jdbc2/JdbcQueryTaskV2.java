@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,6 +48,7 @@ class JdbcQueryTaskV2 extends JdbcQueryTask {
      * @param args Args.
      * @param fetchSize Fetch size.
      * @param uuid UUID.
+     * @param maxMem Query memory limit.
      * @param locQry Local query flag.
      * @param collocatedQry Collocated query flag.
      * @param distributedJoins Distributed joins flag.
@@ -55,9 +56,9 @@ class JdbcQueryTaskV2 extends JdbcQueryTask {
      * @param lazy Lazy query execution flag.
      */
     public JdbcQueryTaskV2(Ignite ignite, String cacheName, String schemaName, String sql, Boolean isQry, boolean loc,
-        Object[] args, int fetchSize, UUID uuid, boolean locQry, boolean collocatedQry, boolean distributedJoins,
+        Object[] args, int fetchSize, UUID uuid, long maxMem, boolean locQry, boolean collocatedQry, boolean distributedJoins,
         boolean enforceJoinOrder, boolean lazy) {
-        super(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize, uuid, locQry,
+        super(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize, uuid, maxMem, locQry,
             collocatedQry, distributedJoins);
 
         this.enforceJoinOrder = enforceJoinOrder;
@@ -92,15 +93,15 @@ class JdbcQueryTaskV2 extends JdbcQueryTask {
      * @return Appropriate task JdbcQueryTask or JdbcQueryTaskV2.
      */
     public static JdbcQueryTask createTask(Ignite ignite, String cacheName, String schemaName, String sql,
-        Boolean isQry, boolean loc, Object[] args, int fetchSize, UUID uuid, boolean locQry,
+        Boolean isQry, boolean loc, Object[] args, int fetchSize, UUID uuid, long maxMem, boolean locQry,
         boolean collocatedQry, boolean distributedJoins,
         boolean enforceJoinOrder, boolean lazy) {
 
         if (enforceJoinOrder || lazy)
             return new JdbcQueryTaskV2(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize,
-                uuid, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy);
+                uuid, maxMem, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy);
         else
             return new JdbcQueryTask(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize,
-                uuid, locQry, collocatedQry, distributedJoins);
+                uuid, maxMem, locQry, collocatedQry, distributedJoins);
     }
 }

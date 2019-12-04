@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,8 +41,7 @@ public class IgniteExcludeInConfigurationTest extends GridCommonAbstractTest {
     public void testExclude() throws Exception {
          IgniteSpringHelper spring = SPRING.create(false);
 
-        Collection<IgniteConfiguration> cfgs = spring.loadConfigurations(cfgLocation, "fileSystemConfiguration",
-            "queryEntities").get1();
+        Collection<IgniteConfiguration> cfgs = spring.loadConfigurations(cfgLocation, "queryEntities").get1();
 
         assertNotNull(cfgs);
         assertEquals(1, cfgs.size());
@@ -52,8 +51,6 @@ public class IgniteExcludeInConfigurationTest extends GridCommonAbstractTest {
         assertEquals(1, cfg.getCacheConfiguration().length);
 
         assertTrue(F.isEmpty(cfg.getCacheConfiguration()[0].getQueryEntities()));
-
-        assertNull(cfg.getFileSystemConfiguration());
 
         cfgs = spring.loadConfigurations(cfgLocation, "keyType").get1();
 

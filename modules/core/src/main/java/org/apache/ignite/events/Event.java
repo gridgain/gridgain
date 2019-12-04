@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.events;
 import java.io.Serializable;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.lang.IgniteUuid;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Grid events are used for notification about what happens within the grid. Note that by
@@ -112,7 +111,7 @@ public interface Event extends Comparable<Event>, Serializable {
      *
      * @return Optional (can be {@code null}) message for this event.
      */
-    @Nullable public String message();
+    public String message();
 
     /**
      * Gets type of this event. All system event types are defined in

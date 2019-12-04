@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,15 +16,15 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.command.Prepared;
 import org.h2.engine.Session;
 
 /**
@@ -52,6 +52,9 @@ public class H2QueryInfo {
     /** Lazy mode. */
     private final boolean lazy;
 
+    /** Prepared statement. */
+    private final Prepared stmt;
+
     /**
      * @param type Query type.
      * @param stmt Query statement.
@@ -73,6 +76,7 @@ public class H2QueryInfo {
             enforceJoinOrder = s.isForceJoinOrder();
             distributedJoin = s.isJoinBatchEnabled();
             lazy = s.isLazyQueryExecution();
+            this.stmt = GridSqlQueryParser.prepared(stmt);
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Cannot collect query info", IgniteQueryErrorCode.UNKNOWN, e);
@@ -98,53 +102,41 @@ public class H2QueryInfo {
     /**
      * @param log Logger.
      * @param msg Log message
-     * @param connMgr Connection manager.
+     * @param additionalInfo Additional query info.
      */
-    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg) {
-        StringBuilder msgSb = new StringBuilder(msg + " [");
-
-        msgSb.append("time=").append(time()).append("ms")
-            .append(", type=").append(type)
-            .append(", distributedJoin=").append(distributedJoin)
-            .append(", enforceJoinOrder=").append(enforceJoinOrder)
-            .append(", lazy=").append(lazy);
-
-        printInfo(msgSb);
-
-        msgSb.append(", sql='")
-            .append(sql);
-
-        if (type != QueryType.REDUCE)
-            msgSb.append("', plan=").append(queryPlan(log, connMgr));
-
-        msgSb.append(']');
-
-        LT.warn(log, msgSb.toString());
+    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
+        printLogMessage(log, null, msg, additionalInfo);
     }
 
     /**
      * @param log Logger.
+     * @param msg Log message
      * @param connMgr Connection manager.
-     * @return Query plan.
+     * @param additionalInfo Additional query info.
      */
-    protected String queryPlan(IgniteLogger log, ConnectionManager connMgr) {
-        Connection c = connMgr.connectionForThread().connection(schema);
+    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg, String additionalInfo) {
+        StringBuilder msgSb = new StringBuilder(msg + " [");
 
-        H2Utils.setupConnection(c, distributedJoin, enforceJoinOrder);
+        if (additionalInfo != null)
+            msgSb.append(additionalInfo).append(", ");
 
-        try (PreparedStatement pstmt = c.prepareStatement("EXPLAIN " + sql)) {
+        msgSb.append("duration=").append(time()).append("ms")
+            .append(", type=").append(type)
+            .append(", distributedJoin=").append(distributedJoin)
+            .append(", enforceJoinOrder=").append(enforceJoinOrder)
+            .append(", lazy=").append(lazy)
+            .append(", schema=").append(schema);
 
-            try (ResultSet plan = pstmt.executeQuery()) {
-                plan.next();
+        msgSb.append(", sql='")
+            .append(sql);
 
-                return plan.getString(1) + U.nl();
-            }
-        }
-        catch (Exception e) {
-            log.warning("Cannot get plan for long query: " + sql, e);
+        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
 
-            return "[error on calculate plan: " + e.getMessage() + ']';
-        }
+        printInfo(msgSb);
+
+        msgSb.append(']');
+
+        LT.warn(log, msgSb.toString());
     }
 
     /**

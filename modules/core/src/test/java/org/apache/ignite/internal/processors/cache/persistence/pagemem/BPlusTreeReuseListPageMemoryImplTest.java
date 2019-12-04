@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,12 +29,16 @@ import org.apache.ignite.internal.processors.cache.persistence.CheckpointWritePr
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.database.BPlusTreeReuseSelfTest;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
+import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.mockito.Mockito;
+
+import static org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest.NO_OP_METRICS;
 
 /**
  *
@@ -54,12 +58,14 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
         IgniteConfiguration cfg = new IgniteConfiguration();
 
         cfg.setEncryptionSpi(new NoopEncryptionSpi());
+        cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
 
         GridTestKernalContext cctx = new GridTestKernalContext(log, cfg);
 
         cctx.add(new IgnitePluginProcessor(cctx, cfg, Collections.emptyList()));
         cctx.add(new GridInternalSubscriptionProcessor(cctx));
         cctx.add(new GridEncryptionManager(cctx));
+        cctx.add(new GridMetricManager(cctx));
 
         GridCacheSharedContext<Object, Object> sharedCtx = new GridCacheSharedContext<>(
             cctx,
@@ -70,6 +76,7 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
             new NoOpWALManager(),
             null,
             new IgniteCacheDatabaseSharedManager(),
+            null,
             null,
             null,
             null,
@@ -95,7 +102,7 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
                 }
             },
             () -> true,
-            new DataRegionMetricsImpl(new DataRegionConfiguration()),
+            new DataRegionMetricsImpl(new DataRegionConfiguration(), cctx.metric(), NO_OP_METRICS),
             PageMemoryImpl.ThrottlingPolicy.DISABLED,
             Mockito.mock(CheckpointWriteProgressSupplier.class)
         );

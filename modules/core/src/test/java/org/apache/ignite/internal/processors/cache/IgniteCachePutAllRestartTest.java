@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -78,11 +77,6 @@ public class IgniteCachePutAllRestartTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 5 * 60_000;
-    }
-
     /**
      * @throws Exception If failed.
      */
@@ -92,43 +86,41 @@ public class IgniteCachePutAllRestartTest extends GridCommonAbstractTest {
 
         final AtomicBoolean stop = new AtomicBoolean();
 
-        IgniteInternalFuture<?> fut = GridTestUtils.runAsync(new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                Thread.currentThread().setName("put-thread");
+        IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
+            Thread.currentThread().setName("put-thread");
 
-                IgniteCache<Integer, Integer> cache = ignite(0).cache(CACHE_NAME);
+            IgniteCache<Integer, Integer> cache = ignite(0).cache(CACHE_NAME);
 
-                Random rnd = new Random();
+            Random rnd = new Random();
 
-                int iter = 0;
+            int iter = 0;
 
-                while (!stop.get()) {
-                    Map<Integer, Integer> map = new HashMap<>();
+            while (!stop.get()) {
+                Map<Integer, Integer> map = new HashMap<>();
 
-                    for (int i = 0; i < 10; i++)
-                        map.put(rnd.nextInt(1000), i);
+                for (int i = 0; i < 10; i++)
+                    map.put(rnd.nextInt(1000), i);
 
-                    try {
-                        cache.putAll(map);
-                    }
-                    catch (CacheException e) {
-                        log.info("Update failed: " + e);
-                    }
-
-                    iter++;
-
-                    if (iter % 1000 == 0)
-                        log.info("Iteration: " + iter);
+                try {
+                    cache.putAll(map);
+                }
+                catch (CacheException e) {
+                    log.info("Update failed: " + e);
                 }
 
-                return null;
+                iter++;
+
+                if (iter % 1000 == 0)
+                    log.info("Iteration: " + iter);
             }
+
+            return null;
         });
 
         try {
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-            long endTime = System.currentTimeMillis() + 2 * 60_000;
+            long endTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
             while (System.currentTimeMillis() < endTime) {
                 int node = rnd.nextInt(1, NODES);
@@ -154,7 +146,7 @@ public class IgniteCachePutAllRestartTest extends GridCommonAbstractTest {
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-        long endTime = System.currentTimeMillis() + 2 * 60_000;
+        long endTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
         while (System.currentTimeMillis() < endTime) {
             int node = rnd.nextInt(0, NODES);
@@ -171,7 +163,7 @@ public class IgniteCachePutAllRestartTest extends GridCommonAbstractTest {
 
                     Random rnd = new Random();
 
-                    long endTime = System.currentTimeMillis() + 60_000;
+                    long endTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(60_000, 15_000);
 
                     try {
                         int iter = 0;

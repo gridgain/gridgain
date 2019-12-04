@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  */
 @GridInternal
 @GridVisorManagementTask
+@Deprecated
 public class VisorIgfsResetMetricsTask extends VisorOneNodeTask<VisorIgfsResetMetricsTaskArg, Void> {
     /** */
     private static final long serialVersionUID = 0L;
@@ -54,15 +55,7 @@ public class VisorIgfsResetMetricsTask extends VisorOneNodeTask<VisorIgfsResetMe
 
         /** {@inheritDoc} */
         @Override protected Void run(VisorIgfsResetMetricsTaskArg arg) {
-            for (String igfsName : arg.getIgfsNames())
-                try {
-                    ignite.fileSystem(igfsName).resetMetrics();
-                }
-                catch (IllegalArgumentException iae) {
-                    throw new IgniteException("Failed to reset metrics for IGFS: " + igfsName, iae);
-                }
-
-            return null;
+            throw new IgniteException("IGFS operations are not supported in current version of Ignite");
         }
 
         /** {@inheritDoc} */

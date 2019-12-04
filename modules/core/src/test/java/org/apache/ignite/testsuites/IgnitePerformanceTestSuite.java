@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,8 +22,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtP
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedAffinityExcludeNeighborsPerformanceTest;
 import org.apache.ignite.internal.processors.cache.eviction.sorted.SortedEvictionPolicyPerformanceTest;
 import org.apache.ignite.internal.processors.datastreamer.IgniteDataStreamerPerformanceTest;
-import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMapPerformanceTest;
-import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafePartitionedMapPerformanceTest;
 import org.apache.ignite.lang.GridBasicPerformanceTest;
 import org.apache.ignite.lang.GridFuncPerformanceTest;
 import org.apache.ignite.lang.GridFutureListenPerformanceTest;
@@ -85,8 +83,6 @@ import org.junit.runners.Suite;
     GridSingleSplitsRedeployLoadTest.class,
     GridStealingLoadTest.class,
     GridTcpCommunicationSpiLanLoadTest.class,
-    GridUnsafeMapPerformanceTest.class,
-    GridUnsafePartitionedMapPerformanceTest.class,
     IgniteDataStreamerPerformanceTest.class,
     SortedEvictionPolicyPerformanceTest.class,
 

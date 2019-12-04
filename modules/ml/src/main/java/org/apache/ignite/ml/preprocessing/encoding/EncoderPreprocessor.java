@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,10 +45,10 @@ public abstract class EncoderPreprocessor<K, V> implements Preprocessor<K, V> {
      * Constructs a new instance of String Encoder preprocessor.
      *
      * @param basePreprocessor Base preprocessor.
-     * @param handledIndices   Handled indices.
+     * @param handledIndices Handled indices.
      */
     public EncoderPreprocessor(Map<String, Integer>[] encodingValues,
-                               Preprocessor<K, V> basePreprocessor, Set<Integer> handledIndices) {
+        Preprocessor<K, V> basePreprocessor, Set<Integer> handledIndices) {
         this.handledIndices = handledIndices;
         this.encodingValues = encodingValues;
         this.basePreprocessor = basePreprocessor;

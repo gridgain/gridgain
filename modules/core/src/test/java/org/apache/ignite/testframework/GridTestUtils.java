@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,10 +16,18 @@
 
 package org.apache.ignite.testframework;
 
+import javax.cache.CacheException;
+import javax.cache.configuration.Factory;
+import javax.management.Attribute;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -31,8 +39,10 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.nio.file.attribute.PosixFilePermission;
+import java.security.AccessController;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.PrivilegedAction;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -61,11 +71,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.cache.CacheException;
-import javax.cache.configuration.Factory;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -103,7 +109,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
@@ -112,7 +120,9 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Utility class for tests.
@@ -123,6 +133,15 @@ public final class GridTestUtils {
 
     /** */
     public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;
+
+    /** yyyy-MM-dd. */
+    public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
+
+    /** HH:mm:ss.SSS. */
+    public static final String LOCAL_TIME_REGEXP = "(20|21|22|23|[01]\\d|\\d)((:[0-5]\\d){1,2})\\.\\d{3}";
+
+    /** yyyy-MM-dd'T'HH:mm:ss.SSS. */
+    public static final String LOCAL_DATETIME_REGEXP = LOCAL_DATE_REGEXP + "T" + LOCAL_TIME_REGEXP;
 
     /** */
     static final String ALPHABETH = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890_";
@@ -166,10 +185,10 @@ public final class GridTestUtils {
         }
 
         /** {@inheritDoc} */
-        @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> topSnapshot, @Nullable Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage spiCustomMsg) {
-            hook.handleDiscoveryMessage(spiCustomMsg);
+        @Override public IgniteFuture<?> onDiscovery(DiscoveryNotification notification) {
+            hook.handleDiscoveryMessage(notification.getCustomMsgData());
 
-            return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+            return delegate.onDiscovery(notification);
         }
 
         /** {@inheritDoc} */
@@ -295,6 +314,149 @@ public final class GridTestUtils {
 //            }
 //        }).start();
 //    }
+
+    /**
+     * Checks that string {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertTrue(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String does not matches regexp: '%s':", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} doesn't match given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if matches.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertNotMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertFalse(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String matches regexp: '%s', but shouldn't:", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} doesn't contains substring {@param substr}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if contains.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param substr Substring.
+     */
+    public static void assertNotContains(@Nullable IgniteLogger log, String str, String substr) {
+        try {
+            assertFalse(str.contains(substr));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String contain substring: '%s', but shouldn't:", substr));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} contains substring {@param substr}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param substr Substring.
+     */
+    public static void assertContains(@Nullable IgniteLogger log, String str, String substr) {
+        try {
+            assertTrue(str != null && str.contains(substr));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String does not contain substring: '%s':", substr));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that collection {@param col} contains string {@param str}. Logs collection, string
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param col Collection.
+     * @param str String.
+     */
+    public static  <C extends Collection<String>> void assertContains(@Nullable IgniteLogger log, C col, String str) {
+        try {
+            assertTrue(col.contains(str));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("Collection does not contain string: '%s':", str));
+            U.warn(log, "Collection:");
+            U.warn(log, col);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that collection {@param col} doesn't contains string {@param str}. Logs collection, string
+     * and throws {@link java.lang.AssertionError}, if contains.
+     *
+     * @param log Logger (optional).
+     * @param col Collection.
+     * @param str String.
+     */
+    public static <C extends Collection<String>> void assertNotContains(@Nullable IgniteLogger log, C col, String str) {
+        try {
+            assertFalse(col.contains(str));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("Collection contain string: '%s' but shouldn't:", str));
+            U.warn(log, "Collection:");
+            U.warn(log, col);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks whether runnable throws expected exception or not.
+     *
+     * @param log Logger (optional).
+     * @param run Runnable.
+     * @param cls Exception class.
+     * @param msg Exception message (optional). If provided exception message
+     *      and this message should be equal.
+     * @return Thrown throwable.
+     */
+    public static Throwable assertThrows(
+        @Nullable IgniteLogger log,
+        RunnableX run,
+        Class<? extends Throwable> cls,
+        @Nullable String msg
+    ) {
+        return assertThrows(log, () -> {
+            run.run();
+
+            return null;
+        }, cls, msg);
+    }
 
     /**
      * Checks whether callable throws expected exception or not.
@@ -1026,6 +1188,31 @@ public final class GridTestUtils {
     }
 
     /**
+     * Wait for all passed futures to complete even if they fail.
+     *
+     * @param futs Futures.
+     * @throws AssertionError Suppresses underlying exceptions if some futures failed.
+     */
+    public static void waitForAllFutures(IgniteInternalFuture<?>... futs) {
+        AssertionError err = null;
+
+        for (IgniteInternalFuture<?> fut : futs) {
+            try {
+                fut.get();
+            }
+            catch (Throwable t) {
+                if (err == null)
+                    err = new AssertionError("One or several futures threw the exception.");
+
+                err.addSuppressed(t);
+            }
+        }
+
+        if (err != null)
+            throw err;
+    }
+
+    /**
      * Interrupts and waits for termination of all the threads started
      * so far by current test.
      *
@@ -1430,6 +1617,28 @@ public final class GridTestUtils {
     }
 
     /**
+     * Change static final fields.
+     * @param field Need to be changed.
+     * @param newVal New value.
+     * @throws Exception If failed.
+     */
+    public static void setFieldValue(Field field, Object newVal) throws Exception {
+        field.setAccessible(true);
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+
+        AccessController.doPrivileged(new PrivilegedAction() {
+            @Override
+            public Object run() {
+                modifiersField.setAccessible(true);
+                return null;
+            }
+        });
+
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(null, newVal);
+    }
+
+    /**
      * Get inner class by its name from the enclosing class.
      *
      * @param parentCls Parent class to resolve inner class for.
@@ -1639,6 +1848,26 @@ public final class GridTestUtils {
         }
 
         return bytes;
+    }
+
+    /**
+     * Reads resource into byte array.
+     *
+     * @param classLoader Classloader.
+     * @param resourceName Resource name.
+     * @return Content of resorce in byte array.
+     * @throws IOException If failed.
+     */
+    public static byte[] readResource(ClassLoader classLoader, String resourceName) throws IOException {
+        try (InputStream is = classLoader.getResourceAsStream(resourceName)) {
+            assertNotNull("Resource is missing: " + resourceName , is);
+
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                U.copy(is, baos);
+
+                return baos.toByteArray();
+            }
+        }
     }
 
     /**
@@ -1975,7 +2204,22 @@ public final class GridTestUtils {
      * @return Random string object.
      */
     public static String randomString(Random rnd, int maxLen) {
-        int len = rnd.nextInt(maxLen);
+        return randomString(rnd, 0, maxLen);
+    }
+
+    /**
+     * Generate random alphabetical string.
+     *
+     * @param rnd Random object.
+     * @param maxLen Maximal length of string
+     * @param minLen Minimum length of string
+     * @return Random string object.
+     */
+    public static String randomString(Random rnd, int minLen, int maxLen) {
+        assert minLen >= 0 : "minLen >= 0";
+        assert maxLen >= minLen : "maxLen >= minLen";
+
+        int len = maxLen == minLen ? minLen : minLen + rnd.nextInt(maxLen - minLen);
 
         StringBuilder b = new StringBuilder(len);
 
@@ -2086,6 +2330,32 @@ public final class GridTestUtils {
             f.delete();
     }
 
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @param val Attribute value.
+     * @throws Exception On error.
+     */
+    public static void setJmxAttribute(IgniteEx grid, String grp, String name, String attr, Object val) throws Exception {
+        grid.context().config().getMBeanServer().setAttribute(U.makeMBeanName(grid.name(), grp, name),
+            new Attribute(attr, val));
+    }
+
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @return Attribute's value.
+     * @throws Exception On error.
+     */
+    public static Object getJmxAttribute(IgniteEx grid, String grp, String name, String attr) throws Exception {
+        return grid.context().config().getMBeanServer().getAttribute(U.makeMBeanName(grid.name(), grp, name), attr);
+    }
+
+
     public static class SqlTestFunctions {
         /** Sleep milliseconds. */
         public static volatile long sleepMs;
@@ -2143,5 +2413,58 @@ public final class GridTestUtils {
 
             return sleep;
         }
+    }
+
+    /**
+     * Runnable that can throw exceptions.
+     */
+    @FunctionalInterface
+    public interface RunnableX extends Runnable {
+        /**
+         * Runnable body.
+         *
+         * @throws Exception If failed.
+         */
+        void runx() throws Exception;
+
+        /** {@inheritdoc} */
+        @Override default void run() {
+            try {
+                runx();
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+        }
+    }
+
+    /**
+     * IgniteRunnable that can throw exceptions.
+     */
+    @FunctionalInterface
+    public interface IgniteRunnableX extends IgniteRunnable {
+        /**
+         * Runnable body.
+         *
+         * @throws Exception If failed.
+         */
+        void runx() throws Exception;
+
+        /** {@inheritdoc} */
+        @Override default void run() {
+            try {
+                runx();
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+        }
+    }
+
+    /**
+     * @param runnableX Runnable with exception.
+     */
+    public static void suppressException(RunnableX runnableX) {
+        runnableX.run();
     }
 }

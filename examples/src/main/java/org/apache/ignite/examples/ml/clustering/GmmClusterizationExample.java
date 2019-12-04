@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.examples.ml.clustering;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -33,8 +34,6 @@ import org.apache.ignite.ml.util.generators.DataStreamGenerator;
 import org.apache.ignite.ml.util.generators.primitives.scalar.GaussRandomProducer;
 import org.apache.ignite.ml.util.generators.primitives.scalar.RandomProducer;
 import org.apache.ignite.ml.util.generators.primitives.vector.VectorGeneratorsFamily;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Example of using GMM clusterization algorithm. Gaussian Mixture Algorithm (GMM, see {@link GmmModel}, {@link
@@ -82,7 +81,7 @@ public class GmmClusterizationExample {
                 ).build(seed++).asDataStream();
 
                 AtomicInteger keyGen = new AtomicInteger();
-                dataStream.fillCacheWithCustomKey(50000, dataCache, v -> keyGen.getAndIncrement());
+                dataStream.fillCacheWithCustomKey(5000, dataCache, v -> keyGen.getAndIncrement());
                 GmmTrainer trainer = new GmmTrainer(1);
 
                 GmmModel mdl = trainer
@@ -109,6 +108,8 @@ public class GmmClusterizationExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

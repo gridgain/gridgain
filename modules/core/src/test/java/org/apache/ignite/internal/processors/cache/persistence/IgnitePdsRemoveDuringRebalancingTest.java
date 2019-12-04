@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,7 @@ public class IgnitePdsRemoveDuringRebalancingTest extends GridCommonAbstractTest
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         cfg.setCacheConfiguration(
-            new CacheConfiguration()
+            new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                 .setBackups(1)
                 .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
@@ -95,14 +95,14 @@ public class IgnitePdsRemoveDuringRebalancingTest extends GridCommonAbstractTest
 
         ig.active(true);
 
-        try (IgniteDataStreamer<Object, Object> streamer = ig.dataStreamer(null)) {
+        try (IgniteDataStreamer<Object, Object> streamer = ig.dataStreamer(DEFAULT_CACHE_NAME)) {
             streamer.allowOverwrite(true);
 
             for (int i = 0; i < 100_000; i++)
                 streamer.addData(i, i);
         }
 
-        final IgniteCache<Object, Object> cache = ig.cache(null);
+        final IgniteCache<Object, Object> cache = ig.cache(DEFAULT_CACHE_NAME);
 
         IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
@@ -117,7 +117,7 @@ public class IgnitePdsRemoveDuringRebalancingTest extends GridCommonAbstractTest
 
         IgniteEx another = grid(1);
 
-        IgniteCache<Object, Object> cache1 = another.cache(null);
+        IgniteCache<Object, Object> cache1 = another.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < 100_000; i++)
             assertNull(cache1.localPeek(i));

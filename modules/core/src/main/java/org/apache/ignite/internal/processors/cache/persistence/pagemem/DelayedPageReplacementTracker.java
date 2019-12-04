@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 
 /**
  * Delayed page writes tracker. Provides delayed write implementations and allows to check if page is actually being
@@ -34,7 +35,7 @@ public class DelayedPageReplacementTracker {
     private final int pageSize;
 
     /** Flush dirty page real implementation. */
-    private final ReplacedPageWriter flushDirtyPage;
+    private final PageStoreWriter flushDirtyPage;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -48,18 +49,18 @@ public class DelayedPageReplacementTracker {
         @Override protected ByteBuffer initialValue() {
             ByteBuffer buf = ByteBuffer.allocateDirect(pageSize);
 
-            buf.order(ByteOrder.LITTLE_ENDIAN);
+            buf.order(ByteOrder.nativeOrder());
 
             return buf;
         }
     };
 
     /**
-     * Dirty page write for replacement operations thread local. Because page write {@link DelayedDirtyPageWrite} is
+     * Dirty page write for replacement operations thread local. Because page write {@link DelayedDirtyPageStoreWrite} is
      * stateful and not thread safe, this thread local protects from GC pressure on pages replacement. <br> Map is used
      * instead of build-in thread local to allow GC to remove delayed writers for alive threads after node stop.
      */
-    private final Map<Long, DelayedDirtyPageWrite> delayedPageWriteThreadLocMap = new ConcurrentHashMap<>();
+    private final Map<Long, DelayedDirtyPageStoreWrite> delayedPageWriteThreadLocMap = new ConcurrentHashMap<>();
 
     /**
      * @param pageSize Page size.
@@ -67,8 +68,12 @@ public class DelayedPageReplacementTracker {
      * @param log Logger.
      * @param segmentCnt Segments count.
      */
-    public DelayedPageReplacementTracker(int pageSize, ReplacedPageWriter flushDirtyPage,
-        IgniteLogger log, int segmentCnt) {
+    public DelayedPageReplacementTracker(
+        int pageSize,
+        PageStoreWriter flushDirtyPage,
+        IgniteLogger log,
+        int segmentCnt
+    ) {
         this.pageSize = pageSize;
         this.flushDirtyPage = flushDirtyPage;
         this.log = log;
@@ -81,9 +86,9 @@ public class DelayedPageReplacementTracker {
     /**
      * @return delayed page write implementation, finish method to be called to actually write page.
      */
-    public DelayedDirtyPageWrite delayedPageWrite() {
+    public DelayedDirtyPageStoreWrite delayedPageWrite() {
         return delayedPageWriteThreadLocMap.computeIfAbsent(Thread.currentThread().getId(),
-            id -> new DelayedDirtyPageWrite(flushDirtyPage, byteBufThreadLoc, pageSize, this));
+            id -> new DelayedDirtyPageStoreWrite(flushDirtyPage, byteBufThreadLoc, pageSize, this));
     }
 
     /**

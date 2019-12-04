@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,7 +55,7 @@ public class OneVsRestTrainer<M extends IgniteModel<Vector, Double>>
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> MultiClassModel<M> fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> MultiClassModel<M> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                    Preprocessor<K, V> extractor) {
 
         return updateModel(null, datasetBuilder, extractor);
@@ -110,7 +110,7 @@ public class OneVsRestTrainer<M extends IgniteModel<Vector, Double>>
         try (Dataset<EmptyContext, LabelPartitionDataOnHeap> dataset = datasetBuilder.build(
             envBuilder,
             (env, upstream, upstreamSize) -> new EmptyContext(),
-            partDataBuilder
+            partDataBuilder, learningEnvironment()
         )) {
             final Set<Double> clsLabels = dataset.compute(data -> {
                 final Set<Double> locClsLabels = new HashSet<>();

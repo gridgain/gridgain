@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,12 @@
  */
 
 package org.apache.ignite.examples.ml.tutorial;
+
+import org.apache.ignite.examples.ml.tutorial.hyperparametertuning.Step_10_RandomSearch;
+import org.apache.ignite.examples.ml.tutorial.hyperparametertuning.Step_11_Parallel_BrutForce_Search;
+import org.apache.ignite.examples.ml.tutorial.hyperparametertuning.Step_12_Parallel_Random_Search;
+import org.apache.ignite.examples.ml.tutorial.hyperparametertuning.Step_13_Genetic_Programming_Search;
+import org.apache.ignite.examples.ml.tutorial.hyperparametertuning.Step_14_Parallel_Genetic_Programming_Search;
 
 /**
  * Run all the tutorial examples step by step with primary purpose to provide
@@ -33,5 +39,11 @@ public class TutorialStepByStepExample {
         Step_7_Split_train_test.main(args);
         Step_8_CV.main(args);
         Step_8_CV_with_Param_Grid.main(args);
+        Step_9_Scaling_With_Stacking.main(args);
+        Step_10_RandomSearch.main(args);
+        Step_11_Parallel_BrutForce_Search.main(args);
+        Step_12_Parallel_Random_Search.main(args);
+        Step_13_Genetic_Programming_Search.main(args);
+        Step_14_Parallel_Genetic_Programming_Search.main(args);
     }
 }

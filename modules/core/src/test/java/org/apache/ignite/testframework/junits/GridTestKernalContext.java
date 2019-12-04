@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,10 +29,13 @@ import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.GridLoggerProxy;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.LongJVMPauseDetector;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.PluginProvider;
+import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 
 /**
@@ -59,36 +62,42 @@ public class GridTestKernalContext extends GridKernalContextImpl {
      */
     public GridTestKernalContext(IgniteLogger log, IgniteConfiguration cfg) {
         super(new GridLoggerProxy(log, null, null, null),
-                new IgniteKernal(null),
-                cfg,
-                new GridKernalGatewayImpl(null),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                U.allPluginProviders(),
-                null,
-                null,
-                null,
-                new LongJVMPauseDetector(log)
+            new IgniteKernal(null),
+            cfg,
+            new GridKernalGatewayImpl(null),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            U.allPluginProviders(),
+            null,
+            null,
+            null,
+            new LongJVMPauseDetector(log)
         );
 
         GridTestUtils.setFieldValue(grid(), "cfg", config());
         GridTestUtils.setFieldValue(grid(), "ctx", this);
 
         config().setGridLogger(log);
+
+        if (cfg.getMetricExporterSpi() == null || cfg.getMetricExporterSpi().length == 0)
+            cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+
+        add(new GridMetricManager(this));
+        add(new GridResourceProcessor(this));
     }
 
     /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 
 /**
  * Storage of actual information about current index of compressed segments.
@@ -53,29 +54,50 @@ public class SegmentCompressStorage {
     /** Min uncompressed index to keep. */
     private volatile long minUncompressedIdxToKeep = -1L;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * @param segmentArchivedStorage Storage of last archived segment.
      * @param compactionEnabled If WAL compaction enabled.
+     * @param log Logger.
      */
-    private SegmentCompressStorage(SegmentArchivedStorage segmentArchivedStorage, boolean compactionEnabled) {
+    private SegmentCompressStorage(
+        SegmentArchivedStorage segmentArchivedStorage,
+        boolean compactionEnabled,
+        IgniteLogger log) {
         this.segmentArchivedStorage = segmentArchivedStorage;
 
         this.compactionEnabled = compactionEnabled;
 
         this.segmentArchivedStorage.addObserver(this::onSegmentArchived);
+
+        this.log = log;
     }
 
     /**
      * @param segmentArchivedStorage Storage of last archived segment.
      * @param compactionEnabled If WAL compaction enabled.
+     * @param log Logger.
      */
-    static SegmentCompressStorage buildCompressStorage(SegmentArchivedStorage segmentArchivedStorage,
-                                                       boolean compactionEnabled) {
-        SegmentCompressStorage storage = new SegmentCompressStorage(segmentArchivedStorage, compactionEnabled);
+    static SegmentCompressStorage buildCompressStorage(
+        SegmentArchivedStorage segmentArchivedStorage,
+        boolean compactionEnabled,
+        IgniteLogger log) {
+        SegmentCompressStorage storage = new SegmentCompressStorage(segmentArchivedStorage, compactionEnabled, log);
 
         segmentArchivedStorage.addObserver(storage::onSegmentArchived);
 
         return storage;
+    }
+
+    /**
+     * Sets the largest index of previously compressed segment.
+     *
+     * @param idx Segment index.
+     */
+    synchronized void lastSegmentCompressed(long idx) {
+        onSegmentCompressed(lastEnqueuedToCompressIdx = idx);
     }
 
     /**
@@ -84,6 +106,9 @@ public class SegmentCompressStorage {
      * @param compressedIdx Index of compressed segment.
      */
     synchronized void onSegmentCompressed(long compressedIdx) {
+        if (log.isInfoEnabled())
+            log.info("Segment compressed notification [idx=" + compressedIdx + ']');
+
         if (compressedIdx > lastMaxCompressedIdx)
             lastMaxCompressedIdx = compressedIdx;
 
@@ -150,8 +175,12 @@ public class SegmentCompressStorage {
      * Callback for waking up compressor when new segment is archived.
      */
     private synchronized void onSegmentArchived(long lastAbsArchivedIdx) {
-        while (lastEnqueuedToCompressIdx < lastAbsArchivedIdx && compactionEnabled)
+        while (lastEnqueuedToCompressIdx < lastAbsArchivedIdx && compactionEnabled) {
+            if (log.isInfoEnabled())
+                log.info("Enqueuing segment for compression [idx=" + (lastEnqueuedToCompressIdx + 1) + ']');
+
             segmentsToCompress.add(++lastEnqueuedToCompressIdx);
+        }
 
         notifyAll();
     }

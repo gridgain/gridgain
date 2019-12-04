@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,6 +62,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.cache.CacheException;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryListenerException;
+import javax.cache.event.EventType;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.security.Timestamp;
@@ -611,6 +612,23 @@ public class PlatformUtils {
         writer.writeObjectDetached(evt.getKey());
         writer.writeObjectDetached(evt.getOldValue());
         writer.writeObjectDetached(evt.getValue());
+        writeEventType(writer, evt.getEventType());
+    }
+
+    /**
+     * Write event type to the writer.
+     * @param writer Writer.
+     * @param evtType Type of event.
+     */
+    private static void writeEventType(BinaryRawWriterEx writer, EventType evtType) {
+        switch (evtType){
+            case CREATED: writer.writeByte((byte) 0); break;
+            case UPDATED: writer.writeByte((byte) 1); break;
+            case REMOVED: writer.writeByte((byte) 2); break;
+            case EXPIRED: writer.writeByte((byte) 3); break;
+            default:
+                throw new IllegalArgumentException("Unknown event type: " + evtType);
+        }
     }
 
     /**

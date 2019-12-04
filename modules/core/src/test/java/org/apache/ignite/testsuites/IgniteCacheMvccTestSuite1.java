@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,8 +57,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccPartitionedSelfT
 import org.apache.ignite.internal.processors.cache.GridCacheMvccSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapAtomicMultiThreadedUpdateSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapMultiThreadedUpdateSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionedLocalStoreSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCacheReplicatedLocalStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheStopSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheTcpClientDiscoveryMultiThreadedTest;
 import org.apache.ignite.internal.processors.cache.GridDataStorageConfigurationConsistencySelfTest;
@@ -150,8 +148,6 @@ public class IgniteCacheMvccTestSuite1 {
         ignoredTests.add(IgniteCacheAtomicWithStoreInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicLocalInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicLocalWithStoreInvokeTest.class);
-        ignoredTests.add(GridCachePartitionedLocalStoreSelfTest.class);
-        ignoredTests.add(GridCacheReplicatedLocalStoreSelfTest.class);
         ignoredTests.add(CacheStoreReadFromBackupTest.class);
 
         ignoredTests.add(IgniteCacheAtomicExecutionContextTest.class);

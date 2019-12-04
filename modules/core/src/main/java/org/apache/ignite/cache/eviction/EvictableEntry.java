@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@
 package org.apache.ignite.cache.eviction;
 
 import javax.cache.Cache;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Evictable cache entry passed into {@link EvictionPolicy}.
@@ -53,9 +52,9 @@ public interface EvictableEntry<K, V> extends Cache.Entry<K, V> {
     /**
      * Gets metadata added by eviction policy.
      *
-     * @return Metadata value or {@code null}.
+     * @return Metadata value or {@code null} if no metadata was added by eviction policy.
      */
-    @Nullable public <T> T meta();
+    public <T> T meta();
 
     /**
      * Adds a new metadata.
@@ -64,7 +63,7 @@ public interface EvictableEntry<K, V> extends Cache.Entry<K, V> {
      * @return Metadata previously added, or
      *      {@code null} if there was none.
      */
-    @Nullable public <T> T addMeta(T val);
+    public <T> T addMeta(T val);
 
     /**
      * Adds given metadata value only if it was absent.
@@ -72,7 +71,7 @@ public interface EvictableEntry<K, V> extends Cache.Entry<K, V> {
      * @param val Value to add if it's not attached already.
      * @return {@code null} if new value was put, or current value if put didn't happen.
      */
-    @Nullable public <T> T putMetaIfAbsent(T val);
+    public <T> T putMetaIfAbsent(T val);
 
     /**
      * Replaces given metadata with new {@code newVal} value only if its current value
@@ -87,9 +86,9 @@ public interface EvictableEntry<K, V> extends Cache.Entry<K, V> {
     /**
      * Removes metadata by name.
      *
-     * @return Value of removed metadata or {@code null}.
+     * @return Value of removed metadata or {@code null} if no metadata was added by eviction policy.
      */
-    @Nullable public <T> T removeMeta();
+    public <T> T removeMeta();
 
     /**
      * Removes metadata only if its current value is equal to {@code val} passed in.

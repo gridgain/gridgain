@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -155,12 +155,14 @@ class BaselineAutoAdjustScheduler {
             long lastScheduledTaskTime = totalEndTime - System.currentTimeMillis();
 
             if (lastScheduledTaskTime <= 0) {
-                log.info("Baseline auto-adjust will be executed right now.");
+                if (log.isInfoEnabled())
+                    log.info("Baseline auto-adjust will be executed right now.");
 
                 baselineAutoAdjustExecutor.execute(baselineAutoAdjustData);
             }
             else {
-                log.info("Baseline auto-adjust will be executed in '" + lastScheduledTaskTime + "' ms.");
+                if (log.isInfoEnabled())
+                    log.info("Baseline auto-adjust will be executed in '" + lastScheduledTaskTime + "' ms.");
 
                 endTime = calculateEndTime(lastScheduledTaskTime);
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,6 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * This interface defines a set of operations available to failover SPI
@@ -66,10 +65,11 @@ public interface FailoverContext {
     public int partition();
 
     /**
-     * Returns affinity cache name {@link IgniteCompute#affinityRun(String, Object, IgniteRunnable)}
-     * and {@link IgniteCompute#affinityCall(String, Object, IgniteCallable)}.
+     * Returns affinity cache name if the task was launched using
+     * {@link IgniteCompute#affinityRun(String, Object, IgniteRunnable)} or
+     * {@link IgniteCompute#affinityCall(String, Object, IgniteCallable)} calls.
      *
-     * @return Cache name.
+     * @return Cache name or {@code null} if task was not an partition-aware task.
      */
-    @Nullable public String affinityCacheName();
+    public String affinityCacheName();
 }

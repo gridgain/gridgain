@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,8 +26,8 @@ import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateProposed
  */
 public interface BinaryMetadataHandler {
     /**
-     * Adds a new or updates an existing metadata to the latest version.
-     * See {@link MetadataUpdateProposedMessage} javadoc for detailed protocol description.
+     * Adds a new or updates an existing metadata to the latest version. See {@link MetadataUpdateProposedMessage}
+     * javadoc for detailed protocol description.
      *
      * @param typeId Type ID.
      * @param meta Metadata.
@@ -35,6 +35,16 @@ public interface BinaryMetadataHandler {
      * @throws BinaryObjectException In case of error.
      */
     public void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered) throws BinaryObjectException;
+
+    /**
+     * Adds meta data locally on current node without sending any messages.
+     *
+     * @param typeId Type ID.
+     * @param meta Metadata.
+     * @param failIfUnregistered Fail if unregistered.
+     * @throws BinaryObjectException In case of error.
+     */
+    public void addMetaLocally(int typeId, BinaryType meta, boolean failIfUnregistered) throws BinaryObjectException;
 
     /**
      * Gets metadata for provided type ID.
@@ -66,6 +76,7 @@ public interface BinaryMetadataHandler {
 
     /**
      * Gets all metadata known to the node.
+     *
      * @return Metadata collection
      * @throws BinaryObjectException If failed.
      */

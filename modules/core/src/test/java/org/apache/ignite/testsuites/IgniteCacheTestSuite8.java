@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.CacheStoreTxPutAllMultiNodeTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOrderedPreloadingSelfTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRebalanceThreadPoolTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRabalancingDelayedPartitionMapExchangeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingAsyncSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingCancelTest;
@@ -72,6 +73,7 @@ public class IgniteCacheTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, GridCacheRabalancingDelayedPartitionMapExchangeSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingCancelTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheStoreTxPutAllMultiNodeTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheRebalanceThreadPoolTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CleanupRestoredCachesSlowTest.class, ignoredTests);
 

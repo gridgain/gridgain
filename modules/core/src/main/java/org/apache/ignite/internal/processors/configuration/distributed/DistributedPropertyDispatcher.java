@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,8 @@
  */
 
 package org.apache.ignite.internal.processors.configuration.distributed;
+
+import java.io.Serializable;
 
 /**
  * Dispatcher of distributed properties.
@@ -25,24 +27,14 @@ public interface DistributedPropertyDispatcher {
     /**
      * Attach already created property.
      *
-     * @param prop Property to attach to processor.
+     * @param props Properties to attach to processor.
      * @param <T> Type of property value.
      */
-    public <T extends DistributedProperty> T registerProperty(T prop);
-
+    <T extends DistributedChangeableProperty> void registerProperties(T... props);
     /**
-     * Create and attach new long property.
+     * Attach already created property.
      *
-     * @param name Name of property.
-     * @return Attached new property.
+     * @param prop Property to attach to processor.
      */
-    public DistributedLongProperty registerLong(String name);
-
-    /**
-     * Create and attach new boolean property.
-     *
-     * @param name Name of property.
-     * @return Attached new property.
-     */
-    public DistributedBooleanProperty registerBoolean(String name);
+    <T extends Serializable> DistributedProperty<T> registerProperty(DistributedChangeableProperty<T> prop);
 }

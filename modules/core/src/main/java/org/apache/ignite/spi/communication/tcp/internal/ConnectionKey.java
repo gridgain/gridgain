@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,9 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConnectionKey {
     /** */
+    private final Object consistentId;
+
+    /** */
     private final UUID nodeId;
 
     /** */
@@ -39,22 +42,25 @@ public class ConnectionKey {
     /**
      * Creates ConnectionKey with false value of dummy flag.
      *
+     * @param consistentId Consistent id of the node.
      * @param nodeId Node ID. Should be not null.
      * @param idx Connection index.
      * @param connCnt Connection counter (set only for incoming connections).
      */
-    public ConnectionKey(@NotNull UUID nodeId, int idx, long connCnt) {
-        this(nodeId, idx, connCnt, false);
+    public ConnectionKey(@NotNull Object consistentId, @NotNull UUID nodeId, int idx, long connCnt) {
+        this(consistentId, nodeId, idx, connCnt, false);
     }
 
     /**
+     * @param consistentId Consistent id of the node.
      * @param nodeId Node ID. Should be not null.
      * @param idx Connection index.
      * @param connCnt Connection counter (set only for incoming connections).
      * @param dummy Indicates that session with this ConnectionKey is temporary
      *              (for now dummy sessions are used only for Communication Failure Resolving process).
      */
-    public ConnectionKey(@NotNull UUID nodeId, int idx, long connCnt, boolean dummy) {
+    public ConnectionKey(@NotNull Object consistentId, @NotNull UUID nodeId, int idx, long connCnt, boolean dummy) {
+        this.consistentId = consistentId;
         this.nodeId = nodeId;
         this.idx = idx;
         this.connCnt = connCnt;
@@ -73,6 +79,11 @@ public class ConnectionKey {
      */
     public UUID nodeId() {
         return nodeId;
+    }
+
+    /** */
+    public Object consistentId() {
+        return consistentId;
     }
 
     /**

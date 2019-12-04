@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,4 +67,54 @@ public interface SqlQueryMXBean {
     @MXBeanParametersNames("longQueryTimeoutMultiplier")
     @MXBeanParametersDescriptions("Long query timeout multiplier.")
     void setLongQueryTimeoutMultiplier(int longQueryTimeoutMultiplier);
+
+    /**
+     * @return Threshold for the number of rows of the result, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     */
+    @MXBeanDescription("Threshold for the number of rows of the result, when count of fetched rows is bigger than the threshold" +
+        "warning will be printed.")
+    long getResultSetSizeThreshold();
+
+    /**
+     * Sets threshold result's row count, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     *
+     * @param rsSizeThreshold Threshold result's row count, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     */
+    @MXBeanDescription("Sets threshold for the number of rows of the result, when count of fetched rows is bigger than the threshold " +
+        "warning will be printed")
+    @MXBeanParametersNames("rsSizeThreshold")
+    @MXBeanParametersDescriptions("Threshold for the number of rows of the result, when count of fetched rows is bigger than the " +
+        "threshold warning will be printed.")
+    void setResultSetSizeThreshold(long rsSizeThreshold);
+
+    /**
+     * Gets result set size threshold multiplier. The warning will be printed after:
+     *  - size of result set > threshold;
+     *  - size of result set > threshold * multiplier;
+     *  - size of result set > threshold * multiplier * multiplier;
+     *  - etc.
+     * If the multiplier <= 1, the warning message is printed once during query execution and the next one on the query end.
+     *
+     * @return Result set size threshold multiplier.
+     */
+    @MXBeanDescription("Gets result set size threshold multiplier. The warning will be printed when size " +
+        "of result set is bugger than: threshold, threshold * multiplier, threshold * multiplier * multiplier, " +
+        "etc. If the multiplier <= 1, the warning message is printed once during query execution " +
+        "and the next one on the query end.")
+    int getResultSetSizeThresholdMultiplier();
+
+    /**
+     * Sets result set size threshold multiplier.
+     *
+     * @param rsSizeThresholdMultiplier Result set size threshold multiplier.
+     */
+    @MXBeanDescription("Sets result set size threshold multiplier. The warning will be printed when size " +
+        "of result set is bugger than: threshold, threshold * multiplier, threshold * multiplier * multiplier," +
+        "etc. If the multiplier <= 1, the warning message is printed once.")
+    @MXBeanParametersNames("rsSizeThresholdMultiplier")
+    @MXBeanParametersDescriptions("TResult set size threshold multiplier.")
+    void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMultiplier);
 }

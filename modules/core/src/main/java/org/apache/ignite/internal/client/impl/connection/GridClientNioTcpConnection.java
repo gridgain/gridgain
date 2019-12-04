@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,6 +58,8 @@ import org.apache.ignite.internal.client.marshaller.optimized.GridClientOptimize
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientZipOptimizedMarshaller;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientReadOnlyModeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
@@ -78,6 +80,7 @@ import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -609,6 +612,8 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         if (resp.successStatus() == GridClientResponse.STATUS_AUTH_FAILURE)
             fut.onDone(new GridClientAuthenticationException("Client authentication failed [clientId=" + clientId +
                 ", srvAddr=" + serverAddress() + ", errMsg=" + resp.errorMessage() +']'));
+        else if (resp.successStatus() == GridClientResponse.STATUS_ILLEGAL_STATE)
+            fut.onDone(new VisorIllegalStateException(resp.errorMessage()));
         else if (resp.errorMessage() != null)
             fut.onDone(new GridClientException(resp.errorMessage()));
         else
@@ -815,6 +820,23 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     }
 
     /** {@inheritDoc} */
+    @Override public GridClientFuture<?> changeReadOnlyState(
+        boolean readOnly,
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        return readOnly ?
+            makeRequest(GridClientReadOnlyModeRequest.enableReadOnly(), destNodeId) :
+            makeRequest(GridClientReadOnlyModeRequest.disableReadOnly(), destNodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<Boolean> readOnlyState(
+        UUID destNodeId
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        return makeRequest(GridClientReadOnlyModeRequest.currentReadOnlyMode(), destNodeId);
+    }
+
+    /** {@inheritDoc} */
     @Override public GridClientFuture<Boolean> currentState(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException {
         GridClientStateRequest msg = new GridClientStateRequest();
@@ -927,6 +949,12 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         makeRequest((GridClientMessage)msg, res, true);
 
         return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<String> clusterName(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException {
+        return makeRequest(new GridClientClusterNameRequest(), destNodeId);
     }
 
     /**

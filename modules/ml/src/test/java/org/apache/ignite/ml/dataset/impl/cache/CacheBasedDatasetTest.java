@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -87,7 +87,8 @@ public class CacheBasedDatasetTest extends GridCommonAbstractTest {
         CacheBasedDataset<Integer, String, Long, SimpleDatasetData> dataset = builder.build(
             TestUtils.testEnvBuilder(),
             (env, upstream, upstreamSize) -> upstreamSize,
-            (env, upstream, upstreamSize, ctx) -> new SimpleDatasetData(new double[0], 0)
+            (env, upstream, upstreamSize, ctx) -> new SimpleDatasetData(new double[0], 0),
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         assertEquals("Upstream cache name from dataset",
@@ -144,7 +145,8 @@ public class CacheBasedDatasetTest extends GridCommonAbstractTest {
         CacheBasedDataset<Integer, String, Long, SimpleDatasetData> dataset = builder.build(
             TestUtils.testEnvBuilder(),
             (env, upstream, upstreamSize) -> upstreamSize,
-            (env, upstream, upstreamSize, ctx) -> new SimpleDatasetData(new double[0], 0)
+            (env, upstream, upstreamSize, ctx) -> new SimpleDatasetData(new double[0], 0),
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         assertTrue("Before computation all partitions should not be reserved",

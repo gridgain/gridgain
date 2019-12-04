@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.configuration.Factory;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -37,8 +38,10 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.A;
 
 /**
- * This SSL context factory that provides ssl context configuration with specified key
- * and trust stores.
+ * SSL context factory that provides SSL context configuration with specified key and trust stores.
+ *
+ * This factory caches the result of the first successful attempt to create an {@link SSLContext} and always returns it
+ * as a result of further invocations of the {@link SslContextFactory#create()}} method.
  * <p>
  * In some cases it is useful to disable certificate validation of client side (e.g. when connecting
  * to a server with self-signed certificate). This can be achieved by setting a disabled trust manager
@@ -94,6 +97,9 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /** Enabled protocols. */
     private String[] protocols;
+
+    /** Cached instance of an {@link SSLContext}. */
+    private final AtomicReference<SSLContext> sslCtx = new AtomicReference<>();
 
     /**
      * Gets key store type used for context creation.
@@ -511,11 +517,20 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /** {@inheritDoc} */
     @Override public SSLContext create() {
-        try {
-            return createSslContext();
+        SSLContext ctx = sslCtx.get();
+
+        if (ctx == null) {
+            try {
+                ctx = createSslContext();
+
+                if (!sslCtx.compareAndSet(null, ctx))
+                    ctx = sslCtx.get();
+            }
+            catch (SSLException e) {
+                throw new IgniteException(e);
+            }
         }
-        catch (SSLException e) {
-            throw new IgniteException(e);
-        }
+
+        return ctx;
     }
 }

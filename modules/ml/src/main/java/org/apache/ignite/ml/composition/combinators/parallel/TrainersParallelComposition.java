@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,7 +77,7 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> IgniteModel<I, List<O>> fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> IgniteModel<I, List<O>> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
         List<IgniteSupplier<IgniteModel<I, O>>> tasks = trainers.stream()
             .map(tr -> (IgniteSupplier<IgniteModel<I, O>>)(() -> tr.fit(datasetBuilder, preprocessor)))
@@ -94,6 +94,8 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     @Override public <K, V> IgniteModel<I, List<O>> update(IgniteModel<I, List<O>> mdl,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
+        learningEnvironment().initDeployingContext(preprocessor);
+
         ModelsParallelComposition<I, O> typedMdl = (ModelsParallelComposition<I, O>)mdl;
 
         assert typedMdl.submodels().size() == trainers.size();

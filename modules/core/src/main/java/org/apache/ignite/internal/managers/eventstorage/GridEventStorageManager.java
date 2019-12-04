@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,9 +71,12 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVTS_ALL;
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY_ALL;
+import static org.apache.ignite.events.EventType.EVT_JOB_MAPPED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
+import static org.apache.ignite.events.EventType.EVT_TASK_FAILED;
+import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_EVENT;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.PUBLIC_POOL;
@@ -373,7 +376,7 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
     public synchronized void enableEvents(int[] types) {
         assert types != null;
 
-        ctx.security().authorize(null, SecurityPermission.EVENTS_ENABLE, null);
+        ctx.security().authorize(SecurityPermission.EVENTS_ENABLE);
 
         boolean[] userRecordableEvts0 = userRecordableEvts;
         boolean[] recordableEvts0 = recordableEvts;
@@ -415,7 +418,7 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
     public synchronized void disableEvents(int[] types) {
         assert types != null;
 
-        ctx.security().authorize(null, SecurityPermission.EVENTS_DISABLE, null);
+        ctx.security().authorize(SecurityPermission.EVENTS_DISABLE);
 
         boolean[] userRecordableEvts0 = userRecordableEvts;
         boolean[] recordableEvts0 = recordableEvts;
@@ -504,7 +507,16 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
      * @return {@code true} if this is an internal event.
      */
     private boolean isInternalEvent(int type) {
-        return type == EVT_DISCOVERY_CUSTOM_EVT || F.contains(EVTS_DISCOVERY_ALL, type);
+        switch (type) {
+            case EVT_DISCOVERY_CUSTOM_EVT:
+            case EVT_TASK_FINISHED:
+            case EVT_TASK_FAILED:
+            case EVT_JOB_MAPPED:
+                return true;
+
+            default:
+                return F.contains(EVTS_DISCOVERY_ALL, type);
+        }
     }
 
     /**
@@ -559,13 +571,8 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
     public boolean isAllUserRecordable(int[] types) {
         assert types != null;
 
-        boolean[] userRecordableEvts0 = userRecordableEvts;
-
         for (int type : types) {
-            if (type < 0 || type >= len)
-                throw new IllegalArgumentException("Invalid event type: " + type);
-
-            if (!userRecordableEvts0[type])
+            if (!isUserRecordable(type))
                 return false;
         }
 
@@ -1060,21 +1067,18 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
             if (timeout == 0)
                 timeout = Long.MAX_VALUE;
 
-            long now = U.currentTimeMillis();
+            long startNanos = System.nanoTime();
 
-            // Account for overflow of long value.
-            long endTime = now + timeout <= 0 ? Long.MAX_VALUE : now + timeout;
-
-            long delta = timeout;
+            long passedMillis = 0L;
 
             Collection<UUID> uidsCp = null;
 
             synchronized (qryMux) {
                 try {
-                    while (!uids.isEmpty() && err.get() == null && delta > 0) {
-                        qryMux.wait(delta);
+                    while (!uids.isEmpty() && err.get() == null && passedMillis < timeout) {
+                        qryMux.wait(timeout - passedMillis);
 
-                        delta = endTime - U.currentTimeMillis();
+                        passedMillis = U.millisSinceNanos(startNanos);
                     }
                 }
                 catch (InterruptedException e) {

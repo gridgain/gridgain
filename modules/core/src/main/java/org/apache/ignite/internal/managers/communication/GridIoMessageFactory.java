@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -161,20 +161,6 @@ import org.apache.ignite.internal.processors.continuous.GridContinuousMessage;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerResponse;
-import org.apache.ignite.internal.processors.hadoop.HadoopJobId;
-import org.apache.ignite.internal.processors.hadoop.shuffle.HadoopDirectShuffleMessage;
-import org.apache.ignite.internal.processors.hadoop.shuffle.HadoopShuffleAck;
-import org.apache.ignite.internal.processors.hadoop.shuffle.HadoopShuffleFinishRequest;
-import org.apache.ignite.internal.processors.hadoop.shuffle.HadoopShuffleFinishResponse;
-import org.apache.ignite.internal.processors.hadoop.shuffle.HadoopShuffleMessage;
-import org.apache.ignite.internal.processors.igfs.IgfsAckMessage;
-import org.apache.ignite.internal.processors.igfs.IgfsBlockKey;
-import org.apache.ignite.internal.processors.igfs.IgfsBlocksMessage;
-import org.apache.ignite.internal.processors.igfs.IgfsDeleteMessage;
-import org.apache.ignite.internal.processors.igfs.IgfsFileAffinityRange;
-import org.apache.ignite.internal.processors.igfs.IgfsFragmentizerRequest;
-import org.apache.ignite.internal.processors.igfs.IgfsFragmentizerResponse;
-import org.apache.ignite.internal.processors.igfs.IgfsSyncMessage;
 import org.apache.ignite.internal.processors.marshaller.MissingMappingRequestMessage;
 import org.apache.ignite.internal.processors.marshaller.MissingMappingResponseMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryCancelRequest;
@@ -229,6 +215,7 @@ public class GridIoMessageFactory implements MessageFactory {
         switch (type) {
             // -54 is reserved for SQL.
             // -46 ... -51 - snapshot messages.
+            // -62 ... -63 - management console messages.
             case -61:
                 msg = new IgniteDiagnosticMessage();
 
@@ -276,36 +263,6 @@ public class GridIoMessageFactory implements MessageFactory {
 
             case -43:
                 msg = new IgniteIoTestMessage();
-
-                break;
-
-            case -42:
-                msg = new HadoopDirectShuffleMessage();
-
-                break;
-
-            case -41:
-                msg = new HadoopShuffleFinishResponse();
-
-                break;
-
-            case -40:
-                msg = new HadoopShuffleFinishRequest();
-
-                break;
-
-            case -39:
-                msg = new HadoopJobId();
-
-                break;
-
-            case -38:
-                msg = new HadoopShuffleAck();
-
-                break;
-
-            case -37:
-                msg = new HadoopShuffleMessage();
 
                 break;
 
@@ -651,46 +608,6 @@ public class GridIoMessageFactory implements MessageFactory {
 
             case 63:
                 msg = new DataStreamerResponse();
-
-                break;
-
-            case 64:
-                msg = new IgfsAckMessage();
-
-                break;
-
-            case 65:
-                msg = new IgfsBlockKey();
-
-                break;
-
-            case 66:
-                msg = new IgfsBlocksMessage();
-
-                break;
-
-            case 67:
-                msg = new IgfsDeleteMessage();
-
-                break;
-
-            case 68:
-                msg = new IgfsFileAffinityRange();
-
-                break;
-
-            case 69:
-                msg = new IgfsFragmentizerRequest();
-
-                break;
-
-            case 70:
-                msg = new IgfsFragmentizerResponse();
-
-                break;
-
-            case 71:
-                msg = new IgfsSyncMessage();
 
                 break;
 
@@ -1155,10 +1072,18 @@ public class GridIoMessageFactory implements MessageFactory {
 
                 break;
 
+            case GridIoSecurityAwareMessage.TYPE_CODE:
+                msg = new GridIoSecurityAwareMessage();
+
+                break;
+
             // [-3..119] [124..129] [-23..-28] [-36..-55] - this
             // [120..123] - DR
             // [-4..-22, -30..-35] - SQL
             // [2048..2053] - Snapshots
+            // [4096..4096] - TxDR
+            // [-42..-37] - former hadoop.
+            // [64..71] - former IGFS.
             default:
                 if (ext != null) {
                     for (MessageFactory factory : ext) {

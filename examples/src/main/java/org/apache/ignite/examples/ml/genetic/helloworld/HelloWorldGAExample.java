@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,14 +37,14 @@ import org.apache.ignite.ml.genetic.parameter.GAGridConstants;
  * <p>
  * You can change the test data and parameters of GA grid used in this example and re-run it to explore
  * this functionality further.</p>
- * 
+ *
  * For example, you may change the some basic genetic parameters on the GAConfiguration object:
- * 
+ *
  *  Mutation Rate
  *  Crossover Rate
  *  Population Size
  *  Selection Method
- *  
+ *
  * <p>
  * How to run from command line:</p>
  * <p>
@@ -65,10 +65,7 @@ public class HelloWorldGAExample {
     public static void main(String args[]) {
         System.out.println(">>> HelloWorld GA grid example started.");
 
-        try {
-            // Create an Ignite instance as you would in any other use case.
-            Ignite ignite = Ignition.start("examples/config/example-ignite.xml");
-
+        try(Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             // Create GAConfiguration.
             GAConfiguration gaCfg = new GAConfiguration();
 
@@ -80,19 +77,19 @@ public class HelloWorldGAExample {
 
             // Initialize gene pool.
             gaCfg.setGenePool(genes);
-             
+
             // Set CrossOver Rate.
             gaCfg.setCrossOverRate(.05);
-            
+
             // Set Mutation Rate.
             gaCfg.setMutationRate(.05);
-           
+
             // Set Selection Method.
             gaCfg.setSelectionMtd(GAGridConstants.SELECTION_METHOD.SELECTION_METHOD_ROULETTE_WHEEL);
-            
+
             // Set Population Size.
-            gaCfg.setPopulationSize(2000);
-            
+            gaCfg.setPopulationSize(500);
+
             // Create and set Fitness function.
             HelloWorldFitnessFunction function = new HelloWorldFitnessFunction();
             gaCfg.setFitnessFunction(function);
@@ -113,9 +110,6 @@ public class HelloWorldGAExample {
             Chromosome chromosome = gaGrid.evolve();
 
             System.out.println(">>> Evolution result: " + chromosome);
-
-            Ignition.stop(true);
-
             System.out.println(">>> HelloWorld GA grid example completed.");
         }
         catch (Exception e) {

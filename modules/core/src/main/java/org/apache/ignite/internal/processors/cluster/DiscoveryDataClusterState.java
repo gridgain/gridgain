@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -43,6 +44,15 @@ public class DiscoveryDataClusterState implements Serializable {
 
     /** Flag indicating if the cluster in in active state. */
     private final boolean active;
+
+    /** Flag indicating if the cluster in read-only mode. */
+    private final boolean readOnly;
+
+    /** Last cluster activation time. */
+    private final long activationTime;
+
+    /** Read-only mode change time. Correctly work's only for enabling read-only mode. */
+    private final long readOnlyChangeTime;
 
     /** Current cluster baseline topology. */
     @Nullable private final BaselineTopology baselineTopology;
@@ -85,23 +95,32 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param active Current status.
      * @return State instance.
      */
-    static DiscoveryDataClusterState createState(boolean active, @Nullable BaselineTopology baselineTopology) {
-        return new DiscoveryDataClusterState(null, active, baselineTopology, null, null, null);
+    static DiscoveryDataClusterState createState(
+        boolean active,
+        boolean readOnly,
+        @Nullable BaselineTopology baselineTopology,
+        long activationTime
+    ) {
+        return new DiscoveryDataClusterState(null, active, readOnly, baselineTopology, null, null, activationTime, null);
     }
 
     /**
      * @param active New status.
+     * @param readOnly New read-only mode.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      * @return State instance.
      */
     static DiscoveryDataClusterState createTransitionState(
         DiscoveryDataClusterState prevState,
         boolean active,
+        boolean readOnly,
         @Nullable BaselineTopology baselineTopology,
         UUID transitionReqId,
         AffinityTopologyVersion transitionTopVer,
+        long activationTime,
         Set<UUID> transitionNodes
     ) {
         assert transitionReqId != null;
@@ -112,29 +131,39 @@ public class DiscoveryDataClusterState implements Serializable {
         return new DiscoveryDataClusterState(
             prevState,
             active,
+            readOnly,
             baselineTopology,
             transitionReqId,
             transitionTopVer,
-            transitionNodes);
+            activationTime,
+            transitionNodes
+        );
     }
 
     /**
      * @param prevState Previous state. May be non-null only for transitional states.
      * @param active New state.
+     * @param readOnly New read-only mode.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      */
     private DiscoveryDataClusterState(
         DiscoveryDataClusterState prevState,
         boolean active,
+        boolean readOnly,
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
+        long activationTime,
         @Nullable Set<UUID> transitionNodes
     ) {
         this.prevState = prevState;
         this.active = active;
+        this.readOnly = readOnly;
+        this.activationTime = activationTime;
+        this.readOnlyChangeTime = U.currentTimeMillis();
         this.baselineTopology = baselineTopology;
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
@@ -175,6 +204,13 @@ public class DiscoveryDataClusterState implements Serializable {
     }
 
     /**
+     * @return {@code True} if transition is baseline change.
+     */
+    public boolean baselineChanging() {
+        return transition() && prevState != null && prevState.active() && active();
+    }
+
+    /**
      * @return State change exchange version.
      */
     public AffinityTopologyVersion transitionTopologyVersion() {
@@ -186,6 +222,27 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     public boolean active() {
         return active;
+    }
+
+    /**
+     * @return Cluster activation time.
+     */
+    public long activationTime() {
+        return activationTime;
+    }
+
+    /**
+     * @return Read only mode enabled flag.
+     */
+    public boolean readOnly() {
+        return readOnly;
+    }
+
+    /**
+     * @return Change time read-only mode.
+     */
+    public long readOnlyModeChangeTime() {
+        return readOnlyChangeTime;
     }
 
     /**
@@ -203,20 +260,15 @@ public class DiscoveryDataClusterState implements Serializable {
     }
 
     /**
-     *
-     * @return {@code True} If baseLine changed, {@code False} if not.
+     * @return Previous "active" flag value during transition.
      */
-    public boolean baselineChanged() {
-        BaselineTopology prevBLT = previousBaselineTopology();
-        BaselineTopology curBLT = baselineTopology();
+    public boolean previouslyActive() {
+        assert transitionReqId != null;
 
-        if (prevBLT == null && curBLT != null)
-            return true;
+        if (prevState != null)
+            return prevState.active;
 
-        if (prevBLT!= null && curBLT != null)
-            return !prevBLT.equals(curBLT);
-
-        return false;
+        return !active;
     }
 
     /**
@@ -277,13 +329,14 @@ public class DiscoveryDataClusterState implements Serializable {
             new DiscoveryDataClusterState(
                 null,
                 active,
+                readOnly,
                 baselineTopology,
                 null,
                 null,
+                activationTime,
                 null
             ) :
-            prevState != null ? prevState :
-                    DiscoveryDataClusterState.createState(false, null);
+            prevState != null ? prevState : createState(false, false, null, 0);
     }
 
     /** {@inheritDoc} */

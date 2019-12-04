@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -55,13 +54,12 @@ public class GridSpringCacheManagerMultiJvmSelfTest extends GridCommonAbstractTe
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-9488")
     @Test
     public void testSyncCache() throws Exception {
         IgniteEx loc = startGrid(0);
 
         final int threads = 4;
-        final int entries = 100_000;
+        final int entries = 1000;
         final int remoteNum = 2;
 
         final CountDownLatch latch = new CountDownLatch(1);

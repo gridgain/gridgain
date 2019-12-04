@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -91,6 +91,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridCursor;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -307,7 +308,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             String errMsg = "Failed to add node to topology. MVCC is enabled on the cluster, but " +
                 "the node doesn't support MVCC [nodeId=" + node.id() + ']';
 
-            return new IgniteNodeValidationResult(node.id(), errMsg, errMsg);
+            return new IgniteNodeValidationResult(node.id(), errMsg);
         }
 
         return null;
@@ -403,7 +404,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
         //noinspection ConstantConditions
         ctx.cache().context().pageStore().initialize(TX_LOG_CACHE_ID, 0,
-            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics());
+            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages());
     }
 
     /** {@inheritDoc} */
@@ -649,7 +650,11 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
         // Complete init future if local node is a new coordinator. All previous txs have been already completed here.
         if (curCrd0.local())
-            ctx.closure().runLocalSafe(initFut::onDone);
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                @Override public void run() {
+                    initFut.onDone();
+                }
+            });
     }
 
     /** {@inheritDoc} */

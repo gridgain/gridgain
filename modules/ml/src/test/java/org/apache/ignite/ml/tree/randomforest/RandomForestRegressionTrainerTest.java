@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,7 @@ public class RandomForestRegressionTrainerTest extends TrainerTest {
     /** */
     @Test
     public void testFit() {
-        int sampleSize = 1000;
+        int sampleSize = 100;
         Map<Double, LabeledVector<Double>> sample = new HashMap<>();
         for (int i = 0; i < sampleSize; i++) {
             double x1 = i;
@@ -65,7 +65,7 @@ public class RandomForestRegressionTrainerTest extends TrainerTest {
     /** */
     @Test
     public void testUpdate() {
-        int sampleSize = 1000;
+        int sampleSize = 100;
         Map<Double, LabeledVector<Double>> sample = new HashMap<>();
         for (int i = 0; i < sampleSize; i++) {
             double x1 = i;

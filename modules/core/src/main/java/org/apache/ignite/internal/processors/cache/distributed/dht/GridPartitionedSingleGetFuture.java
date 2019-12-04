@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSing
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -403,7 +404,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     ) {
         // Local get cannot be used with MVCC as local node can contain some visible version which is not latest.
         boolean fastLocGet = !cctx.mvccEnabled() &&
-            (!forcePrimary || affNodes.get(0).isLocal()) &&
+            ((!forcePrimary && cctx.config().isReadFromBackup()) || affNodes.get(0).isLocal()) &&
             cctx.reserveForFastLocalGet(part, topVer);
 
         if (fastLocGet) {
@@ -874,7 +875,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      * @param topVer Topology version.
      */
     private void remap(final AffinityTopologyVersion topVer) {
-        cctx.closures().runLocalSafe(new Runnable() {
+        cctx.closures().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
                 // If topology changed reset collection of invalid nodes.
                 synchronized (this) {

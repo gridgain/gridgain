@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,7 +49,7 @@ public class DiscreteNaiveBayesTrainer extends SingleLabelDatasetTrainer<Discret
     private double[][] bucketThresholds;
 
     /** {@inheritDoc} */
-    @Override public <K, V> DiscreteNaiveBayesModel fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> DiscreteNaiveBayesModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                         Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }
@@ -111,7 +111,7 @@ public class DiscreteNaiveBayesTrainer extends SingleLabelDatasetTrainer<Discret
                     }
                 }
                 return res;
-            })) {
+            }, learningEnvironment())) {
             DiscreteNaiveBayesSumsHolder sumsHolder = dataset.compute(t -> t, (a, b) -> {
                 if (a == null)
                     return b == null ? new DiscreteNaiveBayesSumsHolder() : b;

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
@@ -30,11 +31,13 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -89,15 +92,16 @@ public class CacheDataPageScanQueryTest extends GridCommonAbstractTest {
      */
     @SuppressWarnings("ConstantConditions")
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20800")
     public void testDataPageScanWithRestart() throws Exception {
         IgniteEx ignite = startGrid(0);
         ignite.cluster().active(true);
 
         IgniteInternalCache<Long, String> cache = ignite.cachex(CACHE);
-        CacheGroupMetricsMXBean gmx = cache.context().group().mxBean();
+        CacheGroupMetricsImpl metrics = cache.context().group().metrics();
         DataRegionMetricsImpl rmx = cache.context().dataRegion().memoryMetrics();
 
-        long maxKey = 100_000;
+        long maxKey = 10_000;
 
         Map<Long,String> map = new ConcurrentHashMap<>();
 
@@ -105,11 +109,13 @@ public class CacheDataPageScanQueryTest extends GridCommonAbstractTest {
         AtomicInteger threadShift = new AtomicInteger();
 
         multithreaded((Callable<Void>)() -> {
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
             int shift = threadShift.getAndIncrement();
 
             for (int i = shift; i < maxKey; i += threads) {
                 Long k = (long)i;
-                String v = String.valueOf(i);
+                String v = GridTestUtils.randomString(rnd, 6 * 1024); // Bigger than single page.
 
                 cache.put(k, v);
                 map.put(k, v);
@@ -117,18 +123,16 @@ public class CacheDataPageScanQueryTest extends GridCommonAbstractTest {
             return null;
         }, threads);
 
-//        forceCheckpoint(ignite);
-
         assertEquals(map.size(), cache.size());
 
         info("Page mem  : " + rmx.getPhysicalMemorySize());
-        info("Alloc size: " + gmx.getTotalAllocatedSize());
-        info("Store size: " + gmx.getStorageSize());
+        info("Alloc size: " + metrics.getTotalAllocatedSize());
+        info("Store size: " + metrics.getStorageSize());
 
         HashMap<Long,String> map2 = new HashMap<>(map);
 
         IgniteCache<Long,String> c = ignite.cache(CACHE);
-        for (Cache.Entry<Long,String> e : c.query(new ScanQuery<Long,String>().setDataPageScanEnabled(true)).getAll())
+        for (Cache.Entry<Long,String> e : c.query(new ScanQuery<Long,String>()).getAll())
             assertEquals(e.getValue(), map.remove(e.getKey()));
 
         assertTrue(map.isEmpty());
@@ -140,7 +144,7 @@ public class CacheDataPageScanQueryTest extends GridCommonAbstractTest {
         ignite.cluster().active(true);
 
         c = ignite.cache(CACHE);
-        for (Cache.Entry<Long,String> e : c.query(new ScanQuery<Long,String>().setDataPageScanEnabled(true)).getAll())
+        for (Cache.Entry<Long,String> e : c.query(new ScanQuery<Long,String>()).getAll())
             assertEquals(e.getValue(), map2.remove(e.getKey()));
 
         assertTrue(map2.isEmpty());

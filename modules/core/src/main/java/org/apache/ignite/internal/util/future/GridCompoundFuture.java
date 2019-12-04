@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,11 @@
 
 package org.apache.ignite.internal.util.future;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
@@ -31,12 +36,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteReducer;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Future composed of multiple inner futures.
@@ -219,7 +218,7 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      *
      * @param fut Future to add.
      */
-    public final void add(IgniteInternalFuture<T> fut) {
+    public final GridCompoundFuture<T, R> add(IgniteInternalFuture<T> fut) {
         assert fut != null;
 
         synchronized (this) {
@@ -247,6 +246,8 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
                 onDone(e);
             }
         }
+
+        return this;
     }
 
     /**
@@ -267,9 +268,11 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     /**
      * Mark this future as initialized.
      */
-    public final void markInitialized() {
+    public final GridCompoundFuture<T, R> markInitialized() {
         if (FLAGS_UPD.compareAndSet(this, 0, INIT_FLAG))
             checkComplete();
+
+        return this;
     }
 
     /**

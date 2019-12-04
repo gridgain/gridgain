@@ -1,13 +1,13 @@
 
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,7 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.h2.result.SortOrder;
 import org.h2.value.CompareMode;
 import org.h2.value.Value;
@@ -201,7 +201,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();
@@ -322,7 +322,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();
@@ -374,7 +374,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();
@@ -433,7 +433,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();
@@ -575,7 +575,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             null,
             PAGE_SIZE,
             plcCfg,
-            new DataRegionMetricsImpl(plcCfg),
+            new LongAdderMetric("NO_OP", null),
             false);
 
         pageMem.start();
@@ -591,7 +591,7 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             int off = 0;
             int max = 255;
 
-            InlineIndexHelper ih = new InlineIndexHelper("", v1.getType(), 1, 0,
+            InlineIndexHelper ih = new InlineIndexHelper("", v1.getType().getValueType(), 1, 0,
                 CompareMode.getInstance(null, 0));
 
             off += ih.put(pageAddr, off, v1, max - off);
@@ -619,7 +619,8 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
         Value v1 = s1 == null ? ValueNull.INSTANCE : ValueString.get(s1);
         Value v2 = s2 == null ? ValueNull.INSTANCE : ValueString.get(s2);
 
-        int c = v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
+        int c = v1 == ValueNull.INSTANCE ? -1 : v2 == ValueNull.INSTANCE ? 1 :
+            v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
 
         return ha.canRelyOnCompare(c, v1, v2);
     }
@@ -629,7 +630,8 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
         Value v1 = b1 == null ? ValueNull.INSTANCE : ValueBytes.get(b1);
         Value v2 = b2 == null ? ValueNull.INSTANCE : ValueBytes.get(b2);
 
-        int c = v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
+        int c = v1 == ValueNull.INSTANCE ? -1 : v2 == ValueNull.INSTANCE ? 1 :
+            v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
 
         return ha.canRelyOnCompare(c, v1, v2);
     }
@@ -639,7 +641,8 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
         Value v1 = o1 == null ? ValueNull.INSTANCE : ValueJavaObject.getNoCopy(null, SerializationUtils.serialize(o1), null);
         Value v2 = o2 == null ? ValueNull.INSTANCE : ValueJavaObject.getNoCopy(null, SerializationUtils.serialize(o2), null);
 
-        int c = v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
+        int c = v1 == ValueNull.INSTANCE ? -1 : v2 == ValueNull.INSTANCE ? 1 :
+            v1.compareTypeSafe(v2, CompareMode.getInstance(null, 0));
 
         return ha.canRelyOnCompare(c, v1, v2);
     }

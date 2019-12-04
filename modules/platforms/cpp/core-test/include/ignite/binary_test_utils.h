@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@
 using namespace ignite;
 using namespace ignite::binary;
 using namespace ignite::impl::binary;
+using namespace ignite::impl::interop;
 
 namespace ignite_test
 {
@@ -32,6 +33,21 @@ namespace ignite_test
             inline bool IsBinaryError(const IgniteError& err)
             {
                 return err.GetCode() == IgniteError::IGNITE_ERR_BINARY;
+            }
+
+            inline bool IsStreamPositionEqualOnSkip(InteropInputStream& in, int32_t prevPos = 0)
+            {
+                int32_t pos = in.Position();
+
+                BinaryReaderImpl reader(&in);
+
+                in.Position(prevPos);
+                reader.Skip();
+                int32_t skipPos = in.Position();
+
+                in.Position(pos);
+
+                return skipPos == pos;
             }
 
             template<typename T>

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,9 @@
 
 package org.apache.ignite.ml.preprocessing.normalization;
 
+import java.util.Collections;
+import java.util.List;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.functions.Functions;
 import org.apache.ignite.ml.math.functions.IgniteBiFunction;
 import org.apache.ignite.ml.math.functions.IgniteDoubleFunction;
@@ -33,7 +36,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class NormalizationPreprocessor<K, V> implements Preprocessor<K, V> {
+public final class NormalizationPreprocessor<K, V> implements Preprocessor<K, V>, DeployableObject {
     /** */
     private static final long serialVersionUID = 6873438115778921295L;
 
@@ -91,5 +94,10 @@ public class NormalizationPreprocessor<K, V> implements Preprocessor<K, V> {
     /** Gets the degree of L^p space parameter value. */
     public double p() {
         return p;
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(basePreprocessor);
     }
 }

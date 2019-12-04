@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.spi.checkpoint.noop.NoopCheckpointSpi;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -39,10 +40,10 @@ import org.junit.Test;
  */
 public class IgnitePdsWholeClusterRestartTest extends GridCommonAbstractTest {
     /** */
-    private static final int GRID_CNT = 5;
+    private static final int GRID_CNT = SF.applyLB(5, 3);
 
     /** */
-    private static final int ENTRIES_COUNT = 1_000;
+    private static final int ENTRIES_COUNT = SF.apply(1_000);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -89,7 +90,7 @@ public class IgnitePdsWholeClusterRestartTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-        /**
+    /**
      * @throws Exception if failed.
      */
     @Test
@@ -112,7 +113,7 @@ public class IgnitePdsWholeClusterRestartTest extends GridCommonAbstractTest {
         for (int i = 0; i < GRID_CNT; i++)
             idxs.add(i);
 
-        for (int r = 0; r < 10; r++) {
+        for (int r = 0; r < SF.applyLB(10, 3); r++) {
             Collections.shuffle(idxs);
 
             info("Will start in the following order: " + idxs);
@@ -128,7 +129,7 @@ public class IgnitePdsWholeClusterRestartTest extends GridCommonAbstractTest {
 
                     for (int k = 0; k < ENTRIES_COUNT; k++)
                         assertEquals("Failed to read [g=" + g + ", part=" + ig.affinity(DEFAULT_CACHE_NAME).partition(k) +
-                            ", nodes=" + ig.affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(k) + ']',
+                                ", nodes=" + ig.affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(k) + ']',
                             k, ig.cache(DEFAULT_CACHE_NAME).get(k));
                 }
             }

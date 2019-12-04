@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,21 +16,23 @@
 
 package org.apache.ignite;
 
+import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.stream.StreamTransformer;
@@ -89,10 +91,19 @@ public final class IgniteSystemProperties {
     /**
      * If this system property is set to {@code false} - no checks for new versions will
      * be performed by Ignite. By default, Ignite periodically checks for the new
-     * version and prints out the message into the log if new version of Ignite is
+     * version and prints out the message into the log if a new version of Ignite is
      * available for download.
+     *
+     * Update notifier enabled flag is a cluster-wide value and determined according to the local setting
+     * during the start of the first node in the cluster. The chosen value will survive the first node shutdown
+     * and will override the property value on all newly joining nodes.
      */
     public static final String IGNITE_UPDATE_NOTIFIER = "IGNITE_UPDATE_NOTIFIER";
+
+    /**
+     * Url of updates service.
+     */
+    public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
 
     /**
      * This system property defines interval in milliseconds in which Ignite will check
@@ -265,6 +276,8 @@ public final class IgniteSystemProperties {
      * System property to enable pending transaction tracker.
      * Affects impact of {@link IgniteSystemProperties#IGNITE_DISABLE_WAL_DURING_REBALANCING} property:
      * if this property is set, WAL anyway won't be disabled during rebalancing triggered by baseline topology change.
+     * Now it is not nessessary setting this property before grid starting because enabling of pendingTxTracker happens
+     * automatically if needed, and it should be used for test purposes only.
      */
     public static final String IGNITE_PENDING_TX_TRACKER_ENABLED = "IGNITE_PENDING_TX_TRACKER_ENABLED";
 
@@ -289,7 +302,10 @@ public final class IgniteSystemProperties {
      * System property to override default job metrics processor property defining
      * concurrency level for structure holding job metrics snapshots.
      * Default value is {@code 64}.
+     *
+     * @deprecated Use {@link GridMetricManager} instead.
      */
+    @Deprecated
     public static final String IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL = "IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL";
 
     /**
@@ -557,9 +573,6 @@ public final class IgniteSystemProperties {
     /** Maximum number of nested listener calls before listener notification becomes asynchronous. */
     public static final String IGNITE_MAX_NESTED_LISTENER_CALLS = "IGNITE_MAX_NESTED_LISTENER_CALLS";
 
-    /** Indicating whether local store keeps primary only. Backward compatibility flag. */
-    public static final String IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY = "IGNITE_LOCAL_STORE_KEEPS_PRIMARY_ONLY";
-
     /**
      * Manages {@link OptimizedMarshaller} behavior of {@code serialVersionUID} computation for
      * {@link Serializable} classes.
@@ -798,8 +811,10 @@ public final class IgniteSystemProperties {
     /** Max amount of remembered errors for {@link GridLogThrottle}. */
     public static final String IGNITE_LOG_THROTTLE_CAPACITY = "IGNITE_LOG_THROTTLE_CAPACITY";
 
-    /** If this property is set, {@link DataStorageConfiguration#writeThrottlingEnabled} will be overridden to true
-     * independent of initial value in configuration. */
+    /**
+     * If this property is set, {@link DataStorageConfiguration#isWriteThrottlingEnabled()}
+     * will be overridden to {@code true} regardless the initial value in the configuration.
+     */
     public static final String IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED = "IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED";
 
     /**
@@ -913,11 +928,11 @@ public final class IgniteSystemProperties {
 
     /**
      * Whenever read load balancing is enabled, that means 'get' requests will be distributed between primary and backup
-     * nodes if it is possible and {@link CacheConfiguration#readFromBackup} is {@code true}.
+     * nodes if it is possible and {@link CacheConfiguration#isReadFromBackup()} is {@code true}.
      *
      * Default is {@code true}.
      *
-     * @see CacheConfiguration#readFromBackup
+     * @see CacheConfiguration#isReadFromBackup()
      */
     public static final String IGNITE_READ_LOAD_BALANCING = "IGNITE_READ_LOAD_BALANCING";
 
@@ -1034,9 +1049,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_WAIT_SCHEMA_UPDATE = "IGNITE_WAIT_SCHEMA_UPDATE";
 
     /**
-     * System property to override {@link CacheConfiguration#rebalanceThrottle} configuration property for all caches.
+     * System property to override {@link CacheConfiguration#getRebalanceThrottle} configuration property for all caches.
      * {@code 0} by default, which means that override is disabled.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceThrottle()} instead.
      */
+    @Deprecated
     public static final String IGNITE_REBALANCE_THROTTLE_OVERRIDE = "IGNITE_REBALANCE_THROTTLE_OVERRIDE";
 
     /**
@@ -1134,14 +1151,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_NODE_IDS_HISTORY_SIZE = "IGNITE_NODE_IDS_HISTORY_SIZE";
 
     /**
-     * Flag to enable baseline auto-adjust by default.
-     */
-    public static final String IGNITE_BASELINE_AUTO_ADJUST_ENABLED = "IGNITE_BASELINE_AUTO_ADJUST_ENABLED";
-
-    /**
      * Maximum number of diagnostic warning messages per category, when waiting for PME.
      */
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
+
+    /**
+     * Flag to enable triggering failure handler for node if unrecoverable partition inconsistency is
+     * discovered during partition update counters exchange.
+     */
+    public static final String IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY =
+        "IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY";
 
     /**
      * Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements.
@@ -1175,6 +1194,135 @@ public final class IgniteSystemProperties {
      * owner thread.
      */
     public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
+
+    /**
+     * Defines factory class for H2 LocalResult (see org.h2.result.LocalResult).
+     */
+    public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
+
+    /**
+     * Defines default memory limit for every single sql query (query quota).
+     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
+     *
+     * Default: MaxHeapSize/AvailableCPUs.
+     */
+    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
+
+    /**
+     * Defines memory pool size available for sql queries on node (global quota).
+     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
+     *
+     * Default: 60% MaxHeapSize.
+     */
+
+    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
+
+    /**
+     * Defines default memory reservation block size.
+     *
+     * Default: 512K.
+     */
+    public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
+
+    /**
+     * Page lock tracker type.
+     * -1 - Disable lock tracking.
+     *  1 - HEAP_STACK
+     *  2 - HEAP_LOG
+     *  3 - OFF_HEAP_STACK
+     *  4 - OFF_HEAP_LOG
+     *
+     * Default is 2 - HEAP_LOG.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_TYPE = "IGNITE_PAGE_LOCK_TRACKER_TYPE";
+
+    /**
+     * Capacity in pages for storing in page lock tracker strucuture.
+     *
+     * Default is 512 pages.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CAPACITY = "IGNITE_PAGE_LOCK_TRACKER_CAPACITY";
+
+    /**
+     * Page lock tracker thread for checking hangs threads interval.
+     *
+     * Default is 60_000 ms.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL = "IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL";
+
+    /**
+     * Enables threads locks dumping on critical node failure.
+     *
+     * Default is {@code true}.
+     */
+    public static final String IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = "IGNITE_DUMP_PAGE_LOCK_ON_FAILURE";
+
+    /**
+     * Scan the classpath on startup and log all the files containing in it.
+     */
+    public static final String IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP = "IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP";
+
+    /**
+     * Maximum size of table (rows count) when temporary hash index can be built on fly.
+     *
+     * Default: 100_000 (rows).
+     */
+    public static final String IGNITE_HASH_JOIN_MAX_TABLE_SIZE = "IGNITE_HASH_JOIN_MAX_TABLE_SIZE";
+
+    /**
+     * Enable hash join (create hash index on the fly) for query optimizer.
+     * When disabled hash join may be enabled only by index hint.
+     * e.g.: SELECT * from A, B USE INDEX (HASH_JOIN_IDX) WHERE A.jid = B.jid
+     * hash index will be created for B.jid on the fly.
+     *
+     * Default: false.
+     */
+    public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
+
+    /**
+     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
+     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
+     * can't be greater than total available processors count.
+     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
+     */
+    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
+
+    /** Enable write rebalnce statistics into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
+
+    /**  Enable write rebalnce statistics by partitions into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS =
+        "IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS";
+
+    /**
+     * Threshold timeout for long transactions, if transaction exceeds it, it will be dumped in log with
+     * information about how much time did it spent in system time (time while aquiring locks, preparing,
+     * commiting, etc) and user time (time when client node runs some code while holding transaction and not
+     * waiting it). Equals 0 if not set. No long transactions are dumped in log if nor this parameter
+     * neither {@link #IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT} is set.
+     */
+    public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD = "IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD";
+
+    /**
+     * The coefficient for samples of completed transactions that will be dumped in log. Must be float value
+     * between 0.0 and 1.0 inclusive. Default value is <code>0.0</code>.
+     */
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT";
+
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>. Default value is <code>5</code>.
+     */
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
+
+    /**
+     * Disables smart DR throttling. Default value is <code>false</code>.
+     */
+    public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
+        "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /**
      * Enforces singleton.
@@ -1275,7 +1423,7 @@ public final class IgniteSystemProperties {
     public static boolean getBoolean(String name, boolean dflt) {
         String val = getString(name);
 
-        return val == null ? dflt : Boolean.valueOf(val);
+        return val == null ? dflt : Boolean.parseBoolean(val);
     }
 
     /**

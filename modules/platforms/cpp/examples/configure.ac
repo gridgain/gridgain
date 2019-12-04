@@ -1,12 +1,12 @@
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
-# 
+#
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([Apache Ignite C++ Examples], [8.8.0.36920], [dev@ignite.apache.org], [ignite-examples], [ignite.apache.org])
+AC_INIT([Apache Ignite C++ Examples], [9.0.0.38994], [dev@ignite.apache.org], [ignite-examples], [ignite.apache.org])
 
 AC_CANONICAL_HOST
 AC_CONFIG_MACRO_DIR([m4])
@@ -56,6 +56,7 @@ AC_CONFIG_FILES([ \
     query-example/Makefile \
     continuous-query-example/Makefile \
     compute-example/Makefile \
+    cluster-compute-example/Makefile \
     thin-client-put-get-example/Makefile \
 ])
 

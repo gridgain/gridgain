@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.plugin.security;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -37,6 +38,9 @@ public class AuthenticationContext {
 
     /** Subject address. */
     private InetSocketAddress addr;
+
+    /** All Subject address. */
+    private List<InetSocketAddress> allAddr;
 
     /** */
     private Map<String, Object> nodeAttrs;
@@ -169,4 +173,23 @@ public class AuthenticationContext {
 
         return this;
     }
+
+    /**
+     * Gets All subject network addresses.
+     *
+     * @return All subject network addresses.
+     */
+    public List<InetSocketAddress> allAddresses() {
+        return allAddr;
+    }
+
+    /**
+     * Sets All subject network addresses.
+     *
+     * @param allAddr List of All subject network addresses.
+     */
+    public void allAddresses(List<InetSocketAddress> allAddr) {
+        this.allAddr = allAddr;
+    }
+
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,18 +53,16 @@ public class GridJettyObjectMapper extends ObjectMapper {
     public GridJettyObjectMapper() {
         super(null, new CustomSerializerProvider(), null);
 
+        configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         setDateFormat(DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT, Locale.US));
 
-        SimpleModule module = new SimpleModule();
-
-        module.addSerializer(Throwable.class, THROWABLE_SERIALIZER);
-        module.addSerializer(IgniteBiTuple.class, IGNITE_TUPLE_SERIALIZER);
-        module.addSerializer(IgniteUuid.class, IGNITE_UUID_SERIALIZER);
-        module.addSerializer(GridCacheSqlMetadata.class, IGNITE_SQL_METADATA_SERIALIZER);
-        module.addSerializer(GridCacheSqlIndexMetadata.class, IGNITE_SQL_INDEX_METADATA_SERIALIZER);
-        module.addSerializer(BinaryObjectImpl.class, IGNITE_BINARY_OBJECT_SERIALIZER);
-
-        configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        SimpleModule module = new SimpleModule()
+            .addSerializer(Throwable.class, THROWABLE_SERIALIZER)
+            .addSerializer(IgniteBiTuple.class, IGNITE_TUPLE_SERIALIZER)
+            .addSerializer(IgniteUuid.class, IGNITE_UUID_SERIALIZER)
+            .addSerializer(GridCacheSqlMetadata.class, IGNITE_SQL_METADATA_SERIALIZER)
+            .addSerializer(GridCacheSqlIndexMetadata.class, IGNITE_SQL_INDEX_METADATA_SERIALIZER)
+            .addSerializer(BinaryObjectImpl.class, IGNITE_BINARY_OBJECT_SERIALIZER);
 
         registerModule(module);
     }
@@ -156,6 +154,13 @@ public class GridJettyObjectMapper extends ObjectMapper {
 
             writeException(e, gen);
 
+            gen.writeArrayFieldStart("stackTrace");
+
+            for (StackTraceElement el: e.getStackTrace())
+                gen.writeString(el.toString());
+
+            gen.writeEndArray();
+
             if (e.getCause() != null)
                 gen.writeObjectField("cause", e.getCause());
 
@@ -243,7 +248,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
                             BinaryObjectImpl ref = (BinaryObjectImpl)val;
 
                             if (ref.hasCircularReferences())
-                                throw ser.mappingException("Failed convert to JSON object for circular references");
+                                ser.reportMappingProblem("Failed convert to JSON object for circular references");
                         }
 
                         gen.writeObjectField(name, val);

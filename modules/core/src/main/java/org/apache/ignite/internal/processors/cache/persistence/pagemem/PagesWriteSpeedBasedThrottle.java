@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -289,7 +289,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (weight <= WARN_THRESHOLD)
             return;
 
-        if (prevWarnTime.compareAndSet(prevWarningNs, curNs)) {
+        if (prevWarnTime.compareAndSet(prevWarningNs, curNs) && log.isInfoEnabled()) {
             String msg = String.format("Throttling is applied to page modifications " +
                     "[percentOfPartTime=%.2f, markDirty=%d pages/sec, checkpointWrite=%d pages/sec, " +
                     "estIdealMarkDirty=%d pages/sec, curDirty=%.2f, maxDirty=%.2f, avgParkTime=%d ns, " +

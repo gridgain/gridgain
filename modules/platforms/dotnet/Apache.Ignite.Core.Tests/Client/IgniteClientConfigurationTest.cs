@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,7 +90,8 @@ namespace Apache.Ignite.Core.Tests.Client
                     "foo",
                     "bar:123",
                     "baz:100..103"
-                }
+                },
+                EnablePartitionAwareness = true
             };
 
             using (var xmlReader = XmlReader.Create(Path.Combine("Config", "Client", "IgniteClientConfiguration.xml")))
@@ -167,7 +168,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 var ex = Assert.Throws<ConfigurationErrorsException>(() => Ignition.StartClient("foo", "bar"));
                 Assert.AreEqual("Specified config file does not exist: bar", ex.Message);
 
-#if !NETCOREAPP2_0  // Test runners do not pick up default config.
+#if !NETCOREAPP2_0 && !NETCOREAPP3_0  // Test runners do not pick up default config.
                 // Default section.
                 using (var client = Ignition.StartClient())
                 {
@@ -195,7 +196,7 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
-#if !NETCOREAPP2_0 && !NETCOREAPP2_1
+#if !NETCOREAPP2_0 && !NETCOREAPP2_1 && !NETCOREAPP3_0
         /// <summary>
         /// Tests the schema validation.
         /// </summary>

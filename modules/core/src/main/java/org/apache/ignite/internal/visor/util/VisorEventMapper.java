@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.visor.util;
 
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.ClusterActivationEvent;
 import org.apache.ignite.events.DeploymentEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -65,6 +66,9 @@ public class VisorEventMapper implements IgniteClosure<Event, VisorGridEvent> {
 
         if (evt instanceof DiscoveryEvent)
             return discoveryEvent((DiscoveryEvent)evt, type, id, name, nid, ts, msg, shortDisplay);
+
+        if (evt instanceof ClusterActivationEvent)
+            return new VisorGridEvent(type, id, name, nid, ts, msg, shortDisplay);
 
         return null;
     }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,8 +25,10 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
 import org.apache.ignite.ml.inference.storage.descriptor.ModelDescriptorStorageFactory;
 import org.apache.ignite.ml.inference.storage.model.ModelStorageFactory;
+import org.apache.ignite.ml.inference.storage.model.thinclient.ModelStorateThinClientProcessor;
 import org.apache.ignite.plugin.CachePluginContext;
 import org.apache.ignite.plugin.CachePluginProvider;
 import org.apache.ignite.plugin.ExtensionRegistry;
@@ -74,7 +76,7 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
 
     /** {@inheritDoc} */
     @Override public String copyright() {
-        return null;
+        return "Copyright 2019 GridGain Systems, Inc. and Contributors.";
     }
 
     /** {@inheritDoc} */
@@ -171,7 +173,15 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
 
         ignite.getOrCreateCache(storageCfg);
 
-        log.info("ML model storage is ready");
+        boolean procWasRegistered = ThinClientCustomQueryRegistry.registerIfAbsent(new ModelStorateThinClientProcessor(
+            new ModelStorageFactory().getModelStorage(ignite)
+        ));
+
+        if (!procWasRegistered)
+            log.warning("Processor " + ModelStorateThinClientProcessor.PROCESSOR_ID + " is already registered");
+
+        if (log.isInfoEnabled())
+            log.info("ML model storage is ready");
     }
 
     /**
@@ -189,6 +199,7 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
 
         ignite.getOrCreateCache(storageCfg);
 
-        log.info("ML model descriptor storage is ready");
+        if (log.isInfoEnabled())
+            log.info("ML model descriptor storage is ready");
     }
 }

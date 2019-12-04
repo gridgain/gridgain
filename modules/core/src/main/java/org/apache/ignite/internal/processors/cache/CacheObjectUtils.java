@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.F;
@@ -183,6 +185,32 @@ public class CacheObjectUtils {
             return unwrapBinariesInArrayIfNeeded(ctx, (Object[])o, keepBinary, cpy);
 
         return o;
+    }
+
+    /**
+     * Checks the cache object is binary object.
+     *
+     * @param o Cache object.
+     * @return {@code true} if the key is binary object. Otherwise (key's type is a platform type) returns false.
+     */
+    public static boolean isBinary(CacheObject o) {
+        return o instanceof BinaryObject
+            || (o instanceof KeyCacheObjectImpl
+            && o.value(null, false) instanceof BinaryObject);
+    }
+
+    /**
+     * @param o Cache object.
+     * @return Binary object.
+     * @throws IgniteException is the object is not binary object (e.g. platform / primitive type)
+     */
+    public static BinaryObject binary(CacheObject o) {
+        if (o instanceof BinaryObject)
+            return (BinaryObject)o;
+        else if (o instanceof KeyCacheObjectImpl && o.value(null, false) instanceof BinaryObject)
+            return o.value(null, false);
+
+        throw new IgniteException("The object is not binary object [obj=" + o + ']');
     }
 
     /**

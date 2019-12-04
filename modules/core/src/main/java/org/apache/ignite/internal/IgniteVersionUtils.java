@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -29,6 +30,9 @@ public class IgniteVersionUtils {
 
     /** Ignite version. */
     public static final IgniteProductVersion VER;
+
+    /** UTC build date formatter. */
+    private static final SimpleDateFormat BUILD_TSTAMP_DATE_FORMATTER;
 
     /** Formatted build date. */
     public static final String BUILD_TSTAMP_STR;
@@ -66,9 +70,13 @@ public class IgniteVersionUtils {
         BUILD_TSTAMP = !BUILD_TSTAMP_FROM_PROPERTY.isEmpty() && Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) != 0
             ? Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) : System.currentTimeMillis() / 1000;
 
-        BUILD_TSTAMP_STR = new SimpleDateFormat("yyyyMMdd").format(new Date(BUILD_TSTAMP * 1000));
+        BUILD_TSTAMP_DATE_FORMATTER = new SimpleDateFormat("yyyyMMdd");
 
-        COPYRIGHT = BUILD_TSTAMP_STR.substring(0, 4) + " Copyright(C) Apache Software Foundation";
+        BUILD_TSTAMP_DATE_FORMATTER.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        BUILD_TSTAMP_STR = formatBuildTimeStamp(BUILD_TSTAMP * 1000);
+
+        COPYRIGHT = BUILD_TSTAMP_STR.substring(0, 4) + " Copyright(C) GridGain Systems, Inc. and Contributors";
 
         REV_HASH_STR = IgniteProperties.get("ignite.revision");
 
@@ -79,6 +87,17 @@ public class IgniteVersionUtils {
         ACK_VER_STR = VER_STR + '#' + BUILD_TSTAMP_STR + "-sha1:" + rev;
 
         VER = IgniteProductVersion.fromString(VER_STR + '-' + BUILD_TSTAMP + '-' + REV_HASH_STR);
+    }
+
+    /**
+     * Builds string date representation in "yyyyMMdd" format.
+     * "synchronized" because it uses {@link SimpleDateFormat} which is not threadsafe.
+     *
+     * @param ts Timestamp.
+     * @return Timestamp date in UTC timezone.
+     */
+    public static synchronized String formatBuildTimeStamp(long ts) {
+        return BUILD_TSTAMP_DATE_FORMATTER.format(new Date(ts));
     }
 
     /**

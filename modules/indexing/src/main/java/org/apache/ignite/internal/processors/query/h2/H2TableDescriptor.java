@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,10 +50,10 @@ public class H2TableDescriptor {
     /** PK index name. */
     public static final String PK_IDX_NAME = "_key_PK";
 
-    /** PK hashindex name */
+    /** PK hash index name. */
     public static final String PK_HASH_IDX_NAME = "_key_PK_hash";
 
-    /** Affinity key index name */
+    /** Affinity key index name. */
     public static final String AFFINITY_KEY_IDX_NAME = "AFFINITY_KEY";
 
     /** Indexing. */
@@ -417,7 +417,7 @@ public class H2TableDescriptor {
             );
         }
         else if (idxDesc.type() == QueryIndexType.GEOSPATIAL)
-            return H2Utils.createSpatialIndex(tbl, idxDesc.name(), cols.toArray(new IndexColumn[0]));
+            return H2Utils.createSpatialIndex(tbl, idxDesc.name(), cols.toArray(H2Utils.EMPTY_COLUMNS));
 
         throw new IllegalStateException("Index type: " + idxDesc.type());
     }

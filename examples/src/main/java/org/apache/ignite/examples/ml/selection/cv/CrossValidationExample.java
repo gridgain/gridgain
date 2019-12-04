@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,17 +75,19 @@ public class CrossValidationExample {
                 DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(4, 0);
 
                 LabeledDummyVectorizer<Integer, Double> vectorizer = new LabeledDummyVectorizer<>();
+
                 CrossValidation<DecisionTreeNode, Double, Integer, LabeledVector<Double>> scoreCalculator
                     = new CrossValidation<>();
 
-                double[] accuracyScores = scoreCalculator.score(
-                    trainer,
-                    new Accuracy<>(),
-                    ignite,
-                    trainingSet,
-                    vectorizer,
-                    4
-                );
+                double[] accuracyScores = scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(trainingSet)
+                    .withTrainer(trainer)
+                    .withMetric(new Accuracy<>())
+                    .withPreprocessor(vectorizer)
+                    .withAmountOfFolds(4)
+                    .isRunningOnPipeline(false)
+                    .scoreByFolds();
 
                 System.out.println(">>> Accuracy: " + Arrays.toString(accuracyScores));
 
@@ -94,14 +96,9 @@ public class CrossValidationExample {
                     .withPositiveClsLb(1.0)
                     .withMetric(BinaryClassificationMetricValues::balancedAccuracy);
 
-                double[] balancedAccuracyScores = scoreCalculator.score(
-                    trainer,
-                    metrics,
-                    ignite,
-                    trainingSet,
-                    vectorizer,
-                    4
-                );
+                double[] balancedAccuracyScores = scoreCalculator
+                    .withMetric(metrics)
+                    .scoreByFolds();
 
                 System.out.println(">>> Balanced Accuracy: " + Arrays.toString(balancedAccuracyScores));
 
@@ -109,6 +106,8 @@ public class CrossValidationExample {
             } finally {
                 trainingSet.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 

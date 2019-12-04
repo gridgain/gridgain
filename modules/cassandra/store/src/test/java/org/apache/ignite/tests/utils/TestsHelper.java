@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,26 +20,10 @@ package org.apache.ignite.tests.utils;
 import org.apache.ignite.cache.store.cassandra.common.SystemHelper;
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
 import org.apache.ignite.tests.load.Generator;
+import org.apache.ignite.tests.pojos.*;
 import org.springframework.core.io.ClassPathResource;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.ResourceBundle;
-import java.util.Calendar;
-import java.util.Date;
-
-import org.apache.ignite.tests.pojos.Product;
-import org.apache.ignite.tests.pojos.ProductOrder;
-import org.apache.ignite.tests.pojos.Person;
-import org.apache.ignite.tests.pojos.SimplePerson;
-import org.apache.ignite.tests.pojos.PersonId;
-import org.apache.ignite.tests.pojos.SimplePersonId;
+import java.util.*;
 
 /**
  * Helper class for all tests
@@ -296,7 +280,7 @@ public class TestsHelper {
         for (int i = 0; i < cnt; i++) {
             PersonId id = generateRandomPersonId();
 
-            map.put(new SimplePersonId(id), new SimplePerson(generateRandomPerson(id.getPersonNumber())));
+            map.put(new SimplePersonId(id), new SimplePerson(generateRandomPerson(id.getPersonNum())));
         }
 
         return map;
@@ -314,7 +298,7 @@ public class TestsHelper {
         for (int i = 0; i < cnt; i++) {
             PersonId id = generateRandomPersonId();
 
-            map.put(id, generateRandomPerson(id.getPersonNumber()));
+            map.put(id, generateRandomPerson(id.getPersonNum()));
         }
 
         return map;
@@ -332,7 +316,7 @@ public class TestsHelper {
         for (int i = 0; i < cnt; i++) {
             PersonId id = generateRandomPersonId();
 
-            entries.add(new CacheEntryImpl<>(new SimplePersonId(id), new SimplePerson(generateRandomPerson(id.getPersonNumber()))));
+            entries.add(new CacheEntryImpl<>(new SimplePersonId(id), new SimplePerson(generateRandomPerson(id.getPersonNum()))));
         }
 
         return entries;
@@ -350,7 +334,7 @@ public class TestsHelper {
         for (int i = 0; i < cnt; i++) {
             PersonId id = generateRandomPersonId();
 
-            entries.add(new CacheEntryImpl<>(id, generateRandomPerson(id.getPersonNumber())));
+            entries.add(new CacheEntryImpl<>(id, generateRandomPerson(id.getPersonNum())));
         }
 
         return entries;

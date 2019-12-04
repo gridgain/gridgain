@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,11 @@
 
 package org.apache.ignite.examples.ml.tree.randomforest;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -33,12 +38,6 @@ import org.apache.ignite.ml.tree.randomforest.RandomForestRegressionTrainer;
 import org.apache.ignite.ml.tree.randomforest.data.FeaturesCountSelectionStrategies;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
-
-import javax.cache.Cache;
-import java.io.FileNotFoundException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Example represents a solution for the task of price predictions for houses in Boston based on a
@@ -60,7 +59,7 @@ public class RandomForestRegressionExample {
     /**
      * Run example.
      */
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws IOException {
         System.out.println();
         System.out.println(">>> Random Forest regression algorithm over cached dataset usage example started.");
         // Start ignite grid.
@@ -126,6 +125,8 @@ public class RandomForestRegressionExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

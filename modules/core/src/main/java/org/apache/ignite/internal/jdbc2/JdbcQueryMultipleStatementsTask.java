@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,12 +16,15 @@
 
 package org.apache.ignite.internal.jdbc2;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteJdbcDriver;
+import org.apache.ignite.cache.query.BulkLoadContextCursor;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
@@ -58,6 +61,9 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
     /** Fetch size. */
     private final int fetchSize;
 
+    /** Query max memory size. */
+    private final long maxMem;
+
     /** Local execution flag. */
     private final boolean loc;
 
@@ -84,6 +90,7 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
      * @param loc Local execution flag.
      * @param args Args.
      * @param fetchSize Fetch size.
+     * @param maxMem Query memory limit.
      * @param locQry Local query flag.
      * @param collocatedQry Collocated query flag.
      * @param distributedJoins Distributed joins flag.
@@ -91,7 +98,7 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
      * @param lazy Lazy query execution flag.
      */
     public JdbcQueryMultipleStatementsTask(Ignite ignite, String schemaName, String sql, Boolean isQry, boolean loc,
-        Object[] args, int fetchSize, boolean locQry, boolean collocatedQry, boolean distributedJoins,
+        Object[] args, int fetchSize, long maxMem, boolean locQry, boolean collocatedQry, boolean distributedJoins,
         boolean enforceJoinOrder, boolean lazy) {
         this.ignite = ignite;
         this.args = args;
@@ -99,6 +106,7 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
         this.sql = sql;
         this.isQry = isQry;
         this.fetchSize = fetchSize;
+        this.maxMem = maxMem;
         this.loc = loc;
         this.locQry = locQry;
         this.collocatedQry = collocatedQry;
@@ -109,8 +117,8 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
     /** {@inheritDoc} */
     @Override public List<JdbcStatementResultInfo> call() throws Exception {
-        SqlFieldsQuery qry = (isQry != null ? new SqlFieldsQueryEx(sql, isQry) : new SqlFieldsQuery(sql))
-            .setArgs(args);
+        SqlFieldsQuery qry = (isQry != null ? new SqlFieldsQueryEx(sql, isQry).setMaxMemory(maxMem) :
+            new SqlFieldsQuery(sql)).setArgs(args);
 
         qry.setPageSize(fetchSize);
         qry.setLocal(locQry);
@@ -122,11 +130,18 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
         GridKernalContext ctx = ((IgniteKernal)ignite).context();
 
-        List<FieldsQueryCursor<List<?>>> curs = ctx.query().querySqlFields(qry, true, false);
+        List<FieldsQueryCursor<List<?>>> curs = ctx.query().querySqlFields(
+            qry, true, !allowMultipleStatements());
 
         List<JdbcStatementResultInfo> resultsInfo = new ArrayList<>(curs.size());
 
         for (FieldsQueryCursor<List<?>> cur0 : curs) {
+            if (cur0 instanceof BulkLoadContextCursor) {
+                curs.forEach(QueryCursor::close);
+
+                throw new SQLException("COPY command is currently supported only in thin JDBC driver.");
+            }
+
             QueryCursorImpl<List<?>> cur = (QueryCursorImpl<List<?>>)cur0;
 
             long updCnt = -1;
@@ -164,4 +179,10 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
         return resultsInfo;
     }
 
+    /**
+     * @return {@code true} if query with multiple statements is allowed.
+     */
+    protected boolean allowMultipleStatements() {
+        return true;
+    }
 }

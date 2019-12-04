@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,6 +46,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CacheServerNotFoundException;
 import org.apache.ignite.cache.QueryEntity;
@@ -65,6 +66,7 @@ import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.affinity.LocalAffinityFunction;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -77,7 +79,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.dr.GridDrType;
-import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
@@ -110,18 +111,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
-import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
-import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
-import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME;
 
 /**
  * Cache utility methods.
@@ -169,15 +166,14 @@ public class GridCacheUtils {
         return cheatCacheId != 0 && id == cheatCacheId;
     }
 
-    /**  Hadoop syste cache name. */
-    public static final String SYS_CACHE_HADOOP_MR = "ignite-hadoop-mr-sys-cache";
-
     /** System cache name. */
     public static final String UTILITY_CACHE_NAME = "ignite-sys-cache";
 
+    /** System cache group id. */
+    public static final int UTILITY_CACHE_GROUP_ID = cacheGroupId(UTILITY_CACHE_NAME, null);
+
     /** Reserved cache names */
     public static final String[] RESERVED_NAMES = new String[] {
-        SYS_CACHE_HADOOP_MR,
         UTILITY_CACHE_NAME,
         MetaStorage.METASTORAGE_CACHE_NAME,
         TxLog.TX_LOG_CACHE_NAME,
@@ -839,6 +835,13 @@ public class GridCacheUtils {
     }
 
     /**
+     * Alias for {@link #txString(IgniteInternalTx)}.
+     */
+    public static String txDump(@Nullable IgniteInternalTx tx) {
+        return txString(tx);
+    }
+
+    /**
      * @param tx Transaction.
      * @return String view of all safe-to-print transaction properties.
      */
@@ -848,15 +851,18 @@ public class GridCacheUtils {
 
         return tx.getClass().getSimpleName() + "[xid=" + tx.xid() +
             ", xidVersion=" + tx.xidVersion() +
+            ", nearXidVersion=" + tx.nearXidVersion() +
             ", concurrency=" + tx.concurrency() +
             ", isolation=" + tx.isolation() +
             ", state=" + tx.state() +
+            ", topVer=" + tx.topologyVersionSnapshot() +
             ", invalidate=" + tx.isInvalidate() +
             ", rollbackOnly=" + tx.isRollbackOnly() +
             ", nodeId=" + tx.nodeId() +
             ", timeout=" + tx.timeout() +
+            ", startTime=" + tx.startTime() +
             ", duration=" + (U.currentTimeMillis() - tx.startTime()) +
-            (tx instanceof GridNearTxLocal ? ", label=" + ((GridNearTxLocal)tx).label() : "") +
+            (tx instanceof GridNearTxLocal ? ", label=" + tx.label() : "") +
             ']';
     }
 
@@ -982,25 +988,13 @@ public class GridCacheUtils {
         assert attrName != null;
         assert attrMsg != null;
 
-        if (!F.eq(locVal, rmtVal)) {
-            if (fail) {
-                throw new IgniteCheckedException(attrMsg + " mismatch (fix " + attrMsg.toLowerCase() + " in cache " +
-                    "configuration or set -D" + IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK + "=true " +
-                    "system property) [cacheName=" + cfgName +
-                    ", local" + capitalize(attrName) + "=" + locVal +
-                    ", remote" + capitalize(attrName) + "=" + rmtVal +
-                    ", rmtNodeId=" + rmtNodeId + ']');
-            }
-            else {
-                assert log != null;
-
-                U.warn(log, attrMsg + " mismatch (fix " + attrMsg.toLowerCase() + " in cache " +
-                    "configuration) [cacheName=" + cfgName +
-                    ", local" + capitalize(attrName) + "=" + locVal +
-                    ", remote" + capitalize(attrName) + "=" + rmtVal +
-                    ", rmtNodeId=" + rmtNodeId + ']');
-            }
-        }
+        if (!F.eq(locVal, rmtVal))
+            throwIgniteCheckedException(log, fail,
+                attrMsg + " mismatch [" +
+                    "cacheName=" + cfgName + ", " +
+                    "local" + capitalize(attrName) + "=" + locVal + ", " +
+                    "remote" + capitalize(attrName) + "=" + rmtVal + ", " +
+                    "rmtNodeId=" + rmtNodeId + ']');
     }
 
     /**
@@ -1068,37 +1062,6 @@ public class GridCacheUtils {
 
     /**
      * @param cacheName Cache name.
-     * @return {@code True} if this is Hadoop system cache.
-     */
-    public static boolean isHadoopSystemCache(String cacheName) {
-        return F.eq(cacheName, SYS_CACHE_HADOOP_MR);
-    }
-
-    /**
-     * Create system cache used by Hadoop component.
-     *
-     * @return Hadoop cache configuration.
-     */
-    public static CacheConfiguration hadoopSystemCache() {
-        CacheConfiguration cache = new CacheConfiguration();
-
-        cache.setName(CU.SYS_CACHE_HADOOP_MR);
-        cache.setCacheMode(REPLICATED);
-        cache.setAtomicityMode(TRANSACTIONAL);
-        cache.setWriteSynchronizationMode(FULL_SYNC);
-
-        cache.setEvictionPolicyFactory(null);
-        cache.setEvictionPolicy(null);
-        cache.setCacheStoreFactory(null);
-        cache.setNodeFilter(CacheConfiguration.ALL_NODES);
-        cache.setEagerTtl(true);
-        cache.setRebalanceMode(SYNC);
-
-        return cache;
-    }
-
-    /**
-     * @param cacheName Cache name.
      * @return {@code True} if this is utility system cache.
      */
     public static boolean isUtilityCache(String cacheName) {
@@ -1110,7 +1073,7 @@ public class GridCacheUtils {
      * @return {@code True} if system cache.
      */
     public static boolean isSystemCache(String cacheName) {
-        return isUtilityCache(cacheName) || isHadoopSystemCache(cacheName);
+        return isUtilityCache(cacheName);
     }
 
     /**
@@ -1139,15 +1102,6 @@ public class GridCacheUtils {
         assert cacheName != null;
 
         return grpName != null ? CU.cacheId(grpName) : CU.cacheId(cacheName);
-    }
-
-    /**
-     * @param cfg Grid configuration.
-     * @param cacheName Cache name.
-     * @return {@code True} in this is IGFS data or meta cache.
-     */
-    public static boolean isIgfsCache(IgniteConfiguration cfg, @Nullable String cacheName) {
-        return IgfsUtils.isIgfsCache(cfg, cacheName);
     }
 
     /**
@@ -1597,6 +1551,8 @@ public class GridCacheUtils {
      * @throws IllegalArgumentException In case the name is not valid.
      */
     public static void validateCacheNames(Collection<String> cacheNames) throws IllegalArgumentException {
+        A.notNull(cacheNames, "cacheNames");
+
         for (String name : cacheNames)
             validateCacheName(name);
     }
@@ -1622,6 +1578,129 @@ public class GridCacheUtils {
         }
 
         return false;
+    }
+
+    /**
+     * Validate affinity key configurations.
+     * All fields are initialized and not empty (typeName and affKeyFieldName is defined).
+     * Definition for the type does not repeat.
+     *
+     * @param groupName Cache group name.
+     * @param cacheName Cache name.
+     * @param cacheKeyCfgs keyConfiguration to validate.
+     * @param log Logger used to log warning message (used only if fail flag is not set).
+     * @param fail If true throws IgniteCheckedException in case of attribute values mismatch, otherwise logs warning.
+     * @return Affinity key maps (typeName -> fieldName)
+     * @throws IgniteCheckedException In case the affinity key configurations is not valid.
+     */
+    public static Map<String, String> validateKeyConfigiration(
+        String groupName, String cacheName, CacheKeyConfiguration[] cacheKeyCfgs, IgniteLogger log,
+        boolean fail
+    ) throws IgniteCheckedException {
+        Map<String, String> keyConfigurations = new HashMap<>();
+
+        if (cacheKeyCfgs != null) {
+            for (CacheKeyConfiguration cacheKeyCfg : cacheKeyCfgs) {
+                String typeName = cacheKeyCfg.getTypeName();
+
+                A.notNullOrEmpty(typeName, "typeName");
+
+                String fieldName = cacheKeyCfg.getAffinityKeyFieldName();
+
+                A.notNullOrEmpty(fieldName, "affKeyFieldName");
+
+                String oldFieldName = keyConfigurations.put(typeName, fieldName);
+
+                if (oldFieldName != null && !oldFieldName.equals(fieldName)) {
+                    final String msg = "Cache key configuration contains conflicting definitions: [" +
+                        (groupName != null ? "cacheGroup=" + groupName + ", " : "") +
+                        "cacheName=" + cacheName + ", " +
+                        "typeName=" + typeName + ", " +
+                        "affKeyFieldName1=" + oldFieldName + ", " +
+                        "affKeyFieldName2=" + fieldName + "].";
+
+                    throwIgniteCheckedException(log, fail, msg);
+                }
+            }
+        }
+
+        return keyConfigurations;
+    }
+
+    /**
+     * If -DIGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK=true then output message to log else throw IgniteCheckedException.
+     *
+     * @param log Logger used to log warning message (used only if fail flag is not set).
+     * @param fail If true throws IgniteCheckedException in case of attribute values mismatch, otherwise logs warning.
+     * @param msg Message to output.
+     * @throws IgniteCheckedException
+     */
+    private static void throwIgniteCheckedException(IgniteLogger log,
+        boolean fail, String msg) throws IgniteCheckedException {
+        if (fail)
+            throw new IgniteCheckedException(msg + " Fix cache configuration or set system property -D" +
+                IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK + "=true.");
+        else {
+            assert log != null;
+
+            U.warn(log, msg);
+        }
+    }
+
+    /**
+     * Validate and compare affinity key configurations.
+     *
+     * @param groupName Cache group name.
+     * @param cacheName Cache name.
+     * @param rmtNodeId Remote node.
+     * @param rmtCacheKeyCfgs Exist affinity key configurations.
+     * @param locCacheKeyCfgs New affinity key configurations.
+     * @param log Logger used to log warning message (used only if fail flag is not set).
+     * @param fail If true throws IgniteCheckedException in case of attribute values mismatch, otherwise logs warning.
+     * @throws IgniteCheckedException In case the affinity key configurations is not valid.
+     */
+    public static void validateKeyConfigiration(
+        String groupName,
+        String cacheName,
+        UUID rmtNodeId,
+        CacheKeyConfiguration rmtCacheKeyCfgs[],
+        CacheKeyConfiguration locCacheKeyCfgs[],
+        IgniteLogger log,
+        boolean fail
+    ) throws IgniteCheckedException {
+        Map<String, String> rmtAffinityKeys = CU.validateKeyConfigiration(groupName, cacheName, rmtCacheKeyCfgs, log, fail);
+
+        Map<String, String> locAffinityKey = CU.validateKeyConfigiration(groupName, cacheName, locCacheKeyCfgs, log, fail);
+
+        if (rmtAffinityKeys.size() != locAffinityKey.size()) {
+            throwIgniteCheckedException(log, fail, "Affinity key configuration mismatch" +
+                "[" +
+                (groupName != null ? "cacheGroup=" + groupName + ", " : "") +
+                "cacheName=" + cacheName + ", " +
+                "remote keyConfiguration.length=" + rmtAffinityKeys.size() + ", " +
+                "local keyConfiguration.length=" + locAffinityKey.size() +
+                (rmtNodeId != null ? ", rmtNodeId=" + rmtNodeId : "") +
+                ']');
+        }
+
+        for (Map.Entry<String, String> rmtAffinityKey : rmtAffinityKeys.entrySet()) {
+            String rmtTypeName = rmtAffinityKey.getKey();
+
+            String rmtFieldName = rmtAffinityKey.getValue();
+
+            String locFieldName = locAffinityKey.get(rmtTypeName);
+
+            if (!rmtFieldName.equals(locFieldName)) {
+                throwIgniteCheckedException(log, fail, "Affinity key configuration mismatch [" +
+                    (groupName != null ? "cacheGroup=" + groupName + ", " : "") +
+                    "cacheName=" + cacheName + ", " +
+                    "typeName=" + rmtTypeName + ", " +
+                    "remote affinityKeyFieldName=" + rmtFieldName + ", " +
+                    "local affinityKeyFieldName=" + locFieldName +
+                    (rmtNodeId != null ? ", rmtNodeId=" + rmtNodeId : "") +
+                    ']');
+            }
+        }
     }
 
     /**
@@ -1652,16 +1731,18 @@ public class GridCacheUtils {
                 cfg.setBackups(Integer.MAX_VALUE);
             }
             else
-                cfg.setAffinity(new GridCacheProcessor.LocalAffinityFunction());
+                cfg.setAffinity(new LocalAffinityFunction());
         }
         else {
-            if (cfg.getCacheMode() == LOCAL && !(cfg.getAffinity() instanceof GridCacheProcessor.LocalAffinityFunction)) {
-                cfg.setAffinity(new GridCacheProcessor.LocalAffinityFunction());
+            if (cfg.getCacheMode() == LOCAL && !(cfg.getAffinity() instanceof LocalAffinityFunction)) {
+                cfg.setAffinity(new LocalAffinityFunction());
 
                 U.warn(log, "AffinityFunction configuration parameter will be ignored for local cache" +
                     " [cacheName=" + U.maskName(cfg.getName()) + ']');
             }
         }
+
+        validateKeyConfigiration(cfg.getGroupName(), cfg.getName(), cfg.getKeyConfiguration(), log, true);
 
         if (cfg.getCacheMode() == REPLICATED)
             cfg.setBackups(Integer.MAX_VALUE);
@@ -1818,7 +1899,7 @@ public class GridCacheUtils {
             return false;
 
         // Special handling for system cache is needed.
-        if (isSystemCache(ccfg.getName()) || isIgfsCacheInSystemRegion(ccfg)) {
+        if (isSystemCache(ccfg.getName())) {
             if (dsCfg.getDefaultDataRegionConfiguration().isPersistenceEnabled())
                 return true;
 
@@ -1848,36 +1929,28 @@ public class GridCacheUtils {
     }
 
     /**
-     * Checks whether cache configuration represents IGFS cache that will be placed in system memory region.
-     *
-     * @param ccfg Cache config.
-     */
-    private static boolean isIgfsCacheInSystemRegion(CacheConfiguration ccfg) {
-        return IgfsUtils.matchIgfsCacheName(ccfg.getName()) &&
-            (SYSTEM_DATA_REGION_NAME.equals(ccfg.getDataRegionName()) || ccfg.getDataRegionName() == null);
-    }
-
-    /**
      * @param nodes Nodes to check.
-     * @param cfg Config to class loader.
+     * @param marshaller JdkMarshaller
+     * @param clsLdr Class loader.
      * @return {@code true} if cluster has only in-memory nodes.
      */
-    public static boolean isInMemoryCluster(Collection<ClusterNode> nodes, IgniteConfiguration cfg) {
-        return nodes.stream().allMatch(serNode -> !CU.isPersistenceEnabled(extractDataStorage(serNode, cfg)));
+    public static boolean isInMemoryCluster(Collection<ClusterNode> nodes, JdkMarshaller marshaller, ClassLoader clsLdr) {
+        return nodes.stream().allMatch(serNode -> !CU.isPersistenceEnabled(extractDataStorage(serNode, marshaller, clsLdr)));
     }
 
     /**
      * Extract and unmarshal data storage configuration from given node.
      *
      * @param node Source of data storage configuration.
-     * @return Data storage configuration for given node.
+     * @return  Data storage configuration for given node,
+     * or {@code null} if this node has not data storage configuration.
      */
-    private static DataStorageConfiguration extractDataStorage(ClusterNode node, IgniteConfiguration cfg) {
+    @Nullable public static DataStorageConfiguration extractDataStorage(ClusterNode node, JdkMarshaller marshaller, ClassLoader clsLdr) {
         Object dsCfgBytes = node.attribute(IgniteNodeAttributes.ATTR_DATA_STORAGE_CONFIG);
 
         if (dsCfgBytes instanceof byte[]) {
             try {
-                return new JdkMarshaller().unmarshal((byte[])dsCfgBytes, U.resolveClassLoader(cfg));
+                return marshaller.unmarshal((byte[])dsCfgBytes, clsLdr);
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
@@ -1885,6 +1958,21 @@ public class GridCacheUtils {
         }
 
         return null;
+    }
+
+    /**
+     * @return {@code true} if persistence is enabled for a default data region, {@code false} if not.
+     */
+    public static boolean isDefaultDataRegionPersistent(DataStorageConfiguration cfg) {
+        if (cfg == null)
+            return false;
+
+        DataRegionConfiguration dfltRegionCfg = cfg.getDefaultDataRegionConfiguration();
+
+        if (dfltRegionCfg == null)
+            return false;
+
+        return dfltRegionCfg.isPersistenceEnabled();
     }
 
     /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.StampedLock;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -61,6 +60,7 @@ import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteClientReconnectAbstractTest.TestTcpDiscoverySpi;
@@ -804,7 +804,7 @@ public abstract class DynamicColumnsAbstractConcurrentSelfTest extends DynamicCo
 
         // Check index create.
         reconnectClientNode(srv, cli, restartCache, dynamicCache, new RunnableX() {
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 addCols(srv, schemaName, cols).get();
 
                 dropCols(srv, schemaName, "NAME").get();
@@ -1225,19 +1225,6 @@ public abstract class DynamicColumnsAbstractConcurrentSelfTest extends DynamicCo
             cfg.setUserAttributes(Collections.singletonMap(ATTR_FILTERED, true));
 
         return cfg;
-    }
-
-    /**
-     * Runnable which can throw checked exceptions.
-     */
-    interface RunnableX {
-        /**
-         * Do run.
-         *
-         * @throws Exception If failed.
-         */
-        @SuppressWarnings("UnnecessaryInterfaceModifier")
-        public void run() throws Exception;
     }
 
     /**

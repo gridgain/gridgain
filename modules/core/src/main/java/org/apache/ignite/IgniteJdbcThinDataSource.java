@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,6 @@ import org.apache.ignite.internal.jdbc.thin.ConnectionPropertiesImpl;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.typedef.F;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * JDBC thin DataSource implementation.
@@ -609,21 +608,5 @@ public class IgniteJdbcThinDataSource implements DataSource, Serializable {
      */
     public String getPassword() {
         return props.getPassword();
-    }
-
-    /**
-     * @return {@code True} if data page scan support is enabled for this connection, {@code false} if it's disabled and
-     * {@code null} for server default.
-     */
-    @Nullable public Boolean isDataPageScanEnabled() {
-        return props.isDataPageScanEnabled();
-    }
-
-    /**
-     * @param dataPageScan if {@code True} then data page scan support is enabled for this connection, if {@code false}
-     * then it's disabled, if {@code null} then server should use its default settings.
-     */
-    public void setDataPageScanEnabled(@Nullable Boolean dataPageScan) {
-        props.setDataPageScanEnabled(dataPageScan);
     }
 }

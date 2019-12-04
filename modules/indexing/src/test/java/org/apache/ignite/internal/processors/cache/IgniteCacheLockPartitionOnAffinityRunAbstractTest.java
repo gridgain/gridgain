@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,6 +44,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.failover.always.AlwaysFailoverSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -71,10 +72,10 @@ public class IgniteCacheLockPartitionOnAffinityRunAbstractTest extends GridCache
     protected static final int ORGS_COUNT_PER_NODE = 2;
 
     /** Test duration. */
-    protected static final long TEST_DURATION = 2 * 60_000;
+    protected static final long TEST_DURATION = 40_000;
 
     /** Test timeout. */
-    protected static final long TEST_TIMEOUT = TEST_DURATION + 2 * 60_000;
+    protected static final long TEST_TIMEOUT = TEST_DURATION + 60_000;
 
     /** Timeout between restart of a node. */
     protected static final long RESTART_TIMEOUT = 3_000;
@@ -181,7 +182,7 @@ public class IgniteCacheLockPartitionOnAffinityRunAbstractTest extends GridCache
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        endTime = System.currentTimeMillis() + TEST_DURATION;
+        endTime = System.currentTimeMillis() + SF.applyLB((int)TEST_DURATION, 20_000);
 
         super.beforeTest();
     }

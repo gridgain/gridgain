@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,11 +20,13 @@ import org.apache.ignite.internal.processors.cache.BinaryTypeMismatchLoggingTest
 import org.apache.ignite.internal.processors.cache.BinaryTypeRegistrationTest;
 import org.apache.ignite.internal.processors.cache.CacheBinaryKeyConcurrentQueryTest;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationP2PTest;
+import org.apache.ignite.internal.processors.cache.CacheGroupMetricsWithIndexTest;
 import org.apache.ignite.internal.processors.cache.CacheIndexStreamerTest;
 import org.apache.ignite.internal.processors.cache.CacheOperationsWithExpirationTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryAfterDynamicCacheStartFailureTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryFilterExpiredTest;
 import org.apache.ignite.internal.processors.cache.CacheRandomOperationsMultithreadedTest;
+import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyTest;
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
@@ -35,8 +37,11 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheConfigurationPrimi
 import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheStarvationOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IgniteClientReconnectQueriesTest;
+import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
+import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
@@ -58,6 +63,7 @@ import org.junit.runners.Suite;
     CacheTtlTransactionalPartitionedSelfTest.class,
     CacheTtlAtomicLocalSelfTest.class,
     CacheTtlAtomicPartitionedSelfTest.class,
+    CacheTtlReadOnlyModeSelfTest.class,
 
     GridCacheOffheapIndexGetSelfTest.class,
     GridCacheOffheapIndexEntryEvictTest.class,
@@ -77,6 +83,8 @@ import org.junit.runners.Suite;
 
     CacheQueryAfterDynamicCacheStartFailureTest.class,
 
+    CacheRegisterMetadataLocallyTest.class,
+
     IgniteCacheGroupsSqlTest.class,
 
     IgniteDataStreamerTest.class,
@@ -85,7 +93,13 @@ import org.junit.runners.Suite;
 
     BinaryTypeRegistrationTest.class,
 
-    ClusterReadOnlyModeSqlTest.class
+    ClusterReadOnlyModeSqlTest.class,
+
+    CacheGroupMetricsWithIndexTest.class,
+
+    RebuildIndexLogMessageTest.class,
+
+    H2TreeCorruptedTreeExceptionTest.class
 })
 public class IgniteCacheWithIndexingTestSuite {
 }

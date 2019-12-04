@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,12 +72,12 @@ public interface IgniteTransactions {
     public Transaction txStart(TransactionConcurrency concurrency, TransactionIsolation isolation);
 
     /**
-     * Starts transaction with specified isolation, concurrency, timeout, invalidation flag,
+     * Starts transaction with specified isolation, concurrency, timeout,
      * and number of participating entries.
      *
      * @param concurrency Concurrency.
      * @param isolation Isolation.
-     * @param timeout Timeout.
+     * @param timeout Timeout in milliseconds.
      * @param txSize Number of entries participating in transaction (may be approximate).
      * @return New transaction.
      * @throws IllegalStateException If transaction is already started by this thread.
@@ -117,10 +117,19 @@ public interface IgniteTransactions {
 
     /**
      * Returns instance of Ignite Transactions to mark a transaction with a special label.
+     * The label can be obtained via {@link Transaction#label()} method.
      *
      * @param lb label.
      * @return {@code This} for chaining.
      * @throws NullPointerException if label is null.
+     * @see Transaction#label()
      */
     public IgniteTransactions withLabel(String lb);
+
+    /**
+     * Returns an instance of {@code IgniteTransactions} tran will trace every transaction.
+     *
+     * @return Trace-enabled transactions intance.
+     */
+    public IgniteTransactions withTracing();
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,8 +89,10 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @throws IgniteCheckedException If failed to write.
      * @throws StorageException If IO exception occurred during the write. If an exception is thrown from this
      *      method, the WAL will be invalidated and the node will be stopped.
+     * @return Last WAL position which was flushed to WAL segment file. May be greater than or equal to a {@code ptr}.
+     * May be {@code null}, it means nothing has been flushed.
      */
-    public void flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException;
+    public WALPointer flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException;
 
     /**
      * Reads WAL record by the specified pointer.

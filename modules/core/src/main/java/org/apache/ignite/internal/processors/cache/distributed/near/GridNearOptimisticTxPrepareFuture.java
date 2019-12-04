@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,7 +61,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.Nullable;
@@ -155,30 +154,8 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
             }
         }
 
-        if (ERR_UPD.compareAndSet(this, null, e)) {
-            boolean marked = tx.setRollbackOnly();
-
-            if (e instanceof IgniteTxRollbackCheckedException) {
-                if (marked) {
-                    tx.rollbackAsync().listen(new IgniteInClosure<IgniteInternalFuture<IgniteInternalTx>>() {
-                        @Override public void apply(IgniteInternalFuture<IgniteInternalTx> fut) {
-                            try {
-                                fut.get();
-                            }
-                            catch (IgniteCheckedException e) {
-                                U.error(log, "Failed to automatically rollback transaction: " + tx, e);
-                            }
-
-                            onComplete();
-                        }
-                    });
-
-                    return;
-                }
-            }
-
+        if (ERR_UPD.compareAndSet(this, null, e))
             onComplete();
-        }
     }
 
     /** {@inheritDoc} */
@@ -536,7 +513,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                     tx.subjectId(),
                     tx.taskNameHash(),
                     m.clientFirst(),
-                    true,
+                    txMapping.transactionNodes().size() == 1,
                     tx.activeCachesDeploymentEnabled(),
                     tx.txState().recovery());
 
@@ -1012,6 +989,14 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
          *
          */
         private void remap() {
+            if (parent.tx.isRollbackOnly()) {
+                onDone(new IgniteTxRollbackCheckedException(
+                    "Failed to prepare the transaction, due to the transaction is marked as rolled back " +
+                        "[tx=" + CU.txString(parent.tx) + ']'));
+
+                return;
+            }
+
             parent.prepareOnTopology(true, new Runnable() {
                 @Override public void run() {
                     onDone((GridNearTxPrepareResponse) null);

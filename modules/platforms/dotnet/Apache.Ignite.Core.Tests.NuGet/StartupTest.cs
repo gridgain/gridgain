@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,9 @@ namespace Apache.Ignite.Core.Tests.NuGet
     /// </summary>
     public class StartupTest
     {
+        /** */
+        private string _tempDir;
+
         /// <summary>
         /// Tears down the test.
         /// </summary>
@@ -43,6 +46,12 @@ namespace Apache.Ignite.Core.Tests.NuGet
                     proc.Kill();
                     proc.WaitForExit();
                 }
+            }
+
+            if (!string.IsNullOrEmpty(_tempDir))
+            {
+                Directory.Delete(_tempDir, true);
+                _tempDir = null;
             }
         }
 
@@ -92,7 +101,7 @@ namespace Apache.Ignite.Core.Tests.NuGet
         {
             var asm = GetType().Assembly;
             var version = asm.GetName().Version.ToString(3);
-            var packageDirName = "Apache.Ignite." + version + "*";
+            var packageDirName = "GridGain.Ignite." + version + "*";
             
             var asmDir = Path.GetDirectoryName(asm.Location);
             Assert.IsNotNull(asmDir, asmDir);
@@ -100,10 +109,13 @@ namespace Apache.Ignite.Core.Tests.NuGet
             var packagesDir = Path.GetFullPath(Path.Combine(asmDir, @"..\..\packages"));
             Assert.IsTrue(Directory.Exists(packagesDir), packagesDir);
 
-            var packageDir = Directory.GetDirectories(packagesDir, packageDirName).Single();
+            var packageDir = Directory.GetDirectories(packagesDir, packageDirName).SingleOrDefault();
             Assert.IsTrue(Directory.Exists(packageDir), packageDir);
 
-            var exePath = Path.Combine(packageDir, @"lib\net40\Apache.Ignite.exe");
+            _tempDir = PathUtils.GetTempDirectoryName();
+            PathUtils.CopyDirectory(packageDir, _tempDir);
+
+            var exePath = Path.Combine(_tempDir, @"lib\net40\Apache.Ignite.exe");
             Assert.IsTrue(File.Exists(exePath), exePath);
 
             var springPath = Path.GetFullPath(@"config\ignite-config.xml");

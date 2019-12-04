@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import javax.cache.CacheException;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.DbObject;
 import org.h2.engine.Session;
 import org.h2.index.Index;
@@ -69,8 +70,8 @@ public class ReduceTableWrapper extends Table {
     /**
      * @return Inner table.
      */
-    private Table innerTable() {
-        Table t = tbl.get();
+    public ReduceTable innerTable() {
+        ReduceTable t = tbl.get();
 
         if (t == null)
             throw new CacheException("Table `" + getName() + "` can be accessed only within Ignite query context.");
@@ -90,8 +91,8 @@ public class ReduceTableWrapper extends Table {
 
     /** {@inheritDoc} */
     @Override public PlanItem getBestPlanItem(Session session, int[] masks, TableFilter[] filters, int filter,
-        SortOrder sortOrder, HashSet<Column> cols) {
-        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, cols);
+        SortOrder sortOrder, AllColumnsForPlan allColumnsSet, boolean isEquiJoined) {
+        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, allColumnsSet, isEquiJoined);
     }
 
     /** {@inheritDoc} */
@@ -178,7 +179,7 @@ public class ReduceTableWrapper extends Table {
 
     /** {@inheritDoc} */
     @Override public TableType getTableType() {
-        return TableType.EXTERNAL_TABLE_ENGINE;
+        return TableType.TABLE;
     }
 
     /** {@inheritDoc} */
@@ -227,10 +228,10 @@ public class ReduceTableWrapper extends Table {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
+    @Override public long getRowCountApproximation(Session ses) {
         Table t = tbl.get();
 
-        return t == null ? 0 : t.getRowCountApproximation();
+        return t == null ? 0 : t.getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */

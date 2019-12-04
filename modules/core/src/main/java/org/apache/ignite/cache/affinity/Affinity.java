@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Provides affinity information to detect which node is primary and which nodes are
@@ -175,8 +174,9 @@ public interface Affinity<K> {
      * @param key Keys to map to a node.
      * @return Primary node for the key.
      * @throws IgniteException If there are no alive nodes for this cache.
+     * @throws NullPointerException if {@code key} is {@code null}.
      */
-    @Nullable public ClusterNode mapKeyToNode(K key);
+    public ClusterNode mapKeyToNode(K key);
 
     /**
      * Gets primary and backup nodes for the key. Note that primary node is always

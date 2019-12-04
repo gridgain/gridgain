@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,7 +62,7 @@ public class KMeansTrainer extends SingleLabelDatasetTrainer<KMeansModel> {
     private DistanceMeasure distance = new EuclideanDistance();
 
     /** {@inheritDoc} */
-    @Override public <K, V> KMeansModel fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> KMeansModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
         return updateModel(null, datasetBuilder, preprocessor);
     }
@@ -77,15 +77,16 @@ public class KMeansTrainer extends SingleLabelDatasetTrainer<KMeansModel> {
         Preprocessor<K, V> preprocessor) {
         assert datasetBuilder != null;
 
-        PartitionDataBuilder<K, V, EmptyContext, LabeledVectorSet<Double, LabeledVector>> partDataBuilder =
+        PartitionDataBuilder<K, V, EmptyContext, LabeledVectorSet<LabeledVector>> partDataBuilder =
             new LabeledDatasetPartitionDataBuilderOnHeap<>(preprocessor);
 
         Vector[] centers;
 
-        try (Dataset<EmptyContext, LabeledVectorSet<Double, LabeledVector>> dataset = datasetBuilder.build(
+        try (Dataset<EmptyContext, LabeledVectorSet<LabeledVector>> dataset = datasetBuilder.build(
             envBuilder,
             (env, upstream, upstreamSize) -> new EmptyContext(),
-            partDataBuilder
+            partDataBuilder,
+            learningEnvironment()
         )) {
             final Integer cols = dataset.compute(org.apache.ignite.ml.structures.Dataset::colSize, (a, b) -> {
                 if (a == null)
@@ -148,7 +149,7 @@ public class KMeansTrainer extends SingleLabelDatasetTrainer<KMeansModel> {
      * @return Helper data to calculate the new centroids.
      */
     private TotalCostAndCounts calcDataForNewCentroids(Vector[] centers,
-        Dataset<EmptyContext, LabeledVectorSet<Double, LabeledVector>> dataset, int cols) {
+        Dataset<EmptyContext, LabeledVectorSet<LabeledVector>> dataset, int cols) {
         final Vector[] finalCenters = centers;
 
         return dataset.compute(data -> {
@@ -211,7 +212,7 @@ public class KMeansTrainer extends SingleLabelDatasetTrainer<KMeansModel> {
      * @param k Amount of clusters.
      * @return K cluster centers.
      */
-    private Vector[] initClusterCentersRandomly(Dataset<EmptyContext, LabeledVectorSet<Double, LabeledVector>> dataset,
+    private Vector[] initClusterCentersRandomly(Dataset<EmptyContext, LabeledVectorSet<LabeledVector>> dataset,
         int k) {
         Vector[] initCenters = new DenseVector[k];
 
@@ -271,10 +272,14 @@ public class KMeansTrainer extends SingleLabelDatasetTrainer<KMeansModel> {
 
     /** Service class used for statistics. */
     public static class TotalCostAndCounts {
-        /** */
+        /**
+         *
+         */
         double totalCost;
 
-        /** */
+        /**
+         *
+         */
         ConcurrentHashMap<Integer, Vector> sums = new ConcurrentHashMap<>();
 
         /** Count of points closest to the center with a given index. */

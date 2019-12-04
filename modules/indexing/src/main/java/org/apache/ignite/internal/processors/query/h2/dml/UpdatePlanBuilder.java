@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.h2.dml;
 
 import java.lang.reflect.Constructor;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -38,11 +37,13 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlConst;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlDelete;
@@ -531,7 +532,7 @@ public final class UpdatePlanBuilder {
 
             h2Cols[i] = h2Col;
 
-            colTypes[i] = h2Col.getType();
+            colTypes[i] = h2Col.getType().getValueType();
             int colId = h2Col.getColumnId();
 
             if (desc.isKeyColumn(colId)) {
@@ -889,7 +890,12 @@ public final class UpdatePlanBuilder {
         if ((!mvccEnabled && !planKey.skipReducerOnUpdate()) || planKey.batched())
             return null;
 
-        try (Connection conn = idx.connections().connectionNoCache(planKey.schemaName())) {
+        try (H2PooledConnection conn = idx.connections().connection(planKey.schemaName())) {
+            H2Utils.setupConnection(conn,
+                QueryContext.parseContext(idx.backupFilter(null, null), planKey.local()),
+                planKey.distributedJoins(),
+                planKey.enforceJoinOrder());
+
             // Get a new prepared statement for derived select query.
             try (PreparedStatement stmt = conn.prepareStatement(selectQry)) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);

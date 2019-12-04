@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,7 @@
 #include "ignite/impl/interop/interop_memory.h"
 
 namespace ignite
-{    
+{
     namespace impl
     {
         namespace interop
@@ -51,12 +51,12 @@ namespace ignite
                  * @return Value.
                  */
                 int32_t ReadInt8(int32_t pos);
-                    
+
                 /**
                  * Read signed 8-byte int array.
                  *
                  * @param res Allocated array.
-                 * @param len Length.                 
+                 * @param len Length.
                  */
                 void ReadInt8Array(int8_t* const res, const int32_t len);
 
@@ -127,7 +127,7 @@ namespace ignite
                  * @return Value.
                  */
                 int32_t ReadInt32(int32_t pos);
-                    
+
                 /**
                  * Read signed 32-byte int array.
                  *
@@ -198,27 +198,35 @@ namespace ignite
                 /**
                  * Set position.
                  *
-                 * @param Position.
+                 * @param pos Position.
                  */
                 void Position(int32_t pos);
+
+                /**
+                 * Ignore some number of bytes.
+                 *
+                 * @param cnt Amount of bytes to be ignored.
+                 */
+                void Ignore(int32_t cnt);
 
                 /**
                  * Synchronize data from underlying memory.
                  */
                 void Synchronize();
+
             private:
                 /** Memory. */
                 InteropMemory* mem; 
-                
+
                 /** Pointer to data. */
-                int8_t* data;       
-                
+                int8_t* data;
+
                 /** Length. */
-                int len;            
-                
+                int len;
+
                 /** Current position. */
-                int pos;            
-                    
+                int pos;
+
                 /**
                  * Ensure there is enough data in the stream.
                  *
@@ -229,7 +237,7 @@ namespace ignite
                 /**
                  * Copy data from the stream shifting it along the way.
                  *
-                 * @param ptr Pointer to data.
+                 * @param dest Pointer to data.
                  * @param off Offset.
                  * @param cnt Amount of data to copy.
                  */
@@ -243,7 +251,7 @@ namespace ignite
                 void Shift(int32_t cnt);
             };
         }
-    }    
+    }
 }
 
 #endif //_IGNITE_IMPL_INTEROP_INTEROP_INPUT_STREAM

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -98,17 +98,25 @@ public class GridSqlColumn extends GridSqlElement {
         return tblAlias;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
-        String sql = Parser.quoteIdentifier(colName);
+        StringBuilder sb = new StringBuilder();
 
-        if (tblAlias != null)
-            sql = Parser.quoteIdentifier(tblAlias) + "." + sql;
+        if (schema != null) {
+            Parser.quoteIdentifier(sb, schema, true);
 
-        if (schema != null)
-            sql = Parser.quoteIdentifier(schema) + "." + sql;
+            sb.append(".");
+        }
 
-        return sql;
+        if (tblAlias != null) {
+            Parser.quoteIdentifier(sb, tblAlias, true);
+
+            sb.append(".");
+        }
+
+        Parser.quoteIdentifier(sb, colName, true);
+
+        return sb.toString();
     }
 
     /**
@@ -138,14 +146,14 @@ public class GridSqlColumn extends GridSqlElement {
      * @return Precision.
      */
     public int precision() {
-        return (int) col.getPrecision();
+        return (int) col.getType().getPrecision();
     }
 
     /**
      * @return Scale.
      */
     public int scale() {
-        return col.getScale();
+        return col.getType().getScale();
     }
 
     /**

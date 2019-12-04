@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
@@ -35,17 +36,32 @@ public class IndexRebuildPartialClosure implements SchemaIndexCacheVisitorClosur
     /** Indexes. */
     private final Map<GridH2Table, Collection<GridH2IndexBase>> tblIdxs = new IdentityHashMap<>();
 
+    /** Cache context. */
+    private GridCacheContext cctx;
+
+    /**
+     * Constructor.
+     *
+     * @param cctx Cache context.
+     */
+    public IndexRebuildPartialClosure(GridCacheContext cctx) {
+        this.cctx = cctx;
+    }
+
     /** {@inheritDoc} */
     @Override public void apply(CacheDataRow row) throws IgniteCheckedException {
         assert hasIndexes();
 
         for (Map.Entry<GridH2Table, Collection<GridH2IndexBase>> tblIdxEntry : tblIdxs.entrySet()) {
-            GridH2Table tbl = tblIdxEntry.getKey();
+            if (cctx.kernalContext().query().belongsToTable(cctx, tblIdxEntry.getKey().cacheName(),
+                tblIdxEntry.getKey().getName(), row.key(), row.value())) {
+                GridH2Table tbl = tblIdxEntry.getKey();
 
-            H2CacheRow row0 = tbl.rowDescriptor().createRow(row);
+                H2CacheRow row0 = tbl.rowDescriptor().createRow(row);
 
-            for (GridH2IndexBase idx : tblIdxEntry.getValue())
-                idx.putx(row0);
+                for (GridH2IndexBase idx : tblIdxEntry.getValue())
+                    idx.putx(row0);
+            }
         }
     }
 

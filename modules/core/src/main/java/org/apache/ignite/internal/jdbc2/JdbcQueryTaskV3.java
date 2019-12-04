@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,6 +42,7 @@ class JdbcQueryTaskV3 extends JdbcQueryTaskV2 {
      * @param args Args.
      * @param fetchSize Fetch size.
      * @param uuid UUID.
+     * @param maxMem Query memory limit.
      * @param locQry Local query flag.
      * @param collocatedQry Collocated query flag.
      * @param distributedJoins Distributed joins flag.
@@ -51,9 +52,9 @@ class JdbcQueryTaskV3 extends JdbcQueryTaskV2 {
      * @param skipReducerOnUpdate Flkag to enable server side updates.
      */
     public JdbcQueryTaskV3(Ignite ignite, String cacheName, String schemaName, String sql, Boolean isQry, boolean loc,
-        Object[] args, int fetchSize, UUID uuid, boolean locQry, boolean collocatedQry, boolean distributedJoins,
+        Object[] args, int fetchSize, UUID uuid,long maxMem, boolean locQry, boolean collocatedQry, boolean distributedJoins,
         boolean enforceJoinOrder, boolean lazy, boolean updateMeta, boolean skipReducerOnUpdate) {
-        super(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize, uuid, locQry,
+        super(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize, uuid, maxMem, locQry,
             collocatedQry, distributedJoins, enforceJoinOrder, lazy);
 
         this.updateMeta = updateMeta;
@@ -80,6 +81,7 @@ class JdbcQueryTaskV3 extends JdbcQueryTaskV2 {
      * @param args Args.
      * @param fetchSize Fetch size.
      * @param uuid UUID.
+     * @param maxMem Query memory limit.
      * @param locQry Local query flag.
      * @param collocatedQry Collocated query flag.
      * @param distributedJoins Distributed joins flag.
@@ -90,15 +92,16 @@ class JdbcQueryTaskV3 extends JdbcQueryTaskV2 {
      * @return Appropriate task JdbcQueryTask or JdbcQueryTaskV2.
      */
     public static JdbcQueryTask createTask(Ignite ignite, String cacheName, String schemaName, String sql,
-        Boolean isQry, boolean loc, Object[] args, int fetchSize, UUID uuid, boolean locQry,
-        boolean collocatedQry, boolean distributedJoins,
-        boolean enforceJoinOrder, boolean lazy, boolean updateMeta, boolean skipReducerOnUpdate) {
+        Boolean isQry, boolean loc, Object[] args, int fetchSize, UUID uuid, long maxMem, boolean locQry,
+        boolean collocatedQry, boolean distributedJoins, boolean enforceJoinOrder, boolean lazy, boolean updateMeta,
+        boolean skipReducerOnUpdate) {
 
         if (updateMeta || skipReducerOnUpdate)
             return new JdbcQueryTaskV3(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize,
-                uuid, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy, updateMeta, skipReducerOnUpdate);
+                uuid, maxMem, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy, updateMeta,
+                skipReducerOnUpdate);
         else
             return JdbcQueryTaskV2.createTask(ignite, cacheName, schemaName, sql, isQry, loc, args, fetchSize,
-                uuid, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy);
+                uuid, maxMem, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy);
     }
 }

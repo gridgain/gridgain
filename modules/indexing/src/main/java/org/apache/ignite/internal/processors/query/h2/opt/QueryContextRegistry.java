@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,49 +16,17 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Registry of all currently available query contexts.
  */
 public class QueryContextRegistry {
-    /** Current local context. */
-    private final ThreadLocal<QueryContext> locCtx = new ThreadLocal<>();
-
     /** Shared contexts. */
     private final ConcurrentMap<QueryContextKey, QueryContext> sharedCtxs = new ConcurrentHashMap<>();
-
-    /**
-     * Access current thread local query context (if it was set).
-     *
-     * @return Current thread local query context or {@code null} if the query runs outside of Ignite context.
-     */
-    @Nullable public QueryContext getThreadLocal() {
-        return locCtx.get();
-    }
-
-    /**
-     * Sets current thread local context. This method must be called when all the non-volatile properties are
-     * already set to ensure visibility for other threads.
-     *
-     * @param x Query context.
-     */
-    public void setThreadLocal(QueryContext x) {
-        assert locCtx.get() == null;
-
-        locCtx.set(x);
-    }
-
-    /**
-     * Drops current thread local context.
-     */
-    public void clearThreadLocal() {
-        locCtx.remove();
-    }
 
     /**
      * Access query context from another thread.

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,11 +86,12 @@ public class LearningEnvironmentTest {
 
         DatasetTrainer<IgniteModel<Object, Vector>, Void> trainer = new DatasetTrainer<IgniteModel<Object, Vector>, Void>() {
             /** {@inheritDoc} */
-             @Override public <K, V> IgniteModel<Object, Vector> fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+             @Override public <K, V> IgniteModel<Object, Vector> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
                 Dataset<EmptyContext, TestUtils.DataWrapper<Integer>> ds = datasetBuilder.build(envBuilder,
                     new EmptyContextBuilder<>(),
                     (PartitionDataBuilder<K, V, EmptyContext, TestUtils.DataWrapper<Integer>>)(env, upstreamData, upstreamDataSize, ctx) ->
-                        TestUtils.DataWrapper.of(env.partition()));
+                        TestUtils.DataWrapper.of(env.partition()),
+                    envBuilder.buildForTrainer());
 
                 Vector v = null;
                 for (int iter = 0; iter < iterations; iter++) {

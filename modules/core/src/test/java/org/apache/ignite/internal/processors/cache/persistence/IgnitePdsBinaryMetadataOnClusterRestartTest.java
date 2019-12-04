@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,6 +40,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -311,6 +312,8 @@ public class IgnitePdsBinaryMetadataOnClusterRestartTest extends GridCommonAbstr
 
         cache.put(0, bObj);
 
+        int createdTypeId = igniteA.binary().type(DYNAMIC_TYPE_NAME).typeId();
+
         stopAllGrids();
 
         Ignite igniteC = startGridInASeparateWorkDir("C");
@@ -333,24 +336,30 @@ public class IgnitePdsBinaryMetadataOnClusterRestartTest extends GridCommonAbstr
 
         startGridInASeparateWorkDir("A");
 
-        boolean exceptedExceptionThrown = false;
-        try {
-            startGridInASeparateWorkDir("B");
-        }
-        catch (Exception e) {
-            if (e.getCause() != null && e.getCause().getCause() != null) {
-                if (e.getCause().getCause().getMessage().contains(
-                        String.format("[typeName=%s, fieldName=%s, fieldTypeName1=int, fieldTypeName2=long]",
-                            DYNAMIC_TYPE_NAME,
-                            decimalFieldName)
-                ))
-                    exceptedExceptionThrown = true;
-            }
-            else
-                throw e;
-        }
+        String expectedMsg = String.format(
+            "Type '%s' with typeId %d has a different/incorrect type for field '%s'. Expected 'int' but 'long' was " +
+                "provided. Field type's modification is unsupported, clean {root_path}/marshaller and " +
+                "{root_path}/binary_meta directories if the type change is required.",
+            DYNAMIC_TYPE_NAME,
+            createdTypeId,
+            decimalFieldName);
 
-        assertTrue(exceptedExceptionThrown);
+        Throwable thrown = GridTestUtils.assertThrows(
+            log,
+            () -> startGridInASeparateWorkDir("B"),
+            Exception.class,
+            null);
+
+        if (thrown.getCause() != null && thrown.getCause().getCause() != null) {
+            Throwable cause = thrown.getCause().getCause();
+
+            String actualMsg = cause.getMessage();
+
+            assertTrue("Cause is not correct [expected='" + expectedMsg + "', actual='" + actualMsg + "'].",
+                actualMsg.contains(expectedMsg));
+        }
+        else
+            throw new AssertionError("Thrown unexpected exception", thrown);
     }
 
     /** */

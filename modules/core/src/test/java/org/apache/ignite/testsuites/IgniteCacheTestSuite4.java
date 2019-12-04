@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,9 +56,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateAtomi
 import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateNearEnabledNoBackupsSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateNearEnabledSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheMultinodeUpdateSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCacheStoreManagerDeserializationTest;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessorActiveTxTest;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionMultinodeTest;
-import org.apache.ignite.internal.processors.cache.GridLocalCacheStoreManagerDeserializationTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicCopyOnReadDisabledTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalPeekModesTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalStoreValueTest;
@@ -120,6 +119,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCrossCa
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheNearTxPreloadSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheNearOnlyTxTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheNearReadCommittedTest;
+import org.apache.ignite.internal.processors.cache.distributed.near.NearCacheNoMessagesTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.GridReplicatedTxPreloadTest;
 import org.apache.ignite.internal.processors.cache.integration.IgniteCacheAtomicLoadAllTest;
 import org.apache.ignite.internal.processors.cache.integration.IgniteCacheAtomicLoaderWriterTest;
@@ -313,9 +313,6 @@ public class IgniteCacheTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, CacheStoreUsageMultinodeDynamicStartTxTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheConnectionLeakStoreTxTest.class, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, GridCacheStoreManagerDeserializationTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridLocalCacheStoreManagerDeserializationTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteStartCacheInTransactionSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteStartCacheInTransactionAtomicSelfTest.class, ignoredTests);
 
@@ -358,6 +355,10 @@ public class IgniteCacheTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, CacheResultIsNotNullOnPartitionLossTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheEventWithTxLabelTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, NearCacheNoMessagesTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, GridCacheProcessorActiveTxTest.class, ignoredTests);
 
         return suite;
     }

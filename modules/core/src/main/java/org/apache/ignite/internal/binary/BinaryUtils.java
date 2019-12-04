@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1040,10 +1040,11 @@ public class BinaryUtils {
 
                     if (!F.eq(oldFieldTypeName, newFieldTypeName)) {
                         throw new BinaryObjectException(
-                            "Binary type has different field types [" + "typeName=" + oldMeta.typeName() +
-                                ", fieldName=" + newField.getKey() +
-                                ", fieldTypeName1=" + oldFieldTypeName +
-                                ", fieldTypeName2=" + newFieldTypeName + ']'
+                            "Type '" + oldMeta.typeName() + "' with typeId " + oldMeta.typeId()
+                                + " has a different/incorrect type for field '" + newField.getKey()
+                                + "'. Expected '" + oldFieldTypeName + "' but '" + newFieldTypeName
+                                + "' was provided. Field type's modification is unsupported, clean {root_path}/marshaller " +
+                                "and {root_path}/binary_meta directories if the type change is required."
                         );
                     }
                 }
@@ -1633,7 +1634,7 @@ public class BinaryUtils {
         Class cls;
 
         if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-            cls = ctx.descriptorForTypeId(true, typeId, ldr, true).describedClass();
+            cls = ctx.descriptorForTypeId(true, typeId, ldr, false).describedClass();
         else {
             String clsName = doReadClassName(in);
 
@@ -1644,8 +1645,7 @@ public class BinaryUtils {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
             }
 
-            // forces registering of class by type id, at least locally
-            ctx.descriptorForClass(cls, true, false);
+            ctx.registerClass(cls, false, false);
         }
 
         return cls;
@@ -1661,11 +1661,11 @@ public class BinaryUtils {
      * @return Resovled class.
      */
     public static Class resolveClass(BinaryContext ctx, int typeId, @Nullable String clsName,
-        @Nullable ClassLoader ldr, boolean deserialize) {
+        @Nullable ClassLoader ldr, boolean registerMeta) {
         Class cls;
 
         if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-            cls = ctx.descriptorForTypeId(true, typeId, ldr, deserialize).describedClass();
+            cls = ctx.descriptorForTypeId(true, typeId, ldr, registerMeta).describedClass();
         else {
             try {
                 cls = U.forName(clsName, ldr);
@@ -1674,8 +1674,7 @@ public class BinaryUtils {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
             }
 
-            // forces registering of class by type id, at least locally
-            ctx.descriptorForClass(cls, true, false);
+            ctx.registerClass(cls, false, false);
         }
 
         return cls;

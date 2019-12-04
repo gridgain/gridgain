@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,7 +48,6 @@ import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheInvokeEntry;
 import org.apache.ignite.internal.processors.cache.CacheInvokeResult;
 import org.apache.ignite.internal.processors.cache.CacheLazyEntry;
-import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
@@ -227,12 +226,10 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     @Override public void start() throws IgniteCheckedException {
         super.start();
 
-        CacheMetricsImpl m = new CacheMetricsImpl(ctx);
+        assert metrics != null : "Cache metrics instance isn't initialized.";
 
         if (ctx.dht().near() != null)
-            m.delegate(ctx.dht().near().metrics0());
-
-        metrics = m;
+            metrics.delegate(ctx.dht().near().metrics0());
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
@@ -449,7 +446,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     /** {@inheritDoc} */
     @Override protected IgniteInternalFuture<V> getAsync(
         final K key,
-        final boolean forcePrimary,
         final boolean skipTx,
         @Nullable UUID subjId,
         final String taskName,
@@ -474,7 +470,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         return asyncOp(new CO<IgniteInternalFuture<V>>() {
             @Override public IgniteInternalFuture<V> apply() {
                 return getAsync0(ctx.toCacheKeyObject(key),
-                    forcePrimary,
+                    false,
                     subjId0,
                     taskName,
                     deserializeBinary,
@@ -493,7 +489,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         CacheOperationContext opCtx = ctx.operationContextPerCall();
 
         return getAllAsyncInternal(keys,
-            !ctx.config().isReadFromBackup(),
+            false,
             null,
             ctx.kernalContext().job().currentTaskName(),
             deserializeBinary,
@@ -1463,7 +1459,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final boolean evt = !skipVals;
 
         // Optimisation: try to resolve value locally and escape 'get future' creation.
-        if (!forcePrimary && ctx.affinityNode()) {
+        if (!forcePrimary && ctx.config().isReadFromBackup() && ctx.affinityNode()) {
             try {
                 Map<K, V> locVals = U.newHashMap(keys.size());
 
@@ -1774,10 +1770,16 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             // Do not check topology version if topology was locked on near node by
                             // external transaction or explicit lock.
                             if (!req.topologyLocked()) {
+                                AffinityTopologyVersion waitVer = top.topologyVersionFuture().initialVersion();
+
+                                // No need to remap if next future version is compatible.
+                                boolean compatible =
+                                    waitVer.isBetween(req.lastAffinityChangedTopologyVersion(), req.topologyVersion());
+
                                 // Can not wait for topology future since it will break
                                 // GridNearAtomicCheckUpdateRequest processing.
-                                remap = !top.topologyVersionFuture().isDone() ||
-                                    needRemap(req.topologyVersion(), top.readyTopologyVersion(), req.keys());
+                                remap = !compatible && !top.topologyVersionFuture().isDone() ||
+                                    needRemap(req.topologyVersion(), top.readyTopologyVersion());
                             }
 
                             if (!remap) {
@@ -1873,7 +1875,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         assert cacheObjProc instanceof CacheObjectBinaryProcessorImpl;
 
                         ((CacheObjectBinaryProcessorImpl)cacheObjProc)
-                            .binaryContext().descriptorForClass(ex.cls(), false, false);
+                            .binaryContext().registerClass(ex.cls(), true, false);
                     }
                     catch (UnregisteredBinaryTypeException ex) {
                         if (ex.future() != null) {
@@ -2007,8 +2009,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         if (req.size() > 1 &&                    // Several keys ...
             writeThrough() && !req.skipStore() && // and store is enabled ...
-            !ctx.store().isLocal() &&             // and this is not local store ...
-            // (conflict resolver should be used for local store)
             !ctx.dr().receiveEnabled()            // and no DR.
             ) {
             // This method can only be used when there are no replicated entries in the batch.
@@ -3344,8 +3344,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                 op,
                                 op == TRANSFORM ? entryProcessor : val,
                                 op == TRANSFORM ? req.invokeArguments() : null,
-                                /*write-through*/(ctx.store().isLocal() && !ctx.shared().localStorePrimaryOnly())
-                                    && writeThrough() && !req.skipStore(),
+                                /*write-through*/false,
                                 /*read-through*/false,
                                 /*retval*/false,
                                 req.keepBinary(),

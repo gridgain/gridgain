@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,7 +45,6 @@ import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.IgniteLock;
 import org.apache.ignite.IgniteLogger;
@@ -78,7 +77,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cache.GridCacheUtilityKey;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.hadoop.Hadoop;
 import org.apache.ignite.internal.util.GridJavaProcess;
 import org.apache.ignite.internal.util.lang.IgnitePredicateX;
 import org.apache.ignite.internal.util.typedef.G;
@@ -500,16 +498,6 @@ public class IgniteProcessProxy implements IgniteEx {
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteFileSystem igfsx(String name) {
-        throw new UnsupportedOperationException("Operation isn't supported yet.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public Hadoop hadoop() {
-        throw new UnsupportedOperationException("Operation isn't supported yet.");
-    }
-
-    /** {@inheritDoc} */
     @Override public IgniteClusterEx cluster() {
         return new IgniteClusterProcessProxy(this);
     }
@@ -698,16 +686,6 @@ public class IgniteProcessProxy implements IgniteEx {
 
     /** {@inheritDoc} */
     @Override public <K, V> IgniteDataStreamer<K, V> dataStreamer(@Nullable String cacheName) {
-        throw new UnsupportedOperationException("Operation isn't supported yet.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFileSystem fileSystem(String name) {
-        throw new UnsupportedOperationException("Operation isn't supported yet.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public Collection<IgniteFileSystem> fileSystems() {
         throw new UnsupportedOperationException("Operation isn't supported yet.");
     }
 

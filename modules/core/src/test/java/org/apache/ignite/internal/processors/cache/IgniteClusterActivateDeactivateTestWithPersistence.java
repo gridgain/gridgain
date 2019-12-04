@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,10 +41,11 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 
 /**
@@ -54,20 +55,6 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -366,6 +353,8 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      */
     @Test
     public void testDeactivateDuringEvictionAndRebalance() throws Exception {
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-7384", MvccFeatureChecker.forcedMvcc());
+
         IgniteEx srv = (IgniteEx) startGrids(3);
 
         srv.cluster().active(true);

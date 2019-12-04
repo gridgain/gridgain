@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,9 @@ import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
@@ -146,7 +148,12 @@ class JdbcBatchUpdateTask implements IgniteCallable<int[]> {
             }
         }
         catch (Exception ex) {
-            throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), ex);
+            IgniteSQLException sqlEx = X.cause(ex, IgniteSQLException.class);
+
+            if (sqlEx != null)
+                throw new BatchUpdateException(sqlEx.getMessage(), sqlEx.sqlState(), Arrays.copyOf(updCntrs, idx), ex);
+            else
+                throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), ex);
         }
 
         return updCntrs;

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,9 +44,7 @@ public class CacheFutureExceptionSelfTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = new IgniteConfiguration();
-
-        cfg.setIgniteInstanceName(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         if (igniteInstanceName.equals(getTestIgniteInstanceName(1)))
             cfg.setClientMode(true);
@@ -139,12 +137,12 @@ public class CacheFutureExceptionSelfTest extends GridCommonAbstractTest {
      * Test class.
      */
     private static class NotSerializableClass implements Serializable {
-        /** {@inheritDoc}*/
+        /** */
         private void writeObject(ObjectOutputStream out) throws IOException {
             out.writeObject(this);
         }
 
-        /** {@inheritDoc}*/
+        /** */
         private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
             if (fail)
                 throw new RuntimeException("Deserialization failed.");

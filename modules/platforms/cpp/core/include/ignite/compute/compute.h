@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,6 +84,89 @@ namespace ignite
                 impl(impl)
             {
                 // No-op.
+            }
+
+            /**
+             * Executes given job on the node where data for
+             * provided affinity key is located (a.k.a. affinity co-location).
+             *
+             * @tparam R Call return type. BinaryType should be specialized for
+             *  the type if it is not primitive. Should not be void. For
+             *  non-returning methods see Compute::AffinityRun().
+             * @tparam K Affinity key type.
+             * @tparam F Compute function type. Should implement ComputeFunc<R>
+             *  class.
+             * @param cacheName Cache name to use for affinity co-location.
+             * @param key Affinity key.
+             * @param func Compute function to call.
+             * @return Computation result.
+             * @throw IgniteError in case of error.
+             */
+            template<typename R, typename K, typename F>
+            R AffinityCall(const std::string& cacheName, const K& key, const F& func)
+            {
+                return impl.Get()->AffinityCallAsync<R, K, F>(cacheName, key, func).GetValue();
+            }
+
+            /**
+             * Executes given job asynchronously on the node where data for
+             * provided affinity key is located (a.k.a. affinity co-location).
+             *
+             * @tparam R Call return type. BinaryType should be specialized for
+             *  the type if it is not primitive. Should not be void. For
+             *  non-returning methods see Compute::AffinityRun().
+             * @tparam K Affinity key type.
+             * @tparam F Compute function type. Should implement ComputeFunc<R>
+             *  class.
+             * @param cacheName Cache name to use for affinity co-location.
+             * @param key Affinity key.
+             * @param func Compute function to call.
+             * @return Future that can be used to access computation result once
+             *  it's ready.
+             * @throw IgniteError in case of error.
+             */
+            template<typename R, typename K, typename F>
+            Future<R> AffinityCallAsync(const std::string& cacheName, const K& key, const F& func)
+            {
+                return impl.Get()->AffinityCallAsync<R, K, F>(cacheName, key, func);
+            }
+
+            /**
+             * Executes given job on the node where data for
+             * provided affinity key is located (a.k.a. affinity co-location).
+             *
+             * @tparam K Affinity key type.
+             * @tparam F Compute function type. Should implement ComputeFunc<R>
+             *  class.
+             * @param cacheName Cache names to use for affinity co-location.
+             * @param key Affinity key.
+             * @param action Compute action to call.
+             * @throw IgniteError in case of error.
+             */
+            template<typename K, typename F>
+            void AffinityRun(const std::string& cacheName, const K& key, const F& action)
+            {
+                return impl.Get()->AffinityRunAsync<K, F>(cacheName, key, action).GetValue();
+            }
+
+            /**
+             * Executes given job asynchronously on the node where data for
+             * provided affinity key is located (a.k.a. affinity co-location).
+             *
+             * @tparam K Affinity key type.
+             * @tparam F Compute function type. Should implement ComputeFunc<R>
+             *  class.
+             * @param cacheName Cache names to use for affinity co-location.
+             * @param key Affinity key.
+             * @param action Compute action to call.
+             * @return Future that can be used to access computation result once
+             *  it's ready.
+             * @throw IgniteError in case of error.
+             */
+            template<typename K, typename F>
+            Future<void> AffinityRunAsync(const std::string& cacheName, const K& key, const F& action)
+            {
+                return impl.Get()->AffinityRunAsync<K, F>(cacheName, key, action);
             }
 
             /**

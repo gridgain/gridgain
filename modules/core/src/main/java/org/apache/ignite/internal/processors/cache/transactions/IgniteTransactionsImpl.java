@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,13 +45,17 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
     /** Label. */
     private String lb;
 
+    /** Tracing enabled flag. */
+    private boolean tracingEnabled;
+
     /**
      * @param cctx Cache shared context.
      * @param lb Label.
      */
-    public IgniteTransactionsImpl(GridCacheSharedContext<K, V> cctx, @Nullable String lb) {
+    public IgniteTransactionsImpl(GridCacheSharedContext<K, V> cctx, @Nullable String lb, boolean tracingEnabled) {
         this.cctx = cctx;
         this.lb = lb;
+        this.tracingEnabled = tracingEnabled;
     }
 
     /** {@inheritDoc} */
@@ -176,7 +180,8 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
                 true,
                 null,
                 txSize,
-                lb
+                lb,
+                tracingEnabled
             );
 
             assert tx != null;
@@ -197,7 +202,7 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
 
     /** {@inheritDoc} */
     @Override public TransactionMetrics metrics() {
-        return cctx.txMetrics();
+        return cctx.txMetrics().snapshot();
     }
 
     /** {@inheritDoc} */
@@ -222,7 +227,12 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
     @Override public IgniteTransactions withLabel(String lb) {
         A.notNull(lb, "label should not be empty.");
 
-        return new IgniteTransactionsImpl<>(cctx, lb);
+        return new IgniteTransactionsImpl<>(cctx, lb, tracingEnabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteTransactions withTracing() {
+        return new IgniteTransactionsImpl<>(cctx, lb, true);
     }
 
     /**

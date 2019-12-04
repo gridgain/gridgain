@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
-import org.h2.util.DateTimeUtils;
 import org.h2.util.LocalDateTimeUtils;
 import org.h2.value.Value;
 import org.h2.value.ValueDate;
@@ -97,8 +96,7 @@ public class DmlUtils {
                 return LocalDateTimeUtils.valueToLocalDateTime(ValueTimestamp.get((Timestamp)val));
 
             if (val instanceof Date && LocalDateTimeUtils.LOCAL_DATE == expCls) {
-                return LocalDateTimeUtils.valueToLocalDate(ValueDate.fromDateValue(
-                    DateTimeUtils.dateValueFromDate(((Date)val).getTime())));
+                return LocalDateTimeUtils.valueToLocalDate(ValueDate.fromMillis(((Date)val).getTime()));
             }
 
             if (val instanceof Time && LocalDateTimeUtils.LOCAL_TIME == expCls)
@@ -216,7 +214,7 @@ public class DmlUtils {
                 String msg = "Failed to INSERT some keys because they are already in cache " +
                     "[keys=" + sender.failedKeys() + ']';
 
-                SQLException dupEx = new SQLException(msg, SqlStateCode.CONSTRAINT_VIOLATION);
+                SQLException dupEx = createJdbcSqlException(msg, DUPLICATE_KEY);
 
                 if (resEx == null)
                     resEx = dupEx;

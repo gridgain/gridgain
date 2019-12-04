@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,9 +25,13 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
+import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 
 /**
  * Makes sure that cache lock order values come in proper sequence.
@@ -42,6 +46,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
     /** Timestamp used as base time for cache topology version (January 1, 2014). */
     public static final long TOP_VER_BASE_TIME = 1388520000000L;
+
+    /** Last data version metric name. */
+    public static final String LAST_DATA_VER = "LastDataVersion";
+
+    /** Last version metric. */
+    protected AtomicLongMetric lastDataVer;
 
     /**
      * Current order. Initialize to current time to make sure that
@@ -61,8 +71,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /** Data center ID. */
     private byte dataCenterId;
 
-    /** */
-    private long gridStartTime;
+    /**
+     * Oldest cluster node start timestamp, lazily initialized.
+     *
+     * @see DiscoverySpi#getGridStartTime().
+     */
+    private volatile long gridStartTime;
 
     /** */
     private GridCacheVersion ISOLATED_STREAMER_VER;
@@ -83,7 +97,13 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
     /** {@inheritDoc} */
     @Override public void start0() throws IgniteCheckedException {
+        MetricRegistry sysreg = cctx.kernalContext().metric().registry(CACHE_METRICS);
+
+        lastDataVer = sysreg.longMetric(LAST_DATA_VER, "The latest data version on the node.");
+
         last = new GridCacheVersion(0, order.get(), 0, dataCenterId);
+
+        lastDataVer.value(last.order());
 
         startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
 
@@ -104,6 +124,8 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         this.dataCenterId = dataCenterId;
 
         last = new GridCacheVersion(0, order.get(), 0, dataCenterId);
+
+        lastDataVer.value(last.order());
 
         startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
     }
@@ -292,6 +314,8 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
         last = next;
 
+        lastDataVer.value(last.order());
+
         return next;
     }
 
@@ -323,5 +347,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      */
     public boolean isStartVersion(GridCacheVersion ver) {
         return startVer.equals(ver);
+    }
+
+    /**
+     * Invalidates first cluster node start timestamp, it can be reinitialized lazily in the future.
+     */
+    public void invalidateGridStartTime() {
+        gridStartTime = 0;
     }
 }

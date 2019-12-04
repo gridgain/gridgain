@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import org.apache.ignite.cache.store.CacheTransactionalStoreReadFromBackupTest;
 import org.apache.ignite.cache.store.GridCacheBalancingStoreSelfTest;
 import org.apache.ignite.cache.store.GridCacheLoadOnlyStoreAdapterSelfTest;
 import org.apache.ignite.cache.store.GridStoreLoadCacheTest;
+import org.apache.ignite.cache.store.StoreArrayKeyTest;
 import org.apache.ignite.cache.store.StoreResourceInjectionSelfTest;
 import org.apache.ignite.cache.store.jdbc.CacheJdbcPojoStoreBinaryMarshallerSelfTest;
 import org.apache.ignite.cache.store.jdbc.CacheJdbcPojoStoreBinaryMarshallerStoreKeepBinarySelfTest;
@@ -46,11 +47,13 @@ import org.apache.ignite.internal.managers.communication.IgniteIoTestMessagesTes
 import org.apache.ignite.internal.managers.communication.IgniteVariousConnectionNumberTest;
 import org.apache.ignite.internal.processors.cache.BinaryMetadataRegistrationInsideEntryProcessorTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityCallSelfTest;
+import org.apache.ignite.internal.processors.cache.CacheAffinityKeyConfigurationMismatchTest;
 import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteQueueTest;
 import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteSanitySelfTest;
 import org.apache.ignite.internal.processors.cache.CacheFutureExceptionSelfTest;
 import org.apache.ignite.internal.processors.cache.CachePutEventListenerErrorSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheTxFastFinishTest;
+import org.apache.ignite.internal.processors.cache.CacheWithDifferentDataRegionConfigurationTest;
 import org.apache.ignite.internal.processors.cache.DataStorageConfigurationValidationTest;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityApiSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityMapperSelfTest;
@@ -73,13 +76,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheNearTxStoreException
 import org.apache.ignite.internal.processors.cache.GridCacheObjectToStringSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapAtomicMultiThreadedUpdateSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapMultiThreadedUpdateSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionedLocalStoreSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCacheReplicatedLocalStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheReplicatedTxStoreExceptionSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheStopSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheStoreValueBytesSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheTtlManagerSelfTest;
-import org.apache.ignite.internal.processors.cache.GridCacheTxPartitionedLocalStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.GridDataStorageConfigurationConsistencySelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicInvokeTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalInvokeTest;
@@ -146,8 +146,10 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamerClientReco
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImplSelfTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerMultinodeCreateCacheTest;
+import org.apache.ignite.internal.processors.datastreamer.DataStreamerStopCacheTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerTimeoutTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerUpdateAfterLoadTest;
+import org.apache.ignite.internal.processors.datastreamer.MultipleDataStreamersOnClientTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -213,6 +215,8 @@ public class IgniteCacheTestSuite {
         GridTestUtils.addTestIfNeeded(suite, IgniteCachePrivateExecutionContextTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheSharedExecutionContextTest.class, ignoredTests);
 
+        GridTestUtils.addTestIfNeeded(suite, StoreArrayKeyTest.class, ignoredTests);
+
         // Warmup closure tests.
         GridTestUtils.addTestIfNeeded(suite, IgniteWarmupClosureSelfTest.class, ignoredTests);
 
@@ -228,8 +232,10 @@ public class IgniteCacheTestSuite {
         // GridTestUtils.addTestIfNeeded(suite, GridCacheP2PUndeploySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheConfigurationValidationSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheConfigurationConsistencySelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheAffinityKeyConfigurationMismatchTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridDataStorageConfigurationConsistencySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStorageConfigurationValidationTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheWithDifferentDataRegionConfigurationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheJdbcBlobStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheJdbcBlobStoreMultithreadedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, JdbcTypesDefaultTransformerTest.class, ignoredTests);
@@ -248,9 +254,11 @@ public class IgniteCacheTestSuite {
         GridTestUtils.addTestIfNeeded(suite, DataStreamerUpdateAfterLoadTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStreamerMultiThreadedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStreamerMultinodeCreateCacheTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, DataStreamerStopCacheTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStreamerImplSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStreamerTimeoutTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DataStreamerClientReconnectAfterClusterRestartTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MultipleDataStreamersOnClientTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEntryMemorySizeSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheClearAllSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheObjectToStringSelfTest.class, ignoredTests);
@@ -287,9 +295,6 @@ public class IgniteCacheTestSuite {
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheConnectionRecoveryTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheConnectionRecovery10ConnectionsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheGlobalLoadTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedLocalStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheReplicatedLocalStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheTxPartitionedLocalStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheSystemTransactionsSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheDeferredDeleteSanitySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheDeferredDeleteQueueTest.class, ignoredTests);

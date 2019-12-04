@@ -1,12 +1,12 @@
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
-# 
+#
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,11 +53,13 @@ ignite_tests_LDFLAGS = \
 	-rdynamic
 
 ignite_tests_SOURCES = \
+	src/affinity_test.cpp \
 	src/reference_test.cpp \
 	src/bits_test.cpp \
 	src/binary_identity_resolver_test.cpp \
 	src/cache_test.cpp \
 	src/cache_query_test.cpp \
+	src/cache_query_schema_test.cpp \
 	src/cache_store_test.cpp \
 	src/continuous_query_test.cpp \
 	src/concurrent_test.cpp \
@@ -65,7 +67,8 @@ ignite_tests_SOURCES = \
 	src/ignition_test.cpp \
 	src/interop_memory_test.cpp \
 	src/interop_test.cpp \
-	src/cluster_test.cpp \
+	src/cluster_group_test.cpp \
+	src/cluster_node_test.cpp \
 	src/cache_invoke_test.cpp \
 	src/handle_registry_test.cpp \
 	src/ignite_error_test.cpp \

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
@@ -30,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.PartitionUpdateCountersMessage;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.PartitionCountersNeighborcastRequest;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -87,13 +90,21 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
             if (F.isEmpty(cntrs))
                 continue;
 
+            ClusterNode n = cctx.discovery().node(tx.topologyVersionSnapshot(), peer);
+
+            assert n != null : "Failed to find a node within locked tx topology [tx=" + CU.txString(tx) +
+                ", nodeId=" + peer + ']';
+
+            if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
+                continue; // Skip old version node.
+
             MiniFuture miniFut = new MiniFuture(peer);
 
             try {
                 // we must add mini future before sending a message, otherwise mini future must miss completion
                 add(miniFut);
 
-                cctx.io().send(peer, new PartitionCountersNeighborcastRequest(cntrs, futId), SYSTEM_POOL);
+                cctx.io().send(n, new PartitionCountersNeighborcastRequest(cntrs, futId, tx.topologyVersion()), SYSTEM_POOL);
             }
             catch (IgniteCheckedException e) {
                 if (!(e instanceof ClusterTopologyCheckedException))
@@ -169,7 +180,11 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
             MiniFuture mini = (MiniFuture)fut;
 
             if (mini.nodeId.equals(nodeId)) {
-                cctx.kernalContext().closure().runLocalSafe(mini::onDone);
+                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        mini.onDone();
+                    }
+                });
 
                 return;
             }

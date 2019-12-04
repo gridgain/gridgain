@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,7 @@ namespace Apache.Ignite.EntityFramework.Impl
         private readonly DbCache _cache;
 
         /** Map from tx to dependent sets. HashSet because same sets can be affected multiple times within a tx. */
-        private readonly ConcurrentDictionary<DbTransaction, HashSet<EntitySetBase>> _entitySets 
+        private readonly ConcurrentDictionary<DbTransaction, HashSet<EntitySetBase>> _entitySets
             = new ConcurrentDictionary<DbTransaction, HashSet<EntitySetBase>>();
 
         /// <summary>
@@ -48,6 +48,10 @@ namespace Apache.Ignite.EntityFramework.Impl
         /** <inheritDoc /> */
         public void InvalidateCache(ICollection<EntitySetBase> entitySets, DbTransaction transaction)
         {
+            // Stored procedure is used, nothing to invalidate.
+            if (entitySets == null)
+                return;
+
             if (transaction == null)
             {
                 // Invalidate immediately.

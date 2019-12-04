@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -220,12 +220,13 @@ public class WorkersRegistry implements GridWorkerListener {
                     long heartbeatDelay = U.currentTimeMillis() - worker.heartbeatTs();
 
                     if (heartbeatDelay > sysWorkerBlockedTimeout) {
-                        GridWorker worker0 = registeredWorkers.get(worker.runner().getName());
+                        GridWorker worker0 = registeredWorkers.get(runner.getName());
 
                         if (worker0 != null && worker0 == worker) {
                             log.error("Blocked system-critical thread has been detected. " +
-                                "This can lead to cluster-wide undefined behaviour " +
-                                "[threadName=" + worker.name() + ", blockedFor=" + heartbeatDelay / 1000 + "s]");
+                                    "This can lead to cluster-wide undefined behaviour " +
+                                    "[workerName=" + worker.name() + ", threadName=" + runner.getName() +
+                                    ", blockedFor=" + heartbeatDelay / 1000 + "s]");
 
                             U.dumpThread(worker.runner(), log);
 

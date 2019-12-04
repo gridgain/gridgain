@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,9 +31,9 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 [assembly: Guid("c558518a-c1a0-4224-aaa9-a8688474b4dc")]
 
-[assembly: AssemblyVersion("8.8.0.36920")]
-[assembly: AssemblyFileVersion("8.8.0.36920")]
-[assembly: AssemblyInformationalVersion("8.8.0")]
+[assembly: AssemblyVersion("9.0.0.38994")]
+[assembly: AssemblyFileVersion("9.0.0.38994")]
+[assembly: AssemblyInformationalVersion("9.0.0")]
 
 [assembly: CLSCompliant(true)]
 

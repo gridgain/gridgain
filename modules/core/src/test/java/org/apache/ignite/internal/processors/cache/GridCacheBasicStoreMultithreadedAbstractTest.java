@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,8 @@ import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -36,6 +38,9 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  * Basic store test.
  */
 public abstract class GridCacheBasicStoreMultithreadedAbstractTest extends GridCommonAbstractTest {
+    /** */
+    private static final long DELAY = 100;
+
     /** Cache store. */
     private CacheStore<Integer, Integer> store;
 
@@ -96,7 +101,20 @@ public abstract class GridCacheBasicStoreMultithreadedAbstractTest extends GridC
 
         store = new CacheStoreAdapter<Integer, Integer>() {
             @Override public Integer load(Integer key) {
-                return cntr.incrementAndGet();
+                int res = cntr.incrementAndGet();
+
+                try {
+                    U.sleep(DELAY);
+                }
+                catch (IgniteInterruptedCheckedException e) {
+                    e.printStackTrace();
+
+                    Thread.currentThread().interrupt();
+                }
+
+                cntr.decrementAndGet();
+
+                return res;
             }
 
             /** {@inheritDoc} */
@@ -122,12 +140,12 @@ public abstract class GridCacheBasicStoreMultithreadedAbstractTest extends GridC
             @Override public Object call() throws Exception {
                 barrier.await();
 
-                cache.get(1);
+                assertEquals(1, (int)cache.get(1));
 
                 return null;
             }
         }, threads, "concurrent-get-worker");
 
-        assertEquals(1, cntr.get());
+        assertEquals(0, cntr.get());
     }
 }

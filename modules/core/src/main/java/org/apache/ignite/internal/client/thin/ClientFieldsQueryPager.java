@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
-import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 
 /**
  * Fields query pager.
@@ -41,7 +40,7 @@ class ClientFieldsQueryPager extends GenericQueryPager<List<?>> implements Field
         ReliableChannel ch,
         ClientOperation qryOp,
         ClientOperation pageQryOp,
-        Consumer<BinaryOutputStream> qryWriter,
+        Consumer<PayloadOutputChannel> qryWriter,
         boolean keepBinary,
         ClientBinaryMarshaller marsh
     ) {
@@ -53,7 +52,9 @@ class ClientFieldsQueryPager extends GenericQueryPager<List<?>> implements Field
     }
 
     /** {@inheritDoc} */
-    @Override Collection<List<?>> readEntries(BinaryInputStream in) {
+    @Override Collection<List<?>> readEntries(PayloadInputChannel payloadCh) {
+        BinaryInputStream in = payloadCh.in();
+
         if (!hasFirstPage())
             fieldNames = new ArrayList<>(ClientUtils.collection(in, ignored -> (String)serDes.readObject(in, keepBinary)));
 

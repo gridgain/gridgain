@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,9 @@
 #include <ignite/impl/module_manager.h>
 #include <ignite/impl/ignite_binding_impl.h>
 #include <ignite/impl/compute/compute_task_holder.h>
+#include <ignite/impl/cluster/cluster_node_impl.h>
 
+#include <ignite/ignite.h>
 #include <ignite/binary/binary.h>
 #include <ignite/cache/query/continuous/continuous_query.h>
 #include <ignite/ignite_binding_context.h>
@@ -57,6 +59,7 @@ namespace ignite
                 CONTINUOUS_QUERY_FILTER_APPLY = 20,
                 CONTINUOUS_QUERY_FILTER_RELEASE = 21,
                 REALLOC = 36,
+                NODE_INFO = 48,
                 ON_START = 49,
                 ON_STOP = 50,
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
@@ -87,6 +90,53 @@ namespace ignite
             };
         };
 
+        typedef SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
+
+        /*
+         * Stores cluster nodes in thread-safe manner.
+         */
+        class ClusterNodesHolder
+        {
+            CriticalSection nodesLock;
+            std::map<Guid, SP_ClusterNodeImpl> nodes;
+
+        public:
+            ClusterNodesHolder() :
+                nodesLock()
+            {
+                // No-op.
+            }
+
+            void AddNode(SP_ClusterNodeImpl node)
+            {
+                CsLockGuard mtx(nodesLock);
+
+                nodes.insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
+            }
+
+            SP_ClusterNodeImpl GetLocalNode()
+            {
+                CsLockGuard mtx(nodesLock);
+
+                std::map<Guid, SP_ClusterNodeImpl>::iterator it;
+                for (it = nodes.begin(); it != nodes.end(); ++it)
+                    if (it->second.Get()->IsLocal())
+                        return it->second;
+
+                return NULL;
+            }
+
+            SP_ClusterNodeImpl GetNode(Guid Id)
+            {
+                CsLockGuard mtx(nodesLock);
+
+                if (nodes.find(Id) != nodes.end())
+                    return nodes.at(Id);
+
+                return NULL;
+            }
+        };
+
         /**
          * InLongOutLong callback.
          * 
@@ -99,8 +149,22 @@ namespace ignite
             int64_t res = 0;
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
 
+            if (!env)
+                return res;
+
             switch (type)
             {
+                case OperationCallback::NODE_INFO:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
+                    SharedPointer<InteropMemory> memCopy(new InteropUnpooledMemory(mem.Get()->Capacity()));
+                    memCopy.Get()->Length(mem.Get()->Length());
+                    memcpy(memCopy.Get()->Data(), mem.Get()->Data(), mem.Get()->Capacity());
+                    SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(memCopy));
+                    env->Get()->nodes.Get()->AddNode(node);
+                    break;
+                }
+
                 case OperationCallback::ON_STOP:
                 {
                     delete env;
@@ -274,7 +338,9 @@ namespace ignite
             metaMgr(new BinaryTypeManager()),
             metaUpdater(0),
             binding(),
-            moduleMgr()
+            moduleMgr(),
+            nodes(new ClusterNodesHolder()),
+            ignite(NULL)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -287,6 +353,7 @@ namespace ignite
         {
             delete[] name;
 
+            delete ignite;
             delete metaUpdater;
             delete metaMgr;
             delete cfg;
@@ -300,6 +367,8 @@ namespace ignite
         JniHandlers IgniteEnvironment::GetJniHandlers(SharedPointer<IgniteEnvironment>* target)
         {
             JniHandlers hnds;
+
+            memset(&hnds, 0, sizeof(hnds));
 
             hnds.target = target;
 
@@ -330,6 +399,8 @@ namespace ignite
 
             common::dynamic::Module currentModule = common::dynamic::GetCurrent();
             moduleMgr.Get()->RegisterModule(currentModule);
+
+            ignite = new Ignite(new IgniteImpl(SharedPointer<IgniteEnvironment>(this, SharedPointerEmptyDeleter)));
         }
 
         const char* IgniteEnvironment::InstanceName() const
@@ -391,6 +462,16 @@ namespace ignite
             return metaUpdater;
         }
 
+        IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetLocalNode()
+        {
+            return nodes.Get()->GetLocalNode();
+        }
+
+        IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetNode(Guid Id)
+        {
+            return nodes.Get()->GetNode(Id);
+        }
+
         SharedPointer<IgniteBindingImpl> IgniteEnvironment::GetBinding() const
         {
             return binding;
@@ -419,7 +500,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteLocal();
+                job->ExecuteLocal(this);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
@@ -450,6 +531,11 @@ namespace ignite
 
             IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
                 "Job is not registred for handle", "jobHandle", jobHandle);
+        }
+
+        ignite::Ignite* IgniteEnvironment::GetIgnite()
+        {
+            return ignite;
         }
 
         void IgniteEnvironment::ComputeTaskReduce(int64_t taskHandle)
@@ -527,7 +613,7 @@ namespace ignite
             compute::ComputeJobHolder* job = job0.Get();
 
             if (job)
-                job->ExecuteRemote(writer);
+                job->ExecuteRemote(this, writer);
             else
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,

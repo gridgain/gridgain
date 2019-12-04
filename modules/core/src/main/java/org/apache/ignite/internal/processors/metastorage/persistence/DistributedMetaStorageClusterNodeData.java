@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,7 @@ import java.io.Serializable;
 /**
  * Distributed metastorage data that cluster sends to joining node.
  */
-@SuppressWarnings("PublicField")
+@SuppressWarnings({"PublicField", "AssignmentOrReturnOfFieldWithMutableType"})
 class DistributedMetaStorageClusterNodeData implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
@@ -55,6 +55,9 @@ class DistributedMetaStorageClusterNodeData implements Serializable {
         DistributedMetaStorageHistoryItem[] hist,
         DistributedMetaStorageHistoryItem[] updates
     ) {
+        assert ver != null;
+        assert fullData == null || hist != null;
+
         this.fullData = fullData;
         this.ver = ver;
         this.hist = hist;

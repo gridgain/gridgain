@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,23 +17,23 @@
 package org.apache.ignite.internal.processors.cache.persistence.metastorage;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
-import org.apache.ignite.internal.stat.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 
 /**
  *
  */
 public class MetastorageRowStore {
     /** */
-    private final FreeList freeList;
+    private final PartitionMetaStorage<MetastorageDataRow> partStorage;
 
     /** */
     protected final IgniteCacheDatabaseSharedManager db;
 
     /** */
-    public MetastorageRowStore(FreeList freeList, IgniteCacheDatabaseSharedManager db) {
-        this.freeList = freeList;
+    public MetastorageRowStore(PartitionMetaStorage<MetastorageDataRow> partStorage, IgniteCacheDatabaseSharedManager db) {
+        this.partStorage = partStorage;
         this.db = db;
     }
 
@@ -42,7 +42,7 @@ public class MetastorageRowStore {
      * @return Data row.
      */
     public MetastorageDataRow dataRow(String key, long link) throws IgniteCheckedException {
-        return ((MetaStorage.FreeListImpl)freeList).readRow(key, link);
+        return new MetastorageDataRow(link, key, partStorage.readRow(link));
     }
 
     /**
@@ -54,7 +54,7 @@ public class MetastorageRowStore {
         db.checkpointReadLock();
 
         try {
-            freeList.removeDataRowByLink(link, IoStatisticsHolderNoOp.INSTANCE);
+            partStorage.removeDataRowByLink(link, IoStatisticsHolderNoOp.INSTANCE);
         }
         finally {
             db.checkpointReadUnlock();
@@ -69,28 +69,10 @@ public class MetastorageRowStore {
         db.checkpointReadLock();
 
         try {
-            freeList.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
+            partStorage.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
         }
         finally {
             db.checkpointReadUnlock();
         }
     }
-
-    /**
-     * @param link Row link.
-     * @param row New row data.
-     * @return {@code True} if was able to update row.
-     * @throws IgniteCheckedException If failed.
-     */
-    public boolean updateRow(long link, MetastorageDataRow row) throws IgniteCheckedException {
-        return freeList.updateDataRow(link, row, IoStatisticsHolderNoOp.INSTANCE);
-    }
-
-    /**
-     * @return Free list.
-     */
-    public FreeList freeList() {
-        return freeList;
-    }
-
 }

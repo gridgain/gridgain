@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.query.h2.opt.join.ProxyDistributedLookupBatch;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
 import org.h2.index.Cursor;
@@ -28,11 +29,9 @@ import org.h2.message.DbException;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
-import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 
-import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -40,7 +39,6 @@ import java.util.List;
  * Delegates the calls to underlying normal index
  */
 public class GridH2ProxyIndex extends BaseIndex {
-
     /** Underlying normal index */
     protected Index idx;
 
@@ -55,12 +53,12 @@ public class GridH2ProxyIndex extends BaseIndex {
                             String name,
                             List<IndexColumn> colsList,
                             Index idx) {
+        super(tbl, 0, name, GridH2IndexBase.columnsArray(tbl, colsList),
+            IndexType.createNonUnique(false, false, idx instanceof SpatialIndex));
 
         IndexColumn[] cols = colsList.toArray(new IndexColumn[colsList.size()]);
 
         IndexColumn.mapColumns(cols, tbl);
-
-        initBaseIndex(tbl, 0, name, cols, IndexType.createNonUnique(false, false, idx instanceof SpatialIndex));
 
         this.idx = idx;
     }
@@ -99,12 +97,13 @@ public class GridH2ProxyIndex extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public double getCost(Session session, int[] masks, TableFilter[] filters, int filter, SortOrder sortOrder, HashSet<Column> allColumnsSet) {
-        long rowCnt = getRowCountApproximation();
+    @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter,
+        SortOrder sortOrder, AllColumnsForPlan allColumnsSet) {
+        long rowCnt = getRowCountApproximation(ses);
 
         double baseCost = getCostRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
 
-        int mul = ((GridH2IndexBase)idx).getDistributedMultiplier(session, filters, filter);
+        int mul = ((GridH2IndexBase)idx).getDistributedMultiplier(ses, filters, filter);
 
         return mul * baseCost;
     }
@@ -140,8 +139,8 @@ public class GridH2ProxyIndex extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        return idx.getRowCountApproximation();
+    @Override public long getRowCountApproximation(Session ses) {
+        return idx.getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */

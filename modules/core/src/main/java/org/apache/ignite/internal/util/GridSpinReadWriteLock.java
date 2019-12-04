@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@ package org.apache.ignite.internal.util;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  *
@@ -331,7 +330,9 @@ public class GridSpinReadWriteLock {
                     break;
             }
 
-            long end = U.currentTimeMillis() + unit.toMillis(timeout);
+            long startNanos = System.nanoTime();
+
+            long timeoutNanos = unit.toNanos(timeout);
 
             while (true) {
                 if (compareAndSet(STATE_OFFS, 0, -1)) {
@@ -345,7 +346,7 @@ public class GridSpinReadWriteLock {
 
                 Thread.sleep(10);
 
-                if (end <= U.currentTimeMillis())
+                if (System.nanoTime() - startNanos >= timeoutNanos)
                     return false;
             }
         }

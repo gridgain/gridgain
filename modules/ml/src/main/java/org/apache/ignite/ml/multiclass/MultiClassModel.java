@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,7 @@ import java.io.Serializable;
 import java.util.*;
 
 /** Base class for multi-classification model for set of classifiers. */
-public class MultiClassModel<M extends IgniteModel<Vector, Double>> implements IgniteModel<Vector, Double>, Exportable<MultiClassModel>, Serializable {
+public final class MultiClassModel<M extends IgniteModel<Vector, Double>> implements IgniteModel<Vector, Double>, Exportable<MultiClassModel>, Serializable {
     /** */
     private static final long serialVersionUID = -114986533359917L;
 

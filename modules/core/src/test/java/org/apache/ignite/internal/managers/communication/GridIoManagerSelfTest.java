@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,7 +109,7 @@ public class GridIoManagerSelfTest extends GridCommonAbstractTest {
         GridIoManager ioMgr = spy(new TestGridIoManager(ctx));
 
         try {
-            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, null, false, 0, false);
+            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, null, false, 0);
         }
         catch (IgniteCheckedException ignored) {
             // No-op. We are using mocks so real sending is impossible.
@@ -122,56 +122,6 @@ public class GridIoManagerSelfTest extends GridCommonAbstractTest {
 
         verify(ioMgr).sendToGridTopic(argThat(new IsEqualCollection(rmtNodes)), eq(GridTopic.TOPIC_COMM_USER),
             any(GridIoUserMessage.class), eq(GridIoPolicy.PUBLIC_POOL));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendUserMessageUnorderedThickVersionIfOneOfNodesIsLocal() throws Exception {
-        Object msg = new Object();
-
-        GridIoManager ioMgr = spy(new TestGridIoManager(ctx));
-
-        try {
-            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, GridTopic.TOPIC_IGFS, false, 123L, false);
-        }
-        catch (IgniteCheckedException ignored) {
-            // No-op. We are using mocks so real sending is impossible.
-        }
-
-        verify(ioMgr).sendToGridTopic(eq(locNode), eq(GridTopic.TOPIC_COMM_USER), any(GridIoUserMessage.class),
-            eq(GridIoPolicy.PUBLIC_POOL));
-
-        Collection<? extends ClusterNode> rmtNodes = F.view(F.asList(rmtNode), F.remoteNodes(locNode.id()));
-
-        verify(ioMgr).sendToGridTopic(argThat(new IsEqualCollection(rmtNodes)), eq(GridTopic.TOPIC_COMM_USER),
-            any(GridIoUserMessage.class), eq(GridIoPolicy.PUBLIC_POOL));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendUserMessageOrderedThickVersionIfOneOfNodesIsLocal() throws Exception {
-        Object msg = new Object();
-
-        GridIoManager ioMgr = spy(new TestGridIoManager(ctx));
-
-        try {
-            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, GridTopic.TOPIC_IGFS, true, 123L, false);
-        }
-        catch (Exception ignored) {
-            // No-op. We are using mocks so real sending is impossible.
-        }
-
-        verify(ioMgr).sendOrderedMessageToGridTopic(
-            argThat(new IsEqualCollection(F.asList(locNode, rmtNode))),
-            eq(GridTopic.TOPIC_COMM_USER),
-            any(GridIoUserMessage.class),
-            eq(GridIoPolicy.PUBLIC_POOL),
-            eq(123L),
-            false);
     }
 
     /**

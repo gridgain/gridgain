@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,7 +68,7 @@ public class SegmentRouter {
     public FileDescriptor findSegment(long segmentId) throws FileNotFoundException {
         FileDescriptor fd;
 
-        if (segmentAware.lastArchivedAbsoluteIndex() >= segmentId)
+        if (segmentAware.lastArchivedAbsoluteIndex() >= segmentId || !isArchiverEnabled())
             fd = new FileDescriptor(new File(walArchiveDir, fileName(segmentId)));
         else
             fd = new FileDescriptor(new File(walWorkDir, fileName(segmentId % dsCfg.getWalSegments())), segmentId);
@@ -85,5 +85,36 @@ public class SegmentRouter {
         }
 
         return fd;
+    }
+
+    /**
+     * @return {@code true} If archive folder exists.
+     */
+    public boolean hasArchive() {
+        return !walWorkDir.getAbsolutePath().equals(walArchiveDir.getAbsolutePath());
+    }
+
+    /**
+     * @return WAL working directory.
+     */
+    public File getWalWorkDir() {
+        return walWorkDir;
+    }
+
+    /**
+     * @return WAL archive directory.
+     */
+    public File getWalArchiveDir() {
+        return walArchiveDir;
+    }
+
+    /**
+     * Returns {@code true} if archiver is enabled.
+     */
+    private boolean isArchiverEnabled() {
+        if (walArchiveDir != null && walWorkDir != null)
+            return !walArchiveDir.equals(walWorkDir);
+
+        return !new File(dsCfg.getWalArchivePath()).equals(new File(dsCfg.getWalPath()));
     }
 }

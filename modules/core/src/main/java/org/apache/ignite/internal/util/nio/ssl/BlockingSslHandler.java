@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -334,12 +334,41 @@ public class BlockingSslHandler {
 
         SSLEngineResult res = unwrap0();
 
+        res = postHandshakeIfNeded(res);
+
         // prepare to be written again
         inNetBuf.compact();
 
         checkStatus(res);
 
         renegotiateIfNeeded(res);
+    }
+
+    /**
+     * Does post-handshake logic described <a href="https://tools.ietf.org/html/rfc8446#section-4.6">here</a> if nedded.
+     *
+     * @param res Response.
+     */
+    private SSLEngineResult postHandshakeIfNeded(SSLEngineResult res) throws SSLException, IgniteCheckedException {
+        while (res.getHandshakeStatus() == FINISHED && res.getStatus() == OK) {
+            if (!inNetBuf.hasRemaining()) {
+                inNetBuf.clear();
+
+                readFromNet();
+
+                inNetBuf.flip();
+            }
+
+            res = unwrap0();
+
+            handshakeStatus = res.getHandshakeStatus();
+
+            if (log.isDebugEnabled())
+                log.debug("Unrapped post-handshake data [status=" + res.getStatus() + ", handshakeStatus=" +
+                    handshakeStatus + ']');
+        }
+
+        return res;
     }
 
     /**

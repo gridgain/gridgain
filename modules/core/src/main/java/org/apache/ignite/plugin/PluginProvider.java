@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Pluggable Ignite component.
@@ -69,9 +68,9 @@ public interface PluginProvider<C extends PluginConfiguration> {
      *
      * @param ctx Plugin context.
      * @param cls Ignite component class.
-     * @return Ignite component or {@code null} if component is not supported.
+     * @return Ignite component or {@code null} if component is not supported (default Ignite component will be used).
      */
-    @Nullable public <T> T createComponent(PluginContext ctx, Class<T> cls);
+    public <T> T createComponent(PluginContext ctx, Class<T> cls);
 
     /**
      * Creates cache plugin provider.
@@ -121,7 +120,7 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * @return Discovery data object or {@code null} if there is nothing
      *      to send for this component.
      */
-    @Nullable public Serializable provideDiscoveryData(UUID nodeId);
+    public Serializable provideDiscoveryData(UUID nodeId);
 
     /**
      * Receives plugin discovery data object from remote nodes (called

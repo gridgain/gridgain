@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,10 +26,9 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
 /**
@@ -682,7 +681,7 @@ public class JoinPartitionPruningSelfTest extends AbstractPartitionPruningBaseTe
         ccfg.setAffinity(affFunc);
 
         if (nodeFilter)
-            ccfg.setNodeFilter(new CustomNodeFilter());
+            ccfg.setNodeFilter(F.alwaysTrue());
 
         if (persistent)
             ccfg.setDataRegionName(REGION_DISK);
@@ -822,15 +821,6 @@ public class JoinPartitionPruningSelfTest extends AbstractPartitionPruningBaseTe
      */
     private static class CustomRendezvousAffinityFunction extends RendezvousAffinityFunction {
         // No-op.
-    }
-
-    /**
-     * Custom node filter.
-     */
-    private static class CustomNodeFilter implements IgnitePredicate<ClusterNode> {
-        @Override public boolean apply(ClusterNode clusterNode) {
-            return true;
-        }
     }
 
     /**

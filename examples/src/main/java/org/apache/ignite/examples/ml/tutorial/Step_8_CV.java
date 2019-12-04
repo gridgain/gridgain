@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -126,15 +126,16 @@ public class Step_8_CV {
                         CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
                             = new CrossValidation<>();
 
-                        double[] scores = scoreCalculator.score(
-                            trainer,
-                            new Accuracy<>(),
-                            ignite,
-                            dataCache,
-                            split.getTrainFilter(),
-                            normalizationPreprocessor,
-                            3
-                        );
+                        double[] scores = scoreCalculator
+                            .withIgnite(ignite)
+                            .withUpstreamCache(dataCache)
+                            .withTrainer(trainer)
+                            .withMetric(new Accuracy<>())
+                            .withFilter(split.getTrainFilter())
+                            .withPreprocessor(normalizationPreprocessor)
+                            .withAmountOfFolds(3)
+                            .isRunningOnPipeline(false)
+                            .scoreByFolds();
 
                         System.out.println("Scores are: " + Arrays.toString(scores));
 
@@ -189,6 +190,8 @@ public class Step_8_CV {
             catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

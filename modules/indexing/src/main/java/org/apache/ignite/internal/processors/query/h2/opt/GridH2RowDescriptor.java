@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,10 +28,10 @@ import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.h2.message.DbException;
 import org.h2.result.SearchRow;
-import org.h2.value.DataType;
 import org.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,8 +81,8 @@ public class GridH2RowDescriptor {
         this.tbl = tbl;
         this.type = type;
 
-        keyType = DataType.getTypeFromClass(type.keyClass());
-        valType = DataType.getTypeFromClass(type.valueClass());
+        keyType = H2Utils.getTypeFromClass(type.keyClass());
+        valType = H2Utils.getTypeFromClass(type.valueClass());
 
         refreshMetadataFromTypeDescriptor();
     }
@@ -111,7 +111,7 @@ public class GridH2RowDescriptor {
         Class[] classes = allFields.values().toArray(new Class[fields.length]);
 
         for (int i = 0; i < fieldTypes.length; i++)
-            fieldTypes[i] = DataType.getTypeFromClass(classes[i]);
+            fieldTypes[i] = H2Utils.getTypeFromClass(classes[i]);
 
         props = new GridQueryProperty[fields.length];
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
@@ -41,6 +42,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -68,11 +70,13 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridFilteredClosableIterator;
 import org.apache.ignite.internal.util.typedef.F;
@@ -81,8 +85,6 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 
 /**
  * Test simulated checkpoints, Disables integrated check pointer thread
@@ -126,20 +128,6 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
         );
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -211,7 +199,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
         mem = shared.database().dataRegion(null).pageMemory();
 
-        verifyReads(res.get1(), mem, res.get2(), shared.wal());
+        verifyReads(ig.context(), res.get1(), mem, res.get2(), shared.wal());
     }
 
     /**
@@ -610,7 +598,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             ig.context().cache().context().database().checkpointReadUnlock();
         }
 
-        Collection<FullPageId> cpPages = mem.beginCheckpoint();
+        Collection<FullPageId> cpPages = mem.beginCheckpoint(new GridFinishedFuture());
 
         ig.context().cache().context().database().checkpointReadLock();
 
@@ -641,7 +629,8 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     buf.rewind();
 
-                    mem.getForCheckpoint(fullId, buf, null);
+                    mem.checkpointWritePage(fullId, buf, (fullPageId, buffer, tag) -> {
+                    }, null);
 
                     buf.position(PageIO.COMMON_HEADER_END);
 
@@ -679,7 +668,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
             try {
-                DataPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()));
+                DummyPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()));
 
                 ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
@@ -700,12 +689,15 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
      * @param mem Memory.
      */
     private void verifyReads(
+        GridKernalContext ctx,
         Map<FullPageId, Integer> res,
         PageMemory mem,
         WALPointer start,
         IgniteWriteAheadLogManager wal
     ) throws Exception {
         Map<FullPageId, byte[]> replay = new HashMap<>();
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(mem.pageSize()).order(ByteOrder.nativeOrder());
 
         try (PartitionMetaStateRecordExcludeIterator it = new PartitionMetaStateRecordExcludeIterator(wal.replay(start))) {
             IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
@@ -729,7 +721,22 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                 else if (rec instanceof PageSnapshot) {
                     PageSnapshot page = (PageSnapshot)rec;
 
-                    replay.put(page.fullPageId(), page.pageData());
+                    int realPageSize = mem.realPageSize(page.groupId());
+
+                    byte[] pageData = page.pageData();
+
+                    if (page.pageDataSize() < realPageSize) {
+                        buf.clear();
+                        buf.put(pageData).flip();
+
+                        ctx.compress().decompressPage(buf, realPageSize);
+
+                        pageData = new byte[buf.limit()];
+
+                        buf.get(pageData);
+                    }
+
+                    replay.put(page.fullPageId(), pageData);
                 }
             }
         }
@@ -921,7 +928,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             try {
                 snapshot = new HashMap<>(resMap);
 
-                pageIds = mem.beginCheckpoint();
+                pageIds = mem.beginCheckpoint(new GridFinishedFuture());
 
                 checkpoints--;
 
@@ -953,8 +960,16 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     Integer tag;
 
+                    AtomicReference<Integer> tag0 = new AtomicReference<>();
+
+                    PageStoreWriter pageStoreWriter = (fullPageId, buf, tagx) -> {
+                        tag0.set(tagx);
+                    };
+
                     while (true) {
-                        tag = mem.getForCheckpoint(fullId, tmpBuf, null);
+                        mem.checkpointWritePage(fullId, tmpBuf, pageStoreWriter, null);
+
+                        tag = tag0.get();
 
                         if (tag != null && tag == PageMemoryImpl.TRY_AGAIN_TAG)
                             continue;

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.util.BitSetIntSet;
+import org.apache.ignite.internal.util.collection.BitSetIntSet;
+import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -299,7 +300,7 @@ public class HistoryAffinityAssignmentImpl implements HistoryAffinityAssignment 
                 res.add(p);
         }
 
-        return Collections.unmodifiableSet(res);
+        return ImmutableIntSet.wrap(res);
     }
 
     /** {@inheritDoc} */
@@ -320,7 +321,7 @@ public class HistoryAffinityAssignmentImpl implements HistoryAffinityAssignment 
             }
         }
 
-        return Collections.unmodifiableSet(res);
+        return ImmutableIntSet.wrap(res);
     }
 
     /** {@inheritDoc} */

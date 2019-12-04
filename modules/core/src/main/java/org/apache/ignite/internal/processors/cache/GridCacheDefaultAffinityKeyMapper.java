@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.GridArgumentCheck;
 import org.apache.ignite.internal.util.GridReflectionCache;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -75,6 +76,9 @@ public class GridCacheDefaultAffinityKeyMapper implements AffinityKeyMapper {
      */
     @Override public Object affinityKey(Object key) {
         GridArgumentCheck.notNull(key, "key");
+
+        if(key.getClass().isArray())
+            return IgniteUtils.hashCode(key);
 
         try {
             Object o = reflectCache.firstFieldValue(key);

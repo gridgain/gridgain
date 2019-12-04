@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessa
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRangeBounds;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.h2.engine.Session;
 import org.h2.index.Cursor;
 import org.h2.index.IndexLookupBatch;
 import org.h2.result.SearchRow;
@@ -149,12 +150,12 @@ public class DistributedLookupBatch implements IndexLookupBatch {
 
     /** {@inheritDoc} */
     @SuppressWarnings({"ForLoopReplaceableByForEach", "IfMayBeConditional"})
-    @Override public boolean addSearchRows(SearchRow firstRow, SearchRow lastRow) {
+    @Override public boolean addSearchRows(Session ses, SearchRow firstRow, SearchRow lastRow) {
         if (joinCtx == null || findCalled) {
             if (joinCtx == null) {
                 // It is the first call after query begin (may be after reuse),
                 // reinitialize query context and result.
-                QueryContext qctx = qryCtxRegistry.getThreadLocal();
+                QueryContext qctx = H2Utils.context(ses);
 
                 res = new ArrayList<>();
 
@@ -253,6 +254,7 @@ public class DistributedLookupBatch implements IndexLookupBatch {
      */
     private boolean equal(Value v1, Value v2) {
         return v1 == v2 || (v1 != null && v2 != null &&
+            v1 != ValueNull.INSTANCE && v2 != ValueNull.INSTANCE &&
             v1.compareTypeSafe(v2, idx.getDatabase().getCompareMode()) == 0);
     }
 

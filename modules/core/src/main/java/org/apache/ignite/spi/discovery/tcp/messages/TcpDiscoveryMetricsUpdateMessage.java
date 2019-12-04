@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -212,13 +212,23 @@ public class TcpDiscoveryMetricsUpdateMessage extends TcpDiscoveryAbstractMessag
         clientNodeIds.add(clientNodeId);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean traceLogLevel() {
-        return true;
+    /**
+     * @param nodeId Node ID.
+     * @return Number of laps, that the message passed for this node.
+     */
+    public int passedLaps(UUID nodeId) {
+        boolean hasLocMetrics = this.hasMetrics(nodeId) || this.hasCacheMetrics(nodeId);
+
+        if (nodeId.equals(creatorNodeId()) && !hasLocMetrics && senderNodeId() != null)
+            return 2;
+        else if (senderNodeId() == null || !hasLocMetrics)
+            return 0;
+        else
+            return 1;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean highPriority() {
+    @Override public boolean traceLogLevel() {
         return true;
     }
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.testframework.config.GridTestProperties;
-import org.h2.jdbc.JdbcSQLException;
+import org.h2.jdbc.JdbcSQLSyntaxErrorException;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.config.GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER;
@@ -448,7 +449,7 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
 
             run("ALTER TABLE test DROP COLUMN IF EXISTS a");
 
-            assertThrowsAnyCause("ALTER TABLE test DROP COLUMN a", JdbcSQLException.class, "Column \"A\" not found");
+            assertThrowsAnyCause("ALTER TABLE test DROP COLUMN a", JdbcSQLSyntaxErrorException.class, "Column \"A\" not found");
         }
         finally {
             run("DROP TABLE IF EXISTS test");
@@ -513,7 +514,7 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
         try {
             run("CREATE TABLE test (id INT PRIMARY KEY, a INT)");
 
-            assertThrowsAnyCause("ALTER TABLE test DROP COLUMN b", JdbcSQLException.class, "Column \"B\" not found");
+            assertThrowsAnyCause("ALTER TABLE test DROP COLUMN b", JdbcSQLSyntaxErrorException.class, "Column \"B\" not found");
         }
         finally {
             run("DROP TABLE IF EXISTS test");
@@ -526,7 +527,7 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
      */
     @Test
     public void testDropColumnNonExistingTable() throws Exception {
-        assertThrowsAnyCause("ALTER TABLE nosuchtable DROP COLUMN a", JdbcSQLException.class,
+        assertThrowsAnyCause("ALTER TABLE nosuchtable DROP COLUMN a", JdbcSQLSyntaxErrorException.class,
             "Table \"NOSUCHTABLE\" not found");
     }
 
@@ -695,7 +696,7 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
             "(2, 2, 'New York')");
 
         assertThrowsAnyCause("SELECT state_name FROM \"City\".City",
-            JdbcSQLException.class, "Column \"STATE_NAME\" not found");
+            JdbcSQLSyntaxErrorException.class, "Column \"STATE_NAME\" not found");
 
         List<List<?>> res = run(cache, "SELECT _key, id, name FROM \"City\".City WHERE id = 1");
 
@@ -762,6 +763,42 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
 
             assertEquals(1, res.get(0).get(0));
             assertEquals(11, res.get(0).get(1));
+        }
+        finally {
+            run("DROP TABLE IF EXISTS test");
+        }
+    }
+
+    /** */
+    @Test
+    public void testDropColumnPriorToCompoundPkIndex() throws Exception {
+        try {
+            run("CREATE TABLE test (a INT, b INT, id1 INT, id2 INT, PRIMARY KEY (id1, id2))");
+
+            run("INSERT INTO test (a, b, id1, id2) VALUES (1, 2, 3, 4)");
+
+            String qry = "SELECT a, id1, id2 FROM test WHERE id1 = 3 AND id2 = 4";
+
+            List<List<?>> resBefore = run(qry);
+
+            Assert.assertEquals(1, resBefore.size());
+
+            run("ALTER TABLE test DROP COLUMN b");
+
+            run("SELECT * FROM test WHERE id1 = 3 AND id2 = 4");
+
+            List<List<?>> resAfter = run(qry);
+
+            Assert.assertEquals(1, resAfter.size());
+
+            Assert.assertEquals(resBefore, resAfter);
+
+            String plan = (String)run("EXPLAIN SELECT * FROM test WHERE id1 = 3 AND id2 = 4").get(0).get(0);
+
+            String pkIdxName = "PUBLIC._key_PK";
+
+            Assert.assertTrue("Query plan does not contain index '" + pkIdxName + "': plan=" + plan,
+                plan.contains(pkIdxName));
         }
         finally {
             run("DROP TABLE IF EXISTS test");

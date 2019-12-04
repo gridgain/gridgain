@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,8 +15,6 @@
  */
 
 package org.apache.ignite.compute;
-
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Defines continuation support for grid job context.
@@ -50,7 +48,7 @@ public interface ComputeJobContinuation {
      * @return Always returns {@code null} for convenience to be used in code with return statement.
      * @throws IllegalStateException If job has been already held before.
      */
-    @Nullable public <T> T holdcc();
+    public <T> T holdcc();
 
     /**
      * Holds (suspends) a given job for specified timeout or until {@link #callcc()} is called.
@@ -73,7 +71,7 @@ public interface ComputeJobContinuation {
      * @return Always returns {@code null} for convenience to be used in code with return statement.
      * @throws IllegalStateException If job has been already held before
      */
-    @Nullable public <T> T holdcc(long timeout);
+    public <T> T holdcc(long timeout);
 
     /**
      * Resumes job if it was held by {@link #holdcc()} method. Resuming job means that

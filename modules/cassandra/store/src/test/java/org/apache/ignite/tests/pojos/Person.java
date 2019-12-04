@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,7 @@ import java.util.List;
  */
 public class Person implements Externalizable {
     /** */
-    private long personNum;
+    private long personNumber;
 
     /** */
     private String firstName;
@@ -62,9 +62,9 @@ public class Person implements Externalizable {
     }
 
     /** */
-    public Person(long personNum, String firstName, String lastName, short age, boolean married,
-        long height, float weight, Date birthDate, List<String> phones) {
-        this.personNum = personNum;
+    public Person(long personNumber, String firstName, String lastName, short age, boolean married,
+                  long height, float weight, Date birthDate, List<String> phones) {
+        this.personNumber = personNumber;
         this.firstName = firstName;
         this.lastName = lastName;
         this.age = age;
@@ -78,7 +78,7 @@ public class Person implements Externalizable {
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeLong(personNum);
+        out.writeLong(personNumber);
         out.writeObject(firstName);
         out.writeObject(lastName);
         out.writeShort(age);
@@ -92,7 +92,7 @@ public class Person implements Externalizable {
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        personNum = in.readLong();
+        personNumber = in.readLong();
         firstName = (String)in.readObject();
         lastName = (String)in.readObject();
         age = in.readShort();
@@ -111,7 +111,7 @@ public class Person implements Externalizable {
 
         Person person = (Person)obj;
 
-        if (personNum != person.personNum)
+        if (personNumber != person.personNumber)
             return false;
 
         if ((firstName != null && !firstName.equals(person.firstName)) ||
@@ -142,7 +142,7 @@ public class Person implements Externalizable {
 
         Person person = (Person)obj;
 
-        if (personNum != person.personNum)
+        if (personNumber != person.personNumber)
             return false;
 
         if ((firstName != null && !firstName.equals(person.firstName)) ||
@@ -163,12 +163,12 @@ public class Person implements Externalizable {
 
     /** */
     public void setPersonNumber(long personNum) {
-        this.personNum = personNum;
+        this.personNumber = personNum;
     }
 
     /** */
     public long getPersonNumber() {
-        return personNum;
+        return personNumber;
     }
 
     /** */

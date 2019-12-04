@@ -2,13 +2,13 @@
 
 <!--
  Copyright 2019 GridGain Systems, Inc. and Contributors.
- 
+
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
      https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,39 +56,39 @@
         <aws.encryption.sdk.version>1.3.2</aws.encryption.sdk.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.3</commons.beanutils.version>
-        <commons.codec.version>1.11</commons.codec.version>
+        <commons.codec.version>1.12</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
         <commons.lang.version>2.6</commons.lang.version>
+        <commons.io.version>2.6</commons.io.version>
         <cron4j.version>2.2.5</cron4j.version>
-        <curator.version>2.9.1</curator.version>
+        <curator.version>4.2.0</curator.version>
+        <!--Need this version to test ZooKeeper 3.4.x-->
+        <curator.test.version>2.9.1</curator.test.version>
         <easymock.version>3.4</easymock.version>
         <ezmorph.bundle.version>1.0.6_1</ezmorph.bundle.version>
         <ezmorph.version>1.0.6</ezmorph.version>
         <flume.ng.version>1.7.0</flume.ng.version>
         <guava.retrying.version>2.0.0</guava.retrying.version>
         <guava.version>25.1-jre</guava.version>
-        <guava14.version>14.0.1</guava14.version>
-        <guava16.version>16.0.1</guava16.version>
-        <h2.version>1.4.197</h2.version>
         <hadoop.version>2.9.1</hadoop.version>
         <hamcrest.version>1.2</hamcrest.version>
         <httpclient.version>4.5.1</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
-        <jackson.version>2.9.6</jackson.version>
+        <jackson.version>2.9.9</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
         <jaxb.api.version>2.1</jaxb.api.version>
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
-        <javassist.version>3.20.0-GA</javassist.version>
+        <javassist.version>3.21.0-GA</javassist.version>
         <javax.cache.bundle.version>1.0.0_1</javax.cache.bundle.version>
-        <javax.cache.tck.version>1.0.1</javax.cache.tck.version>
+        <javax.cache.tck.version>1.1.0</javax.cache.tck.version>
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.11.v20180605</jetty.version>
+        <jetty.version>9.4.22.v20191022</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
-        <jnr.posix.version>3.0.46</jnr.posix.version>
+        <jnr.posix.version>3.0.50</jnr.posix.version>
         <jotm.version>2.2.3</jotm.version>
         <jsch.bundle.version>0.1.54_1</jsch.bundle.version>
         <jsch.version>0.1.54</jsch.version>
@@ -102,6 +102,8 @@
         <lucene.version>7.4.0</lucene.version>
         <lz4.version>1.5.0</lz4.version>
         <maven.bundle.plugin.version>3.5.0</maven.bundle.plugin.version>
+        <maven.checkstyle.plugin.version>3.0.0</maven.checkstyle.plugin.version>
+        <checkstyle.puppycrawl.version>8.19</checkstyle.puppycrawl.version>
         <mockito.version>1.10.19</mockito.version>
         <mysql.connector.version>8.0.13</mysql.connector.version>
         <netlibjava.version>1.1.2</netlibjava.version>
@@ -119,21 +121,26 @@
         <slf4j16.version>1.6.4</slf4j16.version>
         <snappy.version>1.1.7.2</snappy.version>
         <spark.hadoop.version>2.6.5</spark.hadoop.version>
-        <spark.version>2.3.0</spark.version>
+        <spark.version>2.3.3</spark.version>
+        <spring.boot.version>1.5.20.RELEASE</spring.boot.version>
         <spring.data.version>1.13.14.RELEASE</spring.data.version> <!-- don't forget to update spring version -->
         <spring.version>4.3.18.RELEASE</spring.version><!-- don't forget to update spring-data version -->
         <spring.data-2.0.version>2.0.9.RELEASE</spring.data-2.0.version> <!-- don't forget to update spring-5.0 version -->
         <spring-5.0.version>5.0.8.RELEASE</spring-5.0.version><!-- don't forget to update spring-data-2.0 version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
-        <storm.version>1.1.1</storm.version>
-        <tomcat.version>9.0.10</tomcat.version>
+        <storm.version>1.2.3</storm.version>
+        <tomcat.version>9.0.21</tomcat.version>
         <twitter.hbc.version>2.2.0</twitter.hbc.version>
         <yammer.metrics.annotation.version>2.2.0</yammer.metrics.annotation.version>
         <yammer.metrics.core.version>2.2.0</yammer.metrics.core.version>
         <yardstick.version>0.8.3</yardstick.version>
         <zkclient.version>0.5</zkclient.version>
-        <zookeeper.version>3.4.13</zookeeper.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
         <zstd.version>1.3.7-2</zstd.version>
+        <opencensus.version>0.22.0</opencensus.version>
+        <commons.lang3.version>3.9</commons.lang3.version>
+        <awaitility.version>3.1.6</awaitility.version>
+
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -208,23 +215,6 @@
         </developer>
     </developers>
 
-    <repositories>
-        <repository>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>ignore</checksumPolicy>
-            </snapshots>
-            <id>h2database.com</id>
-            <name>Snapshot repository on h2database.com</name>
-            <url>http://h2database.com/m2-repo</url>
-            <layout>default</layout>
-        </repository>
-    </repositories>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -242,6 +232,40 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-annotations</artifactId>
+                <exclusions>
+                    <exclusion>
+                        <!-- This dependency is not available in some JDKs.-->
+                        <groupId>jdk.tools</groupId>
+                        <artifactId>jdk.tools</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <exclusions>
+                    <exclusion>
+                        <!-- This dependency is not available in some JDKs.-->
+                        <groupId>jdk.tools</groupId>
+                        <artifactId>jdk.tools</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <type>test-jar</type>
+                <exclusions>
+                    <exclusion>
+                        <!-- This dependency is not available in some JDKs.-->
+                        <groupId>jdk.tools</groupId>
+                        <artifactId>jdk.tools</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -249,7 +273,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
 
@@ -260,6 +284,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>GridGain External Repository</id>
+            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+    </repositories>
 
     <build>
         <pluginManagement>
@@ -326,13 +357,13 @@
                         <version>false</version>
                         <additionalparam>${javadoc.opts}</additionalparam>
                         <links>
-                            <link>http://hadoop.apache.org/docs/current/api/</link>
+                            <link>https://hadoop.apache.org/docs/current/api/</link>
                         </links>
                         <groups>
                             <group>
                                 <title>Common Grid APIs</title>
                                 <packages>
-                                    org.gridgain:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
+                                    org.apache.ignite:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
                                 </packages>
                             </group>
                             <group>
@@ -358,12 +389,8 @@
                                 <packages>org.apache.ignite.services</packages>
                             </group>
                             <group>
-                                <title>File System APIs</title>
-                                <packages>org.apache.ignite.igfs*</packages>
-                            </group>
-                            <group>
-                                <title>Hadoop Accelerator APIs</title>
-                                <packages>org.apache.ignite.hadoop*</packages>
+                                <title>Ignite Thin Client APIs</title>
+                                <packages>org.apache.ignite.client</packages>
                             </group>
                             <group>
                                 <title>Streaming APIs</title>
@@ -416,6 +443,10 @@
                             <group>
                                 <title>SPI: Event Storage</title>
                                 <packages>org.apache.ignite.spi.eventstorage*</packages>
+                            </group>
+                            <group>
+                                <title>SPI: Metric</title>
+                                <packages>org.apache.ignite.spi.metric*</packages>
                             </group>
                             <group>
                                 <title>Communication Failure Detection</title>
@@ -490,7 +521,7 @@
                                 <packages>org.apache.ignite.springdata20.repository*</packages>
                             </group>
                             <group>
-                            <title>RocketMQ integration</title>
+                                <title>RocketMQ integration</title>
                                 <packages>org.apache.ignite.stream.rocketmq*</packages>
                             </group>
                             <group>
@@ -514,15 +545,18 @@
                                 <packages>org.apache.ignite.spi.encryption*</packages>
                             </group>
                             <group>
-                                <title>Ignite Web Console</title>
-                                <packages>org.apache.ignite.console*</packages>
+                                <title>OpenCensus Metric Integration</title>
+                                <packages>org.apache.ignite.spi.metric.opencensus*</packages>
+                            </group>
+                            <group>
+                                <title>OpenCensus Tracing Integration</title>
+                                <packages>org.apache.ignite.spi.tracing.opencensus*</packages>
+                            </group>
+                            <group>
+                                <title>Management Console</title>
+                                <packages>org.apache.ignite.agent*</packages>
                             </group>
                         </groups>
-                        <header>
-                            <![CDATA[
-                                    Ignite - In-Memory Database and Caching Platform
-                                ]]>
-                        </header>
                         <bottom>
                             <![CDATA[
                                     <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
@@ -782,6 +816,11 @@
                             <goal>jar</goal>
                         </goals>
                         <phase>package</phase>
+                        <configuration>
+                            <stylesheetfile>
+                                ${project.basedir}/${project.parent.relativePath}/../assembly/docfiles/css/stylesheet.css
+                            </stylesheetfile>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -789,6 +828,45 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>checkstyle</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>${maven.checkstyle.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>style</id>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <phase>validate</phase>
+                                <configuration>
+                                    <consoleOutput>true</consoleOutput>
+                                    <logViolationsToConsole>true</logViolationsToConsole>
+                                    <failsOnError>false</failsOnError>
+                                    <failOnViolation>true</failOnViolation>
+                                    <outputFile>${project.build.directory}/checkstyle-result.xml</outputFile>
+                                    <configLocation>../checkstyle/checkstyle.xml</configLocation>
+                                    <suppressionsLocation>../checkstyle/checkstyle-suppressions.xml</suppressionsLocation>
+                                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.puppycrawl.tools</groupId>
+                                <artifactId>checkstyle</artifactId>
+                                <version>${checkstyle.puppycrawl.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <profile>
             <id>check-licenses</id>
             <build>
@@ -863,9 +941,7 @@
                                         <exclude>**/keystore/ca/*serial</exclude><!--auto generated files-->
                                         <exclude>**/META-INF/services/**</exclude> <!-- Interface mappings: cannot be changed -->
                                         <!--special excludes-->
-                                        <exclude>idea/disabled_plugins.txt</exclude>
                                         <exclude>idea/ignite_codeStyle.xml</exclude>
-                                        <exclude>idea/ignite_inspections.xml</exclude>
                                         <exclude>idea/ignite_inspections_teamcity.xml</exclude>
                                         <exclude>**/DEVNOTES*.txt</exclude>
                                         <exclude>**/NOTICE*</exclude>
@@ -877,6 +953,8 @@
                                         <exclude>src/main/java/org/jsr166/*.java</exclude>
                                         <exclude>src/main/java/org/mindrot/*.java</exclude>
                                         <exclude>src/test/java/org/apache/ignite/p2p/p2p.properties</exclude><!--test depends on file content-->
+                                        <exclude>src/test/resources/org.apache.ignite.util/control.sh_cache_help.output</exclude><!--test depends on file content-->
+                                        <exclude>src/test/resources/org.apache.ignite.util/control.sh_help.output</exclude><!--test depends on file content-->
                                         <exclude>src/test/resources/log/ignite.log.tst</exclude><!--test resource-->
                                         <exclude>src/test/java/org/apache/ignite/spi/deployment/uri/META-INF/ignite.incorrefs</exclude><!--test resource-->
                                         <exclude>src/test/java/org/apache/ignite/spi/deployment/uri/META-INF/ignite.empty</exclude><!--should be empty-->
@@ -895,6 +973,7 @@
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test2/maven-metadata-local.xml</exclude>
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test1/1.1/test1-1.1.pom</exclude>
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test1/maven-metadata-local.xml</exclude>
+                                        <exclude>src/test/resources/org/apache/ignite/internal/managers/discovery/Wrapper.ser</exclude>
                                         <!--shmem-->
                                         <exclude>ipc/shmem/**/Makefile.in</exclude><!--auto generated files-->
                                         <exclude>ipc/shmem/**/Makefile</exclude><!--auto generated files-->
@@ -958,29 +1037,15 @@
                                         <exclude>**/*.ps1</exclude>
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
-                                        <exclude>modules/platforms/nodejs/examples/certs/client.crt</exclude>
-                                        <exclude>modules/platforms/nodejs/examples/certs/ca.crt</exclude>
-                                        <exclude>modules/platforms/nodejs/examples/certs/client.key</exclude>
-                                        <exclude>modules/platforms/nodejs/api_spec/**</exclude>
-                                        <exclude>modules/platforms/python/**/*.md</exclude><!--markdown can not be commented-->
-                                        <exclude>modules/platforms/python/docs/Makefile</exclude><!--sphinx files: BSD license-->
-                                        <exclude>modules/platforms/python/docs/conf.py</exclude><!--sphinx files: BSD license-->
-                                        <exclude>modules/platforms/python/docs/**/*.rst</exclude><!--sphinx-apidoc generated files-->
-                                        <exclude>modules/platforms/python/requirements/**/*.txt</exclude><!--plain text can not be commented-->
-                                        <!--web console-->
-                                        <exclude>**/web-console/**/.eslintrc</exclude>
-                                        <exclude>**/web-console/**/.babelrc</exclude>
-                                        <exclude>**/web-console/**/*.json</exclude>
-                                        <exclude>**/web-console/**/*.json.sample</exclude>
-                                        <exclude>**/web-console/backend/build/**</exclude>
-                                        <exclude>**/web-console/backend/node_modules/**</exclude>
-                                        <exclude>**/web-console/e2e/testcafe/node_modules/**</exclude>
-                                        <exclude>**/web-console/frontend/build/**</exclude>
-                                        <exclude>**/web-console/frontend/node_modules/**</exclude>
-                                        <exclude>**/web-console/frontend/**/*.png</exclude>
-                                        <exclude>**/web-console/frontend/**/*.svg</exclude>
+                                        <!-- H2 forked module. -->
+                                        <exclude>**/org/h2/**</exclude>
+                                        <exclude>src/docsrc/**</exclude>
+                                        <exclude>src/test/tools/WEB-INF/console.html</exclude>
+                                        <exclude>src/test/tools/WEB-INF/web.xml</exclude>
                                         <!--Packaging -->
                                         <exclude>packaging/**</exclude>
+                                        <!-- Checkstyle -->
+                                        <exclude>checkstyle/**</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>
@@ -1052,35 +1117,6 @@
                     </plugin>
                 </plugins>
             </build>
-
-            <dependencyManagement>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.hadoop</groupId>
-                        <artifactId>hadoop-common</artifactId>
-                        <exclusions>
-                            <exclusion>
-                                <!-- This dependency is not available with java 9.-->
-                                <groupId>jdk.tools</groupId>
-                                <artifactId>jdk.tools</artifactId>
-                            </exclusion>
-                        </exclusions>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.hadoop</groupId>
-                        <artifactId>hadoop-common</artifactId>
-                        <type>test-jar</type>
-                        <exclusions>
-                            <exclusion>
-                                <!-- This dependency is not available with java 9.-->
-                                <groupId>jdk.tools</groupId>
-                                <artifactId>jdk.tools</artifactId>
-                            </exclusion>
-                        </exclusions>
-                    </dependency>
-                </dependencies>
-            </dependencyManagement>
-
         </profile>
 
         <profile>
@@ -1115,6 +1151,24 @@
                     <scope>system</scope>
                     <version>${java.version}</version>
                     <systemPath>${java.home}/../Classes/classes.jar</systemPath>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>tools.jar-j9</id>
+            <activation>
+                <file>
+                    <exists>${java.home}/lib/tools.jar</exists>
+                </file>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.sun</groupId>
+                    <artifactId>tools</artifactId>
+                    <scope>system</scope>
+                    <version>${java.version}</version>
+                    <systemPath>${java.home}/lib/tools.jar</systemPath>
                 </dependency>
             </dependencies>
         </profile>
@@ -1266,6 +1320,5 @@
                 </pluginManagement>
             </build>
         </profile>
-
     </profiles>
 </project>

@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Binary
 {
-    using System;
     using Apache.Ignite.Core.Impl.Binary;
     using NUnit.Framework;
 
@@ -82,18 +81,10 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TestNewMode()
         {
             // Run "TestOldMode" in a separate process with changed setting.
-            Environment.SetEnvironmentVariable(BinaryUtils.IgniteBinaryMarshallerUseStringSerializationVer2, "true");
-
-            TestUtils.RunTestInNewProcess(GetType().FullName, "TestOldMode");
-        }
-
-        /// <summary>
-        /// Test tear down.
-        /// </summary>
-        [TearDown]
-        public void TearDown()
-        {
-            Environment.SetEnvironmentVariable(BinaryUtils.IgniteBinaryMarshallerUseStringSerializationVer2, null);
+            using (EnvVar.Set(BinaryUtils.IgniteBinaryMarshallerUseStringSerializationVer2, "true"))
+            {
+                TestUtils.RunTestInNewProcess(GetType().FullName, "TestOldMode");
+            }
         }
     }
 }

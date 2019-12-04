@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,13 +39,13 @@ import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.math.stat.MultivariateGaussianDistribution;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.DatasetRow;
-import org.apache.ignite.ml.trainers.DatasetTrainer;
+import org.apache.ignite.ml.trainers.SingleLabelDatasetTrainer;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Traner for GMM model.
  */
-public class GmmTrainer extends DatasetTrainer<GmmModel, Double> {
+public class GmmTrainer extends SingleLabelDatasetTrainer<GmmModel> {
     /** Min divergence of mean vectors beween iterations. If divergence will less then trainer stops. */
     private double eps = 1e-3;
 
@@ -102,7 +102,7 @@ public class GmmTrainer extends DatasetTrainer<GmmModel, Double> {
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> GmmModel fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> GmmModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }
@@ -481,7 +481,8 @@ public class GmmTrainer extends DatasetTrainer<GmmModel, Double> {
 
         try (Dataset<EmptyContext, GmmPartitionData> dataset = datasetBuilder.build(envBuilder,
             new EmptyContextBuilder<>(),
-            new GmmPartitionData.Builder<>(extractor, maxCountOfClusters)
+            new GmmPartitionData.Builder<>(extractor, maxCountOfClusters),
+            learningEnvironment()
         )) {
             if (mdl != null) {
                 if (initialMeans != null)

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,7 +68,10 @@ public enum GridTopic {
     /** */
     TOPIC_REPLICATION,
 
-    /** */
+    /**
+     * @deprecated Should be removed.
+     */
+    @Deprecated
     TOPIC_IGFS,
 
     /** */
@@ -89,7 +92,10 @@ public enum GridTopic {
     /** */
     TOPIC_TIME_SYNC,
 
-    /** */
+    /**
+     * @deprecated Should be removed.
+     */
+    @Deprecated
     TOPIC_HADOOP,
 
     /** */
@@ -141,7 +147,10 @@ public enum GridTopic {
     TOPIC_SERVICES,
 
     /** */
-    TOPIC_DEADLOCK_DETECTION;
+    TOPIC_DEADLOCK_DETECTION,
+
+    /** */
+    TOPIC_TXDR;
 
     /** Enum values. */
     private static final GridTopic[] VALS = values();

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@ package org.apache.ignite.spi.discovery;
 
 import java.util.UUID;
 import org.apache.ignite.mxbean.MXBeanDescription;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Generic MBean interface to monitor DiscoverySpi subsystem.
@@ -63,15 +62,15 @@ public interface DiscoverySpiMBean {
      */
     @Deprecated
     @MXBeanDescription("Coordinator node ID.")
-    @Nullable public UUID getCoordinator();
+    public UUID getCoordinator();
 
     /**
      * Gets current coordinator node formatted as a string.
      *
-     * @return Current coordinator string representation.
+     * @return Current coordinator string representation or {@code null} if coordinator cannot be determined.
      */
     @MXBeanDescription("Coordinator node formatted as a string.")
-    @Nullable public String getCoordinatorNodeFormatted();
+    public String getCoordinatorNodeFormatted();
 
     /**
      * Gets local node formatted as a string.

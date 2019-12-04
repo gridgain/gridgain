@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -413,6 +413,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
         throws IgniteCheckedException {
         assert cacheName != null;
 
+        if (topVer == null)
+            topVer = ctx.cache().context().exchange().readyAffinityVersion();
+
         IgniteInternalFuture<AffinityInfo> locFetchFut = localAffinityInfo(cacheName, topVer);
 
         if (locFetchFut != null)
@@ -432,10 +435,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> localAffinityInfo(
         String cacheName,
-        @Nullable AffinityTopologyVersion topVer
+        AffinityTopologyVersion topVer
     ) throws IgniteCheckedException {
-        if (topVer == null)
-            topVer = ctx.cache().context().exchange().readyAffinityVersion();
+        assert topVer != null;
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 
@@ -496,10 +498,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> remoteAffinityInfo(
         String cacheName,
-        @Nullable AffinityTopologyVersion topVer
+        AffinityTopologyVersion topVer
     ) {
-        if (topVer == null)
-            topVer = ctx.discovery().topologyVersionEx();
+        assert topVer != null;
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 

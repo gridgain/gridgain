@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -633,8 +633,9 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
                             }
                             catch (Exception e) {
                                 if (interruptAll) {
-                                    log.info("Node is stopped (or lock is broken in non-failover safe mode)," +
-                                        " aborting transaction.");
+                                    if (log.isInfoEnabled())
+                                        log.info("Node is stopped (or lock is broken in non-failover safe mode)," +
+                                            " aborting transaction.");
 
                                     // Abort this attempt to synchronize queue and start another one,
                                     // that will return immediately.

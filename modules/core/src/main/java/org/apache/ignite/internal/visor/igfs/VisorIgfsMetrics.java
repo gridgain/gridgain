@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,15 +19,13 @@ package org.apache.ignite.internal.visor.igfs;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import org.apache.ignite.IgniteFileSystem;
-import org.apache.ignite.igfs.IgfsMetrics;
-import org.apache.ignite.internal.processors.igfs.IgfsEx;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 
 /**
- * Data transfer object for {@link IgfsMetrics}.
+ * Data transfer object.
  */
+@Deprecated
 public class VisorIgfsMetrics extends VisorDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
@@ -79,32 +77,6 @@ public class VisorIgfsMetrics extends VisorDataTransferObject {
      */
     public VisorIgfsMetrics() {
         // No-op.
-    }
-
-    /**
-     * Create data transfer object for given IGFS metrics.
-     *
-     * @param igfs Source IGFS.
-     */
-    public VisorIgfsMetrics(IgniteFileSystem igfs) {
-        assert igfs != null;
-
-        IgfsMetrics m = igfs.metrics();
-
-        totalSpaceSz = ((IgfsEx)igfs).context().data().maxSpaceSize();
-        usedSpaceSz = m.localSpaceSize();
-        foldersCnt = m.directoriesCount();
-        filesCnt = m.filesCount();
-        filesOpenedForRd = m.filesOpenedForRead();
-        filesOpenedForWrt = m.filesOpenedForWrite();
-        blocksRd = m.blocksReadTotal();
-        blocksRdRmt = m.blocksReadRemote();
-        blocksWrt = m.blocksWrittenTotal();
-        blocksWrtRmt = m.blocksWrittenRemote();
-        bytesRd = m.bytesRead();
-        bytesRdTm = m.bytesReadTime();
-        bytesWrt = m.bytesWritten();
-        bytesWrtTm = m.bytesWriteTime();
     }
 
     /**

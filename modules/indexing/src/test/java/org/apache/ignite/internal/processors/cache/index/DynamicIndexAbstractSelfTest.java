@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,6 +47,8 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
+
+import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.CONC_DESTROY_MSG;
 
 /**
  * Tests for dynamic index creation.
@@ -118,14 +120,8 @@ public abstract class DynamicIndexAbstractSelfTest extends AbstractSchemaSelfTes
         return commonConfiguration(idx).setClientMode(true);
     }
 
-    /**
-     * Create common node configuration.
-     *
-     * @param idx Index.
-     * @return Configuration.
-     * @throws Exception If failed.
-     */
-    protected IgniteConfiguration commonConfiguration(int idx) throws Exception {
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration commonConfiguration(int idx) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(getTestIgniteInstanceName(idx));
 
         cfg.setFailureHandler(new StopNodeFailureHandler());
@@ -419,6 +415,11 @@ public abstract class DynamicIndexAbstractSelfTest extends AbstractSchemaSelfTes
                 ", ids=" + ids + ']', expSize, res.size());
         }
         catch (Exception e) {
+            for (Throwable th = e; th != null; th = th.getCause()) {
+                if (th.getMessage().contains(CONC_DESTROY_MSG))
+                    return;
+            }
+
             // Swallow QueryRetryException.
             if (X.cause(e, QueryRetryException.class) == null)
                 throw e;

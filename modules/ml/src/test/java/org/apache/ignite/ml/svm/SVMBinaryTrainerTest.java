@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,8 @@ public class SVMBinaryTrainerTest extends TrainerTest {
             cacheMock.put(i, twoLinearlySeparableClasses[i]);
 
         SVMLinearClassificationTrainer trainer = new SVMLinearClassificationTrainer()
-            .withSeed(1234L);
+            .withAmountOfIterations(32)
+            .withSeed(123L);
 
         SVMLinearClassificationModel mdl = trainer.fit(
             cacheMock, parts,
@@ -61,8 +62,8 @@ public class SVMBinaryTrainerTest extends TrainerTest {
             cacheMock.put(i, twoLinearlySeparableClasses[i]);
 
         SVMLinearClassificationTrainer trainer = new SVMLinearClassificationTrainer()
-            .withAmountOfIterations(1000)
-            .withSeed(1234L);
+            .withAmountOfIterations(16)
+            .withSeed(123L);
 
         Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
         SVMLinearClassificationModel originalMdl = trainer.fit(
@@ -79,7 +80,7 @@ public class SVMBinaryTrainerTest extends TrainerTest {
 
         SVMLinearClassificationModel updatedOnEmptyDS = trainer.update(
             originalMdl,
-            new HashMap<Integer, double[]>(),
+            new HashMap<>(),
             parts,
             vectorizer
         );

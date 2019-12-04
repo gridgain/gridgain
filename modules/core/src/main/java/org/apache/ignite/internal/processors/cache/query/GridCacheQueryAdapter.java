@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryMetrics;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
@@ -108,9 +107,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     private final boolean incMeta;
 
     /** */
-    private volatile GridCacheQueryMetricsAdapter metrics;
-
-    /** */
     private volatile int pageSize = Query.DFLT_PAGE_SIZE;
 
     /** */
@@ -177,11 +173,9 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
 
         log = cctx.logger(getClass());
 
-        metrics = new GridCacheQueryMetricsAdapter();
-
-        this.incMeta = false;
-        this.clsName = null;
-        this.clause = null;
+        incMeta = false;
+        clsName = null;
+        clause = null;
     }
 
     /**
@@ -221,8 +215,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.dataPageScanEnabled = dataPageScanEnabled;
 
         log = cctx.logger(getClass());
-
-        metrics = new GridCacheQueryMetricsAdapter();
     }
 
     /**
@@ -482,16 +474,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** {@inheritDoc} */
     @Override public <R> CacheQueryFuture<R> execute(IgniteReducer<T, R> rmtReducer, @Nullable Object... args) {
         return execute0(rmtReducer, args);
-    }
-
-    /** {@inheritDoc} */
-    @Override public QueryMetrics metrics() {
-        return metrics.copy();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void resetMetrics() {
-        metrics = new GridCacheQueryMetricsAdapter();
     }
 
     /**

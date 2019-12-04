@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,6 +49,9 @@ public class BulkLoadProcessor implements AutoCloseable {
 
     /** Query id. */
     private final Long qryId;
+
+    /** Exception, current load process ended with, or {@code null} if in progress or if succeded. */
+    private Exception failReason;
 
     /**
      * Creates bulk load processor.
@@ -100,13 +103,21 @@ public class BulkLoadProcessor implements AutoCloseable {
     }
 
     /**
+     * Is called to notify processor, that bulk load execution, this processor is performing, failed with specified
+     * exception.
+     *
+     * @param failReason why current load failed.
+     */
+    public void onError(Exception failReason) {
+        this.failReason = failReason;
+    }
+
+    /**
      * Aborts processing and closes the underlying objects ({@link IgniteDataStreamer}).
      */
     @Override public void close() throws Exception {
         if (isClosed)
             return;
-
-        boolean failed = false;
 
         try {
             isClosed = true;
@@ -114,12 +125,13 @@ public class BulkLoadProcessor implements AutoCloseable {
             outputStreamer.close();
         }
         catch (Exception e) {
-            failed = true;
+            if (failReason == null)
+                failReason = e;
 
             throw e;
         }
         finally {
-            runningQryMgr.unregister(qryId, failed);
+            runningQryMgr.unregister(qryId, failReason);
         }
     }
 }

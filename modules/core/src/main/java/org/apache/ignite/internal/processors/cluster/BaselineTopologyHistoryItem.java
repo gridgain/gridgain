@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -74,5 +75,24 @@ public class BaselineTopologyHistoryItem implements Serializable {
      */
     public List<Long> branchingHistory() {
         return branchingHistory;
+    }
+
+    /**
+     * Returns {@code true} if baseline topology history item contains node with given consistent ID.
+     *
+     * @param consistentId Consistent ID.
+     * @return {@code True} if baseline topology history item contains node with given consistent ID.
+     */
+    public boolean containsNode(Object consistentId) {
+        return consIds.contains(consistentId);
+    }
+
+    /**
+     * Returns a copy of consistent ids of nodes that included into this baseline topology item.
+     *
+     * @return Collection of consistent ids.
+     */
+    public Collection<Object> consistentIds() {
+        return U.arrayList(this.consIds);
     }
 }

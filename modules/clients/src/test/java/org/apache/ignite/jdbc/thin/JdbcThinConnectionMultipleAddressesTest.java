@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -346,7 +346,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
     }
 
     /**
-     * Check failover on restart cluster ar stop one node.
+     * Check failover on restart cluster or stop one node.
      *
      * @param url Connection URL.
      * @param allNodes Restart all nodes flag.
@@ -356,7 +356,9 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
         try (Connection conn = DriverManager.getConnection(url)) {
             DatabaseMetaData meta = conn.getMetaData();
 
-            ResultSet rs0 = meta.getTables(null, null, null, null);
+            final String[] types = {"TABLES"};
+
+            ResultSet rs0 = meta.getTables(null, null, null, types);
 
             assertFalse(rs0.next());
 
@@ -372,7 +374,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             restart(allNodes);
 
-            rs0 = meta.getTables(null, null, null, null);
+            rs0 = meta.getTables(null, null, null, types);
             assertFalse(rs0.next());
         }
     }
@@ -534,7 +536,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stopAllGrids();
         else {
 
-            if (affinityAwareness) {
+            if (partitionAwareness) {
                 for (int i = 0; i < NODES_CNT - 1; i++)
                     stopGrid(i);
             }

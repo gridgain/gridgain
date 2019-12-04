@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,7 @@ import java.io.Serializable;
  * {@code p(C_k,y) =x_1*p_k1^x *...*x_i*p_ki^x_i}. Where {@code x_i} is a discrete feature, {@code p_ki} is a prior
  * probability probability of class {@code p(x|C_k)}. Returns the number of the most possible class.
  */
-public class DiscreteNaiveBayesModel implements IgniteModel<Vector, Double>, Exportable<DiscreteNaiveBayesModel>, Serializable {
+public final class DiscreteNaiveBayesModel implements IgniteModel<Vector, Double>, Exportable<DiscreteNaiveBayesModel>, Serializable {
     /** */
     private static final long serialVersionUID = -127386523291350345L;
     /**

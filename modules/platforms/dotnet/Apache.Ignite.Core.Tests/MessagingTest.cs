@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -105,7 +105,6 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestMessageDataTypes()
         {
-            var topic = "dataTypes";
             object lastMsg = null;
             var evt = new AutoResetEvent(false);
 
@@ -119,16 +118,15 @@ namespace Apache.Ignite.Core.Tests
                 return true;
             });
 
-            messaging1.LocalListen(listener, topic);
-
             foreach (var msg in Objects.Where(x => x != null))
             {
+                var topic = "dataTypes" + Guid.NewGuid();
+                messaging1.LocalListen(listener, topic);
                 messaging2.Send(msg, topic);
                 evt.WaitOne(500);
                 Assert.AreEqual(msg, lastMsg);
+                messaging1.StopLocalListen(listener, topic);
             }
-
-            messaging1.StopLocalListen(listener, topic);
         }
 
         /// <summary>

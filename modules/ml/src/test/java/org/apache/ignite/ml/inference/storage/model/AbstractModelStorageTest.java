@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,9 +48,12 @@ public abstract class AbstractModelStorageTest {
         assertTrue(mdlStorage.exists("/test"));
         assertArrayEquals(data, mdlStorage.getFile("/test"));
 
+        Set<String> paths = mdlStorage.listFiles("/");
+        assertTrue(paths.contains("/test"));
         mdlStorage.remove("/test");
 
         assertFalse(mdlStorage.exists("/test"));
+        assertTrue(mdlStorage.listFiles("/").isEmpty());
     }
 
     /** */
@@ -101,8 +104,8 @@ public abstract class AbstractModelStorageTest {
     }
 
     /** */
-    @Test
-    public void testRemoveDirectory() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testRemoveNonEmptyDirectory() {
         ModelStorage mdlStorage = getModelStorage();
 
         mdlStorage.mkdirs("/a/b/c");
@@ -112,15 +115,31 @@ public abstract class AbstractModelStorageTest {
         mdlStorage.putFile("/a/b/test", new byte[0]);
 
         mdlStorage.remove("/a/b");
+    }
+
+    @Test
+    public void testRemoveEmptyDirectory() {
+        ModelStorage mdlStorage = getModelStorage();
+
+        mdlStorage.mkdirs("/a/b/c");
+        mdlStorage.mkdirs("/a/b/d");
+        mdlStorage.mkdirs("/a/c");
+        mdlStorage.putFile("/a/b/c/test", new byte[0]);
+        mdlStorage.putFile("/a/b/test", new byte[0]);
+
+        mdlStorage.remove("/a/b/c/test");
+        mdlStorage.remove("/a/b/c");
+        mdlStorage.remove("/a/b/d");
+        mdlStorage.remove("/a/b/test");
+        mdlStorage.remove("/a/b");
 
         assertFalse(mdlStorage.exists("/a/b"));
         assertFalse(mdlStorage.exists("/a/b/c"));
         assertFalse(mdlStorage.exists("/a/b/d"));
-        assertFalse(mdlStorage.exists("/a/b/test"));
         assertFalse(mdlStorage.exists("/a/b/c/test"));
-
+        assertFalse(mdlStorage.exists("/a/b/test"));
         assertTrue(mdlStorage.exists("/a"));
-        assertTrue(mdlStorage.exists("/a/c"));
+
     }
 
     /** */

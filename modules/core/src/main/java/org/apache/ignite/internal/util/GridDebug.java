@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.management.OperatingSystemMXBean;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -73,8 +72,11 @@ public class GridDebug {
     /** This is the name of the HotSpot Diagnostic MBean */
     private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
 
+    /** This is the type of the HotSpot Diagnostic MBean */
+    private static final String HOTSPOT_BEAN_CLASS = "com.sun.management.HotSpotDiagnosticMXBean";
+
     /** field to store the hotspot diagnostic MBean */
-    private static volatile HotSpotDiagnosticMXBean hotspotMBean;
+    private static volatile Object hotspotMBean;
 
     /** Platform-specific management interface for the operating system. */
     private static final String OS_BEAN_NAME = "java.lang:type=OperatingSystem";
@@ -335,7 +337,8 @@ public class GridDebug {
             f.delete();
 
         try {
-            hotspotMBean.dumpHeap(fileName, live);
+            hotspotMBean.getClass().getMethod("dumpHeap", String.class, boolean.class)
+                .invoke(hotspotMBean, fileName, live);
         }
         catch (RuntimeException re) {
             throw re;
@@ -360,8 +363,14 @@ public class GridDebug {
     private static void initHotspotMBean() {
         if (hotspotMBean == null) {
             synchronized (GridDebug.class) {
-                if (hotspotMBean == null)
-                    hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, HotSpotDiagnosticMXBean.class);
+                if (hotspotMBean == null) {
+                    try {
+                        hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, Class.forName(HOTSPOT_BEAN_CLASS));
+                    }
+                    catch (ClassNotFoundException e) {
+                        throw new IgniteException(e);
+                    }
+                }
             }
         }
     }

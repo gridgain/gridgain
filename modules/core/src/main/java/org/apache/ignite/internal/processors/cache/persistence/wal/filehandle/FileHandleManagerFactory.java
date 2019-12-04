@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import java.util.function.Supplier;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
-import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializer;
@@ -47,7 +46,6 @@ public class FileHandleManagerFactory {
      * @param cctx Cache context.
      * @param metrics Data storage metrics.
      * @param mmap Using mmap.
-     * @param lastWALPtr Last WAL pointer.
      * @param serializer Serializer.
      * @param currHandleSupplier Supplier of current handle.
      * @return One of implementation of {@link FileHandleManager}.
@@ -56,7 +54,6 @@ public class FileHandleManagerFactory {
         GridCacheSharedContext cctx,
         DataStorageMetricsImpl metrics,
         boolean mmap,
-        Supplier<WALPointer> lastWALPtr,
         RecordSerializer serializer,
         Supplier<FileWriteHandle> currHandleSupplier
     ) {
@@ -64,7 +61,6 @@ public class FileHandleManagerFactory {
             return new FsyncFileHandleManagerImpl(
                 cctx,
                 metrics,
-                lastWALPtr,
                 serializer,
                 currHandleSupplier,
                 dsConf.getWalMode(),
@@ -77,7 +73,6 @@ public class FileHandleManagerFactory {
                 cctx,
                 metrics,
                 mmap,
-                lastWALPtr,
                 serializer,
                 currHandleSupplier,
                 dsConf.getWalMode(),

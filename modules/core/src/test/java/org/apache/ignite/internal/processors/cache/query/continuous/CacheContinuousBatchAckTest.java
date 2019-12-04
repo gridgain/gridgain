@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.util.typedef.P1;
-import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -268,14 +267,10 @@ public class CacheContinuousBatchAckTest extends GridCommonAbstractTest implemen
 
             qry = cache.query(q);
 
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < GridTestUtils.SF.applyLB(10000, 1000); i++)
                 cache.put(i, i);
 
-            assert !GridTestUtils.waitForCondition(new PA() {
-                @Override public boolean apply() {
-                    return fail.get();
-                }
-            }, 1300L);
+            assertFalse(GridTestUtils.waitForCondition(fail::get, 1300L));
         }
         finally {
             if (qry != null)

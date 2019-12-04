@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
+import javax.cache.CacheException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -28,7 +29,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -133,7 +133,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
      * @param r Runnable.
      * @param expCode Error code.
      */
-    static void assertSqlException(DynamicIndexAbstractBasicSelfTest.RunnableX r, int expCode) {
+    static void assertSqlException(Runnable r, int expCode) {
         try {
             try {
                 r.run();
@@ -431,7 +431,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
      * @param node Node.
      * @return Query processor.
      */
-    static GridQueryProcessor queryProcessor(Ignite node) {
+    public static GridQueryProcessor queryProcessor(Ignite node) {
         return queryProcessor((IgniteEx)node);
     }
 
@@ -619,21 +619,21 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
     public static class ValueClass {
         /** Field 1. */
         @QuerySqlField
-        private String field1;
+        private Long field1;
 
         /**
          * Constructor.
          *
          * @param field1 Field 1.
          */
-        public ValueClass(String field1) {
+        public ValueClass(Long field1) {
             this.field1 = field1;
         }
 
         /**
          * @return Field 1
          */
-        public String field1() {
+        public Long field1() {
             return field1;
         }
     }
@@ -661,17 +661,5 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
         public String field() {
             return field;
         }
-    }
-
-    /**
-     * Runnable which can throw checked exceptions.
-     */
-    protected interface RunnableX {
-        /**
-         * Do run.
-         *
-         * @throws Exception If failed.
-         */
-        public void run() throws Exception;
     }
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -250,6 +250,40 @@ namespace ignite
             int32_t peekModes;
 
             IGNITE_NO_COPY_ASSIGNMENT(InCacheLocalPeekOperation)
+        };
+
+        /**
+         * Cache Invoke input operation.
+         */
+        template<typename T1, typename T2>
+        class InCacheInvokeOperation : public InputOperation
+        {
+        public:
+            /**
+             * Constructor.
+             *
+             * @param val1 First value.
+             * @param val2 Second value.
+             */
+            InCacheInvokeOperation(const T1& val1, const T2& val2) : val1(val1), val2(val2)
+            {
+                // No-op.
+            }
+
+            virtual void ProcessInput(ignite::impl::binary::BinaryWriterImpl& writer)
+            {
+                writer.WriteTopObject<T1>(val1);
+                writer.WriteInt64(0);
+                writer.WriteTopObject<T2>(val2);
+            }
+        private:
+            /** First value. */
+            const T1& val1;
+
+            /** Second value. */
+            const T2& val2;
+
+            IGNITE_NO_COPY_ASSIGNMENT(InCacheInvokeOperation)
         };
 
         /**

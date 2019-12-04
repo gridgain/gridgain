@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,8 +59,8 @@ namespace ignite
                 /** Version 1.2.0. */
                 static const ProtocolVersion VERSION_1_2_0;
                 
-                /** Version 1.3.0. Added: Best Effort Affinity support, IEP-23. */
-                static const ProtocolVersion VERSION_1_3_0;
+                /** Version 1.4.0. Added: Partition Awareness support, IEP-23. */
+                static const ProtocolVersion VERSION_1_4_0;
 
                 /** Current version. */
                 static const ProtocolVersion VERSION_DEFAULT;

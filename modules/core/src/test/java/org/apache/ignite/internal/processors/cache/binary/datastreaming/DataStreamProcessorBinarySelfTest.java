@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessorSelfTest;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.stream.StreamReceiver;
@@ -36,6 +37,8 @@ public class DataStreamProcessorBinarySelfTest extends DataStreamProcessorSelfTe
         BinaryMarshaller marsh = new BinaryMarshaller();
 
         cfg.setMarshaller(marsh);
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -200,7 +200,7 @@ public class RobinHoodBackwardShiftHashMap implements LoadedPagesMap {
         long pageIdToInsert = pageId;
         long valToInsert = val;
         int verToInsert = ver;
-        long idxIdealToInsert = idxInit;
+        int idxIdealToInsert = idxInit;
 
         for (int i = 0; i < numBuckets; i++) {
             int idxCurr = (idxInit + i) % numBuckets;
@@ -477,10 +477,10 @@ public class RobinHoodBackwardShiftHashMap implements LoadedPagesMap {
      * @param base Entry base, address in buffer of the entry start.
      * @param idxIdeal number of ideal bucket (cell) to insert this value.
      */
-    private void setIdealBucket(long base, long idxIdeal) {
+    private void setIdealBucket(long base, int idxIdeal) {
         assert idxIdeal >= 0 && idxIdeal < numBuckets;
 
-        putLong(base + IDEAL_BUCKET_OFFSET, idxIdeal);
+        putInt(base + IDEAL_BUCKET_OFFSET, idxIdeal);
     }
 
     /**
@@ -540,7 +540,7 @@ public class RobinHoodBackwardShiftHashMap implements LoadedPagesMap {
      * @param val Entry value associated with key.
      * @param ver Entry version.
      */
-    private void setCellValue(long base, long idealBucket, int grpId, long pageId, long val, int ver) {
+    private void setCellValue(long base, int idealBucket, int grpId, long pageId, long val, int ver) {
         setIdealBucket(base, idealBucket);
         setGrpId(base, grpId);
         setPageId(base, pageId);

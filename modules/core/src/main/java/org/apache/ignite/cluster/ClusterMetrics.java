@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -373,7 +373,7 @@ public interface ClusterMetrics {
     public int getTotalCpus();
 
     /**
-     * Returns the CPU usage usage in {@code [0, 1]} range.
+     * Returns the CPU usage in {@code [0, 1]} range.
      * The exact way how this number is calculated depends on SPI implementation.
      * <p>
      * If the CPU usage is not available, a negative value is returned.

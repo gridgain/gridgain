@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,10 +50,10 @@ public class MLPTrainerTest {
     @RunWith(Parameterized.class)
     public static class ComponentParamTests {
         /** Number of parts to be tested. */
-        private static final int[] partsToBeTested = new int[] {1, 2, 3, 4, 5, 7};
+        private static final int[] partsToBeTested = new int[] {1, 2, 3, 4, 7};
 
         /** Batch sizes to be tested. */
-        private static final int[] batchSizesToBeTested = new int[] {1, 2, 3, 4};
+        private static final int[] batchSizesToBeTested = new int[] {1, 3, 4};
 
         /** Parameters. */
         @Parameterized.Parameters(name = "Data divided on {0} partitions, training with batch size {1}")
@@ -104,7 +104,7 @@ public class MLPTrainerTest {
         @Test
         public void testXORNesterov() {
             xorTest(new UpdatesStrategy<>(
-                new NesterovUpdateCalculator<MultilayerPerceptron>(0.1, 0.7),
+                new NesterovUpdateCalculator<MultilayerPerceptron>(0.2, 0.7),
                 NesterovParameterUpdate::sum,
                 NesterovParameterUpdate::avg
             ));
@@ -130,10 +130,10 @@ public class MLPTrainerTest {
                 arch,
                 LossFunctions.MSE,
                 updatesStgy,
-                3000,
+                1000,
                 batchSize,
-                50,
-                123L
+                5,
+                0L
             );
 
             MultilayerPerceptron mlp = trainer.fit(xorData, parts, new LabeledDummyVectorizer<>());

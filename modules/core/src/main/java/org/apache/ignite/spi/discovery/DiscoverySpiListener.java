@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,12 +16,8 @@
 
 package org.apache.ignite.spi.discovery;
 
-import java.util.Collection;
-import java.util.Map;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.lang.IgniteFuture;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Listener for grid node discovery events. See
@@ -40,22 +36,9 @@ public interface DiscoverySpiListener {
     /**
      * Notification for grid node discovery events.
      *
-     * @param type Node discovery event type. See {@link DiscoveryEvent}
-     * @param topVer Topology version or {@code 0} if configured discovery SPI implementation
-     *      does not support versioning.
-     * @param node Node affected (e.g. newly joined node, left node, failed node or local node).
-     * @param topSnapshot Topology snapshot after event has been occurred (e.g. if event is
-     *      {@code EVT_NODE_JOINED}, then joined node will be in snapshot).
-     * @param topHist Topology snapshots history.
-     * @param data Data for custom event.
+     * @param notification Discovery notification object.
      *
      * @return A future that will be completed when notification process has finished.
      */
-    public IgniteFuture<?> onDiscovery(
-        int type,
-        long topVer,
-        ClusterNode node,
-        Collection<ClusterNode> topSnapshot,
-        @Nullable Map<Long, Collection<ClusterNode>> topHist,
-        @Nullable DiscoverySpiCustomMessage data);
+    public IgniteFuture<?> onDiscovery(DiscoveryNotification notification);
 }

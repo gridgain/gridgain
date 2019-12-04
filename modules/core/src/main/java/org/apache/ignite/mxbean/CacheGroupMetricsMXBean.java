@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,10 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 
 /**
  * This interface defines JMX view on {@link CacheGroupContext}.
+ *
+ * @deprecated Use {@link GridMetricManager} instead.
  */
+@Deprecated
 @MXBeanDescription("MBean that provides access to cache group descriptor.")
 public interface CacheGroupMetricsMXBean {
     /**
@@ -190,4 +194,12 @@ public interface CacheGroupMetricsMXBean {
      */
     @MXBeanDescription("Storage space allocated for group adjusted for possible sparsity, in bytes.")
     public long getSparseStorageSize();
+
+    /**
+     * @return Number of partitions need processed for finished indexes create or rebuilding.
+     * It is calculated as the number of local partition minus the processed.
+     * A value of 0 indicates that the index is built.
+     */
+    @MXBeanDescription("Count of partitions need processed for finished indexes create or rebuilding.")
+    public long getIndexBuildCountPartitionsLeft();
 }

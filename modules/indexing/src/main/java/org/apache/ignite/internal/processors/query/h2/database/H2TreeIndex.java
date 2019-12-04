@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,10 +28,12 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
@@ -41,6 +43,7 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -61,8 +64,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRange
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRangeBounds;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
-import org.apache.ignite.internal.stat.IoStatisticsHolder;
-import org.apache.ignite.internal.stat.IoStatisticsType;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -80,6 +81,7 @@ import org.h2.index.IndexType;
 import org.h2.index.SingleRowCursor;
 import org.h2.message.DbException;
 import org.h2.result.SearchRow;
+import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
@@ -87,9 +89,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
+import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
+import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 import static org.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -145,8 +150,76 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /**
      * @param cctx Cache context.
+     * @param tbl Table.
+     * @param idxName Index name.
+     * @param pk Primary key.
+     * @param affinityKey {@code true} for affinity key.
+     * @param idxColsInfo Index column info.
+     * @param treeName Tree name.
+     * @param segments Tree segments.
+     * @param log Logger.
+     */
+    private H2TreeIndex(
+        GridCacheContext<?, ?> cctx,
+        GridH2Table tbl,
+        String idxName,
+        boolean pk,
+        boolean affinityKey,
+        IndexColumnsInfo idxColsInfo,
+        String treeName,
+        H2Tree[] segments,
+        IgniteLogger log
+    ) {
+        super(tbl, idxName, idxColsInfo.cols(),
+            pk ? IndexType.createPrimaryKey(false, false) :
+                IndexType.createNonUnique(false, false, false));
+
+        this.cctx = cctx;
+        ctx = cctx.kernalContext();
+        this.log = log;
+
+        this.pk = pk;
+        this.affinityKey = affinityKey;
+
+        this.tblName = tbl.getName();
+        this.idxName = idxName;
+
+        this.treeName = treeName;
+
+        this.segments = segments;
+
+        inlineIdxs = idxColsInfo.inlineIdx();
+
+        qryCtxRegistry = ((IgniteH2Indexing)(ctx.query().getIndexing())).queryContextRegistry();
+
+        IndexColumn.mapColumns(idxColsInfo.cols(), tbl);
+
+        // Initialize distributed joins.
+        msgTopic = new IgniteBiTuple<>(GridTopic.TOPIC_QUERY, tbl.identifierString() + '.' + getName());
+
+        msgLsnr = new GridMessageListener() {
+            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                GridSpinBusyLock l = tbl.rowDescriptor().indexing().busyLock();
+
+                if (!l.enterBusy())
+                    return;
+
+                try {
+                    onMessage0(nodeId, msg);
+                }
+                finally {
+                    l.leaveBusy();
+                }
+            }
+        };
+
+        ctx.io().addMessageListener(msgTopic, msgLsnr);
+    }
+
+    /**
+     * @param cctx Cache context.
      * @param rowCache Row cache.
-     * @param table Table.
+     * @param tbl Table.
      * @param idxName Index name.
      * @param pk Primary key.
      * @param affinityKey {@code true} for affinity key.
@@ -154,14 +227,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param wrappedColsList Index columns as is.
      * @param inlineSize Inline size.
      * @param segmentsCnt Count of tree segments.
-     * @param qryCtxRegistry Query context registry.
+     * @param log Logger.
+     * @return Index.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("MapReplaceableByEnumMap")
-    public H2TreeIndex(
+    public static H2TreeIndex createIndex(
         GridCacheContext<?, ?> cctx,
         @Nullable H2RowCache rowCache,
-        GridH2Table table,
+        GridH2Table tbl,
         String idxName,
         boolean pk,
         boolean affinityKey,
@@ -169,68 +242,62 @@ public class H2TreeIndex extends H2TreeIndexBase {
         List<IndexColumn> wrappedColsList,
         int inlineSize,
         int segmentsCnt,
-        QueryContextRegistry qryCtxRegistry
+        IgniteLogger log
     ) throws IgniteCheckedException {
-        super(table);
-
         assert segmentsCnt > 0 : segmentsCnt;
 
-        ctx = cctx.kernalContext();
-        log = ctx.log(getClass());
+        IndexColumn[] unwrappedCols = unwrappedColsList.toArray(H2Utils.EMPTY_COLUMNS);
 
-        this.cctx = cctx;
+        IndexColumnsInfo unwrappedColsInfo = new IndexColumnsInfo(
+            unwrappedCols, getAvailableInlineColumns(affinityKey, cctx.name(), idxName, log, pk, tbl, unwrappedCols), inlineSize,
+            cctx.config().getSqlIndexMaxInlineSize()
+        );
 
-        this.pk = pk;
-        this.affinityKey = affinityKey;
+        IndexColumn[] wrappedCols = wrappedColsList.toArray(H2Utils.EMPTY_COLUMNS);
 
-        tblName = table.getName();
+        IndexColumnsInfo wrappedColsInfo = new IndexColumnsInfo(
+            wrappedCols, getAvailableInlineColumns(affinityKey, cctx.name(), idxName, log, pk, tbl, wrappedCols), inlineSize,
+            cctx.config().getSqlIndexMaxInlineSize()
+        );
 
-        this.idxName = idxName;
-
-        this.table = table;
-        this.qryCtxRegistry = qryCtxRegistry;
-
-        GridQueryTypeDescriptor typeDesc = table.rowDescriptor().type();
+        GridQueryTypeDescriptor typeDesc = tbl.rowDescriptor().type();
 
         int typeId = cctx.binaryMarshaller() ? typeDesc.typeId() : typeDesc.valueClass().hashCode();
 
-        treeName = BPlusTree.treeName((table.rowDescriptor() == null ? "" : typeId + "_") + idxName, "H2Tree");
-
-        IndexColumnsInfo unwrappedColsInfo = new IndexColumnsInfo(unwrappedColsList, inlineSize);
-
-        IndexColumnsInfo wrappedColsInfo = new IndexColumnsInfo(wrappedColsList, inlineSize);
-
-        IndexColumn[] cols;
+        String treeName = BPlusTree.treeName((tbl.rowDescriptor() == null ? "" : typeId + "_") + idxName, "H2Tree");
 
         assert cctx.affinityNode();
 
-        segments = new H2Tree[segmentsCnt];
+        H2Tree[] segments = new H2Tree[segmentsCnt];
 
         IgniteCacheDatabaseSharedManager db = cctx.shared().database();
 
         AtomicInteger maxCalculatedInlineSize = new AtomicInteger();
 
-        IoStatisticsHolder stats = cctx.kernalContext().ioStats().registerIndex(
-            IoStatisticsType.SORTED_INDEX,
+        IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
+            SORTED_INDEX,
             cctx.name(),
-            idxName
+            idxName,
+            cctx.kernalContext().metric(),
+            cctx.group().statisticsHolderData()
         );
 
         for (int i = 0; i < segments.length; i++) {
             db.checkpointReadLock();
 
             try {
-                RootPage page = getMetaPage(i);
+                RootPage page = getMetaPage(cctx, treeName, i);
 
                 segments[i] = new H2Tree(
                     cctx,
-                    table,
+                    tbl,
                     treeName,
                     idxName,
-                    tblName,
-                    table.cacheName(),
+                    tbl.getName(),
+                    tbl.cacheName(),
                     cctx.offheap().reuseListForIndex(treeName),
                     cctx.groupId(),
+                    cctx.group().name(),
                     cctx.dataRegion().pageMemory(),
                     cctx.shared().wal(),
                     cctx.offheap().globalRemoveId(),
@@ -255,37 +322,9 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         boolean useUnwrappedCols = segments[0].unwrappedPk();
 
-        IndexColumnsInfo colsInfo = useUnwrappedCols ? unwrappedColsInfo : wrappedColsInfo;
+        IndexColumnsInfo idxColsInfo = useUnwrappedCols ? unwrappedColsInfo : wrappedColsInfo;
 
-        cols = colsInfo.cols();
-
-        inlineIdxs = colsInfo.inlineIdx();
-
-        IndexColumn.mapColumns(cols, table);
-
-        initBaseIndex(table, 0, idxName, cols,
-            pk ? IndexType.createPrimaryKey(false, false) : IndexType.createNonUnique(false, false, false));
-
-        // Initialize distributed joins.
-        msgTopic = new IgniteBiTuple<>(GridTopic.TOPIC_QUERY, table.identifierString() + '.' + getName());
-
-        msgLsnr = new GridMessageListener() {
-            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                GridSpinBusyLock l = table.rowDescriptor().indexing().busyLock();
-
-                if (!l.enterBusy())
-                    return;
-
-                try {
-                    onMessage0(nodeId, msg);
-                }
-                finally {
-                    l.leaveBusy();
-                }
-            }
-        };
-
-        ctx.io().addMessageListener(msgTopic, msgLsnr);
+        return new H2TreeIndex(cctx, tbl, idxName, pk, affinityKey, idxColsInfo, treeName, segments, log);
     }
 
     /** {@inheritDoc} */
@@ -318,21 +357,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /** {@inheritDoc} */
-    @Override protected void warnCantBeInlined(IndexColumn col) {
-        String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
-
-        U.warn(log, "Column cannot be inlined into the index because it's type doesn't support inlining, " +
-            "index access may be slow due to additional page reads (change column type if possible) " +
-            "[cacheName=" + cctx.name() +
-            ", tableName=" + tblName +
-            ", idxName=" + idxName +
-            ", idxType=" + idxType +
-            ", colName=" + col.columnName +
-            ", columnType=" + InlineIndexHelper.nameTypeBycode(col.column.getType()) + ']'
-        );
-    }
-
-    /** {@inheritDoc} */
     @Override public int segmentsCount() {
         return segments.length;
     }
@@ -343,13 +367,15 @@ public class H2TreeIndex extends H2TreeIndexBase {
         assert upper == null || upper instanceof H2Row : upper;
 
         try {
-            int seg = threadLocalSegment();
+            QueryContext qctx = ses != null ? H2Utils.context(ses) : null;
+
+            int seg = segment(qctx);
 
             H2Tree tree = treeForRead(seg);
 
-            if (!cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
-                tree.compareRows((H2Row)lower, (H2Row)upper) == 0) {
-                H2Row row = tree.findOne((H2Row)lower, filter(qryCtxRegistry.getThreadLocal()), null);
+            // If it is known that only one row will be returned an optimization is employed
+            if (isSingleRowLookup(lower, upper, tree)) {
+                H2Row row = tree.findOne((H2Row)lower, filter(qctx), null);
 
                 if (row == null || isExpired(row))
                     return GridH2Cursor.EMPTY;
@@ -358,12 +384,29 @@ public class H2TreeIndex extends H2TreeIndexBase {
             }
             else {
                 return new H2Cursor(tree.find((H2Row)lower,
-                    (H2Row)upper, filter(qryCtxRegistry.getThreadLocal()), null));
+                    (H2Row)upper, filter(qctx), null));
             }
         }
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);
         }
+    }
+
+    /** */
+    private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
+        return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
+            tree.compareRows((H2Row)lower, (H2Row)upper) == 0 && hasAllIndexColumns(lower);
+    }
+
+    /** */
+    private boolean hasAllIndexColumns(SearchRow searchRow) {
+        for (Column c : columns) {
+            // Java null means that column is not specified in a search row, for SQL NULL a special constant is used
+            if (searchRow.getValue(c.getColumnId()) == null)
+                return false;
+        }
+
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -379,8 +422,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             return (H2CacheRow)tree.put(row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -390,18 +435,20 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** {@inheritDoc} */
     @Override public boolean putx(H2CacheRow row) {
         try {
-            InlineIndexHelper.setCurrentInlineIndexes(inlineIdxs);
-
             int seg = segmentForRow(cctx, row);
 
             H2Tree tree = treeForRead(seg);
+
+            InlineIndexHelper.setCurrentInlineIndexes(tree.inlineIndexes());
 
             assert cctx.shared().database().checkpointLockIsHeldByThread();
 
             return tree.putx(row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -423,8 +470,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             return tree.removex((H2Row)row);
         }
-        catch (IgniteCheckedException e) {
-            throw DbException.convert(e);
+        catch (Throwable t) {
+            ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
+
+            throw DbException.convert(t);
         }
         finally {
             InlineIndexHelper.clearCurrentInlineIndexes();
@@ -434,11 +483,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** {@inheritDoc} */
     @Override public long getRowCount(Session ses) {
         try {
-            int seg = threadLocalSegment();
+            QueryContext qctx = H2Utils.context(ses);
+
+            int seg = segment(qctx);
 
             H2Tree tree = treeForRead(seg);
-
-            QueryContext qctx = qryCtxRegistry.getThreadLocal();
 
             return tree.size(filter(qctx));
         }
@@ -448,10 +497,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /** {@inheritDoc} */
-    @Override public Cursor findFirstOrLast(Session session, boolean b) {
+    @Override public Cursor findFirstOrLast(Session ses, boolean b) {
         try {
-            H2Tree tree = treeForRead(threadLocalSegment());
-            QueryContext qctx = qryCtxRegistry.getThreadLocal();
+            QueryContext qctx = H2Utils.context(ses);
+
+            H2Tree tree = treeForRead(segment(qctx));
 
             H2Row found = b ? tree.findFirst(filter(qctx)) : tree.findLast(filter(qctx));
 
@@ -531,11 +581,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
+     * @param cctx Cache context.
+     * @param treeName Tree name.
      * @param segIdx Segment index.
      * @return RootPage for meta page.
      * @throws IgniteCheckedException If failed.
      */
-    private RootPage getMetaPage(int segIdx) throws IgniteCheckedException {
+    private static RootPage getMetaPage(GridCacheContext<?, ?> cctx, String treeName, int segIdx)
+        throws IgniteCheckedException {
         return cctx.offheap().rootPageForIndex(cctx.cacheId(), treeName, segIdx);
     }
 
@@ -554,17 +607,39 @@ public class H2TreeIndex extends H2TreeIndexBase {
         if (inlineIdxs == null)
             return;
 
-        List<InlineIndexHelper> inlineHelpers = getAvailableInlineColumns(indexColumns);
+        List<InlineIndexHelper> inlineHelpers = getAvailableInlineColumns(
+            affinityKey, cctx.name(), idxName, log, pk, table, indexColumns);
 
         assert inlineIdxs.size() == inlineHelpers.size();
 
         for (int pos = 0; pos < inlineHelpers.size(); ++pos)
             inlineIdxs.set(pos, inlineHelpers.get(pos));
+
+        for (H2Tree seg : segments)
+            seg.refreshColumnIds(inlineIdxs);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long totalRowCount(IndexingQueryCacheFilter partsFilter) {
+        try {
+            H2TreeFilterClosure filter = partsFilter == null ? null :
+                new H2TreeFilterClosure(partsFilter, null, cctx, log);
+
+            long cnt = 0;
+
+            for (int seg = 0; seg < segmentsCount(); seg++)
+                cnt += segments[seg].size(filter);
+
+            return cnt;
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public IndexLookupBatch createLookupBatch(TableFilter[] filters, int filter) {
-        QueryContext qctx = qryCtxRegistry.getThreadLocal();
+        QueryContext qctx = H2Utils.context(filters[filter].getSession());
 
         if (qctx == null || qctx.distributedJoinContext() == null || !getTable().isPartitioned())
             return null;
@@ -769,7 +844,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             GridCursor<H2Row> range = ((BPlusTree)t).find(first, last, filter, null);
 
             if (range == null)
-                range = H2Utils.EMPTY_CURSOR;
+                range = EMPTY_CURSOR;
 
             H2Cursor cur = new H2Cursor(range);
 
@@ -844,7 +919,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      *
      */
     @SuppressWarnings({"PublicInnerClass", "AssignmentOrReturnOfFieldWithMutableType"})
-    public class IndexColumnsInfo {
+    public static class IndexColumnsInfo {
         /** */
         private final int inlineSize;
 
@@ -855,15 +930,18 @@ public class H2TreeIndex extends H2TreeIndexBase {
         private final List<InlineIndexHelper> inlineIdx;
 
         /**
-         * @param colsList Index columns list
+         * @param cols Index columns.
+         * @param inlineIdxHelpers Inline helpers for index columns.
          * @param cfgInlineSize Inline size from cache config.
+         * @param maxInlineSize Max inline size.
          */
-        @SuppressWarnings("ZeroLengthArrayAllocation")
-        public IndexColumnsInfo(List<IndexColumn> colsList, int cfgInlineSize) {
-            cols = colsList.toArray(new IndexColumn[0]);
+        public IndexColumnsInfo(IndexColumn[] cols, List<InlineIndexHelper> inlineIdxHelpers, int cfgInlineSize,
+            int maxInlineSize) {
+            this.cols = cols;
 
-            inlineIdx = getAvailableInlineColumns(cols);
-            inlineSize = computeInlineSize(inlineIdx, cfgInlineSize, cctx.config());
+            inlineIdx = inlineIdxHelpers;
+
+            inlineSize = computeInlineSize(inlineIdx, cfgInlineSize, maxInlineSize);
         }
 
         /**

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt.join;
 
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
+import org.h2.engine.Session;
 import org.h2.index.Cursor;
 import org.h2.index.IndexLookupBatch;
 import org.h2.result.SearchRow;
@@ -46,11 +47,11 @@ public class ProxyDistributedLookupBatch implements IndexLookupBatch {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean addSearchRows(SearchRow first, SearchRow last) {
+    @Override public boolean addSearchRows(Session ses, SearchRow first, SearchRow last) {
         SearchRow firstProxy = rowDesc.prepareProxyIndexRow(first);
         SearchRow lastProxy = rowDesc.prepareProxyIndexRow(last);
 
-        return delegate.addSearchRows(firstProxy, lastProxy);
+        return delegate.addSearchRows(ses, firstProxy, lastProxy);
     }
 
     /** {@inheritDoc} */

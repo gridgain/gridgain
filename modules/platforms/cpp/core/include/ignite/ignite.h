@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,8 +26,10 @@
 
 #include <ignite/ignite_configuration.h>
 #include <ignite/cache/cache.h>
+#include <ignite/cache/cache_affinity.h>
 #include <ignite/transactions/transactions.h>
 #include <ignite/compute/compute.h>
+#include <ignite/cluster/ignite_cluster.h>
 
 namespace ignite
 {
@@ -53,6 +55,26 @@ namespace ignite
          */
         Ignite(impl::IgniteImpl* impl);
         
+        /**
+         * Get affinity service to provide information about data partitioning and distribution.
+         *
+         * @tparam K Cache affinity key type.
+         *
+         * @param cacheName Cache name.
+         * @return Cache data affinity service.
+         */
+        template<typename K>
+        cache::CacheAffinity<K> GetAffinity(const std::string& cacheName)
+        {
+            IgniteError err;
+
+            cache::CacheAffinity<K> ret(impl.Get()->GetAffinity(cacheName, err));
+
+            IgniteError::ThrowIfNeeded(err);
+
+            return ret;
+        }
+
         /**
          * Get Ignite instance name.
          *
@@ -205,13 +227,34 @@ namespace ignite
         transactions::Transactions GetTransactions();
 
         /**
-         * Get compute.
+         * Get cluster.
+         *
+         * This method should only be called on the valid instance.
+         *
+         * @return Cluster class instance.
+         */
+        cluster::IgniteCluster GetCluster();
+
+        /**
+         * Gets compute instance over all cluster nodes started in server mode.
          *
          * This method should only be called on the valid instance.
          *
          * @return Compute class instance.
          */
         compute::Compute GetCompute();
+
+        /**
+         * Gets compute instance over the specified cluster group. All operations
+         * on the returned compute instance will only include nodes from
+         * this cluster group.
+         *
+         * This method should only be called on the valid instance.
+         *
+         * @param grp Specified cluster group instance.
+         * @return Compute class instance over the specified cluster group.
+         */
+        compute::Compute GetCompute(cluster::ClusterGroup grp);
 
         /**
          * Get ignite binding.

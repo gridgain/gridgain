@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,10 +16,10 @@
 
 package org.apache.ignite.testframework.junits;
 
+import javax.management.MBeanServer;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import javax.management.MBeanServer;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -38,7 +38,6 @@ import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.IgniteLock;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
@@ -305,16 +304,6 @@ public class IgniteMock implements Ignite {
 
     /** {@inheritDoc} */
     @Override public <K, V> IgniteDataStreamer<K, V> dataStreamer(@Nullable String cacheName) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFileSystem fileSystem(String name) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Collection<IgniteFileSystem> fileSystems() {
         return null;
     }
 

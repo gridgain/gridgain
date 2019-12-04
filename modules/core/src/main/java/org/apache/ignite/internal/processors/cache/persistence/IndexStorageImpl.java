@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -31,7 +33,9 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeaf
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -84,7 +88,8 @@ public class IndexStorageImpl implements IndexStorage {
         final ReuseList reuseList,
         final long rootPageId,
         final boolean initNew,
-        final FailureProcessor failureProcessor
+        final FailureProcessor failureProcessor,
+        final PageLockListener lockLsnr
     ) {
         try {
             this.pageMem = pageMem;
@@ -94,8 +99,21 @@ public class IndexStorageImpl implements IndexStorage {
             this.allocSpace = allocSpace;
             this.reuseList = reuseList;
 
-            metaTree = new MetaTree(grpId, allocPartId, allocSpace, pageMem, wal, globalRmvId, rootPageId,
-                reuseList, MetaStoreInnerIO.VERSIONS, MetaStoreLeafIO.VERSIONS, initNew, failureProcessor);
+            metaTree = new MetaTree(
+                grpId,
+                allocPartId,
+                allocSpace,
+                pageMem,
+                wal,
+                globalRmvId,
+                rootPageId,
+                reuseList,
+                MetaStoreInnerIO.VERSIONS,
+                MetaStoreLeafIO.VERSIONS,
+                initNew,
+                failureProcessor,
+                lockLsnr
+            );
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -170,6 +188,29 @@ public class IndexStorageImpl implements IndexStorage {
         metaTree.destroy();
     }
 
+    /** {@inheritDoc} */
+    @Override public Collection<String> getIndexNames() throws IgniteCheckedException {
+        assert metaTree != null;
+
+        GridCursor<IndexItem> cursor = metaTree.find(null, null);
+
+        ArrayList<String> names = new ArrayList<>((int)metaTree.size());
+
+        while (cursor.next()) {
+            IndexItem item = cursor.get();
+
+            if (item != null)
+                names.add(new String(item.idxName));
+        }
+
+        return names;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean nameIsAssosiatedWithCache(String idxName, int cacheId) {
+        return !grpShared || idxName.startsWith(Integer.toString(cacheId));
+    }
+
     /**
      * Mask cache index name.
      *
@@ -177,10 +218,7 @@ public class IndexStorageImpl implements IndexStorage {
      * @return Masked name.
      */
     private String maskCacheIndexName(Integer cacheId, String idxName, int segment) {
-        if (grpShared)
-            idxName = Integer.toString(cacheId) + "_" + idxName;
-
-        return idxName + "%" + segment;
+        return (grpShared ? (Integer.toString(cacheId) + "_") : "") + idxName + "%" + segment;
     }
 
     /**
@@ -214,9 +252,23 @@ public class IndexStorageImpl implements IndexStorage {
             final IOVersions<? extends BPlusInnerIO<IndexItem>> innerIos,
             final IOVersions<? extends BPlusLeafIO<IndexItem>> leafIos,
             final boolean initNew,
-            @Nullable FailureProcessor failureProcessor
+            @Nullable FailureProcessor failureProcessor,
+            @Nullable PageLockListener lockLsnr
         ) throws IgniteCheckedException {
-            super(treeName("meta", "Meta"), cacheId, pageMem, wal, globalRmvId, metaPageId, reuseList, innerIos, leafIos, failureProcessor);
+            super(
+                treeName("meta", "Meta"),
+                cacheId,
+                null,
+                pageMem,
+                wal,
+                globalRmvId,
+                metaPageId,
+                reuseList,
+                innerIos,
+                leafIos,
+                failureProcessor,
+                lockLsnr
+            );
 
             this.allocPartId = allocPartId;
             this.allocSpace = allocSpace;

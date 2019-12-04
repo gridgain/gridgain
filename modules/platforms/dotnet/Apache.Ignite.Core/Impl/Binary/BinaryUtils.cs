@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -620,7 +620,9 @@ namespace Apache.Ignite.Core.Impl.Binary
                         if (((c2 & 0xC0) != 0x80) || ((c3 & 0xC0) != 0x80))
                             throw new BinaryObjectException("Malformed input around byte: " + (off - 1));
 
-                        res[charArrCnt++] = (char)(((c & 0x0F) << 12) |
+                        // ReSharper disable once ShiftExpressionRealShiftCountIsZero (reviewed - readability)
+                        res[charArrCnt++] = (char)(
+                            ((c & 0x0F) << 12) |
                             ((c2 & 0x3F) << 6) |
                             ((c3 & 0x3F) << 0));
 

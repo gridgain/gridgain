@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -42,6 +43,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 /**
  *
  */
+@WithSystemProperty(key="IGNITE_DUMP_THREADS_ON_FAILURE", value = "false")
 public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
     /** */
     private static final int CACHES = 10;
@@ -58,6 +60,14 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setConnectorConfiguration(null);
         cfg.setPeerClassLoadingEnabled(false);
         cfg.setTimeServerPortRange(200);
+
+        cfg.setDataStreamerThreadPoolSize(2);
+        cfg.setManagementThreadPoolSize(2);
+        cfg.setPeerClassLoadingThreadPoolSize(1);
+        cfg.setPublicThreadPoolSize(2);
+        cfg.setStripedPoolSize(2);
+        cfg.setSystemThreadPoolSize(2);
+        cfg.setUtilityCachePoolSize(2);
 
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSocketWriteTimeout(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
@@ -159,11 +169,11 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
             }
         }, CLIENTS, "start-client");
 
-        fut.get();
+        fut.get(getTestTimeout());
 
         log.info("Started all clients.");
 
-        waitForTopology(CLIENTS + 1);
+        waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
         checkNodes(CLIENTS + 1);
     }

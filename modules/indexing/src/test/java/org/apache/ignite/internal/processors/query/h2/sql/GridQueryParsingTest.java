@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,19 +39,19 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.command.Prepared;
 import org.h2.engine.Session;
-import org.h2.jdbc.JdbcConnection;
 import org.h2.message.DbException;
 import org.h2.table.Column;
 import org.h2.value.Value;
@@ -432,7 +432,6 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         checkQuery("insert into Person(name) values(null)");
         checkQuery("insert into Person() values()");
         checkQuery("insert into Person(name) values(null), (null)");
-        checkQuery("insert into Person(name) values(null),");
         checkQuery("insert into Person(name, parentName) values(null, null), (?, ?)");
         checkQuery("insert into Person(old, name) values(5, 'John',), (6, 'Jack')");
         checkQuery("insert into Person(old, name) values(5 * 3, null,)");
@@ -442,7 +441,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         checkQuery("insert into Person(old, name, parentName) values" +
             "(2016 - 1828, CONCAT('Leo', 'Tolstoy'), CONCAT(?, 'Tolstoy'))," +
             "(?, 'AlexanderPushkin', null)," +
-            "(ABS(1821 - 2016), CONCAT('Fyodor', null, UPPER(CONCAT(SQRT(?), 'dostoevsky'))), null),");
+            "(ABS(1821 - 2016), CONCAT('Fyodor', null, UPPER(CONCAT(SQRT(?), 'dostoevsky'))), null)");
         checkQuery("insert into Person(date, old, name, parentName, addrId) values " +
             "('20160112', 1233, 'Ivan Ivanov', 'Peter Ivanov', 123)");
         checkQuery("insert into Person(date, old, name, parentName, addrId) values " +
@@ -806,7 +805,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
             assertNotNull(val);
 
             assertEquals(col.getValue().columnName(), val.columnName());
-            assertEquals(col.getValue().column().getType(), val.column().getType());
+            assertEquals(col.getValue().column().getType().getValueType(), val.column().getType().getValueType());
         }
 
         assertEquals(exp.ifNotExists(), actual.ifNotExists());
@@ -884,7 +883,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
             GridSqlColumn col = actual.columns()[i];
 
             assertEquals(expCol.columnName(), col.columnName());
-            assertEquals(expCol.column().getType(), col.column().getType());
+            assertEquals(expCol.column().getType().getValueType(), col.column().getType().getValueType());
         }
 
         assertEquals(exp.ifNotExists(), actual.ifNotExists());
@@ -1021,16 +1020,10 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     /**
      *
      */
-    private JdbcConnection connection() throws Exception {
-        GridKernalContext ctx = ((IgniteEx)ignite).context();
+    private H2PooledConnection connection() throws Exception {
+        IgniteH2Indexing idx = (IgniteH2Indexing)((IgniteEx)ignite).context().query().getIndexing();
 
-        GridQueryProcessor qryProcessor = ctx.query();
-
-        IgniteH2Indexing idx = U.field(qryProcessor, "idx");
-
-        String schemaName = idx.schema(DEFAULT_CACHE_NAME);
-
-        return (JdbcConnection)idx.connections().connectionForThread().connection(schemaName);
+        return idx.connections().connection(idx.schema(DEFAULT_CACHE_NAME));
     }
 
     /**
@@ -1038,9 +1031,13 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
      */
     @SuppressWarnings("unchecked")
     private <T extends Prepared> T parse(String sql) throws Exception {
-        Session ses = (Session)connection().getSession();
+        try (H2PooledConnection conn = connection()) {
+            Session ses = H2Utils.session(conn);
 
-        return (T)ses.prepare(sql);
+            ses.setQueryContext(QueryContext.parseContext(null, true));
+
+            return (T)ses.prepare(sql);
+        }
     }
 
     /**
@@ -1079,7 +1076,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
 
         System.out.println(normalizeSql(res));
 
-        assertSqlEquals(U.firstNotNull(prepared.getPlanSQL(), prepared.getSQL()), res);
+        assertSqlEquals(U.firstNotNull(prepared.getPlanSQL(true), prepared.getSQL()), res);
     }
 
     @QuerySqlFunction

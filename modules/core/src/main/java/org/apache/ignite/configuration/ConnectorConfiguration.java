@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.ssl.SslContextFactory;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * REST access configuration.
@@ -202,7 +201,7 @@ public class ConnectorConfiguration {
      * @param secretKey REST secret key.
      * @return {@code this} for chaining.
      */
-    public ConnectorConfiguration setSecretKey(@Nullable String secretKey) {
+    public ConnectorConfiguration setSecretKey(String secretKey) {
         this.secretKey = secretKey;
 
         return this;
@@ -215,7 +214,7 @@ public class ConnectorConfiguration {
      * @see IgniteSystemProperties#IGNITE_JETTY_HOST
      * @see IgniteSystemProperties#IGNITE_JETTY_PORT
      */
-    @Nullable public String getSecretKey() {
+    public String getSecretKey() {
         return secretKey;
     }
 
@@ -344,18 +343,18 @@ public class ConnectorConfiguration {
     }
 
     /**
-     * Gets REST TCP server receive buffer size.
+     * Gets REST TCP server receive buffer size in bytes.
      *
-     * @return REST TCP server receive buffer size (0 for default).
+     * @return REST TCP server receive buffer size in bytes(0 for default).
      */
     public int getReceiveBufferSize() {
         return rcvBufSize;
     }
 
     /**
-     * Sets REST TCP server receive buffer size.
+     * Sets REST TCP server receive buffer size in bytes.
      *
-     * @param rcvBufSize Receive buffer size.
+     * @param rcvBufSize Receive buffer size in bytes.
      * @see #getReceiveBufferSize()
      * @return {@code this} for chaining.
      */
@@ -599,7 +598,7 @@ public class ConnectorConfiguration {
      * @see ConnectorMessageInterceptor
      * @return Interceptor.
      */
-    @Nullable public ConnectorMessageInterceptor getMessageInterceptor() {
+    public ConnectorMessageInterceptor getMessageInterceptor() {
         return msgInterceptor;
     }
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,7 +51,6 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxAb
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCoordinator;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
-import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
@@ -62,6 +61,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -398,8 +398,6 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
                         // Can't advance further at the moment.
                         peek = cur;
 
-                        it.beforeDetach();
-
                         break;
                     }
 
@@ -505,8 +503,6 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
                         else {
                             GridDhtCacheEntry entry0 = entry;
                             List<ClusterNode> backups0 = backups;
-
-                            it.beforeDetach();
 
                             updateFut.listen(new CI1<IgniteInternalFuture<GridCacheUpdateTxResult>>() {
                                 @Override public void apply(IgniteInternalFuture<GridCacheUpdateTxResult> fut) {
@@ -1032,7 +1028,11 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
             if (nearNodeId.equals(nodeId))
                 onDone(new ClusterTopologyCheckedException("Requesting node left the grid [nodeId=" + nodeId + ']'));
             else if (pending != null && pending.remove(nodeId) != null)
-                cctx.kernalContext().closure().runLocalSafe(() -> continueLoop(false));
+                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        continueLoop(false);
+                    }
+                });
         }
         catch (Exception e) {
             onDone(e);

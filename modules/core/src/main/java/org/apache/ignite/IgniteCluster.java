@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,10 +26,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
-import org.apache.ignite.lang.IgniteAsyncSupport;
-import org.apache.ignite.lang.IgniteAsyncSupported;
 import org.apache.ignite.lang.IgniteFuture;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents whole cluster (all available nodes) and also provides a handle on {@link #nodeLocalMap()} which
@@ -37,7 +34,12 @@ import org.jetbrains.annotations.Nullable;
  * between job executions on the grid. Additionally you can also ping, start, and restart remote nodes, map keys to
  * caching nodes, and get other useful information about topology.
  */
-public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
+public interface IgniteCluster extends ClusterGroup {
+    /**
+     * Maximum length of {@link IgniteCluster#tag()} tag.
+     */
+    public static final int MAX_TAG_LENGTH = 280;
+
     /**
      * Gets local grid node.
      *
@@ -118,8 +120,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * successful attempt doesn't mean that node was actually started and joined topology. For large
      * topologies (> 100s nodes) it can take over 10 minutes for all nodes to start. See individual
      * node logs for details.
-     * <p>
-     * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param file Configuration file.
      * @param restart Whether to stop existing nodes. If {@code true}, all existing
@@ -132,7 +132,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *      and error message (if any).
      * @throws IgniteException In case of error.
      */
-    @IgniteAsyncSupported
     public Collection<ClusterStartNodeResult> startNodes(File file, boolean restart, int timeout,
         int maxConn) throws IgniteException;
 
@@ -246,11 +245,9 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * successful attempt doesn't mean that node was actually started and joined topology. For large
      * topologies (> 100s nodes) it can take over 10 minutes for all nodes to start. See individual
      * node logs for details.
-     * <p>
-     * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param hosts Startup parameters.
-     * @param dflts Default values.
+     * @param dflts Optional default values.
      * @param restart Whether to stop existing nodes. If {@code true}, all existing
      *      nodes on the host will be stopped before starting new ones. If
      *      {@code false}, nodes will be started only if there are less
@@ -261,9 +258,8 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *      and error message (if any).
      * @throws IgniteException In case of error.
      */
-    @IgniteAsyncSupported
     public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-        @Nullable Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -350,7 +346,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * node logs for details.
      *
      * @param hosts Startup parameters.
-     * @param dflts Default values.
+     * @param dflts Options default values.
      * @param restart Whether to stop existing nodes. If {@code true}, all existing
      *      nodes on the host will be stopped before starting new ones. If
      *      {@code false}, nodes will be started only if there are less
@@ -361,7 +357,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(Collection<Map<String, Object>> hosts,
-        @Nullable Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Stops nodes satisfying optional set of predicates.
@@ -438,9 +434,9 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * If local client node disconnected from cluster returns future
      * that will be completed when client reconnected.
      *
-     * @return Future that will be completed when client reconnected.
+     * @return Future that will be completed when client reconnected ({@code null} if client is connected).
      */
-    @Nullable public IgniteFuture<?> clientReconnectFuture();
+    public IgniteFuture<?> clientReconnectFuture();
 
     /**
      * Checks Ignite grid is active or not active.
@@ -458,11 +454,27 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void active(boolean active);
 
     /**
+     * Checks Ignite grid is in read-only mode or not.
+     *
+     * @return {@code True} if grid is in read-only mode and {@code False} otherwise.
+     */
+    public boolean readOnly();
+
+    /**
+     * Enable or disable Ignite grid read-only mode.
+     *
+     * @param readOnly If {@code True} enable read-only mode. If {@code False} disable read-only mode.
+     * @throws IgniteException If Ignite grid isn't active.
+     */
+    public void readOnly(boolean readOnly) throws IgniteException;
+
+    /**
      * Gets current baseline topology. If baseline topology was not set, will return {@code null}.
      *
-     * @return Collection of nodes included to the current baseline topology.
+     * @return Collection of nodes included to the current baseline topology
+     *      (or {@code null} if baseline topology is not set).
      */
-    @Nullable public Collection<BaselineNode> currentBaselineTopology();
+    public Collection<BaselineNode> currentBaselineTopology();
 
     /**
      * Sets baseline topology. The cluster must be activated for this method to be called.
@@ -479,10 +491,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @param topVer Topology version to set.
      */
     public void setBaselineTopology(long topVer);
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override public IgniteCluster withAsync();
 
     /**
      * Disables write-ahead logging for specified cache. When WAL is disabled, changes are not logged to disk.
@@ -532,8 +540,43 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isWalEnabled(String cacheName);
 
     /**
+     * Cluster ID is a unique identifier automatically generated when cluster starts up for the very first time.
+     *
+     * It is a cluster-wide property so all nodes of the cluster (including client nodes) return the same value.
+     *
+     * In in-memory clusters ID is generated again upon each cluster restart.
+     * In clusters running in persistent mode cluster ID is stored to disk and is used even after full cluster restart.
+     *
+     * @return Unique cluster ID.
+     */
+    public UUID id();
+
+    /**
+     * User-defined tag describing the cluster.
+     *
+     * @return Current tag value same across all nodes of the cluster..
+     */
+    public String tag();
+
+    /**
+     * Enables user to add a specific label to the cluster e.g. to describe purpose of the cluster
+     * or any its characteristics.
+     * Tag is set cluster-wide,
+     * value set on one node will be distributed across all nodes (including client nodes) in the cluster.
+     *
+     * Maximum tag length is limited by {@link #MAX_TAG_LENGTH} value.
+     *
+     * @param tag New tag to be set.
+     *
+     * @throws IgniteCheckedException In case tag change is requested on inactive cluster
+     *  or concurrent tag change request was completed before the current one.
+     *  Also provided tag is checked for max length.
+     */
+    public void tag(String tag) throws IgniteCheckedException;
+
+    /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manuale.
+     * {@code False} If cluster in manual.
      */
     public boolean isBaselineAutoAdjustEnabled();
 

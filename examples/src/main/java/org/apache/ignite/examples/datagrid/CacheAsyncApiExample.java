@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,26 +58,17 @@ public class CacheAsyncApiExample {
 
             // Auto-close cache at the end of the example.
             try (IgniteCache<Integer, String> cache = ignite.getOrCreateCache(cfg)) {
-                // Enable asynchronous mode.
-                IgniteCache<Integer, String> asyncCache = cache.withAsync();
-
                 Collection<IgniteFuture<?>> futs = new ArrayList<>();
 
                 // Execute several puts asynchronously.
-                for (int i = 0; i < 10; i++) {
-                    asyncCache.put(i, String.valueOf(i));
-
-                    futs.add(asyncCache.future());
-                }
+                for (int i = 0; i < 10; i++)
+                    futs.add(cache.putAsync(i, String.valueOf(i)));
 
                 // Wait for completion of all futures.
                 futs.forEach(IgniteFuture::get);
 
                 // Execute get operation asynchronously.
-                asyncCache.get(1);
-
-                // Asynchronously wait for result.
-                asyncCache.<String>future().listen(fut ->
+                cache.getAsync(1).listen(fut ->
                     System.out.println("Get operation completed [value=" + fut.get() + ']'));
             }
             finally {

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import java.io.Serializable;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.trainers.transformers.BaggingUpstreamTransformer;
 
@@ -45,12 +46,14 @@ public interface DatasetBuilder<K, V> {
      * @param partDataBuilder Partition {@code data} builder.
      * @param <C> Type of a partition {@code context}.
      * @param <D> Type of a partition {@code data}.
+     * @param localLearningEnv Local learning environment.
      * @return Dataset.
      */
     public <C extends Serializable, D extends AutoCloseable> Dataset<C, D> build(
         LearningEnvironmentBuilder envBuilder,
         PartitionContextBuilder<K, V, C> partCtxBuilder,
-        PartitionDataBuilder<K, V, C, D> partDataBuilder);
+        PartitionDataBuilder<K, V, C, D> partDataBuilder,
+        LearningEnvironment localLearningEnv);
 
     /**
      * Returns new instance of {@link DatasetBuilder} with new {@link UpstreamTransformerBuilder} added

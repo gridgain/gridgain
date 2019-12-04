@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,14 +45,22 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     /** Version 1.2.0. */
     public static final ClientListenerProtocolVersion VER_1_2_0 = ClientListenerProtocolVersion.create(1, 2, 0);
 
-    /** Version 1.3.0. Added: Affinity Awareness support, IEP-23. */
+    /** Version 1.3.0. */
     public static final ClientListenerProtocolVersion VER_1_3_0 = ClientListenerProtocolVersion.create(1, 3, 0);
 
+    /** Version 1.4.0. Added: Partition Awareness, IEP-23. */
+    public static final ClientListenerProtocolVersion VER_1_4_0 = ClientListenerProtocolVersion.create(1, 4, 0);
+
+    /** Version 1.5.0. Added: Expiration Policy configuration. */
+    public static final ClientListenerProtocolVersion VER_1_5_0 = ClientListenerProtocolVersion.create(1, 5, 0);
+
     /** Default version. */
-    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_3_0;
+    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_5_0;
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
+        VER_1_5_0,
+        VER_1_4_0,
         VER_1_3_0,
         VER_1_2_0,
         VER_1_1_0,

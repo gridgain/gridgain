@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,13 +66,16 @@ public class SecurityPermissionSetBuilder {
     /** Default allow all.*/
     private boolean dfltAllowAll;
 
+    /** */
+    public static final SecurityPermissionSet ALLOW_ALL = create().defaultAllowAll(true).build();
+
     /**
      * Static factory method for create new permission builder.
      *
      * @return SecurityPermissionSetBuilder
      */
-    public static SecurityPermissionSetBuilder create(){
-        return new SecurityPermissionSetBuilder();
+    public static SecurityPermissionSetBuilder create() {
+        return new SecurityPermissionSetBuilder().defaultAllowAll(true);
     }
 
     /**
@@ -152,6 +155,23 @@ public class SecurityPermissionSetBuilder {
     }
 
     /**
+     * Append permission set.
+     *
+     * @param permSet Permission set.
+     * @return {@link SecurityPermissionSetBuilder} refer to same permission builder.
+     */
+    public SecurityPermissionSetBuilder appendPermissionSet(SecurityPermissionSet permSet) {
+        append(cachePerms, permSet.cachePermissions());
+        append(taskPerms, permSet.taskPermissions());
+        append(srvcPerms, permSet.servicePermissions());
+
+        if (permSet.systemPermissions() != null)
+            sysPerms.addAll(permSet.systemPermissions());
+
+        return this;
+    }
+
+    /**
      * Validate method use patterns.
      *
      * @param ptrns Pattern.
@@ -206,6 +226,22 @@ public class SecurityPermissionSetBuilder {
     }
 
     /**
+     * @param target Permissions map to append to.
+     * @param source Permissions than need to be appended.
+     */
+    private void append(
+        Map<String, Collection<SecurityPermission>> target,
+        Map<String, Collection<SecurityPermission>> source
+    ) {
+        assert target != null;
+
+        if (source != null) {
+            for (Map.Entry<String, Collection<SecurityPermission>> e : source.entrySet())
+                append(target, e.getKey(), e.getValue());
+        }
+    }
+
+    /**
      * @param permsMap Permissions map.
      * @param name Name.
      * @param perms Permission.
@@ -221,8 +257,19 @@ public class SecurityPermissionSetBuilder {
 
         Collection<SecurityPermission> col = permsMap.get(name);
 
-        if (col == null)
+        if (col == null) {
+            if (!(perms instanceof Set)) {
+                Set<SecurityPermission> set = U.newLinkedHashSet(perms.size());
+
+                set.addAll(perms);
+
+                perms = set;
+            }
+
+            assert perms instanceof Set;
+
             permsMap.put(name, perms);
+        }
         else
             col.addAll(perms);
     }

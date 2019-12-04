@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -614,6 +614,14 @@ BOOST_AUTO_TEST_CASE(TransactionAttributesNe)
     tx = transactions.GetTx();
 
     BOOST_CHECK(!tx.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(TransactionSetTxTimeoutOnPartitionMapExchange)
+{
+    cluster::IgniteCluster cluster = grid.GetCluster();
+
+    BOOST_CHECK_NO_THROW(cluster.SetTxTimeoutOnPartitionMapExchange(10000));
+    BOOST_CHECK_THROW(cluster.SetTxTimeoutOnPartitionMapExchange(-1), IgniteError);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

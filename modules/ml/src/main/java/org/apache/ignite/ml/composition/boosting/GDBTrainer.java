@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,7 +86,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> ModelsComposition fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> ModelsComposition fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                   Preprocessor<K, V> preprocessor) {
         return updateModel(null, datasetBuilder, preprocessor);
     }
@@ -185,11 +185,13 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
+        learningEnvironment().initDeployingContext(preprocessor);
 
         try (Dataset<EmptyContext, DecisionTreeData> dataset = builder.build(
             envBuilder,
             new EmptyContextBuilder<>(),
-            new DecisionTreeDataBuilder<>(preprocessor, false)
+            new DecisionTreeDataBuilder<>(preprocessor, false),
+            learningEnvironment()
         )) {
             IgniteBiTuple<Double, Long> meanTuple = dataset.compute(
                 data -> {
@@ -240,7 +242,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
     /**
      * GDB model.
      */
-    public static class GDBModel extends ModelsComposition {
+    public static final class GDBModel extends ModelsComposition {
         /** Serial version uid. */
         private static final long serialVersionUID = 3476661240155508004L;
 

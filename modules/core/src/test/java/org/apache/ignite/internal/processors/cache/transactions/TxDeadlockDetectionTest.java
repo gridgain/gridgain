@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,61 +109,57 @@ public class TxDeadlockDetectionTest extends GridCommonAbstractTest {
         IgniteInternalFuture<Long> restartFut = null;
 
         try {
-            restartFut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
-                @Override public void run() {
-                    while (!stop.get()) {
-                        try {
-                            U.sleep(500);
+            restartFut = GridTestUtils.runMultiThreadedAsync(() -> {
+                while (!stop.get()) {
+                    try {
+                        U.sleep(500);
 
-                            startGrid(NODES_CNT);
+                        startGrid(NODES_CNT);
 
-                            awaitPartitionMapExchange();
+                        awaitPartitionMapExchange();
 
-                            U.sleep(500);
+                        U.sleep(500);
 
-                            stopGrid(NODES_CNT);
-                        }
-                        catch (Exception ignored) {
-                            // No-op.
-                        }
+                        stopGrid(NODES_CNT);
+                    }
+                    catch (Exception ignored) {
+                        // No-op.
                     }
                 }
             }, 1, "restart-thread");
 
-            long stopTime = System.currentTimeMillis() + 2 * 60_000L;
+            long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
             for (int i = 0; System.currentTimeMillis() < stopTime; i++) {
                 log.info(">>> Iteration " + i);
 
                 final AtomicInteger threadCnt = new AtomicInteger();
 
-                IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
-                    @Override public void run() {
-                        int threadNum = threadCnt.getAndIncrement();
+                IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(() -> {
+                    int threadNum = threadCnt.getAndIncrement();
 
-                        Ignite ignite = ignite(threadNum % NODES_CNT);
+                    Ignite ignite = ignite(threadNum % NODES_CNT);
 
-                        IgniteCache<Integer, Integer> cache = ignite.cache(CACHE);
+                    IgniteCache<Integer, Integer> cache = ignite.cache(CACHE);
 
-                        try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, 700, 0)) {
-                            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                    try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, 700, 0)) {
+                        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                            for (int i = 0; i < 50; i++) {
-                                int key = rnd.nextInt(50);
+                        for (int i1 = 0; i1 < 50; i1++) {
+                            int key = rnd.nextInt(50);
 
-                                if (log.isDebugEnabled()) {
-                                    log.info(">>> Performs put [node=" + ((IgniteKernal)ignite).localNode() +
-                                        ", tx=" + tx + ", key=" + key + ']');
-                                }
-
-                                cache.put(key, 0);
+                            if (log.isDebugEnabled()) {
+                                log.info(">>> Performs put [node=" + ((IgniteKernal)ignite).localNode() +
+                                    ", tx=" + tx + ", key=" + key + ']');
                             }
 
-                            tx.commit();
+                            cache.put(key, 0);
                         }
-                        catch (Exception e) {
-                            e.printStackTrace();
-                        }
+
+                        tx.commit();
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }, NODES_CNT * 3, "tx-thread");
 

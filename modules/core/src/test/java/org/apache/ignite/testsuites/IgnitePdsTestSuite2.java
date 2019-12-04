@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsReser
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsWholeClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteShutdownOnSupplyMessageFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.SlowHistoricalRebalanceSmallHistoryTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointFailBeforeWriteMarkTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointFreeListTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.IgniteCheckpointDirtyPagesForLowLoadTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.filename.IgniteUidAsConsistentIdMigrationTest;
@@ -60,7 +61,9 @@ import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalF
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalHistoryReservationsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalIteratorExceptionDuringReadTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalIteratorSwitchSegmentTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalReplayingAfterRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalSerializerVersionTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionNoArchiverTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionSwitchOnTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalDeletionArchiveFsyncTest;
@@ -73,7 +76,9 @@ import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.Ignite
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.IgniteStandaloneWalIteratorInvalidCrcTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.IgniteWithoutArchiverWalIteratorInvalidCrcTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.reader.IgniteWalReaderTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.reader.FilteredWalIteratorTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneWalRecordsIteratorTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.scanner.WalScannerTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -189,12 +194,15 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsReserveWalSegmentsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsReserveWalSegmentsWithCompactionTest.class, ignoredTests);
 
+        GridTestUtils.addTestIfNeeded(suite, IgniteWalReplayingAfterRestartTest.class, ignoredTests);
+
         // new style folders with generated consistent ID test
         GridTestUtils.addTestIfNeeded(suite, IgniteUidAsConsistentIdMigrationTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteWalSerializerVersionTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, WalCompactionTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, WalCompactionNoArchiverTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WalCompactionSwitchOnTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, WalDeletionArchiveFsyncTest.class, ignoredTests);
@@ -203,6 +211,8 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, IgniteCheckpointDirtyPagesForLowLoadTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCorruptedStoreTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, CheckpointFailBeforeWriteMarkTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CheckpointFreeListTest.class, ignoredTests);
 
@@ -213,6 +223,10 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, IgniteNodeStoppedDuringDisableWALTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, StandaloneWalRecordsIteratorTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, FilteredWalIteratorTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, WalScannerTest.class, ignoredTests);
 
         //GridTestUtils.addTestIfNeeded(suite, IgniteWalRecoverySeveralRestartsTest.class, ignoredTests);
 

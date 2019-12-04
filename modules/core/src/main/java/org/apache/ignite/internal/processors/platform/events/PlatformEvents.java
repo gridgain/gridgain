@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,6 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractTarget;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.PlatformEventFilterListener;
-import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.utils.PlatformFutureUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteFuture;
@@ -69,7 +68,7 @@ public class PlatformEvents extends PlatformAbstractTarget {
     private static final int OP_GET_ENABLED_EVENTS = 10;
 
     /** */
-    private static final int OP_WITH_ASYNC = 11;
+    private static final int OP_RESERVED_1 = 11;
 
     /** */
     private static final int OP_IS_ENABLED = 12;
@@ -322,19 +321,6 @@ public class PlatformEvents extends PlatformAbstractTarget {
             default:
                 super.processOutStream(type, writer);
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public PlatformTarget processOutObject(int type) throws IgniteCheckedException {
-        switch (type) {
-            case OP_WITH_ASYNC:
-                if (events.isAsync())
-                    return this;
-
-                return new PlatformEvents(platformCtx, events.withAsync());
-        }
-
-        return super.processOutObject(type);
     }
 
     /** {@inheritDoc} */

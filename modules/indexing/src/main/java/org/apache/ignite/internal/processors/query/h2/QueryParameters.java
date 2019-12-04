@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +16,10 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
-
-import java.util.List;
 
 /**
  * Query parameters which vary between requests having the same execution plan. Essentially, these are the arguments
@@ -55,6 +54,15 @@ public class QueryParameters {
     private final List<Object[]> batchedArgs;
 
     /**
+     * Update internal batch size.
+     * Default is 1 to prevent deadlock on update where keys sequence are different in several concurrent updates.
+     */
+    private final int updateBatchSize;
+
+    /** Memory limit for query results. */
+    private final long maxMem;
+
+    /**
      * Create parameters from query.
      *
      * @param qry Query.
@@ -64,6 +72,7 @@ public class QueryParameters {
         NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
         boolean autoCommit = true;
         List<Object[]> batchedArgs = null;
+        long maxMem = 0;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
@@ -74,6 +83,8 @@ public class QueryParameters {
             autoCommit = qry0.isAutoCommit();
 
             batchedArgs = qry0.batchedArguments();
+
+            maxMem = qry0.getMaxMemory();
         }
 
         return new QueryParameters(
@@ -82,10 +93,12 @@ public class QueryParameters {
             qry.getTimeout(),
             qry.isLazy(),
             qry.getPageSize(),
-            qry.isDataPageScanEnabled(),
+            maxMem,
+            null,
             nestedTxMode,
             autoCommit,
-            batchedArgs
+            batchedArgs,
+            qry.getUpdateBatchSize()
         );
     }
 
@@ -97,10 +110,12 @@ public class QueryParameters {
      * @param timeout Timeout.
      * @param lazy Lazy flag.
      * @param pageSize Page size.
+     * @param maxMem Query memory limit.
      * @param dataPageScanEnabled Data page scan enabled flag.
      * @param nestedTxMode Nested TX mode.
      * @param autoCommit Auto-commit flag.
      * @param batchedArgs Batched arguments.
+     * @param updateBatchSize Update internal batch size.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     private QueryParameters(
@@ -109,20 +124,24 @@ public class QueryParameters {
         int timeout,
         boolean lazy,
         int pageSize,
+        long maxMem,
         Boolean dataPageScanEnabled,
         NestedTxMode nestedTxMode,
         boolean autoCommit,
-        List<Object[]> batchedArgs
+        List<Object[]> batchedArgs,
+        int updateBatchSize
     ) {
         this.args = args;
         this.parts = parts;
         this.timeout = timeout;
         this.lazy = lazy;
         this.pageSize = pageSize;
+        this.maxMem = maxMem;
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.nestedTxMode = nestedTxMode;
         this.autoCommit = autoCommit;
         this.batchedArgs = batchedArgs;
+        this.updateBatchSize = updateBatchSize;
     }
 
     /**
@@ -192,6 +211,25 @@ public class QueryParameters {
     }
 
     /**
+     * Gets update internal bach size.
+     * Default is 1 to prevent deadlock on update where keys sequance are different in several concurrent updates.
+     *
+     * @return Update internal batch size
+     */
+    public int updateBatchSize() {
+        return updateBatchSize;
+    }
+
+    /**
+     * Returns max memory available for query.
+     * .
+     * @return Memory limit in bytes.
+     */
+    public long maxMemory() {
+        return maxMem;
+    }
+
+    /**
      * Convert current batched arguments to a form with single arguments.
      *
      * @param args Arguments.
@@ -204,10 +242,12 @@ public class QueryParameters {
             this.timeout,
             this.lazy,
             this.pageSize,
+            this.maxMem,
             this.dataPageScanEnabled,
             this.nestedTxMode,
             this.autoCommit,
-            null
+            null,
+            this.updateBatchSize
         );
     }
 }

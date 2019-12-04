@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -103,7 +103,11 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
 
         gate = ctx.gate();
 
-        aff = new GridCacheAffinityProxy<>(ctx, ctx.cache().affinity());
+        GridCacheAdapter adapter = ctx.cache();
+        if (adapter == null)
+            throw new IllegalStateException(new CacheStoppedException(ctx.name()));
+
+        aff = new GridCacheAffinityProxy<>(ctx, adapter.affinity());
     }
 
     /**
@@ -451,30 +455,6 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
 
         try {
             return delegate.getAllOutTxAsync(keys);
-        }
-        finally {
-            gate.leave(prev);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isIgfsDataCache() {
-        CacheOperationContext prev = gate.enter(opCtx);
-
-        try {
-            return delegate.isIgfsDataCache();
-        }
-        finally {
-            gate.leave(prev);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public long igfsDataSpaceUsed() {
-        CacheOperationContext prev = gate.enter(opCtx);
-
-        try {
-            return delegate.igfsDataSpaceUsed();
         }
         finally {
             gate.leave(prev);

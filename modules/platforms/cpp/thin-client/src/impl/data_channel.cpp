@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,11 +30,11 @@ namespace ignite
         namespace thin
         {
             const ProtocolVersion DataChannel::VERSION_1_2_0(1, 2, 0);
-            const ProtocolVersion DataChannel::VERSION_1_3_0(1, 3, 0);
-            const ProtocolVersion DataChannel::VERSION_DEFAULT(VERSION_1_3_0);
+            const ProtocolVersion DataChannel::VERSION_1_4_0(1, 4, 0);
+            const ProtocolVersion DataChannel::VERSION_DEFAULT(VERSION_1_4_0);
 
             DataChannel::VersionSet::value_type supportedArray[] = {
-                DataChannel::VERSION_1_3_0,
+                DataChannel::VERSION_1_4_0,
                 DataChannel::VERSION_1_2_0,
             };
 
@@ -322,7 +322,7 @@ namespace ignite
                     return false;
                 }
 
-                if (propVer >= VERSION_1_3_0)
+                if (propVer >= VERSION_1_4_0)
                 {
                     Guid nodeGuid = reader.ReadGuid();
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,6 +67,10 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
 
 /**
  * Thin client message parser.
@@ -204,6 +208,23 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** */
     private static final short OP_BINARY_TYPE_PUT = 3003;
+
+    /* Cluster operations. */
+    /** */
+    private static final short OP_CLUSTER_IS_ACTIVE = 4000;
+
+    /** */
+    private static final short OP_CLUSTER_CHANGE_STATE = 4001;
+
+    /** */
+    private static final short OP_CLUSTER_CHANGE_WAL_STATE = 4002;
+
+    /** */
+    private static final short OP_CLUSTER_GET_WAL_STATE = 4003;
+
+    /* Custom queries working through processors registry. */
+    /** */
+    private static final short OP_CUSTOM_QUERY = 32_000;
 
     /** Marshaller. */
     private final GridBinaryMarshaller marsh;
@@ -378,6 +399,21 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_QUERY_SQL_FIELDS_CURSOR_GET_PAGE:
                 return new ClientCacheQueryNextPageRequest(reader);
+
+            case OP_CLUSTER_IS_ACTIVE:
+                return new ClientClusterIsActiveRequest(reader);
+
+            case OP_CLUSTER_CHANGE_STATE:
+                return new ClientClusterChangeStateRequest(reader);
+
+            case OP_CLUSTER_CHANGE_WAL_STATE:
+                return new ClientClusterWalChangeStateRequest(reader);
+
+            case OP_CLUSTER_GET_WAL_STATE:
+                return new ClientClusterWalGetStateRequest(reader);
+
+            case OP_CUSTOM_QUERY:
+                return new ClientCustomQueryRequest(reader);
         }
 
         return new ClientRawRequest(reader.readLong(), ClientStatus.INVALID_OP_CODE,

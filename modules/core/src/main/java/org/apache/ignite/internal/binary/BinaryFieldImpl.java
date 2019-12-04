@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.streams.BinaryByteBufferInputStream;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -32,6 +33,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryField;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.nonNull;
 
 /**
  * Implementation of binary field descriptor.
@@ -280,9 +282,28 @@ public class BinaryFieldImpl implements BinaryFieldEx {
      */
     public int fieldOrder(BinaryObjectExImpl obj) {
         if (typeId != obj.typeId()) {
-            throw new BinaryObjectException("Failed to get field because type ID of passed object differs" +
-                " from type ID this " + BinaryField.class.getSimpleName() + " belongs to [expected=" + typeId +
-                ", actual=" + obj.typeId() + ']');
+            BinaryType expType = ctx.metadata(typeId);
+            BinaryType actualType = obj.type();
+
+            String actualTypeName = null;
+
+            Exception actualTypeNameEx = null;
+
+            try {
+                actualTypeName = actualType.typeName();
+            }
+            catch (BinaryObjectException e) {
+                actualTypeNameEx = new BinaryObjectException("Failed to get actual binary type name.", e);
+            }
+
+            throw new BinaryObjectException(
+                "Failed to get field because type ID of passed object differs from type ID this " +
+                    BinaryField.class.getSimpleName() + " belongs to [expected=[typeId=" + typeId + ", typeName=" +
+                    (nonNull(expType) ? expType.typeName() : null) + "], actual=[typeId=" + actualType.typeId() +
+                    ", typeName=" + actualTypeName + "], fieldId=" + fieldId + ", fieldName=" + fieldName +
+                    ", fieldType=" + (nonNull(expType) ? expType.fieldTypeName(fieldName) : null) + ']',
+                actualTypeNameEx
+            );
         }
 
         int schemaId = obj.schemaId();

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,6 +75,9 @@ public class PlatformCompute extends PlatformAbstractTarget {
     /** */
     private static final int OP_WITH_NO_RESULT_CACHE = 9;
 
+    /** */
+    private static final int OP_WITH_EXECUTOR = 10;
+
     /** Compute instance. */
     private final IgniteComputeImpl compute;
 
@@ -98,6 +101,20 @@ public class PlatformCompute extends PlatformAbstractTarget {
         ClusterGroup platformGrp = grp.forAttribute(platformAttr, platformCtx.platform());
 
         computeForPlatform = (IgniteComputeImpl)grp.ignite().compute(platformGrp);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param platformCtx Context.
+     * @param compute Compute.
+     * @param computeForPlatform Compute over platform-specific nodes.
+     */
+    private PlatformCompute(PlatformContext platformCtx, IgniteComputeImpl compute,
+                            IgniteComputeImpl computeForPlatform) {
+        super(platformCtx);
+        this.compute = compute;
+        this.computeForPlatform = computeForPlatform;
     }
 
     /** {@inheritDoc} */
@@ -124,6 +141,14 @@ public class PlatformCompute extends PlatformAbstractTarget {
 
             case OP_EXEC_ASYNC:
                 return wrapListenable((PlatformListenable) executeJavaTask(reader, true));
+
+            case OP_WITH_EXECUTOR: {
+                String executorName = reader.readString();
+
+                return new PlatformCompute(platformCtx,
+                        (IgniteComputeImpl)compute.withExecutor(executorName),
+                        (IgniteComputeImpl)computeForPlatform.withExecutor(executorName));
+            }
 
             default:
                 return super.processInStreamOutObject(type, reader);

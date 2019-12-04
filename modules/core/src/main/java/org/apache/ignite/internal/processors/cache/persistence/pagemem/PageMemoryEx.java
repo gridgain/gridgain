@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,15 +17,17 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
-import org.apache.ignite.internal.stat.IoStatisticsHolder;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
-import org.jetbrains.annotations.Nullable;
+import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
  * Page memory with some persistence related additions.
@@ -84,6 +86,18 @@ public interface PageMemoryEx extends PageMemory {
 
     /**
      * @see #acquirePage(int, long)
+     * Sets additional flag indicating that page was not found in memory and had to be allocated.
+     *
+     * @param grpId Cache group ID.
+     * @param pageId Page ID.
+     * @param pageAllocated Flag is set if new page was allocated in offheap memory.
+     * @return Page.
+     * @throws IgniteCheckedException
+     */
+    public long acquirePage(int grpId, long pageId, AtomicBoolean pageAllocated) throws IgniteCheckedException;
+
+    /**
+     * @see #acquirePage(int, long)
      * Will read page from file if it is not present in memory
      *
      * @param grpId Cache group ID.
@@ -98,7 +112,7 @@ public interface PageMemoryEx extends PageMemory {
 
     /**
      * Heuristic method which allows a thread to check if it safe to start memory struture modifications
-     * in regard with checkpointing.
+     * in regard with checkpointing. May return false-negative result during or after partition eviction.
      *
      * @return {@code False} if there are too many dirty pages and a thread should wait for a
      *      checkpoint to begin.
@@ -113,8 +127,23 @@ public interface PageMemoryEx extends PageMemory {
      *
      * @return Collection of dirty page IDs.
      * @throws IgniteException If checkpoint has been already started and was not finished.
+     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint() throws IgniteException;
+    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToReplace) throws IgniteException;
+
+    /**
+     * Gets a collection of dirty page IDs since the last checkpoint and dirty pages with user data are presented. If a
+     * dirty page is being written after the checkpointing operation begun, the modifications will be written to a
+     * temporary buffer which will be flushed to the main memory after the checkpointing finished. This method must be
+     * called when no concurrent operations on pages are performed.
+     *
+     * @return Couple of collection of dirty page IDs and flag. The flag is {@code true}, if since last checkpoint at
+     * least one page with user data (not relates with system cache) became a dirty, and {@code false} otherwise.
+     * @throws IgniteException If checkpoint has been already started and was not finished.
+     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
+     */
+    public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
+        IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
      * Finishes checkpoint operation.
@@ -122,16 +151,22 @@ public interface PageMemoryEx extends PageMemory {
     public void finishCheckpoint();
 
     /**
-     * Gets page byte buffer for the checkpoint procedure.
+     * Prepare page for write during checkpoint.
+     *{@link PageStoreWriter} will be called when the page will be ready to write.
      *
      * @param pageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
-     *      the {@link #beginCheckpoint()} method call.
-     * @param outBuf Temporary buffer to write changes into.
+     *      the {@link #beginCheckpoint(IgniteInternalFuture)} method call.
+     * @param buf Temporary buffer to write changes into.
+     * @param pageWriter Checkpoint page write context.
      * @param tracker Checkpoint metrics tracker.
-     * @return {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
-     * @throws IgniteException If failed to obtain page data.
+     * @throws IgniteCheckedException If failed to obtain page data.
      */
-    @Nullable public Integer getForCheckpoint(FullPageId pageId, ByteBuffer outBuf, CheckpointMetricsTracker tracker);
+     public void checkpointWritePage(
+         FullPageId pageId,
+         ByteBuffer buf,
+         PageStoreWriter pageWriter,
+         CheckpointMetricsTracker tracker
+     ) throws IgniteCheckedException;
 
     /**
      * Marks partition as invalid / outdated.

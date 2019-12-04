@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,6 +54,14 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import org.apache.ignite.internal.processors.tracing.NoopTracing;
+import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -79,6 +87,10 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
+import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
+import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_WRITE;
+import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
 
@@ -127,6 +139,24 @@ public class GridNioServer<T> {
     /** */
     private static final boolean DISABLE_KEYSET_OPTIMIZATION =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_NO_SELECTOR_OPTS);
+
+    /** */
+    public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME = "outboundMessagesQueueSize";
+
+    /** */
+    public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC = "Number of messages waiting to be sent";
+
+    /** */
+    public static final String RECEIVED_BYTES_METRIC_NAME = "receivedBytes";
+
+    /** */
+    public static final String RECEIVED_BYTES_METRIC_DESC = "Total number of bytes received by current node";
+
+    /** */
+    public static final String SENT_BYTES_METRIC_NAME = "sentBytes";
+
+    /** */
+    public static final String SENT_BYTES_METRIC_DESC = "Total number of bytes sent by current node";
 
     /**
      *
@@ -212,8 +242,15 @@ public class GridNioServer<T> {
     /** Whether direct mode is used. */
     private final boolean directMode;
 
-    /** Metrics listener. */
-    private final GridNioMetricsListener metricsLsnr;
+    /** */
+    @Nullable private final MetricRegistry mreg;
+
+    /** Received bytes count metric. */
+    @Nullable private final AtomicLongMetric rcvdBytesCntMetric;
+
+    /** Sent bytes count metric. */
+    @Nullable private final AtomicLongMetric sentBytesCntMetric;
+
 
     /** Sessions. */
     private final GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions = new GridConcurrentHashSet<>();
@@ -247,6 +284,9 @@ public class GridNioServer<T> {
      */
     private final boolean readWriteSelectorsAssign;
 
+    /** Tracing processor. */
+    private Tracing tracing;
+
     /**
      * @param addr Address.
      * @param port Port.
@@ -266,12 +306,12 @@ public class GridNioServer<T> {
      * @param sndQueueLimit Send queue limit.
      * @param directMode Whether direct mode is used.
      * @param daemon Daemon flag to create threads.
-     * @param metricsLsnr Metrics listener.
      * @param writerFactory Writer factory.
      * @param skipRecoveryPred Skip recovery predicate.
      * @param msgQueueLsnr Message queue size listener.
      * @param readWriteSelectorsAssign If {@code true} then in/out connections are assigned to even/odd workers.
      * @param workerLsnr Worker lifecycle listener.
+     * @param mreg Metrics registry.
      * @param filters Filters for this server.
      * @throws IgniteCheckedException If failed.
      */
@@ -292,12 +332,13 @@ public class GridNioServer<T> {
         int sndQueueLimit,
         boolean directMode,
         boolean daemon,
-        GridNioMetricsListener metricsLsnr,
         GridNioMessageWriterFactory writerFactory,
         IgnitePredicate<Message> skipRecoveryPred,
         IgniteBiInClosure<GridNioSession, Integer> msgQueueLsnr,
         boolean readWriteSelectorsAssign,
         @Nullable GridWorkerListener workerLsnr,
+        @Nullable MetricRegistry mreg,
+        Tracing tracing,
         GridNioFilter... filters
     ) throws IgniteCheckedException {
         if (port != -1)
@@ -324,6 +365,7 @@ public class GridNioServer<T> {
         this.selectorSpins = selectorSpins;
         this.readWriteSelectorsAssign = readWriteSelectorsAssign;
         this.lsnr = lsnr;
+        this.tracing = tracing == null ? new NoopTracing() : tracing;
 
         filterChain = new GridNioFilterChain<>(log, lsnr, new HeadFilter(), filters);
 
@@ -381,7 +423,6 @@ public class GridNioServer<T> {
         }
 
         this.directMode = directMode;
-        this.metricsLsnr = metricsLsnr;
         this.writerFactory = writerFactory;
 
         this.skipRecoveryPred = skipRecoveryPred != null ? skipRecoveryPred : F.<Message>alwaysFalse();
@@ -402,7 +443,15 @@ public class GridNioServer<T> {
             }
         }
 
-        this.balancer = balancer0;
+        balancer = balancer0;
+
+        this.mreg = mreg;
+
+        rcvdBytesCntMetric = mreg == null ?
+            null : mreg.longMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
+
+        sentBytesCntMetric = mreg == null ?
+            null : mreg.longMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
     }
 
     /**
@@ -1132,8 +1181,8 @@ public class GridNioServer<T> {
             if (log.isTraceEnabled())
                 log.trace("Bytes received [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-            if (metricsLsnr != null)
-                metricsLsnr.onBytesReceived(cnt);
+            if (rcvdBytesCntMetric != null)
+                rcvdBytesCntMetric.add(cnt);
 
             ses.bytesReceived(cnt);
 
@@ -1189,15 +1238,17 @@ public class GridNioServer<T> {
                 }
 
                 if (!skipWrite) {
-                    int cnt = sockCh.write(buf);
+                    try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                        int cnt = sockCh.write(buf);
 
-                    if (log.isTraceEnabled())
-                        log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
+                        if (log.isTraceEnabled())
+                            log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-                    if (metricsLsnr != null)
-                        metricsLsnr.onBytesSent(cnt);
+                        if (sentBytesCntMetric != null)
+                            sentBytesCntMetric.add(cnt);
 
-                    ses.bytesSent(cnt);
+                        ses.bytesSent(cnt);
+                    }
                 }
                 else {
                     // For test purposes only (skipWrite is set to true in tests only).
@@ -1295,8 +1346,8 @@ public class GridNioServer<T> {
             if (cnt == 0)
                 return;
 
-            if (metricsLsnr != null)
-                metricsLsnr.onBytesReceived(cnt);
+            if (rcvdBytesCntMetric != null)
+                rcvdBytesCntMetric.add(cnt);
 
             ses.bytesReceived(cnt);
             onRead(cnt);
@@ -1376,8 +1427,8 @@ public class GridNioServer<T> {
                 if (sslNetBuf != null) {
                     int cnt = sockCh.write(sslNetBuf);
 
-                    if (metricsLsnr != null)
-                        metricsLsnr.onBytesSent(cnt);
+                    if (sentBytesCntMetric != null)
+                        sentBytesCntMetric.add(cnt);
 
                     ses.bytesSent(cnt);
 
@@ -1421,23 +1472,8 @@ public class GridNioServer<T> {
 
                     List<SessionWriteRequest> pendingRequests = new ArrayList<>(2);
 
-                    if (req != null) {
-                        msg = (Message)req.message();
-
-                        assert msg != null;
-
-                        if (writer != null)
-                            writer.setCurrentWriteClass(msg.getClass());
-
-                        finished = msg.writeTo(buf, writer);
-
-                        if (finished) {
-                            pendingRequests.add(req);
-
-                            if (writer != null)
-                                writer.reset();
-                        }
-                    }
+                    if (req != null)
+                        finished = writeToBuffer(writer, buf, req, pendingRequests);
 
                     // Fill up as many messages as possible to write buffer.
                     while (finished) {
@@ -1449,21 +1485,7 @@ public class GridNioServer<T> {
                         if (req == null)
                             break;
 
-                        msg = (Message)req.message();
-
-                        assert msg != null;
-
-                        if (writer != null)
-                            writer.setCurrentWriteClass(msg.getClass());
-
-                        finished = msg.writeTo(buf, writer);
-
-                        if (finished) {
-                            pendingRequests.add(req);
-
-                            if (writer != null)
-                                writer.reset();
-                        }
+                        finished = writeToBuffer(writer, buf, req, pendingRequests);
                     }
 
                     int sesBufLimit = buf.limit();
@@ -1493,8 +1515,8 @@ public class GridNioServer<T> {
                         if (log.isTraceEnabled())
                             log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-                        if (metricsLsnr != null)
-                            metricsLsnr.onBytesSent(cnt);
+                        if (sentBytesCntMetric != null)
+                            sentBytesCntMetric.add(cnt);
 
                         ses.bytesSent(cnt);
                     }
@@ -1533,6 +1555,45 @@ public class GridNioServer<T> {
         }
 
         /**
+         * @param writer Customizer of writing.
+         * @param buf Buffer to write.
+         * @param req Source of data.
+         * @param pendingRequests List of requests which was successfully written.
+         * @return {@code true} if message successfully written to buffer and {@code false} otherwise.
+         */
+        private boolean writeToBuffer(
+            MessageWriter writer,
+            ByteBuffer buf,
+            SessionWriteRequest req,
+            List<SessionWriteRequest> pendingRequests
+        ) {
+            Message msg;
+            boolean finished;
+            msg = (Message)req.message();
+
+            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                if (isTraceable())
+                    traceTag(SpanTags.MESSAGE, traceName(msg));
+
+                assert msg != null;
+
+                if (writer != null)
+                    writer.setCurrentWriteClass(msg.getClass());
+
+                finished = msg.writeTo(buf, writer);
+
+                if (finished) {
+                    pendingRequests.add(req);
+
+                    if (writer != null)
+                        writer.reset();
+                }
+
+                return finished;
+            }
+        }
+
+        /**
          * @param ses NIO session.
          * @param sockCh Socket channel.
          * @throws IOException If failed.
@@ -1550,8 +1611,8 @@ public class GridNioServer<T> {
             while ((buf = queue.peek()) != null) {
                 int cnt = sockCh.write(buf);
 
-                if (metricsLsnr != null)
-                    metricsLsnr.onBytesSent(cnt);
+                if (sentBytesCntMetric != null)
+                    sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
 
@@ -1620,26 +1681,10 @@ public class GridNioServer<T> {
                 }
             }
 
-            Message msg;
             boolean finished = false;
 
-            if (req != null) {
-                msg = (Message)req.message();
-
-                assert msg != null : req;
-
-                if (writer != null)
-                    writer.setCurrentWriteClass(msg.getClass());
-
-                finished = msg.writeTo(buf, writer);
-
-                if (finished) {
-                    onMessageWritten(ses, msg);
-
-                    if (writer != null)
-                        writer.reset();
-                }
-            }
+            if (req != null)
+                finished = writeToBuffer(ses, buf, req, writer);
 
             // Fill up as many messages as possible to write buffer.
             while (finished) {
@@ -1653,21 +1698,7 @@ public class GridNioServer<T> {
                 if (req == null)
                     break;
 
-                msg = (Message)req.message();
-
-                assert msg != null;
-
-                if (writer != null)
-                    writer.setCurrentWriteClass(msg.getClass());
-
-                finished = msg.writeTo(buf, writer);
-
-                if (finished) {
-                    onMessageWritten(ses, msg);
-
-                    if (writer != null)
-                        writer.reset();
-                }
+                finished = writeToBuffer(ses, buf, req, writer);
             }
 
             buf.flip();
@@ -1680,8 +1711,8 @@ public class GridNioServer<T> {
                 if (log.isTraceEnabled())
                     log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-                if (metricsLsnr != null)
-                    metricsLsnr.onBytesSent(cnt);
+                if (sentBytesCntMetric != null)
+                    sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
                 onWrite(cnt);
@@ -1703,6 +1734,41 @@ public class GridNioServer<T> {
             }
             else
                 buf.clear();
+        }
+
+        /**
+         * @param writer Customizer of writing.
+         * @param buf Buffer to write.
+         * @param req Source of data.
+         * @param ses Session for notification about writting.
+         * @return {@code true} if message successfully written to buffer and {@code false} otherwise.
+         */
+        private boolean writeToBuffer(GridSelectorNioSessionImpl ses, ByteBuffer buf, SessionWriteRequest req,
+            MessageWriter writer) {
+            Message msg;
+            boolean finished;
+            msg = (Message)req.message();
+
+            assert msg != null : req;
+
+            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                if (isTraceable())
+                    traceTag(SpanTags.MESSAGE, traceName(msg));
+
+                if (writer != null)
+                    writer.setCurrentWriteClass(msg.getClass());
+
+                finished = msg.writeTo(buf, writer);
+
+                if (finished) {
+                    onMessageWritten(ses, msg);
+
+                    if (writer != null)
+                        writer.reset();
+                }
+
+                return finished;
+            }
         }
 
         /** {@inheritDoc} */
@@ -2582,6 +2648,7 @@ public class GridNioServer<T> {
                     (InetSocketAddress)sockCh.getRemoteAddress(),
                     fut.accepted(),
                     sndQueueLimit,
+                    mreg,
                     writeBuf,
                     readBuf);
 
@@ -2693,7 +2760,8 @@ public class GridNioServer<T> {
             if (e != null) {
                 // Print stack trace only if has runtime exception in it's cause.
                 if (e.hasCause(IOException.class))
-                    U.warn(log, "Closing NIO session because of unhandled exception [cls=" + e.getClass() +
+                    U.warn(log, "Client disconnected abruptly due to network connection loss or because " +
+                        "the connection was left open on application shutdown. [cls=" + e.getClass() +
                         ", msg=" + e.getMessage() + ']');
                 else
                     U.error(log, "Closing NIO session because of unhandled exception.", e);
@@ -2842,14 +2910,17 @@ public class GridNioServer<T> {
      * Gets outbound messages queue size.
      *
      * @return Write queue size.
+     * @deprecated Will be removed in the next major release and replaced with new metrics API.
      */
+    @Deprecated
     public int outboundMessagesQueueSize() {
-        int res = 0;
+        if (mreg == null)
+            return -1;
 
-        for (GridSelectorNioSessionImpl ses : sessions)
-            res += ses.writeQueueSize();
-
-        return res;
+        return (int) mreg.longMetric(
+            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
+            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
+        ).value();
     }
 
     /**
@@ -2876,6 +2947,16 @@ public class GridNioServer<T> {
             super(igniteInstanceName, name, log, workerLsnr);
 
             this.selector = selector;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void cancel() {
+            super.cancel();
+
+            // If accept worker never was started then explicitly close selector, otherwise selector will be closed
+            // in finally block when workers thread will be stopped.
+            if (runner() == null)
+                closeSelector();
         }
 
         /** {@inheritDoc} */
@@ -3087,6 +3168,9 @@ public class GridNioServer<T> {
         /** */
         private final GridNioSession ses;
 
+        /** */
+        private Span span;
+
         /**
          * @param ses Session.
          * @param msg Message.
@@ -3094,6 +3178,7 @@ public class GridNioServer<T> {
         WriteRequestSystemImpl(GridNioSession ses, Object msg) {
             this.ses = ses;
             this.msg = msg;
+            this.span = MTC.span();
         }
 
         /** {@inheritDoc} */
@@ -3152,6 +3237,11 @@ public class GridNioServer<T> {
         }
 
         /** {@inheritDoc} */
+        @Override public Span span() {
+            return span;
+        }
+
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestSystemImpl.class, this);
         }
@@ -3176,6 +3266,9 @@ public class GridNioServer<T> {
         /** */
         private final IgniteInClosure<IgniteException> ackC;
 
+        /** Span for tracing. */
+        private Span span;
+
         /**
          * @param ses Session.
          * @param msg Message.
@@ -3190,6 +3283,7 @@ public class GridNioServer<T> {
             this.msg = msg;
             this.skipRecovery = skipRecovery;
             this.ackC = ackC;
+            this.span = MTC.span();
         }
 
         /** {@inheritDoc} */
@@ -3250,6 +3344,11 @@ public class GridNioServer<T> {
         }
 
         /** {@inheritDoc} */
+        @Override public Span span() {
+            return span;
+        }
+
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestImpl.class, this);
         }
@@ -3286,6 +3385,9 @@ public class GridNioServer<T> {
         @GridToStringExclude
         private boolean skipRecovery;
 
+        /** */
+        private Span span;
+
         /**
          * @param sockCh Socket channel.
          * @param accepted {@code True} if socket has been accepted.
@@ -3303,6 +3405,7 @@ public class GridNioServer<T> {
             this.sockCh = sockCh;
             this.accepted = accepted;
             this.meta = meta;
+            this.span = MTC.span();
         }
 
         /**
@@ -3320,6 +3423,7 @@ public class GridNioServer<T> {
 
             this.ses = ses;
             this.op = op;
+            this.span = MTC.span();
         }
 
         /**
@@ -3344,6 +3448,7 @@ public class GridNioServer<T> {
             this.ses = ses;
             this.op = op;
             this.msg = msg;
+            this.span = MTC.span();
         }
 
         /**
@@ -3371,6 +3476,7 @@ public class GridNioServer<T> {
             this.op = op;
             this.msg = commMsg;
             this.skipRecovery = skipRecovery;
+            this.span = MTC.span();
         }
 
         /** {@inheritDoc} */
@@ -3381,6 +3487,11 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public NioOperation operation() {
             return op;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Span span() {
+            return span;
         }
 
         /** {@inheritDoc} */
@@ -3643,9 +3754,6 @@ public class GridNioServer<T> {
         /** Whether direct mode is used. */
         private boolean directMode;
 
-        /** Metrics listener. */
-        private GridNioMetricsListener metricsLsnr;
-
         /** NIO filters. */
         private GridNioFilter[] filters;
 
@@ -3679,6 +3787,12 @@ public class GridNioServer<T> {
         /** Worker lifecycle listener to be used by server's worker threads. */
         private GridWorkerListener workerLsnr;
 
+        /** Metrics registry. */
+        private MetricRegistry mreg;
+
+        /** Tracing processor */
+        private Tracing tracing;
+
         /**
          * Finishes building the instance.
          *
@@ -3703,12 +3817,13 @@ public class GridNioServer<T> {
                 sndQueueLimit,
                 directMode,
                 daemon,
-                metricsLsnr,
                 writerFactory,
                 skipRecoveryPred,
                 msgQueueLsnr,
                 readWriteSelectorsAssign,
                 workerLsnr,
+                mreg,
+                tracing,
                 filters != null ? Arrays.copyOf(filters, filters.length) : EMPTY_FILTERS
             );
 
@@ -3727,6 +3842,16 @@ public class GridNioServer<T> {
          */
         public Builder<T> readWriteSelectorsAssign(boolean readWriteSelectorsAssign) {
             this.readWriteSelectorsAssign = readWriteSelectorsAssign;
+
+            return this;
+        }
+
+        /**
+         * @param tracing Tracing processor.
+         * @return This for chaining.
+         */
+        public Builder<T> tracing(Tracing tracing) {
+            this.tracing = tracing;
 
             return this;
         }
@@ -3885,16 +4010,6 @@ public class GridNioServer<T> {
         }
 
         /**
-         * @param metricsLsnr Metrics listener.
-         * @return This for chaining.
-         */
-        public Builder<T> metricsListener(GridNioMetricsListener metricsLsnr) {
-            this.metricsLsnr = metricsLsnr;
-
-            return this;
-        }
-
-        /**
          * @param filters NIO filters.
          * @return This for chaining.
          */
@@ -3970,6 +4085,16 @@ public class GridNioServer<T> {
          */
         public Builder<T> workerListener(GridWorkerListener workerLsnr) {
             this.workerLsnr = workerLsnr;
+
+            return this;
+        }
+
+        /**
+         * @param mreg Metrics registry.
+         * @return This for chaining.
+         */
+        public Builder<T> metricRegistry(MetricRegistry mreg) {
+            this.mreg = mreg;
 
             return this;
         }

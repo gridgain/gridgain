@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.resource.GridResourceIoc;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -281,7 +282,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> removeAllAsync() {
-        return ctx.closures().callLocalSafe(new Callable<Void>() {
+        return ctx.closures().callLocalSafe(new GridPlainCallable<Void>() {
             @Override public Void call() throws Exception {
                 removeAll();
 
@@ -340,7 +341,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         final boolean storeEnabled = ctx.readThrough();
 
-        return asyncOp(new Callable<Map<K, V>>() {
+        return asyncOp(new GridPlainCallable<Map<K, V>>() {
             @Override public Map<K, V> call() throws Exception {
                 return getAllInternal(keys, storeEnabled, taskName, deserializeBinary, skipVals, needVer);
             }
@@ -360,7 +361,8 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("ConstantConditions")
-    private Map<K, V> getAllInternal(@Nullable Collection<? extends K> keys,
+    private Map<K, V> getAllInternal(
+        @Nullable Collection<? extends K> keys,
         boolean storeEnabled,
         String taskName,
         boolean deserializeBinary,
@@ -525,18 +527,15 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
         if (success || !storeEnabled)
             return vals;
 
-        return getAllAsync(
-            keys,
-            null,
+        return this.<K, V>getAllAsync0(ctx.cacheKeysView(keys),
             opCtx == null || !opCtx.skipStore(),
             false,
             subjId,
             taskName,
             deserializeBinary,
-            opCtx != null && opCtx.recovery(),
-            /*force primary*/false,
             expiry,
             skipVals,
+            opCtx != null && opCtx.recovery(),
             needVer).get();
     }
 
@@ -763,7 +762,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         final boolean keepBinary = opCtx != null && opCtx.isKeepBinary();
 
-        return asyncOp(new Callable<Object>() {
+        return asyncOp(new GridPlainCallable<Object>() {
             @Override public Object call() throws Exception {
                 return updateAllInternal(op,
                     keys,
@@ -805,7 +804,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         final boolean keepBinary = opCtx != null && opCtx.isKeepBinary();
 
-        return asyncOp(new Callable<Object>() {
+        return asyncOp(new GridPlainCallable<Object>() {
             @Override public Object call() throws Exception {
                 return updateAllInternal(DELETE,
                     keys,

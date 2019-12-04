@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -188,11 +188,46 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Whether data page scan for queries is allowed. If not specified, server defines the default behaviour.",
         null, false);
 
-    /** affinity awareness flag. */
-    private BooleanProperty affinityAwareness = new BooleanProperty(
-        "affinityAwareness",
-        "Whether jdbc thin affinity awareness is enabled.",
+    /** Partition awareness flag. */
+    private BooleanProperty partitionAwareness = new BooleanProperty(
+        "partitionAwareness",
+        "Whether jdbc thin Partition Awareness is enabled.",
         false, false);
+
+    /** Update batch size (the size of internal batches are used for INSERT/UPDATE/DELETE operation). */
+    private IntegerProperty updateBatchSize = new IntegerProperty("updateBatchSize",
+        "Update bach size (the size of internal batches are used for INSERT/UPDATE/DELETE operation). " +
+            "Set to 1 to prevent deadlock on update where keys sequence are different " +
+            "in several concurrent updates.", null, false, 1, Integer.MAX_VALUE);
+
+    /** Partition awareness SQL cache size. */
+    private IntegerProperty partitionAwarenessSQLCacheSize = new IntegerProperty("partitionAwarenessSQLCacheSize",
+        "The size of sql cache that is used within Partition Awareness optimization.",
+        1_000, false, 1, Integer.MAX_VALUE);
+
+    /** Partition awareness partition distributions cache size. */
+    private IntegerProperty partitionAwarenessPartDistributionsCacheSize = new IntegerProperty(
+        "partitionAwarenessPartitionDistributionsCacheSize",
+        "The size of partition distributions cache that is used within Partition Awareness optimization.",
+        1_000, false, 1, Integer.MAX_VALUE);
+
+    /** Query memory limit. */
+    private LongProperty qryMaxMemory = new LongProperty("queryMaxMemory",
+        "Query max memory limit. Set to 0 to use default value. Set to negative value to disable memory limits.",
+        0L, false, Long.MIN_VALUE, Long.MAX_VALUE);
+
+    /** Query timeout. */
+    private IntegerProperty qryTimeout = new IntegerProperty("queryTimeout",
+        "Sets the number of seconds the driver will wait for a <code>Statement</code> object to execute." +
+            " Zero means there is no limits.",
+        0L, false, 0, Integer.MAX_VALUE);
+
+    /** JDBC connection timeout. */
+    private IntegerProperty connTimeout = new IntegerProperty("connectionTimeout",
+        "Sets the number of milliseconds JDBC client will waits for server to response." +
+            " Zero means there is no limits.",
+        0L, false, 0, Integer.MAX_VALUE);
+
 
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
@@ -204,7 +239,13 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         sslTrustAll, sslFactory,
         user, passwd,
         dataPageScanEnabled,
-        affinityAwareness
+        partitionAwareness,
+        updateBatchSize,
+        partitionAwarenessSQLCacheSize,
+        partitionAwarenessPartDistributionsCacheSize,
+        qryMaxMemory,
+        qryTimeout,
+        connTimeout
     };
 
     /** {@inheritDoc} */
@@ -511,13 +552,76 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isAffinityAwareness() {
-        return affinityAwareness.value();
+    @Override public boolean isPartitionAwareness() {
+        return partitionAwareness.value();
     }
 
     /** {@inheritDoc} */
-    @Override public void setAffinityAwareness(boolean affinityAwareness) {
-        this.affinityAwareness.setValue(affinityAwareness);
+    @Override public void setPartitionAwareness(boolean partitionAwareness) {
+        this.partitionAwareness.setValue(partitionAwareness);
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable Integer getUpdateBatchSize() {
+        return updateBatchSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setUpdateBatchSize(@Nullable Integer updateBatchSize) throws SQLException {
+        this.updateBatchSize.setValue(updateBatchSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getPartitionAwarenessSqlCacheSize() {
+        return partitionAwarenessSQLCacheSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setPartitionAwarenessSqlCacheSize(int partitionAwarenessSQLCacheSize)
+        throws SQLException {
+        this.partitionAwarenessSQLCacheSize.setValue(partitionAwarenessSQLCacheSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getPartitionAwarenessPartitionDistributionsCacheSize() {
+        return partitionAwarenessPartDistributionsCacheSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setPartitionAwarenessPartitionDistributionsCacheSize(
+        int partitionAwarenessPartDistributionsCacheSize) throws SQLException {
+        this.partitionAwarenessPartDistributionsCacheSize.setValue(
+            partitionAwarenessPartDistributionsCacheSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Long getQueryMaxMemory() {
+        return qryMaxMemory.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setQueryMaxMemory(Long maxMemory) throws SQLException {
+        this.qryMaxMemory.setValue(maxMemory);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Integer getQueryTimeout() {
+        return qryTimeout.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setQueryMaxMemory(@Nullable Integer timeout) throws SQLException {
+        qryTimeout.setValue(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getConnectionTimeout() {
+        return connTimeout.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setConnectionTimeout(@Nullable Integer timeout) throws SQLException {
+        connTimeout.setValue(timeout);
     }
 
     /**
@@ -1020,8 +1124,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         NumberProperty(String name, String desc, Number dfltVal, boolean required, Number min, Number max) {
             super(name, desc, dfltVal, null, required);
 
-            assert dfltVal != null;
-
             val = dfltVal;
 
             range = new Number[] {min, max};
@@ -1030,7 +1132,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         /** {@inheritDoc} */
         @Override void init(String str) throws SQLException {
             if (str == null)
-                val = (int)dfltVal;
+                val = dfltVal != null ? (Number)dfltVal : null;
             else {
                 try {
                     setValue(parse(str));
@@ -1051,7 +1153,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
         /** {@inheritDoc} */
         @Override String valueObject() {
-            return String.valueOf(val);
+            return val != null ? String.valueOf(val) : null;
         }
 
         /**
@@ -1102,8 +1204,40 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         /**
          * @return Property value.
          */
-        int value() {
-            return val.intValue();
+        Integer value() {
+            return val != null ? val.intValue() : null;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class LongProperty extends NumberProperty {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /**
+         * @param name Name.
+         * @param desc Description.
+         * @param dfltVal Default value.
+         * @param required {@code true} if the property is required.
+         * @param min Lower bound of allowed range.
+         * @param max Upper bound of allowed range.
+         */
+        LongProperty(String name, String desc, Number dfltVal, boolean required, long min, long max) {
+            super(name, desc, dfltVal, required, min, max);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected Number parse(String str) throws NumberFormatException {
+            return Long.parseLong(str);
+        }
+
+        /**
+         * @return Property value.
+         */
+        Long value() {
+            return val != null ? val.longValue() : 0L;
         }
     }
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.DiscoverySpiTestListener;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
@@ -1012,119 +1011,6 @@ public class GridMessagingSelfTest extends GridCommonAbstractTest implements Ser
                 return null;
             }
         }, NullPointerException.class, "Ouch! Argument cannot be null: msg");
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAsyncOld() throws Exception {
-        final AtomicInteger msgCnt = new AtomicInteger();
-
-        IgniteDiscoverySpi discoSpi = (IgniteDiscoverySpi)ignite2.configuration().getDiscoverySpi();
-
-        DiscoverySpiTestListener lsnr = new DiscoverySpiTestListener();
-
-        discoSpi.setInternalListener(lsnr);
-
-        assertFalse(ignite2.message().isAsync());
-
-        final IgniteMessaging msg = ignite2.message().withAsync();
-
-        assertTrue(msg.isAsync());
-
-        assertFalse(ignite2.message().isAsync());
-
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                msg.future();
-
-                return null;
-            }
-        }, IllegalStateException.class, null);
-
-        lsnr.blockCustomEvent(StartRoutineDiscoveryMessage.class, StartRoutineDiscoveryMessageV2.class);
-
-        final String topic = "topic";
-
-        UUID id = msg.remoteListen(topic, new P2<UUID, Object>() {
-            @Override public boolean apply(UUID nodeId, Object msg) {
-                System.out.println(Thread.currentThread().getName() +
-                    " Listener received new message [msg=" + msg + ", senderNodeId=" + nodeId + ']');
-
-                msgCnt.incrementAndGet();
-
-                return true;
-            }
-        });
-
-        Assert.assertNull(id);
-
-        IgniteFuture<UUID> starFut = msg.future();
-
-        Assert.assertNotNull(starFut);
-
-        U.sleep(500);
-
-        Assert.assertFalse(starFut.isDone());
-
-        lsnr.stopBlockCustomEvents();
-
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                msg.future();
-
-                return null;
-            }
-        }, IllegalStateException.class, null);
-
-        id = starFut.get();
-
-        Assert.assertNotNull(id);
-
-        Assert.assertTrue(starFut.isDone());
-
-        lsnr.blockCustomEvent(StopRoutineDiscoveryMessage.class);
-
-        message(ignite1.cluster().forRemotes()).send(topic, "msg1");
-
-        GridTestUtils.waitForCondition(new PA() {
-            @Override public boolean apply() {
-                return msgCnt.get() > 0;
-            }
-        }, 5000);
-
-        assertEquals(1, msgCnt.get());
-
-        msg.stopRemoteListen(id);
-
-        IgniteFuture<?> stopFut = msg.future();
-
-        Assert.assertNotNull(stopFut);
-
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                msg.future();
-
-                return null;
-            }
-        }, IllegalStateException.class, null);
-
-        U.sleep(500);
-
-        Assert.assertFalse(stopFut.isDone());
-
-        lsnr.stopBlockCustomEvents();
-
-        stopFut.get();
-
-        Assert.assertTrue(stopFut.isDone());
-
-        message(ignite1.cluster().forRemotes()).send(topic, "msg2");
-
-        U.sleep(1000);
-
-        assertEquals(1, msgCnt.get());
     }
 
     /**

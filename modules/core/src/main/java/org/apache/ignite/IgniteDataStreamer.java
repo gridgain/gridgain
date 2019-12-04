@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.stream.StreamReceiver;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Data streamer is responsible for streaming external data into cache. It achieves it by
@@ -358,7 +357,7 @@ public interface IgniteDataStreamer<K, V> extends AutoCloseable {
      * @throws IgniteDataStreamerTimeoutException If {@code timeout} is exceeded.
      * @see #allowOverwrite()
      */
-    public IgniteFuture<?> addData(K key, @Nullable V val) throws CacheException, IgniteInterruptedException,
+    public IgniteFuture<?> addData(K key, V val) throws CacheException, IgniteInterruptedException,
         IllegalStateException, IgniteDataStreamerTimeoutException;
 
     /**

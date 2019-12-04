@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,6 +68,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -76,6 +77,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -208,7 +210,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
         if (val == null)
             throw new IgniteCheckedException(GridRestCommandHandlerAdapter.missingParameter("val"));
 
-        return ctx.closure().callLocalSafe(new Callable<Object>() {
+        return ctx.closure().callLocalSafe(new GridPlainCallable<Object>() {
             @Override public Object call() throws Exception {
                 EntryProcessorResult<Boolean> res = cache.invoke(key, new EntryProcessor<Object, Object, Boolean>() {
                     @Override public Boolean process(MutableEntry<Object, Object> entry,
@@ -1008,7 +1010,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
         private IgniteEx ignite;
 
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             String cacheName) throws IgniteException {
 
             GridDiscoveryManager discovery = ignite.context().discovery();
@@ -1685,7 +1687,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
             GridKernalContext ctx) {
             assert c != null;
 
-            return ctx.closure().callLocalSafe(new Callable<Object>() {
+            return ctx.closure().callLocalSafe(new GridPlainCallable<Object>() {
                 @Override public Object call() throws Exception {
                     EntryProcessorResult<Boolean> res = c.invoke(key, new EntryProcessor<Object, Object, Boolean>() {
                         @Override public Boolean process(MutableEntry<Object, Object> entry,

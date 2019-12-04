@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -26,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Thread local SQL query context which is intended to be accessible from everywhere.
  */
-public class QueryContext {
+public class QueryContext implements H2QueryContext {
     /** Segment ID. */
     private final int segment;
 
@@ -42,13 +45,20 @@ public class QueryContext {
     /** */
     private final PartitionReservation reservations;
 
+    /** */
+    private QueryMemoryTracker memTracker;
+
+    /** {@code True} for local queries, {@code false} for distributed ones. */
+    private final boolean loc;
+
     /**
      * Constructor.
-     *
      * @param segment Index segment ID.
      * @param filter Filter.
      * @param distributedJoinCtx Distributed join context.
      * @param mvccSnapshot MVCC snapshot.
+     * @param memTracker Query memory tracker.
+     * @param loc {@code True} for local queries, {@code false} for distributed ones.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public QueryContext(
@@ -56,13 +66,34 @@ public class QueryContext {
         @Nullable IndexingQueryFilter filter,
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
-        @Nullable PartitionReservation reservations
+        @Nullable PartitionReservation reservations,
+        @Nullable QueryMemoryTracker memTracker,
+        boolean loc
     ) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
         this.mvccSnapshot = mvccSnapshot;
         this.reservations = reservations;
+        this.memTracker = memTracker;
+        this.loc = loc;
+    }
+
+    /**
+     * @param filter Filter.
+     * @param local Local query flag.
+     * @return Context for parsing.
+     */
+    public static QueryContext parseContext(@Nullable IndexingQueryFilter filter, boolean local) {
+        return new QueryContext(
+            0,
+            filter,
+            null,
+            null,
+            null,
+            null,
+            local
+        );
     }
 
     /**
@@ -103,6 +134,20 @@ public class QueryContext {
      */
     public IndexingQueryFilter filter() {
         return filter;
+    }
+
+    /**
+     * @return Query memory tracker.
+     */
+    @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
+        return memTracker;
+    }
+
+    /**
+     * @return {@code True} for local queries, {@code false} for distributed ones.
+     */
+    public boolean local() {
+        return loc;
     }
 
     /** {@inheritDoc} */

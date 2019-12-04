@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1639,20 +1639,6 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @return Future for getAllOutTx operation.
      */
     public IgniteInternalFuture<Map<K, V>> getAllOutTxAsync(Set<? extends K> keys);
-
-    /**
-     * Checks whether this cache is IGFS data cache.
-     *
-     * @return {@code True} in case this cache is IGFS data cache.
-     */
-    public boolean isIgfsDataCache();
-
-    /**
-     * Get current amount of used IGFS space in bytes.
-     *
-     * @return Amount of used IGFS space in bytes.
-     */
-    public long igfsDataSpaceUsed();
 
     /**
      * @param keepBinary Keep binary flag.

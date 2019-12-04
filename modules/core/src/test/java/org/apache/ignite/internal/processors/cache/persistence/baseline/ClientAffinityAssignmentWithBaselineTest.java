@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.baseline;
 
+import javax.cache.CacheException;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -30,7 +31,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
-import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -57,7 +57,6 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
 /**
@@ -156,20 +155,6 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
             IgniteNodeAttributes.ATTR_MACS_OVERRIDE, UUID.randomUUID().toString()));
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -286,6 +271,7 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
     private void testChangingBaselineDown(String cacheName, boolean lateActivation) throws Exception {
         IgniteEx ig0 = (IgniteEx)startGrids(DEFAULT_NODES_COUNT);
 
+        ig0.cluster().baselineAutoAdjustEnabled(false);
         IgniteEx client1 = null;
         IgniteEx client2 = null;
 
@@ -422,6 +408,7 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
     public void testCrossCacheTxs() throws Exception {
         IgniteEx ig0 = (IgniteEx)startGrids(DEFAULT_NODES_COUNT);
 
+        ig0.cluster().baselineAutoAdjustEnabled(false);
         ig0.cluster().active(true);
 
         AtomicBoolean stopLoad = new AtomicBoolean(false);
@@ -927,12 +914,8 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
                             threadProgressTracker.compute(Thread.currentThread().getId(),
                                 (tId, ops) -> ops == null ? 1 : ops + 1);
                         }
-                        catch (CacheException e) {
-                            if (e.getCause() instanceof ClusterTopologyException)
-                                ((ClusterTopologyException)e.getCause()).retryReadyFuture().get();
-                        }
-                        catch (ClusterTopologyException e) {
-                            e.retryReadyFuture().get();
+                        catch (CacheException | ClusterTopologyException e) {
+                            awaitTopology(e);
                         }
                     }
                 }
@@ -943,6 +926,20 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
                 }
             }
         });
+    }
+
+    /**
+     * Extract cause of type {@link ClusterTopologyException} (if exists) and awaits retry topology.
+     *
+     * @param e Original exception.
+     */
+    private void awaitTopology(Throwable e) {
+        ClusterTopologyException ex = X.cause(e, ClusterTopologyException.class);
+        IgniteFuture f;
+
+        // For now in MVCC case the topology exception doesn't have a remap future.
+        if (ex != null && (f = ex.retryReadyFuture()) != null)
+            f.get();
     }
 
     /**

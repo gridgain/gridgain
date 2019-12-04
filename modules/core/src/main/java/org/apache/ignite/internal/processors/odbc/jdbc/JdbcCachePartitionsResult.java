@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.jdbc.thin.JdbcThinAffinityAwarenessMappingGroup;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionAwarenessMappingGroup;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -31,7 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class JdbcCachePartitionsResult extends JdbcResult {
     /** Partitions Mappings. */
-    private List<JdbcThinAffinityAwarenessMappingGroup> mappings;
+    private List<JdbcThinPartitionAwarenessMappingGroup> mappings;
 
     /**
      * Default constructor.
@@ -46,7 +46,7 @@ public class JdbcCachePartitionsResult extends JdbcResult {
      * @param mappings Partitions mappings.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public JdbcCachePartitionsResult(List<JdbcThinAffinityAwarenessMappingGroup> mappings) {
+    public JdbcCachePartitionsResult(List<JdbcThinPartitionAwarenessMappingGroup> mappings) {
         super(CACHE_PARTITIONS);
 
         this.mappings = mappings;
@@ -55,7 +55,7 @@ public class JdbcCachePartitionsResult extends JdbcResult {
     /**
      * @return Partitons mappings.
      */
-    public List<JdbcThinAffinityAwarenessMappingGroup> getMappings() {
+    public List<JdbcThinPartitionAwarenessMappingGroup> getMappings() {
         return Collections.unmodifiableList(mappings);
     }
 
@@ -68,7 +68,7 @@ public class JdbcCachePartitionsResult extends JdbcResult {
 
         writer.writeInt(mappings.size());
 
-        for (JdbcThinAffinityAwarenessMappingGroup mappingGroup : mappings)
+        for (JdbcThinPartitionAwarenessMappingGroup mappingGroup : mappings)
             mappingGroup.writeBinary(writer, ver);
     }
 
@@ -76,12 +76,12 @@ public class JdbcCachePartitionsResult extends JdbcResult {
     @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
         throws BinaryObjectException {
         super.readBinary(reader, ver);
-        List<JdbcThinAffinityAwarenessMappingGroup> res = new ArrayList<>();
+        List<JdbcThinPartitionAwarenessMappingGroup> res = new ArrayList<>();
 
         int mappingsSize = reader.readInt();
 
         for (int i = 0; i < mappingsSize; i++)
-            res.add(JdbcThinAffinityAwarenessMappingGroup.readGroup(reader, ver));
+            res.add(JdbcThinPartitionAwarenessMappingGroup.readGroup(reader, ver));
 
         mappings = res;
     }

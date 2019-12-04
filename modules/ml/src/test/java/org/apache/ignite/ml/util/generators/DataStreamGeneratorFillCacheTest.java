@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,9 @@
 
 package org.apache.ignite.ml.util.generators;
 
+import java.util.Arrays;
+import java.util.UUID;
+import java.util.stream.DoubleStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -29,40 +32,28 @@ import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilde
 import org.apache.ignite.ml.dataset.primitive.builder.data.SimpleDatasetDataBuilder;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.dataset.primitive.data.SimpleDatasetData;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.util.generators.primitives.scalar.GaussRandomProducer;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-
-import java.util.UUID;
-import java.util.stream.DoubleStream;
 
 /**
  * Test for {@link DataStreamGenerator} cache filling.
  */
 public class DataStreamGeneratorFillCacheTest extends GridCommonAbstractTest {
     /** */
-    private Ignite ignite;
-
-    /** */
-    @Before
-    public void before() throws Exception {
-        ignite = startGrid();
-    }
-
-    /** */
-    @After
-    public void after() throws Exception {
-        ignite.close();
-    }
-
-    /** */
     @Test
     public void testCacheFilling() {
-        IgniteConfiguration configuration = new IgniteConfiguration().setPeerClassLoadingEnabled(true);
+        IgniteConfiguration configuration = new IgniteConfiguration()
+            .setDiscoverySpi(new TcpDiscoverySpi()
+                .setIpFinder(new TcpDiscoveryVmIpFinder()
+                    .setAddresses(Arrays.asList("127.0.0.1:47500..47509"))));
+
         String cacheName = "TEST_CACHE";
         CacheConfiguration<UUID, LabeledVector<Double>> cacheConfiguration =
             new CacheConfiguration<UUID, LabeledVector<Double>>(cacheName)
@@ -76,15 +67,21 @@ public class DataStreamGeneratorFillCacheTest extends GridCommonAbstractTest {
 
             LabeledDummyVectorizer<UUID, Double> vectorizer = new LabeledDummyVectorizer<>();
             CacheBasedDatasetBuilder<UUID, LabeledVector<Double>> datasetBuilder = new CacheBasedDatasetBuilder<>(ignite, cache);
+
+            IgniteFunction<SimpleDatasetData, StatPair> map = data ->
+                new StatPair(DoubleStream.of(data.getFeatures()).sum(), data.getRows());
+            LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
+            env.deployingContext().initByClientObject(map);
+
             try (CacheBasedDataset<UUID, LabeledVector<Double>, EmptyContext, SimpleDatasetData> dataset =
-                     datasetBuilder.build(LearningEnvironmentBuilder.defaultBuilder(),
-                         new EmptyContextBuilder<>(), new SimpleDatasetDataBuilder<>(vectorizer))) {
+                     datasetBuilder.build(
+                         LearningEnvironmentBuilder.defaultBuilder(),
+                         new EmptyContextBuilder<>(),
+                         new SimpleDatasetDataBuilder<>(vectorizer),
+                         env
+                     )) {
 
-                StatPair result = dataset.compute(
-                    data -> new StatPair(DoubleStream.of(data.getFeatures()).sum(), data.getRows()),
-                    StatPair::sum
-                );
-
+                StatPair result = dataset.compute(map, StatPair::sum);
                 assertEquals(datasetSize, result.countOfRows);
                 assertEquals(0.0, result.elementsSum / result.countOfRows, 1e-2);
             }

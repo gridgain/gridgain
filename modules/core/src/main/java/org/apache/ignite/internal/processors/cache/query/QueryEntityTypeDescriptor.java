@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Descriptor of type.
@@ -63,13 +64,24 @@ public class QueryEntityTypeDescriptor {
     private QueryEntityIndexDescriptor fullTextIdx;
 
     /** */
-    private Class<?> keyCls;
+    private final Class<?> keyCls;
 
     /** */
-    private Class<?> valCls;
+    private final Class<?> valCls;
 
     /** */
     private boolean valTextIdx;
+
+    /**
+     * Constructor.
+     *
+     * @param keyCls QueryEntity key class.
+     * @param valCls QueryEntity value class.
+     */
+    public QueryEntityTypeDescriptor(@NotNull Class<?> keyCls, @NotNull Class<?> valCls) {
+        this.keyCls = keyCls;
+        this.valCls = valCls;
+    }
 
     /**
      * @return Indexes.
@@ -139,28 +151,10 @@ public class QueryEntityTypeDescriptor {
     }
 
     /**
-     * Sets value class.
-     *
-     * @param valCls Value class.
-     */
-    public void valueClass(Class<?> valCls) {
-        this.valCls = valCls;
-    }
-
-    /**
      * @return Key class.
      */
     public Class<?> keyClass() {
         return keyCls;
-    }
-
-    /**
-     * Set key class.
-     *
-     * @param keyCls Key class.
-     */
-    public void keyClass(Class<?> keyCls) {
-        this.keyCls = keyCls;
     }
 
     /**
@@ -171,15 +165,16 @@ public class QueryEntityTypeDescriptor {
      * @param failOnDuplicate Fail on duplicate flag.
      */
     public void addProperty(QueryEntityClassProperty prop, boolean key, boolean failOnDuplicate) {
-        String name = prop.fullName();
+        if (props.put(prop.name(), prop) != null && failOnDuplicate) {
+            throw new CacheException("Property with name '" + prop.name() + "' already exists for " +
+                (key ? "key" : "value") + ": " +
+                "QueryEntity [key=" + keyCls.getName() + ", value=" + valCls.getName() + ']');
+        }
 
-        if (props.put(name, prop) != null && failOnDuplicate)
-            throw new CacheException("Property with name '" + name + "' already exists.");
-
-        fields.put(name, prop.type());
+        fields.put(prop.fullName(), prop.type());
 
         if (key)
-            keyProps.add(name);
+            keyProps.add(prop.fullName());
     }
 
     /**

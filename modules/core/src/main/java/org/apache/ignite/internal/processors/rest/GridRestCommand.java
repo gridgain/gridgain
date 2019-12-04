@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -174,6 +174,18 @@ public enum GridRestCommand {
 
     /** */
     CLUSTER_CURRENT_STATE("currentstate"),
+
+    /** */
+    CLUSTER_NAME("clustername"),
+
+    /** Current cluster name. */
+    CLUSTER_CURRENT_READ_ONLY_MODE("currentreadonlymode"),
+
+    /** */
+    CLUSTER_READ_ONLY_ENABLE("readonlyenable"),
+
+    /** */
+    CLUSTER_READ_ONLY_DISABLE("readonlydisable"),
 
     /** */
     BASELINE_CURRENT_STATE("baseline"),

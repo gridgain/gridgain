@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
 /**
  * @file
  * Declares ignite::binary::BinaryType class template and helping macros
- * to declare binary type specialisation for user types.
+ * to declare binary type specialization for user types.
  */
 
 #ifndef _IGNITE_BINARY_BINARY_TYPE
@@ -107,7 +107,7 @@ static bool IsNull(const T& obj) \
 
 /**
  * @def IGNITE_BINARY_GET_NULL_DEFAULT_CTOR(T)
- * Implementation of GetNull() function which returns an instance created with defult constructor.
+ * Implementation of GetNull() function which returns an instance created with default constructor.
  */
 #define IGNITE_BINARY_GET_NULL_DEFAULT_CTOR(T) \
 static void GetNull(T& dst) \
@@ -214,7 +214,7 @@ namespace ignite
             BinaryTypeNonNullableType<T> { };
 
         /**
-         * Templated binary type specification for pointers.
+         * BinaryType template specialization for pointers.
          */
         template <typename T>
         struct IGNITE_IMPORT_EXPORT BinaryType<T*>
@@ -291,7 +291,7 @@ namespace ignite
             /**
              * Get NULL value for the given binary type.
              *
-             * @param dst Null value for the type.
+             * @param dst NULL value for the type.
              */
             static void GetNull(T*& dst)
             {

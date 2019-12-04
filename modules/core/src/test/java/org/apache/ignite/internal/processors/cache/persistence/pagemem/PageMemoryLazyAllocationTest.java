@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -26,7 +25,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
@@ -223,16 +221,10 @@ public class PageMemoryLazyAllocationTest extends GridCommonAbstractTest {
 
     /** */
     private void createCacheAndPut(IgniteEx g, CacheMode cacheMode) {
-        createCacheAndPut(g, cacheMode, null);
-    }
-
-    /** */
-    private void createCacheAndPut(IgniteEx g, CacheMode cacheMode, IgnitePredicate<ClusterNode> fltr) {
         IgniteCache<Integer, String> cache =
             g.createCache(new CacheConfiguration<Integer, String>("my-cache-2")
                 .setCacheMode(cacheMode)
-                .setDataRegionName(LAZY_REGION)
-                .setNodeFilter(fltr));
+                .setDataRegionName(LAZY_REGION));
 
         cache.put(1, "test");
 

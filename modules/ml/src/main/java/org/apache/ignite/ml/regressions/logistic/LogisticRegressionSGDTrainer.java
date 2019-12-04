@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,7 +62,7 @@ public class LogisticRegressionSGDTrainer extends SingleLabelDatasetTrainer<Logi
     private long seed = 1234L;
 
     /** {@inheritDoc} */
-    @Override public <K, V> LogisticRegressionModel fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> LogisticRegressionModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> extractor) {
 
         return updateModel(null, datasetBuilder, extractor);
@@ -157,8 +157,8 @@ public class LogisticRegressionSGDTrainer extends SingleLabelDatasetTrainer<Logi
      * @param maxIterations The parameter value.
      * @return Model with new max number of iterations before convergence parameter value.
      */
-    public LogisticRegressionSGDTrainer withMaxIterations(int maxIterations) {
-        this.maxIterations = maxIterations;
+    public LogisticRegressionSGDTrainer withMaxIterations(double maxIterations) {
+        this.maxIterations = (int)maxIterations;
         return this;
     }
 
@@ -168,8 +168,8 @@ public class LogisticRegressionSGDTrainer extends SingleLabelDatasetTrainer<Logi
      * @param batchSize The size of learning batch.
      * @return Trainer with new batch size parameter value.
      */
-    public LogisticRegressionSGDTrainer withBatchSize(int batchSize) {
-        this.batchSize = batchSize;
+    public LogisticRegressionSGDTrainer withBatchSize(double batchSize) {
+        this.batchSize = (int)batchSize;
         return this;
     }
 
@@ -179,8 +179,8 @@ public class LogisticRegressionSGDTrainer extends SingleLabelDatasetTrainer<Logi
      * @param amountOfLocIterations The parameter value.
      * @return Trainer with new locIterations parameter value.
      */
-    public LogisticRegressionSGDTrainer withLocIterations(int amountOfLocIterations) {
-        this.locIterations = amountOfLocIterations;
+    public LogisticRegressionSGDTrainer withLocIterations(double amountOfLocIterations) {
+        this.locIterations = (int)amountOfLocIterations;
         return this;
     }
 

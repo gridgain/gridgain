@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -98,7 +98,7 @@ namespace ignite
                 {
                     const AffinityTopologyVersion* ver = rsp.GetAffinityTopologyVersion();
 
-                    if (ver != 0 && config.IsAffinityAwareness())
+                    if (ver != 0 && config.IsPartitionAwareness())
                         affinityManager.UpdateAffinity(*ver);
                 }
 
@@ -181,13 +181,13 @@ namespace ignite
                 void RefreshAffinityMapping(const std::vector<int32_t>& cacheIds);
 
                 /**
-                 * Checked whether affinity awareness enabled.
+                 * Checked whether Partition Awareness enabled.
                  *
-                 * @return @c true if affinity awareness enabled.
+                 * @return @c true if Partition Awareness enabled.
                  */
-                bool IsAffinityAwarenessEnabled() const
+                bool IsPartitionAwarenessEnabled() const
                 {
-                    return config.IsAffinityAwareness();
+                    return config.IsPartitionAwareness();
                 }
 
                 /**

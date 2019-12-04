@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -100,6 +100,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -310,7 +311,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
      */
     @Test
     public void testRebalance() throws Exception {
-        for (int iter = 0; iter < 5; iter++) {
+        for (int iter = 0; iter < SF.applyLB(5, 2); iter++) {
             log.info("Iteration: " + iter);
 
             final IgniteEx ignite = startGrid(1);
@@ -460,7 +461,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         int killedNode = rnd.nextInt(SRV_NODES);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < SF.applyLB(10, 2); i++) {
             List<Integer> keys = testKeys(grid(0).cache(DEFAULT_CACHE_NAME), 10);
 
             for (Integer key : keys) {
@@ -1330,7 +1331,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         int[] nodeParts = aff.primaryPartitions(node);
 
-        final int KEYS_PER_PART = 50;
+        final int KEYS_PER_PART = SF.applyLB(50, 10);
 
         for (int i = 0; i < parts; i++) {
             int part = nodeParts[i];
@@ -1617,7 +1618,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         QueryCursor<?> cur = qryClnCache.query(qry);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < SF.applyLB(10, 2); i++) {
             final int idx = i % (SRV_NODES - 1);
 
             log.info("Stop node: " + idx);
@@ -1730,7 +1731,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
         final List<T3<Object, Object, Object>> expEvtsLsnr = new ArrayList<>();
 
         try {
-            long stopTime = System.currentTimeMillis() + 60_000;
+            long stopTime = System.currentTimeMillis() + SF.applyLB(60_000, 10_000);
 
             // Start new filter each 5 sec.
             long startFilterTime = System.currentTimeMillis() + 5_000;
@@ -1752,11 +1753,22 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
                 if (System.currentTimeMillis() > startFilterTime) {
                     // Stop filter and check events.
                     if (dinQry != null) {
-                        dinQry.close();
+                        // If sync callback is used then we can close a query before checking notifications
+                        // because CQ listeners on a server side have a pending notification upon each
+                        // successfull cache update operations completion.
+                        if (!asyncCallback())
+                            dinQry.close();
 
-                        log.info("Continuous query listener closed. Await events: " + expEvtsNewLsnr.size());
+                        log.info("Await events: " + expEvtsNewLsnr.size());
 
                         checkEvents(expEvtsNewLsnr, dinLsnr, backups == 0);
+
+                        // If async callback is used and we close a query before checking notifications then
+                        // some updates can be missed because a callback submitted in parallel can be executed
+                        // after CQ is closed and no notification will be sent as a result.
+                        // So, we close CQ after the check.
+                        if (asyncCallback())
+                            dinQry.close();
                     }
 
                     dinLsnr = new CacheEventListener2();
@@ -2040,7 +2052,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
             }
         });
 
-        final long stopTime = System.currentTimeMillis() + 60_000;
+        final long stopTime = System.currentTimeMillis() + SF.applyLB(60_000, 10_000);
 
         final AtomicInteger valCntr = new AtomicInteger(0);
 
@@ -2316,7 +2328,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
     public void testNoEventLossOnTopologyChange() throws Exception {
         final int batchLoadSize = 2000;
 
-        final int restartCycles = 5;
+        final int restartCycles = SF.applyLB(5, 2);
 
         Ignite qryClient = startGrid(0);
 

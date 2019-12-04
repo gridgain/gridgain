@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import com.google.common.base.Strings;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -26,6 +27,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -55,13 +57,19 @@ public class IgniteTcBotInitNewPageTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> cache = ignite.cache(CACHE);
 
-        for (int i = 0; i < 1_000_000; i++)
-            cache.put(i, i);
+        try (IgniteDataStreamer<Object, Object> ds = ignite.dataStreamer(CACHE)) {
+            for (int i = 0; i < SF.apply(1_000_000); i++)
+                ds.addData(i, i);
+        }
 
         cache.clear();
 
-        for (int i = 0; i < 1_000; i++)
-            cache.put(i, Strings.repeat("Apache Ignite", 1000));
+        String longStr = Strings.repeat("Apache Ignite", SF.apply(1000));
+
+        try (IgniteDataStreamer<Object, Object> ds = ignite.dataStreamer(CACHE)) {
+            for (int i = 0; i < 1_000; i++)
+                ds.addData(i, longStr);
+        }
     }
 
     /** {@inheritDoc} */
@@ -75,7 +83,7 @@ public class IgniteTcBotInitNewPageTest extends GridCommonAbstractTest {
         cfg.setCacheConfiguration(ccfg);
 
         DataRegionConfiguration regCfg = new DataRegionConfiguration()
-            .setMaxSize(2L * 1024 * 1024 * 1024)
+            .setMaxSize(SF.apply(128) * 1024 * 1024)
             .setPersistenceEnabled(true);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()

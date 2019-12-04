@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,7 +77,9 @@ namespace Apache.Ignite.Core.Tests.NuGet
         {
             var cache = GetPersonCache();
 
+#pragma warning disable 618
             var sqlRes = cache.Query(new SqlQuery(typeof (Person), "age < ?", 30)).GetAll();
+#pragma warning restore 618
 
             Assert.AreEqual(29, sqlRes.Count);
             Assert.IsTrue(sqlRes.All(x => x.Value.Age < 30));
@@ -105,7 +107,8 @@ namespace Apache.Ignite.Core.Tests.NuGet
         {
             var ignite = Ignition.GetIgnite();
 
-            var cache = ignite.GetOrCreateCache<int, Person>(new CacheConfiguration("sqlCache", typeof(Person)));
+            var cache = ignite.GetOrCreateCache<int, Person>(
+                new CacheConfiguration("sqlCache", new QueryEntity(typeof(Person))));
 
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Person { Name = "Name" + x, Age = x }));
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,6 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.ReadTimeoutException;
-
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -99,7 +98,7 @@ public class CassandraHelper {
         while (e != null) {
             if (e instanceof InvalidQueryException &&
                 (TABLE_EXIST_ERROR1.matcher(e.getMessage()).matches() ||
-                	TABLE_EXIST_ERROR3.matcher(e.getMessage()).matches() ||
+                    TABLE_EXIST_ERROR3.matcher(e.getMessage()).matches() ||
                     KEYSPACE_EXIST_ERROR1.matcher(e.getMessage()).matches() ||
                     KEYSPACE_EXIST_ERROR2.matcher(e.getMessage()).matches()))
                 return true;

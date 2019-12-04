@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,22 @@
 
 package org.apache.ignite.internal.util;
 
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.management.DynamicMBean;
+import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -63,6 +79,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -134,8 +151,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -148,22 +165,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
-import javax.management.DynamicMBean;
-import javax.management.JMException;
-import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -231,6 +232,12 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.T1;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.T4;
+import org.apache.ignite.internal.util.typedef.T5;
+import org.apache.ignite.internal.util.typedef.T6;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -295,6 +302,12 @@ import static org.apache.ignite.internal.util.GridUnsafe.staticFieldOffset;
 @SuppressWarnings({"UnusedReturnValue", "RedundantStringConstructorCall"})
 public abstract class IgniteUtils {
     /** */
+    public static final long KB = 1024L;
+
+    /** */
+    public static final long MB = 1024L * 1024;
+
+    /** */
     public static final long GB = 1024L * 1024 * 1024;
 
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
@@ -336,12 +349,21 @@ public abstract class IgniteUtils {
     /** Default user version. */
     public static final String DFLT_USER_VERSION = "0";
 
+    /** Lock hold message. */
+    public static final String LOCK_HOLD_MESSAGE = "ReadLock held the lock more than ";
+
     /** Cache for {@link GridPeerDeployAware} fields to speed up reflection. */
     private static final ConcurrentMap<String, IgniteBiTuple<Class<?>, Collection<Field>>> p2pFields =
         new ConcurrentHashMap<>();
 
     /** Secure socket protocol to use. */
     private static final String HTTPS_PROTOCOL = "TLS";
+
+    /** Default working directory name. */
+    private static final String DEFAULT_WORK_DIR = "work";
+
+    /** Thread dump message. */
+    public static final String THREAD_DUMP_MSG = "Thread dump at ";
 
     /** Correct Mbean cache name pattern. */
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
@@ -559,10 +581,6 @@ public abstract class IgniteUtils {
     /** Ignite MBeans disabled flag. */
     public static boolean IGNITE_MBEANS_DISABLED =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_MBEANS_DISABLED);
-
-    /** Ignite test features enabled flag. */
-    public static boolean IGNITE_TEST_FEATURES_ENABLED =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED);
 
     /** */
     private static final boolean assertionsEnabled;
@@ -1066,10 +1084,34 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * @return Value of {@link System#nanoTime()} in microseconds.
+     * Convert milliseconds time interval to nanoseconds.
+     *
+     * @param millis Original time interval.
+     * @return Calculated time interval.
      */
-    public static long microTime() {
-        return System.nanoTime() / 1000;
+    public static long millisToNanos(long millis) {
+        return TimeUnit.MILLISECONDS.toNanos(millis);
+    }
+
+    /**
+     * Convert nanoseconds time interval to milliseconds.
+     *
+     * @param nanos Original time interval.
+     * @return Calculated time interval.
+     */
+    public static long nanosToMillis(long nanos) {
+        return TimeUnit.NANOSECONDS.toMillis(nanos);
+    }
+
+    /**
+     * Returns number of milliseconds passed after the given nanos timestamp.
+     *
+     * @param nanos Nanos timestamp.
+     * @return Number of milliseconds passed after the given nanos timestamp.
+     * @see System#nanoTime()
+     */
+    public static long millisSinceNanos(long nanos) {
+        return nanosToMillis(System.nanoTime() - nanos);
     }
 
     /**
@@ -1377,25 +1419,37 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Performs thread dump and prints all available info to the given log.
+     * Performs thread dump and prints all available info to the given log with WARN logging level.
      *
      * @param log Logger.
      */
     public static void dumpThreads(@Nullable IgniteLogger log) {
+        dumpThreads(log, false);
+    }
+
+    /**
+     * Performs thread dump and prints all available info to the given log
+     * with WARN or ERROR logging level depending on {@code isErrorLevel} parameter.
+     *
+     * @param log Logger.
+     * @param isErrorLevel {@code true} if thread dump must be printed with ERROR logging level,
+     *      {@code false} if thread dump must be printed with WARN logging level.
+     */
+    public static void dumpThreads(@Nullable IgniteLogger log, boolean isErrorLevel) {
         ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
 
         final Set<Long> deadlockedThreadsIds = getDeadlockedThreadIds(mxBean);
 
         if (deadlockedThreadsIds.isEmpty())
-            warn(log, "No deadlocked threads detected.");
+            logMessage(log, "No deadlocked threads detected.", isErrorLevel);
         else
-            warn(log, "Deadlocked threads detected (see thread dump below) " +
-                "[deadlockedThreadsCnt=" + deadlockedThreadsIds.size() + ']');
+            logMessage(log, "Deadlocked threads detected (see thread dump below) " +
+                "[deadlockedThreadsCnt=" + deadlockedThreadsIds.size() + ']', isErrorLevel);
 
         ThreadInfo[] threadInfos =
             mxBean.dumpAllThreads(mxBean.isObjectMonitorUsageSupported(), mxBean.isSynchronizerUsageSupported());
 
-        GridStringBuilder sb = new GridStringBuilder("Thread dump at ")
+        GridStringBuilder sb = new GridStringBuilder(THREAD_DUMP_MSG)
             .a(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z").format(new Date(U.currentTimeMillis()))).a(NL);
 
         for (ThreadInfo info : threadInfos) {
@@ -1412,7 +1466,20 @@ public abstract class IgniteUtils {
 
         sb.a(NL);
 
-        warn(log, sb.toString());
+        logMessage(log, sb.toString(), isErrorLevel);
+    }
+
+    /**
+     * @param log Logger.
+     * @param msg Message.
+     * @param isErrorLevel {@code true} if message must be printed with ERROR logging level,
+     *      {@code false} if message must be printed with WARN logging level.
+     */
+    private static void logMessage(@Nullable IgniteLogger log, String msg, boolean isErrorLevel) {
+        if (isErrorLevel)
+            error(log, msg);
+        else
+            warn(log, msg);
     }
 
     /**
@@ -1465,6 +1532,18 @@ public abstract class IgniteUtils {
         ThreadInfo threadInfo = mxBean.getThreadInfo(threadId, Integer.MAX_VALUE);
 
         printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
+    }
+
+    /**
+     * @return Stacktrace of current thread as {@link String}.
+     */
+    public static String stackTrace() {
+        GridStringBuilder sb = new GridStringBuilder();
+        long threadId = Thread.currentThread().getId();
+
+        printStackTrace(threadId, sb);
+
+        return sb.toString();
     }
 
     /**
@@ -1928,6 +2007,17 @@ public abstract class IgniteUtils {
      * @param <E> Entry type
      * @return Sealed collection.
      */
+    public static <E> Set<E> sealSet(Collection<E> c) {
+        return Collections.unmodifiableSet(new HashSet<>(c));
+    }
+
+    /**
+     * Seal collection.
+     *
+     * @param c Collection to seal.
+     * @param <E> Entry type
+     * @return Sealed collection.
+     */
     public static <E> List<E> sealList(Collection<E> c) {
         return Collections.unmodifiableList(new ArrayList<>(c));
     }
@@ -2190,6 +2280,11 @@ public abstract class IgniteUtils {
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
                 @Override public int compare(NetworkInterface itf1, NetworkInterface itf2) {
                     // Interfaces whose name starts with 'e' should go first.
+                    if (itf1.getName().charAt(0) < 'e')
+                        return 1;
+
+                    if (itf2.getName().charAt(0) < 'e')
+                        return -1;
                     return itf1.getName().compareTo(itf2.getName());
                 }
             });
@@ -2369,6 +2464,33 @@ public abstract class IgniteUtils {
         Collections.sort(macs);
 
         return macs;
+    }
+
+    /**
+     * Sort addresses: IPv4 & real addresses first.
+     *
+     * @param addrs Addresses to sort.
+     * @return Sorted list.
+     */
+    public static Collection<String> sortAddresses(Collection<String> addrs) {
+        if (F.isEmpty(addrs))
+            return Collections.emptyList();
+
+        int sz = addrs.size();
+
+        List<SortableAddress> sorted = new ArrayList<>(sz);
+
+        for (String addr : addrs)
+            sorted.add(new SortableAddress(addr));
+
+        Collections.sort(sorted);
+
+        Collection<String> res = new ArrayList<>(sz);
+
+        for (SortableAddress sa : sorted)
+            res.add(sa.address());
+
+        return res;
     }
 
     /**
@@ -3591,6 +3713,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Converts size in bytes to human-readable size in megabytes.
+     *
+     * @param sizeInBytes Size of any object (file, memory region etc) in bytes.
+     * @return Size converted to megabytes.
+     */
+    public static int sizeInMegabytes(long sizeInBytes) {
+        return (int)(sizeInBytes / MB);
+    }
+
+    /**
      * Deletes file or directory with all sub-directories and files.
      *
      * @param path File or directory to delete.
@@ -4253,6 +4385,32 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Quietly closes given {@link Socket} ignoring possible checked exception.
+     *
+     * @param sock Socket to close. If it's {@code null} - it's no-op.
+     */
+    public static void closeQuiet(@Nullable Socket sock) {
+        if (sock == null)
+            return;
+
+        try {
+            // Avoid java 12 bug see https://bugs.openjdk.java.net/browse/JDK-8219658
+            sock.shutdownOutput();
+            sock.shutdownInput();
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+
+        try {
+            sock.close();
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+    }
+
+    /**
      * Quietly releases file lock ignoring all possible exceptions.
      *
      * @param lock File lock. If it's {@code null} - it's no-op.
@@ -4359,6 +4517,20 @@ public abstract class IgniteUtils {
 
         if (log.isQuiet())
             quiet(false, shortMsg);
+    }
+
+    /**
+     * Logs warning message in both verbose and quiet modes.
+     *
+     * @param log Logger to use.
+     * @param msg Message to log.
+     * @param e Optional exception.
+     */
+    public static void quietAndWarn(IgniteLogger log, Object msg, @Nullable Throwable e) {
+        warn(log, msg, e);
+
+        if (log.isQuiet())
+            quiet(false, msg);
     }
 
     /**
@@ -4695,9 +4867,16 @@ public abstract class IgniteUtils {
         assert name != null;
         assert itf != null;
 
-        DynamicMBean mbean = new IgniteStandardMXBean(impl, itf);
+        DynamicMBean mbean;
 
-        mbean.getMBeanInfo();
+        if (impl instanceof DynamicMBean) {
+            mbean = (DynamicMBean)impl;
+        }
+        else {
+            mbean = new IgniteStandardMXBean(impl, itf);
+
+            mbean.getMBeanInfo();
+        }
 
         return mbeanSrv.registerMBean(mbean, name).getObjectName();
     }
@@ -5287,6 +5466,45 @@ public abstract class IgniteUtils {
             map.put((K)in.readObject(), (V)in.readObject());
 
         return map;
+    }
+
+
+    /**
+     * Calculate a hashCode for an array.
+     *
+     * @param obj Object.
+     */
+    public static int hashCode(Object obj) {
+        if(obj == null)
+            return 0;
+
+        if (obj.getClass().isArray()) {
+            if (obj instanceof byte[])
+                return Arrays.hashCode((byte[])obj);
+            if (obj instanceof short[])
+                return Arrays.hashCode((short[])obj);
+            if (obj instanceof int[])
+                return Arrays.hashCode((int[])obj);
+            if (obj instanceof long[])
+                return Arrays.hashCode((long[])obj);
+            if (obj instanceof float[])
+                return Arrays.hashCode((float[])obj);
+            if (obj instanceof double[])
+                return Arrays.hashCode((double[])obj);
+            if (obj instanceof char[])
+                return Arrays.hashCode((char[])obj);
+            if (obj instanceof boolean[])
+                return Arrays.hashCode((boolean[])obj);
+
+            int result = 1;
+
+            for (Object element : (Object[])obj)
+                result = 31 * result + hashCode(element);
+
+            return result;
+        }
+        else
+            return obj.hashCode();
     }
 
     /**
@@ -7268,6 +7486,102 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Create one-element tuple.
+     *
+     * @param v0 First element.
+     * @param <V0> Type of first element.
+     * @return Tuple.
+     */
+    public static <V0> T1<V0> tuple(V0 v0) {
+        return new T1<>(v0);
+    }
+
+    /**
+     * Create two-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @return Tuple.
+     */
+    public static <V0, V1> T2<V0, V1> tuple(V0 v0, V1 v1) {
+        return new T2<>(v0, v1);
+    }
+
+    /**
+     * Create three-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2> T3<V0, V1, V2> tuple(V0 v0, V1 v1, V2 v2) {
+        return new T3<>(v0, v1, v2);
+    }
+
+    /**
+     * Create four-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3> T4<V0, V1, V2, V3> tuple(V0 v0, V1 v1, V2 v2, V3 v3) {
+        return new T4<>(v0, v1, v2, v3);
+    }
+
+    /**
+     * Create five-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4> T5<V0, V1, V2, V3, V4> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4) {
+        return new T5<>(v0, v1, v2, v3, v4);
+    }
+
+    /**
+     * Create six-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param v5 Sixth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @param <V5> Type of sixth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4, V5> T6<V0, V1, V2, V3, V4, V5> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4, V5 v5) {
+        return new T6<>(v0, v1, v2, v3, v4, v5);
+    }
+
+    /**
      * Utility method creating {@link JMException} with given cause.
      *
      * @param e Cause exception.
@@ -7279,6 +7593,19 @@ public abstract class IgniteUtils {
         x.initCause(e);
 
         return x;
+    }
+
+    /**
+     * Ignore {@link RuntimeException}.
+     *
+     * @param runnable Runnable.
+     */
+    public static void ignoreRuntimeException(Runnable runnable) {
+        try {
+            runnable.run();
+        }
+        catch (RuntimeException ignore) {
+        }
     }
 
     /**
@@ -9212,15 +9539,39 @@ public abstract class IgniteUtils {
         else if (!F.isEmpty(IGNITE_WORK_DIR))
             workDir = new File(IGNITE_WORK_DIR);
         else if (!F.isEmpty(userIgniteHome))
-            workDir = new File(userIgniteHome, "work");
+            workDir = new File(userIgniteHome, DEFAULT_WORK_DIR);
         else {
-            String tmpDirPath = System.getProperty("java.io.tmpdir");
+            String userDir = System.getProperty("user.dir");
 
-            if (tmpDirPath == null)
-                throw new IgniteCheckedException("Failed to create work directory in OS temp " +
-                    "(property 'java.io.tmpdir' is null).");
+            if (F.isEmpty(userDir))
+                throw new IgniteCheckedException(
+                    "Failed to resolve Ignite work directory. Either IgniteConfiguration.setWorkDirectory or " +
+                        "one of the system properties (" + IGNITE_HOME + ", " +
+                        IgniteSystemProperties.IGNITE_WORK_DIR + ") must be explicitly set."
+                );
 
-            workDir = new File(tmpDirPath, "ignite" + File.separator + "work");
+            File igniteDir = new File(userDir, "ignite");
+
+            try {
+                igniteDir.mkdirs();
+
+                File readme = new File(igniteDir, "README.txt");
+
+                if (!readme.exists()) {
+                    U.writeStringToFile(readme,
+                        "This is GridGain working directory that contains information that \n" +
+                        "    GridGain nodes need in order to function normally.\n" +
+                        "Don't delete it unless you're sure you know what you're doing.\n\n" +
+                        "You can change the location of working directory with \n" +
+                        "    igniteConfiguration.setWorkingDirectory(location) or \n" +
+                        "    <property name=\"workingDirectory\" value=\"location\"/> in IgniteConfiguration <bean>.\n");
+                }
+            }
+            catch (Exception e) {
+                // Ignore.
+            }
+
+            workDir = new File(igniteDir, DEFAULT_WORK_DIR);
         }
 
         if (!workDir.isAbsolute())
@@ -9503,6 +9854,32 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Creates new {@link Set} based on {@link ConcurrentHashMap}.
+     *
+     * @param <T> Type of elements.
+     * @return New concurrent set.
+     */
+    public static <T> Set<T> newConcurrentHashSet() {
+        return Collections.newSetFromMap(new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Constructs a new {@link Set} based on {@link ConcurrentHashMap},
+     * containing the elements in the specified collection.
+     *
+     * @param <T> Type of elements.
+     * @param c Source collection.
+     * @return New concurrent set.
+     */
+    public static <T> Set<T> newConcurrentHashSet(Collection<T> c) {
+        Set<T> set = newConcurrentHashSet();
+
+        set.addAll(c);
+
+        return set;
+    }
+
+    /**
      * Creates new map that limited by size.
      *
      * @param limit Limit for size.
@@ -9515,6 +9892,60 @@ public abstract class IgniteUtils {
             return new GridLeanMap<>(limit);
 
         return new HashMap<>(capacity(limit), 0.75f);
+    }
+
+    /**
+     * Create a map with single key-value pair.
+     *
+     * @param k Key.
+     * @param v Value.
+     * @return Map.
+     */
+    public static <K, V> Map<K, V> map(K k, V v) {
+        GridLeanMap<K, V> map = new GridLeanMap<>(1);
+
+        map.put(k, v);
+
+        return map;
+    }
+
+    /**
+     * Create a map with two key-value pairs.
+     *
+     * @param k1 Key 1.
+     * @param v1 Value 1.
+     * @param k2 Key 2.
+     * @param v2 Value 2.
+     * @return Map.
+     */
+    public static <K, V> Map<K, V> map(K k1, V v1, K k2, V v2) {
+        GridLeanMap<K, V> map = new GridLeanMap<>(2);
+
+        map.put(k1, v1);
+        map.put(k2, v2);
+
+        return map;
+    }
+
+    /**
+     * Create a map with three key-value pairs.
+     *
+     * @param k1 Key 1.
+     * @param v1 Value 1.
+     * @param k2 Key 2.
+     * @param v2 Value 2.
+     * @param k3 Key 3.
+     * @param v3 Value 3.
+     * @return Map.
+     */
+    public static <K, V> Map<K, V> map(K k1, V v1, K k2, V v2, K k3, V v3) {
+        GridLeanMap<K, V> map = new GridLeanMap<>(3);
+
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
+
+        return map;
     }
 
     /**
@@ -9698,7 +10129,7 @@ public abstract class IgniteUtils {
     public static <T extends R, R> List<R> arrayList(Collection<T> c, @Nullable IgnitePredicate<? super T>... p) {
         assert c != null;
 
-        return arrayList(c, c.size(), p);
+        return arrayList(c.iterator(), c.size(), p);
     }
 
     /**
@@ -9717,14 +10148,16 @@ public abstract class IgniteUtils {
      * @param p Optional filters.
      * @return Resulting array list.
      */
-    public static <T extends R, R> List<R> arrayList(Iterable<T> c, int cap,
+    public static <T extends R, R> List<R> arrayList(Iterator<T> c, int cap,
         @Nullable IgnitePredicate<? super T>... p) {
         assert c != null;
         assert cap >= 0;
 
         List<R> list = new ArrayList<>(cap);
 
-        for (T t : c) {
+        while (c.hasNext()) {
+            T t = c.next();
+
             if (F.isAll(t, p))
                 list.add(t);
         }
@@ -10378,7 +10811,7 @@ public abstract class IgniteUtils {
                 maxCpBufSize = cpBufSize;
         }
 
-        long adjustedWalArchiveSize = maxCpBufSize * 4;
+        long adjustedWalArchiveSize = maxCpBufSize * 256;
 
         if (adjustedWalArchiveSize > dsCfg.getMaxWalArchiveSize()) {
             if (log != null)
@@ -10540,20 +10973,6 @@ public abstract class IgniteUtils {
             y /= 2;
 
         return (int)y;
-    }
-
-    /**
-     * @param lock Lock.
-     */
-    public static ReentrantReadWriteLockTracer lockTracer(ReadWriteLock lock) {
-        return new ReentrantReadWriteLockTracer(lock);
-    }
-
-    /**
-     * @param lock Lock.
-     */
-    public static LockTracer lockTracer(Lock lock) {
-        return new LockTracer(lock);
     }
 
     /**
@@ -10727,11 +11146,6 @@ public abstract class IgniteUtils {
 
             case GridIoPolicy.UTILITY_CACHE_POOL:
                 parallelismLvl = cfg.getUtilityCacheThreadPoolSize();
-
-                break;
-
-            case GridIoPolicy.IGFS_POOL:
-                parallelismLvl = cfg.getIgfsThreadPoolSize();
 
                 break;
 
@@ -11108,102 +11522,125 @@ public abstract class IgniteUtils {
         };
     }
 
-    /**
-     *
-     */
-    public static class ReentrantReadWriteLockTracer implements ReadWriteLock {
+    /** */
+    public static class ReentrantReadWriteLockTracer extends ReentrantReadWriteLock {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Read lock. */
-        private final LockTracer readLock;
+        private final ReadLockTracer readLock;
 
         /** Write lock. */
-        private final LockTracer writeLock;
+        private final WriteLockTracer writeLock;
+
+        /** Lock print threshold. */
+        private long readLockThreshold;
+
+        /** */
+        private IgniteLogger log;
 
         /**
-         * @param delegate Delegate.
+         * @param delegate RWLock delegate.
+         * @param kctx Kernal context.
+         * @param readLockThreshold ReadLock threshold timeout.
+         *
          */
-        public ReentrantReadWriteLockTracer(ReadWriteLock delegate) {
-            readLock = new LockTracer(delegate.readLock());
-            writeLock = new LockTracer(delegate.writeLock());
+        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, GridKernalContext kctx, long readLockThreshold) {
+            log = kctx.cache().context().logger(getClass());
+
+            readLock = new ReadLockTracer(delegate, log, readLockThreshold);
+
+            writeLock = new WriteLockTracer(delegate);
+
+            this.readLockThreshold = readLockThreshold;
         }
 
         /** {@inheritDoc} */
-        @NotNull @Override public Lock readLock() {
+        @Override public ReadLock readLock() {
             return readLock;
         }
 
         /** {@inheritDoc} */
-        @NotNull @Override public Lock writeLock() {
+        @Override public WriteLock writeLock() {
             return writeLock;
         }
 
-        /**
-         *
-         */
-        public LockTracer getReadLock() {
-            return readLock;
-        }
-
-        /**
-         *
-         */
-        public LockTracer getWriteLock() {
-            return writeLock;
+        /** */
+        public long lockWaitThreshold() {
+            return readLockThreshold;
         }
     }
 
-    /**
-     *
-     */
-    public static class LockTracer implements Lock {
+    /** */
+    private static class ReadLockTracer extends ReentrantReadWriteLock.ReadLock {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Delegate. */
-        private final Lock delegate;
+        private final ReentrantReadWriteLock.ReadLock delegate;
 
-        private final AtomicLong cnt = new AtomicLong();
+        /** */
+        private static final ThreadLocal<T2<Integer, Long>> READ_LOCK_HOLDER_TS =
+            ThreadLocal.withInitial(() -> new T2<>(0, 0L));
 
-        /** Count. */
-        private final ConcurrentMap<String, AtomicLong> cntMap = new ConcurrentHashMap<>();
+        /** */
+        private IgniteLogger log;
 
-        /**
-         * @param delegate Delegate.
-         */
-        public LockTracer(Lock delegate) {
-            this.delegate = delegate;
+        /** */
+        private long readLockThreshold;
+
+        /** */
+        public ReadLockTracer(ReentrantReadWriteLock lock, IgniteLogger log, long readLockThreshold) {
+            super(lock);
+
+            delegate = lock.readLock();
+
+            this.log = log;
+
+            this.readLockThreshold = readLockThreshold;
         }
 
-        /**
-         *
-         */
-        private void inc(){
-            cnt.incrementAndGet();
+        /** */
+        private void inc() {
+            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
 
-            String name = Thread.currentThread().getName();
+            int cntr = val.get1();
 
-            AtomicLong cnt = cntMap.get(name);
+            if (cntr == 0)
+                val.set2(U.currentTimeMillis());
 
-            if (cnt == null) {
-                AtomicLong cnt0 = cntMap.putIfAbsent(name, cnt = new AtomicLong());
+            val.set1(++cntr);
 
-                if (cnt0 != null)
-                    cnt = cnt0;
+            READ_LOCK_HOLDER_TS.set(val);
+        }
+
+        /** */
+        private void dec() {
+            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
+
+            int cntr = val.get1();
+
+            if (--cntr == 0) {
+                long timeout = U.currentTimeMillis() - val.get2();
+
+                if (timeout > readLockThreshold) {
+                    GridStringBuilder sb = new GridStringBuilder();
+
+                    sb.a(LOCK_HOLD_MESSAGE + timeout + " ms." + nl());
+
+                    U.printStackTrace(Thread.currentThread().getId(), sb);
+
+                    U.warn(log, sb.toString());
+                }
             }
 
-            cnt.incrementAndGet();
-        }
+            val.set1(cntr);
 
-        /**
-         *
-         */
-        private void dec(){
-            cnt.decrementAndGet();
-
-            String name = Thread.currentThread().getName();
-
-            AtomicLong cnt = cntMap.get(name);
-
-            cnt.decrementAndGet();
+            READ_LOCK_HOLDER_TS.set(val);
         }
 
         /** {@inheritDoc} */
+        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         @Override public void lock() {
             delegate.lock();
 
@@ -11211,6 +11648,7 @@ public abstract class IgniteUtils {
         }
 
         /** {@inheritDoc} */
+        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         @Override public void lockInterruptibly() throws InterruptedException {
             delegate.lockInterruptibly();
 
@@ -11245,24 +11683,16 @@ public abstract class IgniteUtils {
 
             dec();
         }
+    }
 
-        /** {@inheritDoc} */
-        @NotNull @Override public Condition newCondition() {
-            return delegate.newCondition();
-        }
+    /** */
+    private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
+        /** */
+        private static final long serialVersionUID = 0L;
 
-        /**
-         *
-         */
-        public Map<String, AtomicLong> getLockUnlockCounters() {
-            return new HashMap<>(cntMap);
-        }
-
-        /**
-         *
-         */
-        public long getLockUnlockCounter() {
-            return cnt.get();
+        /** */
+        public WriteLockTracer(ReentrantReadWriteLock lock) {
+            super(lock);
         }
     }
 
@@ -11283,6 +11713,103 @@ public abstract class IgniteUtils {
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
             throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * Special wrapper over address that can be sorted in following order:
+     *     IPv4, private IPv4, IPv4 local host, IPv6.
+     *     Lower addresses first.
+     */
+    private static class SortableAddress implements Comparable<SortableAddress> {
+        /**
+         *
+         */
+        private int type;
+
+        /**
+         *
+         */
+        private BigDecimal bits;
+
+        /**
+         *
+         */
+        private String addr;
+
+        /**
+         * Constructor.
+         *
+         * @param addr Address as string.
+         */
+        private SortableAddress(String addr) {
+            this.addr = addr;
+
+            if (addr.indexOf(':') > 0)
+                type = 4; // IPv6
+            else {
+                try {
+                    InetAddress inetAddr = InetAddress.getByName(addr);
+
+                    if (inetAddr.isLoopbackAddress())
+                        type = 3;  // localhost
+                    else if (inetAddr.isSiteLocalAddress())
+                        type = 2;  // private IPv4
+                    else
+                        type = 1; // other IPv4
+                }
+                catch (UnknownHostException ignored) {
+                    type = 5;
+                }
+            }
+
+            bits = BigDecimal.valueOf(0L);
+
+            try {
+                String[] octets = addr.contains(".") ? addr.split(".") : addr.split(":");
+
+                int len = octets.length;
+
+                for (int i = 0; i < len; i++) {
+                    long oct = F.isEmpty(octets[i]) ? 0 : Long.valueOf(octets[i]);
+                    long pow = Double.valueOf(Math.pow(256, octets.length - 1 - i)).longValue();
+
+                    bits = bits.add(BigDecimal.valueOf(oct * pow));
+                }
+            }
+            catch (Exception ignore) {
+                // No-op.
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public int compareTo(@NotNull SortableAddress o) {
+            return (type == o.type ? bits.compareTo(o.bits) : Integer.compare(type, o.type));
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            SortableAddress other = (SortableAddress)o;
+
+            return addr != null ? addr.equals(other.addr) : other.addr == null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return addr != null ? addr.hashCode() : 0;
+        }
+
+        /**
+         * @return Address.
+         */
+        public String address() {
+            return addr;
         }
     }
 
@@ -11338,5 +11865,110 @@ public abstract class IgniteUtils {
      */
     public static boolean isFlagSet(int flags, int flag) {
         return (flags & flag) == flag;
+    }
+
+    /**
+     * Reads string-to-string map written by {@link #writeStringMap(DataOutput, Map)}.
+     *
+     * @param in Data input.
+     * @throws IOException If write failed.
+     * @return Read result.
+     */
+    public static Map<String, String> readStringMap(DataInput in) throws IOException {
+        int size = in.readInt();
+
+        if (size == -1)
+            return null;
+        else {
+            Map<String, String> map = U.newHashMap(size);
+
+            for (int i = 0; i < size; i++)
+                map.put(readUTF(in), readUTF(in));
+
+            return map;
+        }
+    }
+
+    /**
+     * Writes string-to-string map to given data output.
+     *
+     * @param out Data output.
+     * @param map Map.
+     * @throws IOException If write failed.
+     */
+    public static void writeStringMap(DataOutput out, @Nullable Map<String, String> map) throws IOException {
+        if (map != null) {
+            out.writeInt(map.size());
+
+            for (Map.Entry<String, String> e : map.entrySet()) {
+                writeUTF(out, e.getKey());
+                writeUTF(out, e.getValue());
+            }
+        }
+        else
+            out.writeInt(-1);
+    }
+
+    /** Maximum string length to be written at once. */
+    private static final int MAX_STR_LEN = 0xFFFF / 4;
+
+    /**
+     * Write UTF string which can be {@code null}.
+     *
+     * @param out Output stream.
+     * @param val Value.
+     * @throws IOException If failed.
+     */
+    public static void writeUTF(DataOutput out, @Nullable String val) throws IOException {
+        if (val == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(val.length());
+
+            if (val.length() <= MAX_STR_LEN)
+                out.writeUTF(val); // Optimized write in 1 chunk.
+            else {
+                int written = 0;
+
+                while (written < val.length()) {
+                    int partLen = Math.min(val.length() - written, MAX_STR_LEN);
+
+                    String part = val.substring(written, written + partLen);
+
+                    out.writeUTF(part);
+
+                    written += partLen;
+                }
+            }
+        }
+    }
+
+    /**
+     * Read UTF string which can be {@code null}.
+     *
+     * @param in Input stream.
+     * @return Value.
+     * @throws IOException If failed.
+     */
+    public static String readUTF(DataInput in) throws IOException {
+        int len = in.readInt(); // May be zero.
+
+        if (len < 0)
+            return null;
+        else {
+            if (len <= MAX_STR_LEN)
+                return in.readUTF();
+
+            StringBuilder sb = new StringBuilder(len);
+
+            do {
+                sb.append(in.readUTF());
+            }
+            while (sb.length() < len);
+
+            assert sb.length() == len;
+
+            return sb.toString();
+        }
     }
 }

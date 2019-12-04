@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
  * Simple naive Bayes model which predicts result value {@code y} belongs to a class {@code C_k, k in [0..K]} as {@code
  * p(C_k,y) = p(C_k)*p(y_1,C_k) *...*p(y_n,C_k) / p(y)}. Return the number of the most possible class.
  */
-public class GaussianNaiveBayesModel implements IgniteModel<Vector, Double>, Exportable<GaussianNaiveBayesModel>, Serializable {
+public final class GaussianNaiveBayesModel implements IgniteModel<Vector, Double>, Exportable<GaussianNaiveBayesModel>, Serializable {
     /** */
     private static final long serialVersionUID = -127386523291350345L;
     /** Means of features for all classes. kth row contains means for labels[k] class. */

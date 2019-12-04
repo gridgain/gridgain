@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,12 +16,16 @@
 
 package org.apache.ignite.ml.inference;
 
+import java.util.Arrays;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.util.plugin.MLPluginConfiguration;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -35,13 +39,22 @@ public class IgniteModelStorageUtilTest extends GridCommonAbstractTest {
      * Constructs a new instance of Ignite model storage util test.
      */
     public IgniteModelStorageUtilTest() {
-        cfg = new IgniteConfiguration();
+        cfg = new IgniteConfiguration()
+            .setDiscoverySpi(new TcpDiscoverySpi()
+                .setIpFinder(new TcpDiscoveryVmIpFinder()
+                    .setAddresses(Arrays.asList("127.0.0.1:47500..47509"))));
 
         MLPluginConfiguration mlCfg = new MLPluginConfiguration();
         mlCfg.setWithMdlDescStorage(true);
         mlCfg.setWithMdlStorage(true);
 
         cfg.setPluginConfigurations(mlCfg);
+    }
+
+    /** */
+    @After
+    public void tearDown() throws Exception {
+        stopAllGrids();
     }
 
     /** */

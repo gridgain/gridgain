@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,9 +46,9 @@ public class LogisticRegressionSGDTrainerTest extends TrainerTest {
         LogisticRegressionSGDTrainer trainer = new LogisticRegressionSGDTrainer()
             .withUpdatesStgy(new UpdatesStrategy<>(new SimpleGDUpdateCalculator(0.2),
                 SimpleGDParameterUpdate.SUM_LOCAL, SimpleGDParameterUpdate.AVG))
-            .withMaxIterations(100000)
-            .withLocIterations(100)
-            .withBatchSize(14)
+            .withMaxIterations(100)
+            .withLocIterations(10)
+            .withBatchSize(15)
             .withSeed(123L);
 
         LogisticRegressionModel mdl = trainer.fit(cacheMock, parts, new DoubleArrayVectorizer<Integer>().labeled(0));
@@ -68,9 +68,9 @@ public class LogisticRegressionSGDTrainerTest extends TrainerTest {
         LogisticRegressionSGDTrainer trainer = new LogisticRegressionSGDTrainer()
             .withUpdatesStgy(new UpdatesStrategy<>(new SimpleGDUpdateCalculator(0.2),
                 SimpleGDParameterUpdate.SUM_LOCAL, SimpleGDParameterUpdate.AVG))
-            .withMaxIterations(100000)
-            .withLocIterations(100)
-            .withBatchSize(10)
+            .withMaxIterations(5)
+            .withLocIterations(5)
+            .withBatchSize(100)
             .withSeed(123L);
 
         LogisticRegressionModel originalMdl = trainer.fit(
@@ -89,7 +89,7 @@ public class LogisticRegressionSGDTrainerTest extends TrainerTest {
 
         LogisticRegressionModel updatedOnEmptyDS = trainer.update(
             originalMdl,
-            new HashMap<Integer, double[]>(),
+            new HashMap<>(),
             parts,
             vectorizer
         );

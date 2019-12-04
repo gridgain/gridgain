@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,7 @@ public class IgniteSpiOperationTimeoutHelper {
     // We need to reuse new logic ExponentialBackoffTimeout logic in TcpDiscovery instead of this class.
 
     /** */
-    private long lastOperStartTs;
+    private long lastOperStartNanos;
 
     /** */
     private long timeout;
@@ -71,16 +71,16 @@ public class IgniteSpiOperationTimeoutHelper {
         if (!failureDetectionTimeoutEnabled)
             return dfltTimeout;
 
-        if (lastOperStartTs == 0) {
+        if (lastOperStartNanos == 0) {
             timeout = failureDetectionTimeout;
-            lastOperStartTs = U.currentTimeMillis();
+            lastOperStartNanos = System.nanoTime();
         }
         else {
-            long curTs = U.currentTimeMillis();
+            long curNanos = System.nanoTime();
 
-            timeout = timeout - (curTs - lastOperStartTs);
+            timeout -= U.nanosToMillis(curNanos - lastOperStartNanos);
 
-            lastOperStartTs = curTs;
+            lastOperStartNanos = curNanos;
 
             if (timeout <= 0)
                 throw new IgniteSpiOperationTimeoutException("Network operation timed out. Increase " +
@@ -104,6 +104,6 @@ public class IgniteSpiOperationTimeoutHelper {
         if (X.hasCause(e, IgniteSpiOperationTimeoutException.class, SocketTimeoutException.class, SocketException.class))
             return true;
 
-        return (timeout - (U.currentTimeMillis() - lastOperStartTs) <= 0);
+        return (timeout - U.millisSinceNanos(lastOperStartNanos) <= 0);
     }
 }

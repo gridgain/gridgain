@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,6 +89,8 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeFailedMessag
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeLeftMessage;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -2244,6 +2246,36 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
                     assertEquals(3, node.cluster().nodes().size());
                 }
             }
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCheckRingLatency() throws Exception {
+        int hops = 1;
+
+        ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+
+        // We should discard ring check latency on server node.
+        LogListener lsnr = LogListener.matches("Latency check has been discarded").times(hops).build();
+
+        testLog.registerListener(lsnr);
+
+        try {
+            IgniteEx node = startGrid(getConfiguration("server").setGridLogger(testLog));
+
+            startGrid(getConfiguration("client").setClientMode(true));
+
+            TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi)node.context().discovery().getInjectedDiscoverySpi();
+
+            discoverySpi.impl.checkRingLatency(hops);
+
+            assertTrue("Check ring latency message wasn't discarded", lsnr.check(1000));
         }
         finally {
             stopAllGrids();

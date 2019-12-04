@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,12 +19,19 @@ package org.apache.ignite.spi.discovery.tcp;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Collections;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.query.DummyQueryIndexing;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -43,6 +50,9 @@ import org.junit.Test;
 public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
     /** */
     private static final int FAIL_PORT = 47503;
+
+    /** */
+    private static final int BIND_PORT = 47511;
 
     /** */
     private SpiFailType failType = SpiFailType.REFUSE;
@@ -70,12 +80,45 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
             discoSpi.setForceServerMode(gridName.contains("server"));
         }
 
+        if (gridName.contains("failingNode")) {
+            GridQueryProcessor.idxCls = FailingIndexing.class;
+
+            cfg.setLocalHost("127.0.0.1");
+        }
+
         return cfg;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        GridQueryProcessor.idxCls = null;
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testPortReleasedAfterFailure() throws Exception {
+        try {
+            startGrid("failingNode-" + BIND_PORT);
+
+            fail("Node start should fail");
+        }
+        catch (Exception e) {
+            // Expected exception. Check that BIND_PORT can be re-bound.
+            ServerSocket sock = new ServerSocket();
+
+            try {
+                sock.setReuseAddress(true);
+
+                sock.bind(new InetSocketAddress("127.0.0.1", BIND_PORT));
+            }
+            finally {
+                U.close(sock, log);
+            }
+        }
     }
 
     /**
@@ -190,6 +233,18 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
             long timeout) throws IOException {
             if (sock.getPort() != FAIL_PORT)
                 super.writeToSocket(msg, sock, res, timeout);
+        }
+    }
+
+    /**
+     *
+     */
+    private static class FailingIndexing extends DummyQueryIndexing {
+        /** {@inheritDoc} */
+        @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) {
+            ctx.discovery().consistentId();
+
+            throw new IgniteException("Failed to start");
         }
     }
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,10 +29,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2QueryFetchSizeInterceptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
+import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.internal.util.typedef.F;
@@ -42,6 +43,7 @@ import org.h2.jdbc.JdbcResultSet;
 import org.h2.result.LazyResult;
 import org.h2.result.ResultInterface;
 import org.h2.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_OBJECT_READ;
@@ -101,7 +103,7 @@ class MapQueryResult {
     private final Session ses;
 
     /** Detached connection. Used for lazy execution to prevent connection sharing. */
-    private ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn;
+    private H2PooledConnection conn;
 
     /** */
     private final ReentrantLock lock = new ReentrantLock();
@@ -116,7 +118,7 @@ class MapQueryResult {
      * @param log Logger.
      */
     MapQueryResult(IgniteH2Indexing h2, @Nullable GridCacheContext cctx,
-        UUID qrySrcNodeId, GridCacheSqlQuery qry, Object[] params, H2ConnectionWrapper conn, IgniteLogger log) {
+        UUID qrySrcNodeId, GridCacheSqlQuery qry, Object[] params, H2PooledConnection conn, IgniteLogger log) {
         this.h2 = h2;
         this.cctx = cctx;
         this.qry = qry;
@@ -124,13 +126,14 @@ class MapQueryResult {
         this.qrySrcNodeId = qrySrcNodeId;
         this.cpNeeded = F.eq(h2.kernalContext().localNodeId(), qrySrcNodeId);
         this.log = log;
+        this.conn = conn;
 
         ses = H2Utils.session(conn.connection());
     }
 
     /** */
-    void openResult(ResultSet rs) {
-        res = new Result(rs);
+    void openResult(@NotNull ResultSet rs, MapH2QueryInfo qryInfo) {
+        res = new Result(rs, qryInfo);
     }
 
     /**
@@ -240,10 +243,9 @@ class MapQueryResult {
                 }
 
                 rows.add(res.res.currentRow());
-            }
 
-            if (detachedConn == null && res.res.hasNext())
-                detachedConn = h2.connections().detachThreadConnection();
+                res.fetchSizeInterceptor.checkOnFetchNext();
+            }
 
             return !res.res.hasNext();
         }
@@ -279,10 +281,9 @@ class MapQueryResult {
         if (res != null)
             res.close();
 
-        if (detachedConn != null)
-            detachedConn.recycle();
+        ses.setQueryContext(null);
 
-        detachedConn = null;
+        conn.close();
     }
 
     /** */
@@ -293,7 +294,7 @@ class MapQueryResult {
 
     /** */
     public void lockTables() {
-        if (ses.isLazyQueryExecution() && !closed)
+        if (!closed && ses.isLazyQueryExecution())
             GridH2Table.readLockTables(ses);
     }
 
@@ -305,7 +306,7 @@ class MapQueryResult {
 
     /** */
     public void unlockTables() {
-        if (ses.isLazyQueryExecution())
+        if (!closed && ses.isLazyQueryExecution())
             GridH2Table.unlockTables(ses);
     }
 
@@ -331,37 +332,34 @@ class MapQueryResult {
         /** */
         private final int rowCnt;
 
+        /** */
+        private final H2QueryFetchSizeInterceptor fetchSizeInterceptor;
+
         /**
          * Constructor.
          *
          * @param rs H2 result set.
          */
-        Result(ResultSet rs) {
-            if (rs != null) {
-                this.rs = rs;
+        Result(@NotNull ResultSet rs, MapH2QueryInfo qryInfo) {
+            this.rs = rs;
 
-                try {
-                    res = (ResultInterface)RESULT_FIELD.get(rs);
-                }
-                catch (IllegalAccessException e) {
-                    throw new IllegalStateException(e); // Must not happen.
-                }
-
-                rowCnt = (res instanceof LazyResult) ? -1 : res.getRowCount();
-                cols = res.getVisibleColumnCount();
+            try {
+                res = (ResultInterface)RESULT_FIELD.get(rs);
             }
-            else {
-                this.rs = null;
-                this.res = null;
-                this.cols = -1;
-                this.rowCnt = -1;
-
-                closed = true;
+            catch (IllegalAccessException e) {
+                throw new IllegalStateException(e); // Must not happen.
             }
+
+            rowCnt = (res instanceof LazyResult) ? -1 : res.getRowCount();
+            cols = res.getVisibleColumnCount();
+
+            fetchSizeInterceptor = new H2QueryFetchSizeInterceptor(h2, qryInfo, log);
         }
 
         /** */
         void close() {
+            fetchSizeInterceptor.checkOnClose();
+
             U.close(rs, log);
         }
     }

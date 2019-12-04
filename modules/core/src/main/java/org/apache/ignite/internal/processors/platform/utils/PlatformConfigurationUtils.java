@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,6 +60,8 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.DiskPageCompression;
+import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.MemoryPolicyConfiguration;
@@ -287,7 +289,7 @@ public class PlatformConfigurationUtils {
      * @param in Reader.
      * @return Expiry policy factory.
      */
-    private static Factory<? extends ExpiryPolicy> readExpiryPolicyFactory(BinaryRawReader in) {
+    public static Factory<? extends ExpiryPolicy> readExpiryPolicyFactory(BinaryRawReader in) {
         if (!in.readBoolean())
             return null;
 
@@ -299,7 +301,7 @@ public class PlatformConfigurationUtils {
      *
      * @param out Writer.
      */
-    private static void writeExpiryPolicyFactory(BinaryRawWriter out, Factory<? extends ExpiryPolicy> factory) {
+    public static void writeExpiryPolicyFactory(BinaryRawWriter out, Factory<? extends ExpiryPolicy> factory) {
         if (!(factory instanceof PlatformExpiryPolicyFactory)) {
             out.writeBoolean(false);
 
@@ -666,9 +668,7 @@ public class PlatformConfigurationUtils {
 
         int sqlSchemasCnt = in.readInt();
 
-        if (sqlSchemasCnt == -1)
-            cfg.setSqlSchemas((String[])null);
-        else {
+        if (sqlSchemasCnt >= 0) {
             String[] sqlSchemas = new String[sqlSchemasCnt];
 
             for (int i = 0; i < sqlSchemasCnt; i++)
@@ -806,7 +806,7 @@ public class PlatformConfigurationUtils {
             cfg.setSqlConnectorConfiguration(readSqlConnectorConfiguration(in));
 
         if (in.readBoolean())
-            cfg.setClientConnectorConfiguration(readClientConnectorConfiguration(in));
+            cfg.setClientConnectorConfiguration(readClientConnectorConfiguration(in, ver));
 
         if (!in.readBoolean())  // ClientConnectorConfigurationEnabled override
             cfg.setClientConnectorConfiguration(null);
@@ -837,6 +837,20 @@ public class PlatformConfigurationUtils {
 
                     break;
             }
+        }
+
+        int execCfgCnt = in.readInt();
+
+        if (execCfgCnt > 0) {
+            ExecutorConfiguration[] execCfgs = new ExecutorConfiguration[execCfgCnt];
+
+            for (int i = 0; i < execCfgCnt; i++) {
+                execCfgs[i] = new ExecutorConfiguration()
+                        .setName(in.readString())
+                        .setSize(in.readInt());
+            }
+
+            cfg.setExecutorConfiguration(execCfgs);
         }
 
         readPluginConfiguration(cfg, in);
@@ -1257,7 +1271,7 @@ public class PlatformConfigurationUtils {
         w.writeInt(cfg.getSqlQueryHistorySize());
 
         if (cfg.getSqlSchemas() == null)
-            w.writeInt(-1);
+            w.writeInt(0);
         else {
             w.writeInt(cfg.getSqlSchemas().length);
 
@@ -1404,7 +1418,7 @@ public class PlatformConfigurationUtils {
 
         writeSqlConnectorConfiguration(w, cfg.getSqlConnectorConfiguration());
 
-        writeClientConnectorConfiguration(w, cfg.getClientConnectorConfiguration());
+        writeClientConnectorConfiguration(w, cfg.getClientConnectorConfiguration(), ver);
 
         w.writeBoolean(cfg.getClientConnectorConfiguration() != null);
 
@@ -1436,6 +1450,18 @@ public class PlatformConfigurationUtils {
             w.writeLong(((StopNodeOrHaltFailureHandler)failureHnd).timeout());
         } else
             w.writeBoolean(false);
+
+        ExecutorConfiguration[] execCfgs = cfg.getExecutorConfiguration();
+
+        if (execCfgs != null) {
+            w.writeInt(execCfgs.length);
+
+            for (ExecutorConfiguration execCfg : execCfgs) {
+                w.writeString(execCfg.getName());
+                w.writeInt(execCfg.getSize());
+            }
+        } else
+            w.writeInt(0);
 
         w.writeString(cfg.getIgniteHome());
 
@@ -1802,10 +1828,12 @@ public class PlatformConfigurationUtils {
      * Reads the client connector configuration.
      *
      * @param in Reader.
+     * @param ver Protocol version.
      * @return Config.
      */
-    private static ClientConnectorConfiguration readClientConnectorConfiguration(BinaryRawReader in) {
-        return new ClientConnectorConfiguration()
+    private static ClientConnectorConfiguration readClientConnectorConfiguration(BinaryRawReader in,
+        ClientListenerProtocolVersion ver) {
+        ClientConnectorConfiguration cfg = new ClientConnectorConfiguration()
                 .setHost(in.readString())
                 .setPort(in.readInt())
                 .setPortRange(in.readInt())
@@ -1818,14 +1846,21 @@ public class PlatformConfigurationUtils {
                 .setThinClientEnabled(in.readBoolean())
                 .setOdbcEnabled(in.readBoolean())
                 .setJdbcEnabled(in.readBoolean());
+
+        if (ver.compareTo(VER_1_3_0) >= 0)
+            cfg.setHandshakeTimeout(in.readLong());
+
+        return cfg;
     }
 
     /**
      * Writes the client connector configuration.
      *
      * @param w Writer.
+     * @param ver Protocol version.
      */
-    private static void writeClientConnectorConfiguration(BinaryRawWriter w, ClientConnectorConfiguration cfg) {
+    private static void writeClientConnectorConfiguration(BinaryRawWriter w, ClientConnectorConfiguration cfg,
+        ClientListenerProtocolVersion ver) {
         assert w != null;
 
         if (cfg != null) {
@@ -1844,6 +1879,9 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(cfg.isThinClientEnabled());
             w.writeBoolean(cfg.isOdbcEnabled());
             w.writeBoolean(cfg.isJdbcEnabled());
+
+            if (ver.compareTo(VER_1_3_0) >= 0)
+                w.writeLong(cfg.getIdleTimeout());
         } else {
             w.writeBoolean(false);
         }
@@ -1921,6 +1959,11 @@ public class PlatformConfigurationUtils {
 
         if (in.readBoolean())
             res.setCheckpointReadLockTimeout(in.readLong());
+
+        res.setWalPageCompression(DiskPageCompression.fromOrdinal(in.readInt()));
+
+        if (in.readBoolean())
+            res.setWalPageCompressionLevel(in.readInt());
 
         int cnt = in.readInt();
 
@@ -2054,6 +2097,15 @@ public class PlatformConfigurationUtils {
             if (cfg.getCheckpointReadLockTimeout() != null) {
                 w.writeBoolean(true);
                 w.writeLong(cfg.getCheckpointReadLockTimeout());
+            }
+            else
+                w.writeBoolean(false);
+
+            w.writeInt(cfg.getWalPageCompression().ordinal());
+
+            if (cfg.getWalPageCompressionLevel() != null) {
+                w.writeBoolean(true);
+                w.writeInt(cfg.getWalPageCompressionLevel());
             }
             else
                 w.writeBoolean(false);

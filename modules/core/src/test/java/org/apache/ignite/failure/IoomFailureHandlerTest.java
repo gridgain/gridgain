@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,8 +60,13 @@ public class IoomFailureHandlerTest extends AbstractFailureHandlerTest {
         dfltPlcCfg.setInitialSize(SIZE);
         dfltPlcCfg.setMaxSize(SIZE);
 
-        if (pds)
+        if (pds) {
+            // We need longer failure detection timeout for PDS enabled mode or checkpoint write lock can block tx
+            // checkpoint read lock for too long causing FH triggering on slow hardware.
+            cfg.setFailureDetectionTimeout(30_000);
+
             dfltPlcCfg.setPersistenceEnabled(true);
+        }
 
         dsCfg.setDefaultDataRegionConfiguration(dfltPlcCfg);
         dsCfg.setPageSize(PAGE_SIZE);

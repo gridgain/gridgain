@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
 
 /**
@@ -151,10 +152,10 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
-                    "    ID\n" +
-                    "FROM \"default\".PERSON\n" +
-                    "    /* \"default\".IDX: ID = 5 */\n" +
-                    "WHERE ID = 5")
+                    "    \"ID\"\n" +
+                    "FROM \"default\".\"PERSON\"\n" +
+                    "    /* default.IDX: ID = 5 */\n" +
+                    "WHERE \"ID\" = 5")
             ), locRes);
         }
 
@@ -172,7 +173,7 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
 
         assertSqlException(new RunnableX() {
             /** {@inheritDoc} */
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 jdbcRun(CREATE_INDEX);
             }
         });
@@ -209,10 +210,10 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
-                    "    ID\n" +
-                    "FROM \"default\".PERSON\n" +
-                    "    /* \"default\".PERSON.__SCAN_ */\n" +
-                    "WHERE ID = 5")
+                    "    \"ID\"\n" +
+                    "FROM \"default\".\"PERSON\"\n" +
+                    "    /* default.PERSON.__SCAN_ */\n" +
+                    "WHERE \"ID\" = 5")
             ), locRes);
         }
 
@@ -226,7 +227,7 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
     public void testDropMissingIndex() {
         assertSqlException(new RunnableX() {
             /** {@inheritDoc} */
-            @Override public void run() throws Exception {
+            @Override public void runx() throws Exception {
                 jdbcRun(DROP_INDEX);
             }
         });
@@ -321,7 +322,7 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
         // We expect IgniteSQLException with given code inside CacheException inside JDBC SQLException.
 
         try {
-            r.run();
+            r.runx();
         }
         catch (SQLException e) {
             return;
@@ -331,17 +332,5 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
         }
 
         fail(SQLException.class.getSimpleName() +  " is not thrown.");
-    }
-
-    /**
-     * Runnable which can throw checked exceptions.
-     */
-    private interface RunnableX {
-        /**
-         * Do run.
-         *
-         * @throws Exception If failed.
-         */
-        public void run() throws Exception;
     }
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.apache.ignite.ml.selection.paramgrid;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +49,7 @@ public class ParameterSetGenerator {
         assert !map.isEmpty();
 
         this.map = map;
-        this.sizeOfParamVector = map.size();
+        sizeOfParamVector = map.size();
     }
 
     /**
@@ -60,7 +61,7 @@ public class ParameterSetGenerator {
 
         traverseTree(map, nextPnt, -1);
 
-        return params;
+        return Collections.unmodifiableList(params);
     }
 
     /**
@@ -75,7 +76,6 @@ public class ParameterSetGenerator {
 
         if (dimensionNum == sizeOfParamVector){
             Double[] paramSet = Arrays.copyOf(nextPnt, sizeOfParamVector);
-            System.out.println(Arrays.toString(paramSet));
             params.add(paramSet);
             return;
         }

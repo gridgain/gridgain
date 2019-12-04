@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1951,5 +1951,48 @@ public abstract class GridUnsafe {
             UNSAFE.putByte(addr + 1, (byte)(val >> 8));
             UNSAFE.putByte(addr, (byte)(val));
         }
+    }
+
+    /**
+     * @param ptr1 First pointer.
+     * @param ptr2 Second pointer.
+     * @param size Memory size.
+     * @return {@code True} if equals.
+     */
+    public static boolean compare(long ptr1, long ptr2, int size) {
+        assert ptr1 > 0 : ptr1;
+        assert ptr2 > 0 : ptr2;
+        assert size > 0 : size;
+
+        if (ptr1 == ptr2)
+            return true;
+
+        int words = size / 8;
+
+        for (int i = 0; i < words; i++) {
+            long w1 = getLong(ptr1);
+            long w2 = getLong(ptr2);
+
+            if (w1 != w2)
+                return false;
+
+            ptr1 += 8;
+            ptr2 += 8;
+        }
+
+        int left = size % 8;
+
+        for (int i = 0; i < left; i++) {
+            byte b1 = getByte(ptr1);
+            byte b2 = getByte(ptr2);
+
+            if (b1 != b2)
+                return false;
+
+            ptr1++;
+            ptr2++;
+        }
+
+        return true;
     }
 }

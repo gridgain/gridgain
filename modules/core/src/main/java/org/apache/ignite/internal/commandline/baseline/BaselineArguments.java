@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,15 @@
 package org.apache.ignite.internal.commandline.baseline;
 
 import java.util.List;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * This class contains all possible arguments after parsing baseline command input.
  */
 public class BaselineArguments {
     /** Command. */
-    private BaselineCommand cmd;
+    private BaselineSubcommands cmd;
     /**
      * {@code true} if auto-adjust should be enable, {@code false} if it should be disable, {@code null} if no operation
      * needed.
@@ -34,6 +36,7 @@ public class BaselineArguments {
     /** Requested topology version. */
     private long topVer = -1;
     /** List of consistent ids for operation. */
+    @GridToStringInclude
     List<String> consistentIds;
 
     /**
@@ -43,7 +46,7 @@ public class BaselineArguments {
      * @param topVer Requested topology version.
      * @param consistentIds List of consistent ids for operation.
      */
-    public BaselineArguments(BaselineCommand cmd, Boolean enableAutoAdjust, Long softBaselineTimeout,
+    public BaselineArguments(BaselineSubcommands cmd, Boolean enableAutoAdjust, Long softBaselineTimeout,
         long topVer, List<String> consistentIds) {
         this.cmd = cmd;
         this.enableAutoAdjust = enableAutoAdjust;
@@ -55,7 +58,7 @@ public class BaselineArguments {
     /**
      * @return Command.
      */
-    public BaselineCommand getCmd() {
+    public BaselineSubcommands getCmd() {
         return cmd;
     }
 
@@ -88,12 +91,17 @@ public class BaselineArguments {
         return consistentIds;
     }
 
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(BaselineArguments.class, this);
+    }
+
     /**
      * Builder of {@link BaselineArguments}.
      */
     public static class Builder {
         /** Command. */
-        private BaselineCommand cmd;
+        private BaselineSubcommands cmd;
         /**
          * {@code true} if auto-adjust should be enable, {@code false} if it should be disable, {@code null} if no
          * operation needed.
@@ -109,7 +117,7 @@ public class BaselineArguments {
         /**
          * @param cmd Command.
          */
-        public Builder(BaselineCommand cmd) {
+        public Builder(BaselineSubcommands cmd) {
             this.cmd = cmd;
         }
 

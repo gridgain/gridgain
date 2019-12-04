@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,6 @@ import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * API for cache persistent storage for read-through and write-through behavior.
@@ -87,7 +86,7 @@ public interface CacheStore<K, V> extends CacheLoader<K, V>, CacheWriter<K, V> {
      *      {@link org.apache.ignite.IgniteCache#loadCache(IgniteBiPredicate, Object...)} method.
      * @throws CacheLoaderException If loading failed.
      */
-    public void loadCache(IgniteBiInClosure<K, V> clo, @Nullable Object... args) throws CacheLoaderException;
+    public void loadCache(IgniteBiInClosure<K, V> clo, Object... args) throws CacheLoaderException;
 
     /**
      * Tells store to commit or rollback a transaction depending on the value of the {@code 'commit'}

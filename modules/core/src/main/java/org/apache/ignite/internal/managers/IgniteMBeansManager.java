@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +34,6 @@ import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMXBeanImpl;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustMXBeanImpl;
-import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImpl;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.FailureHandlingMxBeanImpl;
@@ -45,7 +44,6 @@ import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 import org.apache.ignite.mxbean.DataStorageMXBean;
 import org.apache.ignite.mxbean.FailureHandlingMxBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
-import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
 import org.apache.ignite.mxbean.StripedExecutorMXBean;
 import org.apache.ignite.mxbean.ThreadPoolMXBean;
 import org.apache.ignite.mxbean.TransactionMetricsMxBean;
@@ -53,6 +51,9 @@ import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.mxbean.WorkersControlMXBean;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
  * Class that registers and unregisters MBeans for kernal.
@@ -89,7 +90,6 @@ public class IgniteMBeansManager {
      * @param stripedExecSvc Striped executor.
      * @param p2pExecSvc P2P executor service.
      * @param mgmtExecSvc Management executor service.
-     * @param igfsExecSvc IGFS executor service.
      * @param dataStreamExecSvc data stream executor service.
      * @param restExecSvc Reset executor service.
      * @param affExecSvc Affinity executor service.
@@ -97,6 +97,7 @@ public class IgniteMBeansManager {
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      * @param workersRegistry Worker registry.
      * @throws IgniteCheckedException if fails to register any of the MBeans.
@@ -109,7 +110,6 @@ public class IgniteMBeansManager {
         final StripedExecutor stripedExecSvc,
         ExecutorService p2pExecSvc,
         ExecutorService mgmtExecSvc,
-        ExecutorService igfsExecSvc,
         StripedExecutor dataStreamExecSvc,
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
@@ -117,6 +117,7 @@ public class IgniteMBeansManager {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         WorkersRegistry workersRegistry
     ) throws IgniteCheckedException {
@@ -131,10 +132,6 @@ public class IgniteMBeansManager {
         registerMBean("Kernal", locMetricsBean.getClass().getSimpleName(), locMetricsBean, ClusterMetricsMXBean.class);
         ClusterMetricsMXBean metricsBean = new ClusterMetricsMXBeanImpl(kernal.cluster());
         registerMBean("Kernal", metricsBean.getClass().getSimpleName(), metricsBean, ClusterMetricsMXBean.class);
-
-        //IO metrics
-        IoStatisticsMetricsMXBean ioStatMetricsBean = new IoStatisticsMetricsLocalMXBeanImpl(ctx.ioStats());
-        registerMBean("IOMetrics", ioStatMetricsBean.getClass().getSimpleName(), ioStatMetricsBean, IoStatisticsMetricsMXBean.class);
 
         // Transaction metrics
         TransactionMetricsMxBean txMetricsMXBean = new TransactionMetricsMxBeanImpl(ctx.cache().transactions().metrics());
@@ -160,12 +157,12 @@ public class IgniteMBeansManager {
         registerExecutorMBean("GridSystemExecutor", sysExecSvc);
         registerExecutorMBean("GridClassLoadingExecutor", p2pExecSvc);
         registerExecutorMBean("GridManagementExecutor", mgmtExecSvc);
-        registerExecutorMBean("GridIgfsExecutor", igfsExecSvc);
         registerExecutorMBean("GridDataStreamExecutor", dataStreamExecSvc);
         registerExecutorMBean("GridAffinityExecutor", affExecSvc);
         registerExecutorMBean("GridCallbackExecutor", callbackExecSvc);
         registerExecutorMBean("GridQueryExecutor", qryExecSvc);
         registerExecutorMBean("GridSchemaExecutor", schemaExecSvc);
+        registerExecutorMBean("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             registerExecutorMBean("GridIndexingExecutor", idxExecSvc);
@@ -186,7 +183,7 @@ public class IgniteMBeansManager {
                 registerExecutorMBean(entry.getKey(), entry.getValue());
         }
 
-        if (U.IGNITE_TEST_FEATURES_ENABLED) {
+        if (getBoolean(IGNITE_TEST_FEATURES_ENABLED, false)) {
             WorkersControlMXBean workerCtrlMXBean = new WorkersControlMXBeanImpl(workersRegistry);
 
             registerMBean("Kernal", workerCtrlMXBean.getClass().getSimpleName(),

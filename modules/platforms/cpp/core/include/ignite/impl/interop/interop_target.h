@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,6 +72,16 @@ namespace ignite
                  * Destructor.
                  */
                 virtual ~InteropTarget();
+
+                /**
+                 * Internal out operation.
+                 *
+                 * @param opType Operation type.
+                 * @param inMem Input memory.
+                 * @param err Error.
+                 * @return Result.
+                 */
+                bool OutOp(int32_t opType, InteropMemory& inMem, IgniteError& err);
 
                 /**
                  * Internal out operation.
@@ -144,6 +154,16 @@ namespace ignite
                 OperationResult::Type InStreamOutLong(int32_t opType, InteropMemory& outInMem, IgniteError& err);
 
                 /**
+                 * In stream out long operation.
+                 *
+                 * @param opType Type of operation.
+                 * @param inOp Input opeartion.
+                 * @param err Error.
+                 * @return Operation result or long value.
+                 */
+                int64_t InStreamOutLong(int32_t opType, InputOperation& inOp, IgniteError& err);
+
+                /**
                  * In stream out object operation.
                  *
                  * @param opType Type of operation.
@@ -152,6 +172,16 @@ namespace ignite
                  * @return Java object references.
                  */
                 jobject InStreamOutObject(int32_t opType, InteropMemory& outInMem, IgniteError& err);
+
+                /**
+                 * In stream out stream operation.
+                 *
+                 * @param opType Type of operation.
+                 * @param inMem Input memory.
+                 * @param outMem Output memory.
+                 * @param err Error.
+                 */
+                 void InStreamOutStream(int32_t opType, InteropMemory& inMem, InteropMemory& outMem, IgniteError& err);
 
                 /**
                 * Internal out-in operation.

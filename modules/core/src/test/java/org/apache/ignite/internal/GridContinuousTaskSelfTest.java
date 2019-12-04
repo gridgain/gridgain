@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,6 +53,7 @@ import org.apache.ignite.resources.TaskSessionResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -222,7 +223,7 @@ public class GridContinuousTaskSelfTest extends GridCommonAbstractTest {
     @GridInternal
     public static class NestedHoldccTask extends ComputeTaskAdapter<String, String> {
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable String arg) throws IgniteException {
             Map<ComputeJob, ClusterNode> map = new HashMap<>();
 
@@ -360,7 +361,7 @@ public class GridContinuousTaskSelfTest extends GridCommonAbstractTest {
         private int cnt;
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Boolean arg) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Boolean arg) {
             assert mapper != null;
             assert arg != null;
 
@@ -536,7 +537,7 @@ public class GridContinuousTaskSelfTest extends GridCommonAbstractTest {
         private int cnt;
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Object arg) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Object arg) {
             mapper.send(new TestJob(++cnt));
 
             try {

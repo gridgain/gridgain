@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
@@ -694,9 +698,9 @@ public class CommandProcessor {
                 }
             }
             else if (cmdH2 instanceof GridSqlCreateTable) {
-                ctx.security().authorize(null, SecurityPermission.CACHE_CREATE, null);
-
                 GridSqlCreateTable cmd = (GridSqlCreateTable)cmdH2;
+
+                ctx.security().authorize(cmd.cacheName(), SecurityPermission.CACHE_CREATE);
 
                 isDdlOnSchemaSupported(cmd.schemaName());
 
@@ -739,8 +743,6 @@ public class CommandProcessor {
                 }
             }
             else if (cmdH2 instanceof GridSqlDropTable) {
-                ctx.security().authorize(null, SecurityPermission.CACHE_DESTROY, null);
-
                 GridSqlDropTable cmd = (GridSqlDropTable)cmdH2;
 
                 isDdlOnSchemaSupported(cmd.schemaName());
@@ -752,8 +754,11 @@ public class CommandProcessor {
                         throw new SchemaOperationException(SchemaOperationException.CODE_TABLE_NOT_FOUND,
                             cmd.tableName());
                 }
-                else
+                else {
+                    ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
+
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
+                }
             }
             else if (cmdH2 instanceof GridSqlAlterTableAddColumn) {
                 GridSqlAlterTableAddColumn cmd = (GridSqlAlterTableAddColumn)cmdH2;
@@ -973,7 +978,7 @@ public class CommandProcessor {
                 sqlCode = IgniteQueryErrorCode.UNKNOWN;
         }
 
-        return new IgniteSQLException(e.getMessage(), sqlCode);
+        return new IgniteSQLException(e.getMessage(), sqlCode, e);
     }
 
     /**
@@ -1011,19 +1016,19 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            if (col.getType() == Value.DECIMAL) {
-                if (col.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.DECIMAL) {
+                if (col.getType().getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
 
-                if (col.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
-                    scale.put(e.getKey(), col.getScale());
+                if (col.getType().getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+                    scale.put(e.getKey(), col.getType().getScale());
             }
 
-            if (col.getType() == Value.STRING ||
-                col.getType() == Value.STRING_FIXED ||
-                col.getType() == Value.STRING_IGNORECASE)
-                if (col.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.STRING ||
+                col.getType().getValueType() == Value.STRING_FIXED ||
+                col.getType().getValueType() == Value.STRING_IGNORECASE)
+                if (col.getType().getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1035,7 +1040,9 @@ public class CommandProcessor {
         if (!F.isEmpty(scale))
             res.setFieldsScale(scale);
 
-        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName());
+        String digest = createFieldsDigest(createTbl);
+        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName(), digest);
+
         String keyTypeName = QueryUtils.createTableKeyTypeName(valTypeName);
 
         if (!F.isEmpty(createTbl.keyTypeName()))
@@ -1107,13 +1114,51 @@ public class CommandProcessor {
     }
 
     /**
+     * Creates table digest as MD5 hash from sorted list of column names and types.
+     *
+     * @param tbl Create table command.
+     * @return Digest from sorted list of column names and types.
+     */
+    private static String createFieldsDigest(GridSqlCreateTable tbl) {
+        try {
+            String concatedFields = concatFields(tbl);
+
+           return U.calculateMD5(new ByteArrayInputStream(concatedFields.getBytes()));
+        }
+        catch (NoSuchAlgorithmException | IOException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * @param tbl Table.
+     * @return Concated table fields and their types.
+     */
+    private static String concatFields(GridSqlCreateTable tbl) {
+        List<String> fieldDigests = new ArrayList<>(tbl.columns().size());
+
+        for (Map.Entry<String, GridSqlColumn> e : tbl.columns().entrySet()) {
+            String colName = e.getKey();
+            String colType = getTypeClassName(e.getValue());
+
+            String fd = "[" + colName + ":" + colType + "]";
+
+            fieldDigests.add(fd.toUpperCase());
+        }
+
+        Collections.sort(fieldDigests);
+
+        return String.join(", ", fieldDigests);
+    }
+
+    /**
      * Helper function for obtaining type class name for H2.
      *
      * @param col Column.
      * @return Type class name.
      */
     private static String getTypeClassName(GridSqlColumn col) {
-        int type = col.column().getType();
+        int type = col.column().getType().getValueType();
 
         switch (type) {
             case Value.UUID :
@@ -1121,7 +1166,7 @@ public class CommandProcessor {
                     return UUID.class.getName();
 
             default:
-                return DataType.getTypeClassName(type);
+                return DataType.getTypeClassName(type, false);
         }
     }
 

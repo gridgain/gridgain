@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,8 @@ import org.apache.ignite.ml.dataset.feature.extractor.impl.DoubleArrayVectorizer
 import org.apache.ignite.ml.nn.UpdatesStrategy;
 import org.apache.ignite.ml.optimization.updatecalculators.RPropParameterUpdate;
 import org.apache.ignite.ml.optimization.updatecalculators.RPropUpdateCalculator;
+import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDParameterUpdate;
+import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDUpdateCalculator;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -51,10 +53,10 @@ public class LinearRegressionSGDTrainerTest extends TrainerTest {
         data.put(9, new double[]{-0.37890345, -0.04846179, -0.84122753, -1.14667474, -124.92598583});
 
         LinearRegressionSGDTrainer<?> trainer = new LinearRegressionSGDTrainer<>(new UpdatesStrategy<>(
-            new RPropUpdateCalculator(),
-            RPropParameterUpdate.SUM_LOCAL,
-            RPropParameterUpdate.AVG
-        ), 100000, 10, 100, 123L);
+            new SimpleGDUpdateCalculator(),
+            SimpleGDParameterUpdate.SUM_LOCAL,
+            SimpleGDParameterUpdate.AVG
+        ), 1800, 10, 10, 123L);
 
         LinearRegressionModel mdl = trainer.fit(
             data, parts,
@@ -89,7 +91,7 @@ public class LinearRegressionSGDTrainerTest extends TrainerTest {
             new RPropUpdateCalculator(),
             RPropParameterUpdate.SUM_LOCAL,
             RPropParameterUpdate.AVG
-        ), 100000, 10, 100, 0L);
+        ), 1800, 10, 10, 123L);
 
         LinearRegressionModel originalMdl = trainer.withSeed(0).fit(
             data, parts,

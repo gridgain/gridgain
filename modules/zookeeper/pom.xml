@@ -2,13 +2,13 @@
 
 <!--
  Copyright 2019 GridGain Systems, Inc. and Contributors.
- 
+
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
      https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-zookeeper</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>9.0.0-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>${guava16.version}</version>
+            <version>${guava.version}</version>
         </dependency>
 
         <!-- Do not remove org.codehaus.jackson:jackson-core-asl it is required by Apache Curator at runtime -->
@@ -110,7 +110,7 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
-            <version>${curator.version}</version>
+            <version>${curator.test.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -199,13 +199,13 @@
                                     <![CDATA[
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
-# 
+#
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.

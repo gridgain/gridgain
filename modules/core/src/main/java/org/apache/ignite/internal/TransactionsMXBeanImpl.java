@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -123,7 +123,7 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     /** {@inheritDoc} */
     @Override public void setTxTimeoutOnPartitionMapExchange(long timeout) {
         try {
-            ctx.grid().context().cache().setTxTimeoutOnPartitionMapExchange(timeout);
+            ctx.cache().context().tm().setTxTimeoutOnPartitionMapExchange(timeout);
         }
         catch (Exception e) {
             throw new RuntimeException(e.getMessage());
@@ -137,7 +137,37 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
 
     /** {@inheritDoc} */
     @Override public void setTxOwnerDumpRequestsAllowed(boolean allowed) {
-        ctx.cache().setTxOwnerDumpRequestsAllowed(allowed);
+        ctx.cache().context().tm().setTxOwnerDumpRequestsAllowedDistributed(allowed);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getLongTransactionTimeDumpThreshold() {
+        return ctx.cache().context().tm().longTransactionTimeDumpThreshold();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setLongTransactionTimeDumpThreshold(long threshold) {
+        ctx.cache().context().tm().longTransactionTimeDumpThresholdDistributed(threshold);
+    }
+
+    /** {@inheritDoc} */
+    @Override public double getTransactionTimeDumpSamplesCoefficient() {
+        return ctx.cache().context().tm().transactionTimeDumpSamplesCoefficient();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setTransactionTimeDumpSamplesCoefficient(double coefficient) {
+        ctx.cache().context().tm().transactionTimeDumpSamplesCoefficientDistributed(coefficient);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getTransactionTimeDumpSamplesPerSecondLimit() {
+        return ctx.cache().context().tm().transactionTimeDumpSamplesPerSecondLimit();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setTransactionTimeDumpSamplesPerSecondLimit(int limit) {
+        ctx.cache().context().tm().longTransactionTimeDumpSamplesPerSecondLimit(limit);
     }
 
     /** {@inheritDoc} */

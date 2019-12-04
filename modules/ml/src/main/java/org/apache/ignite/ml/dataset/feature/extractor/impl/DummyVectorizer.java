@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,10 @@
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.dataset.feature.extractor.ExtractionUtils;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 
 /**
@@ -25,7 +28,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
  *
  * @param <K> Type of key.
  */
-public class DummyVectorizer<K> extends ExtractionUtils.ArrayLikeVectorizer<K, Vector> {
+public final class DummyVectorizer<K> extends ExtractionUtils.ArrayLikeVectorizer<K, Vector> implements DeployableObject {
     /** Serial version uid. */
     private static final long serialVersionUID = -6225354615212148224L;
 
@@ -48,4 +51,8 @@ public class DummyVectorizer<K> extends ExtractionUtils.ArrayLikeVectorizer<K, V
         return value.size();
     }
 
+    /** {@inheritDoc} */
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
+    }
 }

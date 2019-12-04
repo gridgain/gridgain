@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,6 +82,17 @@ namespace Apache.Ignite.Core.Compute
         /// </summary>
         /// <returns>This compute instance for chaining calls.</returns>
         ICompute WithKeepBinary();
+
+        /// <summary>
+        /// Gets instance of the compute API associated with custom executor. All tasks and closures submitted to
+        /// returned instance will be processed by this executor on both remote and local nodes.
+        /// If an executor with the given name doesn't exist, task will be processed in default ("public") pool.
+        /// <para/>
+        /// Executor should be defined in <see cref="IgniteConfiguration.ExecutorConfiguration"/>.
+        /// </summary>
+        /// <param name="executorName">Executor name.</param>
+        /// <returns>New Compute instance associated with a custom executor.</returns>
+        ICompute WithExecutor(string executorName);
 
         /// <summary>
         /// Executes given Java task on the grid projection. If task for given name has not been deployed yet,

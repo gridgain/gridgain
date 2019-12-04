@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -145,7 +145,7 @@ public class IgniteCheckpointDirtyPagesForLowLoadTest extends GridCommonAbstract
                     db.wakeupForCheckpoint("").get(cpTimeout, TimeUnit.MILLISECONDS);
                 }
                 catch (IgniteFutureTimeoutCheckedException ignored) {
-                    long msPassed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+                    long msPassed = U.millisSinceNanos(start);
 
                     log.error("Timeout during waiting for checkpoint to start:" +
                         " [" + msPassed + "] but checkpoint is not running");
@@ -196,7 +196,7 @@ public class IgniteCheckpointDirtyPagesForLowLoadTest extends GridCommonAbstract
         long start = System.currentTimeMillis();
 
         while (currCpPages == 0) {
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1));
+            LockSupport.parkNanos(U.millisToNanos(1));
             currCpPages = db.currentCheckpointPagesCount();
 
             if (currCpPages == 0 && ((System.currentTimeMillis() - start) > timeout))

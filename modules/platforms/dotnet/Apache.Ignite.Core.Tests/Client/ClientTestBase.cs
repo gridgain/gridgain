@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Net;
     using Apache.Ignite.Core.Binary;
@@ -54,18 +55,19 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Fixture tear down.
+        /// Fixture set up.
         /// </summary>
         [TestFixtureSetUp]
-        public void FixtureSetUp()
+        public virtual void FixtureSetUp()
         {
             var cfg = GetIgniteConfiguration();
             Ignition.Start(cfg);
 
-            cfg.AutoGenerateIgniteInstanceName = true;
-
             for (var i = 1; i < _gridCount; i++)
             {
+                cfg = GetIgniteConfiguration();
+                cfg.AutoGenerateIgniteInstanceName = true;
+
                 Ignition.Start(cfg);
             }
 
@@ -139,7 +141,8 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteClientConfiguration
             {
-                Endpoints = new[] {IPAddress.Loopback.ToString()}
+                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
+                SocketTimeout = TimeSpan.FromSeconds(15)
             };
         }
 
@@ -205,7 +208,17 @@ namespace Apache.Ignite.Core.Tests.Client
                 }
             }
 
-            AssertExtensions.ReflectionEqual(cfg, cfg2);
+            HashSet<string> ignoredProps = null;
+
+            if (cfg.ExpiryPolicyFactory != null && cfg2.ExpiryPolicyFactory != null)
+            {
+                ignoredProps = new HashSet<string> {"ExpiryPolicyFactory"};
+
+                AssertExtensions.ReflectionEqual(cfg.ExpiryPolicyFactory.CreateInstance(),
+                    cfg2.ExpiryPolicyFactory.CreateInstance());
+            }
+
+            AssertExtensions.ReflectionEqual(cfg, cfg2, ignoredProperties : ignoredProps);
         }
     }
 }

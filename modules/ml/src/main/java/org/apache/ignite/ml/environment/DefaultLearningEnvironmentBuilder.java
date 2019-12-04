@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
 package org.apache.ignite.ml.environment;
 
 import java.util.Random;
+import org.apache.ignite.ml.environment.deploy.DeployingContext;
 import org.apache.ignite.ml.environment.logging.MLLogger;
 import org.apache.ignite.ml.environment.logging.NoOpLogger;
 import org.apache.ignite.ml.environment.parallelism.DefaultParallelismStrategy;
@@ -33,6 +34,9 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     /** Serial version id. */
     private static final long serialVersionUID = 8502532880517447662L;
 
+    /** Default partition data TTL (infinite). */
+    private static final long INFINITE_TTL = -1;
+
     /** Dependency (partition -> Parallelism strategy). */
     private IgniteFunction<Integer, ParallelismStrategy> parallelismStgy;
 
@@ -45,6 +49,9 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     /** Dependency (partition -> Random numbers generator supplier). */
     private IgniteFunction<Integer, Random> rngSupplier;
 
+    /** Partition data time-to-live in seconds (-1 for an infinite lifetime). */
+    private long dataTtl;
+
     /**
      * Creates an instance of DefaultLearningEnvironmentBuilder.
      */
@@ -53,6 +60,7 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
         loggingFactory = constant(NoOpLogger.factory());
         seed = constant(new Random().nextLong());
         rngSupplier = p -> new Random();
+        dataTtl = INFINITE_TTL;
     }
 
     /** {@inheritDoc} */
@@ -65,6 +73,13 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     /** {@inheritDoc} */
     @Override public LearningEnvironmentBuilder withRandomDependency(IgniteFunction<Integer, Random> rngSupplier) {
         this.rngSupplier = rngSupplier;
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public LearningEnvironmentBuilder withDataTtl(long dataTtl) {
+        this.dataTtl = dataTtl;
 
         return this;
     }
@@ -113,7 +128,7 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     @Override public LearningEnvironment buildForWorker(int part) {
         Random random = rngSupplier.apply(part);
         random.setSeed(seed.apply(part));
-        return new LearningEnvironmentImpl(part, random, parallelismStgy.apply(part), loggingFactory.apply(part));
+        return new LearningEnvironmentImpl(part, dataTtl, random, parallelismStgy.apply(part),  loggingFactory.apply(part));
     }
 
     /** Default LearningEnvironment implementation. */
@@ -127,23 +142,32 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
         /** Partition. */
         private final int part;
 
+        /** Partition data time-to-live in seconds (-1 for an infinite lifetime). */
+        private final long dataTtl;
+
         /** Random numbers generator. */
         private final Random randomNumGen;
+
+        /** Deploy context. */
+        private final DeployingContext deployingContext = DeployingContext.unitialized();
 
         /**
          * Creates an instance of LearningEnvironmentImpl.
          *
          * @param part Partition.
+         * @param dataTtl Partition data time-to-live in seconds (-1 for an infinite lifetime).
          * @param rng Random numbers generator.
          * @param parallelismStgy Parallelism strategy.
          * @param loggingFactory Logging factory.
          */
         private LearningEnvironmentImpl(
             int part,
+            long dataTtl,
             Random rng,
             ParallelismStrategy parallelismStgy,
             MLLogger.Factory loggingFactory) {
             this.part = part;
+            this.dataTtl = dataTtl;
             this.parallelismStgy = parallelismStgy;
             this.loggingFactory = loggingFactory;
             randomNumGen = rng;
@@ -172,6 +196,16 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
         /** {@inheritDoc} */
         @Override public int partition() {
             return part;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long dataTtl() {
+            return dataTtl;
+        }
+
+        /** {@inheritDoc} */
+        @Override public DeployingContext deployingContext() {
+            return deployingContext;
         }
     }
 }

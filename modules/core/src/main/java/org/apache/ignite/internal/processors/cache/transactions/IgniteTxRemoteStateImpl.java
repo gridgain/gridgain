@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,16 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -155,18 +155,30 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidPartition(int part) {
+    @Override public void invalidPartition(int cacheId, int part, GridCacheVersion version) {
         if (writeMap != null) {
             for (Iterator<IgniteTxEntry> it = writeMap.values().iterator(); it.hasNext(); ) {
                 IgniteTxEntry e = it.next();
 
+                if (e.cacheId() != cacheId)
+                    continue;
+
                 GridCacheContext cacheCtx = e.context();
 
-                GridCacheEntryEx cached = e.cached();
+                GridDistributedCacheEntry cached = (GridDistributedCacheEntry)e.cached();
 
                 if (cached != null) {
-                    if (cached.partition() == part)
+                    if (cached.partition() == part) {
+                        try {
+                            if (cached.hasLockCandidate(version))
+                                cached.removeLock(version);
+                        }
+                        catch (GridCacheEntryRemovedException ignored) {
+                            // No-op.
+                        }
+
                         it.remove();
+                    }
                 }
                 else if (cacheCtx.affinity().partition(e.key()) == part)
                     it.remove();
@@ -177,35 +189,5 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IgniteTxRemoteStateImpl.class, this);
-    }
-
-    /** {@inheritDoc} */
-    @Override public Collection<CacheStoreManager> stores(GridCacheSharedContext cctx) {
-        int locStoreCnt = cctx.getLocalStoreCount();
-
-        if (locStoreCnt > 0 && !writeMap.isEmpty()) {
-            Collection<CacheStoreManager> stores = null;
-
-            for (IgniteTxEntry e : writeMap.values()) {
-                if (e.skipStore())
-                    continue;
-
-                CacheStoreManager store = e.context().store();
-
-                if (store.configured() && store.isLocal()) {
-                    if (stores == null)
-                        stores = new ArrayList<>(locStoreCnt);
-
-                    stores.add(store);
-
-                    if (stores.size() == locStoreCnt)
-                        break;
-                }
-            }
-
-            return stores;
-        }
-
-        return null;
     }
 }

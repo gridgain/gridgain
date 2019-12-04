@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -335,11 +335,8 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
         final GridNearCacheAdapter near = cache();
 
-        // Allow to get cached value from the local node.
-        boolean allowLocRead = !forcePrimary || cctx.localNode().equals(affNodes.get(0));
-
         while (true) {
-            GridNearCacheEntry entry = allowLocRead ? (GridNearCacheEntry)near.peekEx(key) : null;
+            GridNearCacheEntry entry = (GridNearCacheEntry)near.peekEx(key);
 
             try {
                 CacheObject v = null;
@@ -383,6 +380,9 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                 }
 
                 if (v == null) {
+                    // Allow to get cached value from the local node.
+                    boolean allowLocRead = (!forcePrimary && cctx.config().isReadFromBackup())|| cctx.localNode().equals(affNodes.get(0));
+
                     boolean fastLocGet = allowLocRead && cctx.reserveForFastLocalGet(part, topVer);
 
                     if (fastLocGet) {

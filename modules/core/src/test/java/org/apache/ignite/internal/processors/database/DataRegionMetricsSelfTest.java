@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,10 +18,16 @@ package org.apache.ignite.internal.processors.database;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.DataRegionMetrics;
+import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.cache.ratemetrics.HitRateMetrics;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
@@ -30,6 +36,19 @@ import static java.lang.Thread.sleep;
  *
  */
 public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
+    /** For test purposes only. */
+    public static final DataRegionMetricsProvider NO_OP_METRICS = new DataRegionMetricsProvider() {
+        /** {@inheritDoc} */
+        @Override public long partiallyFilledPagesFreeSpace() {
+            return 0;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long emptyDataPages() {
+            return 0;
+        }
+    };
+
     /** */
     private DataRegionMetricsImpl memMetrics;
 
@@ -52,7 +71,11 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration();
 
-        memMetrics = new DataRegionMetricsImpl(plcCfg);
+        IgniteConfiguration cfg = new IgniteConfiguration().setMetricExporterSpi(new NoopMetricExporterSpi());
+
+        memMetrics = new DataRegionMetricsImpl(plcCfg,
+            new GridMetricManager(new GridTestKernalContext(new GridTestLog4jLogger(), cfg)),
+            NO_OP_METRICS);
 
         memMetrics.enableMetrics();
     }
@@ -184,7 +207,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * As rate metrics {@link HitRateMetrics implementation} is tied to absolute time ticks
+     * As rate metrics {@link HitRateMetric implementation} is tied to absolute time ticks
      * (not related to the first hit) all tests need to align start time with this sequence of ticks.
      *
      * @param rateTimeInterval Rate time interval.
@@ -288,7 +311,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
                 startLatch.await();
 
                 for (int i = 0; i < iterationsCnt; i++) {
-                    memMetrics.updateTotalAllocatedPages(1);
+                    memMetrics.totalAllocatedPages().increment();
 
                     sleep(delay);
                 }

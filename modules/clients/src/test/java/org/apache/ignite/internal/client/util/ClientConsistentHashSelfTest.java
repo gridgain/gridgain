@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -103,8 +103,8 @@ public class ClientConsistentHashSelfTest extends GridCommonAbstractTest {
 
         try {
             // Add several objects with the same hash without neither natural ordering nor comparator.
-            hash.addNode(new Object() { public int hashCode() { return 0; } }, 1);
-            hash.addNode(new Object() { public int hashCode() { return 0; } }, 1);
+            hash.addNode(new Object() { @Override public int hashCode() { return 0; } }, 1);
+            hash.addNode(new Object() { @Override public int hashCode() { return 0; } }, 1);
 
             fail("Expects failed due to internal TreeSet requires comparator or natural ordering.");
         }
@@ -121,8 +121,8 @@ public class ClientConsistentHashSelfTest extends GridCommonAbstractTest {
         }, null);
 
         // Add several objects with the same hash into consistent hash with explicit comparator.
-        hash.addNode(new Object() { public int hashCode() { return 0; } }, 1);
-        hash.addNode(new Object() { public int hashCode() { return 0; } }, 1);
+        hash.addNode(new Object() { @Override public int hashCode() { return 0; } }, 1);
+        hash.addNode(new Object() { @Override public int hashCode() { return 0; } }, 1);
 
         info("Expected pass due to internal TreeSet has explicit comparator.");
     }

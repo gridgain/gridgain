@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ package org.apache.ignite.ml.environment.parallelism;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +36,11 @@ public class DefaultParallelismStrategy implements ParallelismStrategy {
     /** {@inheritDoc} */
     @Override public <T> Promise<T> submit(IgniteSupplier<T> task) {
         return new FutureWrapper<>(pool.submit(task::get));
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getParallelism(){
+        return ((ForkJoinPool)pool).getParallelism();
     }
 
     /**

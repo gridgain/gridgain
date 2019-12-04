@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.cache.store.CacheStoreSession;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobContext;
@@ -73,6 +72,8 @@ public class GridResourceProcessor extends GridProcessorAdapter {
             new GridResourceLoggerInjector(ctx.config().getGridLogger());
         injectorByAnnotation[GridResourceIoc.ResourceAnnotation.IGNITE_INSTANCE.ordinal()] =
             new GridResourceBasicInjector<>(ctx.grid());
+        injectorByAnnotation[GridResourceIoc.ResourceAnnotation.METRIC_MANAGER.ordinal()] =
+            new GridResourceSupplierInjector<>(ctx::metric);
     }
 
     /** {@inheritDoc} */
@@ -201,26 +202,6 @@ public class GridResourceProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Injects filesystem instance into given object.
-     *
-     * @param obj Object.
-     * @param igfs Ignite filesystem to inject.
-     * @return {@code True} if filesystem was injected.
-     * @throws IgniteCheckedException If failed to inject.
-     */
-    public boolean injectFileSystem(Object obj, IgniteFileSystem igfs) throws IgniteCheckedException {
-        assert obj != null;
-
-        if (log.isDebugEnabled())
-            log.debug("Injecting cache store session: " + obj);
-
-        // Unwrap Proxy object.
-        obj = unwrapTarget(obj);
-
-        return inject(obj, GridResourceIoc.ResourceAnnotation.FILESYSTEM_RESOURCE, null, null, igfs);
-    }
-
-    /**
      * @param obj Object to inject.
      * @throws IgniteCheckedException If failed to inject.
      */
@@ -326,10 +307,6 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
             case JOB_CONTEXT:
                 res = new GridResourceJobContextInjector((ComputeJobContext)param);
-                break;
-
-            case FILESYSTEM_RESOURCE:
-                res = new GridResourceBasicInjector<>(param);
                 break;
 
             default:

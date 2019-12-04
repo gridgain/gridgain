@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -124,7 +124,7 @@ public interface IgniteTree<L, T> {
         /**
          * @return Operation type for this closure or {@code null} if it is unknown.
          *      After method {@link #call(Object)} has been called, operation type must
-         *      be know and this method can not return {@code null}.
+         *      be known and this method can not return {@code null}.
          */
         OperationType operationType();
     }
@@ -140,6 +140,9 @@ public interface IgniteTree<L, T> {
         REMOVE,
 
         /** */
-        PUT
+        PUT,
+
+        /** */
+        IN_PLACE
     }
 }

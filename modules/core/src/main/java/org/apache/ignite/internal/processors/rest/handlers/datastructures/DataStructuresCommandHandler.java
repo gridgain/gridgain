@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.rest.handlers.datastructures;
 
 import java.util.Collection;
-import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -28,6 +27,7 @@ import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandle
 import org.apache.ignite.internal.processors.rest.request.DataStructuresRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -95,8 +95,8 @@ public class DataStructuresCommandHandler extends GridRestCommandHandlerAdapter 
             return new GridFinishedFuture(err);
         }
 
-        return ctx.closure().callLocalSafe(new Callable<Object>() {
-            @Override public Object call() throws Exception {
+        return ctx.closure().callLocalSafe(new GridPlainCallable<Object>() {
+            @Override public Object call() {
                 Long init = req.initial();
                 Long delta = req.delta();
 

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -124,11 +124,6 @@ public class PoolProcessor extends GridProcessorAdapter {
 
                 return ctx.utilityCachePool();
 
-            case GridIoPolicy.IGFS_POOL:
-                assert ctx.getIgfsExecutorService() != null : "IGFS pool is not configured.";
-
-                return ctx.getIgfsExecutorService();
-
             case GridIoPolicy.SERVICE_POOL:
                 assert ctx.getServiceExecutorService() != null : "Service pool is not configured.";
 
@@ -148,6 +143,11 @@ public class PoolProcessor extends GridProcessorAdapter {
                 assert ctx.getSchemaExecutorService() != null : "Query pool is not configured.";
 
                 return ctx.getSchemaExecutorService();
+
+            case GridIoPolicy.REBALANCE_POOL:
+                assert ctx.getRebalanceExecutorService() != null : "Rebalance pool is not configured.";
+
+                return ctx.getRebalanceExecutorService();
 
             default: {
                 if (plc < 0)

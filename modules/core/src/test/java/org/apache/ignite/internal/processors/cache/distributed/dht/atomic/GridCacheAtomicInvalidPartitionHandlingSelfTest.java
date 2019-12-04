@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,7 +90,7 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
         return cfg;
     }
 
-    /** {@inheritDoc} */
+    /** */
     protected CacheConfiguration cacheConfiguration() {
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
@@ -166,7 +166,7 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
 
             final IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-            final int range = 100_000;
+            final int range = GridTestUtils.SF.apply(100_000);
 
             final Set<Integer> keys = new LinkedHashSet<>();
 
@@ -262,7 +262,7 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
             Random rnd = new Random();
 
             // Restart random nodes.
-            for (int r = 0; r < 20; r++) {
+            for (int r = 0; r < GridTestUtils.SF.applyLB(20, 10); r++) {
                 int idx0 = rnd.nextInt(gridCnt - 1) + 1;
 
                 stopGrid(idx0);

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,7 +70,7 @@ public class PlatformServices extends PlatformAbstractTarget {
     private static final int OP_DESCRIPTORS = 5;
 
     /** */
-    private static final int OP_WITH_ASYNC = 6;
+    private static final int OP_RESERVED_1 = 6;
 
     /** */
     private static final int OP_WITH_SERVER_KEEP_BINARY = 7;
@@ -341,12 +341,6 @@ public class PlatformServices extends PlatformAbstractTarget {
     /** {@inheritDoc} */
     @Override public PlatformTarget processOutObject(int type) throws IgniteCheckedException {
         switch (type) {
-            case OP_WITH_ASYNC:
-                if (services.isAsync())
-                    return this;
-
-                return new PlatformServices(platformCtx, services.withAsync(), srvKeepBinary);
-
             case OP_WITH_SERVER_KEEP_BINARY:
                 return srvKeepBinary ? this : new PlatformServices(platformCtx, services, true);
         }

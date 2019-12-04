@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -115,10 +115,18 @@ public class JdbcStatement implements Statement {
         UUID nodeId = conn.nodeId();
 
         boolean loc = nodeId == null;
+        JdbcQueryMultipleStatementsTask qryTask;
 
-        JdbcQueryMultipleStatementsTask qryTask = new JdbcQueryMultipleStatementsTask(loc ? ignite : null, conn.schemaName(),
-            sql, isQuery, loc, getArgs(), fetchSize, conn.isLocalQuery(), conn.isCollocatedQuery(),
-            conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy());
+        if (!conn.isMultipleStatementsAllowed() && conn.isMultipleStatementsTaskV2Supported()) {
+            qryTask = new JdbcQueryMultipleStatementsNotAllowTask(loc ? ignite : null, conn.schemaName(),
+                sql, isQuery, loc, getArgs(), fetchSize, conn.getQueryMaxMemory(), conn.isLocalQuery(),
+                conn.isCollocatedQuery(), conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy());
+        }
+        else {
+            qryTask = new JdbcQueryMultipleStatementsTask(loc ? ignite : null, conn.schemaName(),
+                sql, isQuery, loc, getArgs(), fetchSize, conn.getQueryMaxMemory(), conn.isLocalQuery(),
+                conn.isCollocatedQuery(), conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy());
+        }
 
         try {
             List<JdbcStatementResultInfo> rsInfos =
@@ -154,14 +162,15 @@ public class JdbcStatement implements Statement {
 
         boolean loc = nodeId == null;
 
-        if (!conn.isDmlSupported())
-            if(isQuery != null && !isQuery)
+        if (!conn.isDmlSupported()) {
+            if (isQuery != null && !isQuery)
                 throw new SQLException("Failed to query Ignite: DML operations are supported in versions 1.8.0 and newer");
             else
                 isQuery = true;
+        }
 
         JdbcQueryTask qryTask = JdbcQueryTaskV3.createTask(loc ? ignite : null, conn.cacheName(), conn.schemaName(),
-            sql, isQuery, loc, getArgs(), fetchSize, uuid, conn.isLocalQuery(), conn.isCollocatedQuery(),
+            sql, isQuery, loc, getArgs(), fetchSize, uuid, conn.getQueryMaxMemory(), conn.isLocalQuery(), conn.isCollocatedQuery(),
             conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy(), false, conn.skipReducerOnUpdate());
 
         try {
@@ -205,7 +214,7 @@ public class JdbcStatement implements Statement {
      * @throws SQLException On error.
      */
     protected void execute0(String sql, Boolean isQuery) throws SQLException {
-        if (conn.isMultipleStatementsAllowed())
+        if (conn.isMultipleStatementsSupported())
             executeMultipleStatement(sql, isQuery);
         else
             executeSingle(sql, isQuery);

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -132,6 +132,8 @@ public class GridCacheGateway<K, V> {
         ctx.tm().resetContext();
         ctx.mvcc().contextReset();
 
+        ctx.tm().leaveNearTxSystemSection();
+
         // Unwind eviction notifications.
         if (!ctx.shared().closed(ctx))
             CU.unwindEvicts(ctx);
@@ -168,6 +170,8 @@ public class GridCacheGateway<K, V> {
             throw new IgniteException("Failed to wait for cache preloader start [cacheName=" +
                 ctx.name() + "]", e);
         }
+
+        ctx.tm().enterNearTxSystemSection();
 
         onEnter(opCtx);
 
@@ -237,6 +241,8 @@ public class GridCacheGateway<K, V> {
 
         // Unwind eviction notifications.
         CU.unwindEvicts(ctx);
+
+        ctx.tm().leaveNearTxSystemSection();
 
         // Return back previous thread local operation context per call.
         ctx.operationContextPerCall(prev);

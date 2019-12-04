@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -406,14 +406,100 @@ public interface ConnectionProperties {
     public void setDataPageScanEnabled(@Nullable Boolean dataPageScanEnabled);
 
     /**
-     * @return {@code true} if jdbc thin affinity awareness is enabled for this connection,
+     * @return {@code true} if jdbc thin Partition Awareness is enabled for this connection,
      * {@code false} if it's disabled.
      */
-    public boolean isAffinityAwareness();
+    public boolean isPartitionAwareness();
 
     /**
-     * @param affinityAwareness {@code true} if jdbc thin affinity awareness is enabled
+     * @param partitionAwareness {@code true} if jdbc thin Partition Awareness is enabled
      * for this connection, if {@code false} then it's disabled.
      */
-    public void setAffinityAwareness(boolean affinityAwareness);
+    public void setPartitionAwareness(boolean partitionAwareness);
+
+    /**
+     * Note: Batch size of 1 prevents deadlock on update where keys sequence are different in several concurrent updates.
+     *
+     * @return update internal bach size.
+     */
+    @Nullable public Integer getUpdateBatchSize();
+
+    /**
+     * Note: Set to 1 to prevent deadlock on update where keys sequence are different in several concurrent updates.
+     *
+     * @param updateBatchSize update internal bach size.
+     * @throws SQLException On error.
+     */
+    public void setUpdateBatchSize(@Nullable Integer updateBatchSize) throws SQLException;
+
+    /**
+     * @return SQL cache size that is used within Partition Awareness optimizations.
+     */
+    public int getPartitionAwarenessSqlCacheSize();
+
+    /**
+     * Sets SQL cache size that is used within Partition Awareness optimizations.
+     *
+     * @param partitionAwarenessSqlCacheSize SQL cache size.
+     * @throws SQLException On error.
+     */
+    public void setPartitionAwarenessSqlCacheSize(int partitionAwarenessSqlCacheSize) throws SQLException;
+
+    /**
+     * @return Partition distributions cache size that is used within Partition Awareness optimizations.
+     */
+    public int getPartitionAwarenessPartitionDistributionsCacheSize();
+
+    /**
+     * Sets partition distributions cache size that is used within Partition Awareness optimizations.
+     *
+     * @param partitionAwarenessPartDistributionsCacheSize Partition distributions cache size.
+     * @throws SQLException On error.
+     */
+    public void setPartitionAwarenessPartitionDistributionsCacheSize(
+        int partitionAwarenessPartDistributionsCacheSize) throws SQLException;
+
+    /**
+     * Note: zero value means query memory manager uses default limit.
+     * Note: negative value means ('unlimited') memory management is disabled for query.
+     *
+     * @return Query memory limit in bytes.
+     */
+    @Nullable public Long getQueryMaxMemory();
+
+    /**
+     * Note: zero value makes query memory manager to use default limit.
+     * Note: negative value (means 'unlimited') disable memory management for queries.
+     *
+     * @param maxMemory Query memory limit in bytes.
+     */
+    public void setQueryMaxMemory(@Nullable Long maxMemory) throws SQLException;
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @return Query timeout in seconds.
+     */
+    @Nullable public Integer getQueryTimeout();
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @param qryTimeout Query timeout in seconds.
+     */
+    public void setQueryMaxMemory(@Nullable Integer qryTimeout) throws SQLException;
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @return Connection timeout in milliseconds.
+     */
+    @Nullable public int getConnectionTimeout();
+
+    /**
+     * Note: zero value means there is no limits.
+     *
+     * @param connTimeout Connection timeout in milliseconds.
+     */
+    public void setConnectionTimeout(@Nullable Integer connTimeout) throws SQLException;
 }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 {
+    using System;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Cache.Event;
@@ -83,13 +84,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 
             Debug.Assert(hasVal || hasOldVal);
 
-            if (!hasOldVal)
-                return new CacheEntryCreateEvent<TK, TV>(key, val);
-
-            if (val.Equals(oldVal))
-                return new CacheEntryRemoveEvent<TK, TV>(key, oldVal);
-
-            return new CacheEntryUpdateEvent<TK, TV>(key, oldVal, val);
+            var eventType = reader.ReadByte();
+            switch (eventType)
+            {
+                case 0:
+                    return new CacheEntryCreateEvent<TK, TV>(key, val);
+                case 1:
+                    return new CacheEntryUpdateEvent<TK, TV>(key, oldVal, val);
+                case 2:
+                    return new CacheEntryRemoveEvent<TK, TV>(key, oldVal);
+                default:
+                    throw new NotSupportedException(eventType.ToString());
+            }
         }
     }
 }

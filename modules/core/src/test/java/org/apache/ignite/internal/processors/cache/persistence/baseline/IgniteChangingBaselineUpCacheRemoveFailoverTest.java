@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +36,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheAbstractRemoveFailur
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
@@ -81,8 +80,6 @@ public class IgniteChangingBaselineUpCacheRemoveFailoverTest extends GridCacheAb
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         cleanPersistenceDir();
     }
 
@@ -100,8 +97,6 @@ public class IgniteChangingBaselineUpCacheRemoveFailoverTest extends GridCacheAb
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         cleanPersistenceDir();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
@@ -124,6 +119,8 @@ public class IgniteChangingBaselineUpCacheRemoveFailoverTest extends GridCacheAb
                 startGrid(GRIDS_COUNT);
 
                 IgniteEx ig0 = grid(0);
+
+                ig0.cluster().baselineAutoAdjustEnabled(false);
 
                 ig0.cluster().setBaselineTopology(baselineNodes(ig0.cluster().forServers().nodes()));
 

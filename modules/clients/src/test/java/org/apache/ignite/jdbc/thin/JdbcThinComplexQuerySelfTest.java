@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -27,6 +28,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -255,6 +257,38 @@ public class JdbcThinComplexQuerySelfTest extends JdbcThinAbstractSelfTest {
     }
 
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWrongArgumentType() throws Exception {
+        try (ResultSet rs = stmt.executeQuery("select * from \"org\".Organization where name = '2'")) {
+            assertFalse(rs.next());
+        }
+
+        // Check non-indexed field.
+        GridTestUtils.assertThrowsWithCause(() -> {
+            try (ResultSet rs = stmt.executeQuery("select * from \"org\".Organization where name = 2")) {
+                assertFalse(rs.next());
+            }
+
+            return null;
+        }, SQLException.class);
+
+        // Check indexed field.
+        try (ResultSet rs = stmt.executeQuery("select * from \"pers\".Person where name = '2'")) {
+            assertFalse(rs.next());
+        }
+
+        GridTestUtils.assertThrowsWithCause(() -> {
+            try (ResultSet rs = stmt.executeQuery("select * from \"pers\".Person where name = 2")) {
+                assertFalse(rs.next());
+            }
+
+            return null;
+        }, SQLException.class);
+    }
+
+    /**
      * Person.
      */
     private static class Person implements Serializable {
@@ -263,7 +297,7 @@ public class JdbcThinComplexQuerySelfTest extends JdbcThinAbstractSelfTest {
         private final int id;
 
         /** Name. */
-        @QuerySqlField(index = false)
+        @QuerySqlField(index = true)
         private final String name;
 
         /** Age. */

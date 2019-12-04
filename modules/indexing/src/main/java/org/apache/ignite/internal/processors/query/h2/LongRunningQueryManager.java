@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.thread.IgniteThread;
 
 /**
  * Long running query manager.
@@ -31,8 +32,14 @@ public final class LongRunningQueryManager {
     /** Check period in ms. */
     private static final long CHECK_PERIOD = 1_000;
 
-    /** Connection manager. */
-    private final ConnectionManager connMgr;
+    /**
+     * Default threshold result's row count, when count of fetched rows is bigger than the threshold
+     * warning will be printed.
+     */
+    private static final long DFLT_FETCHED_SIZE_THRESHOLD = 100_000;
+
+    /** Message about the long execution of the query. */
+    public static final String LONG_QUERY_EXEC_MSG = "Query execution is too long";
 
     /** Queries collection. Sorted collection isn't used to reduce 'put' time. */
     private final ConcurrentHashMap<H2QueryInfo, TimeoutChecker> qrys = new ConcurrentHashMap<>();
@@ -57,12 +64,24 @@ public final class LongRunningQueryManager {
      */
     private volatile int timeoutMult = 2;
 
+    /** Query result set size threshold. */
+    private volatile long rsSizeThreshold = DFLT_FETCHED_SIZE_THRESHOLD;
+
+    /**
+     * Result set size threshold multiplier. The warning will be printed after:
+     * - size of result set > threshold;
+     * - size of result set > threshold * multiplier;
+     * - size of result set > threshold * multiplier * multiplier;
+     * - etc.
+     *
+     * If the multiplier <= 1, the warning message is printed once.
+     */
+    private volatile int rsSizeThresholdMult = 2;
+
     /**
      * @param ctx Kernal context.
      */
     public LongRunningQueryManager(GridKernalContext ctx) {
-        connMgr = ((IgniteH2Indexing)ctx.query().getIndexing()).connections();
-
         log = ctx.log(LongRunningQueryManager.class);
 
         checkWorker = new GridWorker(ctx.igniteInstanceName(), "long-qry", log) {
@@ -77,7 +96,7 @@ public final class LongRunningQueryManager {
 
         timeout = ctx.config().getLongQueryWarningTimeout();
 
-        Thread thread = new Thread(checkWorker);
+        IgniteThread thread = new IgniteThread(checkWorker);
 
         thread.setDaemon(true);
         thread.start();
@@ -121,7 +140,7 @@ public final class LongRunningQueryManager {
             H2QueryInfo qinfo = e.getKey();
 
             if (e.getValue().checkTimeout(qinfo.time())) {
-                qinfo.printLogMessage(log, connMgr, "Query execution is too long");
+                qinfo.printLogMessage(log, LONG_QUERY_EXEC_MSG, null);
 
                 if (e.getValue().timeoutMult <= 1)
                     qrys.remove(qinfo);
@@ -154,16 +173,57 @@ public final class LongRunningQueryManager {
 
     /**
      * Sets long query timeout multiplier. The warning will be printed after:
-     *      - timeout;
-     *      - timeout * multiplier;
-     *      - timeout * multiplier * multiplier;
-     *      - etc...
+     * - timeout;
+     * - timeout * multiplier;
+     * - timeout * multiplier * multiplier;
+     * - etc...
      * If the multiplier <= 1, the warning message is printed once.
      *
      * @param timeoutMult Long query timeout multiplier.
      */
     public void setTimeoutMultiplier(int timeoutMult) {
         this.timeoutMult = timeoutMult;
+    }
+
+    /**
+     * @return Threshold result's row count, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     */
+    public long getResultSetSizeThreshold() {
+        return rsSizeThreshold;
+    }
+
+    /**
+     * Sets threshold result's row count, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     *
+     * @param rsSizeThreshold Threshold result's row count, when count of fetched rows is bigger than the threshold
+     *      warning will be printed.
+     */
+    public void setResultSetSizeThreshold(long rsSizeThreshold) {
+        this.rsSizeThreshold = rsSizeThreshold;
+    }
+
+    /**
+     * Gets result set size threshold multiplier. The warning will be printed after:
+     *  - size of result set > threshold;
+     *  - size of result set > threshold * multiplier;
+     *  - size of result set > threshold * multiplier * multiplier;
+     *  - etc.
+     * If the multiplier <= 1, the warning message is printed once.
+     * @return Result set size threshold multiplier.
+     */
+    public int getResultSetSizeThresholdMultiplier() {
+        return rsSizeThresholdMult;
+    }
+
+    /**
+     * Sets result set size threshold multiplier.
+     *
+     * @param rsSizeThresholdMult Result set size threshold multiplier
+     */
+    public void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMult) {
+        this.rsSizeThresholdMult = rsSizeThresholdMult <= 1 ? 1 : rsSizeThresholdMult;
     }
 
     /**

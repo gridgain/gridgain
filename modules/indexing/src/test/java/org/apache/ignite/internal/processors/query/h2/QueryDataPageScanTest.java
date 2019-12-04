@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.Serializable;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Arrays;
@@ -61,6 +60,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.Boolean.FALSE;
@@ -98,6 +98,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20800")
     public void testMultipleIndexedTypes() throws Exception {
         final String cacheName = "test_multi_type";
 
@@ -136,32 +137,27 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
 
         CacheDataTree.isLastFindWithDataPageScan();
 
-        List<List<?>> res = cache.query(new SqlFieldsQuery("select z, _key, _val from TestData use index()")
-            .setDataPageScanEnabled(true)).getAll();
+        List<List<?>> res = cache.query(new SqlFieldsQuery("select z, _key, _val from TestData use index()")).getAll();
         assertEquals(1, res.size());
         assertEquals(777L, res.get(0).get(0));
         assertTrue(CacheDataTree.isLastFindWithDataPageScan());
 
-        res = cache.query(new SqlFieldsQuery("select _val, _key from String use index()")
-            .setDataPageScanEnabled(true)).getAll();
+        res = cache.query(new SqlFieldsQuery("select _val, _key from String use index()")).getAll();
         assertEquals(1, res.size());
         assertEquals("bla-bla", res.get(0).get(0));
         assertTrue(CacheDataTree.isLastFindWithDataPageScan());
 
-        res = cache.query(new SqlFieldsQuery("select _key, _val from Integer use index()")
-            .setDataPageScanEnabled(true)).getAll();
+        res = cache.query(new SqlFieldsQuery("select _key, _val from Integer use index()")).getAll();
         assertEquals(1, res.size());
         assertEquals(3, res.get(0).get(0));
         assertTrue(CacheDataTree.isLastFindWithDataPageScan());
 
-        res = cache.query(new SqlFieldsQuery("select _key, _val from uuids use index()")
-            .setDataPageScanEnabled(true)).getAll();
+        res = cache.query(new SqlFieldsQuery("select _key, _val from uuids use index()")).getAll();
         assertEquals(1, res.size());
         assertEquals(7, res.get(0).get(0));
         assertTrue(CacheDataTree.isLastFindWithDataPageScan());
 
-        res = cache.query(new SqlFieldsQuery("select age, name from my_persons use index()")
-            .setDataPageScanEnabled(true)).getAll();
+        res = cache.query(new SqlFieldsQuery("select age, name from my_persons use index()")).getAll();
         assertEquals(1, res.size());
         assertEquals(99, res.get(0).get(0));
         assertEquals("Vasya", res.get(0).get(1));
@@ -172,6 +168,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20800")
     public void testConcurrentUpdatesWithMvcc() throws Exception {
         doTestConcurrentUpdates(true);
     }
@@ -180,6 +177,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20800")
     public void testConcurrentUpdatesNoMvcc() throws Exception {
         try {
             doTestConcurrentUpdates(false);
@@ -213,7 +211,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
 
         assertEquals(accounts * initialBalance,((Number)
             cache.query(new SqlFieldsQuery("select sum(_val) from Long use index()")
-                .setDataPageScanEnabled(true)).getAll().get(0).get(0)).longValue());
+                ).getAll().get(0).get(0)).longValue());
         assertTrue(CacheDataTree.isLastFindWithDataPageScan());
 
         AtomicBoolean cancel = new AtomicBoolean();
@@ -284,7 +282,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
             while (!cancel.get() && !Thread.interrupted()) {
                 assertEquals("wrong sum!", accounts * initialBalance, ((Number)
                     cache.query(new SqlFieldsQuery("select sum(_val) from Long use index()")
-                        .setDataPageScanEnabled(true)).getAll().get(0).get(0)).longValue());
+                        ).getAll().get(0).get(0)).longValue());
 //                info("query ok!");
             }
         }, 2, "query");
@@ -307,6 +305,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20800")
     public void testDataPageScan() throws Exception {
         final String cacheName = "test";
 
@@ -364,7 +363,6 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
                         "where a.z between ? and ? " +
                         "and check_scan_flag(?,true)")
                     .setLazy(true)
-                    .setDataPageScanEnabled(DirectPageScanIndexing.expectedDataPageScanEnabled)
                     .setArgs(1, expNestedLoops, DirectPageScanIndexing.expectedDataPageScanEnabled)
                     .setPageSize(keysCnt / 10) // Must be less than keysCnt.
             )
@@ -415,7 +413,6 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
 
         assertEquals(0L, cache.query(new SqlFieldsQuery(
             "update TestData set z = z + 1 where check_scan_flag(?,false)")
-            .setDataPageScanEnabled(DirectPageScanIndexing.expectedDataPageScanEnabled)
             .setArgs(DirectPageScanIndexing.expectedDataPageScanEnabled)
         ).getAll().get(0).get(0));
 
@@ -453,7 +450,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
         assertTrue(cache.query(new SqlQuery<>(TestData.class,
             "from TestData use index() where check_scan_flag(?,false)") // Force full scan with USE INDEX()
             .setArgs(DirectPageScanIndexing.expectedDataPageScanEnabled)
-            .setDataPageScanEnabled(DirectPageScanIndexing.expectedDataPageScanEnabled))
+            )
             .getAll().isEmpty());
 
         checkSqlLastFindDataPageScan(dataPageScanEnabled);
@@ -482,8 +479,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
     }
 
     private void checkScanQuery(IgniteCache<Long,TestData> cache, Boolean dataPageScanEnabled, Boolean expLastDataPageScan) {
-        assertTrue(cache.query(new ScanQuery<>(new TestPredicate())
-            .setDataPageScanEnabled(dataPageScanEnabled)).getAll().isEmpty());
+        assertTrue(cache.query(new ScanQuery<>(new TestPredicate())).getAll().isEmpty());
         assertEquals(expLastDataPageScan, CacheDataTree.isLastFindWithDataPageScan());
     }
 
@@ -511,7 +507,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public ResultSet executeSqlQueryWithTimer(
             PreparedStatement stmt,
-            Connection conn,
+            H2PooledConnection conn,
             String sql,
             @Nullable Collection<Object> params,
             int timeoutMillis,

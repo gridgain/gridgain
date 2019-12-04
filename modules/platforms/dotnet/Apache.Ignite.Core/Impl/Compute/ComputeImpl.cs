@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,6 +66,9 @@ namespace Apache.Ignite.Core.Impl.Compute
 
         /** */
         private const int OpWithNoResultCache = 9;
+
+        /** */
+        private const int OpWithExecutor = 10;
 
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
@@ -135,6 +138,18 @@ namespace Apache.Ignite.Core.Impl.Compute
         public void WithKeepBinary()
         {
             _keepBinary.Value = true;
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="ComputeImpl"/> instance associated with a specified executor.
+        /// </summary>
+        /// <param name="executorName">Executor name.</param>
+        /// <returns>New <see cref="ComputeImpl"/> instance associated with a specified executor.</returns>
+        public ComputeImpl WithExecutor(string executorName)
+        {
+            var target = DoOutOpObject(OpWithExecutor, w => w.WriteString(executorName));
+
+            return new ComputeImpl(target, _prj, _keepBinary.Value);
         }
 
         /// <summary>

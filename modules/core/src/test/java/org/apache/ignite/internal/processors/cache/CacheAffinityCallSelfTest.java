@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -182,6 +182,47 @@ public class CacheAffinityCallSelfTest extends GridCommonAbstractTest {
         }
         catch (ClusterTopologyException e) {
             log.info("Expected error: " + e);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testAffinityCallMergedExchanges() throws Exception {
+        startGrids(SRVS + 1);
+
+        final Integer key = 1;
+
+        final IgniteEx client = grid(SRVS);
+
+        assertTrue(client.configuration().isClientMode());
+        assertNull(client.context().cache().cache(CACHE_NAME));
+
+        try {
+            grid(0).context().cache().context().exchange().mergeExchangesTestWaitVersion(
+                new AffinityTopologyVersion(SRVS + 3, 0),
+                null
+            );
+
+            IgniteInternalFuture<IgniteEx> fut1 = GridTestUtils.runAsync(() -> startGrid(SRVS + 1));
+
+            assertTrue(GridTestUtils.waitForCondition(() -> client.context().cache().context()
+                .exchange().lastTopologyFuture()
+                .initialVersion().equals(new AffinityTopologyVersion(SRVS + 2, 0)), 5_000));
+
+            assertFalse(fut1.isDone());
+
+            IgniteInternalFuture<Object> fut2 = GridTestUtils.runAsync(() ->
+                client.compute().affinityCall(CACHE_NAME, key, new CheckCallable(key, null)));
+
+            startGrid(SRVS + 2);
+
+            fut1.get();
+            fut2.get();
         }
         finally {
             stopAllGrids();

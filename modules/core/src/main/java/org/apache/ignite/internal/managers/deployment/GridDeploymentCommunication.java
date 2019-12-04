@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -353,7 +354,7 @@ class GridDeploymentCommunication {
      * @throws IgniteCheckedException Thrown if there is no connection with remote node.
      */
     GridDeploymentResponse sendResourceRequest(final String rsrcName, IgniteUuid clsLdrId,
-        final ClusterNode dstNode, long threshold) throws IgniteCheckedException {
+        final ClusterNode dstNode, long threshold) throws IgniteCheckedException, TimeoutException {
         assert rsrcName != null;
         assert dstNode != null;
         assert clsLdrId != null;
@@ -470,13 +471,21 @@ class GridDeploymentCommunication {
 
                         timeout = threshold - U.currentTimeMillis();
                     }
+
+                    if (timeout <= 0)
+                        throw new TimeoutException();
                 }
                 catch (InterruptedException e) {
                     // Interrupt again to get it in the users code.
                     Thread.currentThread().interrupt();
 
-                    throw new IgniteCheckedException("Got interrupted while waiting for response from node: " +
-                        dstNode.id(), e);
+                    TimeoutException te = new TimeoutException(
+                        "Got interrupted while waiting for response from node: " + dstNode.id()
+                    );
+
+                    te.initCause(e);
+
+                    throw te;
                 }
             }
 

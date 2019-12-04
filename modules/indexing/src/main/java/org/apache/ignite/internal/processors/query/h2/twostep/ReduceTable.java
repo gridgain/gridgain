@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,8 +68,8 @@ public class ReduceTable extends TableBase {
      * @param idx Index.
      * @return Scan index.
      */
-    public static H2ScanIndex<ReduceIndex> createScanIndex(ReduceIndex idx) {
-        return new H2ScanIndex<>(idx);
+    public static H2ScanIndex<ReduceIndex> createScanIndex(ReduceIndex idx, ReduceTable tbl) {
+        return new H2ScanIndex<>(idx, tbl, "_SCAN_" + idx.getName());
     }
 
     /** {@inheritDoc} */
@@ -105,7 +105,7 @@ public class ReduceTable extends TableBase {
 
     /** {@inheritDoc} */
     @Override public void addRow(Session session, Row row) {
-        throw DbException.getUnsupportedException("addRow");
+        // Noop.
     }
 
     /** {@inheritDoc} */
@@ -115,7 +115,7 @@ public class ReduceTable extends TableBase {
 
     /** {@inheritDoc} */
     @Override public TableType getTableType() {
-        return TableType.EXTERNAL_TABLE_ENGINE;
+        return TableType.TABLE;
     }
 
     /** {@inheritDoc} */
@@ -165,8 +165,8 @@ public class ReduceTable extends TableBase {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        return getScanIndex(null).getRowCountApproximation();
+    @Override public long getRowCountApproximation(Session ses) {
+        return getScanIndex(null).getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */
