@@ -58,4 +58,7 @@ public interface WebSocketEvents {
 
     /** */
     public static final String CLUSTER_TOPOLOGY = "cluster:topology";
+
+    /** */
+    public static final String CLUSTER_LOGOUT = "cluster:logout";
 }

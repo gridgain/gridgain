@@ -77,6 +77,9 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Latest activation token was sent at. */
     private LocalDateTime activationSentAt;
 
+    /** Last activity. */
+    private String sessionToken;
+
     /**
      * Default constructor for serialization.
      */

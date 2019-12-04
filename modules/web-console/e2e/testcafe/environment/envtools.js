@@ -51,7 +51,6 @@ const dropTestDB = (mask = '@example.com') => {
         .catch((err) => {throw err.message;});
 };
 
-
 /**
  * Spawns a new process using the given command.
  * @param command {String} The command to run.

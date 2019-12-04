@@ -39,7 +39,7 @@ export type AgentsStatResponse = {
 export type CacheNamesCollectorTaskResponse = {
 	caches: {[cacheName: string]: string},
 	groups: string[]
-}
+} | {cacheGroupsNotAvailable: true};
 
 export type CacheNodesTaskResponse = string[]
 
@@ -88,4 +88,22 @@ export type WebSocketResponse = {
 	requestId: any,
 	eventType: string,
 	payload: any
+}
+
+/** Error codes from o.a.i.internal.processors.restGridRestResponse.java */
+export enum SuccessStatus {
+	/** Command succeeded. */
+	SUCCESS = 0,
+	/** Command failed. */
+	FAILED = 1,
+	/** Authentication failure. */
+	AUTH_FAILED = 2,
+	/** Security check failed. */
+	SECURITY_CHECK_FAILED = 3
+}
+
+export type GridRestResponse<V> = {
+	error: string,
+	response: V,
+	successStatus: SuccessStatus
 }
