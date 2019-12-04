@@ -5139,7 +5139,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             int roundRobin = 0;
 
             for (CacheGroupContext grp : forGroups) {
-                stripedExec.execute(roundRobin % stripedExec.stripes(), () -> {
+                stripedExec.execute(roundRobin % stripedExec.stripesCount(), () -> {
                     try {
                         long processed = grp.offheap().restorePartitionStates(partitionStates);
 

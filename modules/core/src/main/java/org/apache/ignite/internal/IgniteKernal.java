@@ -1332,6 +1332,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
                 qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
 
+            ctx.systemView().registerThreadPools(stripedExecSvc, dataStreamExecSvc);
+
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
         }
@@ -1495,7 +1497,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         else if (execSvc instanceof StripedExecutor) {
             StripedExecutor exec = (StripedExecutor) execSvc;
 
-            poolSize = exec.stripes();
+            poolSize = exec.stripesCount();
             poolActiveThreads = exec.activeStripesCount();
             poolQSize = exec.queueSize();
         }
