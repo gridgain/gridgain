@@ -35,7 +35,13 @@ import static org.mockito.Mockito.when;
  */
 public class ManagementConsoleProcessorTest extends AbstractServiceTest {
     /**
-     * Should write warning log message if tracing feature not enabled.
+     * GG-26201 - Testcase 5:
+     *
+     * 1. Mock `isTracingEnabled()` method to return false
+     * 2. Verify the warning message** is present in log after start
+     *
+     * ** "Current Ignite configuration does not support tracing functionality and management console agent will
+     * not collect traces (consider adding ignite-opencensus module to classpath)."
      */
     @Test
     public void shouldNotCreateSpanExporterIfNodeNotSupportTracingFeature() {

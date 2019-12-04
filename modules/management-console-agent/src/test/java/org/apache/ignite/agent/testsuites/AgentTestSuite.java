@@ -33,6 +33,7 @@ import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
 import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
 import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessorTest;
+import org.apache.ignite.agent.processor.ManagementConsoleSpanMessagesProcessorTest;
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
@@ -62,6 +63,7 @@ import org.junit.runners.Suite;
     CacheChangesProcessorTest.class,
     ClusterInfoProcessorTest.class,
     ManagementConsoleMessagesProcessorTest.class,
+    ManagementConsoleSpanMessagesProcessorTest.class,
     EventsExporterTest.class,
     SpanExporterTest.class,
     MetricsProcessorTest.class,
