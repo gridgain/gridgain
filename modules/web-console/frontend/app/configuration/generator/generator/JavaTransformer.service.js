@@ -799,22 +799,31 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         return sb;
     }
 
+    /**
+     * Filter and sort list of required imports.
+     *
+     * @param {Set.<String>} imports List of imports to process.
+     * @return {Array.<String>} List of sorted imports.
+     * @private
+     */
     static _prepareImports(imports) {
-        return _.sortBy(_.filter(imports, (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.')));
+        return _.sortBy(_.filter([...imports.values()], (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.')));
     }
 
     /**
-     * @param {Bean} bean
-     * @returns {Array.<String>}
+     * Collect list of static imports.
+     *
+     * @param {Bean} bean Configuration metadata object.
+     * @returns {Set.<String>} Set of static imports.
      */
     static collectStaticImports(bean) {
-        const imports = [];
+        const imports = new Set();
 
         _.forEach(bean.properties, (prop) => {
             switch (prop.clsName) {
                 case 'EVENT_TYPES':
                     _.forEach(prop.eventTypes, (grp) => {
-                        imports.push(`${grp.class}.${grp.value}`);
+                        imports.add(`${grp.class}.${grp.value}`);
                     });
 
                     break;
@@ -822,7 +831,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 case 'MAP':
                     if (prop.valClsNameShow === 'EVENTS') {
                         _.forEach(prop.entries, (lnr) => {
-                            _.forEach(lnr.eventTypes, (type) => imports.push(`${type.class}.${type.label}`));
+                            _.forEach(lnr.eventTypes, (type) => imports.add(`${type.class}.${type.label}`));
                         });
                     }
 
@@ -875,7 +884,11 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     /**
-     * @returns {Set.<String>}
+     * Collect list of imports.
+     *
+     * @param {Bean} bean Configuration metadata object.
+     * @param {Set.<String>} imports Set to store used imports.
+     * @returns {Set.<String>} Set of imports.
      */
     static collectConfigurationImports(cfg, imports = new Set()) {
         const addImport = (value) => {
@@ -969,8 +982,12 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 if (node.clsName === 'ARRAY' || node.clsName === 'COLLECTION')
                     return node.items;
 
-                if (node.clsName === 'MAP')
+                if (node.clsName === 'MAP') {
+                    if (node.name === 'localEventListeners')
+                        return _.map(node.entries, (e) => e[node.keyField]);
+
                     return node.entries;
+                }
 
                 return [...(node.arguments || []), ...(node.properties || [])];
             }
@@ -1016,13 +1033,13 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
         const hasProps = imports.has('java.util.Properties');
 
-        _.forEach(this._prepareImports([...imports.values()]), (cls) => sb.append(`import ${cls};`));
+        _.forEach(this._prepareImports(imports), (cls) => sb.append(`import ${cls};`));
 
         sb.emptyLine();
 
-        const staticImports = this._prepareImports(this.collectStaticImports(cfg));
+        const staticImports = this.collectStaticImports(cfg);
 
-        if (staticImports.length) {
+        if (staticImports.size) {
             _.forEach(this._prepareImports(staticImports), (cls) => sb.append(`import static ${cls};`));
 
             sb.emptyLine();

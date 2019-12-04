@@ -232,7 +232,10 @@ export const TEST_CACHE = {
                 keyField: 'name',
                 valClsName: 'java.lang.String',
                 valField: 'className',
-                entries: [{name: 'id', className: 'java.lang.Integer'}, {
+                entries: [{
+                    name: 'id',
+                    className: 'java.lang.Integer'
+                }, {
                     name: 'value',
                     className: 'java.sql.Timestamp'
                 }]
@@ -440,6 +443,57 @@ export const TEST_CONFIGURATION = {
             dflts: {}
         }
     }, {
+        clsName: 'BEAN',
+        name: 'eventStorageSpi',
+        value: {
+            properties: [],
+            arguments: [],
+            clsName: 'org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi',
+            id: 'eventStorage',
+            dflts: {expireCount: 10000}
+        }
+    }, {
+        clsName: 'EVENT_TYPES',
+        id: 'evts',
+        name: 'includeEventTypes',
+        eventTypes: [{
+            label: 'EVTS_CHECKPOINT',
+            value: 'EVTS_CHECKPOINT',
+            class: 'org.apache.ignite.events.EventType',
+            events: ['EVT_CHECKPOINT_SAVED', 'EVT_CHECKPOINT_LOADED', 'EVT_CHECKPOINT_REMOVED']
+        }]
+    }, {
+        clsName: 'MAP',
+        id: 'localEventListeners',
+        name: 'localEventListeners',
+        ordered: false,
+        keyClsName: 'org.apache.ignite.lang.IgnitePredicate',
+        keyField: 'className',
+        valClsName: 'int[]',
+        valClsNameShow: 'EVENTS',
+        valField: 'eventTypes',
+        entries: [{
+            className: {properties: [], arguments: [], clsName: 'test.Listener1'},
+            eventTypes: [{
+                class: 'org.apache.ignite.events.EventType',
+                label: 'EVT_CHECKPOINT_SAVED'
+            }, {
+                class: 'org.apache.ignite.events.EventType',
+                label: 'EVT_CHECKPOINT_LOADED'
+            }]
+        }, {
+            className: {properties: [], arguments: [], clsName: 'test.Listener2'},
+            eventTypes: [{
+                class: 'org.apache.ignite.events.EventType',
+                label: 'EVT_CHECKPOINT_LOADED'
+            }, {
+                class: 'org.apache.ignite.events.EventType',
+                label: 'EVT_CHECKPOINT_REMOVED'
+            }]
+        }],
+        keyClsGenericType: 'org.apache.ignite.events.Event',
+        isKeyClsGenericTypeExtended: true
+    }, {
         clsName: 'ARRAY',
         id: 'failoverSpi',
         name: 'failoverSpi',
@@ -452,7 +506,12 @@ export const TEST_CONFIGURATION = {
         }],
         typeClsName: 'org.apache.ignite.spi.failover.FailoverSpi'
     }, {
-        clsName: 'ARRAY', id: 'ccfgs', name: 'cacheConfiguration', items: [], typeClsName: 'org.apache.ignite.configuration.CacheConfiguration', varArg: true
+        clsName: 'ARRAY',
+        id: 'ccfgs',
+        name: 'cacheConfiguration',
+        items: [],
+        typeClsName: 'org.apache.ignite.configuration.CacheConfiguration',
+        varArg: true
     }, {
         clsName: 'ARRAY', id: 'pluginConfigurations', name: 'pluginConfigurations', items: [{
             properties: [{
@@ -998,6 +1057,8 @@ export const EXPECTED_IMPORTS = [
     'org.apache.ignite.cache.store.jdbc.dialect.OracleDialect',
     'org.apache.ignite.configuration.CacheConfiguration',
     'org.apache.ignite.configuration.IgniteConfiguration',
+    'org.apache.ignite.events.Event',
+    'org.apache.ignite.lang.IgnitePredicate',
     'org.apache.ignite.plugin.security.SecurityBasicPermissionSet',
     'org.apache.ignite.plugin.security.SecurityCredentials',
     'org.apache.ignite.plugin.security.SecurityCredentialsBasicProvider',
@@ -1005,9 +1066,19 @@ export const EXPECTED_IMPORTS = [
     'org.apache.ignite.plugin.security.SecurityPermissionSet',
     'org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi',
     'org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder',
+    'org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi',
     'org.apache.ignite.spi.failover.FailoverSpi',
     'org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi',
     'org.gridgain.grid.configuration.GridGainConfiguration',
     'org.gridgain.grid.security.jaas.JaasAuthenticator',
-    'org.gridgain.grid.security.jaas.JaasBasicPermissionsProvider'
+    'org.gridgain.grid.security.jaas.JaasBasicPermissionsProvider',
+    'test.Listener1',
+    'test.Listener2'
+];
+
+export const EXPECTED_STATIC_IMPORTS = [
+    'org.apache.ignite.events.EventType.EVTS_CHECKPOINT',
+    'org.apache.ignite.events.EventType.EVT_CHECKPOINT_LOADED',
+    'org.apache.ignite.events.EventType.EVT_CHECKPOINT_REMOVED',
+    'org.apache.ignite.events.EventType.EVT_CHECKPOINT_SAVED'
 ];

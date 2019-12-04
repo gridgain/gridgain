@@ -17,11 +17,8 @@
 import IgniteJavaTransformer from './JavaTransformer.service';
 import {assert} from 'chai';
 import cloneDeep from 'lodash/cloneDeep';
-import filter from 'lodash/filter';
 import find from 'lodash/find';
 import forEach from 'lodash/forEach';
-import startsWith from 'lodash/startsWith';
-import includes from 'lodash/includes';
 
 import * as testData from './JavaTransformer.service.data.spec';
 
@@ -71,14 +68,29 @@ suite('Java transformer tests', () => {
 
         _addCacheConfiguration(configuration, testData.TEST_CACHE);
 
-        const imports = filter(
-            [...IgniteJavaTransformer.collectConfigurationImports(configuration).values()],
-            (cls) => !startsWith(cls, 'java.lang.') && includes(cls, '.')
+        const imports = IgniteJavaTransformer._prepareImports(
+            IgniteJavaTransformer.collectConfigurationImports(configuration)
         );
 
         assert.equal(testData.EXPECTED_IMPORTS.length, imports.length);
 
-        forEach(testData.EXPECTED_IMPORTS, (expectedImport) => assert.equal(true, imports.indexOf(expectedImport) >= 0));
+        forEach(testData.EXPECTED_IMPORTS,
+            (expectedImport) => assert.equal(true, imports.indexOf(expectedImport) >= 0)
+        );
+    });
+
+    test('Should generate valid list of static imports', () => {
+        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+
+        const imports = IgniteJavaTransformer._prepareImports(
+            IgniteJavaTransformer.collectStaticImports(configuration)
+        );
+
+        assert.equal(testData.EXPECTED_STATIC_IMPORTS.length, imports.length);
+
+        forEach(testData.EXPECTED_STATIC_IMPORTS,
+            (expectedImport) => assert.equal(true, imports.indexOf(expectedImport) >= 0)
+        );
     });
 
     test('Should generate list of imports for big configuration without exceptions', () => {
