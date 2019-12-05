@@ -717,19 +717,34 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             List<Event> evts = new ArrayList<>(2);
 
             ClusterNode locNode = cctx.kernalContext().discovery().localNode();
-            Collection<ClusterNode> nodes = cctx.kernalContext().cluster().get().topology(affVer.topologyVersion());
-            Collection<BaselineNode> bltNodes = nodes == null ? null : new ArrayList<>(nodes);
 
-            if (exchActions.activate() && evtMngr.isRecordable(EVT_CLUSTER_ACTIVATED))
+            Collection<BaselineNode> bltNodes = cctx.kernalContext().cluster().get().currentBaselineTopology();
+
+            boolean collectionUsed = false;
+
+            if (exchActions.activate() && evtMngr.isRecordable(EVT_CLUSTER_ACTIVATED)) {
+                assert !exchActions.deactivate() : exchActions;
+
+                collectionUsed = true;
+
                 evts.add(new ClusterActivationEvent(locNode, "Cluster activated.", EVT_CLUSTER_ACTIVATED, bltNodes));
+            }
 
-            if (exchActions.deactivate() && evtMngr.isRecordable(EVT_CLUSTER_DEACTIVATED))
+            if (exchActions.deactivate() && evtMngr.isRecordable(EVT_CLUSTER_DEACTIVATED)) {
+                assert !exchActions.activate() : exchActions;
+
+                collectionUsed = true;
+
                 evts.add(new ClusterActivationEvent(locNode, "Cluster deactivated.", EVT_CLUSTER_DEACTIVATED, bltNodes));
+            }
 
             if (exchActions.changedClusterState() && evtMngr.isRecordable(EVT_CLUSTER_STATE_CHANGED)) {
                 StateChangeRequest req = exchActions.stateChangeRequest();
 
-                evts.add(new ClusterStateChangeEvent(req.prevState(), req.state(), nodes, locNode, "Cluster state changed."));
+                if (collectionUsed && bltNodes != null)
+                    bltNodes = new ArrayList<>(bltNodes);
+
+                evts.add(new ClusterStateChangeEvent(req.prevState(), req.state(), bltNodes, locNode, "Cluster state changed."));
             }
 
             A.notEmpty(evts, "events " + exchActions);
