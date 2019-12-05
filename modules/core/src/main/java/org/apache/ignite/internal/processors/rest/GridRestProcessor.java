@@ -89,6 +89,7 @@ import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.thread.IgniteThread;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKEN_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
@@ -111,10 +112,10 @@ public class GridRestProcessor extends GridProcessorAdapter {
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
 
     /** Default session timeout, in seconds. */
-    private static final int DFLT_SES_TIMEOUT = 30;
+    private static final long DFLT_SES_TIMEOUT = MINUTES.toSeconds(5);
 
     /** The default interval used to invalidate sessions, in seconds. */
-    private static final int DFLT_SES_TOKEN_INVALIDATE_INTERVAL = 5 * 60;
+    private static final long DFLT_SES_TOKEN_INVALIDATE_INTERVAL = MINUTES.toSeconds(30);
 
     /** Index of task name wrapped by VisorGatewayTask */
     private static final int WRAPPED_TASK_IDX = 1;
