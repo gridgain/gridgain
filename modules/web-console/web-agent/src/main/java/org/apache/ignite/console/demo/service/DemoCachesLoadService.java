@@ -333,6 +333,7 @@ public class DemoCachesLoadService implements Service {
         indFlds.put("lastName", Boolean.FALSE);
 
         idx.setFields(indFlds);
+        idx.setInlineSize(80);
 
         indexes.add(idx);
         indexes.add(new QueryIndex("salary", QueryIndexType.SORTED, false, "EMP_SALARY"));
