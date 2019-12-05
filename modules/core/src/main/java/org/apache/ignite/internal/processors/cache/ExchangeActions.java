@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -215,10 +216,10 @@ public class ExchangeActions {
     }
 
     /**
-     * @return {@code True} if has enable cluster read-only request.
+     * @return {@code True} if cluster state was changed.
      */
-    public boolean readOnlyEnabled() {
-        return stateChangeReq != null && stateChangeReq.prevState() != ACTIVE_READ_ONLY && stateChangeReq.state() == ACTIVE_READ_ONLY;
+    public boolean changedClusterState() {
+        return stateChangeReq != null && stateChangeReq.prevState() != stateChangeReq.state();
     }
 
     /**

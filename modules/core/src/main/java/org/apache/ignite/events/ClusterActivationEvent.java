@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Cluster activation event.
@@ -56,7 +57,6 @@ import org.apache.ignite.lang.IgnitePredicate;
  * event storage SPI if they are disabled in Ignite configuration.
  * @see EventType#EVT_CLUSTER_ACTIVATED
  * @see EventType#EVT_CLUSTER_DEACTIVATED
- * @see EventType#EVT_CLUSTER_READ_ONLY_MODE_ENABLED
  */
 public class ClusterActivationEvent extends EventAdapter {
     /** */
@@ -86,7 +86,7 @@ public class ClusterActivationEvent extends EventAdapter {
      *
      * @return Baseline nodes.
      */
-    public Collection<BaselineNode> baselineNodes() {
+    public @Nullable Collection<BaselineNode> baselineNodes() {
         return baselineNodes;
     }
 }
