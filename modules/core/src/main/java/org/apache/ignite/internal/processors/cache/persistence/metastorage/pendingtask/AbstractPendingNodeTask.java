@@ -40,9 +40,6 @@ public abstract class AbstractPendingNodeTask implements Serializable {
     /** */
     public abstract void execute(GridKernalContext ctx);
 
-    /** */
-    public abstract void onCreate(GridKernalContext ctx);
-
     /** {@inheritDoc} */
     public String toString() {
         return S.toString(AbstractPendingNodeTask.class, this);

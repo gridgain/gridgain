@@ -1646,19 +1646,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
     }
 
-    public void localIndexRename(String schemaName, String idxName, String newName) throws IgniteCheckedException {
-        synchronized (stateMux) {
-            QueryIndexDescriptorImpl idxDesc = idxs.remove(new QueryIndexKey(schemaName, idxName));
-
-            idxs.put(
-                new QueryIndexKey(schemaName, newName),
-                new QueryIndexDescriptorImpl(idxDesc.typeDescriptor(), newName, idxDesc.type(), idxDesc.inlineSize())
-            );
-
-            idx.dynamicIndexRename(schemaName, idxName, newName);
-        }
-    }
-
     /**
      * Create cache and table from given query entity.
      *

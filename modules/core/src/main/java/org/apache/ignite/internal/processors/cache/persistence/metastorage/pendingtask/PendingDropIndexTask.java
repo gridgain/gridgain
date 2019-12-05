@@ -91,17 +91,6 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
         ctx.cache().removePendingNodeTask(this);
     }
 
-    @Override public void onCreate(GridKernalContext ctx) {
-        SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)schemaOperation;
-
-        try {
-            ctx.query().localIndexRename(op0.schemaName(), op0.indexName(), tempIndexName(op0.indexName()));
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-    }
-
     private String tempIndexName(String name) {
         return new GridStringBuilder(name)
             .a("_pending_delete_")

@@ -43,7 +43,7 @@ public class PendingNodeTaskFactory {
 
                 AbstractPendingNodeTask task = new PendingDropIndexTask(op0, cacheData);
 
-                task.onCreate(ctx);
+                return task;
             }
         }
 

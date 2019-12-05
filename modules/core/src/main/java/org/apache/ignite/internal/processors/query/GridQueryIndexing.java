@@ -163,16 +163,6 @@ public interface GridQueryIndexing {
     public void dynamicIndexDrop(String schemaName, String idxName, boolean ifExists) throws IgniteCheckedException;
 
     /**
-     * Allows to rename existing index.
-     *
-     * @param schemaName Schema name.
-     * @param idxName Index name.
-     * @param newName New index name.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void dynamicIndexRename(String schemaName, String idxName, String newName) throws IgniteCheckedException;
-
-    /**
      * Add columns to dynamic table.
      *
      * @param schemaName Schema name.

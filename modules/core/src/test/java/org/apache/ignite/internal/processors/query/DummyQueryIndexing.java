@@ -134,15 +134,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void dynamicIndexRename(
-        String schemaName,
-        String idxName,
-        String newName
-    ) throws IgniteCheckedException {
-
-    }
-
-    /** {@inheritDoc} */
     @Override public void dynamicAddColumn(
         String schemaName,
         String tblName,

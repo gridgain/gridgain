@@ -405,11 +405,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void dynamicIndexRename(String schemaName, String idxName, String newName) throws IgniteCheckedException {
-        schemaMgr.renameIndex(schemaName, idxName, newName);
-    }
-
-    /** {@inheritDoc} */
     @Override public void dynamicAddColumn(String schemaName, String tblName, List<QueryField> cols,
         boolean ifTblExists, boolean ifColNotExists) throws IgniteCheckedException {
         schemaMgr.addColumn(schemaName, tblName, cols, ifTblExists, ifColNotExists);

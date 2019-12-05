@@ -301,17 +301,6 @@ public class H2Utils {
     }
 
     /**
-     * Generate {@code RENAME INDEX} SQL statement for given params.
-     * @param schemaName <b>Quoted</b> schema name.
-     * @param idxName Index name.
-     * @param newName New index name.
-     * @return Statement string.
-     */
-    public static String indexRenameSql(String schemaName, String idxName, String newName) {
-        return "RENAME INDEX " + withQuotes(schemaName) + '.' + withQuotes(idxName) + " TO " + withQuotes(newName);
-    }
-
-    /**
      * @param desc Row descriptor.
      * @param cols Columns list.
      * @param keyCol Primary key column.
