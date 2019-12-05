@@ -181,11 +181,6 @@ public class CacheGroupMetricsImpl {
         return idxBuildCntPartitionsLeft.value();
     }
 
-    /** Set number of partitions need processed for finished indexes create or rebuilding. */
-    public void setIndexBuildCountPartitionsLeft(long idxBuildCntPartitionsLeft) {
-        this.idxBuildCntPartitionsLeft.value(idxBuildCntPartitionsLeft);
-    }
-
     /** Decrement number of partitions need processed for finished indexes create or rebuilding. */
     public void decrementIndexBuildCountPartitionsLeft() {
         idxBuildCntPartitionsLeft.decrement();
