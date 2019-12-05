@@ -73,8 +73,8 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractPendingNodeTask;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.PendingNodeTaskFactory;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.NodePendingTaskFactory;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -214,7 +214,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** */
-    private final PendingNodeTaskFactory pendingNodeTaskFactory;
+    private final NodePendingTaskFactory nodePendingTaskFactory;
 
     /**
      * @param ctx Kernal context.
@@ -246,7 +246,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             }
         };
 
-        pendingNodeTaskFactory = new PendingNodeTaskFactory(ctx);
+        nodePendingTaskFactory = new NodePendingTaskFactory(ctx);
     }
 
     /** {@inheritDoc} */
@@ -470,10 +470,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             assert oldDesc == null;
 
-            AbstractPendingNodeTask pendingNodeTask = pendingNodeTaskFactory.buildTaskIfNeeded(msg.operation(), msg.deploymentId());
+            AbstractNodePendingTask pendingNodeTask = nodePendingTaskFactory.buildTaskIfNeeded(msg.operation(), msg.deploymentId());
 
             if (pendingNodeTask != null)
-                ctx.cache().addPendingNodeTask(pendingNodeTask);
+                ctx.cache().addNodePendingTask(pendingNodeTask);
 
             // Create schema operation and either trigger it immediately from exchange thread or append to already
             // running operation.

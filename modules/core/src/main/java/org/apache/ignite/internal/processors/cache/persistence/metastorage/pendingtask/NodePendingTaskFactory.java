@@ -24,15 +24,15 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
-public class PendingNodeTaskFactory {
+public class NodePendingTaskFactory {
     private final GridKernalContext ctx;
 
     /** */
-    public PendingNodeTaskFactory(GridKernalContext ctx) {
+    public NodePendingTaskFactory(GridKernalContext ctx) {
         this.ctx = ctx;
     }
 
-    public @Nullable AbstractPendingNodeTask buildTaskIfNeeded(SchemaAbstractOperation operation, IgniteUuid deploymentId) {
+    public @Nullable AbstractNodePendingTask buildTaskIfNeeded(SchemaAbstractOperation operation, IgniteUuid deploymentId) {
         if (operation instanceof SchemaIndexDropOperation) {
             SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)operation;
 
@@ -41,7 +41,7 @@ public class PendingNodeTaskFactory {
             if (cacheDesc != null && F.eq(cacheDesc.deploymentId(), deploymentId)) {
                 StoredCacheData cacheData = cacheDesc.toStoredData(ctx.cache().splitter());
 
-                AbstractPendingNodeTask task = new PendingDropIndexTask(op0, cacheData);
+                AbstractNodePendingTask task = new PendingDropIndexTask(op0, cacheData);
 
                 return task;
             }

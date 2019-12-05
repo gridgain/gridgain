@@ -30,19 +30,24 @@ import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexD
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 
+/**
+ * Pending task to complete index drop operation.
+ */
 public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
+    /** */
     public PendingDropIndexTask() {
         /* No op. */
     }
 
+    /** */
     public PendingDropIndexTask(SchemaIndexDropOperation operation, StoredCacheData originalCacheData) {
-        super(operation, originalCacheData);
+        super(operation);
 
-        filteredCacheData = new StoredCacheData(originalCacheData);
+        changedCacheData = new StoredCacheData(originalCacheData);
 
         SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)schemaOperation;
 
-        for (QueryEntity queryEntity : filteredCacheData.queryEntities()) {
+        for (QueryEntity queryEntity : changedCacheData.queryEntities()) {
             List<QueryIndex> idxs = new LinkedList<>();
 
             for (QueryIndex idx : queryEntity.getIndexes()) {
@@ -63,7 +68,7 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
 
     /** {@inheritDoc} */
     @Override public void execute(GridKernalContext ctx) {
-        String cacheName = filteredCacheData.config().getName();
+        String cacheName = changedCacheData.config().getName();
 
         GridCacheContextInfo cacheInfo = ctx.query().getIndexing().registeredCacheInfo(cacheName);
 
@@ -86,7 +91,7 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
 
         ctx.query().onLocalOperationFinished(op0, type);
 
-        ctx.cache().removePendingNodeTask(this);
+        ctx.cache().removeNodePendingTask(this);
     }
 
     /** {@inheritDoc} */

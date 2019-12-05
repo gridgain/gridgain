@@ -51,7 +51,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractPendingNodeTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
@@ -1068,7 +1068,7 @@ class ClusterCachesInfo {
     }
 
     private CacheJoinNodeDiscoveryData filterJoinNodeDiscoveryData(CacheJoinNodeDiscoveryData joinDiscoData) {
-        Collection<AbstractPendingNodeTask> tasks = ctx.cache().pendingNodeTasks();
+        Collection<AbstractNodePendingTask> tasks = ctx.cache().nodePendingTasks();
 
         CacheJoinNodeDiscoveryData discoveryData = new CacheJoinNodeDiscoveryData(
             joinDiscoData.deploymentId(),
@@ -1076,18 +1076,18 @@ class ClusterCachesInfo {
             joinDiscoData.startCaches()
         );
 
-        for (AbstractPendingNodeTask task : tasks) {
-            CacheDiscoveryInfo discoveryInfo = joinDiscoData.caches().get(task.filteredCacheData().config().getName());
+        for (AbstractNodePendingTask task : tasks) {
+            CacheDiscoveryInfo discoveryInfo = joinDiscoData.caches().get(task.changedCacheData().config().getName());
 
             if (discoveryInfo != null) {
                 CacheDiscoveryInfo filteredDiscoveryInfo = new CacheDiscoveryInfo(
                     discoveryInfo.deploymentId(),
-                    task.filteredCacheData(),
+                    task.changedCacheData(),
                     discoveryInfo.cacheType(),
                     discoveryInfo.flags()
                 );
 
-                discoveryData.caches().put(task.filteredCacheData().config().getName(), filteredDiscoveryInfo);
+                discoveryData.caches().put(task.changedCacheData().config().getName(), filteredDiscoveryInfo);
             }
         }
 

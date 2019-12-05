@@ -96,7 +96,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractPendingNodeTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -283,7 +283,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     private final AtomicInteger asyncSchemaWorkersCnt = new AtomicInteger(0);
 
     /** */
-    private final ConcurrentHashMap<String, AbstractPendingNodeTask> pendingTasks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AbstractNodePendingTask> pendingTasks = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -655,22 +655,22 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     /**
-     * Starts the asynchronous operation of cleaning up pending delete objects.
+     * Starts the asynchronous operation of pending tasks execution.
      */
     private void asyncPendingTasksExecution() {
         assert pendingTasks != null;
 
-        Set<AbstractPendingNodeTask> tasks = new HashSet<>(pendingTasks.values());
+        Set<AbstractNodePendingTask> tasks = new HashSet<>(pendingTasks.values());
 
-        for (AbstractPendingNodeTask task : tasks)
+        for (AbstractNodePendingTask task : tasks)
             asyncPendingTaskWorker(task);
     }
 
     /**
-     * Creates a worker to clean up one pending delete object.
-     * @param task Object.
+     * Creates a worker to execute single pending task.
+     * @param task Task.
      */
-    private void asyncPendingTaskWorker(AbstractPendingNodeTask task) {
+    private void asyncPendingTaskWorker(AbstractNodePendingTask task) {
         String workerName = "async-schema-cleanup-task-" + asyncSchemaWorkersCnt.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
@@ -680,7 +680,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
                     task.execute(ctx);
 
-                    removePendingNodeTask(task);
+                    removeNodePendingTask(task);
 
                     log.info("Execution of pending task completed: " + task.shortName());
                 }
@@ -5198,7 +5198,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
                 try {
                     metastorage.iterate(
                         STORE_PENDING_DELETE_PREFIX,
-                        (key, val) -> pendingTasks.put(key, (AbstractPendingNodeTask)val),
+                        (key, val) -> pendingTasks.put(key, (AbstractNodePendingTask)val),
                         true
                     );
                 }
@@ -5213,7 +5213,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
         synchronized (metaStorageMux) {
             try {
-                for (Map.Entry<String, AbstractPendingNodeTask> entry : pendingTasks.entrySet()) {
+                for (Map.Entry<String, AbstractNodePendingTask> entry : pendingTasks.entrySet()) {
                     if (metastorage.readRaw(entry.getKey()) == null)
                         metastorage.write(entry.getKey(), entry.getValue());
                 }
@@ -5227,21 +5227,21 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     /**
-     * Builds a metastorage key for pending delete object.
+     * Builds a metastorage key for pending task object.
      *
      * @param obj Object.
      * @return Metastorage key.
      */
-    private String pendingDeleteObjectMetastorageKey(AbstractPendingNodeTask obj) {
+    private String pendingDeleteObjectMetastorageKey(AbstractNodePendingTask obj) {
         return STORE_PENDING_DELETE_PREFIX + obj.shortName();
     }
 
     /**
-     * Adds pending delete object.
+     * Adds pending task object.
      *
      * @param obj Object.
      */
-    public void addPendingNodeTask(AbstractPendingNodeTask obj) {
+    public void addNodePendingTask(AbstractNodePendingTask obj) {
         String objName = pendingDeleteObjectMetastorageKey(obj);
 
         if (metastorage == null) {
@@ -5267,7 +5267,11 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         }
     }
 
-    public Collection<AbstractPendingNodeTask> pendingNodeTasks() {
+    /**
+     * Returns all pending tasks that are still not completed.
+     * @return Pending tasks collection.
+     */
+    public Collection<AbstractNodePendingTask> nodePendingTasks() {
         return Collections.unmodifiableCollection(pendingTasks.values());
     }
 
@@ -5276,7 +5280,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      *
      * @param obj Object.
      */
-    public void removePendingNodeTask(AbstractPendingNodeTask obj) {
+    public void removeNodePendingTask(AbstractNodePendingTask obj) {
         String objName = pendingDeleteObjectMetastorageKey(obj);
 
         if (metastorage == null) {
