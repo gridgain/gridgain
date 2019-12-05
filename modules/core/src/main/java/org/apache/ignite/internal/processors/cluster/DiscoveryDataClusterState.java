@@ -51,6 +51,9 @@ public class DiscoveryDataClusterState implements Serializable {
     /** Time of last cluster state change. */
     private final long lastStateChangeTime;
 
+    /** Last cluster activation time. */
+    private final long activationTime;
+
     /** Current cluster baseline topology. */
     @Nullable private final BaselineTopology baselineTopology;
 
@@ -95,8 +98,12 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param state Current cluster state.
      * @return State instance.
      */
-    static DiscoveryDataClusterState createState(ClusterState state, @Nullable BaselineTopology baselineTopology) {
-        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, null, null);
+    static DiscoveryDataClusterState createState(
+        ClusterState state,
+        @Nullable BaselineTopology baselineTopology,
+        long activationTime
+    ) {
+        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, activationTime, null, null);
     }
 
     /**
@@ -105,6 +112,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param baselineTopology Baseline topology for new cluster state.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      * @return Discovery cluster state instance.
      */
@@ -114,6 +122,7 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         UUID transitionReqId,
         AffinityTopologyVersion transitionTopVer,
+        long activationTime,
         Set<UUID> transitionNodes
     ) {
         assert transitionReqId != null;
@@ -127,6 +136,7 @@ public class DiscoveryDataClusterState implements Serializable {
             baselineTopology,
             transitionReqId,
             transitionTopVer,
+            activationTime,
             transitionNodes,
             prevState.state
         );
@@ -138,6 +148,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param baselineTopology Baseline topology for new cluster state.
      * @param transitionReqId State change request ID.
      * @param transitionTopVer State change topology version.
+     * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
      * @param prevClusterState Nodes participating in state change exchange.
      */
@@ -147,6 +158,7 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
+        long activationTime,
         @Nullable Set<UUID> transitionNodes,
         @Nullable ClusterState prevClusterState
     ) {
@@ -155,6 +167,7 @@ public class DiscoveryDataClusterState implements Serializable {
         this.prevState = prevState;
         this.state = state;
         this.lastStateChangeTime = U.currentTimeMillis();
+        this.activationTime = activationTime;
         this.baselineTopology = baselineTopology;
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
@@ -226,6 +239,13 @@ public class DiscoveryDataClusterState implements Serializable {
     @Deprecated
     public boolean active() {
         return ClusterState.active(state);
+    }
+
+    /**
+     * @return Cluster activation time.
+     */
+    public long activationTime() {
+        return activationTime;
     }
 
     /**
@@ -311,9 +331,9 @@ public class DiscoveryDataClusterState implements Serializable {
      */
     public DiscoveryDataClusterState finish(boolean success) {
         if(success)
-            return createState(state, baselineTopology);
+            return createState(state, baselineTopology, activationTime);
         else
-            return prevState != null ? prevState : createState(INACTIVE, null);
+            return prevState != null ? prevState : createState(INACTIVE, null, 0);
     }
 
     /** {@inheritDoc} */
