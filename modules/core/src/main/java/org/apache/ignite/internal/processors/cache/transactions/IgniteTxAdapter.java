@@ -630,7 +630,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /**
      * @return Finalization status.
      */
-    protected FinalizationStatus finalizationStatus() {
+    @Nullable public FinalizationStatus finalizationStatus() {
         return finalizing;
     }
 
@@ -2317,6 +2317,11 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         /** {@inheritDoc} */
         @Override public boolean markFinalizing(FinalizationStatus status) {
             throw new IllegalStateException("Deserialized transaction can only be used as read-only.");
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public FinalizationStatus finalizationStatus() {
+            return null;
         }
 
         /** {@inheritDoc} */

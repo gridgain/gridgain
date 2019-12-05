@@ -45,8 +45,8 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 /**
  * The test enforces specific order in messages processing during concurrent tx rollback and tx recovery due to
  * node left.
- *
- * Expected result: both dht transactions produces same COMMITTED state on tx finish.
+ * <p>
+ * Expected result: both DHT transactions produces same COMMITTED state on tx finish.
  */
 public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
@@ -147,6 +147,10 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
         // Release rollback request processing.
         stripeBlockLatch.countDown();
+
+        doSleep(1000); // Give some time for finish request to complete.
+
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
 
         assertNotNull(txs1);
         txs1.get(0).finishFuture().get();
