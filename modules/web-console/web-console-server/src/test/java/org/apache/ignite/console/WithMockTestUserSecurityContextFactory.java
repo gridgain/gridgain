@@ -40,7 +40,8 @@ public class WithMockTestUserSecurityContextFactory implements WithSecurityConte
         );
 
         principal.setToken(annotation.token());
-        
+        principal.setAdmin(annotation.admin());
+
         Authentication authentication =
             new UsernamePasswordAuthenticationToken(principal, annotation.password(), principal.getAuthorities());
 
