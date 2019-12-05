@@ -1400,19 +1400,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
-        final long longOpDumpTimeout = IgniteSystemProperties.getLong(
-                IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-                DFLT_LONG_OPERATIONS_DUMP_TIMEOUT
-        );
+        long longOpDumpTimeout = ctx.cache().context().tm().longOperationsDumpTimeout();
 
         if (longOpDumpTimeout > 0) {
-            longOpDumpTask = ctx.timeout().schedule(new Runnable() {
-                @Override public void run() {
-                    GridKernalContext ctx = IgniteKernal.this.ctx;
+            longOpDumpTask = ctx.timeout().schedule(() -> {
+                long longOperationsDumpTimeout = ctx.cache().context().tm().longOperationsDumpTimeout();
 
-                    if (ctx != null)
-                        ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout);
-                }
+                ctx.cache().context().exchange().dumpLongRunningOperations(longOperationsDumpTimeout);
             }, longOpDumpTimeout, longOpDumpTimeout);
         }
 

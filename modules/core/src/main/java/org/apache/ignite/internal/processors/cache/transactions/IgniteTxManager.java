@@ -114,6 +114,7 @@ import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SLOW_TX_WARN_TIMEOUT;
@@ -123,6 +124,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECT
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_SALVAGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
@@ -174,12 +176,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     static int DEADLOCK_MAX_ITERS =
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
 
-    /** Long operation dump timeout. */
-    private static final long LONG_OPERATIONS_DUMP_TIMEOUT = IgniteSystemProperties.getLong(
-            IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-            DFLT_LONG_OPERATIONS_DUMP_TIMEOUT
-    );
-
     /** Committing transactions. */
     private final ThreadLocal<IgniteInternalTx> threadCtx = new ThreadLocal<>();
 
@@ -218,8 +214,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * commiting, etc) and user time (time when client node runs some code while holding transaction and not
      * waiting it). Equals 0 if not set. No transactions are dumped in log if this parameter is not set.
      */
-    private volatile long longTransactionTimeDumpThreshold =
-        IgniteSystemProperties.getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
+    private volatile long longTransactionTimeDumpThreshold = getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
     /**
      * The coefficient for samples of completed transactions that will be dumped in log.
@@ -262,7 +257,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private int slowTxWarnTimeout = SLOW_TX_WARN_TIMEOUT;
 
     /** Long operations dump timeout. */
-    private long longOpsDumpTimeout = LONG_OPERATIONS_DUMP_TIMEOUT;
+    private volatile long longOpsDumpTimeout =
+        getLong(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, DFLT_LONG_OPERATIONS_DUMP_TIMEOUT);
 
     /** */
     private TxDumpsThrottling txDumpsThrottling = new TxDumpsThrottling();

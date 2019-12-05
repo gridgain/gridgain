@@ -171,6 +171,16 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public void setOperationsDumpTimeout(long timeout) {
+        ctx.cache().context().tm().longOperationsDumpTimeout(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOperationsDumpTimeout() {
+        return ctx.cache().context().tm().longOperationsDumpTimeout();
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TransactionsMXBeanImpl.class, this);
     }

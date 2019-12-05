@@ -217,4 +217,32 @@ public interface TransactionsMXBean {
     @MXBeanParametersNames("limit")
     @MXBeanParametersDescriptions("Samples per second limit.")
     public void setTransactionTimeDumpSamplesPerSecondLimit(int limit);
+
+    /**
+     * Setting a timeout (in millis) for printing long-running transactions
+     * as well as transactions that cannot receive locks for all their keys
+     * for a long time. Set {@code 0} to disable.
+     *
+     * @param timeout Timeout.
+     */
+    @MXBeanDescription(
+        "Setting a timeout (in millis) for printing long-running transactions as well as transactions that cannot " +
+            "receive locks for all their keys for a long time. Set {@code 0} to disable."
+    )
+    @MXBeanParametersNames("timeout")
+    @MXBeanParametersDescriptions("Long operations dump timeout.")
+    void setOperationsDumpTimeout(long timeout);
+
+    /**
+     * Returns a timeout (in millis) for printing long-running transactions as
+     * well as transactions that cannot receive locks for all their keys for a
+     * long time. Returns <code>0</code> if not set.
+     *
+     * @return Timeout.
+     */
+    @MXBeanDescription(
+        "Returns a timeout (in millis) for printing long-running transactions as well as transactions that cannot " +
+            "receive locks for all their keys for a long time. Returns <code>0</code> if not set."
+    )
+    long getOperationsDumpTimeout();
 }
