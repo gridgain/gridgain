@@ -24,7 +24,11 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Factory for creating pending tasks (see {@link AbstractNodePendingTask}).
+ */
 public class NodePendingTaskFactory {
+    /** Kernal context. */
     private final GridKernalContext ctx;
 
     /** */
@@ -32,6 +36,12 @@ public class NodePendingTaskFactory {
         this.ctx = ctx;
     }
 
+    /**
+     * Builds tasks that change SQL schema. Can return {@code null} if pending task creation is not needed.
+     * @param operation Schema operation.
+     * @param deploymentId Cache deployment id.
+     * @return Pending task object, or {@code null} if pending task creation is not needed.
+     */
     public @Nullable AbstractNodePendingTask buildTaskIfNeeded(SchemaAbstractOperation operation, IgniteUuid deploymentId) {
         if (operation instanceof SchemaIndexDropOperation) {
             SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)operation;
