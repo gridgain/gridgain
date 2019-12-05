@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.dto.action.query;
 
-import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -41,8 +40,8 @@ public class QueryArgument {
     /** Enforce join order flag. */
     private boolean enforceJoinOrder;
 
-    /** Target node ID. */
-    private UUID targetNodeId;
+    /** Is should be run local. */
+    private boolean isLoc;
 
     /** Result batch size. */
     private int pageSize;
@@ -156,19 +155,18 @@ public class QueryArgument {
     }
 
     /**
-     * @return Node ID on which query will be executed.
+     * @return @{code true} if query should be executed on local node.
      */
-    public UUID getTargetNodeId() {
-        return targetNodeId;
+    public boolean isLocal() {
+        return isLoc;
     }
 
     /**
-     * @param targetNodeId Target node id.
-     * @return {@code This} for chaining method calls.
+     * @param isLocal Is local flag.
+     * @return This for chaining method calls.
      */
-    public QueryArgument setTargetNodeId(UUID targetNodeId) {
-        this.targetNodeId = targetNodeId;
-
+    public QueryArgument setLocal(boolean isLocal) {
+        this.isLoc = isLocal;
         return this;
     }
 

@@ -37,8 +37,11 @@ public class StompDestinationsUtils {
     /** Cluster node configuration. */
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/";
 
-    /** Cluster action response destination. */
-    private static final String CLUSTER_ACTION_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/";
+    /** Cluster action task response destination. */
+    private static final String CLUSTER_ACTION_TASK_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action-task/";
+
+    /** Cluster action job response destination. */
+    private static final String CLUSTER_ACTION_JOB_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action-job/";
 
     /** Span destination. */
     private static final String SPAN_DEST = "/app/agent/spans/";
@@ -89,11 +92,20 @@ public class StompDestinationsUtils {
 
     /**
      * @param clusterId Cluster id.
-     * @param resId Response id.
-     * @return Action response destination.
+     * @param reqId request id.
+     * @return Task response destination.
      */
-    public static String buildActionResponseDest(UUID clusterId, UUID resId) {
-        return CLUSTER_ACTION_RESPONSE_DEST + clusterId + "/" + resId;
+    public static String buildActionTaskResponseDest(UUID clusterId, UUID reqId) {
+        return CLUSTER_ACTION_TASK_RESPONSE_DEST + clusterId + "/" + reqId;
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     * @param reqId request id.
+     * @return Job response destination.
+     */
+    public static String buildActionJobResponseDest(UUID clusterId, UUID reqId) {
+        return CLUSTER_ACTION_JOB_RESPONSE_DEST + clusterId + "/" + reqId;
     }
 
     /**

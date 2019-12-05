@@ -25,12 +25,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.processor.ActionsProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
 import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessor;
+import org.apache.ignite.agent.processor.action.DistributedActionProcessor;
 import org.apache.ignite.agent.processor.export.EventsExporter;
 import org.apache.ignite.agent.processor.export.MetricsExporter;
 import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
@@ -97,8 +98,11 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
-    /** Actions processor. */
-    private ActionsProcessor actProc;
+    /** Action service. */
+    private ActionDispatcher actDispatcher;
+
+    /** Distributed action processor. */
+    private DistributedActionProcessor distributedActProc;
 
     /** Topic processor. */
     private ManagementConsoleMessagesProcessor messagesProc;
@@ -134,6 +138,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         this.evtsExporter = new EventsExporter(ctx);
         this.spanExporter = new SpanExporter(ctx);
         this.metricExporter = new MetricsExporter(ctx);
+        this.actDispatcher = new ActionDispatcher(ctx);
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
@@ -159,6 +164,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
+        quiteStop(actDispatcher);
         quiteStop(messagesProc);
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
@@ -176,7 +182,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         U.shutdownNow(getClass(), connectPool, log);
 
         quiteStop(cacheProc);
-        quiteStop(actProc);
+        quiteStop(distributedActProc);
         quiteStop(metricProc);
         quiteStop(clusterProc);
         quiteStop(mgr);
@@ -214,6 +220,20 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      */
     public WebSocketManager webSocketManager() {
         return mgr;
+    }
+
+    /**
+     * @return Action dispatcher.
+     */
+    public ActionDispatcher actionDispatcher() {
+        return actDispatcher;
+    }
+
+    /**
+     * @return Destributed actions processor.
+     */
+    public DistributedActionProcessor distributedActionProcessor() {
+        return distributedActProc;
     }
 
     /**
@@ -289,7 +309,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         this.sesRegistry = new SessionRegistry(ctx);
         this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
         this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.actProc = new ActionsProcessor(ctx, mgr);
+        this.distributedActProc = new DistributedActionProcessor(ctx);
         this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
@@ -387,7 +407,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actProc.onActionRequest((Request)payload);
+                    distributedActProc.onActionRequest((Request)payload);
                 }
             });
 

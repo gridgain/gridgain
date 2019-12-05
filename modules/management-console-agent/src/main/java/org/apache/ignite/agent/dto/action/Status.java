@@ -19,16 +19,16 @@ package org.apache.ignite.agent.dto.action;
 /**
  * Action status.
  */
-public enum ActionStatus {
+public enum Status {
     /** Action is running. */
     RUNNING,
 
-    /** Action completed. */
+    /** Action is completed. */
     COMPLETED,
 
-    /** Action canceled. */
+    /** Action is Canceled. */
     CANCELED,
 
-    /** Action failed with error. */
+    /** Action is completed with error. */
     FAILED
 }

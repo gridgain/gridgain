@@ -19,19 +19,15 @@ package org.apache.ignite.agent.action;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.agent.ManagementConsoleProcessor;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -43,9 +39,6 @@ import static org.apache.ignite.agent.action.annotation.ActionControllerAnnotati
  * Action dispatcher.
  */
 public class ActionDispatcher extends GridProcessorAdapter {
-    /** Session registry. */
-    private SessionRegistry sesRegistry;
-
     /** Controllers. */
     private final Map<Class, Object> controllers = new ConcurrentHashMap<>();
 
@@ -57,8 +50,6 @@ public class ActionDispatcher extends GridProcessorAdapter {
      */
     public ActionDispatcher(GridKernalContext ctx) {
         super(ctx);
-
-        sesRegistry = ((ManagementConsoleProcessor)ctx.managementConsole()).sessionRegistry();
     }
 
     /**
@@ -88,35 +79,8 @@ public class ActionDispatcher extends GridProcessorAdapter {
         try {
             Class<?> ctrlCls = mtd.controllerClass();
 
-            boolean securityEnabled = ctx.security().enabled();
-
-            boolean authenticationEnabled = ctx.authentication().enabled();
-
             if (!controllers.containsKey(ctrlCls))
                 controllers.put(ctrlCls, ctrlCls.getConstructor(GridKernalContext.class).newInstance(ctx));
-
-            boolean isAuthenticateAct = "SecurityActions.authenticate".equals(mtd.actionName());
-
-            if ((authenticationEnabled || securityEnabled) && !isAuthenticateAct) {
-                UUID sesId = req.getSessionId();
-
-                Session ses = sesRegistry.getSession(sesId);
-
-                if (ses == null) {
-                    throw new IgniteAuthenticationException(
-                        "Failed to authenticate, the session with provided sessionId: " + sesId
-                    );
-                }
-
-                if (log.isDebugEnabled())
-                    log.debug("Received request: [sessionId=" + sesId + ", reqId=" + req.getId() + ']');
-
-                if (ses.securityContext() != null) {
-                    try (OperationSecurityContext ignored = ctx.security().withContext(ses.securityContext())) {
-                        return invoke(mtd.method(), controllers.get(ctrlCls), req.getArgument());
-                    }
-                }
-            }
 
             return invoke(mtd.method(), controllers.get(ctrlCls), req.getArgument());
         }

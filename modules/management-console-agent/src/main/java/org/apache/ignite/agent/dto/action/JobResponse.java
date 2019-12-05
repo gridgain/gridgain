@@ -20,11 +20,11 @@ import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * DTO for response
+ * DTO for job response.
  */
-public class Response {
-    /** Response id. */
-    private UUID id;
+public class JobResponse {
+    /** Request id. */
+    private UUID reqId;
 
     /** Result. */
     private Object res;
@@ -33,25 +33,27 @@ public class Response {
     private ResponseError error;
 
     /** Status. */
-    private ActionStatus status;
+    private Status status;
 
     /** Timestamp. */
     private long ts = System.currentTimeMillis();
+    
+    /** Node consistent id. */
+    private String nodeConsistentId;
 
     /**
-     * @return Response id.
+     * @return Request id.
      */
-    public UUID getId() {
-        return id;
+    public UUID getRequestId() {
+        return reqId;
     }
 
     /**
-     * @param id Response id.
-     * @return {@code This} for chaining method calls.
+     * @param reqId Request id.
+     * @return @{code This} for chaining method calls.
      */
-    public Response setId(UUID id) {
-        this.id = id;
-
+    public JobResponse setRequestId(UUID reqId) {
+        this.reqId = reqId;
         return this;
     }
 
@@ -64,11 +66,10 @@ public class Response {
 
     /**
      * @param res Response.
-     * @return {@code This} for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
-    public Response setResult(Object res) {
+    public JobResponse setResult(Object res) {
         this.res = res;
-
         return this;
     }
 
@@ -81,28 +82,26 @@ public class Response {
 
     /**
      * @param error Response error.
-     * @return {@code This} for chaining method calls.
+     * @return @{code This} for chaining method calls.
      */
-    public Response setError(ResponseError error) {
+    public JobResponse setError(ResponseError error) {
         this.error = error;
-
         return this;
     }
 
     /**
-     * @return Action status.
+     * @return Status.
      */
-    public ActionStatus getStatus() {
+    public Status getStatus() {
         return status;
     }
 
     /**
-     * @param status Action status.
-     * @return {@code This} for chaining method calls.
+     * @param status  Status.
+     * @return This for chaining method calls.
      */
-    public Response setStatus(ActionStatus status) {
+    public JobResponse setStatus(Status status) {
         this.status = status;
-
         return this;
     }
 
@@ -116,14 +115,29 @@ public class Response {
     /**
      * @param ts Timestamp.
      */
-    public Response setTimestamp(long ts) {
+    public JobResponse setTimestamp(long ts) {
         this.ts = ts;
+        return this;
+    }
 
+    /**
+     * @return Node consistent id.
+     */
+    public String getNodeConsistentId() {
+        return nodeConsistentId;
+    }
+
+    /**
+     * @param nodeConsistentId Node consistent id.
+     * @return @{code This} for chaining method calls.
+     */
+    public JobResponse setNodeConsistentId(String nodeConsistentId) {
+        this.nodeConsistentId = nodeConsistentId;
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(Response.class, this);
+        return S.toString(JobResponse.class, this);
     }
 }

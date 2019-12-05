@@ -17,7 +17,7 @@
 package org.apache.ignite.agent.testsuites;
 
 import org.apache.ignite.agent.action.SessionRegistryTest;
-import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
+import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReaderTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
 import org.apache.ignite.agent.action.controller.ActionControllerWithAuthenticationBaseTest;
 import org.apache.ignite.agent.action.controller.BaselineActionsControllerTest;
@@ -58,7 +58,7 @@ import org.junit.runners.Suite;
     QueryRegistryTest.class,
     SessionRegistryTest.class,
     SecurityActionsControllerTest.class,
-    ActionControllerAnnotationProcessorTest.class,
+    ActionControllerAnnotationReaderTest.class,
     SpanExporterTest.class,
     EventsExporterTest.class,
     RetryableSenderTest.class,
