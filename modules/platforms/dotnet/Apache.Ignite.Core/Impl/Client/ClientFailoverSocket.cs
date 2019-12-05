@@ -110,6 +110,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             Connect();
 
+            // TODO: Move this check inside Connect(), so that we re-check on reconnect
             if (_config.EnablePartitionAwareness &&
                 _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
             {
