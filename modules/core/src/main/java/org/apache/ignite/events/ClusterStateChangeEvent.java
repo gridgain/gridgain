@@ -17,14 +17,50 @@
 package org.apache.ignite.events;
 
 import java.util.Collection;
+import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_STATE_CHANGED;
 
+/**
+ * Cluster state change event.
+ * <p>
+ * Grid events are used for notification about what happens within the grid. Note that by
+ * design Ignite keeps all events generated on the local node locally and it provides
+ * APIs for performing a distributed queries across multiple nodes:
+ * <ul>
+ *      <li>
+ *          {@link IgniteEvents#remoteQuery(IgnitePredicate, long, int...)} -
+ *          asynchronously querying events occurred on the nodes specified, including remote nodes.
+ *      </li>
+ *      <li>
+ *          {@link IgniteEvents#localQuery(IgnitePredicate, int...)} -
+ *          querying only local events stored on this local node.
+ *      </li>
+ *      <li>
+ *          {@link IgniteEvents#localListen(IgnitePredicate, int...)} -
+ *          listening to local grid events (events from remote nodes not included).
+ *      </li>
+ * </ul>
+ * User can also wait for events using method {@link IgniteEvents#waitForLocal(IgnitePredicate, int...)}.
+ * <h1 class="header">Events and Performance</h1>
+ * Note that by default all events in Ignite are enabled and therefore generated and stored
+ * by whatever event storage SPI is configured. Ignite can and often does generate thousands events per seconds
+ * under the load and therefore it creates a significant additional load on the system. If these events are
+ * not needed by the application this load is unnecessary and leads to significant performance degradation.
+ * <p>
+ * It is <b>highly recommended</b> to enable only those events that your application logic requires
+ * by using {@link IgniteConfiguration#getIncludeEventTypes()} method in Ignite configuration. Note that certain
+ * events are required for Ignite's internal operations and such events will still be generated but not stored by
+ * event storage SPI if they are disabled in Ignite configuration.
+ * @see EventType#EVT_CLUSTER_STATE_CHANGED
+ */
 public class ClusterStateChangeEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;

@@ -742,28 +742,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
-     * @param msg Event message.
-     * @param evtType Event type.
-     */
-    private void recordEvent(String msg, int evtType) {
-        GridKernalContext ctx = cctx.kernalContext();
-
-        Collection<ClusterNode> srvNodes = ctx.cluster().get().forServers().nodes();
-
-        Collection<BaselineNode> baselineNodes = new ArrayList<>(srvNodes);
-
-        ctx.getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, new Runnable() {
-            @Override public void run() {
-                if (ctx.event().isRecordable(evtType)) {
-                    ClusterActivationEvent evt = new ClusterActivationEvent(ctx.discovery().localNode(), msg, evtType, baselineNodes);
-
-                    ctx.event().record(evt);
-                }
-            }
-        });
-    }
-
-    /**
      * @param task Task to run in exchange worker thread.
      */
     void addCustomTask(CachePartitionExchangeWorkerTask task) {

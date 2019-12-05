@@ -57,7 +57,9 @@ import org.jetbrains.annotations.Nullable;
  * event storage SPI if they are disabled in Ignite configuration.
  * @see EventType#EVT_CLUSTER_ACTIVATED
  * @see EventType#EVT_CLUSTER_DEACTIVATED
+ * @deprecated Use {@link ClusterStateChangeEvent} instead.
  */
+@Deprecated
 public class ClusterActivationEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
