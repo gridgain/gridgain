@@ -38,6 +38,7 @@ import org.junit.rules.TestRule;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.testframework.LogListener.matches;
 
 /**
@@ -132,19 +133,15 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         LogListener logLsnr = matches("First 10 long running transactions").build();
         testLog.registerListener(logLsnr);
 
-        int sleepTime = 500;
+        int waitTime = 500;
 
-        doSleep(sleepTime);
-
-        assertTrue(logLsnr.check());
+        waitForCondition(logLsnr::check, waitTime);
 
         txMXBean.setOperationsDumpTimeout(4_000);
 
         logLsnr.reset();
 
-        doSleep(sleepTime);
-
-        assertFalse(logLsnr.check());
+        waitForCondition(() -> !logLsnr.check(), waitTime);
     }
 
     /**
