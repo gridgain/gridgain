@@ -367,6 +367,8 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
         if (locDep != null)
             return locDep;
 
+
+
         String lambdaEnclosingClsName = U.lambdaEnclosingClassName(rsrcName);
 
         String clsName = lambdaEnclosingClsName == null ? rsrcName : lambdaEnclosingClsName;
