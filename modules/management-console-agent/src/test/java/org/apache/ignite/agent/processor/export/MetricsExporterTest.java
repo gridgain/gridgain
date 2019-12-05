@@ -73,6 +73,61 @@ public class MetricsExporterTest {
     }
 
     /** */
+    @Test
+    public void testDeserializeResponseFromByteArray() {
+        UUID clusterId = UUID.randomUUID();
+
+        String consistentId = "testConsistentId";
+
+        Map<String, MetricRegistry> metrics = generateMetrics();
+
+        MetricResponse msg = exporter.metricMessage(clusterId, "tag", consistentId, metrics);
+
+        MetricResponse newRes = new MetricResponse(msg.body());
+
+        Map<String, Byte> map = new HashMap<>();
+
+        for (MetricRegistry reg : generateMetrics().values()) {
+            for (Metric m : reg) {
+                byte type;
+
+                if (m instanceof BooleanMetric)
+                    type = 0;
+                else if (m instanceof IntMetric)
+                    type = 1;
+                else if (m instanceof LongMetric)
+                    type = 2;
+                else if (m instanceof DoubleMetric)
+                    type = 3;
+                else
+                    throw new IllegalArgumentException("Unknown metric type.");
+
+                map.put(m.name(), type);
+            }
+        }
+
+        newRes.processData(newRes.schema(), new MetricValueConsumer() {
+            @Override public void onBoolean(String name, boolean val) {
+                assertEquals((byte)0, (byte)map.remove(name));
+            }
+
+            @Override public void onInt(String name, int val) {
+                assertEquals((byte)1, (byte)map.remove(name));
+            }
+
+            @Override public void onLong(String name, long val) {
+                assertEquals((byte)2, (byte)map.remove(name));
+            }
+
+            @Override public void onDouble(String name, double val) {
+                assertEquals((byte)3, (byte)map.remove(name));
+            }
+        });
+
+        assertTrue(map.isEmpty());
+    }
+
+    /** */
     private void doTestResponse(String userTag) {
         UUID clusterId = UUID.randomUUID();
 
@@ -128,7 +183,6 @@ public class MetricsExporterTest {
                 assertEquals((byte)3, (byte)map.remove(name));
             }
         });
-
 
         assertTrue(map.isEmpty());
     }
