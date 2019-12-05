@@ -51,13 +51,13 @@ import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
 import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 /**
  * Security settings provider.
@@ -252,7 +252,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             HttpServletResponse res,
             AuthenticationException e
         ) throws IOException {
-            res.sendError(SC_INTERNAL_SERVER_ERROR, message("err.become.failed", e.getMessage()));
+            res.sendError(INTERNAL_SERVER_ERROR.value(), message("err.become.failed", e.getMessage()));
         }
     }
 }
