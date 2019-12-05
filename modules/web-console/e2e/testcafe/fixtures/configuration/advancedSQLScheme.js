@@ -16,7 +16,7 @@
 
 import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfiguration'
+import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfiguration';
 import {
     createModelButton,
     createModelTitle,
@@ -26,7 +26,7 @@ import {
     sqlQuery,
     cacheStore
 } from '../../page-models/pageConfigurationAdvancedModels';
-import {createCacheButton} from '../../page-models/pageConfigurationAdvancedCaches'
+import {createCacheButton} from '../../page-models/pageConfigurationAdvancedCaches';
 import {successNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();

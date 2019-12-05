@@ -31,9 +31,7 @@ export default class PageSignup implements ng.IPostLink {
         email: null,
         password: null,
         firstName: null,
-        lastName: null,
-        company: null,
-        country: null
+        lastName: null
     };
 
     serverError: string | null = null;
