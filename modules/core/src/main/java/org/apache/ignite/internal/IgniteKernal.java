@@ -222,6 +222,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
@@ -1400,15 +1401,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
-        long longOpDumpTimeout = ctx.cache().context().tm().longOperationsDumpTimeout();
-
-        if (longOpDumpTimeout > 0) {
-            longOpDumpTask = ctx.timeout().schedule(() -> {
-                long longOperationsDumpTimeout = ctx.cache().context().tm().longOperationsDumpTimeout();
-
-                ctx.cache().context().exchange().dumpLongRunningOperations(longOperationsDumpTimeout);
-            }, longOpDumpTimeout, longOpDumpTimeout);
-        }
+        scheduleLongOperationsDumpTask(ctx.cache().context().tm().longOperationsDumpTimeout());
 
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
@@ -1426,6 +1419,24 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 EventType.EVT_NODE_JOINED, localNode());
 
         startTimer.finishGlobalStage("Await exchange");
+    }
+
+    /**
+     * Scheduling tasks for dumping long operations.
+     *
+     * @param longOpDumpTimeout Long operations dump timeout.
+     */
+    public void scheduleLongOperationsDumpTask(long longOpDumpTimeout) {
+        if (nonNull(longOpDumpTask))
+            longOpDumpTask.close();
+
+        if (longOpDumpTimeout > 0) {
+            longOpDumpTask = ctx.timeout().schedule(
+                () -> ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
+                longOpDumpTimeout,
+                longOpDumpTimeout
+            );
+        }
     }
 
     /**

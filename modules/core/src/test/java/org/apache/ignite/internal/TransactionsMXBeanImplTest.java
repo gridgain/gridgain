@@ -122,7 +122,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
+    @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "60000")
     public void testOperationsDumpTimeout() throws Exception {
         IgniteEx ignite = startGrid(0);
 
@@ -131,17 +131,14 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         ignite.transactions().txStart();
 
         LogListener logLsnr = matches("First 10 long running transactions").build();
+
         testLog.registerListener(logLsnr);
 
-        int waitTime = 500;
+        txMXBean.setOperationsDumpTimeout(100);
 
-        waitForCondition(logLsnr::check, waitTime);
+        int waitTime = 10_000;
 
-        txMXBean.setOperationsDumpTimeout(4_000);
-
-        logLsnr.reset();
-
-        waitForCondition(() -> !logLsnr.check(), waitTime);
+        assertTrue(waitForCondition(logLsnr::check, waitTime));
     }
 
     /**
