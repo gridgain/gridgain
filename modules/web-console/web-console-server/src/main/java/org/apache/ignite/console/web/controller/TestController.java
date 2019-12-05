@@ -49,20 +49,20 @@ public class TestController {
     private AuthenticationManager authMgr;
 
     /** Accounts service. */
-    private AccountsService accountsSrv;
+    protected AccountsService accountsSrvc;
 
-    /** Admin service. */
-    private AdminService adminSrv;
+    /** Administration service. */
+    protected AdminService adminSrv;
 
     /**
      * @param authMgr Authentication manager.
-     * @param accountsSrv Accounts server.
-     * @param adminSrv Administration server.
+     * @param accountsSrvc Accounts service.
+     * @param adminSrvc Administration service.
      */
-    public TestController(AuthenticationManager authMgr, AccountsService accountsSrv, AdminService adminSrv) {
+    public TestController(AuthenticationManager authMgr, AccountsService accountsSrvc, AdminService adminSrvc) {
         this.authMgr = authMgr;
-        this.accountsSrv = accountsSrv;
-        this.adminSrv = adminSrv;
+        this.accountsSrvc = accountsSrvc;
+        this.adminSrv = adminSrvc;
     }
 
     /**
@@ -73,7 +73,7 @@ public class TestController {
     public ResponseEntity<Void> registerAdmin(@Valid @RequestBody SignUpRequest params) {
         Account acc = adminSrv.registerUser(params);
 
-        accountsSrv.toggle(acc.getId(), true);
+        accountsSrvc.toggle(acc.getId(), true);
 
         Authentication authentication = authMgr.authenticate(
             new UsernamePasswordAuthenticationToken(
