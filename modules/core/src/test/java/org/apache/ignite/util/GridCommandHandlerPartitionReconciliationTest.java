@@ -95,15 +95,37 @@ public class GridCommandHandlerPartitionReconciliationTest extends GridCommandHa
         U.delete(customDiagnosticDir);
     }
 
-    // TODO: 20.11.19 Tests for invalid values.
-
     @Test
-    public void testCacheConsistencyChecker() throws Exception {
-
+    public void testCacheConsistencyCheckerNoConflicts() throws Exception {
         execute("--cache", "partition_reconciliation");
 //        execute("--cache", "partition_reconciliation", "Cache123");
 
         // TODO: 20.11.19 check and assert log. 
+    }
+
+    // TODO: 20.11.19 Tests for invalid values.
+
+    @Test
+    public void testCacheConsistencyCheckerConflictKey() throws Exception {
+        corruptDataEntry(ignite(0).cachex("Cache123").context(), 5, false, true);
+
+        execute("--cache", "partition_reconciliation");
+//        execute("--cache", "partition_reconciliation", "Cache123");
+
+        // TODO: 20.11.19 check and assert log.
+    }
+
+    @Test
+    public void testCacheConsistencyCheckerConflictKeyFix() throws Exception {
+        corruptDataEntry(ignite(0).cachex("Cache123").context(), 5, false, true);
+
+        assertTrue(idleVerify(ignite(0), "Cache123").hasConflicts());
+
+        execute("--cache", "partition_reconciliation", "--fix-mode");
+//        execute("--cache", "partition_reconciliation", "Cache123");
+
+        assertFalse(idleVerify(ignite(0), "Cache123").hasConflicts());
+        // TODO: 20.11.19 check and assert log.
     }
 
 }

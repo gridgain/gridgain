@@ -1749,61 +1749,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         }
     }
 
-    /**
-     * Corrupts data entry.
-     *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
-     */
-    private void corruptDataEntry(
-        GridCacheContext<Object, Object> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            Object valToPut = ctx.cache().keepBinary().get(key);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = valToPut.toString() + " broken";
-
-            // Create data entry
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                new GridCacheVersion(),
-                0L,
-                partId,
-                updateCntr
-            );
-
-            GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry, false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
-    }
 
     /** */
     @Test

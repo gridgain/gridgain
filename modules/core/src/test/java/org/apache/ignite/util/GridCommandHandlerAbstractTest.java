@@ -31,6 +31,7 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.AtomicConfiguration;
@@ -43,10 +44,17 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
+import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareFutureAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -352,4 +360,61 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
                 streamer.addData(i, i);
         }
     }
+
+    /**
+     * Corrupts data entry.
+     *
+     * @param ctx Context.
+     * @param key Key.
+     * @param breakCntr Break counter.
+     * @param breakData Break data.
+     */
+    protected void corruptDataEntry(
+        GridCacheContext<Object, Object> ctx,
+        Object key,
+        boolean breakCntr,
+        boolean breakData
+    ) {
+        int partId = ctx.affinity().partition(key);
+
+        try {
+            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
+
+            Object valToPut = ctx.cache().keepBinary().get(key);
+
+            if (breakCntr)
+                updateCntr++;
+
+            if (breakData)
+                valToPut = valToPut.toString() + " broken";
+
+            // Create data entry
+            DataEntry dataEntry = new DataEntry(
+                ctx.cacheId(),
+                new KeyCacheObjectImpl(key, null, partId),
+                new CacheObjectImpl(valToPut, null),
+                GridCacheOperation.UPDATE,
+                new GridCacheVersion(),
+                new GridCacheVersion(),
+                0L,
+                partId,
+                updateCntr
+            );
+
+            GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();
+
+            db.checkpointReadLock();
+
+            try {
+                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry, false);
+            }
+            finally {
+                db.checkpointReadUnlock();
+            }
+        }
+        catch (IgniteCheckedException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
