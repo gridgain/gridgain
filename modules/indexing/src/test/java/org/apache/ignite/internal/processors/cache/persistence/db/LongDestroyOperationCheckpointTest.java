@@ -18,15 +18,14 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -39,6 +38,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskArg;
@@ -187,7 +187,6 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         createIndex(cache, multicolumn);
 
         for (int i = 0; i < 5_000; i++)
-        //for (int i = 0; i < 111; i++)
             query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
 
         forceCheckpoint();
@@ -270,8 +269,6 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         else
             dropIdx.join();
 
-        //assertFalse(blockedSystemCriticalThreadLsnr.check());
-
         if (!restart)
             assertTrue(idxDropProcLsnr.check());
 
@@ -282,7 +279,11 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         checkSelectAndPlan(cache, true);
 
+        forceCheckpoint();
+
         validateIndexes(ignite);
+
+        assertFalse(blockedSysCriticalThreadLsnr.check());
     }
 
     /** */
@@ -292,16 +293,48 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             add(grid(ALWAYS_ALIVE_NODE_NUM).cluster().localNode().id());
         }};
 
+        log.info("Doing indexes validation.");
+
         VisorValidateIndexesTaskArg taskArg =
             new VisorValidateIndexesTaskArg(Collections.singleton("SQL_PUBLIC_T"), nodeIds, 0, 1);
 
         VisorValidateIndexesTaskResult taskRes =
             ignite.compute().execute(VisorValidateIndexesTask.class.getName(), new VisorTaskArgument<>(nodeIds, taskArg, false));
 
+        if (!taskRes.exceptions().isEmpty()) {
+            for (Map.Entry<UUID, Exception> e : taskRes.exceptions().entrySet())
+                log.error("Exception while validation indexes on node id=" + e.getKey().toString(), e.getValue());
+        }
+
+        for (Map.Entry<UUID, VisorValidateIndexesJobResult> nodeEntry : taskRes.results().entrySet()) {
+            if (nodeEntry.getValue().hasIssues()) {
+                log.error("Validate indexes issues had been found on node id=" + nodeEntry.getKey().toString());
+
+                log.error("Integrity check failures: " + nodeEntry.getValue().integrityCheckFailures().size());
+
+                nodeEntry.getValue().integrityCheckFailures().forEach(f -> log.error(f.toString()));
+
+                logIssuesFromMap("Partition results", nodeEntry.getValue().partitionResult());
+
+                logIssuesFromMap("Index validation issues", nodeEntry.getValue().indexResult());
+            }
+        }
+
         assertTrue(taskRes.exceptions().isEmpty());
 
         for (VisorValidateIndexesJobResult res : taskRes.results().values())
             assertFalse(res.hasIssues());
+    }
+
+    /** */
+    private void logIssuesFromMap(String caption, Map<?, ValidateIndexesPartitionResult> map) {
+        List<String> partResIssues = new LinkedList<>();
+
+        map.forEach((k, v) -> v.issues().forEach(vi -> partResIssues.add(k.toString() + ": " + vi.toString())));
+
+        log.error(caption + ": " + partResIssues.size());
+
+        partResIssues.forEach(r -> log.error(r));
     }
 
     /**

@@ -5267,6 +5267,10 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         }
     }
 
+    public Collection<AbstractPendingNodeTask> pendingNodeTasks() {
+        return Collections.unmodifiableCollection(pendingTasks.values());
+    }
+
     /**
      * Removes pending delete object.
      *

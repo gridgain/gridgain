@@ -22,7 +22,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 public abstract class AbstractPendingNodeTask implements Serializable {
     /** */
-    protected StoredCacheData changedCacheData;
+    protected StoredCacheData filteredCacheData;
 
     /** */
     public AbstractPendingNodeTask() {
@@ -30,8 +30,8 @@ public abstract class AbstractPendingNodeTask implements Serializable {
     }
 
     /** */
-    public StoredCacheData changedCacheData() {
-        return changedCacheData;
+    public StoredCacheData filteredCacheData() {
+        return filteredCacheData;
     }
 
     /** */

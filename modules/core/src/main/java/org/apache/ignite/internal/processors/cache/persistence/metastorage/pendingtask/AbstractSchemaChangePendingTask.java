@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask;
 
+import org.apache.ignite.internal.processors.cache.StoredCacheData;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaAbstractOperation;
 
 public abstract class AbstractSchemaChangePendingTask extends AbstractPendingNodeTask {
@@ -25,7 +26,7 @@ public abstract class AbstractSchemaChangePendingTask extends AbstractPendingNod
         /* No op. */
     }
 
-    public AbstractSchemaChangePendingTask(SchemaAbstractOperation schemaOperation) {
+    public AbstractSchemaChangePendingTask(SchemaAbstractOperation schemaOperation, StoredCacheData originalCacheData) {
         this.schemaOperation = schemaOperation;
     }
 }

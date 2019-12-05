@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.cache.persistence.metastorage.pend
 
 import java.util.LinkedList;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -28,7 +27,6 @@ import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexDropOperation;
-import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 
@@ -38,13 +36,13 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
     }
 
     public PendingDropIndexTask(SchemaIndexDropOperation operation, StoredCacheData originalCacheData) {
-        super(operation);
+        super(operation, originalCacheData);
 
-        changedCacheData = new StoredCacheData(originalCacheData);
+        filteredCacheData = new StoredCacheData(originalCacheData);
 
         SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)schemaOperation;
 
-        for (QueryEntity queryEntity : changedCacheData.queryEntities()) {
+        for (QueryEntity queryEntity : filteredCacheData.queryEntities()) {
             List<QueryIndex> idxs = new LinkedList<>();
 
             for (QueryIndex idx : queryEntity.getIndexes()) {
@@ -65,7 +63,7 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
 
     /** {@inheritDoc} */
     @Override public void execute(GridKernalContext ctx) {
-        String cacheName = changedCacheData.config().getName();
+        String cacheName = filteredCacheData.config().getName();
 
         GridCacheContextInfo cacheInfo = ctx.query().getIndexing().registeredCacheInfo(cacheName);
 
@@ -89,13 +87,6 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
         ctx.query().onLocalOperationFinished(op0, type);
 
         ctx.cache().removePendingNodeTask(this);
-    }
-
-    private String tempIndexName(String name) {
-        return new GridStringBuilder(name)
-            .a("_pending_delete_")
-            .a(name.hashCode())
-            .toString();
     }
 
     /** {@inheritDoc} */
