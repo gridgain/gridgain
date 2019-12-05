@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -66,6 +67,9 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
     /** */
     private static final String ORG_SQL = "select * from Organization";
+
+    /** */
+    static final String UPDATE_SQL = "UPDATE Person SET name=lower(?) ";
 
     /** */
     private static final String ORG = "org";
@@ -329,6 +333,47 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
             }, CacheException.class, "Failed to map SQL query to topology during timeout:");
 
             throwable.printStackTrace();
+        }
+        finally {
+            GridTestUtils.setFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper", mapper);
+        }
+    }
+
+    /**
+     * Test update query remap failure reason.
+     */
+    @Test
+    public void testUpdateQueryMappingFailureMessage() {
+        final GridReduceQueryExecutor rdcQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "rdcQryExec");
+        final ReducePartitionMapper mapper = GridTestUtils.getFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper");
+
+        final IgniteLogger logger = GridTestUtils.getFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "log");
+        final GridKernalContext ctx = GridTestUtils.getFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "ctx");
+
+        GridTestUtils.setFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper",
+            new ReducePartitionMapper(ctx, logger) {
+                @Override public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds,
+                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly, long qryId) {
+                    final ReducePartitionMapResult res = super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly, qryId);
+
+                    return new ReducePartitionMapResult(Collections.emptyList(), res.partitionsMap(), res.queryPartitionsMap());
+                }
+            });
+
+        try {
+            final SqlFieldsQueryEx qry = new SqlFieldsQueryEx(UPDATE_SQL, false)
+                .setArgs("New Name");
+
+            GridTestUtils.assertThrows(log, () -> {
+                personCache.query(qry).getAll();
+            }, CacheException.class, "Failed to map SQL query to topology during timeout");
+
+            qry.setArgs("Another Name");
+            qry.setSkipReducerOnUpdate(true);
+
+            GridTestUtils.assertThrows(log, () -> {
+                personCache.query(qry).getAll();
+            }, CacheException.class, "Failed to determine nodes participating in the update. ");
         }
         finally {
             GridTestUtils.setFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper", mapper);
