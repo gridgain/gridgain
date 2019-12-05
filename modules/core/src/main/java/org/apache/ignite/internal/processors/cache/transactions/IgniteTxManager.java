@@ -2384,7 +2384,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert !F.isEmpty(tx.transactionNodes()) : tx;
         assert tx.nearXidVersion() != null : tx;
 
-        // Transaction will be finished by finish message.
+        // Transaction will be completed by finish message.
         if (!tx.markFinalizing(RECOVERY_FINISH))
             return;
 
