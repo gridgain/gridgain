@@ -185,7 +185,9 @@ public class AbstractIndexingCommonTest extends GridCommonAbstractTest {
          * @param cacheName Cache name.
          */
         public void stopBlock(String cacheName) {
-            latches.computeIfAbsent(cacheName, l -> new CountDownLatch(1)).countDown();
+            CountDownLatch latch = latches.computeIfAbsent(cacheName, l -> new CountDownLatch(1));
+
+            latch.countDown();
         }
     }
 }
