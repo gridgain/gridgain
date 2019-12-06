@@ -23,6 +23,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.util.IgniteUtils.unquote;
+
 /**
  * Factory for creating pending tasks (see {@link AbstractNodePendingTask}).
  */
@@ -46,7 +48,8 @@ public class NodePendingTaskFactory {
 
         if (cacheDesc == null
             || !F.eq(cacheDesc.deploymentId(), deploymentId)
-            || !operation.schemaName().equals(cacheDesc.cacheConfiguration().getSqlSchema()))
+            || !unquote(operation.schemaName().toUpperCase())
+                    .equals(unquote(cacheDesc.cacheConfiguration().getSqlSchema().toUpperCase())))
             return null;
 
         if (operation instanceof SchemaIndexDropOperation) {

@@ -566,6 +566,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                             + cacheDesc.cacheConfiguration(), e);
                     }
                 }
+
+                AbstractNodePendingTask pendingNodeTask = nodePendingTaskFactory.buildTaskIfNeeded(msg.operation(), proposeMsg.deploymentId());
+
+                if (pendingNodeTask != null)
+                    ctx.cache().removeNodePendingTask(pendingNodeTask);
             }
 
             // Propose message will be used from exchange thread to

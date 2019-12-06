@@ -401,7 +401,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testLongIndexDeletion() throws Exception {
+    public void testLongIndexDeletionSimple() throws Exception {
         testLongIndexDeletion(false, false, false, false);
     }
 
