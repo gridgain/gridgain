@@ -262,7 +262,7 @@ public class HibernateL2CacheExample {
      * @return Name of the update timestamps cache.
      */
     private static String timestampsCacheName() {
-        return isIgniteHibernate51Enabled()?
+        return isIgniteHibernate51orBelowEnabled() ?
             // Represents the name of timestamps region specific to hibernate 5.1 {@see HibernateTimestampsRegion}.
             "org.hibernate.cache.spi.UpdateTimestampsCache":
             // Represents the name of timestamps region specific to hibernate 5.3 {@see IgniteTimestampsRegion}.
@@ -275,7 +275,7 @@ public class HibernateL2CacheExample {
      * @return Name of the update timestamps cache.
      */
     private static String queryResultsCacheName() {
-        return isIgniteHibernate51Enabled()?
+        return isIgniteHibernate51orBelowEnabled() ?
             // Represents the name of query results region specific to hibernate 5.1 {@see HibernateQueryResultsRegion}.
             "org.hibernate.cache.internal.StandardQueryCache":
             // Represents the name of query results region specific to hibernate 5.3 {@see IgniteQueryResultsRegion}.
@@ -287,7 +287,7 @@ public class HibernateL2CacheExample {
      *
      * @return {@code true} if ignite-hibernate 5.1 is enabled.
      */
-    private static boolean isIgniteHibernate51Enabled() {
+    private static boolean isIgniteHibernate51orBelowEnabled() {
         try {
             Class.forName("org.apache.ignite.cache.hibernate.HibernateTimestampsRegion");
 
