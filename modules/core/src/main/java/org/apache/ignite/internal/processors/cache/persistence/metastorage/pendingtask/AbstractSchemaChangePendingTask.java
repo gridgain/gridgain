@@ -21,6 +21,9 @@ import org.apache.ignite.internal.processors.query.schema.operation.SchemaAbstra
  * Abstract pending task for SQL schema changing operation.
  */
 public abstract class AbstractSchemaChangePendingTask extends AbstractNodePendingTask {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /**
      * Schema operation.
      */

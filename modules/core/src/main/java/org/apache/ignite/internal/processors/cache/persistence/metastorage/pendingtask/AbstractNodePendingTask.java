@@ -26,6 +26,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * pending tasks from metastorage and completes them.
  */
 public abstract class AbstractNodePendingTask implements Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /**
      * Pending task can change the configuration of persistent cache. In this case in this field should be stored
      * changed {@link StoredCacheData}, which is used to send cache discovery information through cluster

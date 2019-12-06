@@ -35,6 +35,9 @@ import org.apache.ignite.lang.IgniteUuid;
  */
 public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
     /** */
+    private static final long serialVersionUID = 0L;
+
+    /** */
     public PendingDropIndexTask() {
         /* No op. */
     }
